@@ -1,6 +1,6 @@
 //! Datos estáticos del juego: tabla de FSD y clases de estrella.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 
 /// Tipo de FSD (determina los multiplicadores de supercarga).
@@ -84,7 +84,8 @@ pub fn fsd_table() -> &'static FsdTable {
     })
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum StarSpecial {
     Neutron,
     WhiteDwarf,

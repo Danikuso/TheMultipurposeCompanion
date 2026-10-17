@@ -18,7 +18,8 @@ pub enum JumpOutcome {
     Arrived,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum RouteSource {
     Plan,
     NavRoute,
