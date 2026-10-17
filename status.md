@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 15 (`navigation` — tira de ruta, ficha local + remota) 🔄 en curso (Bloque 2).
-- **Siguiente acción:** completar la Task 15 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
+- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 16 (`navigation` — planificador Spansh y persistencia) 🔄 en curso (Bloque 2).
+- **Siguiente acción:** completar la Task 16 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
 
 ## Fases
 
@@ -48,7 +48,8 @@
 | 12 | `tmc-server` — acciones con argumentos y autocompletado | ✅ hecha | 9960190, 61ef707 | `POST /api/actions/{name}` con JSON, WS `action` con `args`, `GET /api/navigation/autocomplete` paginado (20) con `{name,id64}`; seguridad LAN aplicada; 12 Vitest PASS. Revisión aprobada. **Seguridad:** protección CSRF en peticiones que cambian estado (Origin/Sec-Fetch-Site, JSON obligatorio), fallo preexistente de F0 detectado por análisis automático. |
 | 13 | `navigation` — alcance de salto y combustible | ✅ hecha | 1ef1621, cf191fa | `fsd.json` propio (procedencia, `verified:false`), validación contra MaxJumpRange con respaldo escalado, `star_flags` explícito; 30 tmc-modules PASS. Revisión aprobada tras 1 ronda. |
 | 14 | `navigation` — ruta activa y reglas de avance | ✅ hecha | 0ec3604, 6a7361c | Avance con saltos omitidos, retroceso a hops anteriores, fuera de ruta sin descartar plan, prioridad plan > NavRoute > actual; 300 workspace PASS. Revisión aprobada tras 1 ronda. |
-| 15–32 | Ver plan | ⬜ | — | |
+| 15 | `navigation` — tira de ruta (ficha local + remota) | ✅ hecha | 8393242, 76b4c38 | Módulo `Navigation` registrado; topics `navigation.route` y `navigation.jump`; peticiones con caducidad y reintento; visitas desde el historial; 30 claves `strip-*` en 5 idiomas; 74 tmc-modules PASS. Revisión aprobada tras 1 ronda. |
+| 16–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
