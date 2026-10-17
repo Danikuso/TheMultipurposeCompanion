@@ -1,0 +1,88 @@
+//! Limitador de peticiones por servicio (ventana deslizante, reloj inyectado).
+
+use std::collections::VecDeque;
+use std::time::{Duration, Instant};
+
+/// Servicio externo con límite propio.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Service {
+    Spansh,
+    Edsm,
+    Canonn,
+}
+
+/// Permite como máximo `max` peticiones en cualquier ventana de `window`.
+#[derive(Debug, Clone)]
+pub struct RateLimiter {
+    max: u32,
+    window: Duration,
+    taken: VecDeque<Instant>,
+}
+
+impl RateLimiter {
+    pub fn per_window(max: u32, window: Duration) -> Self {
+        Self {
+            max,
+            window,
+            taken: VecDeque::new(),
+        }
+    }
+
+    /// Spansh 1/1 s, Canonn 1/1 s, EDSM 10/10 s.
+    pub fn for_service(service: Service) -> Self {
+        match service {
+            Service::Spansh | Service::Canonn => Self::per_window(1, Duration::from_secs(1)),
+            Service::Edsm => Self::per_window(10, Duration::from_secs(10)),
+        }
+    }
+
+    /// `Ok` registra la petición; `Err(espera)` indica cuánto falta para el siguiente hueco.
+    pub fn try_acquire(&mut self, now: Instant) -> Result<(), Duration> {
+        while let Some(&first) = self.taken.front() {
+            if now.saturating_duration_since(first) >= self.window {
+                self.taken.pop_front();
+            } else {
+                break;
+            }
+        }
+        if (self.taken.len() as u32) < self.max {
+            self.taken.push_back(now);
+            return Ok(());
+        }
+        match self.taken.front() {
+            Some(&first) => Err(self.window - now.saturating_duration_since(first)),
+            None => Err(self.window),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn spansh_limiter_allows_one_per_second() {
+        let t0 = Instant::now();
+        let mut l = RateLimiter::for_service(Service::Spansh);
+        assert_eq!(l.try_acquire(t0), Ok(()));
+        let wait = l.try_acquire(t0 + Duration::from_millis(500)).unwrap_err();
+        assert_eq!(wait, Duration::from_millis(500));
+        assert_eq!(l.try_acquire(t0 + Duration::from_secs(1)), Ok(()));
+    }
+
+    #[test]
+    fn edsm_limiter_allows_ten_per_ten_seconds() {
+        let t0 = Instant::now();
+        let mut l = RateLimiter::for_service(Service::Edsm);
+        for _ in 0..10 {
+            assert_eq!(l.try_acquire(t0), Ok(()));
+        }
+        assert_eq!(l.try_acquire(t0), Err(Duration::from_secs(10)));
+        assert_eq!(
+            l.try_acquire(t0 + Duration::from_secs(4)),
+            Err(Duration::from_secs(6))
+        );
+        assert_eq!(l.try_acquire(t0 + Duration::from_secs(10)), Ok(()));
+    }
+}

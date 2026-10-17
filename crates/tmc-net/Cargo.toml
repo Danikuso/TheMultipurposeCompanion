@@ -1,0 +1,10 @@
+[package]
+name = "tmc-net"
+description = "Capa de red de TMC: limitador, salud de servicios y política de caché"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[dependencies]
+tmc-model = { path = "../tmc-model" }
