@@ -128,7 +128,7 @@ pub struct Entry {
 pub struct Strip {
     pub source: RouteSource,
     pub current: Entry,
-    /// Todos los sistemas pendientes, no solo los visibles.
+    /// Solo los siguientes visibles (`STRIP_AHEAD`); los totales cubren toda la ruta.
     pub upcoming: Vec<Entry>,
     pub off_route: bool,
     pub remaining_jumps: Option<u32>,
@@ -184,15 +184,12 @@ pub fn build_strip(plan: Option<&ActivePlan>, state: &GameState) -> Strip {
                     current.star_class = h.star_class.clone();
                 }
             }
-            let upcoming: Vec<Entry> = p.upcoming(usize::MAX).iter().map(plan_entry).collect();
+            let all = p.upcoming(usize::MAX);
+            let upcoming: Vec<Entry> = all.iter().take(STRIP_AHEAD).map(plan_entry).collect();
             Strip {
                 source,
                 current,
-                remaining_jumps: Some(
-                    upcoming
-                        .iter()
-                        .fold(0u32, |acc, e| acc.saturating_add(e.jumps)),
-                ),
+                remaining_jumps: Some(all.iter().fold(0u32, |a, h| a.saturating_add(h.jumps))),
                 total_ly: Some(p.remaining_ly()),
                 off_route: p.off_route,
                 upcoming,
@@ -206,25 +203,32 @@ pub fn build_strip(plan: Option<&ActivePlan>, state: &GameState) -> Strip {
             }
             let mut prev = current.pos;
             let mut upcoming = Vec::new();
+            let (mut count, mut total, mut any_leg) = (0usize, 0.0, false);
             for h in &hops[idx.map_or(0, |i| i + 1)..] {
                 let pos = Some(h.star_pos);
                 let leg_ly = prev.zip(pos).map(|(a, b)| distance(a, b));
                 prev = pos;
-                upcoming.push(Entry {
-                    name: h.star_system.clone(),
-                    id64: (h.system_address != 0).then_some(h.system_address),
-                    pos,
-                    star_class: h.star_class.clone(),
-                    leg_ly,
-                    jumps: 1,
-                });
+                count += 1;
+                if let Some(d) = leg_ly {
+                    total += d;
+                    any_leg = true;
+                }
+                if upcoming.len() < STRIP_AHEAD {
+                    upcoming.push(Entry {
+                        name: h.star_system.clone(),
+                        id64: (h.system_address != 0).then_some(h.system_address),
+                        pos,
+                        star_class: h.star_class.clone(),
+                        leg_ly,
+                        jumps: 1,
+                    });
+                }
             }
-            let legs: Vec<f64> = upcoming.iter().filter_map(|e| e.leg_ly).collect();
             Strip {
                 source,
                 current,
-                remaining_jumps: u32::try_from(upcoming.len()).ok(),
-                total_ly: (!legs.is_empty()).then(|| legs.iter().sum()),
+                remaining_jumps: u32::try_from(count).ok(),
+                total_ly: any_leg.then_some(total),
                 off_route: false,
                 upcoming,
             }

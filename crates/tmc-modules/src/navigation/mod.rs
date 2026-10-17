@@ -26,8 +26,10 @@ const TOPIC_ROUTE: &str = "navigation.route";
 const TOPIC_JUMP: &str = "navigation.jump";
 const VISITS_TAG: &str = "visits";
 const VISITS_SQL: &str = "SELECT json_extract(json,'$.SystemAddress'), COUNT(*) FROM event WHERE name='FSDJump' AND cmdr=?1 AND ts<=?2 GROUP BY 1";
-/// Tope de peticiones en vuelo recordadas; evita crecer si alguna respuesta se pierde.
-const MAX_INFLIGHT: usize = 64;
+/// Una petición sin respuesta pasado este tiempo se da por perdida y puede repetirse.
+const INFLIGHT_TTL_S: i64 = 60;
+/// Un `Failed` se reintenta pasado este tiempo (la red ya hace su propio backoff).
+const FAILED_COOLDOWN_S: i64 = 300;
 
 #[derive(Debug, Serialize)]
 struct JumpTopic {
@@ -103,7 +105,10 @@ pub struct Navigation {
     supercharged: Option<f64>,
     politics: Option<(u64, LocalPolitics)>,
     remote: HashMap<String, RemoteState>,
-    inflight: HashSet<String>,
+    /// Clave -> (id de petición, instante de envío).
+    inflight: HashMap<String, (u64, DateTime<Utc>)>,
+    /// Último instante conocido (eventos del diario y Status).
+    now: Option<DateTime<Utc>>,
     visits: Visits,
     copy_seq: u64,
     route_value: Value,
@@ -120,7 +125,8 @@ impl Navigation {
             supercharged: None,
             politics: None,
             remote: HashMap::new(),
-            inflight: HashSet::new(),
+            inflight: HashMap::new(),
+            now: None,
             visits: Visits::default(),
             copy_seq: 0,
             route_value: Value::Null,
@@ -131,6 +137,12 @@ impl Navigation {
     /// Plan activo (lo alimenta el planificador). `None` vuelve a `NavRoute`.
     pub fn set_plan(&mut self, plan: Option<ActivePlan>) {
         self.plan = plan;
+    }
+
+    fn tick(&mut self, at: DateTime<Utc>) {
+        if self.now.is_none_or(|n| at > n) {
+            self.now = Some(at);
+        }
     }
 
     fn online(&self, state: &GameState) -> bool {
@@ -166,7 +178,7 @@ impl Navigation {
             Box::new(move |store: &tmc_core::Store| {
                 let rows = store
                     .query_json(VISITS_SQL, &[Value::from(name.as_str()), Value::from(cut)])?;
-                Ok(Value::Array(rows))
+                Ok(serde_json::json!({"cmdr": name, "rows": rows}))
             }),
         );
     }
@@ -251,8 +263,15 @@ impl Navigation {
             .filter_map(|e| e.id64.map(system_key))
             .collect();
         self.remote.retain(|k, _| keep.contains(k));
-        if self.inflight.len() > MAX_INFLIGHT {
-            self.inflight.clear();
+        self.inflight.retain(|k, _| keep.contains(k));
+        if let Some(now) = self.now {
+            self.remote.retain(|_, r| {
+                r.status != RemoteStatus::Failed
+                    || r.fetched_at
+                        .is_none_or(|t| (now - t).num_seconds() < FAILED_COOLDOWN_S)
+            });
+            self.inflight
+                .retain(|_, (_, sent)| (now - *sent).num_seconds() <= INFLIGHT_TTL_S);
         }
         if !self.online(state) {
             return;
@@ -260,15 +279,16 @@ impl Navigation {
         for e in strip.visible() {
             let Some(id64) = e.id64 else { continue };
             let key = system_key(id64);
-            if self.remote.contains_key(&key) || self.inflight.contains(&key) {
+            if self.remote.contains_key(&key) || self.inflight.contains_key(&key) {
                 continue;
             }
             let query = NetQuery::System {
                 id64,
                 name: e.name.clone(),
             };
-            if ctx.request(key.clone(), query).is_some() {
-                self.inflight.insert(key);
+            if let Some(id) = ctx.request(key.clone(), query) {
+                self.inflight
+                    .insert(key, (id, self.now.unwrap_or(DateTime::UNIX_EPOCH)));
             }
         }
     }
@@ -420,6 +440,30 @@ impl Default for Navigation {
     }
 }
 
+/// Eventos del diario que pueden cambiar la tira o el alcance de salto.
+fn affects_topics(kind: &EventKind) -> bool {
+    matches!(
+        kind,
+        EventKind::Fileheader(_)
+            | EventKind::Commander(_)
+            | EventKind::LoadGame(_)
+            | EventKind::Location(_)
+            | EventKind::FsdJump(_)
+            | EventKind::CarrierJump(_)
+            | EventKind::Docked(_)
+            | EventKind::SupercruiseExit(_)
+            | EventKind::FsdTarget(_)
+            | EventKind::NavRouteClear
+            | EventKind::Loadout(_)
+            | EventKind::Cargo(_)
+            | EventKind::FuelScoop(_)
+            | EventKind::RefuelAll(_)
+            | EventKind::RefuelPartial(_)
+            | EventKind::ShipyardSwap(_)
+            | EventKind::JetConeBoost(_)
+    )
+}
+
 impl Module for Navigation {
     fn id(&self) -> &'static str {
         "navigation"
@@ -427,12 +471,25 @@ impl Module for Navigation {
 
     fn on_event(&mut self, ev: &SourceEvent, state: &GameState, ctx: &mut ModuleCtx) -> TopicSet {
         match ev {
-            SourceEvent::Settings(s) => self.settings = s.clone(),
-            SourceEvent::Journal { ev, .. } => self.on_journal(ev, state, ctx),
+            SourceEvent::Settings(s) => {
+                self.settings = s.clone();
+                // Los estados no Ok (p. ej. Disabled) no sobreviven a un cambio de ajustes.
+                self.remote.retain(|_, r| r.status == RemoteStatus::Ok);
+            }
+            SourceEvent::Status(st) => self.tick(st.timestamp),
+            SourceEvent::Journal { ev, .. } => {
+                self.tick(ev.timestamp);
+                self.on_journal(ev, state, ctx);
+                if !self.route_value.is_null() && !affects_topics(&ev.kind) {
+                    return TopicSet::new();
+                }
+            }
             SourceEvent::Stored { module, tag, value }
-                if module == "navigation" && tag == VISITS_TAG =>
+                if module == "navigation"
+                    && tag == VISITS_TAG
+                    && value.get("cmdr").and_then(Value::as_str) == self.visits.cmdr.as_deref() =>
             {
-                self.visits.load(value);
+                self.visits.load(&value["rows"]);
             }
             _ => {}
         }
