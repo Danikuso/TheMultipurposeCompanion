@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-17 18:12 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-17 18:23 (Europe/Madrid) · Codex
 - **Fase actual:** F0 — Cimientos
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md) — ✅ aprobada (2026-10-17)
 - **Plan activo:** [`docs/plans/2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) — ✅ aprobado; ejecución por subagentes
@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** Task 7 (`tmc-journal` — Status, compañeros, proceso, HUD y watcher), Step 1.
-- **Siguiente acción:** tests de Task 7 y RED antes de implementar. Task 6 verificada y revisada: 55 tests del workspace, fmt y clippy PASS.
+- **Tarea:** Task 8 (`tmc-store` — SQLite, escritor e importación), Step 1: tests.
+- **Siguiente acción:** tests de Task 8 y RED antes de implementar. Task 7 aprobada y verificada (72 tests del workspace, fmt/clippy PASS); dependencia store → journal aprobada por el propietario.
 
 ## Fases
 
@@ -41,9 +41,9 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 3 | `tmc-model` — eventos del diario y archivos compañeros | ✅ | d24e813 | |
 | 4 | `tmc-model` — GameState y SourceEvent | ✅ hecha | 70e4999, 177eac1, 2ec0abe | Revisión aprobada; 35 tests PASS, fmt y clippy del workspace PASS. |
 | 5 | `tmc-journal` — localizar carpeta y listar diarios | ✅ hecha | e8e6cc8 | TDD 9 FAIL → 9 PASS; revisión aprobada; workspace 44 tests, fmt y clippy PASS. |
-| 6 | `tmc-journal` — lector incremental de líneas | ✅ hecha | commit de cierre Task 6 | RED 11 FAIL → GREEN 20 journal PASS; revisión y checks workspace PASS. |
-| 7 | `tmc-journal` — Status, compañeros, proceso, HUD y watcher | 🔄 en curso | — | Step 1: tests. |
-| 8 | `tmc-store` — SQLite, escritor e importación | ⬜ | — | |
+| 6 | `tmc-journal` — lector incremental de líneas | ✅ hecha | 7634de8 | RED 11 FAIL → GREEN 20 journal PASS; revisión y checks workspace PASS. |
+| 7 | `tmc-journal` — Status, compañeros, proceso, HUD y watcher | ✅ hecha | commit de cierre Task 7 | Revisión final aprobada; 37 journal y 72 workspace PASS, fmt/clippy PASS. |
+| 8 | `tmc-store` — SQLite, escritor e importación | 🔄 en curso | — | Step 1: tests. |
 | 9 | `tmc-core` — actor, módulos, topics y alertas | ⬜ | — | |
 | 10 | `tmc-i18n` y traducciones | ⬜ | — | |
 | 11 | `tmc-modules` — registro y `dashboard` | ⬜ | — | |
@@ -77,7 +77,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
-- 2026-10-17 18:12 (Europe/Madrid) · Codex · Continuación del plan autorizada sin interrupciones: Task 6 en curso con TDD y revisión por subagentes.
+- 2026-10-17 18:12 (Europe/Madrid) · Codex · Continuación del plan: Task 6 cerrada en7634de8 (55tests PASS), Task7 cerrada con revisión de XML/orden Status corregida (72tests PASS). Task8 en curso; dependencia store→journal aprobada.
 
 - 2026-10-17 18:12 (Europe/Madrid) · Codex · Task 4 cerrada en 2ec0abe tras revisión y correcciones TDD (31 PASS/4 FAIL → 35 PASS); fmt y clippy del workspace PASS. Task 5 completada con TDD y revisión independiente: 9 tests nuevos, workspace 44 PASS, fmt/clippy PASS. Pendiente ejecución nativa Linux; UI y medición de consumo corresponden a Tasks 15/18. Commits: 2ec0abe (Task 4), e8e6cc8 (Task 5); seguimiento final en commit documental inmediato. Sin código sin commit. Cargo disponible añadiendo C:\Users\danik\.cargo\bin al PATH del proceso. UI aún no creada (Task 15).
 

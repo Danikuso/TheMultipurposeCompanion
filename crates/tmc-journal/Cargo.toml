@@ -6,6 +6,14 @@ edition.workspace = true
 license-file.workspace = true
 repository.workspace = true
 
+[dependencies]
+tmc-model = { path = "../tmc-model" }
+tokio.workspace = true
+notify.workspace = true
+sysinfo.workspace = true
+tracing.workspace = true
+roxmltree = "0.21"
+
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.61.1", features = ["Win32_UI_Shell", "Win32_System_Com"] }
 

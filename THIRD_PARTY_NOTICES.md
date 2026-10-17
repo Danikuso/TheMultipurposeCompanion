@@ -33,7 +33,7 @@ Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, 
 ### tracing
 - Versión: 0.1.44
 - Licencia: MIT
-- Usada por: tmc-model
+- Usada por: tmc-model, tmc-journal
 
 <!-- Plantilla por dependencia:
 ### nombre
@@ -50,3 +50,23 @@ Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, 
 - Versión: 3.27.0
 - Licencia: MIT OR Apache-2.0
 - Usada por: tests de tmc-journal
+
+### tokio
+- Versión: 1.53.3
+- Licencia: MIT
+- Usada por: tmc-journal (tareas, temporizadores, canales y pool de E/S)
+
+### notify
+- Versión: 8.2.0
+- Licencia: CC0-1.0
+- Usada por: tmc-journal (aviso de creación de archivos; sondeo como respaldo)
+
+### sysinfo
+- Versión: 0.39.6
+- Licencia: MIT
+- Usada por: tmc-journal (detección del proceso del juego)
+
+### roxmltree
+- Versión: 0.21.1 (serie compatible declarada: 0.21)
+- Licencia: MIT OR Apache-2.0
+- Usada por: tmc-journal (lectura XML del tema HUD)

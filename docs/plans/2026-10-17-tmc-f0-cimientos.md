@@ -304,7 +304,7 @@ Algoritmo del watcher (bucle en una tarea tokio; E/S con `spawn_blocking` o sín
 5. Cada `process_check`: `is_game_running()`; si cambia, envía `GameProcess { running }`.
 6. Si el canal se cierra, termina.
 
-- [ ] **Step 1: Tests** (tokio test, tempdir; ticks acortados a 20 ms en tests):
+- [x] **Step 1: Tests** (tokio test, tempdir; ticks acortados a 20 ms en tests):
 
 ```rust
 #[test] fn status_poller_ignores_empty_and_truncated_reads() { /* válido → Some; vacío → None; truncado → None; mismo texto → None; nuevo válido → Some */ }
@@ -317,8 +317,8 @@ Algoritmo del watcher (bucle en una tarea tokio; E/S con `spawn_blocking` o sín
 #[tokio::test] async fn invalid_line_is_skipped_not_fatal() {}
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-journal` PASS.
-- [ ] **Step 5: Commit** `feat(journal): watcher del diario, Status, compañeros, proceso y tema HUD`
+- [x] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-journal` PASS.
+- [x] **Step 5: Commit** `feat(journal): watcher del diario, Status, compañeros, proceso y tema HUD`
 
 ---
 
@@ -690,3 +690,6 @@ Cambio mínimo aprobado explícitamente por el propietario en esta conversación
 - Task 6: RED observado en 11 tests del lector incremental. offset() persiste hasta el último LF entregado; read_pos privado conserva la lectura física y la cola parcial, evitando pérdida al reabrir. Semántica concretada sin cambiar interfaces.
 
 - Cierre Task 6: RED 11 FAIL → GREEN 11 nuevos tests PASS (20 journal). Revisión independiente aprobada. cargo fmt --all --check, cargo clippy --workspace --all-targets --offline -- -D warnings, cargo test --workspace --offline: código 0; 55 tests PASS (20 journal + 35 model). git diff --check: código 0.
+
+- Cierre Task 7: RED 20 PASS/11 FAIL; GREEN inicial34 journal. Revisión detectó matrices XML comentadas/malformadas y Status inicial posterior a live. Regresiones RED observadas (HUD3PASS/2FAIL; watcher 'live journal preceded initial Status'); corregidas con roxmltree y barrera inicial de Status. Revisión final aprobada.
+- Verificación Task 7: cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline --quiet; git diff --check: código 0. 72 tests PASS (37 journal+35 model). Prueba Status corrupto durante live conserva entrega de journal en menos de400ms con tick20ms. No equivale aún a medición p95 de la app final; consumo pendiente Task18.
