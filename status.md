@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 13 (`navigation` — alcance de salto y combustible) 🔄 en curso (Bloque 2).
-- **Siguiente acción:** completar la Task 13 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
+- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 14 (`navigation` — ruta activa y reglas de avance) 🔄 en curso (Bloque 2).
+- **Siguiente acción:** completar la Task 14 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
 
 ## Fases
 
@@ -46,7 +46,8 @@
 | 10 | `tmc-net` — clientes Spansh/EDSM/Canonn y `NetClient` | ✅ hecha | f87f9fb, 1303436 | reqwest 0.13 + rustls; licencias permisivas (incl. Unicode-3.0) en THIRD_PARTY_NOTICES; Canonn devuelve `Disabled`; autocompletado con id64; 56 tmc-net / 245 workspace PASS. Revisión aprobada tras 1 ronda. |
 | 11 | `tmc-app` — `NetService`, configuración y ajustes en caliente | ✅ hecha | 9e8f009, abaa34e | Caché ficha 24 h / política 1 h, agrupación, reintentos con retroceso, semáforo de 4, opt-out revalidado; 21 tmc-app PASS. Revisión aprobada tras 1 ronda. |
 | 12 | `tmc-server` — acciones con argumentos y autocompletado | ✅ hecha | 9960190, 61ef707 | `POST /api/actions/{name}` con JSON, WS `action` con `args`, `GET /api/navigation/autocomplete` paginado (20) con `{name,id64}`; seguridad LAN aplicada; 12 Vitest PASS. Revisión aprobada. **Seguridad:** protección CSRF en peticiones que cambian estado (Origin/Sec-Fetch-Site, JSON obligatorio), fallo preexistente de F0 detectado por análisis automático. |
-| 13–32 | Ver plan | ⬜ | — | |
+| 13 | `navigation` — alcance de salto y combustible | ✅ hecha | 1ef1621, cf191fa | `fsd.json` propio (procedencia, `verified:false`), validación contra MaxJumpRange con respaldo escalado, `star_flags` explícito; 30 tmc-modules PASS. Revisión aprobada tras 1 ronda. |
+| 14–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
