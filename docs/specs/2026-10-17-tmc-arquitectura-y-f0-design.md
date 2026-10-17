@@ -1,7 +1,7 @@
 # TMC — The Multipurpose Companion · Especificación de arquitectura y Fase 0
 
 - **Fecha:** 2026-10-17
-- **Estado:** pendiente de revisión por el propietario (Danikuso)
+- **Estado:** aprobada por el propietario (Danikuso), 2026-10-17; aprobación ratificada al reconciliar el seguimiento
 - **Investigación base:** `docs/research/informe-investigacion.md` y `docs/research/notes/`
 
 ---
@@ -102,7 +102,7 @@ Reglas de dependencia (sin ciclos):
 | `tmc-model` | — (solo serde) |
 | `tmc-i18n` | — |
 | `tmc-journal` | `tmc-model` |
-| `tmc-store` | `tmc-model` |
+| `tmc-store` | `tmc-model`, `tmc-journal` (importación de historial; aprobado 2026-10-17) |
 | `tmc-net` | `tmc-model` |
 | `tmc-core` | `tmc-model`, `tmc-store` (fuentes de eventos entran por un trait, no depende de `tmc-journal`/`tmc-net`) |
 | `tmc-modules` | `tmc-core`, `tmc-model`, `tmc-i18n` |

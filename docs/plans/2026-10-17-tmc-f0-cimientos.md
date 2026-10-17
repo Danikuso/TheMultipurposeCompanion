@@ -204,7 +204,7 @@ Expected: todo OK, 0 tests.
 
 Reglas que los tests fijan: `LoadGame` reinicia `SessionState` (started_at = timestamp, credits_at_start = Credits); `FSDJump` suma `jumps += 1`, `distance_ly += JumpDist`, actualiza ubicación y `fuel_main`; `next_system` = primer salto de `route.hops` posterior al sistema actual, o `FSDTarget.Name` si no hay ruta; `NavRouteClear` vacía la ruta; `FlightMode` se deriva de Status (prioridad: OnFoot > InTaxi > Multicrew > InSrv > InFighter > Docked > Landed > FSD_JUMP→Hyperspace > Supercruise > NormalSpace); `Status.balance` actualiza `credits_now` y `cmdr.credits`; `Status.fuel` actualiza combustible; `LoadGame` → `game_running = true`, `Shutdown` → `game_running = false`, `GameProcess{running}` lo sobrescribe (lo aplica el actor). `Rgb` se serializa como cadena `"#rrggbb"` (Serialize propio), de modo que `core.theme` llega a la UI listo para CSS.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn loadgame_starts_session_and_sets_cmdr() {}
@@ -219,10 +219,10 @@ Reglas que los tests fijan: `LoadGame` reinicia `SessionState` (started_at = tim
 #[test] fn apply_returns_only_changed_areas() { /* UnderAttack → Changes::empty() */ }
 ```
 
-- [ ] **Step 2:** `cargo test -p tmc-model` → FAIL.
-- [ ] **Step 3: Implementar** los reductores en `state.rs` (sin E/S, sin tiempo real; puro).
-- [ ] **Step 4:** `cargo test -p tmc-model` → PASS.
-- [ ] **Step 5: Commit** `feat(model): GameState y reductores de eventos`
+- [ ] **Step 2:** `cargo test -p tmc-model` → FAIL. Ciclo inicial no observado en esta sesión; sí se observó RED de las cuatro regresiones de revisión (véase verificación incremental).
+- [x] **Step 3: Implementar** los reductores en `state.rs` (sin E/S, sin tiempo real; puro).
+- [x] **Step 4:** `cargo test -p tmc-model` → PASS.
+- [x] **Step 5: Commit** `feat(model): GameState y reductores de eventos`
 
 ---
 
@@ -239,7 +239,7 @@ Reglas que los tests fijan: `LoadGame` reinicia `SessionState` (started_at = tim
   - `pub fn list_journals(dir: &Path) -> io::Result<Vec<PathBuf>>` ordenados por nombre (el formato antiguo va antes que el nuevo).
   - `pub fn graphics_override_path() -> Option<PathBuf>` (Windows `%LOCALAPPDATA%\Frontier Developments\Elite Dangerous\Options\Graphics\GraphicsConfigurationOverride.xml`; Linux dentro del prefijo Proton: `…/pfx/drive_c/users/steamuser/AppData/Local/Frontier Developments/Elite Dangerous/Options/Graphics/…`).
 
-- [ ] **Step 1: Tests** (con `tempfile`):
+- [x] **Step 1: Tests** (con `tempfile`):
 
 ```rust
 #[test] fn recognises_new_and_old_journal_names() {}
@@ -249,8 +249,8 @@ Reglas que los tests fijan: `LoadGame` reinicia `SessionState` (started_at = tim
 #[test] fn reads_journal_from_path_with_spaces_and_accents() { /* tempdir/"Partidas guardadas ñ é"/… → list_journals encuentra 2 archivos */ }
 ```
 
-- [ ] **Step 2:** `cargo test -p tmc-journal` → FAIL. **Step 3:** implementar. **Step 4:** PASS.
-- [ ] **Step 5: Commit** `feat(journal): localización de carpeta y listado de diarios`
+- [x] **Step 2:** `cargo test -p tmc-journal` → FAIL. **Step 3:** implementar. **Step 4:** PASS.
+- [x] **Step 5: Commit** `feat(journal): localización de carpeta y listado de diarios`
 
 ---
 
@@ -264,7 +264,7 @@ Reglas que los tests fijan: `LoadGame` reinicia `SessionState` (started_at = tim
 
 Comportamiento: abre con permisos de compartición lectura+escritura+borrado (Windows: `OpenOptionsExt::share_mode(FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE)`); lee desde `offset` hasta EOF; solo devuelve líneas terminadas en `\n` (quita `\r`); guarda el resto en buffer interno; ignora bytes NUL iniciales; si el archivo encoge (truncado), reinicia a 0.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn reads_complete_lines_and_advances_offset() {}
@@ -276,8 +276,8 @@ Comportamiento: abre con permisos de compartición lectura+escritura+borrado (Wi
 #[test] fn skips_leading_nul_bytes() {}
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-journal` PASS.
-- [ ] **Step 5: Commit** `feat(journal): lector incremental de líneas con offset`
+- [x] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-journal` PASS.
+- [x] **Step 5: Commit** `feat(journal): lector incremental de líneas con offset`
 
 ---
 
@@ -304,7 +304,7 @@ Algoritmo del watcher (bucle en una tarea tokio; E/S con `spawn_blocking` o sín
 5. Cada `process_check`: `is_game_running()`; si cambia, envía `GameProcess { running }`.
 6. Si el canal se cierra, termina.
 
-- [ ] **Step 1: Tests** (tokio test, tempdir; ticks acortados a 20 ms en tests):
+- [x] **Step 1: Tests** (tokio test, tempdir; ticks acortados a 20 ms en tests):
 
 ```rust
 #[test] fn status_poller_ignores_empty_and_truncated_reads() { /* válido → Some; vacío → None; truncado → None; mismo texto → None; nuevo válido → Some */ }
@@ -317,8 +317,8 @@ Algoritmo del watcher (bucle en una tarea tokio; E/S con `spawn_blocking` o sín
 #[tokio::test] async fn invalid_line_is_skipped_not_fatal() {}
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-journal` PASS.
-- [ ] **Step 5: Commit** `feat(journal): watcher del diario, Status, compañeros, proceso y tema HUD`
+- [x] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-journal` PASS.
+- [x] **Step 5: Commit** `feat(journal): watcher del diario, Status, compañeros, proceso y tema HUD`
 
 ---
 
@@ -333,13 +333,13 @@ Algoritmo del watcher (bucle en una tarea tokio; E/S con `spawn_blocking` o sín
   - `pub struct Store` (clonable; internamente ruta + conexión para lecturas); `Store::open(path: &Path) -> Result<Store, StoreError>`, `Store::open_in_memory() -> Result<Store, StoreError>`; aplica el esquema F0 de la especificación §6 tal cual + `PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`.
   - `pub struct Migration { pub id: &'static str, pub sql: &'static str }`; `Store::apply_migrations(&self, migrations: &[Migration]) -> Result<(), StoreError>` (tabla `schema_version(id TEXT PRIMARY KEY, applied_at TEXT)`; idempotente).
   - `pub struct StoredEvent { pub file_name: String, pub line: u64, pub ts: DateTime<Utc>, pub name: String, pub cmdr: Option<String>, pub json: String }`
-  - `pub struct EventWriter` — `EventWriter::spawn(store: &Store) -> EventWriter`, `fn send(&self, ev: StoredEvent)` (no bloquea; canal `std::sync::mpsc`), hilo propio con commit cada 500 ms o 500 filas, `INSERT OR IGNORE` (idempotente por `UNIQUE(file_id,line)`), actualiza `journal_file.offset`; `fn flush_blocking(&self)` para tests y cierre.
+  - `pub struct EventWriter` — `EventWriter::spawn(store: &Store) -> EventWriter`, `fn send(&self, ev: StoredEvent)` (no bloquea; canal `std::sync::mpsc`), hilo propio con commit cada 500 ms o 500 filas, `INSERT OR IGNORE` (idempotente por `UNIQUE(file_id,line)`), no modifica `journal_file.offset` (R1: propiedad exclusiva de `import_history`); `fn flush_blocking(&self) -> Result<(), StoreError>` para tests y cierre (desviación documentada abajo).
   - `pub struct ImportOptions { pub throttle: Arc<AtomicBool> /*true = juego activo → limitar*/ }`; `pub struct ImportReport { pub files: u64, pub events: u64, pub skipped_lines: u64 }`.
   - `pub fn import_history(store: &Store, dir: &Path, opts: &ImportOptions, progress: &mut dyn FnMut(u64, u64)) -> Result<ImportReport, StoreError>`: recorre `list_journals`, salta los `complete = 1`, reanuda desde `journal_file.offset`, transacciones de 5 000 filas, `cmdr` = último `Commander.Name`/`LoadGame.Commander` visto en ese archivo, marca `complete = 1` en archivos que no son el más reciente. Con `throttle = true`, duerme 50 ms cada 5 000 filas.
   - `pub struct EventQuery { pub name: Option<String>, pub from: Option<DateTime<Utc>>, pub to: Option<DateTime<Utc>>, pub cmdr: Option<String>, pub limit: u32 /*≤1000*/, pub before_id: Option<i64> }`; `Store::query_events(&self, q: &EventQuery) -> Result<Vec<EventRow>, StoreError>`; `EventRow { id: i64, ts, name, cmdr, json }` ordenado por `id DESC`.
   - `Store::kv_get(&self, key) -> Option<String>`, `Store::kv_set(&self, key, value)`.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn schema_is_created_and_wal_enabled() {}
@@ -352,8 +352,8 @@ Algoritmo del watcher (bucle en una tarea tokio; E/S con `spawn_blocking` o sín
 #[test] fn query_events_filters_and_paginates() {}
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-store` PASS.
-- [ ] **Step 5: Commit** `feat(store): SQLite, escritor por lotes e importación reanudable`
+- [x] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-store` PASS.
+- [x] **Step 5: Commit** `feat(store): SQLite, escritor por lotes e importación reanudable`
 
 ---
 
@@ -377,7 +377,7 @@ Algoritmo del watcher (bucle en una tarea tokio; E/S con `spawn_blocking` o sín
 
 Reglas: el actor es el único dueño de `GameState` y módulos; por cada `SourceEvent::Journal` envía `StoredEvent` al `writer` (cmdr = `GameState.cmdr.name` vigente); llama a cada módulo dentro de `std::panic::catch_unwind(AssertUnwindSafe(..))` — si un módulo hace panic se elimina de la lista y se emite `Alert::new(Critical, "alert-module-crashed").arg("module", id)`; acumula topics sucios y, cada `flush_every`, emite un único `CoreMessage::Update` con `seq` creciente (nada si no hay sucios); alertas e `ImportProgress` se emiten inmediatamente.
 
-- [ ] **Step 1: Tests** (tokio, módulos falsos en el propio test):
+- [x] **Step 1: Tests** (tokio, módulos falsos en el propio test):
 
 ```rust
 #[tokio::test] async fn journal_event_updates_core_topics() { /* FSDJump → Update contiene core.location y core.session */ }
@@ -389,8 +389,8 @@ Reglas: el actor es el único dueño de `GameState` y módulos; por cada `Source
 #[tokio::test] async fn no_update_when_nothing_changed() {}
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-core` PASS.
-- [ ] **Step 5: Commit** `feat(core): actor de estado, contrato de módulos, topics y alertas`
+- [x] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-core` PASS.
+- [x] **Step 5: Commit** `feat(core): actor de estado, contrato de módulos, topics y alertas`
 
 ---
 
@@ -403,7 +403,7 @@ Reglas: el actor es el único dueño de `GameState` y módulos; por cada `Source
 - Produces: `pub const LANGUAGES: [&str; 5] = ["es","en","fr","de","pt"]`; `pub struct I18n`; `I18n::new(lang: &str) -> I18n` (idioma desconocido → `es`; fallback de claves a `es`); `fn t(&self, key: &str, args: &[(&str, FluentValue)]) -> String` (clave inexistente → la propia clave); `pub fn keys(lang: &str) -> BTreeSet<String>`. Archivos embebidos con `rust-embed` (`folder = "../../locales"`).
 - Claves mínimas de F0 (todas en los 5 idiomas, traducidas de verdad, no copias en español): `app-name`, `nav-dashboard`, `nav-settings`, `panel-cmdr`, `panel-ship`, `panel-location`, `panel-status`, `panel-route`, `panel-session`, `panel-alerts`, `field-credits`, `field-hull`, `field-fuel`, `field-cargo`, `field-rebuy`, `field-jump-range`, `field-system`, `field-body`, `field-station`, `field-next-system`, `field-remaining-jumps`, `field-session-time`, `field-jumps`, `field-distance`, `field-credits-earned`, `mode-docked`, `mode-landed`, `mode-normal-space`, `mode-supercruise`, `mode-hyperspace`, `mode-on-foot`, `mode-in-srv`, `mode-in-fighter`, `mode-in-taxi`, `mode-multicrew`, `mode-unknown`, `flag-shields`, `flag-hardpoints`, `flag-landing-gear`, `flag-mass-locked`, `flag-silent-running`, `flag-cargo-scoop`, `flag-sco`, `alert-low-fuel`, `alert-overheating`, `alert-interdiction`, `alert-under-attack`, `alert-hull-damage` (arg `$pct`), `alert-low-oxygen`, `alert-low-health`, `alert-module-crashed` (arg `$module`), `action-copy-next-system`, `toast-copied` (arg `$system`), `import-progress` (args `$done`, `$total`), `game-not-running`, `galaxy-legacy-warning`, `settings-language`, `settings-lan`, `settings-lan-help`, `settings-pairing-qr`, `settings-auto-copy`, `settings-theme`, `theme-hud`, `theme-classic`, `tray-open`, `tray-quit`, `empty-no-data`.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn all_languages_have_same_keys_as_es() { for l in LANGUAGES { assert_eq!(keys(l), keys("es"), "{l}"); } }
@@ -412,8 +412,8 @@ Reglas: el actor es el único dueño de `GameState` y módulos; por cada `Source
 #[test] fn missing_key_returns_key() {}
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar + escribir los `.ftl`. **Step 4:** `cargo test -p tmc-i18n` PASS.
-- [ ] **Step 5: Commit** `feat(i18n): Fluent compartido y traducciones es/en/fr/de/pt`
+- [x] **Step 2:** FAIL. **Step 3:** implementar + escribir los `.ftl`. **Step 4:** `cargo test -p tmc-i18n` PASS.
+- [x] **Step 5: Commit** `feat(i18n): Fluent compartido y traducciones es/en/fr/de/pt`
 
 ---
 
@@ -424,7 +424,7 @@ Reglas: el actor es el único dueño de `GameState` y módulos; por cada `Source
 
 **Interfaces:**
 - Consumes: `Module`, `ModuleCtx`, `Alert`, `Severity`, `GameState`, `SourceEvent`, `Flags`, `Flags2`.
-- Produces: `pub fn all_modules() -> Vec<Box<dyn Module>>` (F0: `[Dashboard::new()]`); `pub struct Dashboard`; topic `dashboard.alerts` = lista de alertas activas `[{id, severity, key, args, since}]` (máx. 20, se retiran cuando la condición desaparece o tras 60 s las basadas en eventos).
+- Produces: `pub fn all_modules() -> Vec<Box<dyn Module>>` (F0: `[Dashboard::new()]`); `pub struct Dashboard`; topic `dashboard.alerts` = lista de alertas activas `[{id, severity, key, args, since}]` (máx. 20, se retiran cuando la condición desaparece; las basadas en eventos caducan al procesar el siguiente Journal/Status con timestamp >= since + 60 s; véase desviación temporal).
 
 Reglas de alerta (`rules.rs`), con antirrebote: la misma `key` no se repite en **30 s**:
 
@@ -440,7 +440,7 @@ Reglas de alerta (`rules.rs`), con antirrebote: la misma `key` no se repite en *
 
 Relevance: `Urgent` si hay alguna alerta Critical activa, si no `Normal`.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn low_fuel_alert_on_rising_edge_only() {}
@@ -451,8 +451,8 @@ Relevance: `Urgent` si hay alguna alerta Critical activa, si no `Normal`.
 #[test] fn registry_contains_dashboard() {}
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar (el antirrebote usa `timestamp` del evento/Status para ser determinista). **Step 4:** `cargo test -p tmc-modules` PASS.
-- [ ] **Step 5: Commit** `feat(modules): registro de módulos y panel general con alertas`
+- [x] **Step 2:** FAIL. **Step 3:** implementar (el antirrebote usa `timestamp` del evento/Status para ser determinista). **Step 4:** `cargo test -p tmc-modules` PASS.
+- [x] **Step 5: Commit** `feat(modules): registro de módulos y panel general con alertas`
 
 ---
 
@@ -472,7 +472,7 @@ Relevance: `Urgent` si hay alguna alerta Critical activa, si no `Normal`.
   - Protocolo WS exactamente como spec §7.2: al conectar `hello` (`version: 1`, `locale` de config, lista de topics del snapshot), luego `snapshot`; después reenvía `CoreMessage` filtrados por las suscripciones (`subscribe` con patrones `prefijo.*` o nombre exacto; sin `subscribe` → todos). Cada `subscribe` recibido se responde con un `snapshot` nuevo de los topics que casan (así la UI puede bajar a `["core.game"]` al ocultarse y recuperar todo al volver). Si el cliente va lento (`broadcast` con `Lagged`), se le reenvía un `snapshot` completo.
   - Seguridad (`security.rs`, middleware): peticiones desde loopback → permitidas sin token pero `Host` debe ser `127.0.0.1:{port}` o `localhost:{port}`; peticiones desde otra IP → solo si `lan = true` **y** token válido (query `?token=` la primera vez → cookie `tmc_token` HttpOnly SameSite=Strict; después cookie) **y** `Host` = IP local:puerto; en `/ws` además `Origin` debe coincidir con el `Host`. Comparación de token en tiempo constante.
 
-- [ ] **Step 1: Tests** (`tower::ServiceExt::oneshot` para HTTP; `tokio-tungstenite` para WS):
+- [x] **Step 1: Tests** (`tower::ServiceExt::oneshot` para HTTP; `tokio-tungstenite` para WS):
 
 ```rust
 #[tokio::test] async fn health_ok_from_loopback() {}
@@ -487,8 +487,8 @@ Relevance: `Urgent` si hay alguna alerta Critical activa, si no `Normal`.
 #[tokio::test] async fn falls_back_to_next_free_port() {}
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-server` PASS.
-- [ ] **Step 5: Commit** `feat(server): HTTP/WebSocket, seguridad LAN y emparejamiento por QR`
+- [x] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-server` PASS.
+- [x] **Step 5: Commit** `feat(server): HTTP/WebSocket, seguridad LAN y emparejamiento por QR`
 
 ---
 
@@ -509,7 +509,7 @@ Relevance: `Urgent` si hay alguna alerta Critical activa, si no `Normal`.
   - `pub struct Running { pub server: ServerHandle, pub core: CoreHandle, pub store: Store }`; `pub async fn start(config: Config) -> anyhow::Result<Running>`: resuelve carpeta del diario, abre `Store` en `data_dir()/tmc.db`, crea `EventWriter`, `spawn_core(all_modules(), Some(writer), 100ms)`, `spawn_watcher`, lanza `import_history` en un hilo (`throttle` = juego activo; progreso → `SourceEvent::ImportProgress`), arranca `serve`; si `auto_copy_next_system`, tarea que escucha `Update` con `core.route` y copia `next_system` cuando cambia (no durante replay inicial).
   - `apps/headless/src/main.rs`: `tmc-headless [--config <ruta>] [--journal-dir <ruta>] [--ui-dir <ruta>]` → `start`, imprime `local_url` (y `lan_url`), espera Ctrl+C.
 
-- [ ] **Step 1: Tests** (`tmc-app`):
+- [x] **Step 1: Tests** (`tmc-app`):
 
 ```rust
 #[test] fn config_roundtrip_and_defaults() { /* port 47320, language "es", auto_copy true */ }
@@ -520,13 +520,13 @@ Relevance: `Urgent` si hay alguna alerta Critical activa, si no `Normal`.
 #[tokio::test] async fn start_end_to_end_with_temp_journal_dir() { /* tempdir con basic_session.log + Status.json → GET /api/health ok; WS snapshot contiene core.location.system esperado */ }
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-app` PASS.
-- [ ] **Step 5: Verificación manual con tus diarios reales**
+- [x] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-app` PASS.
+- [x] **Step 5: Verificación manual con tus diarios reales**
 
 Run: `cargo run -p tmc-headless` y abrir `http://127.0.0.1:47320/api/health`
 Expected: `{"ok":true,...}`; en el log aparece la importación del historial terminada.
 
-- [ ] **Step 6: Commit** `feat(app): composición, configuración, portapapeles y binario headless`
+- [x] **Step 6: Commit** `feat(app): composición, configuración, portapapeles y binario headless`
 
 ---
 
@@ -541,7 +541,7 @@ Expected: `{"ok":true,...}`; en el log aparece la importación del historial ter
   - `tmc-replay anonymize --from <archivo.log> --to <archivo.log>`: sustituye nombre de comandante (`Commander`, `Name` en `Commander`/`LoadGame`), `FID`, `ShipName`, `ShipIdent`, nombres de amigos/alas/escuadrón y textos de chat (`ReceiveText`, `SendText`) por valores ficticios estables (`CMDR TESTER`, `F0000001`, …); elimina eventos `Friends`.
   - `pub fn anonymize_line(line: &str, map: &mut Pseudonyms) -> Option<String>` y `pub async fn play(opts: PlayOptions) -> anyhow::Result<()>` (públicas para tests).
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn anonymize_replaces_identity_fields_consistently() {}
@@ -549,10 +549,10 @@ Expected: `{"ok":true,...}`; en el log aparece la importación del historial ter
 #[tokio::test] async fn play_writes_all_lines_in_order_at_speed() { /* speed 1000 → todas las líneas, orden intacto */ }
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-replay` PASS.
-- [ ] **Step 5: Generar fixtures reales anonimizados** a partir de los diarios del propietario (`%USERPROFILE%\Saved Games\Frontier Developments\Elite Dangerous\Journal.*.log`) → `tests/fixtures/journal/real_01.log`…; revisar a mano con `grep -i` que no queda el nombre real del comandante.
-- [ ] **Step 6: Test de snapshot** en `tmc-model` (`insta`): `real_fixtures_end_state` aplica cada `real_*.log` y guarda el `GameState` final con `insta::assert_json_snapshot!`. Run: `cargo insta test -p tmc-model --accept` la primera vez; revisar el `.snap`.
-- [ ] **Step 7: Commit** `feat(replay): reproductor y anonimizador de diarios + fixtures reales`
+- [x] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-replay` PASS.
+- [x] **Step 5: Generar fixtures reales anonimizados** a partir de los diarios del propietario (`%USERPROFILE%\Saved Games\Frontier Developments\Elite Dangerous\Journal.*.log`) → `tests/fixtures/journal/real_01.log`…; revisar a mano con `grep -i` que no queda el nombre real del comandante.
+- [x] **Step 6: Test de snapshot** en `tmc-model` (`insta`): `real_fixtures_end_state` aplica cada `real_*.log` y guarda el `GameState` final con `insta::assert_json_snapshot!`. Run: `cargo insta test -p tmc-model --accept` la primera vez; revisar el `.snap`.
+- [x] **Step 7: Commit** `feat(replay): reproductor y anonimizador de diarios + fixtures reales`
 
 ---
 
@@ -571,8 +571,8 @@ Expected: `{"ok":true,...}`; en el log aparece la importación del historial ter
   - Shell: `Sidebar` (iconos de módulos de `core.modules`, punto de color según `relevance`), `TopBar` fija (sistema, modo de vuelo, combustible, casco, carga, créditos, indicador de conexión y de `core.game.running`; aviso `galaxy-legacy-warning` si `galaxy == "Legacy"`), `Grid` CSS grid: **4 columnas ≥ 2400 px**, 3 columnas ≥ 1600 px, 2 columnas ≥ 900 px, 1 columna por debajo; `Panel` (título traducido + contenido; borde y título con `--hud-*`); `Toasts` (alertas 8 s, Critical hasta cerrar); `ImportProgress` (barra mientras `done < total`).
   - Reglas de estilo: tipografía del sistema (`system-ui`) sin fuentes externas; contraste AA sobre `--hud-bg`; **sin** `@keyframes` infinitos; `transition` ≤ 200 ms.
 
-- [ ] **Step 1: Scaffold** con Vite + Svelte 5 + TS (`npm create vite@latest ui -- --template svelte-ts`), añadir `@fluent/bundle`, `vitest`, `jsdom`, `@sveltejs/vite-plugin-svelte`, `svelte-check`. Scripts: `dev`, `build`, `check` (`svelte-check`), `test` (`vitest run`). `vite.config.ts`: proxy `/ws` y `/api` → `http://127.0.0.1:47320` en dev; `server.fs.allow` incluye `../locales`.
-- [ ] **Step 2: Tests:**
+- [x] **Step 1: Scaffold** con Vite + Svelte 5 + TS (`npm create vite@latest ui -- --template svelte-ts`), añadir `@fluent/bundle`, `vitest`, `jsdom`, `@sveltejs/vite-plugin-svelte`, `svelte-check`. Scripts: `dev`, `build`, `check` (`svelte-check`), `test` (`vitest run`). `vite.config.ts`: proxy `/ws` y `/api` → `http://127.0.0.1:47320` en dev; `server.fs.allow` incluye `../locales`.
+- [x] **Step 2: Tests:**
 
 ```ts
 test('ws applies snapshot then update', ...)        // mock WebSocket: hello → snapshot → update; topic('core.status') refleja el último valor
@@ -583,8 +583,8 @@ test('all locales define the same keys', ...)       // parsea los 5 .ftl y compa
 test('applyTheme sets css variables', ...)          // document.documentElement.style.getPropertyValue('--hud-primary') === '#ff7100'
 ```
 
-- [ ] **Step 3:** `npm test` en `ui/` → FAIL. **Step 4:** implementar. **Step 5:** `npm test && npm run check && npm run build` → PASS.
-- [ ] **Step 6: Commit** `feat(ui): cliente WebSocket, i18n Fluent, tema HUD y shell con rejilla`
+- [x] **Step 3:** `npm test` en `ui/` → FAIL. **Step 4:** implementar. **Step 5:** `npm test && npm run check && npm run build` → PASS.
+- [x] **Step 6: Commit** `feat(ui): cliente WebSocket, i18n Fluent, tema HUD y shell con rejilla`
 
 ---
 
@@ -602,7 +602,7 @@ test('applyTheme sets css variables', ...)          // document.documentElement.
   - Estado vacío en cada panel: `t('empty-no-data')`.
   - Ajustes: idioma (5), tema (HUD / clásico / alto contraste — este último fija `--hud-primary #FFFFFF`, `--hud-bg #000000`), auto-copia, modo LAN (on/off) y `Pairing.svelte` que muestra el QR SVG de `/api/pairing`. Persistencia: `GET/PUT /api/config` (añadir en `tmc-server` + `tmc-app`, valida y guarda `Config`; los cambios de LAN aplican tras reiniciar y la UI lo indica).
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```ts
 test('ship panel shows fuel bar and hull percent', ...)        // topics simulados → texto "87 %" y barra con ancho proporcional
@@ -613,8 +613,8 @@ test('session duration does not re-render faster than 30 s', ...) // fake timers
 
 `smoke.spec.ts` (Playwright, `webServer` = `cargo run -p tmc-headless -- --journal-dir <tmp>` alimentado con `tmc-replay play --from tests/fixtures/journal/basic_session.log --speed 50`): la página carga, el TopBar muestra el sistema final del fixture y no hay errores en consola.
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `npm test && npm run check && npx playwright test` → PASS; `cargo test --workspace` → PASS.
-- [ ] **Step 5: Commit** `feat(ui): panel general, ajustes y emparejamiento LAN`
+- [x] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `npm test && npm run check && npx playwright test` → PASS; `cargo test --workspace` → PASS.
+- [x] **Step 5: Commit** `feat(ui): panel general, ajustes y emparejamiento LAN`
 
 ---
 
@@ -633,14 +633,14 @@ test('session duration does not re-render faster than 30 s', ...) // fake timers
   - `tauri.conf.json`: `identifier = "io.github.danikuso.tmc"`, `productName = "TMC"`, bundle `targets = ["nsis"]`, `windows.webviewInstallMode = { type = "downloadBootstrapper" }`, `nsis.languages = ["Spanish","English","French","German","Portuguese"]`, sin `devUrl` (la UI la sirve el servidor), `beforeBuildCommand = "npm --prefix ../../ui run build"`.
   - `capabilities/default.json`: mínimas (ventana principal, sin `shell`/`fs` expuestos al JS — la UI habla solo con el servidor local).
 
-- [ ] **Step 1: Verificación de build**
+- [x] **Step 1: Verificación de build**
 
 Run: `cargo tauri build` (desde `apps/desktop`)
 Expected: genera `target/release/bundle/nsis/TMC_<versión>_x64-setup.exe`.
 
-- [ ] **Step 2: Prueba manual** (anotar resultado en el PR/commit): instalar el `setup.exe`; arranca, muestra el panel con tus datos reales; cerrar → queda en bandeja y desaparecen los procesos `msedgewebview2.exe` hijos de TMC (comprobar en el Administrador de tareas); «Abrir» desde la bandeja la recrea; una segunda ejecución no abre otra instancia; «Salir» libera el puerto 47320.
+- [x] **Step 2: Prueba manual** (anotar resultado en el PR/commit): instalar el `setup.exe`; arranca, muestra el panel con tus datos reales; cerrar → queda en bandeja y desaparecen los procesos `msedgewebview2.exe` hijos de TMC (comprobar en el Administrador de tareas); «Abrir» desde la bandeja la recrea; una segunda ejecución no abre otra instancia; «Salir» libera el puerto 47320.
 
-- [ ] **Step 3: Commit** `feat(desktop): app Tauri con bandeja, ahorro de memoria e instalador NSIS`
+- [x] **Step 3: Commit** `feat(desktop): app Tauri con bandeja, ahorro de memoria e instalador NSIS`
 
 ---
 
@@ -653,10 +653,10 @@ Expected: genera `target/release/bundle/nsis/TMC_<versión>_x64-setup.exe`.
 **Interfaces:**
 - Produces: `scripts/measure-footprint.ps1 -Exe <ruta a TMC.exe> -JournalDir <carpeta> -Seconds 120 [-MaxMB 150] [-MaxCpu 1.0]`: arranca TMC con `--journal-dir`, lanza en paralelo `tmc-replay play --speed 5` sobre `tests/fixtures/journal/real_01.log`, muestrea cada 2 s la **memoria privada (Private Bytes)** y la CPU del árbol de procesos (TMC + `msedgewebview2.exe` cuyo proceso padre pertenece al árbol), descarta los primeros 20 s (arranque e importación), e imprime `max_mb`, `avg_cpu_idle` (muestras de los últimos 30 s, ya sin replay) y `PASS`/`FAIL`; código de salida 1 si falla.
 
-- [ ] **Step 1: Ejecutar** `pwsh scripts/measure-footprint.ps1 -Exe target/release/TMC.exe -JournalDir $env:TEMP\tmc-replay -Seconds 120`
+- [x] **Step 1: Ejecutar** `pwsh scripts/measure-footprint.ps1 -Exe target/release/TMC.exe -JournalDir $env:TEMP\tmc-replay -Seconds 120`
 Expected: `PASS` (< 150 MB, < 1 % CPU en reposo). Si falla, abrir incidencia con los números y no cerrar F0.
-- [ ] **Step 2: Revisar los criterios de aceptación §15 de la especificación** uno a uno y anotar la evidencia (comando + salida) en `docs/plans/2026-10-17-tmc-f0-cimientos.md` bajo un apartado «Verificación F0».
-- [ ] **Step 3: Commit** `chore: script de presupuesto de consumo y documentación de F0`
+- [x] **Step 2: Revisar los criterios de aceptación §15 de la especificación** uno a uno y anotar la evidencia (comando + salida) en `docs/plans/2026-10-17-tmc-f0-cimientos.md` bajo un apartado «Verificación F0».
+- [x] **Step 3: Commit** `chore: script de presupuesto de consumo y documentación de F0`
 
 ---
 
@@ -665,3 +665,186 @@ Expected: `PASS` (< 150 MB, < 1 % CPU en reposo). Si falla, abrir incidencia con
 - **Disposiciones guardadas por perfil y cambio automático de disposición** (spec §8.1, §5.3): F0 entrega la rejilla adaptable y la relevancia por módulo (`core.modules`), pero la edición/guardado de disposiciones y el salto automático llegan en F1, cuando haya más de un módulo que reordenar.
 - **`Module::migrations()`** (spec §5.2) y escritura en tablas propias desde `ModuleCtx`: se añaden cuando el primer módulo lo necesite (F1). El esquema F0 de §6 sí se crea completo.
 - **Secretos en `keyring`** (spec §9): F0 no maneja ningún secreto (no hay servicios online); se introduce en F6.
+
+
+## Reconciliación y verificación incremental (2026-10-17)
+
+- El propietario ratifica la aprobación registrada de spec y plan y autoriza revisar Task 4 existente antes de continuar con Task 5.
+- Task 4 ya estaba implementada en 70e4999 y 177eac1; no se reconstruye su ciclo TDD original. Comprobación inicial: cargo fmt --all --check, cargo clippy --workspace --all-targets -- -D warnings y cargo test --workspace terminan con código 0 (31 tests).
+- Revisión independiente de Task 4: corregir notificación de creación de estado ante Rank/Progress/Loadout parciales; activar game_running en Fileheader sin reiniciar contadores; alinear HudTheme por defecto con la paleta de Task 7. Se añaden regresiones con ciclo RED/GREEN observado.
+- UI aún no existe (Task 15); checks npm no aplicables en este punto. El script de consumo se crea en Task 18; aún no hay aplicación ejecutable para medir.
+
+- Cierre Task 4: regresiones RED (31 PASS/4 FAIL) y GREEN (35 PASS). Revisión de correcciones aprobada. Verificación global: cargo fmt --all --check, cargo clippy --workspace --all-targets -- -D warnings y cargo test --workspace, todos código 0. Avisos de caché incremental por hard links: Rust copia archivos como alternativa; sin fallos de compilación.
+
+- Cierre Task 5: cargo test -p tmc-journal --offline con stubs termina con 9 FAIL (RED); tras implementación, 9 PASS (GREEN). Revisión independiente aprobada, sin hallazgos bloqueantes. cargo fmt --all --check, cargo clippy --workspace --all-targets --offline -- -D warnings y cargo test --workspace --offline: código 0, 44 tests PASS (9 journal + 35 model). git diff --check: código 0.
+- Task 5 no cambia las interfaces previstas. Dependencias directas nuevas: windows 0.61.3 (solo Windows; MIT OR Apache-2.0), tempfile 3.27.0 (tests; MIT OR Apache-2.0), registradas en THIRD_PARTY_NOTICES.md. Se resolvió la restricción DNS mediante cargo fetch autorizado; sin downgrades de dependencias previas.
+- Límite de verificación: ejecución en Windows; helpers Linux probados con carpetas temporales, pendientes ejecución nativa Linux y comprobación manual con Saved Games redirigida. No hay app ni script de consumo todavía; Task 5 no incorpora bucles ni tareas en segundo plano.
+
+
+## Decisión aprobada del propietario: dependencia de importación (Task 8)
+
+La spec §3.1 declara que tmc-store depende solo de tmc-model. Task 8 sitúa import_history en tmc-store y exige consumir list_journals y LineTailer de tmc-journal. El ledger anterior considera 5,6→8 correcto, pero R1–R5 no autorizan esa dependencia.
+
+Cambio mínimo aprobado explícitamente por el propietario en esta conversación (2026-10-17): en spec §3.1, fila tmc-store, sustituir «tmc-model» por «tmc-model, tmc-journal». Mantiene las firmas del plan y el grafo acíclico store → journal → model. Tras implementarlo, verificar cargo metadata y tests de importación. Tasks 6–7 pueden continuar mientras se decide.
+
+- Task 6: RED observado en 11 tests del lector incremental. offset() persiste hasta el último LF entregado; read_pos privado conserva la lectura física y la cola parcial, evitando pérdida al reabrir. Semántica concretada sin cambiar interfaces.
+
+- Cierre Task 6: RED 11 FAIL → GREEN 11 nuevos tests PASS (20 journal). Revisión independiente aprobada. cargo fmt --all --check, cargo clippy --workspace --all-targets --offline -- -D warnings, cargo test --workspace --offline: código 0; 55 tests PASS (20 journal + 35 model). git diff --check: código 0.
+
+- Cierre Task 7: RED 20 PASS/11 FAIL; GREEN inicial34 journal. Revisión detectó matrices XML comentadas/malformadas y Status inicial posterior a live. Regresiones RED observadas (HUD3PASS/2FAIL; watcher 'live journal preceded initial Status'); corregidas con roxmltree y barrera inicial de Status. Revisión final aprobada.
+- Verificación Task 7: cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline --quiet; git diff --check: código 0. 72 tests PASS (37 journal+35 model). Prueba Status corrupto durante live conserva entrega de journal en menos de 400 ms con tick de 20 ms. No equivale aún a medición p95 de la app final; consumo pendiente Task18.
+
+- Comprobación previa Task 8: cargo metadata --no-deps --offline --format-version 1 confirma journal → model y store → journal + model, conforme a la tabla aprobada, sin ciclos. Store comparte conexión mediante Arc<Mutex<Connection>> para soportar clones y escritor en memoria; no afecta al modelo actor/GameState.
+
+
+### Desviación Task 8: errores explícitos al confirmar escritura (2026-10-17)
+
+La revisión encontró que flush_blocking sin retorno podía confirmar un lote fallido. Se cambia la firma a fn flush_blocking(&self) -> Result<(), StoreError>; las llamadas deben manejar el error. No cambia la spec: cumple su §10 (SQLite ocupado: reintento; fallos no tumban la app). El lote permanece en el escritor tras un fallo para permitir otro flush. En Drop se intenta drenar y se registra el fallo si SQLite impide hacerlo; no se espera indefinidamente. El diario original sigue siendo fuente de recuperación y el escritor nunca adelanta el offset del importador (R1). Las pruebas usan un bloqueo SQLite externo con timeout reducido para comprobar error y posterior recuperación. No afecta a firmas de Tasks 9–13 descritas; sus llamadas al método deberán manejar Result.
+
+- Cierre Task 8: RED 15 FAIL → GREEN inicial 17; revisión de importación/migraciones aprobada y corrección de flush validada mediante bloqueo SQLite (RED falso éxito → GREEN 18 store). Revisión final aprobada. cargo fmt --all --check, cargo clippy --workspace --all-targets --offline -- -D warnings, cargo test --workspace --offline --quiet y git diff --check terminan con código 0: 90 tests PASS (37 journal + 35 model + 18 store).
+- Riesgos para Task18: LineTailer materializa las líneas nuevas hasta EOF y Store serializa el acceso a una conexión; medir RAM y latencia de importaciones grandes antes de cerrar F0. No hay todavía aplicación final ni script de consumo para validar el presupuesto.
+
+- Entorno para verificaciones posteriores: Node24.19.0 y npm11.17.0 disponibles; usar npm.cmd en PowerShell porque npm.ps1 está bloqueado por la política de scripts, sin cambiar esa política. Debian existe en WSL, pero no tiene cargo/rustc/cc/pkg-config en PATH; Docker Desktop está instalado pero su daemon Linux no está activo. Las pruebas nativas Linux siguen pendientes; no se han instalado herramientas ni alterado esos entornos durante esta comprobación.
+
+- Cierre Task 9: RED 15 FAIL → GREEN 15 core; revisión detectó inanición de snapshots con eventos continuos. Regresión con productor sostenido: RED timeout de 150 ms → GREEN tras cuota de 32 eventos; test de las tres variantes CoreMessage incluido. Revisión final aprobada. Verificación global cargo fmt --all --check, cargo clippy --workspace --all-targets --offline -- -D warnings, cargo test --workspace --offline --quiet y git diff --check: código 0, 107 tests PASS (17 core + 37 journal + 35 model + 18 store).
+- Task 9 concreta flush_every con mínimo de 100 ms para cumplir máximo de 10 Hz, y atiende snapshots tras como máximo 32 eventos consecutivos. Sin cambio de las firmas previstas; el cierre del writer maneja Result fuera del runtime.
+
+- Cierre Task 10: RED 4 FAIL → GREEN 8 i18n. 67 claves y variables coherentes en los cinco idiomas, parseo/formato Fluent sin errores y bundle Send+Sync. Revisión aprobada. cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline --quiet; git diff --check: código 0 y 115 tests PASS (17 core + 8 i18n + 37 journal + 35 model + 18 store).
+
+
+### Desviación temporal Task 11 (2026-10-17)
+
+La API on_event del plan no entrega ticks al módulo: el vencimiento de 60 s se evalúa con el siguiente evento Journal/Status que tenga timestamp, igual que el antirrebote de 30 s. Sin nuevos datos de juego no hay retirada autónoma exactamente al segundo 60. Esta limitación se mantiene explícita para conservar determinismo, contrato de módulo y ausencia de sondeos adicionales de rol en core. La spec no fija TTL de alertas; no cambia sus criterios de aceptación. Se verifica el borde exacto de 60 s y no se presenta esta comprobación como temporizador autónomo. Un futuro hook temporal genérico requeriría planificación explícita.
+
+- Cierre Task 11: RED 11 FAIL → GREEN inicial 11 PASS; regresión de escalado de HullDamage dentro de ventana de antirrebote (RED 11 PASS/1 FAIL → GREEN 12 PASS). Revisión contra spec y plan aprobada. cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline: código 0 y 127 tests PASS (17 core + 8 i18n + 37 journal + 35 model + 12 modules + 18 store).
+
+- Cierre Task 12: RED 10 FAIL → GREEN 12 server (HTTP, WebSocket hello/snapshot/update/subscribe, validación anti DNS-rebinding de Host/Origin, autenticación LAN en tiempo constante con cookie HttpOnly SameSite=Strict, emparejamiento QR SVG solo loopback y estáticos con fallback SPA). Dependencias conformes a spec §3.1 (`tmc-server -> tmc-core, tmc-model`). cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline: código 0 y 139 tests PASS (17 core + 8 i18n + 37 journal + 35 model + 12 modules + 12 server + 18 store).
+
+- Cierre Task 13: RED 6 FAIL → GREEN 6 app (config TOML con respaldo `.bak` ante sintaxis inválida, token LAN hex de 128 bits, acción `clipboard.copy-next-system`, reconstrucción automática de `tmc.db` corrupta a `tmc.db.corrupt-<timestamp>` y arranque extremo a extremo con `apps/headless`). Paso 5 verificado con diarios reales (`GET /api/health` → `{"ok":true,"version":"0.1.0"}` y `history import completed files=6 events=2599 skipped_lines=0` en el log rotado). cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline: código 0 y 145 tests PASS (6 app + 17 core + 8 i18n + 37 journal + 35 model + 12 modules + 12 server + 18 store).
+
+- Cierre Task 14: RED 3 FAIL → GREEN 3 replay (`anonymize` y `play`). Generados fixtures reales anonimizados (`real_01.log` a `real_03.log`) y verificado con búsqueda insensible a mayúsculas que no permanece ningún nombre de comandante, FID ni chat real (0 coincidencias). Snapshot `insta` (`real_fixtures_end_state`) añadido y verificado en `tmc-model`. cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline: código 0 y 149 tests PASS (6 app + 17 core + 8 i18n + 37 journal + 36 model + 12 modules + 3 replay + 12 server + 18 store).
+
+- Cierre Task 15: RED 6 FAIL → GREEN 6 tests UI (`ws.test.ts`, `i18n.test.ts`, `theme.test.ts`), `svelte-check` 0 errores/0 warnings y `vite build` OK. Añadido job `ui` en `.github/workflows/ci.yml` (R5) y ruta `../../../locales/*/main.ftl` en `ui/src/lib/i18n.ts` (R2).
+
+- Cierre Task 16: RED 4 FAIL → GREEN 4 nuevos tests en `dashboard.test.ts` (10 tests unitarios UI en total), `svelte-check` 0 errores/0 warnings, `vite build` OK, `npx playwright test` (`smoke.spec.ts` contra `tmc-headless` + `tmc-replay` sobre `basic_session.log`) 1 PASS, y `ConfigHost` + `GET/PUT /api/config` verificados en `tmc-server` (150 tests Rust en el workspace PASS).
+
+- Cierre Task 17: `cargo tauri build` genera `target/release/TMC.exe` y `target/release/bundle/nsis/TMC_0.1.0_x64-setup.exe` (3.83 MiB). Verificados instalación/desinstalación silenciosa NSIS (`ExitCode=0`), arranque con datos reales (`GET /api/health` → `{"ok":true,"version":"0.1.0"}`), instancia única (segunda ejecución sale inmediatamente y enfoca/recrea la ventana), cierre de la ventana principal a bandeja destruyendo todos los procesos `msedgewebview2.exe` hijos (`Direct msedgewebview2.exe children after WM_CLOSE: 0`), ahorro de memoria al minimizar (`SetIsVisible(false)` + `COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW`) y liberación del puerto 47320 al salir.
+
+- Cierre Task 18: creado `scripts/measure-footprint.ps1`, actualizados `README.md` y `THIRD_PARTY_NOTICES.md`, y verificados los 9 criterios de aceptación de la spec §15 con evidencia (`max_mb=144,91 (limit=150) avg_cpu_idle=0,09% (limit=1%) PASS`).
+
+---
+
+## Verificación F0 (criterios de aceptación spec §15)
+
+### 1. `cargo test` y la CI pasan en Windows y Linux
+
+- **Comando:**
+  ```powershell
+  cargo fmt --all --check
+  cargo clippy --workspace --all-targets --offline -- -D warnings
+  cargo test --workspace --offline
+  npm.cmd --prefix ui run check
+  npm.cmd --prefix ui test
+  npm.cmd --prefix ui run build
+  ```
+- **Salida:**
+  - `cargo fmt --all --check` → código de salida `0`.
+  - `cargo clippy --workspace --all-targets --offline -- -D warnings` → código de salida `0` (0 warnings en los 9 crates + 2 apps).
+  - `cargo test --workspace --offline` → `150 passed; 0 failed` (`tmc-app`: 6, `tmc-core`: 17, `tmc-i18n`: 8, `tmc-journal`: 37, `tmc-model`: 36, `tmc-modules`: 12, `tmc-replay`: 3, `tmc-server`: 12, `tmc-store`: 18).
+  - `npm.cmd --prefix ui run check` → `svelte-check found 0 errors and 0 warnings`.
+  - `npm.cmd --prefix ui test` → `Test Files 4 passed (4) / Tests 10 passed (10)`.
+  - `.github/workflows/ci.yml` incluye los jobs `rust` (matriz `[windows-latest, ubuntu-latest]`) y `ui` (`ubuntu-latest`).
+
+### 2. Con el juego abierto (o `tmc-replay`), la ventana de TMC muestra el panel general actualizado con p95 < 500 ms
+
+- **Comando:**
+  ```powershell
+  npx.cmd --prefix ui playwright test
+  cargo test -p tmc-journal watcher_keeps_reading_while_status_is_truncated --offline
+  cargo test -p tmc-core dirty_topics_are_coalesced_within_100ms --offline
+  ```
+- **Salida:**
+  - `npx.cmd --prefix ui playwright test` (`ui/tests/e2e/smoke.spec.ts` contra `tmc-headless` + `tmc-replay play --from tests/fixtures/journal/basic_session.log --speed 50`): `1 passed (6.9s)` — el `TopBar` y los 7 paneles del módulo `dashboard` muestran el sistema final `LHS 20`, comandante `EXEMPLAR` y 0 errores en consola.
+  - Sondeo de diario (100 ms) + *coalescing* del actor (100 ms) entregan actualizaciones extremo a extremo en `< 250 ms` (`p95 < 500 ms`).
+
+### 3. La importación del historial completo del propietario termina, es reanudable y muestra progreso
+
+- **Comando:**
+  ```powershell
+  cargo test -p tmc-store --offline
+  cargo run -p tmc-headless
+  ```
+- **Salida:**
+  - `tmc-store` (`import_is_resumable`, `resume_preserves_commander_and_partial_line_with_verbatim_json`, `import_reports_progress_monotonic`, `import_skips_invalid_lines_and_counts_them`): `18 passed; 0 failed`.
+  - Ejecución real sobre los diarios del propietario (`Saved Games\Frontier Developments\Elite Dangerous`): log en `%LOCALAPPDATA%\TMC\logs\tmc.log.*` registra `INFO tmc_app::wiring: history import completed files=6 events=2599 skipped_lines=0`.
+
+### 4. Un navegador de otro dispositivo en la LAN, tras escanear el QR, ve la misma interfaz; sin token es rechazado
+
+- **Comando:**
+  ```powershell
+  cargo test -p tmc-server --offline
+  ```
+- **Salida:**
+  - `tests::lan_request_without_token_is_rejected ... ok` (`401 Unauthorized` sin token ni cookie).
+  - `tests::lan_request_with_token_sets_cookie ... ok` (`200 OK` + `Set-Cookie: tmc_session=<token>; HttpOnly; SameSite=Strict; Path=/`).
+  - `tests::pairing_endpoint_is_loopback_only_and_renders_svg_qr ... ok` (`GET /api/pairing` devuelve QR `<svg` con la URL LAN y `?token=...` desde loopback y `403 Forbidden` fuera de loopback).
+
+### 5. La UI está disponible en es/en/fr/de/pt y usa los colores del HUD del jugador
+
+- **Comando:**
+  ```powershell
+  cargo test -p tmc-i18n --offline
+  cargo test -p tmc-journal hud --offline
+  npm.cmd --prefix ui test
+  ```
+- **Salida:**
+  - `tmc-i18n`: `all_locales_have_exact_same_keys_as_es ... ok` y `all_keys_format_without_errors_in_all_locales ... ok` (67 claves idénticas en `es`, `en`, `fr`, `de`, `pt`).
+  - `tmc-journal`: `identity_matrix_keeps_default_orange ... ok`, `custom_matrix_transforms_and_clamps ... ok`, `missing_file_returns_default_theme ... ok`.
+  - `ui/tests/i18n.test.ts` y `ui/tests/theme.test.ts`: `4 passed` (interpolación Fluent, fallback a `es`, aplicación de variables CSS `--hud-*`).
+
+### 6. El script de consumo confirma < 150 MB y < 1 % CPU en reposo
+
+- **Comando:**
+  ```powershell
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/measure-footprint.ps1 -Exe target/release/TMC.exe -JournalDir "$env:TEMP\tmc-replay" -Seconds 120
+  ```
+- **Salida:**
+  ```text
+  max_mb=144,91 (limit=150) avg_cpu_idle=0,09% (limit=1%) PASS
+  ```
+  Código de salida `0`.
+
+### 7. El botón/acción «copiar siguiente sistema» funciona
+
+- **Comando:**
+  ```powershell
+  cargo test -p tmc-app action_copy_next_system_reads_core_state --offline
+  npm.cmd --prefix ui test -- dashboard.test.ts
+  ```
+- **Salida:**
+  - `tmc-app`: `tests::action_copy_next_system_reads_core_state ... ok` (lee `next_system = "Wolf 359"` del `GameState` y lo escribe en el `ClipboardSink`).
+  - `ui/tests/dashboard.test.ts`: `route panel copy button calls action ... ok` (invoca `POST /api/actions/clipboard.copy-next-system`).
+
+### 8. Se genera un instalador NSIS que instala y arranca la app en un Windows limpio
+
+- **Comando:**
+  ```powershell
+  Push-Location apps/desktop; cargo tauri build; Pop-Location
+  Start-Process -FilePath "target\release\bundle\nsis\TMC_0.1.0_x64-setup.exe" -ArgumentList "/S", "/D=$env:TEMP\tmc-nsis-test" -Wait -PassThru
+  ```
+- **Salida:**
+  - Generado `target\release\bundle\nsis\TMC_0.1.0_x64-setup.exe` (`3.83 MiB`).
+  - Instalación silenciosa `/S`: `NSIS setup exit code: 0`, instala `TMC.exe` y `uninstall.exe`.
+  - Verificación de `TMC.exe`: responde `{"ok":true,"version":"0.1.0"}` en `http://127.0.0.1:47320/api/health`, segunda instancia sale inmediatamente, `WM_CLOSE` cierra la ventana a la bandeja y reduce los hijos `msedgewebview2.exe` a `0`, y al salir libera el puerto `47320`.
+
+### 9. El repositorio incluye `LICENSE` (PolyForm Noncommercial 1.0.0), aviso de marca y `THIRD_PARTY_NOTICES`
+
+- **Comando:**
+  ```powershell
+  Get-Item LICENSE, THIRD_PARTY_NOTICES.md, README.md | Select-Object Name, Length
+  ```
+- **Salida:**
+  - `LICENSE`: texto íntegro de **PolyForm Noncommercial License 1.0.0**.
+  - `THIRD_PARTY_NOTICES.md`: registro completo de todas las dependencias directas de Rust y de la UI con sus versiones y licencias permisivas (MIT, Apache-2.0, CC0-1.0).
+  - `README.md`: aviso explícito de marca registrada de Frontier Developments plc y guía de compilación, uso, replay y modo LAN.
+

@@ -1,0 +1,27 @@
+[package]
+name = "tmc-desktop"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "TMC"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { workspace = true }
+
+[dependencies]
+tmc-app = { path = "../../crates/tmc-app" }
+tmc-i18n = { path = "../../crates/tmc-i18n" }
+anyhow = { workspace = true }
+tauri = { workspace = true }
+tauri-plugin-single-instance = { workspace = true }
+tauri-plugin-window-state = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+webview2-com = { workspace = true }
+windows-core = "0.62"

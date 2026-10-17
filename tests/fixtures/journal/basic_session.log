@@ -1,0 +1,25 @@
+{ "timestamp":"2026-03-05T18:00:01Z", "event":"Fileheader", "part":1, "language":"English/UK", "Odyssey":true, "gameversion":"4.1.0.0", "build":"r999999/r0 " }
+{ "timestamp":"2026-03-05T18:00:05Z", "event":"Commander", "FID":"F0000001", "Name":"TESTER" }
+{ "timestamp":"2026-03-05T18:00:12Z", "event":"LoadGame", "FID":"F0000001", "Commander":"TESTER", "Horizons":true, "Odyssey":true, "Ship":"python", "Ship_Localised":"Python", "ShipID":7, "ShipName":"TEST HAULER", "ShipIdent":"TS-01A", "FuelLevel":20.000000, "FuelCapacity":32.000000, "GameMode":"Solo", "Credits":12345678, "Loan":0, "language":"English/UK", "gameversion":"4.1.0.0", "build":"r999999/r0 " }
+{ "timestamp":"2026-03-05T18:00:12Z", "event":"Rank", "Combat":3, "Trade":5, "Explore":4, "Soldier":0, "Exobiologist":1, "Empire":2, "Federation":1, "CQC":0 }
+{ "timestamp":"2026-03-05T18:00:12Z", "event":"Progress", "Combat":40, "Trade":12, "Explore":88, "Soldier":0, "Exobiologist":5, "Empire":30, "Federation":0, "CQC":0 }
+{ "timestamp":"2026-03-05T18:00:13Z", "event":"Location", "Docked":true, "MarketID":128000001, "StationName":"Test Orbital", "StationType":"Orbis", "StarSystem":"Testia", "SystemAddress":10477373803, "StarPos":[10.5,-4.25,33.0], "Body":"Test Orbital", "BodyType":"Station" }
+{ "timestamp":"2026-03-05T18:00:14Z", "event":"Loadout", "Ship":"python", "ShipID":7, "ShipName":"TEST HAULER", "ShipIdent":"TS-01A", "HullHealth":1.000000, "UnladenMass":350.5, "CargoCapacity":64, "MaxJumpRange":18.25, "FuelCapacity":{ "Main":32.000000, "Reserve":0.630000 }, "Rebuy":500000, "Modules":[ { "Slot":"FrameShiftDrive", "Item":"int_hyperdrive_size5_class5", "Health":1.000000 }, { "Slot":"CargoRack", "Item":"int_cargorack_size6_class1", "Health":1.000000 } ] }
+{ "timestamp":"2026-03-05T18:00:14Z", "event":"Cargo", "Vessel":"Ship", "Count":12 }
+{ "timestamp":"2026-03-05T18:00:15Z", "event":"Market", "MarketID":128000001, "StationName":"Test Orbital", "StationType":"Orbis", "StarSystem":"Testia" }
+{ "timestamp":"2026-03-05T18:01:00Z", "event":"Undocked", "StationName":"Test Orbital", "StationType":"Orbis", "MarketID":128000001 }
+{ "timestamp":"2026-03-05T18:02:10Z", "event":"SupercruiseEntry", "StarSystem":"Testia", "SystemAddress":10477373803 }
+{ "timestamp":"2026-03-05T18:03:00Z", "event":"FSDTarget", "Name":"Exampla", "SystemAddress":5068732442345, "StarClass":"K", "RemainingJumpsInRoute":2 }
+{ "timestamp":"2026-03-05T18:03:05Z", "event":"StartJump", "JumpType":"Hyperspace", "StarSystem":"Exampla", "SystemAddress":5068732442345, "StarClass":"K" }
+{ "timestamp":"2026-03-05T18:03:22Z", "event":"FSDJump", "Taxi":false, "Multicrew":false, "StarSystem":"Exampla", "SystemAddress":5068732442345, "StarPos":[14.0,-2.5,40.75], "SystemAllegiance":"Federation", "JumpDist":9.873, "FuelUsed":1.234567, "FuelLevel":18.765432 }
+{ "timestamp":"2026-03-05T18:03:40Z", "event":"FSDTarget", "Name":"Sampleton", "SystemAddress":2869440361, "StarClass":"G", "RemainingJumpsInRoute":1 }
+{ "timestamp":"2026-03-05T18:03:45Z", "event":"StartJump", "JumpType":"Hyperspace", "StarSystem":"Sampleton", "SystemAddress":2869440361, "StarClass":"G" }
+{ "timestamp":"2026-03-05T18:04:02Z", "event":"FSDJump", "Taxi":false, "Multicrew":false, "StarSystem":"Sampleton", "SystemAddress":2869440361, "StarPos":[20.25,1.0,45.5], "JumpDist":8.1, "FuelUsed":1.0, "FuelLevel":17.765432 }
+{ "timestamp":"2026-03-05T18:04:30Z", "event":"SupercruiseExit", "StarSystem":"Sampleton", "SystemAddress":2869440361, "Body":"Sampleton A 1", "BodyID":5, "BodyType":"Planet" }
+{ "timestamp":"2026-03-05T18:05:10Z", "event":"ApproachBody", "StarSystem":"Sampleton", "Body":"Sampleton A 1", "BodyID":5 }
+{ "timestamp":"2026-03-05T18:05:50Z", "event":"LeaveBody", "StarSystem":"Sampleton", "Body":"Sampleton A 1", "BodyID":5 }
+{ "timestamp":"2026-03-05T18:06:20Z", "event":"Docked", "StationName":"Sample Hub", "StationType":"Coriolis", "StarSystem":"Sampleton", "SystemAddress":2869440361, "MarketID":128000002 }
+{ "timestamp":"2026-03-05T18:06:30Z", "event":"HullDamage", "Health":0.950000, "PlayerPilot":true, "Fighter":false }
+{ "timestamp":"2026-03-05T18:06:31Z", "event":"UnderAttack", "Target":"You" }
+{ "timestamp":"2026-03-05T18:06:40Z", "event":"FuelScoop", "Scooped":4.5, "Total":22.0 }
+{ "timestamp":"2026-03-05T18:07:00Z", "event":"Shutdown" }
