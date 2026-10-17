@@ -1,0 +1,153 @@
+use crate::{Store, StoreError, StoredEvent};
+use std::path::Path;
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
+use tmc_journal::{LineTailer, list_journals};
+use tmc_model::events::{EventKind, parse_line};
+use tmc_model::state::Galaxy;
+
+pub struct ImportOptions {
+    pub throttle: Arc<AtomicBool>,
+}
+
+#[derive(Debug, Default)]
+pub struct ImportReport {
+    pub files: u64,
+    pub events: u64,
+    pub skipped_lines: u64,
+}
+
+pub fn import_history(
+    store: &Store,
+    dir: &Path,
+    opts: &ImportOptions,
+    progress: &mut dyn FnMut(u64, u64),
+) -> Result<ImportReport, StoreError> {
+    let paths = list_journals(dir)?;
+    let total = paths.len() as u64;
+    let mut report = ImportReport::default();
+    progress(0, total);
+    for (index, path) in paths.iter().enumerate() {
+        let name = path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .into_owned();
+        let (offset, mut cmdr, mut version, mut galaxy, complete): (
+            i64,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            bool,
+        ) = {
+            let conn = store.lock()?;
+            conn.execute(
+                "INSERT OR IGNORE INTO journal_file(name,size,offset) VALUES(?,0,0)",
+                [&name],
+            )?;
+            conn.query_row(
+                "SELECT offset,cmdr,gameversion,galaxy,complete FROM journal_file WHERE name=?",
+                [&name],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+            )?
+        };
+        if complete {
+            progress(index as u64 + 1, total);
+            continue;
+        }
+        let mut tail = LineTailer::open(path, u64::try_from(offset)?)?;
+        if tail.offset() == 0 {
+            // Offset inválido tras truncado: vuelve a reconstruir el contexto del archivo.
+            cmdr = None;
+            version = None;
+            galaxy = None;
+        }
+        let mut batch = Vec::with_capacity(5000);
+        for (line, json) in tail.read_new_lines()? {
+            let event = match parse_line(&json) {
+                Ok(event) => event,
+                Err(error) => {
+                    report.skipped_lines += 1;
+                    tracing::warn!(file = %name, line, %error, "invalid history line skipped");
+                    continue;
+                }
+            };
+            match &event.kind {
+                EventKind::Commander(commander) => {
+                    if let Some(name) = &commander.name {
+                        cmdr = Some(name.clone());
+                    }
+                }
+                EventKind::LoadGame(load) => {
+                    if let Some(name) = &load.commander {
+                        cmdr = Some(name.clone());
+                    }
+                    if let Some(gameversion) = &load.gameversion {
+                        version = Some(gameversion.clone());
+                        galaxy = Some(galaxy_name(gameversion).into());
+                    }
+                }
+                EventKind::Fileheader(header) => {
+                    if let Some(gameversion) = &header.gameversion {
+                        version = Some(gameversion.clone());
+                        galaxy = Some(galaxy_name(gameversion).into());
+                    }
+                }
+                _ => {}
+            }
+            batch.push(StoredEvent {
+                file_name: name.clone(),
+                line,
+                ts: event.timestamp,
+                name: event.name,
+                cmdr: cmdr.clone(),
+                json,
+            });
+            if batch.len() == 5000 {
+                report.events += write_batch(store, &batch)?;
+                batch.clear();
+                if opts.throttle.load(Ordering::Relaxed) {
+                    std::thread::sleep(std::time::Duration::from_millis(50));
+                }
+            }
+        }
+        if !batch.is_empty() {
+            report.events += write_batch(store, &batch)?;
+        }
+        // El offset del tailer solo cubre LF completos. Se confirma DESPUÉS de todos los lotes;
+        // si hay un corte entre lotes, se releen filas y UNIQUE(file_id,line) las deduplica.
+        let size = i64::try_from(std::fs::metadata(path)?.len())?;
+        let offset = i64::try_from(tail.offset())?;
+        let complete = index + 1 < paths.len() && offset == size;
+        {
+            let mut conn = store.lock()?;
+            let transaction = conn.transaction()?;
+            transaction.execute("UPDATE journal_file SET size=?1,offset=?2,cmdr=?3,gameversion=?4,galaxy=?5,complete=?6 WHERE name=?7", rusqlite::params![size,offset,cmdr,version,galaxy,complete,name])?;
+            transaction.commit()?;
+        }
+        report.files += 1;
+        progress(index as u64 + 1, total);
+    }
+    Ok(report)
+}
+
+fn write_batch(store: &Store, batch: &[StoredEvent]) -> Result<u64, StoreError> {
+    let mut conn = store.lock()?;
+    let transaction = conn.transaction()?;
+    let mut inserted = 0;
+    for event in batch {
+        inserted += crate::writer::insert_event(&transaction, event)? as u64;
+    }
+    transaction.commit()?;
+    Ok(inserted)
+}
+
+fn galaxy_name(version: &str) -> &'static str {
+    match Galaxy::from_game_version(version) {
+        Galaxy::Live => "Live",
+        Galaxy::Legacy => "Legacy",
+        Galaxy::Unknown => "Unknown",
+    }
+}
