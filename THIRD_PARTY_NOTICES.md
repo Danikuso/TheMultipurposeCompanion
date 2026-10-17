@@ -164,6 +164,9 @@ Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, 
 ### anyhow
 - Versión: 1.0.104
 - Licencia: MIT OR Apache-2.0
-- Usada por: tmc-app, tmc-headless (errores de arranque y composición)
+- Usada por: tmc-app, tmc-headless, tmc-replay (errores de arranque y ejecución)
 
-
+### insta
+- Versión: 1.49.0
+- Licencia: Apache-2.0
+- Usada por: tests de tmc-model (snapshots de estado final sobre fixtures reales)

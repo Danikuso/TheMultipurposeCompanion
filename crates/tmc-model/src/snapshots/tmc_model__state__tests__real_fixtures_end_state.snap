@@ -1,0 +1,192 @@
+---
+source: crates/tmc-model/src/state.rs
+expression: end_states
+---
+{
+  "real_01.log": {
+    "cmdr": {
+      "name": "CMDR TESTER",
+      "fid": "F0000001",
+      "credits": 23061415,
+      "loan": 0,
+      "ranks": {
+        "combat": 2,
+        "trade": 6,
+        "explore": 5,
+        "soldier": 0,
+        "exobiologist": 0,
+        "empire": 0,
+        "federation": 5,
+        "cqc": 0
+      },
+      "progress": {
+        "combat": 62,
+        "trade": 41,
+        "explore": 86,
+        "soldier": 40,
+        "exobiologist": 0,
+        "empire": 100,
+        "federation": 25,
+        "cqc": 0
+      }
+    },
+    "ship": {
+      "ship_type": "adder_taxi",
+      "ship_type_localised": "$ADDER_NAME;",
+      "ship_id": null,
+      "name": null,
+      "ident": null,
+      "hull_health": null,
+      "fuel_main": 5.574885,
+      "fuel_reservoir": null,
+      "fuel_capacity_main": null,
+      "fuel_capacity_reserve": null,
+      "cargo_count": 0,
+      "cargo_capacity": null,
+      "rebuy": null,
+      "max_jump_range": null,
+      "damaged_modules": [],
+      "cargo": []
+    },
+    "location": {
+      "system": "V374 Pegasi",
+      "system_address": 670417561001,
+      "star_pos": [
+        -26.90625,
+        -10.5625,
+        2.90625
+      ],
+      "body": "MacKellar Hub",
+      "body_type": "Station",
+      "station": "MacKellar Hub",
+      "station_type": "Coriolis",
+      "market_id": 3228840448,
+      "mode": "Docked"
+    },
+    "status": null,
+    "route": {
+      "hops": [],
+      "next_system": null,
+      "remaining_jumps": null
+    },
+    "session": {
+      "started_at": "2026-10-16T15:07:20Z",
+      "jumps": 1,
+      "distance_ly": 18.337,
+      "credits_at_start": 23061415,
+      "credits_now": 23061415
+    },
+    "galaxy": "Live",
+    "game_running": false
+  },
+  "real_02.log": {
+    "cmdr": {
+      "name": "CMDR TESTER",
+      "fid": "F0000001",
+      "credits": 23061415,
+      "loan": 0,
+      "ranks": {
+        "combat": 2,
+        "trade": 6,
+        "explore": 5,
+        "soldier": 0,
+        "exobiologist": 0,
+        "empire": 0,
+        "federation": 5,
+        "cqc": 0
+      },
+      "progress": {
+        "combat": 62,
+        "trade": 41,
+        "explore": 86,
+        "soldier": 40,
+        "exobiologist": 0,
+        "empire": 100,
+        "federation": 25,
+        "cqc": 0
+      }
+    },
+    "ship": {
+      "ship_type": "mediumtransport01",
+      "ship_type_localised": null,
+      "ship_id": 7,
+      "name": "",
+      "ident": "TMC-03",
+      "hull_health": 1.0,
+      "fuel_main": null,
+      "fuel_reservoir": null,
+      "fuel_capacity_main": 32.0,
+      "fuel_capacity_reserve": 0.75,
+      "cargo_count": null,
+      "cargo_capacity": 0,
+      "rebuy": 0,
+      "max_jump_range": 16.746778,
+      "damaged_modules": [],
+      "cargo": []
+    },
+    "location": {
+      "system": "Caeritis",
+      "system_address": 2931088689515,
+      "star_pos": [
+        119.8125,
+        -4.9375,
+        -23.0625
+      ],
+      "body": "Bernoulli Vision",
+      "body_type": "Station",
+      "station": "Bernoulli Vision",
+      "station_type": "Coriolis",
+      "market_id": 3229849856,
+      "mode": "Docked"
+    },
+    "status": null,
+    "route": {
+      "hops": [],
+      "next_system": null,
+      "remaining_jumps": null
+    },
+    "session": {
+      "started_at": "2026-10-16T15:22:32Z",
+      "jumps": 62,
+      "distance_ly": 985.4449999999999,
+      "credits_at_start": 23061415,
+      "credits_now": 23061415
+    },
+    "galaxy": "Live",
+    "game_running": false
+  },
+  "real_03.log": {
+    "cmdr": null,
+    "ship": null,
+    "location": {
+      "system": "",
+      "system_address": 0,
+      "star_pos": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "body": null,
+      "body_type": null,
+      "station": null,
+      "station_type": null,
+      "market_id": null,
+      "mode": "Unknown"
+    },
+    "status": null,
+    "route": {
+      "hops": [],
+      "next_system": null,
+      "remaining_jumps": null
+    },
+    "session": {
+      "started_at": null,
+      "jumps": 0,
+      "distance_ly": 0.0,
+      "credits_at_start": null,
+      "credits_now": null
+    },
+    "galaxy": "Live",
+    "game_running": false
+  }
+}
