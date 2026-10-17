@@ -943,4 +943,40 @@ mod tests {
         assert_eq!(g.cmdr.as_ref().unwrap().ranks.combat, None);
         assert_eq!(g.cmdr.as_ref().unwrap().fid, "F2");
     }
+
+    #[test]
+    fn real_fixtures_end_state() {
+        let fixtures_dir =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/journal");
+        let mut files: Vec<_> = std::fs::read_dir(&fixtures_dir)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .map(|e| e.path())
+            .filter(|p| {
+                p.file_name()
+                    .and_then(|n| n.to_str())
+                    .is_some_and(|n| n.starts_with("real_") && n.ends_with(".log"))
+            })
+            .collect();
+        files.sort();
+        assert!(!files.is_empty(), "expected real_*.log fixtures");
+
+        let mut end_states = std::collections::BTreeMap::new();
+        for file in files {
+            let name = file
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap()
+                .to_owned();
+            let content = std::fs::read_to_string(&file).unwrap();
+            let mut state = GameState::default();
+            for line in content.lines().filter(|l| !l.trim().is_empty()) {
+                if let Ok(ev) = parse_line(line) {
+                    state.apply_event(&ev);
+                }
+            }
+            end_states.insert(name, state);
+        }
+        insta::assert_json_snapshot!("real_fixtures_end_state", end_states);
+    }
 }

@@ -541,7 +541,7 @@ Expected: `{"ok":true,...}`; en el log aparece la importación del historial ter
   - `tmc-replay anonymize --from <archivo.log> --to <archivo.log>`: sustituye nombre de comandante (`Commander`, `Name` en `Commander`/`LoadGame`), `FID`, `ShipName`, `ShipIdent`, nombres de amigos/alas/escuadrón y textos de chat (`ReceiveText`, `SendText`) por valores ficticios estables (`CMDR TESTER`, `F0000001`, …); elimina eventos `Friends`.
   - `pub fn anonymize_line(line: &str, map: &mut Pseudonyms) -> Option<String>` y `pub async fn play(opts: PlayOptions) -> anyhow::Result<()>` (públicas para tests).
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn anonymize_replaces_identity_fields_consistently() {}
@@ -549,10 +549,10 @@ Expected: `{"ok":true,...}`; en el log aparece la importación del historial ter
 #[tokio::test] async fn play_writes_all_lines_in_order_at_speed() { /* speed 1000 → todas las líneas, orden intacto */ }
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-replay` PASS.
-- [ ] **Step 5: Generar fixtures reales anonimizados** a partir de los diarios del propietario (`%USERPROFILE%\Saved Games\Frontier Developments\Elite Dangerous\Journal.*.log`) → `tests/fixtures/journal/real_01.log`…; revisar a mano con `grep -i` que no queda el nombre real del comandante.
-- [ ] **Step 6: Test de snapshot** en `tmc-model` (`insta`): `real_fixtures_end_state` aplica cada `real_*.log` y guarda el `GameState` final con `insta::assert_json_snapshot!`. Run: `cargo insta test -p tmc-model --accept` la primera vez; revisar el `.snap`.
-- [ ] **Step 7: Commit** `feat(replay): reproductor y anonimizador de diarios + fixtures reales`
+- [x] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-replay` PASS.
+- [x] **Step 5: Generar fixtures reales anonimizados** a partir de los diarios del propietario (`%USERPROFILE%\Saved Games\Frontier Developments\Elite Dangerous\Journal.*.log`) → `tests/fixtures/journal/real_01.log`…; revisar a mano con `grep -i` que no queda el nombre real del comandante.
+- [x] **Step 6: Test de snapshot** en `tmc-model` (`insta`): `real_fixtures_end_state` aplica cada `real_*.log` y guarda el `GameState` final con `insta::assert_json_snapshot!`. Run: `cargo insta test -p tmc-model --accept` la primera vez; revisar el `.snap`.
+- [x] **Step 7: Commit** `feat(replay): reproductor y anonimizador de diarios + fixtures reales`
 
 ---
 
@@ -721,3 +721,5 @@ La API on_event del plan no entrega ticks al módulo: el vencimiento de 60 s se 
 - Cierre Task 12: RED 10 FAIL → GREEN 12 server (HTTP, WebSocket hello/snapshot/update/subscribe, validación anti DNS-rebinding de Host/Origin, autenticación LAN en tiempo constante con cookie HttpOnly SameSite=Strict, emparejamiento QR SVG solo loopback y estáticos con fallback SPA). Dependencias conformes a spec §3.1 (`tmc-server -> tmc-core, tmc-model`). cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline: código 0 y 139 tests PASS (17 core + 8 i18n + 37 journal + 35 model + 12 modules + 12 server + 18 store).
 
 - Cierre Task 13: RED 6 FAIL → GREEN 6 app (config TOML con respaldo `.bak` ante sintaxis inválida, token LAN hex de 128 bits, acción `clipboard.copy-next-system`, reconstrucción automática de `tmc.db` corrupta a `tmc.db.corrupt-<timestamp>` y arranque extremo a extremo con `apps/headless`). Paso 5 verificado con diarios reales (`GET /api/health` → `{"ok":true,"version":"0.1.0"}` y `history import completed files=6 events=2599 skipped_lines=0` en el log rotado). cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline: código 0 y 145 tests PASS (6 app + 17 core + 8 i18n + 37 journal + 35 model + 12 modules + 12 server + 18 store).
+
+- Cierre Task 14: RED 3 FAIL → GREEN 3 replay (`anonymize` y `play`). Generados fixtures reales anonimizados (`real_01.log` a `real_03.log`) y verificado con búsqueda insensible a mayúsculas que no permanece ningún nombre de comandante, FID ni chat real (0 coincidencias). Snapshot `insta` (`real_fixtures_end_state`) añadido y verificado en `tmc-model`. cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline: código 0 y 149 tests PASS (6 app + 17 core + 8 i18n + 37 journal + 36 model + 12 modules + 3 replay + 12 server + 18 store).
