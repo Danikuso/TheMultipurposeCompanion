@@ -1,6 +1,8 @@
 //! Modelo de dominio de TMC.
 #![forbid(unsafe_code)]
 
+pub mod companion;
+pub mod events;
 pub mod status;
 
 /// Error de análisis compartido por Status.json y los eventos del diario.
