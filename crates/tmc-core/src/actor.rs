@@ -267,6 +267,10 @@ impl Actor {
                 });
                 Changes::empty()
             }
+            SourceEvent::Net(_)
+            | SourceEvent::Action { .. }
+            | SourceEvent::Settings(_)
+            | SourceEvent::Stored { .. } => Changes::empty(),
         };
         self.update_core(changes);
         let mut index = 0;

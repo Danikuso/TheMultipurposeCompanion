@@ -2,6 +2,8 @@
 
 use crate::companion::CompanionFile;
 use crate::events::JournalEvent;
+use crate::net::NetResponse;
+use crate::settings::ModuleSettings;
 use crate::status::Status;
 use crate::theme::HudTheme;
 
@@ -22,5 +24,16 @@ pub enum SourceEvent {
     ImportProgress {
         done: u64,
         total: u64,
+    },
+    Net(NetResponse),
+    Action {
+        name: String,
+        args: serde_json::Value,
+    },
+    Settings(ModuleSettings),
+    Stored {
+        module: String,
+        tag: String,
+        value: serde_json::Value,
     },
 }
