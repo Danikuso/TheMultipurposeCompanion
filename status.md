@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-17 18:07 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-17 18:12 (Europe/Madrid) · Codex
 - **Fase actual:** F0 — Cimientos
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md) — ✅ aprobada (2026-10-17)
 - **Plan activo:** [`docs/plans/2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) — ✅ aprobado; ejecución por subagentes
@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** Task 6 (`tmc-journal` — lector incremental de líneas), Step 1 pendiente.
-- **Siguiente acción:** escribir los tests de Task 6 (LineTailer) y observar RED antes de implementar. Tasks 4–5 revisadas y verificadas: 44 tests del workspace, fmt y clippy PASS.
+- **Tarea:** Task 7 (`tmc-journal` — Status, compañeros, proceso, HUD y watcher), Step 1.
+- **Siguiente acción:** tests de Task 7 y RED antes de implementar. Task 6 verificada y revisada: 55 tests del workspace, fmt y clippy PASS.
 
 ## Fases
 
@@ -41,8 +41,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 3 | `tmc-model` — eventos del diario y archivos compañeros | ✅ | d24e813 | |
 | 4 | `tmc-model` — GameState y SourceEvent | ✅ hecha | 70e4999, 177eac1, 2ec0abe | Revisión aprobada; 35 tests PASS, fmt y clippy del workspace PASS. |
 | 5 | `tmc-journal` — localizar carpeta y listar diarios | ✅ hecha | e8e6cc8 | TDD 9 FAIL → 9 PASS; revisión aprobada; workspace 44 tests, fmt y clippy PASS. |
-| 6 | `tmc-journal` — lector incremental de líneas | ⬜ | — | |
-| 7 | `tmc-journal` — Status, compañeros, proceso, HUD y watcher | ⬜ | — | |
+| 6 | `tmc-journal` — lector incremental de líneas | ✅ hecha | commit de cierre Task 6 | RED 11 FAIL → GREEN 20 journal PASS; revisión y checks workspace PASS. |
+| 7 | `tmc-journal` — Status, compañeros, proceso, HUD y watcher | 🔄 en curso | — | Step 1: tests. |
 | 8 | `tmc-store` — SQLite, escritor e importación | ⬜ | — | |
 | 9 | `tmc-core` — actor, módulos, topics y alertas | ⬜ | — | |
 | 10 | `tmc-i18n` y traducciones | ⬜ | — | |
@@ -57,12 +57,16 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Bloqueos y pendientes del propietario
 
+- [x] **Antes de Task 8 — dependencia arquitectónica aprobada:** spec §3.1 permite tmc-store→tmc-model, pero Task 8 requiere también tmc-journal para list_journals/LineTailer. Propuesta concreta en el plan: permitir tmc-store→tmc-journal (sin ciclos, sin cambiar interfaces). El propietario aprobó explícitamente añadir la dependencia; spec §3.1 sincronizada. Tasks 6–7 continúan.
+
 - [x] **Discrepancia de seguimiento resuelta por autorización del propietario (2026-10-17):** al abrir la sesión, Task 4 figuraba pendiente y en Step 1, pero `git log` y `git show --stat` confirman `70e4999` (GameState, SourceEvent, HudTheme y reductores) y `177eac1` (correcciones de reductores). Además, la siguiente acción apuntaba a Task 2, ya marcada hecha, y F0 figura «sin empezar» pese a Tasks 0–3 hechas. La spec conserva «pendiente de revisión» mientras esta cabecera la declara aprobada. El propietario confirmó «Sí, hazlo»: aprobación de spec y plan válida; se autoriza revisar y verificar Task 4 y continuar con Task 5 si pasa.
 - [ ] **CAPI de Frontier:** solicitud de cliente en user.frontierstore.net (scopes `auth` + `capi`). Pendiente confirmar que se envió y recibir el Client ID → guardarlo en `.env` como `TMC_CAPI_CLIENT_ID` (nunca en el repo). Necesario en F6.
 - [ ] **Inara:** la clave personal se pegó en el chat el 2026-10-17 → regenerarla antes de usarla en TMC. Whitelisting del nombre `TheMultipurposeCompanion` cuando haya versión funcional (F6).
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
 
 ## Decisiones tomadas
+
+- 2026-10-17 · Propietario: aprobada dependencia tmc-store → tmc-journal para la importación de Task 8; spec §3.1 actualizada sin cambiar interfaces.
 
 - 2026-10-17 · Stack: Rust + Tauri 2 + Svelte 5 + SQLite + axum + Fluent (spec §2).
 - 2026-10-17 · Licencia PolyForm Noncommercial 1.0.0 (público, sin uso comercial). Sin código/datos GPL.
@@ -73,8 +77,10 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
-- 2026-10-17 18:07 (Europe/Madrid) · Codex · Task 4 cerrada en 2ec0abe tras revisión y correcciones TDD (31 PASS/4 FAIL → 35 PASS); fmt y clippy del workspace PASS. Task 5 completada con TDD y revisión independiente: 9 tests nuevos, workspace 44 PASS, fmt/clippy PASS. Pendiente ejecución nativa Linux; UI y medición de consumo corresponden a Tasks 15/18. Commits: 2ec0abe (Task 4), e8e6cc8 (Task 5); seguimiento final en commit documental inmediato. Sin código sin commit. Cargo disponible añadiendo C:\Users\danik\.cargo\bin al PATH del proceso. UI aún no creada (Task 15).
+- 2026-10-17 18:12 (Europe/Madrid) · Codex · Continuación del plan autorizada sin interrupciones: Task 6 en curso con TDD y revisión por subagentes.
 
-- 2026-10-17 18:07 (Europe/Madrid) · Codex · Lectura de AGENTS.md, spec y plan activos; inspección de rama e historial. Discrepancia de Task 4 documentada; ejecución detenida según AGENTS.md §1. Solo status.md modificado sin commit; pendiente respuesta del propietario y verificación de Task 4.
+- 2026-10-17 18:12 (Europe/Madrid) · Codex · Task 4 cerrada en 2ec0abe tras revisión y correcciones TDD (31 PASS/4 FAIL → 35 PASS); fmt y clippy del workspace PASS. Task 5 completada con TDD y revisión independiente: 9 tests nuevos, workspace 44 PASS, fmt/clippy PASS. Pendiente ejecución nativa Linux; UI y medición de consumo corresponden a Tasks 15/18. Commits: 2ec0abe (Task 4), e8e6cc8 (Task 5); seguimiento final en commit documental inmediato. Sin código sin commit. Cargo disponible añadiendo C:\Users\danik\.cargo\bin al PATH del proceso. UI aún no creada (Task 15).
+
+- 2026-10-17 18:12 (Europe/Madrid) · Codex · Lectura de AGENTS.md, spec y plan activos; inspección de rama e historial. Discrepancia de Task 4 documentada; ejecución detenida según AGENTS.md §1. Solo status.md modificado sin commit; pendiente respuesta del propietario y verificación de Task 4.
 - 2026-10-17 · Claude Opus 5.5 · Inicio de ejecución de F0 por subagentes: Tasks 0–1 hechas.
 - 2026-10-17 · Claude Opus 5.5 · Investigación (`docs/research/`), spec de arquitectura y F0 aprobada, plan de F0 escrito, `AGENTS.md` y `status.md` creados.

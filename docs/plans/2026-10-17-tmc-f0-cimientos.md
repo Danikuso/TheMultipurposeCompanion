@@ -264,7 +264,7 @@ Reglas que los tests fijan: `LoadGame` reinicia `SessionState` (started_at = tim
 
 Comportamiento: abre con permisos de compartición lectura+escritura+borrado (Windows: `OpenOptionsExt::share_mode(FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE)`); lee desde `offset` hasta EOF; solo devuelve líneas terminadas en `\n` (quita `\r`); guarda el resto en buffer interno; ignora bytes NUL iniciales; si el archivo encoge (truncado), reinicia a 0.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn reads_complete_lines_and_advances_offset() {}
@@ -276,8 +276,8 @@ Comportamiento: abre con permisos de compartición lectura+escritura+borrado (Wi
 #[test] fn skips_leading_nul_bytes() {}
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-journal` PASS.
-- [ ] **Step 5: Commit** `feat(journal): lector incremental de líneas con offset`
+- [x] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-journal` PASS.
+- [x] **Step 5: Commit** `feat(journal): lector incremental de líneas con offset`
 
 ---
 
@@ -679,3 +679,14 @@ Expected: `PASS` (< 150 MB, < 1 % CPU en reposo). Si falla, abrir incidencia con
 - Cierre Task 5: cargo test -p tmc-journal --offline con stubs termina con 9 FAIL (RED); tras implementación, 9 PASS (GREEN). Revisión independiente aprobada, sin hallazgos bloqueantes. cargo fmt --all --check, cargo clippy --workspace --all-targets --offline -- -D warnings y cargo test --workspace --offline: código 0, 44 tests PASS (9 journal + 35 model). git diff --check: código 0.
 - Task 5 no cambia las interfaces previstas. Dependencias directas nuevas: windows 0.61.3 (solo Windows; MIT OR Apache-2.0), tempfile 3.27.0 (tests; MIT OR Apache-2.0), registradas en THIRD_PARTY_NOTICES.md. Se resolvió la restricción DNS mediante cargo fetch autorizado; sin downgrades de dependencias previas.
 - Límite de verificación: ejecución en Windows; helpers Linux probados con carpetas temporales, pendientes ejecución nativa Linux y comprobación manual con Saved Games redirigida. No hay app ni script de consumo todavía; Task 5 no incorpora bucles ni tareas en segundo plano.
+
+
+## Decisión aprobada del propietario: dependencia de importación (Task 8)
+
+La spec §3.1 declara que tmc-store depende solo de tmc-model. Task 8 sitúa import_history en tmc-store y exige consumir list_journals y LineTailer de tmc-journal. El ledger anterior considera 5,6→8 correcto, pero R1–R5 no autorizan esa dependencia.
+
+Cambio mínimo aprobado explícitamente por el propietario en esta conversación (2026-10-17): en spec §3.1, fila tmc-store, sustituir «tmc-model» por «tmc-model, tmc-journal». Mantiene las firmas del plan y el grafo acíclico store → journal → model. Tras implementarlo, verificar cargo metadata y tests de importación. Tasks 6–7 pueden continuar mientras se decide.
+
+- Task 6: RED observado en 11 tests del lector incremental. offset() persiste hasta el último LF entregado; read_pos privado conserva la lectura física y la cola parcial, evitando pérdida al reabrir. Semántica concretada sin cambiar interfaces.
+
+- Cierre Task 6: RED 11 FAIL → GREEN 11 nuevos tests PASS (20 journal). Revisión independiente aprobada. cargo fmt --all --check, cargo clippy --workspace --all-targets --offline -- -D warnings, cargo test --workspace --offline: código 0; 55 tests PASS (20 journal + 35 model). git diff --check: código 0.

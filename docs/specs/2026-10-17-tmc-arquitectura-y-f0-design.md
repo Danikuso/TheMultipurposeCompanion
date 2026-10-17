@@ -102,7 +102,7 @@ Reglas de dependencia (sin ciclos):
 | `tmc-model` | — (solo serde) |
 | `tmc-i18n` | — |
 | `tmc-journal` | `tmc-model` |
-| `tmc-store` | `tmc-model` |
+| `tmc-store` | `tmc-model`, `tmc-journal` (importación de historial; aprobado 2026-10-17) |
 | `tmc-net` | `tmc-model` |
 | `tmc-core` | `tmc-model`, `tmc-store` (fuentes de eventos entran por un trait, no depende de `tmc-journal`/`tmc-net`) |
 | `tmc-modules` | `tmc-core`, `tmc-model`, `tmc-i18n` |
