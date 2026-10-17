@@ -1,0 +1,17 @@
+[package]
+name = "tmc-headless"
+description = "Ejecutable sin ventana de TMC (servidor + núcleo)"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "tmc-headless"
+path = "src/main.rs"
+
+[dependencies]
+tmc-app = { path = "../../crates/tmc-app" }
+tokio.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
