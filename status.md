@@ -45,7 +45,7 @@
 | 9 | `tmc-net` — limitador, salud y política de caché | ✅ hecha | 407de8d | Crate nuevo (solo depende de tmc-model); 7 tests deterministas. Revisión aprobada. |
 | 10 | `tmc-net` — clientes Spansh/EDSM/Canonn y `NetClient` | ✅ hecha | f87f9fb, 1303436 | reqwest 0.13 + rustls; licencias permisivas (incl. Unicode-3.0) en THIRD_PARTY_NOTICES; Canonn devuelve `Disabled`; autocompletado con id64; 56 tmc-net / 245 workspace PASS. Revisión aprobada tras 1 ronda. |
 | 11 | `tmc-app` — `NetService`, configuración y ajustes en caliente | ✅ hecha | 9e8f009, abaa34e | Caché ficha 24 h / política 1 h, agrupación, reintentos con retroceso, semáforo de 4, opt-out revalidado; 21 tmc-app PASS. Revisión aprobada tras 1 ronda. |
-| 12 | `tmc-server` — acciones con argumentos y autocompletado | ✅ hecha | 9960190 | `POST /api/actions/{name}` con JSON, WS `action` con `args`, `GET /api/navigation/autocomplete` paginado (20) con `{name,id64}`; seguridad LAN aplicada; 12 Vitest PASS. Revisión aprobada. |
+| 12 | `tmc-server` — acciones con argumentos y autocompletado | ✅ hecha | 9960190, 61ef707 | `POST /api/actions/{name}` con JSON, WS `action` con `args`, `GET /api/navigation/autocomplete` paginado (20) con `{name,id64}`; seguridad LAN aplicada; 12 Vitest PASS. Revisión aprobada. **Seguridad:** protección CSRF en peticiones que cambian estado (Origin/Sec-Fetch-Site, JSON obligatorio), fallo preexistente de F0 detectado por análisis automático. |
 | 13–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
@@ -93,6 +93,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
 
 ## Decisiones tomadas
+
+- 2026-10-18 · Seguridad (Task 12): toda petición que cambia estado exige Origin coincidente (o ausencia de cabeceras de navegador) y `Content-Type: application/json` si lleva cuerpo; clientes externos (Stream Deck, VoiceAttack) deben enviar JSON.
 
 - 2026-10-17 · Propietario: Canonn desactivado en F1; él solicitará permiso sin enviar datos de usuarios.
 
