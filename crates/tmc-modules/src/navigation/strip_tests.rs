@@ -1286,3 +1286,139 @@ fn clear_plan_deletes_and_replay_jumps_do_not_write() {
     assert_eq!(h.plan_topic()["status"], "idle");
     assert!(h.plan_topic()["active"].is_null());
 }
+
+// ---- Planificador: ronda de correcciones 1 ----
+
+#[test]
+fn recalculate_with_non_object_params_uses_defaults_without_panic() {
+    let mut h = Harness::new();
+    h.ready_ship();
+    let mut v = stored_plan(0);
+    v["plan"]["params"] = json!("x");
+    h.nav.load_pending = true;
+    h.nav.plan_cmdr = Some("TESTER".into());
+    h.location("S1", 1, 0.0);
+    feed(&mut h, vec![("plan".into(), v)]);
+    assert_eq!(h.plan_topic()["status"], "active");
+    h.act("navigation.recalculate", json!({}));
+    let reqs = h.route_requests();
+    assert_eq!(reqs.len(), 1);
+    let NetQuery::NeutronRoute(p) = &reqs[0].query else {
+        panic!("{:?}", reqs[0].query);
+    };
+    assert_eq!(p.from, "S1");
+    assert_eq!(p.to, "S4");
+    assert_eq!(p.efficiency, 60);
+}
+
+#[test]
+fn settings_toggle_reenables_planner_and_invalidates_computing_request() {
+    let mut h = Harness::new();
+    h.ready_ship();
+    h.settings(false);
+    h.act("navigation.plan", json!({"to": "S2", "mode": "neutron"}));
+    assert_eq!(h.plan_topic()["status"], "disabled");
+    h.settings(true);
+    assert_eq!(h.plan_topic()["status"], "idle");
+    assert!(h.plan_topic()["error_key"].is_null());
+    h.act("navigation.plan", json!({"to": "S2", "mode": "neutron"}));
+    assert_eq!(h.plan_topic()["status"], "computing");
+    let id = h.route_requests()[0].id;
+    h.settings(false);
+    assert_eq!(h.plan_topic()["status"], "disabled");
+    assert_eq!(h.plan_topic()["error_key"], "nav-plan-disabled-offline");
+    h.respond_id(id, NetOutcome::Route(planned(&[("Sol", 10), ("S2", 2)])));
+    assert_eq!(h.plan_topic()["status"], "disabled");
+    assert!(h.plan_topic()["result"].is_null());
+}
+
+#[test]
+fn invalid_plan_arguments_fail_with_bad_request() {
+    let long = "x".repeat(129);
+    let cases = [
+        json!({"mode": "neutron"}),
+        json!({"to": "", "mode": "neutron"}),
+        json!({"to": long, "mode": "neutron"}),
+        json!({"to": "A", "from": long, "mode": "neutron"}),
+        json!({"to": "A", "mode": "neutron", "efficiency": 0}),
+        json!({"to": "A", "mode": "neutron", "efficiency": 101}),
+        json!({"to": "A", "mode": "neutron", "efficiency": "x"}),
+        json!({"to": "A"}),
+        json!({"to": "A", "mode": "warp"}),
+        json!({"to": 5, "mode": "neutron"}),
+    ];
+    for args in cases {
+        let mut h = Harness::new();
+        h.ready_ship();
+        h.act("navigation.plan", args.clone());
+        assert_eq!(h.plan_topic()["status"], "failed", "{args}");
+        assert_eq!(
+            h.plan_topic()["error_key"],
+            "nav-plan-error-bad-request",
+            "{args}"
+        );
+        assert!(h.route_requests().is_empty(), "{args}");
+    }
+    let mut h = Harness::new();
+    h.ready_ship();
+    h.act(
+        "navigation.plan",
+        json!({"to": "A", "mode": "neutron", "efficiency": 100}),
+    );
+    assert_eq!(h.plan_topic()["status"], "computing");
+}
+
+#[test]
+fn oversized_route_is_rejected_and_topic_stays_small() {
+    let mut h = Harness::new();
+    h.ready_ship();
+    let hops =
+        |n: u64| -> Vec<(String, u64)> { (0..n).map(|i| (format!("System {i}"), i)).collect() };
+    let big = hops(2000);
+    let refs: Vec<(&str, u64)> = big.iter().map(|(n, i)| (n.as_str(), *i)).collect();
+    h.act("navigation.plan", json!({"to": "Far", "mode": "neutron"}));
+    h.respond(NetOutcome::Route(planned(&refs)));
+    let topic = h.plan_topic();
+    assert_eq!(topic["status"], "ready");
+    assert_eq!(topic["result"]["hops_total"], 2000);
+    assert_eq!(topic["result"]["hops"].as_array().unwrap().len(), 50);
+    assert!(
+        topic.to_string().len() < 16 * 1024,
+        "{}",
+        topic.to_string().len()
+    );
+
+    let huge = hops(2001);
+    let refs: Vec<(&str, u64)> = huge.iter().map(|(n, i)| (n.as_str(), *i)).collect();
+    h.act("navigation.plan", json!({"to": "Far", "mode": "neutron"}));
+    h.respond(NetOutcome::Route(planned(&refs)));
+    assert_eq!(h.plan_topic()["status"], "failed");
+    assert_eq!(h.plan_topic()["error_key"], "nav-plan-error-route-too-long");
+}
+
+#[test]
+fn clear_plan_before_stored_arrives_does_not_resurrect_it() {
+    let mut h = Harness::new();
+    h.load_game();
+    h.location("S1", 1, 0.0);
+    h.act("navigation.clear-plan", json!({}));
+    feed(&mut h, vec![("plan".into(), stored_plan(0))]);
+    assert!(h.plan_topic()["active"].is_null());
+    assert_eq!(h.plan_topic()["status"], "idle");
+}
+
+#[test]
+fn request_dropped_by_context_fails_with_service_error() {
+    let mut h = Harness::new();
+    h.ready_ship();
+    h.event(
+        SourceEvent::Action {
+            name: "navigation.plan".into(),
+            args: json!({"to": "A", "mode": "neutron"}),
+        },
+        true,
+    );
+    assert_eq!(h.plan_topic()["status"], "failed");
+    assert_eq!(h.plan_topic()["error_key"], "nav-plan-error-service");
+    assert!(h.nav.planner.req_id.is_none());
+}

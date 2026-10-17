@@ -9,15 +9,19 @@ use serde::Serialize;
 use serde_json::{Value, json};
 use tmc_core::ModuleCtx;
 use tmc_model::net::{
-    GalaxyRouteParams, NetOutcome, NetQuery, NetResponse, NeutronRouteParams, PlannedRoute,
-    ShipParams,
+    GalaxyRouteParams, NetOutcome, NetQuery, NetResponse, NeutronRouteParams, PlannedHop,
+    PlannedRoute, ShipParams,
 };
 use tmc_model::state::{Galaxy, GameState};
 
 pub(super) const ROUTE_KEY: &str = "route";
 pub(super) const PLAN_TAG: &str = "plan";
+pub(super) const PLAN_TAG_SYNC: &str = "plan-sync";
 
-const ERR_NO_DESTINATION: &str = "nav-plan-error-no-destination";
+const ERR_TOO_LONG: &str = "nav-plan-error-route-too-long";
+const MAX_HOPS: usize = 2000;
+const TOPIC_HOPS: usize = 50;
+const MAX_NAME_CHARS: usize = 128;
 const ERR_NO_DESTINATION_ID: &str = "nav-plan-error-no-destination-id";
 const ERR_NO_ORIGIN: &str = "nav-plan-error-no-origin";
 const ERR_NO_ORIGIN_ID: &str = "nav-plan-error-no-origin-id";
@@ -81,7 +85,7 @@ pub(super) struct Planner {
     result: Option<PlannedRoute>,
     error_key: Option<&'static str>,
     /// Id de la última petición enviada; las respuestas con otro id son obsoletas.
-    req_id: Option<u64>,
+    pub(super) req_id: Option<u64>,
 }
 
 #[derive(Serialize)]
@@ -92,11 +96,19 @@ struct ActiveTopic {
     off_route: bool,
 }
 
+/// Resumen de la ruta calculada: totales y los primeros tramos.
+#[derive(Serialize)]
+struct ResultTopic {
+    total_ly: f64,
+    hops_total: usize,
+    hops: Vec<PlannedHop>,
+}
+
 #[derive(Serialize)]
 struct PlanTopic {
     status: PlanStatus,
     request: Option<Value>,
-    result: Option<PlannedRoute>,
+    result: Option<ResultTopic>,
     active: Option<ActiveTopic>,
     error_key: Option<&'static str>,
 }
@@ -113,14 +125,24 @@ fn parse_request(
     state: &GameState,
     default_efficiency: u8,
 ) -> Result<Request, &'static str> {
-    let to = str_arg(args, "to").ok_or(ERR_NO_DESTINATION)?.to_owned();
+    let name = |key: &str| -> Result<Option<&str>, &'static str> {
+        match args.get(key) {
+            None | Some(Value::Null) => Ok(None),
+            Some(Value::String(v)) if v.chars().count() <= MAX_NAME_CHARS => {
+                Ok(Some(v.trim()).filter(|v| !v.is_empty()))
+            }
+            Some(_) => Err(ERR_BAD_REQUEST),
+        }
+    };
+    let to = name("to")?.ok_or(ERR_BAD_REQUEST)?.to_owned();
+    let from_arg = name("from")?;
     let mode = match str_arg(args, "mode") {
         Some("neutron") => PlanMode::Neutron,
         Some("galaxy") => PlanMode::Galaxy,
         _ => return Err(ERR_BAD_REQUEST),
     };
     let here = &state.location;
-    let from = str_arg(args, "from")
+    let from = from_arg
         .or_else(|| Some(here.system.as_str()).filter(|s| !s.is_empty()))
         .ok_or(ERR_NO_ORIGIN)?
         .to_owned();
@@ -128,10 +150,13 @@ fn parse_request(
         (here.system_address != 0 && from.eq_ignore_ascii_case(&here.system))
             .then_some(here.system_address)
     });
-    let efficiency = args
-        .get("efficiency")
-        .and_then(Value::as_u64)
-        .map_or(default_efficiency, |e| e.min(100) as u8);
+    let efficiency = match args.get("efficiency") {
+        None | Some(Value::Null) => default_efficiency,
+        Some(v) => match v.as_u64() {
+            Some(e @ 1..=100) => e as u8,
+            _ => return Err(ERR_BAD_REQUEST),
+        },
+    };
     let flag = |key: &str, default: bool| args.get(key).and_then(Value::as_bool).unwrap_or(default);
     Ok(Request {
         mode,
@@ -256,14 +281,20 @@ impl Navigation {
                 return self.plan_fail(key);
             }
         };
-        if let Some(id) = ctx.request(ROUTE_KEY, query) {
-            self.planner = Planner {
-                status: PlanStatus::Computing,
-                request: Some(req),
-                result: None,
-                error_key: None,
-                req_id: Some(id),
-            };
+        match ctx.request(ROUTE_KEY, query) {
+            Some(id) => {
+                self.planner = Planner {
+                    status: PlanStatus::Computing,
+                    request: Some(req),
+                    result: None,
+                    error_key: None,
+                    req_id: Some(id),
+                };
+            }
+            None => {
+                self.planner.request = Some(req);
+                self.plan_fail(ERR_SERVICE);
+            }
         }
     }
 
@@ -271,7 +302,14 @@ impl Navigation {
         let Some(plan) = &self.plan else {
             return self.plan_fail(ERR_NO_PLAN);
         };
-        let mut args = plan.params.clone();
+        let mut args = match &plan.params {
+            Value::Object(_) => plan.params.clone(),
+            _ => json!({}),
+        };
+        args["mode"] = json!(match plan.mode {
+            PlanMode::Neutron => "neutron",
+            PlanMode::Galaxy => "galaxy",
+        });
         let here = &state.location;
         args["from"] = json!(here.system);
         args["from_id64"] = json!((here.system_address != 0).then_some(here.system_address));
@@ -308,7 +346,26 @@ impl Navigation {
         }
         self.plan = Some(plan);
         self.plan_dirty = true;
+        self.load_pending = false;
         self.planner = Planner::default();
+    }
+
+    /// Un cambio de ajustes puede activar o desactivar el planificador.
+    pub(super) fn on_planner_settings(&mut self, state: &GameState) {
+        let key = self.disabled_key(state);
+        let p = &mut self.planner;
+        match (p.status, key) {
+            (PlanStatus::Disabled, None) => {
+                p.status = PlanStatus::Idle;
+                p.error_key = None;
+            }
+            (PlanStatus::Computing, Some(key)) => {
+                p.status = PlanStatus::Disabled;
+                p.error_key = Some(key);
+                p.req_id = None;
+            }
+            _ => {}
+        }
     }
 
     pub(super) fn on_plan_action(
@@ -325,6 +382,7 @@ impl Navigation {
             "navigation.clear-plan" => {
                 self.plan = None;
                 self.plan_dirty = true;
+                self.load_pending = false;
                 self.planner = Planner::default();
             }
             _ => {}
@@ -346,6 +404,7 @@ impl Navigation {
         }
         let keep = self.planner.req_id;
         match &r.outcome {
+            NetOutcome::Route(route) if route.hops.len() > MAX_HOPS => self.plan_fail(ERR_TOO_LONG),
             NetOutcome::Route(route) if route.hops.len() >= 2 => {
                 self.planner.status = PlanStatus::Ready;
                 self.planner.result = Some(route.clone());
@@ -399,6 +458,7 @@ impl Navigation {
         self.plan = None;
         self.plan_dirty = false;
         self.planner = Planner::default();
+        self.load_pending = true;
         ctx.store_task(PLAN_TAG, persist::load_plan(name));
     }
 
@@ -406,9 +466,11 @@ impl Navigation {
     pub(super) fn apply_loaded_plan(&mut self, value: &Value, state: &GameState) {
         if value.get("cmdr").and_then(Value::as_str) != self.plan_cmdr.as_deref()
             || self.plan.is_some()
+            || !self.load_pending
         {
             return;
         }
+        self.load_pending = false;
         let Some(mut plan) = value
             .get("plan")
             .filter(|p| !p.is_null())
@@ -416,6 +478,9 @@ impl Navigation {
         else {
             return;
         };
+        if !plan.params.is_object() {
+            plan.params = json!({});
+        }
         let here = &state.location;
         if !here.system.is_empty() {
             plan.reconcile(
@@ -443,7 +508,11 @@ impl Navigation {
         let topic = PlanTopic {
             status,
             request: p.request.as_ref().map(Request::to_json),
-            result: p.result.clone(),
+            result: p.result.as_ref().map(|r| ResultTopic {
+                total_ly: r.total_ly,
+                hops_total: r.hops.len(),
+                hops: r.hops.iter().take(TOPIC_HOPS).cloned().collect(),
+            }),
             active: self.plan.as_ref().map(|a| ActiveTopic {
                 destination: a.destination.clone(),
                 current_index: a.current_index,
@@ -455,5 +524,3 @@ impl Navigation {
         serde_json::to_value(topic).unwrap_or_default()
     }
 }
-
-pub(super) const PLAN_TAG_SYNC: &str = "plan-sync";

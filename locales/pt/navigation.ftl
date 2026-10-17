@@ -41,3 +41,4 @@ nav-plan-error-no-route = Nenhuma rota foi encontrada.
 nav-plan-error-service = O serviço de rotas não está disponível neste momento.
 nav-plan-disabled-legacy = O planeador não está disponível na galáxia Legacy.
 nav-plan-disabled-offline = O planeador precisa dos serviços online ativados.
+nav-plan-error-route-too-long = A rota tem demasiados trechos.

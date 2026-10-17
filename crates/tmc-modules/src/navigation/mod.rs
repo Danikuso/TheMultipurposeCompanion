@@ -109,6 +109,8 @@ pub struct Navigation {
     plan_cmdr: Option<String>,
     /// Hay cambios del plan pendientes de volcar al almacén.
     plan_dirty: bool,
+    /// Espera la carga del plan del almacen (un `clear-plan` la invalida).
+    load_pending: bool,
     model: Option<JumpModel>,
     unladen_mass: Option<f64>,
     supercharged: Option<f64>,
@@ -133,6 +135,7 @@ impl Navigation {
             planner: Planner::default(),
             plan_cmdr: None,
             plan_dirty: false,
+            load_pending: false,
             model: None,
             unladen_mass: None,
             supercharged: None,
@@ -493,6 +496,7 @@ impl Module for Navigation {
                 self.settings = s.clone();
                 // Los estados no Ok (p. ej. Disabled) no sobreviven a un cambio de ajustes.
                 self.remote.retain(|_, r| r.status == RemoteStatus::Ok);
+                self.on_planner_settings(state);
             }
             SourceEvent::Status(st) => self.tick(st.timestamp),
             SourceEvent::Journal { ev, .. } => {
