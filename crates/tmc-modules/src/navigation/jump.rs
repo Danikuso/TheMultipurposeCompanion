@@ -1,6 +1,7 @@
 //! Alcance de salto y combustible por salto a partir del `Loadout`.
 
 use crate::data::{FsdKind, FsdTable, StarSpecial};
+use serde::Serialize;
 use std::collections::HashSet;
 use std::sync::{Mutex, OnceLock};
 use tmc_model::events::Loadout;
@@ -119,7 +120,8 @@ pub fn supercharge_multiplier(kind: FsdKind, star: SuperchargeStar) -> f64 {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum RangeSource {
     Formula,
     Scaled,

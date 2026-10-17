@@ -43,7 +43,9 @@ pub struct ModuleCtx {
 }
 
 impl ModuleCtx {
-    pub(crate) fn new(module: &'static str, replaying: bool, next_request_id: u64) -> Self {
+    /// Lo crea el actor; es público para probar módulos de forma aislada.
+    #[doc(hidden)]
+    pub fn new(module: &'static str, replaying: bool, next_request_id: u64) -> Self {
         Self {
             replaying,
             module,
@@ -78,7 +80,9 @@ impl ModuleCtx {
     }
 
     #[allow(clippy::type_complexity)]
-    pub(crate) fn take_outputs(&mut self) -> (Vec<NetRequest>, Vec<(String, StoreTask)>, u64) {
+    /// Vacía peticiones y tareas acumuladas; público para probar módulos.
+    #[doc(hidden)]
+    pub fn take_outputs(&mut self) -> (Vec<NetRequest>, Vec<(String, StoreTask)>, u64) {
         (
             std::mem::take(&mut self.requests),
             std::mem::take(&mut self.store_tasks),
