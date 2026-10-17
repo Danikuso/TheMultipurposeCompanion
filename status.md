@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 5 (`tmc-model` — Loadout con ingeniería, ubicación ampliada) 🔄 en curso.
-- **Siguiente acción:** completar la Task 5 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
+- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 6 (`tmc-model` — NetRequest/NetResponse, ModuleSettings, SourceEvent) 🔄 en curso.
+- **Siguiente acción:** completar la Task 6 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
 
 ## Fases
 
@@ -38,7 +38,8 @@
 | 2 | Spike 3 — Canonn | ✅ hecha | 722500c, 6297f2f | Viable técnicamente; permiso formal pendiente → capa 3 desactivada por ahora. Revisión aprobada tras 1 ronda. |
 | 3 | Aprobaciones previas del propietario | ✅ hecha | (este commit) | Bloqueos registrados (Canonn, nombres de especies). |
 | 4 | `tmc-model` — eventos de exploración y exobiología | ✅ hecha | 4eec257 | 48 tests tmc-model; workspace, fmt y clippy PASS; fixture `exploration_session.log`. Revisión aprobada. |
-| 5–32 | Ver plan | ⬜ | — | |
+| 5 | `tmc-model` — Loadout con ingeniería, política, superficie | ✅ hecha | c272ae9 | 55 tests tmc-model; snapshots F0 intactos; `LocationInfo` en `Box`. Revisión aprobada. |
+| 6–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
