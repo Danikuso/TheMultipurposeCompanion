@@ -1,0 +1,9 @@
+[package]
+name = "tmc-model"
+description = "Modelo de dominio de TMC"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[dependencies]
