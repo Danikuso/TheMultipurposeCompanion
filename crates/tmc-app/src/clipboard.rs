@@ -1,8 +1,14 @@
-use crate::Config;
+use crate::{Config, NetServiceHandle};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
-use std::sync::Mutex;
+use std::path::PathBuf;
+use std::sync::{
+    Arc, Mutex,
+    atomic::{AtomicBool, Ordering},
+};
+use tmc_model::source::SourceEvent;
 use tmc_server::{ActionError, ActionHost, ConfigHost};
+use tokio::sync::mpsc;
 
 pub struct Clipboard {
     last: Mutex<Option<String>>,
@@ -39,9 +45,18 @@ impl Default for Clipboard {
     }
 }
 
+/// Conexión de `AppActions` con el núcleo y la capa de red en ejecución.
+struct Runtime {
+    events: mpsc::Sender<SourceEvent>,
+    online: Arc<AtomicBool>,
+    net: NetServiceHandle,
+}
+
 pub struct AppActions {
     clipboard: Clipboard,
     config: Mutex<Config>,
+    runtime: Option<Runtime>,
+    save_path: Option<PathBuf>,
 }
 
 impl AppActions {
@@ -49,6 +64,8 @@ impl AppActions {
         Self {
             clipboard: Clipboard::new(),
             config: Mutex::new(Config::default()),
+            runtime: None,
+            save_path: None,
         }
     }
 
@@ -56,6 +73,59 @@ impl AppActions {
         Self {
             clipboard: Clipboard::new(),
             config: Mutex::new(cfg),
+            runtime: None,
+            save_path: None,
+        }
+    }
+
+    /// Como `with_config`, y además `put_config` propaga los ajustes al núcleo
+    /// y actualiza el interruptor de servicios en línea.
+    pub fn with_runtime(
+        cfg: Config,
+        events: mpsc::Sender<SourceEvent>,
+        online: Arc<AtomicBool>,
+        net: NetServiceHandle,
+    ) -> Self {
+        Self {
+            runtime: Some(Runtime {
+                events,
+                online,
+                net,
+            }),
+            ..Self::with_config(cfg)
+        }
+    }
+
+    /// Guarda la configuración en `path` en vez de en la ruta de usuario (tests).
+    pub fn with_save_path(mut self, path: PathBuf) -> Self {
+        self.save_path = Some(path);
+        self
+    }
+
+    /// Autocompletado de sistemas para REST: `{items, page, more}`.
+    ///
+    /// Vacío en la galaxia Legacy (nunca se consulta) o con servicios en línea
+    /// desactivados. `snapshot` es la instantánea del núcleo (`core.game.galaxy`).
+    pub async fn autocomplete(
+        &self,
+        prefix: &str,
+        snapshot: &BTreeMap<String, Value>,
+    ) -> Result<Value, ActionError> {
+        let empty = json!({ "items": [], "page": 0, "more": false });
+        let legacy = snapshot
+            .get("core.game")
+            .and_then(|g| g.get("galaxy"))
+            .and_then(Value::as_str)
+            == Some("Legacy");
+        let Some(runtime) = &self.runtime else {
+            return Ok(empty);
+        };
+        if legacy || !runtime.online.load(Ordering::Relaxed) {
+            return Ok(empty);
+        }
+        match runtime.net.autocomplete(prefix).await {
+            Ok(items) => Ok(json!({ "items": items, "page": 0, "more": false })),
+            Err(failure) => Err(ActionError::Failed(format!("net-{failure:?}"))),
         }
     }
 
@@ -85,7 +155,34 @@ impl ConfigHost for AppActions {
         if updated.server.lan {
             updated.ensure_lan_token();
         }
-        let _ = updated.save();
+        let _ = match &self.save_path {
+            Some(path) => updated.save_to(path),
+            None => updated.save(),
+        };
+        if let Some(runtime) = &self.runtime {
+            runtime
+                .online
+                .store(updated.online_services, Ordering::Relaxed);
+            let event = SourceEvent::Settings(updated.module_settings());
+            match runtime.events.try_send(event) {
+                Ok(()) => {}
+                // Cola llena: se reenvía sin bloquear a quien llama.
+                Err(mpsc::error::TrySendError::Full(event)) => {
+                    let events = runtime.events.clone();
+                    match tokio::runtime::Handle::try_current() {
+                        Ok(handle) => {
+                            handle.spawn(async move {
+                                let _ = events.send(event).await;
+                            });
+                        }
+                        Err(_) => tracing::warn!("settings update dropped: no runtime"),
+                    }
+                }
+                Err(mpsc::error::TrySendError::Closed(_)) => {
+                    tracing::warn!("settings update dropped: core closed");
+                }
+            }
+        }
         let out = serde_json::to_value(&updated).map_err(|e| ActionError::Failed(e.to_string()))?;
         *self.config.lock().unwrap() = updated;
         Ok(out)

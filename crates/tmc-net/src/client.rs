@@ -301,6 +301,40 @@ impl NetClient {
         }
     }
 
+    /// Cuándo reintentar la consulta tras un fallo (consumidor: `NetService`).
+    ///
+    /// `None` si no hay nada que reintentar: el servicio que la atendería está
+    /// caído (o, en `System`, lo están Spansh y EDSM), no hay retroceso
+    /// pendiente o la consulta no usa red. Si Spansh acaba de caer, `System`
+    /// se reintenta ya mismo contra EDSM.
+    pub fn retry_at(&self, q: &NetQuery) -> Option<tokio::time::Instant> {
+        let t = now();
+        let st = self.state.lock().unwrap();
+        let down = |s: Service| st.health.get(&s).is_none_or(|h| h.is_down(t));
+        let (service, fallback) = match q {
+            NetQuery::BodyBio { .. } => return None,
+            NetQuery::System { .. } if down(Service::Spansh) => (Service::Edsm, true),
+            _ => (Service::Spansh, false),
+        };
+        if down(service) {
+            return None;
+        }
+        match st.health.get(&service).and_then(|h| h.retry_at()) {
+            Some(at) => Some(tokio::time::Instant::from_std(at.max(t))),
+            None if fallback => Some(tokio::time::Instant::from_std(t)),
+            None => None,
+        }
+    }
+
+    /// `true` si ningún servicio puede atender la consulta ahora mismo.
+    pub fn is_down_for(&self, q: &NetQuery) -> bool {
+        match q {
+            NetQuery::BodyBio { .. } => false,
+            NetQuery::System { .. } => self.is_down(Service::Spansh) && self.is_down(Service::Edsm),
+            _ => self.is_down(Service::Spansh),
+        }
+    }
+
     fn is_down(&self, service: Service) -> bool {
         let st = self.state.lock().unwrap();
         st.health.get(&service).is_some_and(|h| h.is_down(now()))
@@ -854,5 +888,34 @@ mod tests {
             crate::edsm::system_url("Ñandú A+B"),
             "https://www.edsm.net/api-v1/system?systemName=%C3%91and%C3%BA%20A%2BB&showId=1&showInformation=1&showPrimaryStar=1"
         );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn retry_at_follows_backoff_then_falls_back_to_edsm_then_stops() {
+        let t = FakeTransport::new();
+        t.script("spansh.co.uk/api/system/", vec![ok(503, "")]);
+        t.script("edsm.net", vec![ok(503, "")]);
+        let c = client(&t);
+        let q = sol_query();
+        assert_eq!(c.retry_at(&q), None);
+        c.execute(&q).await;
+        assert_eq!(
+            c.retry_at(&q),
+            Some(tokio::time::Instant::now() + Duration::from_secs(30))
+        );
+        c.execute(&q).await;
+        assert_eq!(
+            c.retry_at(&q),
+            Some(tokio::time::Instant::now() + Duration::from_secs(120))
+        );
+        c.execute(&q).await;
+        // Spansh caído: se reintenta ya contra EDSM, que aún no ha fallado.
+        assert!(!c.is_down_for(&q));
+        assert_eq!(c.retry_at(&q), Some(tokio::time::Instant::now()));
+        for _ in 0..3 {
+            c.execute(&q).await;
+        }
+        assert!(c.is_down_for(&q));
+        assert_eq!(c.retry_at(&q), None);
     }
 }

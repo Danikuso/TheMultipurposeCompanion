@@ -13,6 +13,7 @@ pub struct Dashboard {
     active_alerts: Vec<ActiveAlert>,
     active_flags: BTreeSet<&'static str>,
     last_notified: BTreeMap<String, DateTime<Utc>>,
+    alerts_enabled: bool,
 }
 
 impl Dashboard {
@@ -21,6 +22,7 @@ impl Dashboard {
             active_alerts: Vec::new(),
             active_flags: BTreeSet::new(),
             last_notified: BTreeMap::new(),
+            alerts_enabled: true,
         }
     }
 
@@ -82,6 +84,15 @@ impl Dashboard {
 
     fn process(&mut self, ev: &SourceEvent, _state: &GameState, replaying: bool) -> Vec<Alert> {
         match ev {
+            SourceEvent::Settings(settings) => {
+                self.alerts_enabled = settings.alerts_enabled;
+                if !self.alerts_enabled {
+                    self.reset();
+                }
+                Vec::new()
+            }
+            // Con las alertas desactivadas no se evalúa nada ni se acumula estado.
+            _ if !self.alerts_enabled => Vec::new(),
             SourceEvent::Status(status) => self.process_status(status, replaying),
             SourceEvent::Journal {
                 ev,
@@ -312,6 +323,44 @@ mod tests {
         apply(&mut d, &mut g, status(1, Flags::empty(), Flags2::empty()));
         assert!(active(&d).is_empty());
         assert_eq!(d.relevance(&g), Relevance::Normal);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn dashboard_emits_no_alerts_when_disabled_by_settings() {
+        use tmc_core::CoreMessage;
+        use tmc_model::settings::ModuleSettings;
+        for (enabled, expected) in [(false, 0usize), (true, 1usize)] {
+            let core = tmc_core::spawn_core(
+                crate::all_modules(),
+                None,
+                std::time::Duration::from_millis(100),
+            );
+            let mut rx = core.subscribe();
+            core.events
+                .send(SourceEvent::Settings(ModuleSettings {
+                    alerts_enabled: enabled,
+                    ..ModuleSettings::default()
+                }))
+                .await
+                .unwrap();
+            core.events
+                .send(status(0, Flags::LOW_FUEL, Flags2::empty()))
+                .await
+                .unwrap();
+            let snapshot = core.snapshot().await;
+            let mut alerts = 0;
+            while let Ok(msg) = rx.try_recv() {
+                if let CoreMessage::Alert(a) = msg {
+                    assert_eq!(a.key, "alert-low-fuel");
+                    alerts += 1;
+                }
+            }
+            assert_eq!(alerts, expected, "alerts_enabled={enabled}");
+            assert_eq!(
+                snapshot["dashboard.alerts"].as_array().unwrap().len(),
+                expected
+            );
+        }
     }
 
     #[test]

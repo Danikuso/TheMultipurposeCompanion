@@ -4,11 +4,13 @@
 pub mod clipboard;
 pub mod config;
 pub mod logging;
+pub mod net_service;
 pub mod wiring;
 
 pub use clipboard::{AppActions, Clipboard};
 pub use config::{Config, ServerSection, config_path, data_dir};
 pub use logging::init_logging;
+pub use net_service::{NetServiceHandle, spawn_net_service};
 pub use wiring::{Running, start};
 
 #[cfg(test)]
@@ -45,6 +47,118 @@ mod tests {
         let reloaded = Config::load_from_or_default(&path);
         assert_eq!(reloaded.language, "en");
         assert_eq!(reloaded.server.port, 48000);
+    }
+
+    #[test]
+    fn old_config_without_f1_fields_loads_defaults() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(
+            &path,
+            "language = \"en\"
+auto_copy_next_system = false
+alerts_enabled = true
+[server]
+port = 48001
+lan = false
+",
+        )
+        .unwrap();
+        let cfg = Config::load_from_or_default(&path);
+        assert!(!dir.path().join("config.toml.bak").exists());
+        assert_eq!(cfg.language, "en");
+        assert_eq!(cfg.server.port, 48001);
+        assert!(cfg.online_services);
+        assert_eq!(cfg.map_value_threshold, 500_000);
+        assert_eq!(cfg.default_neutron_efficiency, 60);
+        assert!(!cfg.auto_copy_next_system);
+        let settings = cfg.module_settings();
+        assert_eq!(settings.auto_copy_next_system, cfg.auto_copy_next_system);
+        assert_eq!(settings.map_value_threshold, 500_000);
+        assert!(settings.alerts_enabled && settings.online_services);
+    }
+
+    struct SettingsProbe(Option<tmc_model::settings::ModuleSettings>);
+    impl tmc_core::Module for SettingsProbe {
+        fn id(&self) -> &'static str {
+            "probe"
+        }
+        fn on_event(
+            &mut self,
+            ev: &tmc_model::source::SourceEvent,
+            _: &tmc_model::state::GameState,
+            _: &mut tmc_core::ModuleCtx,
+        ) -> tmc_core::TopicSet {
+            if let tmc_model::source::SourceEvent::Settings(s) = ev {
+                self.0 = Some(s.clone());
+            }
+            ["probe.settings".into()].into()
+        }
+        fn topic_value(&self, _: &str) -> Option<Value> {
+            Some(serde_json::to_value(&self.0).unwrap())
+        }
+        fn topics(&self) -> Vec<String> {
+            vec!["probe.settings".into()]
+        }
+    }
+
+    fn runtime_actions(
+        dir: &std::path::Path,
+    ) -> (
+        AppActions,
+        tmc_core::CoreHandle,
+        std::sync::Arc<std::sync::atomic::AtomicBool>,
+    ) {
+        let core = tmc_core::spawn_core(
+            vec![Box::new(SettingsProbe(None))],
+            None,
+            Duration::from_millis(100),
+        );
+        let online = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+        let (events, _rx) = tokio::sync::mpsc::channel(8);
+        let net = spawn_net_service(
+            std::sync::Arc::new(tmc_net::NetClient::new(std::sync::Arc::new(
+                tmc_net::ReqwestTransport::new().unwrap(),
+            ))),
+            tmc_core::Store::open_in_memory().unwrap(),
+            events,
+            online.clone(),
+        );
+        let actions =
+            AppActions::with_runtime(Config::default(), core.events.clone(), online.clone(), net)
+                .with_save_path(dir.join("config.toml"));
+        (actions, core, online)
+    }
+
+    #[tokio::test]
+    async fn put_config_propagates_settings_to_core() {
+        let dir = tempdir().unwrap();
+        let (actions, core, online) = runtime_actions(dir.path());
+        let mut cfg = actions.get_config();
+        cfg["online_services"] = json!(false);
+        cfg["map_value_threshold"] = json!(750_000);
+        let saved = actions.put_config(cfg).unwrap();
+        assert_eq!(saved["online_services"], false);
+        assert!(!online.load(std::sync::atomic::Ordering::Relaxed));
+        let snap = core.snapshot().await;
+        assert_eq!(snap["probe.settings"]["online_services"], false);
+        assert_eq!(snap["probe.settings"]["map_value_threshold"], 750_000);
+        assert_eq!(snap["probe.settings"]["alerts_enabled"], true);
+        // Con servicios en línea desactivados, el autocompletado no consulta nada.
+        let out = actions.autocomplete("Sol", &snap).await.unwrap();
+        assert_eq!(out, json!({ "items": [], "page": 0, "more": false }));
+        let reloaded = Config::load_from_or_default(&dir.path().join("config.toml"));
+        assert!(!reloaded.online_services);
+    }
+
+    #[tokio::test]
+    async fn autocomplete_is_empty_for_legacy_galaxy() {
+        let dir = tempdir().unwrap();
+        let (actions, _core, _online) = runtime_actions(dir.path());
+        let mut snap = BTreeMap::new();
+        snap.insert("core.game".into(), json!({ "galaxy": "Legacy" }));
+        let out = actions.autocomplete("Sol", &snap).await.unwrap();
+        assert_eq!(out, json!({ "items": [], "page": 0, "more": false }));
     }
 
     #[test]
