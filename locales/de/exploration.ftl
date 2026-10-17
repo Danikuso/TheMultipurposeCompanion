@@ -1,0 +1,1 @@
+panel-system-bodies = Systemkörper
