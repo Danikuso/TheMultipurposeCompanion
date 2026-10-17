@@ -5,6 +5,7 @@ use crate::transport::url_encode;
 use serde_json::Value;
 use tmc_model::net::{
     GalaxyRouteParams, NetFailure, NeutronRouteParams, PlannedHop, PlannedRoute, RemoteSystem,
+    SystemSuggestion,
 };
 
 pub const BASE: &str = "https://spansh.co.uk/api";
@@ -52,7 +53,17 @@ pub fn parse_system(body: &str) -> Result<Option<RemoteSystem>, NetFailure> {
         Some(Value::Object(r)) => r,
         Some(Value::Null) => return Ok(None),
         Some(_) => return Err(NetFailure::Malformed),
-        None if root.contains_key("error") => return Ok(None),
+        None if root.contains_key("error") => {
+            // Solo «no encontrado» es NoData; cualquier otro error en un 2xx es anómalo.
+            let msg = jsonx::opt_str(root, "error")?
+                .unwrap_or_default()
+                .to_lowercase();
+            return if msg.contains("could not find") || msg.contains("not found") {
+                Ok(None)
+            } else {
+                Err(NetFailure::Malformed)
+            };
+        }
         None => return Err(NetFailure::Malformed),
     };
 
@@ -234,12 +245,33 @@ fn parse_galaxy(result: &jsonx::Obj) -> Result<PlannedRoute, NetFailure> {
     Ok(PlannedRoute { hops, total_ly })
 }
 
-pub fn parse_autocomplete(body: &str) -> Result<Vec<String>, NetFailure> {
+/// Sugerencias de `min_max` (nombre + id64). Si `min_max` no existe se usan los `values` sin id64.
+pub fn parse_autocomplete(body: &str) -> Result<Vec<SystemSuggestion>, NetFailure> {
     let v = jsonx::parse(body)?;
-    jsonx::req_array(jsonx::as_obj(&v)?, "values")?
-        .iter()
-        .map(|x| x.as_str().map(str::to_string).ok_or(NetFailure::Malformed))
-        .collect()
+    let root = jsonx::as_obj(&v)?;
+    let values = jsonx::req_array(root, "values")?;
+    let mut out = Vec::new();
+    match root.get("min_max") {
+        Some(Value::Array(items)) if !items.is_empty() => {
+            for it in items {
+                let it = jsonx::as_obj(it)?;
+                out.push(SystemSuggestion {
+                    name: jsonx::req_str(it, "name")?,
+                    id64: jsonx::opt_u64(it, "id64")?,
+                });
+            }
+        }
+        _ => {
+            for x in values {
+                let name = x.as_str().ok_or(NetFailure::Malformed)?;
+                out.push(SystemSuggestion {
+                    name: name.to_string(),
+                    id64: None,
+                });
+            }
+        }
+    }
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -311,6 +343,18 @@ mod tests {
     }
 
     #[test]
+    fn error_field_in_2xx_is_no_data_only_when_not_found() {
+        assert_eq!(
+            parse_system(r#"{"error":"Could not find record with id64 9"}"#),
+            Ok(None)
+        );
+        assert_eq!(
+            parse_system(r#"{"error":"internal failure"}"#),
+            Err(NetFailure::Malformed)
+        );
+    }
+
+    #[test]
     fn recorded_404_body_is_no_data() {
         assert_eq!(parse_system(SYSTEM_404), Ok(None));
     }
@@ -355,9 +399,25 @@ mod tests {
             parse_job(JOB).unwrap(),
             "1F2B690E-CA6C-11F1-B0E5-AD2C2EDDEC53"
         );
+        let got = parse_autocomplete(AUTOCOMPLETE).unwrap();
+        let pairs: Vec<(&str, Option<u64>)> =
+            got.iter().map(|s| (s.name.as_str(), s.id64)).collect();
         assert_eq!(
-            parse_autocomplete(AUTOCOMPLETE).unwrap(),
-            vec!["Sol", "Solitude", "Sollaro", "Solibamba", "Solati"]
+            pairs,
+            [
+                ("Sol", Some(10477373803)),
+                ("Solitude", Some(5059379007779)),
+                ("Sollaro", Some(11538024121505)),
+                ("Solibamba", Some(5267550898539)),
+                ("Solati", Some(1458376315610)),
+            ]
+        );
+        assert_eq!(
+            parse_autocomplete(r#"{"values":["A","B"]}"#).unwrap()[1],
+            SystemSuggestion {
+                name: "B".into(),
+                id64: None
+            }
         );
         assert_eq!(
             parse_autocomplete(r#"{"min_max":[],"values":[]}"#),
