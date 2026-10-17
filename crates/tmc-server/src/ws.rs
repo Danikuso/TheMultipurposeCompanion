@@ -17,8 +17,14 @@ use tokio::sync::broadcast;
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 enum ClientMessage {
-    Subscribe { topics: Vec<String> },
-    Action { name: String },
+    Subscribe {
+        topics: Vec<String>,
+    },
+    Action {
+        name: String,
+        #[serde(default)]
+        args: Option<Value>,
+    },
 }
 
 pub fn matches_pattern(topic: &str, pattern: &str) -> bool {
@@ -111,9 +117,10 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                                     break;
                                 }
                             }
-                            ClientMessage::Action { name } => {
+                            ClientMessage::Action { name, args } => {
                                 let snapshot = state.core.snapshot().await;
-                                let _ = state.host.run_action(&name, &snapshot);
+                                let args = args.unwrap_or(Value::Null);
+                                let _ = state.host.run_action_with(&name, &args, &snapshot);
                             }
                         }
                     }

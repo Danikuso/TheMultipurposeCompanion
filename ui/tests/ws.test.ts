@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { connect, disconnect, live, topic } from '../src/lib/ws.svelte';
+import { action, connect, disconnect, live, topic } from '../src/lib/ws.svelte';
 
 class MockWebSocket {
   static instances: MockWebSocket[] = [];
@@ -126,6 +126,22 @@ describe('ws client', () => {
     expect(MockWebSocket.instances.length).toBe(5);
     vi.advanceTimersByTime(1);
     expect(MockWebSocket.instances.length).toBe(6);
+  });
+
+  test('action posts args as json body', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ accepted: true }) }));
+    vi.stubGlobal('fetch', fetchMock);
+    const out = await action('navigation.plan', { to: 'Colonia' });
+    expect(out).toEqual({ accepted: true });
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('/api/actions/navigation.plan');
+    expect(init.method).toBe('POST');
+    expect(init.body).toBe('{"to":"Colonia"}');
+    expect((init.headers as Record<string, string>)['content-type']).toBe('application/json');
+
+    await action('navigation.clear');
+    const [, init2] = fetchMock.mock.calls[1] as unknown as [string, RequestInit];
+    expect(init2.body).toBeUndefined();
   });
 
   test('ws narrows subscription when page hidden', () => {

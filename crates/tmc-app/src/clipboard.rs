@@ -7,7 +7,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 use tmc_model::source::SourceEvent;
-use tmc_server::{ActionError, ActionHost, ConfigHost};
+use tmc_server::{ActionError, ActionFut, ActionHost, ConfigHost};
 use tokio::sync::mpsc;
 
 pub struct Clipboard {
@@ -210,6 +210,54 @@ impl ActionHost for AppActions {
         }
     }
 
+    fn run_action_with(
+        &self,
+        name: &str,
+        args: &Value,
+        snapshot: &BTreeMap<String, Value>,
+    ) -> Result<Value, ActionError> {
+        if !MODULE_PREFIXES.iter().any(|p| name.starts_with(p)) {
+            return self.run_action(name, snapshot);
+        }
+        let runtime = self
+            .runtime
+            .as_ref()
+            .ok_or_else(|| ActionError::Failed("no-runtime".into()))?;
+        let event = SourceEvent::Action {
+            name: name.to_owned(),
+            args: args.clone(),
+        };
+        match runtime.events.try_send(event) {
+            Ok(()) => Ok(json!({ "accepted": true })),
+            Err(mpsc::error::TrySendError::Full(_)) => Err(ActionError::Failed("busy".into())),
+            Err(mpsc::error::TrySendError::Closed(_)) => {
+                Err(ActionError::Failed("core-closed".into()))
+            }
+        }
+    }
+
+    fn autocomplete(&self, q: String, snapshot: &BTreeMap<String, Value>) -> ActionFut {
+        let empty = json!({ "items": [], "page": 0, "more": false });
+        let legacy = snapshot
+            .get("core.game")
+            .and_then(|g| g.get("galaxy"))
+            .and_then(Value::as_str)
+            == Some("Legacy");
+        let Some(runtime) = &self.runtime else {
+            return Box::pin(async move { Ok(empty) });
+        };
+        if legacy || !runtime.online.load(Ordering::Relaxed) {
+            return Box::pin(async move { Ok(empty) });
+        }
+        let net = runtime.net.clone();
+        Box::pin(async move {
+            match net.autocomplete(&q).await {
+                Ok(items) => Ok(json!({ "items": items })),
+                Err(failure) => Err(ActionError::Failed(format!("net-{failure:?}"))),
+            }
+        })
+    }
+
     fn get_config(&self) -> Value {
         ConfigHost::get_config(self)
     }
@@ -218,3 +266,5 @@ impl ActionHost for AppActions {
         ConfigHost::put_config(self, v)
     }
 }
+
+const MODULE_PREFIXES: [&str; 3] = ["navigation.", "exploration.", "exobiology."];
