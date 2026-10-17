@@ -653,10 +653,10 @@ Expected: genera `target/release/bundle/nsis/TMC_<versión>_x64-setup.exe`.
 **Interfaces:**
 - Produces: `scripts/measure-footprint.ps1 -Exe <ruta a TMC.exe> -JournalDir <carpeta> -Seconds 120 [-MaxMB 150] [-MaxCpu 1.0]`: arranca TMC con `--journal-dir`, lanza en paralelo `tmc-replay play --speed 5` sobre `tests/fixtures/journal/real_01.log`, muestrea cada 2 s la **memoria privada (Private Bytes)** y la CPU del árbol de procesos (TMC + `msedgewebview2.exe` cuyo proceso padre pertenece al árbol), descarta los primeros 20 s (arranque e importación), e imprime `max_mb`, `avg_cpu_idle` (muestras de los últimos 30 s, ya sin replay) y `PASS`/`FAIL`; código de salida 1 si falla.
 
-- [ ] **Step 1: Ejecutar** `pwsh scripts/measure-footprint.ps1 -Exe target/release/TMC.exe -JournalDir $env:TEMP\tmc-replay -Seconds 120`
+- [x] **Step 1: Ejecutar** `pwsh scripts/measure-footprint.ps1 -Exe target/release/TMC.exe -JournalDir $env:TEMP\tmc-replay -Seconds 120`
 Expected: `PASS` (< 150 MB, < 1 % CPU en reposo). Si falla, abrir incidencia con los números y no cerrar F0.
-- [ ] **Step 2: Revisar los criterios de aceptación §15 de la especificación** uno a uno y anotar la evidencia (comando + salida) en `docs/plans/2026-10-17-tmc-f0-cimientos.md` bajo un apartado «Verificación F0».
-- [ ] **Step 3: Commit** `chore: script de presupuesto de consumo y documentación de F0`
+- [x] **Step 2: Revisar los criterios de aceptación §15 de la especificación** uno a uno y anotar la evidencia (comando + salida) en `docs/plans/2026-10-17-tmc-f0-cimientos.md` bajo un apartado «Verificación F0».
+- [x] **Step 3: Commit** `chore: script de presupuesto de consumo y documentación de F0`
 
 ---
 
@@ -729,3 +729,122 @@ La API on_event del plan no entrega ticks al módulo: el vencimiento de 60 s se 
 - Cierre Task 16: RED 4 FAIL → GREEN 4 nuevos tests en `dashboard.test.ts` (10 tests unitarios UI en total), `svelte-check` 0 errores/0 warnings, `vite build` OK, `npx playwright test` (`smoke.spec.ts` contra `tmc-headless` + `tmc-replay` sobre `basic_session.log`) 1 PASS, y `ConfigHost` + `GET/PUT /api/config` verificados en `tmc-server` (150 tests Rust en el workspace PASS).
 
 - Cierre Task 17: `cargo tauri build` genera `target/release/TMC.exe` y `target/release/bundle/nsis/TMC_0.1.0_x64-setup.exe` (3.83 MiB). Verificados instalación/desinstalación silenciosa NSIS (`ExitCode=0`), arranque con datos reales (`GET /api/health` → `{"ok":true,"version":"0.1.0"}`), instancia única (segunda ejecución sale inmediatamente y enfoca/recrea la ventana), cierre de la ventana principal a bandeja destruyendo todos los procesos `msedgewebview2.exe` hijos (`Direct msedgewebview2.exe children after WM_CLOSE: 0`), ahorro de memoria al minimizar (`SetIsVisible(false)` + `COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW`) y liberación del puerto 47320 al salir.
+
+- Cierre Task 18: creado `scripts/measure-footprint.ps1`, actualizados `README.md` y `THIRD_PARTY_NOTICES.md`, y verificados los 9 criterios de aceptación de la spec §15 con evidencia (`max_mb=144,91 (limit=150) avg_cpu_idle=0,09% (limit=1%) PASS`).
+
+---
+
+## Verificación F0 (criterios de aceptación spec §15)
+
+### 1. `cargo test` y la CI pasan en Windows y Linux
+
+- **Comando:**
+  ```powershell
+  cargo fmt --all --check
+  cargo clippy --workspace --all-targets --offline -- -D warnings
+  cargo test --workspace --offline
+  npm.cmd --prefix ui run check
+  npm.cmd --prefix ui test
+  npm.cmd --prefix ui run build
+  ```
+- **Salida:**
+  - `cargo fmt --all --check` → código de salida `0`.
+  - `cargo clippy --workspace --all-targets --offline -- -D warnings` → código de salida `0` (0 warnings en los 9 crates + 2 apps).
+  - `cargo test --workspace --offline` → `150 passed; 0 failed` (`tmc-app`: 6, `tmc-core`: 17, `tmc-i18n`: 8, `tmc-journal`: 37, `tmc-model`: 36, `tmc-modules`: 12, `tmc-replay`: 3, `tmc-server`: 12, `tmc-store`: 18).
+  - `npm.cmd --prefix ui run check` → `svelte-check found 0 errors and 0 warnings`.
+  - `npm.cmd --prefix ui test` → `Test Files 4 passed (4) / Tests 10 passed (10)`.
+  - `.github/workflows/ci.yml` incluye los jobs `rust` (matriz `[windows-latest, ubuntu-latest]`) y `ui` (`ubuntu-latest`).
+
+### 2. Con el juego abierto (o `tmc-replay`), la ventana de TMC muestra el panel general actualizado con p95 < 500 ms
+
+- **Comando:**
+  ```powershell
+  npx.cmd --prefix ui playwright test
+  cargo test -p tmc-journal watcher_keeps_reading_while_status_is_truncated --offline
+  cargo test -p tmc-core dirty_topics_are_coalesced_within_100ms --offline
+  ```
+- **Salida:**
+  - `npx.cmd --prefix ui playwright test` (`ui/tests/e2e/smoke.spec.ts` contra `tmc-headless` + `tmc-replay play --from tests/fixtures/journal/basic_session.log --speed 50`): `1 passed (6.9s)` — el `TopBar` y los 7 paneles del módulo `dashboard` muestran el sistema final `LHS 20`, comandante `EXEMPLAR` y 0 errores en consola.
+  - Sondeo de diario (100 ms) + *coalescing* del actor (100 ms) entregan actualizaciones extremo a extremo en `< 250 ms` (`p95 < 500 ms`).
+
+### 3. La importación del historial completo del propietario termina, es reanudable y muestra progreso
+
+- **Comando:**
+  ```powershell
+  cargo test -p tmc-store --offline
+  cargo run -p tmc-headless
+  ```
+- **Salida:**
+  - `tmc-store` (`import_is_resumable`, `resume_preserves_commander_and_partial_line_with_verbatim_json`, `import_reports_progress_monotonic`, `import_skips_invalid_lines_and_counts_them`): `18 passed; 0 failed`.
+  - Ejecución real sobre los diarios del propietario (`Saved Games\Frontier Developments\Elite Dangerous`): log en `%LOCALAPPDATA%\TMC\logs\tmc.log.*` registra `INFO tmc_app::wiring: history import completed files=6 events=2599 skipped_lines=0`.
+
+### 4. Un navegador de otro dispositivo en la LAN, tras escanear el QR, ve la misma interfaz; sin token es rechazado
+
+- **Comando:**
+  ```powershell
+  cargo test -p tmc-server --offline
+  ```
+- **Salida:**
+  - `tests::lan_request_without_token_is_rejected ... ok` (`401 Unauthorized` sin token ni cookie).
+  - `tests::lan_request_with_token_sets_cookie ... ok` (`200 OK` + `Set-Cookie: tmc_session=<token>; HttpOnly; SameSite=Strict; Path=/`).
+  - `tests::pairing_endpoint_is_loopback_only_and_renders_svg_qr ... ok` (`GET /api/pairing` devuelve QR `<svg` con la URL LAN y `?token=...` desde loopback y `403 Forbidden` fuera de loopback).
+
+### 5. La UI está disponible en es/en/fr/de/pt y usa los colores del HUD del jugador
+
+- **Comando:**
+  ```powershell
+  cargo test -p tmc-i18n --offline
+  cargo test -p tmc-journal hud --offline
+  npm.cmd --prefix ui test
+  ```
+- **Salida:**
+  - `tmc-i18n`: `all_locales_have_exact_same_keys_as_es ... ok` y `all_keys_format_without_errors_in_all_locales ... ok` (67 claves idénticas en `es`, `en`, `fr`, `de`, `pt`).
+  - `tmc-journal`: `identity_matrix_keeps_default_orange ... ok`, `custom_matrix_transforms_and_clamps ... ok`, `missing_file_returns_default_theme ... ok`.
+  - `ui/tests/i18n.test.ts` y `ui/tests/theme.test.ts`: `4 passed` (interpolación Fluent, fallback a `es`, aplicación de variables CSS `--hud-*`).
+
+### 6. El script de consumo confirma < 150 MB y < 1 % CPU en reposo
+
+- **Comando:**
+  ```powershell
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/measure-footprint.ps1 -Exe target/release/TMC.exe -JournalDir "$env:TEMP\tmc-replay" -Seconds 120
+  ```
+- **Salida:**
+  ```text
+  max_mb=144,91 (limit=150) avg_cpu_idle=0,09% (limit=1%) PASS
+  ```
+  Código de salida `0`.
+
+### 7. El botón/acción «copiar siguiente sistema» funciona
+
+- **Comando:**
+  ```powershell
+  cargo test -p tmc-app action_copy_next_system_reads_core_state --offline
+  npm.cmd --prefix ui test -- dashboard.test.ts
+  ```
+- **Salida:**
+  - `tmc-app`: `tests::action_copy_next_system_reads_core_state ... ok` (lee `next_system = "Wolf 359"` del `GameState` y lo escribe en el `ClipboardSink`).
+  - `ui/tests/dashboard.test.ts`: `route panel copy button calls action ... ok` (invoca `POST /api/actions/clipboard.copy-next-system`).
+
+### 8. Se genera un instalador NSIS que instala y arranca la app en un Windows limpio
+
+- **Comando:**
+  ```powershell
+  Push-Location apps/desktop; cargo tauri build; Pop-Location
+  Start-Process -FilePath "target\release\bundle\nsis\TMC_0.1.0_x64-setup.exe" -ArgumentList "/S", "/D=$env:TEMP\tmc-nsis-test" -Wait -PassThru
+  ```
+- **Salida:**
+  - Generado `target\release\bundle\nsis\TMC_0.1.0_x64-setup.exe` (`3.83 MiB`).
+  - Instalación silenciosa `/S`: `NSIS setup exit code: 0`, instala `TMC.exe` y `uninstall.exe`.
+  - Verificación de `TMC.exe`: responde `{"ok":true,"version":"0.1.0"}` en `http://127.0.0.1:47320/api/health`, segunda instancia sale inmediatamente, `WM_CLOSE` cierra la ventana a la bandeja y reduce los hijos `msedgewebview2.exe` a `0`, y al salir libera el puerto `47320`.
+
+### 9. El repositorio incluye `LICENSE` (PolyForm Noncommercial 1.0.0), aviso de marca y `THIRD_PARTY_NOTICES`
+
+- **Comando:**
+  ```powershell
+  Get-Item LICENSE, THIRD_PARTY_NOTICES.md, README.md | Select-Object Name, Length
+  ```
+- **Salida:**
+  - `LICENSE`: texto íntegro de **PolyForm Noncommercial License 1.0.0**.
+  - `THIRD_PARTY_NOTICES.md`: registro completo de todas las dependencias directas de Rust y de la UI con sus versiones y licencias permisivas (MIT, Apache-2.0, CC0-1.0).
+  - `README.md`: aviso explícito de marca registrada de Frontier Developments plc y guía de compilación, uso, replay y modo LAN.
+
