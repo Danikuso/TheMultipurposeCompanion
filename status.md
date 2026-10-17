@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Task 1 (Spike 2 — licencias FSD y especies) · 🔄 en curso.
-- **Siguiente acción:** completar la Task 1 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
+- **Tarea:** F1 · Task 2 (Spike 3 — Canonn) · 🔄 en curso.
+- **Siguiente acción:** completar la Task 2 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
 
 ## Fases
 
@@ -34,7 +34,8 @@
 | # | Tarea | Estado | Commit | Notas |
 |---|---|---|---|---|
 | 0 | Spike 1 — Spansh | ✅ hecha | 886c597 | Ficha `/api/system/{id64}`, neutrones `/api/route`, galaxia `/api/generic/route`, autocompletado; política/Powerplay desde Spansh; «descubierto» vía EDSM. Revisión aprobada. |
-| 1–32 | Ver plan | ⬜ | — | |
+| 1 | Spike 2 — licencias FSD y especies | ✅ hecha | bdaea77, 6ecb663 | Todos los datos estáticos se construyen desde hechos con procedencia y `verified`; ninguna fuente externa incorporable; Canonn solo por red. Revisión aprobada tras 1 ronda. |
+| 2–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
