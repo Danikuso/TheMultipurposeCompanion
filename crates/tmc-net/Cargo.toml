@@ -1,6 +1,6 @@
 [package]
 name = "tmc-net"
-description = "Capa de red de TMC: limitador, salud de servicios y política de caché"
+description = "Capa de red de TMC: limitador, salud de servicios, política de caché y clientes de Spansh, EDSM y Canonn"
 version.workspace = true
 edition.workspace = true
 license-file.workspace = true
@@ -8,3 +8,10 @@ repository.workspace = true
 
 [dependencies]
 tmc-model = { path = "../tmc-model" }
+reqwest = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

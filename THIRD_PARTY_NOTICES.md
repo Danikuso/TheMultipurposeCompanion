@@ -247,3 +247,18 @@ Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, 
 - Versión: ^1.51.0
 - Licencia: Apache-2.0
 - Usada por: tests e2e de ui (prueba de humo extremo a extremo)
+
+### reqwest
+- Versión: 0.13.5 (`default-features = false`; características `rustls`, `form`, `gzip`, `http2`, `charset`)
+- Licencia: MIT OR Apache-2.0
+- Usada por: tmc-net (cliente HTTP de Spansh, EDSM y Canonn)
+
+### rustls (y pila TLS transitiva de reqwest)
+- Versión: rustls 0.23.46, rustls-webpki 0.103.15, rustls-platform-verifier 0.7.1, hyper-rustls 0.27.10, tokio-rustls 0.26.6, aws-lc-rs 1.18.2, aws-lc-sys 0.46.0
+- Licencia: rustls Apache-2.0 OR ISC OR MIT; rustls-webpki ISC; aws-lc-rs ISC AND (Apache-2.0 OR ISC); aws-lc-sys ISC AND (Apache-2.0 OR ISC) AND Apache-2.0 AND MIT AND BSD-3-Clause; resto MIT OR Apache-2.0
+- Usada por: tmc-net (TLS de reqwest; proveedor criptográfico aws-lc-rs)
+
+### Otras dependencias transitivas de reqwest (revisión C19)
+- Árbol revisado con `cargo metadata` + `cargo tree -p tmc-net -e normal` (Windows). Todas permisivas: MIT, Apache-2.0, ISC, BSD-3-Clause, Zlib, 0BSD, Unlicense, BSL-1.0 (solo como alternativa en `ryu`, que también es Apache-2.0) y Unicode-3.0 (tablas ICU de `icu_*`, `idna`, `url`; licencia permisiva del Consorcio Unicode con aviso). Sin GPL/AGPL/CC-BY(-SA).
+- Incluye, entre otras: hyper 1.12.0, hyper-util 0.1.21, h2 0.4.20, http 1.5.0, tower-http 0.6.11, url 2.5.8, idna 1.1.0, encoding_rs 0.8.42 ((Apache-2.0 OR MIT) AND BSD-3-Clause), flate2 1.1.10, miniz_oxide 0.9.1, async-compression 0.4.51, serde_urlencoded 0.7.1, subtle 2.6.1 (BSD-3-Clause), untrusted 0.9.0 (ISC), ipnet 2.12.2, mime 0.3.17.
+- Usadas por: tmc-net
