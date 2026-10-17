@@ -558,6 +558,35 @@ fn replay_jumps_do_not_bump_copy_seq_but_live_jumps_do() {
     assert_eq!(h.route()["copy_seq"], 1);
 }
 
+#[test]
+fn copy_seq_only_increases_on_live_jumps() {
+    let mut h = Harness::new();
+    h.load_game();
+    h.location("S1", 1, 0.0);
+    h.nav
+        .set_plan(Some(plan_of(&[("S1", 1), ("S2", 2), ("S3", 3), ("S4", 4)])));
+    // Replay de 3 FSDJump: el contador no se mueve.
+    for (i, (name, id)) in [("S1", 1u64), ("S2", 2), ("S1", 1)].iter().enumerate() {
+        h.journal_at(
+            200 + i as i64,
+            "FSDJump",
+            &format!(
+                r#","StarSystem":"{name}","SystemAddress":{id},"StarPos":[0,0,0],"JumpDist":10.0"#
+            ),
+            true,
+        );
+    }
+    assert_eq!(h.route()["copy_seq"], 0);
+    // Dos saltos en vivo sobre el plan S1 -> S2 -> S3 -> S4.
+    h.jump_to("S2", 2, 10.0);
+    assert_eq!(h.route()["copy_seq"], 1);
+    assert_eq!(h.route()["copy_target"], "S3");
+    h.jump_to("S3", 3, 20.0);
+    let r = h.route();
+    assert_eq!(r["copy_seq"], 2);
+    assert_eq!(r["copy_target"], "S4");
+}
+
 fn loadout_model() -> (jump::FsdSpec, f64) {
     let lo = tmc_model::events::Loadout {
         unladen_mass: Some(468.0),

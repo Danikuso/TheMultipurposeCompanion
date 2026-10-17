@@ -241,6 +241,163 @@ lan = false
     }
 
     #[test]
+    fn manual_copy_prefers_active_plan_next_system() {
+        let actions = AppActions::new();
+        let mut snapshot = BTreeMap::new();
+        snapshot.insert(
+            "navigation.route".into(),
+            json!({ "source": "plan", "copy_target": "B", "copy_seq": 0 }),
+        );
+        snapshot.insert(
+            "core.route".into(),
+            json!({ "next_system": "NavRouteNext" }),
+        );
+        let out = actions
+            .run_action("clipboard.copy-next-system", &snapshot)
+            .unwrap();
+        assert_eq!(out["system"], "B");
+        assert_eq!(actions.clipboard().last_copied().as_deref(), Some("B"));
+    }
+
+    #[test]
+    fn manual_copy_falls_back_to_core_route() {
+        let actions = AppActions::new();
+        let mut snapshot = BTreeMap::new();
+        snapshot.insert(
+            "navigation.route".into(),
+            json!({ "copy_target": null, "copy_seq": 0 }),
+        );
+        snapshot.insert("core.route".into(), json!({ "next_system": "Z" }));
+        let out = actions
+            .run_action("clipboard.copy-next-system", &snapshot)
+            .unwrap();
+        assert_eq!(out["system"], "Z");
+        assert_eq!(actions.clipboard().last_copied().as_deref(), Some("Z"));
+    }
+
+    #[tokio::test]
+    async fn auto_copy_follows_plan_after_each_jump() {
+        use std::io::Write;
+        use tmc_model::net::PlannedHop;
+        use tmc_modules::navigation::route::{ActivePlan, PlanMode};
+
+        let jdir = tempdir().unwrap();
+        let ddir = tempdir().unwrap();
+        let journal = jdir.path().join("Journal.2026-10-18T100000.01.log");
+        let head = concat!(
+            r#"{"timestamp":"2026-10-18T10:00:00Z","event":"Fileheader","part":1,"language":"English/UK","Odyssey":true,"gameversion":"4.1.0.0","build":"r1"}"#,
+            "
+",
+            r#"{"timestamp":"2026-10-18T10:00:01Z","event":"Commander","FID":"F0000001","Name":"TESTER"}"#,
+            "
+",
+            r#"{"timestamp":"2026-10-18T10:00:02Z","event":"LoadGame","FID":"F0000001","Commander":"TESTER","Ship":"python","ShipID":7,"FuelLevel":20.0,"FuelCapacity":32.0,"GameMode":"Solo","Credits":1,"Loan":0}"#,
+            "
+",
+            r#"{"timestamp":"2026-10-18T10:00:03Z","event":"Location","StarSystem":"PA","SystemAddress":101,"StarPos":[0,0,0],"Docked":false}"#,
+            "
+",
+        );
+        std::fs::write(&journal, head).unwrap();
+
+        // Plan aceptado y persistido antes de arrancar: PA -> PB -> PC -> PD.
+        {
+            let store = tmc_store::Store::open(&ddir.path().join("tmc.db")).unwrap();
+            for module in tmc_modules::all_modules() {
+                store.apply_migrations(module.migrations()).unwrap();
+            }
+            let hops = [("PA", 101u64), ("PB", 102), ("PC", 103), ("PD", 104)]
+                .iter()
+                .enumerate()
+                .map(|(i, (n, id))| PlannedHop {
+                    name: (*n).into(),
+                    id64: Some(*id),
+                    star_pos: None,
+                    distance_ly: 10.0 * i as f64,
+                    jumps: 1,
+                    neutron: false,
+                    refuel: None,
+                    star_class: None,
+                })
+                .collect();
+            let plan = ActivePlan {
+                created_at: "2026-10-18T09:00:00Z".parse().unwrap(),
+                origin: "PA".into(),
+                destination: "PD".into(),
+                mode: PlanMode::Neutron,
+                params: json!({}),
+                hops,
+                current_index: 0,
+                off_route: false,
+            };
+            tmc_modules::navigation::persist::save_plan("TESTER".into(), plan)(&store).unwrap();
+        }
+
+        let cfg = Config {
+            journal_dir: Some(jdir.path().to_path_buf()),
+            data_dir: Some(ddir.path().to_path_buf()),
+            server: ServerSection {
+                port: 0,
+                ..Default::default()
+            },
+            auto_copy_next_system: true,
+            online_services: false,
+            ..Default::default()
+        };
+        let running = start(cfg).await.unwrap();
+        let mut rx = running.core.subscribe();
+
+        // El plan se carga con el comandante y el replay no copia nada.
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                let s = running.core.snapshot().await;
+                if s.get("navigation.route")
+                    .is_some_and(|r| r["source"] == "plan" && r["copy_target"] == "PB")
+                {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(25)).await;
+            }
+        })
+        .await
+        .unwrap();
+        assert_eq!(running.clipboard.last_copied(), None);
+
+        let mut file = std::fs::OpenOptions::new()
+            .append(true)
+            .open(&journal)
+            .unwrap();
+        for (i, (name, id)) in [("PB", 102u64), ("PC", 103)].iter().enumerate() {
+            writeln!(
+                file,
+                r#"{{"timestamp":"2026-10-18T10:01:0{i}Z","event":"FSDJump","StarSystem":"{name}","SystemAddress":{id},"StarPos":[10,0,0],"JumpDist":10.0}}"#
+            )
+            .unwrap();
+        }
+        drop(file);
+
+        tokio::time::timeout(Duration::from_secs(5), async {
+            while running.clipboard.last_copied().as_deref() != Some("PD") {
+                tokio::time::sleep(Duration::from_millis(25)).await;
+            }
+        })
+        .await
+        .expect("el portapapeles debe acabar con PD");
+
+        // La alerta de copia automatica lleva el sistema copiado.
+        let mut alert_systems = Vec::new();
+        while let Ok(msg) = rx.try_recv() {
+            if let tmc_core::CoreMessage::Alert(a) = msg
+                && a.key == "nav-auto-copied"
+            {
+                alert_systems.push(a.args["system"].clone());
+            }
+        }
+        assert_eq!(alert_systems.last(), Some(&json!("PD")));
+        running.server.shutdown();
+    }
+
+    #[test]
     fn config_host_roundtrips_and_validates_language() {
         let actions = AppActions::with_config(Config::default());
         let current = actions.get_config();

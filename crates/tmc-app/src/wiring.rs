@@ -20,6 +20,7 @@ pub struct Running {
     pub server: ServerHandle,
     pub core: CoreHandle,
     pub store: Store,
+    pub clipboard: Arc<Clipboard>,
 }
 
 fn open_or_rebuild_store(db_dir: &Path) -> anyhow::Result<Store> {
@@ -82,6 +83,8 @@ pub async fn start(mut config: Config) -> anyhow::Result<Running> {
             }
         }
     });
+    // Suscripción previa al watcher para no perder la primera actualización.
+    let mut rx = core.subscribe();
     let _ = core
         .events
         .send(SourceEvent::Settings(config.module_settings()))
@@ -119,13 +122,16 @@ pub async fn start(mut config: Config) -> anyhow::Result<Running> {
         }
     });
 
-    if config.auto_copy_next_system {
-        let mut rx = core.subscribe();
-        let clipboard = Clipboard::new();
+    // La copia automática respeta el ajuste en caliente (`put_config` lo cambia).
+    let auto_copy = Arc::new(AtomicBool::new(config.auto_copy_next_system));
+    let clipboard = Arc::new(Clipboard::new());
+    {
+        let task_clipboard = clipboard.clone();
+        let flag = auto_copy.clone();
         let throttle_flag = throttle.clone();
         tokio::spawn(async move {
-            let mut last_next: Option<String> = None;
-            let mut initialized = false;
+            // El replay nunca incrementa `copy_seq`: arranca en 0 y solo suben los saltos en vivo.
+            let mut last_seq: u64 = 0;
             while let Ok(msg) = rx.recv().await {
                 if let CoreMessage::Update { topics, .. } = msg {
                     if let Some(game) = topics.get("core.game")
@@ -133,20 +139,19 @@ pub async fn start(mut config: Config) -> anyhow::Result<Running> {
                     {
                         throttle_flag.store(running, Ordering::Relaxed);
                     }
-                    if let Some(route) = topics.get("core.route") {
-                        let current = route
-                            .get("next_system")
-                            .and_then(|v| v.as_str())
-                            .filter(|s| !s.is_empty())
-                            .map(str::to_owned);
-                        if initialized
-                            && current != last_next
-                            && let Some(ref sys) = current
+                    if let Some(route) = topics.get("navigation.route")
+                        && let Some(seq) = route.get("copy_seq").and_then(|v| v.as_u64())
+                    {
+                        if seq > last_seq
+                            && flag.load(Ordering::Relaxed)
+                            && let Some(target) = route
+                                .get("copy_target")
+                                .and_then(|v| v.as_str())
+                                .filter(|s| !s.is_empty())
                         {
-                            let _ = clipboard.set_text(sys);
+                            let _ = task_clipboard.set_text(target);
                         }
-                        last_next = current;
-                        initialized = true;
+                        last_seq = seq;
                     }
                 }
             }
@@ -164,12 +169,10 @@ pub async fn start(mut config: Config) -> anyhow::Result<Running> {
         server_cfg,
         core.clone(),
         store.clone(),
-        Arc::new(AppActions::with_runtime(
-            config,
-            core.events.clone(),
-            online,
-            net,
-        )),
+        Arc::new(
+            AppActions::with_runtime(config, core.events.clone(), online, net)
+                .with_auto_copy_flag(auto_copy),
+        ),
     )
     .await?;
 
@@ -177,5 +180,6 @@ pub async fn start(mut config: Config) -> anyhow::Result<Running> {
         server,
         core,
         store,
+        clipboard,
     })
 }

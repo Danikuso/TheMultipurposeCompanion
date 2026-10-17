@@ -50,6 +50,8 @@ struct Runtime {
     events: mpsc::Sender<SourceEvent>,
     online: Arc<AtomicBool>,
     net: NetServiceHandle,
+    /// Interruptor vivo de la copia automática (lo lee la tarea de copia).
+    auto_copy: Option<Arc<AtomicBool>>,
 }
 
 pub struct AppActions {
@@ -91,9 +93,18 @@ impl AppActions {
                 events,
                 online,
                 net,
+                auto_copy: None,
             }),
             ..Self::with_config(cfg)
         }
+    }
+
+    /// Comparte el interruptor de la copia automática: `put_config` lo actualiza.
+    pub fn with_auto_copy_flag(mut self, flag: Arc<AtomicBool>) -> Self {
+        if let Some(runtime) = &mut self.runtime {
+            runtime.auto_copy = Some(flag);
+        }
+        self
     }
 
     /// Guarda la configuración en `path` en vez de en la ruta de usuario (tests).
@@ -163,6 +174,9 @@ impl ConfigHost for AppActions {
             runtime
                 .online
                 .store(updated.online_services, Ordering::Relaxed);
+            if let Some(flag) = &runtime.auto_copy {
+                flag.store(updated.auto_copy_next_system, Ordering::Relaxed);
+            }
             let event = SourceEvent::Settings(updated.module_settings());
             match runtime.events.try_send(event) {
                 Ok(()) => {}
@@ -197,11 +211,17 @@ impl ActionHost for AppActions {
     ) -> Result<Value, ActionError> {
         match name {
             "clipboard.copy-next-system" => {
-                let next = snapshot
-                    .get("core.route")
-                    .and_then(|r| r.get("next_system"))
-                    .and_then(|v| v.as_str())
-                    .filter(|s| !s.is_empty())
+                // Primero el siguiente de la ruta activa (plan o NavRoute) y,
+                // si no hay, el de la ruta del juego.
+                let pick = |topic: &str, field: &str| {
+                    snapshot
+                        .get(topic)
+                        .and_then(|r| r.get(field))
+                        .and_then(|v| v.as_str())
+                        .filter(|s| !s.is_empty())
+                };
+                let next = pick("navigation.route", "copy_target")
+                    .or_else(|| pick("core.route", "next_system"))
                     .ok_or_else(|| ActionError::Failed("no-next-system".into()))?;
                 self.clipboard.set_text(next).map_err(ActionError::Failed)?;
                 Ok(json!({ "system": next }))

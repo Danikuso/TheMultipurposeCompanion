@@ -42,3 +42,4 @@ nav-plan-error-service = The route service is unavailable right now.
 nav-plan-disabled-legacy = The planner is not available in the Legacy galaxy.
 nav-plan-disabled-offline = The planner needs online services to be enabled.
 nav-plan-error-route-too-long = The route has too many legs.
+nav-auto-copied = Next system copied: { $system }
