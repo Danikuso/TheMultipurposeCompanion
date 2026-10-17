@@ -30,6 +30,11 @@ Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, 
 - Licencia: MIT OR Apache-2.0
 - Usada por: tmc-model
 
+### tracing
+- Versión: 0.1.44
+- Licencia: MIT
+- Usada por: tmc-model
+
 <!-- Plantilla por dependencia:
 ### nombre
 - Versión: x.y.z
