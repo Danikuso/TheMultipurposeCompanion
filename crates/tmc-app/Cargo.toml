@@ -13,7 +13,7 @@ tmc-store = { path = "../tmc-store" }
 tmc-core = { path = "../tmc-core" }
 tmc-modules = { path = "../tmc-modules" }
 tmc-i18n = { path = "../tmc-i18n" }
-tmc-server = { path = "../tmc-server" }
+tmc-server = { path = "../tmc-server", features = ["embed-ui"] }
 tokio.workspace = true
 serde.workspace = true
 serde_json.workspace = true

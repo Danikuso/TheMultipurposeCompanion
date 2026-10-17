@@ -80,3 +80,19 @@ pub async fn post_action(State(state): State<AppState>, Path(name): Path<String>
         }
     }
 }
+
+pub async fn get_config(State(state): State<AppState>) -> Json<Value> {
+    Json(state.host.get_config())
+}
+
+pub async fn put_config(State(state): State<AppState>, Json(payload): Json<Value>) -> Response {
+    match state.host.put_config(payload) {
+        Ok(value) => (StatusCode::OK, Json(value)).into_response(),
+        Err(ActionError::NotFound) => {
+            (StatusCode::NOT_FOUND, Json(json!({ "error": "not-found" }))).into_response()
+        }
+        Err(ActionError::Failed(reason)) => {
+            (StatusCode::BAD_REQUEST, Json(json!({ "error": reason }))).into_response()
+        }
+    }
+}

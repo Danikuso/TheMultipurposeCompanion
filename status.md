@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-17 18:46 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-17 20:01 (Europe/Madrid) · Gemini 4 Argon (Medium)
 - **Fase actual:** F0 — Cimientos
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md) — ✅ aprobada (2026-10-17)
 - **Plan activo:** [`docs/plans/2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) — ✅ aprobado; ejecución por subagentes
@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** Task 11 (`tmc-modules` — registro y dashboard), Step 1: tests.
-- **Siguiente acción:** tests de Task 11 y RED antes de implementar el módulo dashboard. Task 10 aprobada y verificada (115 tests, fmt/clippy PASS).
+- **Tarea:** Task 16 (`UI — paneles del panel general y ajustes`), Step 1: tests.
+- **Siguiente acción:** crear los paneles del módulo `dashboard` (`CmdrPanel`, `ShipPanel`, `LocationPanel`, `StatusPanel`, `RoutePanel`, `SessionPanel`, `AlertsPanel`), `registry.ts`, `Settings.svelte`, `Pairing.svelte`, `ConfigHost` en `tmc-server` + `tmc-app` (`GET/PUT /api/config`), escribir `ui/tests/dashboard.test.ts` y `ui/tests/e2e/smoke.spec.ts` y verificar RED → GREEN. Task 15 cerrada en `bd78913` (6 tests UI PASS, `svelte-check` 0 errores, `vite build` OK).
 
 ## Fases
 
@@ -36,7 +36,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | # | Tarea | Estado | Commit | Notas |
 |---|---|---|---|---|
 | 0 | Entorno de desarrollo (Build Tools, rustup, Tauri CLI) | ✅ | — | VS BuildTools 17.14, rustc 1.99.1 MSVC, tauri-cli 2.12.3 |
-| 1 | Workspace, licencia y CI | ✅ | 69b4be8, 83201c9 | job `ui` de CI se añadirá en Task 15 |
+| 1 | Workspace, licencia y CI | ✅ | 69b4be8, 83201c9 | job `ui` de CI añadido en Task 15 |
 | 2 | `tmc-model` — Status.json | ✅ | 65c72d9 | |
 | 3 | `tmc-model` — eventos del diario y archivos compañeros | ✅ | d24e813 | |
 | 4 | `tmc-model` — GameState y SourceEvent | ✅ hecha | 70e4999, 177eac1, 2ec0abe | Revisión aprobada; 35 tests PASS, fmt y clippy del workspace PASS. |
@@ -45,13 +45,13 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 7 | `tmc-journal` — Status, compañeros, proceso, HUD y watcher | ✅ hecha | 2cc55b7 | Revisión final aprobada; 37 journal y 72 workspace PASS, fmt/clippy PASS. |
 | 8 | `tmc-store` — SQLite, escritor e importación | ✅ hecha | 9fb90b7 | 18 tests store y 90 workspace PASS; revisión, fmt y clippy aprobados. |
 | 9 | `tmc-core` — actor, módulos, topics y alertas | ✅ hecha | 5565fbb | Revisión aprobada; 17 core/107 workspace PASS, fmt/clippy PASS. |
-| 10 | `tmc-i18n` y traducciones | ✅ hecha | commit de cierre Task 10 | 67 claves/5 idiomas; 8 i18n y 115 workspace PASS, revisión y checks aprobados. |
-| 11 | `tmc-modules` — registro y `dashboard` | 🔄 en curso | — | Step 1: tests. |
-| 12 | `tmc-server` — HTTP, WS, seguridad, emparejamiento | ⬜ | — | |
-| 13 | `tmc-app` + `apps/headless` | ⬜ | — | |
-| 14 | `tmc-replay` — reproducción y anonimización | ⬜ | — | |
-| 15 | UI — base (WS, i18n, tema, shell) | ⬜ | — | |
-| 16 | UI — panel general y ajustes | ⬜ | — | |
+| 10 | `tmc-i18n` y traducciones | ✅ hecha | f56862d | 67 claves/5 idiomas; 8 i18n y 115 workspace PASS, revisión y checks aprobados. |
+| 11 | `tmc-modules` — registro y `dashboard` | ✅ hecha | 0ee2585 | RED 11 FAIL → GREEN 12 modules y 127 workspace PASS, revisión y checks aprobados. |
+| 12 | `tmc-server` — HTTP, WS, seguridad, emparejamiento | ✅ hecha | d1e12be | RED 10 FAIL → GREEN 12 server y 139 workspace PASS, revisión y checks aprobados. |
+| 13 | `tmc-app` + `apps/headless` | ✅ hecha | 31b439f | RED 6 FAIL → GREEN 6 app y 145 workspace PASS, `tmc-headless` + `/api/health` verificados. |
+| 14 | `tmc-replay` — reproducción y anonimización | ✅ hecha | 885b0a2 | RED 3 FAIL → GREEN 3 replay, fixtures reales anonimizados, snapshot `insta` y 149 workspace PASS. |
+| 15 | UI — base (WS, i18n, tema, shell) | ✅ hecha | bd78913 | RED 6 FAIL → GREEN 6 tests UI, `svelte-check` 0 errores, `vite build` OK y job `ui` en CI. |
+| 16 | UI — panel general y ajustes | 🔄 en curso | — | Step 1: tests. |
 | 17 | `apps/desktop` — Tauri, bandeja, instalador | ⬜ | — | |
 | 18 | Presupuesto de consumo y cierre de F0 | ⬜ | — | |
 
@@ -65,6 +65,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
 
 ## Decisiones tomadas
+
+- 2026-10-17 · Task 11: TTL de alertas evaluado al siguiente Journal/Status con tiempo >= since + 60 s; sin caducidad autónoma si no llega información. Desviación explícita del plan, sin cambiar spec ni API del módulo.
 
 - 2026-10-17 · Task 8: flush_blocking devuelve Result<(), StoreError> para no confirmar persistencia fallida; desviación documentada en plan, sin cambio de spec. R1 conserva el diario como recuperación y offset exclusivo del importador.
 

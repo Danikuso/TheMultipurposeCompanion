@@ -31,6 +31,8 @@ pub struct Config {
     pub auto_copy_next_system: bool,
     pub alerts_enabled: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub theme_mode: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub data_dir: Option<PathBuf>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ui_dir: Option<PathBuf>,
@@ -44,6 +46,7 @@ impl Default for Config {
             server: ServerSection::default(),
             auto_copy_next_system: true,
             alerts_enabled: true,
+            theme_mode: None,
             data_dir: None,
             ui_dir: None,
         }

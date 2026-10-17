@@ -602,7 +602,7 @@ test('applyTheme sets css variables', ...)          // document.documentElement.
   - Estado vacío en cada panel: `t('empty-no-data')`.
   - Ajustes: idioma (5), tema (HUD / clásico / alto contraste — este último fija `--hud-primary #FFFFFF`, `--hud-bg #000000`), auto-copia, modo LAN (on/off) y `Pairing.svelte` que muestra el QR SVG de `/api/pairing`. Persistencia: `GET/PUT /api/config` (añadir en `tmc-server` + `tmc-app`, valida y guarda `Config`; los cambios de LAN aplican tras reiniciar y la UI lo indica).
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```ts
 test('ship panel shows fuel bar and hull percent', ...)        // topics simulados → texto "87 %" y barra con ancho proporcional
@@ -613,8 +613,8 @@ test('session duration does not re-render faster than 30 s', ...) // fake timers
 
 `smoke.spec.ts` (Playwright, `webServer` = `cargo run -p tmc-headless -- --journal-dir <tmp>` alimentado con `tmc-replay play --from tests/fixtures/journal/basic_session.log --speed 50`): la página carga, el TopBar muestra el sistema final del fixture y no hay errores en consola.
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `npm test && npm run check && npx playwright test` → PASS; `cargo test --workspace` → PASS.
-- [ ] **Step 5: Commit** `feat(ui): panel general, ajustes y emparejamiento LAN`
+- [x] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `npm test && npm run check && npx playwright test` → PASS; `cargo test --workspace` → PASS.
+- [x] **Step 5: Commit** `feat(ui): panel general, ajustes y emparejamiento LAN`
 
 ---
 
@@ -725,3 +725,5 @@ La API on_event del plan no entrega ticks al módulo: el vencimiento de 60 s se 
 - Cierre Task 14: RED 3 FAIL → GREEN 3 replay (`anonymize` y `play`). Generados fixtures reales anonimizados (`real_01.log` a `real_03.log`) y verificado con búsqueda insensible a mayúsculas que no permanece ningún nombre de comandante, FID ni chat real (0 coincidencias). Snapshot `insta` (`real_fixtures_end_state`) añadido y verificado en `tmc-model`. cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline: código 0 y 149 tests PASS (6 app + 17 core + 8 i18n + 37 journal + 36 model + 12 modules + 3 replay + 12 server + 18 store).
 
 - Cierre Task 15: RED 6 FAIL → GREEN 6 tests UI (`ws.test.ts`, `i18n.test.ts`, `theme.test.ts`), `svelte-check` 0 errores/0 warnings y `vite build` OK. Añadido job `ui` en `.github/workflows/ci.yml` (R5) y ruta `../../../locales/*/main.ftl` en `ui/src/lib/i18n.ts` (R2).
+
+- Cierre Task 16: RED 4 FAIL → GREEN 4 nuevos tests en `dashboard.test.ts` (10 tests unitarios UI en total), `svelte-check` 0 errores/0 warnings, `vite build` OK, `npx playwright test` (`smoke.spec.ts` contra `tmc-headless` + `tmc-replay` sobre `basic_session.log`) 1 PASS, y `ConfigHost` + `GET/PUT /api/config` verificados en `tmc-server` (150 tests Rust en el workspace PASS).
