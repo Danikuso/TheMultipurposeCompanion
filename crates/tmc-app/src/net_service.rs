@@ -17,6 +17,14 @@
 //! - Reintentos: tras `Failed(..)` se consulta `NetClient::retry_at` y se
 //!   duerme hasta ese instante en la tarea de la petición. Si el servicio cae,
 //!   se envía una última `Failed(Down)` y se deja de reprogramar.
+//! - Como máximo `MAX_CONCURRENT` llamadas simultáneas al cliente (semáforo);
+//!   las demás esperan turno en su propia tarea, sin bloquear el bucle.
+//! - El grupo sigue «en curso» durante el retroceso de un reintento: una
+//!   petición idéntica nueva se une a él y recibe la respuesta del reintento
+//!   con su propio `id`, sin llamar al transporte.
+//! - Las claves de caché llevan el prefijo `spansh:` también cuando el
+//!   `System` proviene de EDSM (aceptado). Cada intento fallido envía su
+//!   `Failed(..)`, así que los consumidores deben ser idempotentes por `id`.
 //! - `Disabled` (opt-out) se responde con `source: Cache`, sin tocar el
 //!   transporte ni la caché.
 
@@ -34,10 +42,12 @@ use tmc_model::net::{
 };
 use tmc_model::source::SourceEvent;
 use tmc_net::{CacheKind, NetClient, cache_keys, ttl_for};
-use tokio::sync::mpsc;
+use tokio::sync::{Semaphore, mpsc};
 
 /// Mínimo de caracteres para consultar el autocompletado.
 const AUTOCOMPLETE_MIN_CHARS: usize = 3;
+/// Llamadas simultáneas máximas al cliente de red.
+const MAX_CONCURRENT: usize = 4;
 const CARD_FIELDS: [&str; 3] = ["discovered", "body_count", "primary_star"];
 
 #[derive(Clone)]
@@ -64,6 +74,7 @@ impl NetServiceHandle {
     }
 }
 
+#[derive(Clone)]
 struct Waiter {
     id: u64,
     module: String,
@@ -82,8 +93,11 @@ struct Ctx {
     events: mpsc::Sender<SourceEvent>,
     online: Arc<AtomicBool>,
     shared: Mutex<Shared>,
+    permits: Semaphore,
 }
 
+/// Contrato: la defensa de la galaxia Legacy es de los módulos (no emiten
+/// peticiones en Legacy); el servicio no la comprueba.
 pub fn spawn_net_service(
     client: Arc<NetClient>,
     store: Store,
@@ -97,6 +111,7 @@ pub fn spawn_net_service(
         events,
         online: online.clone(),
         shared: Mutex::new(Shared::default()),
+        permits: Semaphore::new(MAX_CONCURRENT),
     });
     tokio::spawn(async move {
         while let Some(request) = rx.recv().await {
@@ -161,6 +176,38 @@ async fn handle(ctx: Arc<Ctx>, req: NetRequest) {
     lead(ctx, qkey, req.query).await;
 }
 
+fn group(ctx: &Ctx, qkey: &str) -> Vec<Waiter> {
+    ctx.shared
+        .lock()
+        .unwrap()
+        .inflight
+        .get(qkey)
+        .cloned()
+        .unwrap_or_default()
+}
+
+/// Llamada al cliente con turno de concurrencia; `None` si el opt-out está
+/// activo justo antes de llamar.
+async fn run(ctx: &Ctx, query: &NetQuery) -> Option<(NetSource, NetOutcome)> {
+    let _permit = ctx.permits.acquire().await.ok()?;
+    if !ctx.online.load(Ordering::Relaxed) {
+        return None;
+    }
+    Some(ctx.client.execute(query).await)
+}
+
+async fn disabled(ctx: &Ctx, qkey: &str) {
+    let waiters = take_group(ctx, qkey);
+    send_all(
+        ctx,
+        &waiters,
+        NetSource::Cache,
+        Utc::now(),
+        &NetOutcome::Disabled,
+    )
+    .await;
+}
+
 fn take_group(ctx: &Ctx, qkey: &str) -> Vec<Waiter> {
     ctx.shared
         .lock()
@@ -200,18 +247,34 @@ async fn lead(ctx: Arc<Ctx>, qkey: String, query: NetQuery) {
             return;
         }
     }
-    let (source, outcome) = ctx.client.execute(&query).await;
-    let waiters = take_group(&ctx, &qkey);
-    finish(&ctx, &query, &waiters, source, &outcome).await;
+    let Some((source, outcome)) = run(&ctx, &query).await else {
+        disabled(&ctx, &qkey).await;
+        return;
+    };
+    settle(&ctx, &qkey, &query, source, &outcome).await;
     if matches!(outcome, NetOutcome::Failed(_)) {
-        retry(ctx, query, waiters, outcome).await;
+        retry(ctx, qkey, query, outcome).await;
     }
+}
+
+/// Responde al grupo: un fallo deja el grupo en curso (esperará su reintento);
+/// cualquier otro resultado lo cierra.
+async fn settle(ctx: &Ctx, qkey: &str, query: &NetQuery, source: NetSource, outcome: &NetOutcome) {
+    let waiters = if matches!(outcome, NetOutcome::Failed(_)) {
+        group(ctx, qkey)
+    } else {
+        take_group(ctx, qkey)
+    };
+    finish(ctx, query, &waiters, source, outcome).await;
 }
 
 /// Refresco en segundo plano tras servir una caché caducada.
 async fn refresh(ctx: Arc<Ctx>, qkey: String, query: NetQuery, waiters: Vec<Waiter>) {
-    let (source, outcome) = ctx.client.execute(&query).await;
+    let result = run(&ctx, &query).await;
     ctx.shared.lock().unwrap().refreshing.remove(&qkey);
+    let Some((source, outcome)) = result else {
+        return;
+    };
     if matches!(outcome, NetOutcome::System(_)) {
         finish(&ctx, &query, &waiters, source, &outcome).await;
     }
@@ -232,10 +295,11 @@ async fn finish(
     send_all(ctx, waiters, source, now, outcome).await;
 }
 
-async fn retry(ctx: Arc<Ctx>, query: NetQuery, waiters: Vec<Waiter>, first: NetOutcome) {
+async fn retry(ctx: Arc<Ctx>, qkey: String, query: NetQuery, first: NetOutcome) {
     let mut last = first;
     loop {
         let Some(at) = ctx.client.retry_at(&query) else {
+            let waiters = take_group(&ctx, &qkey);
             if ctx.client.is_down_for(&query) && last != NetOutcome::Failed(NetFailure::Down) {
                 let down = NetOutcome::Failed(NetFailure::Down);
                 send_all(&ctx, &waiters, NetSource::Cache, Utc::now(), &down).await;
@@ -243,19 +307,11 @@ async fn retry(ctx: Arc<Ctx>, query: NetQuery, waiters: Vec<Waiter>, first: NetO
             return;
         };
         tokio::time::sleep_until(at).await;
-        if !ctx.online.load(Ordering::Relaxed) {
-            send_all(
-                &ctx,
-                &waiters,
-                NetSource::Cache,
-                Utc::now(),
-                &NetOutcome::Disabled,
-            )
-            .await;
+        let Some((source, outcome)) = run(&ctx, &query).await else {
+            disabled(&ctx, &qkey).await;
             return;
-        }
-        let (source, outcome) = ctx.client.execute(&query).await;
-        finish(&ctx, &query, &waiters, source, &outcome).await;
+        };
+        settle(&ctx, &qkey, &query, source, &outcome).await;
         if !matches!(outcome, NetOutcome::Failed(_)) {
             return;
         }
@@ -623,6 +679,89 @@ mod tests {
         };
         assert_eq!(s.name, "Sol");
         assert_eq!(rig.fake.calls(), 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn request_during_backoff_joins_pending_retry() {
+        let mut rig = rig(vec![ok(503, ""), ok(200, SYSTEM)]);
+        rig.handle.tx.send(request(1)).await.unwrap();
+        let first = next_response(&mut rig).await;
+        assert_eq!(first.outcome, NetOutcome::Failed(NetFailure::Http(503)));
+        tokio::time::sleep(Duration::from_secs(10)).await;
+        rig.handle.tx.send(request(2)).await.unwrap();
+        tokio::time::sleep(Duration::from_secs(10)).await;
+        assert_eq!(rig.fake.calls(), 1);
+        tokio::time::sleep(Duration::from_secs(11)).await;
+        let mut ids = Vec::new();
+        for _ in 0..2 {
+            let r = next_response(&mut rig).await;
+            assert!(matches!(r.outcome, NetOutcome::System(_)));
+            ids.push(r.id);
+        }
+        ids.sort();
+        assert_eq!(ids, vec![1, 2]);
+        assert_eq!(rig.fake.calls(), 2);
+    }
+
+    struct Slow {
+        now: StdMutex<u32>,
+        max: StdMutex<u32>,
+    }
+
+    impl Transport for Slow {
+        fn get(&self, _url: &str) -> BoxFut<'_, Reply> {
+            Box::pin(async move {
+                {
+                    let mut n = self.now.lock().unwrap();
+                    *n += 1;
+                    let mut m = self.max.lock().unwrap();
+                    *m = (*m).max(*n);
+                }
+                tokio::time::sleep(Duration::from_secs(10)).await;
+                *self.now.lock().unwrap() -= 1;
+                ok(200, SYSTEM)
+            })
+        }
+        fn post_form(&self, _url: &str, _form: &[(String, String)]) -> BoxFut<'_, Reply> {
+            self.get("")
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn transport_concurrency_is_bounded_to_four() {
+        let slow = Arc::new(Slow {
+            now: StdMutex::new(0),
+            max: StdMutex::new(0),
+        });
+        let (tx, mut events) = mpsc::channel(64);
+        let handle = spawn_net_service(
+            Arc::new(NetClient::new(slow.clone())),
+            Store::open_in_memory().unwrap(),
+            tx,
+            Arc::new(AtomicBool::new(true)),
+        );
+        for id in 1..=10u64 {
+            handle
+                .tx
+                .send(NetRequest {
+                    id,
+                    module: "navigation".into(),
+                    key: format!("system:{id}"),
+                    query: NetQuery::System {
+                        id64: id,
+                        name: format!("S{id}"),
+                    },
+                })
+                .await
+                .unwrap();
+        }
+        let mut done = 0;
+        while done < 10 {
+            if let Some(SourceEvent::Net(_)) = events.recv().await {
+                done += 1;
+            }
+        }
+        assert_eq!(*slow.max.lock().unwrap(), 4);
     }
 
     #[tokio::test(start_paused = true)]
