@@ -1,7 +1,9 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(windows)]
+use tauri::WebviewWindow;
 use tauri::webview::Url;
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 pub const MAIN_WINDOW_LABEL: &str = "main";
 pub const MAIN_WINDOW_TITLE: &str = "TMC — The Multipurpose Companion";
