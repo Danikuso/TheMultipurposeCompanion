@@ -170,3 +170,50 @@ Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, 
 - Versión: 1.49.0
 - Licencia: Apache-2.0
 - Usada por: tests de tmc-model (snapshots de estado final sobre fixtures reales)
+
+## Dependencias directas de la UI (`ui/package.json`)
+
+### @fluent/bundle
+- Versión: ^0.18.0
+- Licencia: Apache-2.0
+- Usada por: ui (formateo de traducciones Fluent en navegador)
+
+### svelte
+- Versión: ^5.20.0
+- Licencia: MIT
+- Usada por: ui (componentes reactivos de interfaz)
+
+### vite
+- Versión: ^6.2.0
+- Licencia: MIT
+- Usada por: ui (empaquetado y servidor de desarrollo)
+
+### @sveltejs/vite-plugin-svelte
+- Versión: ^5.0.0
+- Licencia: MIT
+- Usada por: ui (integración de Svelte 5 con Vite)
+
+### svelte-check
+- Versión: ^4.1.0
+- Licencia: MIT
+- Usada por: ui (verificación estática de tipos en plantillas Svelte)
+
+### typescript
+- Versión: ~5.7.0
+- Licencia: Apache-2.0
+- Usada por: ui (tipado estático TypeScript)
+
+### vitest
+- Versión: ^3.0.0
+- Licencia: MIT
+- Usada por: tests de ui (ejecutor de pruebas unitarias)
+
+### jsdom
+- Versión: ^26.0.0
+- Licencia: MIT
+- Usada por: tests de ui (entorno DOM simulado para Vitest)
+
+### @playwright/test
+- Versión: ^1.51.0
+- Licencia: Apache-2.0
+- Usada por: tests e2e de ui (prueba de humo extremo a extremo)

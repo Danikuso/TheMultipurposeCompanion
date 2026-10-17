@@ -1,0 +1,16 @@
+:root {
+  --hud-primary: #ff7100;
+  --hud-secondary: #00a2ff;
+  --hud-bg: #0b0c10;
+  --hud-danger: #ff2b2b;
+  --hud-primary-dim: rgba(255, 113, 0, 0.4);
+  --hud-border: rgba(255, 113, 0, 0.35);
+  --hud-surface: #12151e;
+  --hud-surface-alt: #181c28;
+  --hud-text: #f3f4f6;
+  --hud-muted: #9ca3af;
+  --hud-warning: #f59e0b;
+  --hud-success: #22c55e;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace;
+}
