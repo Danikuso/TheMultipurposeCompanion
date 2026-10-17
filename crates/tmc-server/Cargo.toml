@@ -1,0 +1,33 @@
+[package]
+name = "tmc-server"
+description = "Servidor HTTP/WebSocket local y LAN de TMC"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+embed-ui = ["dep:rust-embed"]
+
+[dependencies]
+tmc-core = { path = "../tmc-core" }
+tmc-model = { path = "../tmc-model" }
+axum.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+qrcode.workspace = true
+rust-embed = { workspace = true, optional = true }
+
+[dev-dependencies]
+tower = { workspace = true, features = ["util"] }
+tokio-tungstenite.workspace = true
+futures-util = "0.3"
+tempfile.workspace = true
+hyper = { version = "1.12.0", features = ["http1", "server"] }
+hyper-util = { version = "0.1.21", features = ["tokio", "service"] }
+

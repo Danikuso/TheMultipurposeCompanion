@@ -99,4 +99,40 @@ Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, 
 ### rust-embed
 - Versión: 8.13.0
 - Licencia: MIT
-- Usada por: tmc-i18n (recursos de traducción compartidos)
+- Usada por: tmc-i18n (recursos de traducción compartidos), tmc-server (feature `embed-ui`)
+
+### axum
+- Versión: 0.8.9
+- Licencia: MIT
+- Usada por: tmc-server (servidor HTTP y WebSocket)
+
+### qrcode
+- Versión: 0.14.1
+- Licencia: MIT OR Apache-2.0
+- Usada por: tmc-server (generación de código QR SVG para emparejamiento LAN)
+
+### tower
+- Versión: 0.5.3
+- Licencia: MIT
+- Usada por: tests de tmc-server (`ServiceExt::oneshot`)
+
+### tokio-tungstenite
+- Versión: 0.30.0
+- Licencia: MIT
+- Usada por: tests de tmc-server (cliente WebSocket de prueba)
+
+### futures-util
+- Versión: 0.3.34
+- Licencia: MIT OR Apache-2.0
+- Usada por: tests de tmc-server (streams/sinks de WebSocket)
+
+### hyper
+- Versión: 1.12.0
+- Licencia: MIT
+- Usada por: tests de tmc-server (conexión HTTP/1 con upgrade sobre canal en memoria)
+
+### hyper-util
+- Versión: 0.1.21
+- Licencia: MIT
+- Usada por: tests de tmc-server (adaptador TokioIo / TowerToHyperService)
+

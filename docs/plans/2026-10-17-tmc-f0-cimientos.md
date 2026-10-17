@@ -472,7 +472,7 @@ Relevance: `Urgent` si hay alguna alerta Critical activa, si no `Normal`.
   - Protocolo WS exactamente como spec §7.2: al conectar `hello` (`version: 1`, `locale` de config, lista de topics del snapshot), luego `snapshot`; después reenvía `CoreMessage` filtrados por las suscripciones (`subscribe` con patrones `prefijo.*` o nombre exacto; sin `subscribe` → todos). Cada `subscribe` recibido se responde con un `snapshot` nuevo de los topics que casan (así la UI puede bajar a `["core.game"]` al ocultarse y recuperar todo al volver). Si el cliente va lento (`broadcast` con `Lagged`), se le reenvía un `snapshot` completo.
   - Seguridad (`security.rs`, middleware): peticiones desde loopback → permitidas sin token pero `Host` debe ser `127.0.0.1:{port}` o `localhost:{port}`; peticiones desde otra IP → solo si `lan = true` **y** token válido (query `?token=` la primera vez → cookie `tmc_token` HttpOnly SameSite=Strict; después cookie) **y** `Host` = IP local:puerto; en `/ws` además `Origin` debe coincidir con el `Host`. Comparación de token en tiempo constante.
 
-- [ ] **Step 1: Tests** (`tower::ServiceExt::oneshot` para HTTP; `tokio-tungstenite` para WS):
+- [x] **Step 1: Tests** (`tower::ServiceExt::oneshot` para HTTP; `tokio-tungstenite` para WS):
 
 ```rust
 #[tokio::test] async fn health_ok_from_loopback() {}
@@ -487,8 +487,8 @@ Relevance: `Urgent` si hay alguna alerta Critical activa, si no `Normal`.
 #[tokio::test] async fn falls_back_to_next_free_port() {}
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-server` PASS.
-- [ ] **Step 5: Commit** `feat(server): HTTP/WebSocket, seguridad LAN y emparejamiento por QR`
+- [x] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-server` PASS.
+- [x] **Step 5: Commit** `feat(server): HTTP/WebSocket, seguridad LAN y emparejamiento por QR`
 
 ---
 
@@ -717,4 +717,7 @@ La revisión encontró que flush_blocking sin retorno podía confirmar un lote f
 La API on_event del plan no entrega ticks al módulo: el vencimiento de 60 s se evalúa con el siguiente evento Journal/Status que tenga timestamp, igual que el antirrebote de 30 s. Sin nuevos datos de juego no hay retirada autónoma exactamente al segundo 60. Esta limitación se mantiene explícita para conservar determinismo, contrato de módulo y ausencia de sondeos adicionales de rol en core. La spec no fija TTL de alertas; no cambia sus criterios de aceptación. Se verifica el borde exacto de 60 s y no se presenta esta comprobación como temporizador autónomo. Un futuro hook temporal genérico requeriría planificación explícita.
 
 - Cierre Task 11: RED 11 FAIL → GREEN inicial 11 PASS; regresión de escalado de HullDamage dentro de ventana de antirrebote (RED 11 PASS/1 FAIL → GREEN 12 PASS). Revisión contra spec y plan aprobada. cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline: código 0 y 127 tests PASS (17 core + 8 i18n + 37 journal + 35 model + 12 modules + 18 store).
+
+- Cierre Task 12: RED 10 FAIL → GREEN 12 server (HTTP, WebSocket hello/snapshot/update/subscribe, validación anti DNS-rebinding de Host/Origin, autenticación LAN en tiempo constante con cookie HttpOnly SameSite=Strict, emparejamiento QR SVG solo loopback y estáticos con fallback SPA). Dependencias conformes a spec §3.1 (`tmc-server -> tmc-core, tmc-model`). cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline: código 0 y 139 tests PASS (17 core + 8 i18n + 37 journal + 35 model + 12 modules + 12 server + 18 store).
+
 
