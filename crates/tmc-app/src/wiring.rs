@@ -1,6 +1,6 @@
 //! Arranque y cableado de todos los subsistemas.
 
-use crate::{AppActions, Clipboard, Config, data_dir};
+use crate::{AppActions, Clipboard, Config, data_dir, spawn_net_service};
 use chrono::Utc;
 use std::path::Path;
 use std::sync::{
@@ -8,10 +8,11 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 use std::time::Duration;
-use tmc_core::{CoreHandle, CoreMessage, spawn_core};
+use tmc_core::{CoreHandle, CoreMessage, CoreOptions, spawn_core_with};
 use tmc_journal::{WatchOptions, is_game_running, resolve_journal_dir, spawn_watcher};
 use tmc_model::source::SourceEvent;
 use tmc_modules::all_modules;
+use tmc_net::{NetClient, ReqwestTransport};
 use tmc_server::{ServerConfig, ServerHandle, serve};
 use tmc_store::{EventWriter, ImportOptions, Store, import_history};
 
@@ -45,12 +46,46 @@ pub async fn start(mut config: Config) -> anyhow::Result<Running> {
     store.kv_set("locale", &config.language);
 
     let writer = EventWriter::spawn(&store);
-    let modules = if config.alerts_enabled {
-        all_modules()
-    } else {
-        Vec::new()
-    };
-    let core = spawn_core(modules, Some(writer), Duration::from_millis(100));
+    // Los módulos se registran siempre; cada uno respeta los ajustes que recibe
+    // por `SourceEvent::Settings` (p. ej. `Dashboard` y `alerts_enabled`).
+    let modules = all_modules();
+    for module in &modules {
+        store.apply_migrations(module.migrations())?;
+    }
+
+    let transport = ReqwestTransport::new()
+        .map_err(|err| anyhow::anyhow!("could not build HTTP transport: {err:?}"))?;
+    let online = Arc::new(AtomicBool::new(config.online_services));
+    // El servicio de red necesita el canal de eventos del núcleo, que a su vez
+    // necesita el emisor de peticiones: se enlazan con un canal intermedio.
+    let (net_events, mut net_events_rx) = tokio::sync::mpsc::channel::<SourceEvent>(64);
+    let net = spawn_net_service(
+        Arc::new(NetClient::new(Arc::new(transport))),
+        store.clone(),
+        net_events,
+        online.clone(),
+    );
+    let core = spawn_core_with(
+        modules,
+        CoreOptions {
+            writer: Some(writer),
+            flush_every: Duration::from_millis(100),
+            store: Some(store.clone()),
+            net: Some(net.tx.clone()),
+        },
+    );
+    let forward = core.events.clone();
+    tokio::spawn(async move {
+        while let Some(event) = net_events_rx.recv().await {
+            if forward.send(event).await.is_err() {
+                break;
+            }
+        }
+    });
+    let _ = core
+        .events
+        .send(SourceEvent::Settings(config.module_settings()))
+        .await;
 
     let watch_opts = WatchOptions {
         journal_dir: journal_dir.clone(),
@@ -129,7 +164,12 @@ pub async fn start(mut config: Config) -> anyhow::Result<Running> {
         server_cfg,
         core.clone(),
         store.clone(),
-        Arc::new(AppActions::with_config(config)),
+        Arc::new(AppActions::with_runtime(
+            config,
+            core.events.clone(),
+            online,
+            net,
+        )),
     )
     .await?;
 

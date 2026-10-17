@@ -4945,6 +4945,7 @@ dependencies = [
  "tmc-journal",
  "tmc-model",
  "tmc-modules",
+ "tmc-net",
  "tmc-server",
  "tmc-store",
  "tokio",
