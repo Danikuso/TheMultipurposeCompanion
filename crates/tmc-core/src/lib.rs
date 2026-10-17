@@ -8,4 +8,5 @@ pub mod topics;
 pub use actor::{CoreHandle, CoreMessage, spawn_core};
 pub use alert::{Alert, Severity};
 pub use module::{Module, ModuleCtx, Relevance};
+pub use tmc_store::{EventQuery, EventRow, EventWriter, Store, StoreError, StoredEvent};
 pub use topics::TopicSet;
