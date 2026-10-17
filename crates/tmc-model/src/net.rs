@@ -87,7 +87,7 @@ pub struct NetResponse {
 pub enum NetOutcome {
     System(RemoteSystem),
     Route(PlannedRoute),
-    Autocomplete(Vec<String>),
+    Autocomplete(Vec<SystemSuggestion>),
     BodyBio(RemoteBodyBio),
     NoData,
     Disabled,
@@ -101,6 +101,13 @@ pub enum NetFailure {
     Malformed,
     Down,
     RateLimited,
+}
+
+/// Sugerencia de autocompletado; `id64` lo necesita el planificador de galaxia.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SystemSuggestion {
+    pub name: String,
+    pub id64: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

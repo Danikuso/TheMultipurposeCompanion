@@ -30,6 +30,7 @@ use crate::transport::{HttpReply, Transport, TransportError};
 use tmc_model::net::{NetFailure, NetOutcome, NetQuery, NetSource};
 
 const POLL_EVERY: Duration = Duration::from_secs(2);
+const MAX_TRANSIENT_POLL_FAILURES: u32 = 2;
 const POLL_LIMIT: Duration = Duration::from_secs(120);
 
 /// Resultado no exitoso de una llamada (más pequeño que `NetOutcome`).
@@ -173,6 +174,12 @@ impl NetClient {
     }
 
     /// Alta de un trabajo de ruta en Spansh y sondeo hasta terminar (o 120 s).
+    ///
+    /// Los 120 s se miden desde que se obtiene el cerrojo de rutas y tras el
+    /// alta: no son un tope absoluto de reloj (peor caso aproximado: 120 s +
+    /// intervalo de sondeo + tiempo máximo de una petición, sin contar la espera
+    /// del cerrojo). Se toleran hasta 2 fallos transitorios consecutivos de
+    /// sondeo (5xx, tiempo agotado, 429); el 3.º se devuelve.
     async fn route(&self, post: Req) -> NetOutcome {
         let service = Service::Spansh;
         if self.is_down(service) {
@@ -189,13 +196,31 @@ impl NetClient {
             },
             Err(miss) => return miss.into(),
         };
+        // El alta fue correcta: cuenta como éxito para la salud (solo cuentan fallos consecutivos).
+        self.succeed(service);
+        let mut transient = 0u32;
         let deadline = tokio::time::Instant::now() + POLL_LIMIT;
         loop {
             let body = match self
                 .call(service, Req::Get(spansh::results_url(&job)))
                 .await
             {
-                Ok(body) => body,
+                Ok(body) => {
+                    transient = 0;
+                    body
+                }
+                Err(Miss::Fail(
+                    f @ (NetFailure::Timeout | NetFailure::RateLimited | NetFailure::Http(500..)),
+                )) => {
+                    transient += 1;
+                    if transient > MAX_TRANSIENT_POLL_FAILURES
+                        || tokio::time::Instant::now() >= deadline
+                    {
+                        return NetOutcome::Failed(f);
+                    }
+                    tokio::time::sleep(POLL_EVERY).await;
+                    continue;
+                }
                 Err(miss) => return miss.into(),
             };
             match spansh::parse_route_result(&body) {
@@ -208,7 +233,7 @@ impl NetClient {
                     self.succeed(service);
                     return NetOutcome::NoData;
                 }
-                Ok(RoutePoll::Pending) => {}
+                Ok(RoutePoll::Pending) => self.succeed(service),
                 Err(e) => {
                     self.fail(service);
                     return NetOutcome::Failed(e);
@@ -254,7 +279,10 @@ impl NetClient {
                     Err(Miss::Fail(NetFailure::Http(status)))
                 }
                 // Otros 4xx: petición rechazada, no es un fallo del servicio.
-                _ => Err(Miss::Fail(NetFailure::Http(status))),
+                _ => {
+                    tracing::warn!(status, ?service, "petición rechazada por el servicio");
+                    Err(Miss::Fail(NetFailure::Http(status)))
+                }
             },
         }
     }
@@ -331,6 +359,7 @@ mod tests {
     struct FakeTransport {
         routes: Mutex<Vec<(String, VecDeque<Reply>)>>,
         calls: Mutex<Vec<String>>,
+        forms: Mutex<Vec<Vec<(String, String)>>>,
     }
 
     impl FakeTransport {
@@ -378,7 +407,8 @@ mod tests {
             let r = self.serve(format!("GET {url}"), url);
             Box::pin(async move { r })
         }
-        fn post_form(&self, url: &str, _form: &[(String, String)]) -> BoxFut<'_, Reply> {
+        fn post_form(&self, url: &str, form: &[(String, String)]) -> BoxFut<'_, Reply> {
+            self.forms.lock().unwrap().push(form.to_vec());
             let r = self.serve(format!("POST {url}"), url);
             Box::pin(async move { r })
         }
@@ -732,7 +762,8 @@ mod tests {
             panic!("{out:?}")
         };
         assert_eq!(v.len(), 5);
-        assert_eq!(v[1], "Solitude");
+        assert_eq!(v[1].name, "Solitude");
+        assert_eq!(v[1].id64, Some(5059379007779));
     }
 
     #[tokio::test(start_paused = true)]
@@ -757,5 +788,71 @@ mod tests {
             (NetSource::Canonn, NetOutcome::Disabled)
         );
         assert_eq!(t.total(), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn successful_route_resets_health_so_failures_are_consecutive() {
+        let t = FakeTransport::new();
+        t.script(
+            "spansh.co.uk/api/system/",
+            vec![ok(503, ""), ok(503, ""), ok(200, SYSTEM)],
+        );
+        t.script("spansh.co.uk/api/route", vec![ok(202, JOB)]);
+        t.script("/api/results/", vec![ok(200, NEUTRON)]);
+        t.script("edsm.net", vec![ok(200, EDSM_SOL)]);
+        let c = client(&t);
+        c.execute(&sol_query()).await;
+        c.execute(&sol_query()).await;
+        assert!(matches!(
+            c.execute(&neutron_query()).await.1,
+            NetOutcome::Route(_)
+        ));
+        c.execute(&sol_query()).await; // sigue contando 1 fallo, no 3
+        let (src, _) = c.execute(&sol_query()).await;
+        assert_eq!(src, NetSource::Spansh);
+        assert_eq!(t.count("edsm.net"), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn poll_tolerates_two_transient_failures_but_not_three() {
+        let t = FakeTransport::new();
+        t.script("spansh.co.uk/api/route", vec![ok(202, JOB)]);
+        t.script("/api/results/", vec![ok(503, ""), ok(200, NEUTRON)]);
+        let (_, out) = client(&t).execute(&neutron_query()).await;
+        assert!(matches!(out, NetOutcome::Route(_)));
+
+        let t = FakeTransport::new();
+        t.script("spansh.co.uk/api/route", vec![ok(202, JOB)]);
+        t.script(
+            "/api/results/",
+            vec![
+                ok(503, ""),
+                Err(TransportError::Timeout),
+                ok(429, ""),
+                ok(200, NEUTRON),
+            ],
+        );
+        let (_, out) = client(&t).execute(&neutron_query()).await;
+        assert_eq!(out, NetOutcome::Failed(NetFailure::RateLimited));
+        assert_eq!(t.count("/api/results/"), 3);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn forms_and_urls_carry_special_characters_intact() {
+        let t = FakeTransport::new();
+        t.script("spansh.co.uk/api/route", vec![ok(400, "{}")]);
+        let mut q = neutron_query();
+        if let NetQuery::NeutronRoute(p) = &mut q {
+            p.from = "Ñandú A+B".into();
+        }
+        client(&t).execute(&q).await;
+        let forms = t.forms.lock().unwrap();
+        let from = forms[0].iter().find(|(k, _)| k == "from").unwrap();
+        // El transporte codifica el formulario; el adaptador entrega el texto sin tocar.
+        assert_eq!(from.1, "Ñandú A+B");
+        assert_eq!(
+            crate::edsm::system_url("Ñandú A+B"),
+            "https://www.edsm.net/api-v1/system?systemName=%C3%91and%C3%BA%20A%2BB&showId=1&showInformation=1&showPrimaryStar=1"
+        );
     }
 }
