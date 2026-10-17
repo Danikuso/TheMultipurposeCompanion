@@ -9,6 +9,9 @@
     { "body": "A 1 a", "english_name": "Ejemplo Sintetico Alfa", "entryid": 9900001, "hud_category": "Biology", "index_id": null, "latitude": "10.00000", "longitude": "20.00000", "scanned": "false" },
     { "body": "A 1 a", "english_name": "Ejemplo Sintetico Alfa", "entryid": 9900001, "hud_category": "Biology", "index_id": null, "latitude": "11.50000", "longitude": "-21.25000", "scanned": "false" },
     { "body": "A 1 a", "english_name": "Ejemplo Sintetico Beta", "entryid": 9900002, "hud_category": "Biology", "index_id": null, "latitude": "-5.00000", "longitude": "30.00000", "scanned": "false" },
+    { "body": "A 1", "english_name": "Ejemplo Sintetico Gamma", "entryid": 9900004, "hud_category": "Biology", "index_id": null, "latitude": "3.00000", "longitude": "4.00000", "scanned": "false" },
+    { "body": "a 1 A", "english_name": "Ejemplo Sintetico Alfa", "entryid": 9900001, "hud_category": "Biology", "index_id": null, "latitude": "7.00000", "longitude": "8.00000", "scanned": "false" },
+    { "body": null, "english_name": "Ejemplo Sintetico Beta", "entryid": 9900002, "hud_category": "Biology", "index_id": null, "latitude": "9.00000", "longitude": "9.50000", "scanned": "false" },
     { "body": "A 2", "english_name": "Fumarola Sintetica", "entryid": 9900003, "hud_category": "Geology", "index_id": null, "latitude": "1.00000", "longitude": "2.00000", "scanned": "false" }
   ],
   "odyssey": 1,
