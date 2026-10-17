@@ -42,3 +42,4 @@ nav-plan-error-service = Le service d'itinéraires est indisponible pour le mome
 nav-plan-disabled-legacy = Le planificateur n'est pas disponible dans la galaxie Legacy.
 nav-plan-disabled-offline = Le planificateur nécessite l'activation des services en ligne.
 nav-plan-error-route-too-long = L'itinéraire comporte trop d'étapes.
+nav-auto-copied = Système suivant copié : { $system }

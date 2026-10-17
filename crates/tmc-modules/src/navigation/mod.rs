@@ -18,7 +18,7 @@ use strip::{
     Entry, LocalPolitics, RemoteState, RemoteStatus, RouteTopic, STRIP_AHEAD, Strip, SystemCard,
     build_strip, system_key,
 };
-use tmc_core::{Module, ModuleCtx, Relevance, TopicSet};
+use tmc_core::{Alert, Module, ModuleCtx, Relevance, Severity, TopicSet};
 use tmc_model::events::EventKind;
 use tmc_model::net::{NetOutcome, NetQuery, NetResponse};
 use tmc_model::settings::ModuleSettings;
@@ -223,6 +223,15 @@ impl Navigation {
                 }
                 if !ctx.replaying {
                     self.copy_seq += 1;
+                    // El plan ya avanzó: el destino de copia es el siguiente de la tira.
+                    if self.settings.auto_copy_next_system
+                        && let Some(next) = build_strip(self.plan.as_ref(), state).upcoming.first()
+                    {
+                        ctx.alert(
+                            Alert::new(Severity::Info, "nav-auto-copied")
+                                .arg("system", next.name.clone()),
+                        );
+                    }
                 }
             }
             EventKind::Location(l) | EventKind::CarrierJump(l) => {

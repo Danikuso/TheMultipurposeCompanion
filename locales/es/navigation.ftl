@@ -42,3 +42,4 @@ nav-plan-error-service = El servicio de rutas no está disponible ahora mismo.
 nav-plan-disabled-legacy = El planificador no está disponible en la galaxia Legacy.
 nav-plan-disabled-offline = El planificador necesita los servicios en línea activados.
 nav-plan-error-route-too-long = La ruta tiene demasiados tramos.
+nav-auto-copied = Copiado el siguiente sistema: { $system }
