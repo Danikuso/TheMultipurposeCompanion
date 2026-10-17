@@ -1,0 +1,23 @@
+# Herramientas locales
+.remember/
+.playwright-mcp/
+.claude/settings.local.json
+
+# Rust
+target/
+
+# Frontend
+node_modules/
+dist/
+.svelte-kit/
+
+# Secretos (Client ID de Frontier, claves de API)
+.env
+.env.*
+!.env.example
+
+# SO / editores
+Thumbs.db
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
