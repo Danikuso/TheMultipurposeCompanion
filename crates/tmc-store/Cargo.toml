@@ -11,6 +11,7 @@ tmc-model = { path = "../tmc-model" }
 tmc-journal = { path = "../tmc-journal" }
 rusqlite.workspace = true
 chrono.workspace = true
+serde_json.workspace = true
 tracing.workspace = true
 thiserror.workspace = true
 

@@ -1,6 +1,14 @@
 use crate::{Alert, TopicSet};
 use serde::Serialize;
-use tmc_model::{source::SourceEvent, state::GameState};
+use tmc_model::{
+    net::{NetQuery, NetRequest},
+    source::SourceEvent,
+    state::GameState,
+};
+use tmc_store::{Migration, Store, StoreError};
+
+/// Tarea de SQLite que el actor ejecuta fuera de su bucle (`spawn_blocking`).
+pub type StoreTask = Box<dyn FnOnce(&Store) -> Result<serde_json::Value, StoreError> + Send>;
 
 pub trait Module: Send {
     fn id(&self) -> &'static str;
@@ -9,6 +17,10 @@ pub trait Module: Send {
     fn topics(&self) -> Vec<String>;
     fn relevance(&self, _state: &GameState) -> Relevance {
         Relevance::Normal
+    }
+    /// Migraciones de SQLite propias del modulo (se aplican al arrancar).
+    fn migrations(&self) -> &'static [Migration] {
+        &[]
     }
 }
 
@@ -23,15 +35,55 @@ pub enum Relevance {
 
 pub struct ModuleCtx {
     pub replaying: bool,
+    module: &'static str,
+    next_request_id: u64,
     alerts: Vec<Alert>,
+    requests: Vec<NetRequest>,
+    store_tasks: Vec<(String, StoreTask)>,
 }
 
 impl ModuleCtx {
-    pub(crate) fn new(replaying: bool) -> Self {
+    pub(crate) fn new(module: &'static str, replaying: bool, next_request_id: u64) -> Self {
         Self {
             replaying,
+            module,
+            next_request_id,
             alerts: Vec::new(),
+            requests: Vec::new(),
+            store_tasks: Vec::new(),
         }
+    }
+
+    /// Pide una consulta de red. Devuelve el id de la peticion, o `None` (y la
+    /// descarta) durante el replay.
+    pub fn request(&mut self, key: impl Into<String>, query: NetQuery) -> Option<u64> {
+        if self.replaying {
+            return None;
+        }
+        let id = self.next_request_id;
+        self.next_request_id += 1;
+        self.requests.push(NetRequest {
+            id,
+            module: self.module.to_owned(),
+            key: key.into(),
+            query,
+        });
+        Some(id)
+    }
+
+    /// Encarga trabajo de SQLite; el resultado vuelve como `SourceEvent::Stored`.
+    /// Se ejecuta tambien durante el replay.
+    pub fn store_task(&mut self, tag: impl Into<String>, task: StoreTask) {
+        self.store_tasks.push((tag.into(), task));
+    }
+
+    #[allow(clippy::type_complexity)]
+    pub(crate) fn take_outputs(&mut self) -> (Vec<NetRequest>, Vec<(String, StoreTask)>, u64) {
+        (
+            std::mem::take(&mut self.requests),
+            std::mem::take(&mut self.store_tasks),
+            self.next_request_id,
+        )
     }
 
     pub fn alert(&mut self, alert: Alert) {
@@ -52,7 +104,7 @@ mod tests {
 
     #[test]
     fn module_context_suppresses_replay_and_drains_live_alerts_once() {
-        let mut ctx = ModuleCtx::new(true);
+        let mut ctx = ModuleCtx::new("test", true, 1);
         ctx.alert(Alert::new(Severity::Warn, "alert-low-fuel"));
         assert!(ctx.drain_alerts().is_empty());
         ctx.replaying = false;
@@ -79,6 +131,11 @@ mod tests {
         fn topics(&self) -> Vec<String> {
             Vec::new()
         }
+    }
+
+    #[test]
+    fn module_migrations_default_empty() {
+        assert!(MinimalModule.migrations().is_empty());
     }
 
     #[test]
