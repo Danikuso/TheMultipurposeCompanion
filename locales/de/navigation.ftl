@@ -41,3 +41,4 @@ nav-plan-error-no-route = Es wurde keine Route gefunden.
 nav-plan-error-service = Der Routendienst ist derzeit nicht verfügbar.
 nav-plan-disabled-legacy = Der Planer ist in der Legacy-Galaxie nicht verfügbar.
 nav-plan-disabled-offline = Der Planer benötigt aktivierte Online-Dienste.
+nav-plan-error-route-too-long = Die Route hat zu viele Abschnitte.
