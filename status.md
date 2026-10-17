@@ -40,7 +40,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 2 | `tmc-model` — Status.json | ✅ | 65c72d9 | |
 | 3 | `tmc-model` — eventos del diario y archivos compañeros | ✅ | d24e813 | |
 | 4 | `tmc-model` — GameState y SourceEvent | ✅ hecha | 70e4999, 177eac1, 2ec0abe | Revisión aprobada; 35 tests PASS, fmt y clippy del workspace PASS. |
-| 5 | `tmc-journal` — localizar carpeta y listar diarios | ✅ hecha | commit de cierre de esta tarea | TDD 9 FAIL → 9 PASS; revisión aprobada; workspace 44 tests, fmt y clippy PASS. |
+| 5 | `tmc-journal` — localizar carpeta y listar diarios | ✅ hecha | e8e6cc8 | TDD 9 FAIL → 9 PASS; revisión aprobada; workspace 44 tests, fmt y clippy PASS. |
 | 6 | `tmc-journal` — lector incremental de líneas | ⬜ | — | |
 | 7 | `tmc-journal` — Status, compañeros, proceso, HUD y watcher | ⬜ | — | |
 | 8 | `tmc-store` — SQLite, escritor e importación | ⬜ | — | |
@@ -73,7 +73,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
-- 2026-10-17 18:07 (Europe/Madrid) · Codex · Task 4 cerrada en 2ec0abe tras revisión y correcciones TDD (31 PASS/4 FAIL → 35 PASS); fmt y clippy del workspace PASS. Task 5 completada con TDD y revisión independiente: 9 tests nuevos, workspace 44 PASS, fmt/clippy PASS. Pendiente ejecución nativa Linux; UI y medición de consumo corresponden a Tasks 15/18. Cierre preparado; tras commit no quedarán cambios sin registrar. Cargo disponible añadiendo C:\Users\danik\.cargo\bin al PATH del proceso. UI aún no creada (Task 15).
+- 2026-10-17 18:07 (Europe/Madrid) · Codex · Task 4 cerrada en 2ec0abe tras revisión y correcciones TDD (31 PASS/4 FAIL → 35 PASS); fmt y clippy del workspace PASS. Task 5 completada con TDD y revisión independiente: 9 tests nuevos, workspace 44 PASS, fmt/clippy PASS. Pendiente ejecución nativa Linux; UI y medición de consumo corresponden a Tasks 15/18. Commits: 2ec0abe (Task 4), e8e6cc8 (Task 5); seguimiento final en commit documental inmediato. Sin código sin commit. Cargo disponible añadiendo C:\Users\danik\.cargo\bin al PATH del proceso. UI aún no creada (Task 15).
 
 - 2026-10-17 18:07 (Europe/Madrid) · Codex · Lectura de AGENTS.md, spec y plan activos; inspección de rama e historial. Discrepancia de Task 4 documentada; ejecución detenida según AGENTS.md §1. Solo status.md modificado sin commit; pendiente respuesta del propietario y verificación de Task 4.
 - 2026-10-17 · Claude Opus 5.5 · Inicio de ejecución de F0 por subagentes: Tasks 0–1 hechas.
