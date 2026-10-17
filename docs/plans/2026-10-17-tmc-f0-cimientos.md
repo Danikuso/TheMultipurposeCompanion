@@ -333,13 +333,13 @@ Algoritmo del watcher (bucle en una tarea tokio; E/S con `spawn_blocking` o sín
   - `pub struct Store` (clonable; internamente ruta + conexión para lecturas); `Store::open(path: &Path) -> Result<Store, StoreError>`, `Store::open_in_memory() -> Result<Store, StoreError>`; aplica el esquema F0 de la especificación §6 tal cual + `PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`.
   - `pub struct Migration { pub id: &'static str, pub sql: &'static str }`; `Store::apply_migrations(&self, migrations: &[Migration]) -> Result<(), StoreError>` (tabla `schema_version(id TEXT PRIMARY KEY, applied_at TEXT)`; idempotente).
   - `pub struct StoredEvent { pub file_name: String, pub line: u64, pub ts: DateTime<Utc>, pub name: String, pub cmdr: Option<String>, pub json: String }`
-  - `pub struct EventWriter` — `EventWriter::spawn(store: &Store) -> EventWriter`, `fn send(&self, ev: StoredEvent)` (no bloquea; canal `std::sync::mpsc`), hilo propio con commit cada 500 ms o 500 filas, `INSERT OR IGNORE` (idempotente por `UNIQUE(file_id,line)`), actualiza `journal_file.offset`; `fn flush_blocking(&self)` para tests y cierre.
+  - `pub struct EventWriter` — `EventWriter::spawn(store: &Store) -> EventWriter`, `fn send(&self, ev: StoredEvent)` (no bloquea; canal `std::sync::mpsc`), hilo propio con commit cada 500 ms o 500 filas, `INSERT OR IGNORE` (idempotente por `UNIQUE(file_id,line)`), no modifica `journal_file.offset` (R1: propiedad exclusiva de `import_history`); `fn flush_blocking(&self) -> Result<(), StoreError>` para tests y cierre (desviación documentada abajo).
   - `pub struct ImportOptions { pub throttle: Arc<AtomicBool> /*true = juego activo → limitar*/ }`; `pub struct ImportReport { pub files: u64, pub events: u64, pub skipped_lines: u64 }`.
   - `pub fn import_history(store: &Store, dir: &Path, opts: &ImportOptions, progress: &mut dyn FnMut(u64, u64)) -> Result<ImportReport, StoreError>`: recorre `list_journals`, salta los `complete = 1`, reanuda desde `journal_file.offset`, transacciones de 5 000 filas, `cmdr` = último `Commander.Name`/`LoadGame.Commander` visto en ese archivo, marca `complete = 1` en archivos que no son el más reciente. Con `throttle = true`, duerme 50 ms cada 5 000 filas.
   - `pub struct EventQuery { pub name: Option<String>, pub from: Option<DateTime<Utc>>, pub to: Option<DateTime<Utc>>, pub cmdr: Option<String>, pub limit: u32 /*≤1000*/, pub before_id: Option<i64> }`; `Store::query_events(&self, q: &EventQuery) -> Result<Vec<EventRow>, StoreError>`; `EventRow { id: i64, ts, name, cmdr, json }` ordenado por `id DESC`.
   - `Store::kv_get(&self, key) -> Option<String>`, `Store::kv_set(&self, key, value)`.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn schema_is_created_and_wal_enabled() {}
@@ -352,8 +352,8 @@ Algoritmo del watcher (bucle en una tarea tokio; E/S con `spawn_blocking` o sín
 #[test] fn query_events_filters_and_paginates() {}
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-store` PASS.
-- [ ] **Step 5: Commit** `feat(store): SQLite, escritor por lotes e importación reanudable`
+- [x] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-store` PASS.
+- [x] **Step 5: Commit** `feat(store): SQLite, escritor por lotes e importación reanudable`
 
 ---
 
@@ -692,4 +692,14 @@ Cambio mínimo aprobado explícitamente por el propietario en esta conversación
 - Cierre Task 6: RED 11 FAIL → GREEN 11 nuevos tests PASS (20 journal). Revisión independiente aprobada. cargo fmt --all --check, cargo clippy --workspace --all-targets --offline -- -D warnings, cargo test --workspace --offline: código 0; 55 tests PASS (20 journal + 35 model). git diff --check: código 0.
 
 - Cierre Task 7: RED 20 PASS/11 FAIL; GREEN inicial34 journal. Revisión detectó matrices XML comentadas/malformadas y Status inicial posterior a live. Regresiones RED observadas (HUD3PASS/2FAIL; watcher 'live journal preceded initial Status'); corregidas con roxmltree y barrera inicial de Status. Revisión final aprobada.
-- Verificación Task 7: cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline --quiet; git diff --check: código 0. 72 tests PASS (37 journal+35 model). Prueba Status corrupto durante live conserva entrega de journal en menos de400ms con tick20ms. No equivale aún a medición p95 de la app final; consumo pendiente Task18.
+- Verificación Task 7: cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline --quiet; git diff --check: código 0. 72 tests PASS (37 journal+35 model). Prueba Status corrupto durante live conserva entrega de journal en menos de 400 ms con tick de 20 ms. No equivale aún a medición p95 de la app final; consumo pendiente Task18.
+
+- Comprobación previa Task 8: cargo metadata --no-deps --offline --format-version 1 confirma journal → model y store → journal + model, conforme a la tabla aprobada, sin ciclos. Store comparte conexión mediante Arc<Mutex<Connection>> para soportar clones y escritor en memoria; no afecta al modelo actor/GameState.
+
+
+### Desviación Task 8: errores explícitos al confirmar escritura (2026-10-17)
+
+La revisión encontró que flush_blocking sin retorno podía confirmar un lote fallido. Se cambia la firma a fn flush_blocking(&self) -> Result<(), StoreError>; las llamadas deben manejar el error. No cambia la spec: cumple su §10 (SQLite ocupado: reintento; fallos no tumban la app). El lote permanece en el escritor tras un fallo para permitir otro flush. En Drop se intenta drenar y se registra el fallo si SQLite impide hacerlo; no se espera indefinidamente. El diario original sigue siendo fuente de recuperación y el escritor nunca adelanta el offset del importador (R1). Las pruebas usan un bloqueo SQLite externo con timeout reducido para comprobar error y posterior recuperación. No afecta a firmas de Tasks 9–13 descritas; sus llamadas al método deberán manejar Result.
+
+- Cierre Task 8: RED 15 FAIL → GREEN inicial 17; revisión de importación/migraciones aprobada y corrección de flush validada mediante bloqueo SQLite (RED falso éxito → GREEN 18 store). Revisión final aprobada. cargo fmt --all --check, cargo clippy --workspace --all-targets --offline -- -D warnings, cargo test --workspace --offline --quiet y git diff --check terminan con código 0: 90 tests PASS (37 journal + 35 model + 18 store).
+- Riesgos para Task18: LineTailer materializa las líneas nuevas hasta EOF y Store serializa el acceso a una conexión; medir RAM y latencia de importaciones grandes antes de cerrar F0. No hay todavía aplicación final ni script de consumo para validar el presupuesto.

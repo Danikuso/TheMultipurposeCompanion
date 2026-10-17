@@ -18,7 +18,7 @@ Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, 
 ### chrono
 - Versión: 0.4.45
 - Licencia: MIT OR Apache-2.0
-- Usada por: tmc-model
+- Usada por: tmc-model, tmc-store
 
 ### bitflags
 - Versión: 2.13.2
@@ -28,12 +28,12 @@ Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, 
 ### thiserror
 - Versión: 2.0.21
 - Licencia: MIT OR Apache-2.0
-- Usada por: tmc-model
+- Usada por: tmc-model, tmc-store
 
 ### tracing
 - Versión: 0.1.44
 - Licencia: MIT
-- Usada por: tmc-model, tmc-journal
+- Usada por: tmc-model, tmc-journal, tmc-store
 
 <!-- Plantilla por dependencia:
 ### nombre
@@ -49,7 +49,7 @@ Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, 
 ### tempfile
 - Versión: 3.27.0
 - Licencia: MIT OR Apache-2.0
-- Usada por: tests de tmc-journal
+- Usada por: tests de tmc-journal y tmc-store
 
 ### tokio
 - Versión: 1.53.3
@@ -70,3 +70,8 @@ Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, 
 - Versión: 0.21.1 (serie compatible declarada: 0.21)
 - Licencia: MIT OR Apache-2.0
 - Usada por: tmc-journal (lectura XML del tema HUD)
+
+### rusqlite
+- Versión: 0.40.2
+- Licencia: MIT
+- Usada por: tmc-store (SQLite embebida mediante feature bundled; SQLite es de dominio público)

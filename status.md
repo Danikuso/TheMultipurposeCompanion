@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-17 18:23 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-17 18:32 (Europe/Madrid) · Codex
 - **Fase actual:** F0 — Cimientos
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md) — ✅ aprobada (2026-10-17)
 - **Plan activo:** [`docs/plans/2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) — ✅ aprobado; ejecución por subagentes
@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** Task 8 (`tmc-store` — SQLite, escritor e importación), Step 1: tests.
-- **Siguiente acción:** tests de Task 8 y RED antes de implementar. Task 7 aprobada y verificada (72 tests del workspace, fmt/clippy PASS); dependencia store → journal aprobada por el propietario.
+- **Tarea:** Task 9 (`tmc-core` — actor, módulos, topics y alertas), Step 1: tests.
+- **Siguiente acción:** tests de Task 9 y RED antes de implementar. Task 8 cerrada con revisión y checks globales aprobados (90 tests, fmt y clippy PASS); flush_blocking devuelve Result.
 
 ## Fases
 
@@ -42,9 +42,9 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 4 | `tmc-model` — GameState y SourceEvent | ✅ hecha | 70e4999, 177eac1, 2ec0abe | Revisión aprobada; 35 tests PASS, fmt y clippy del workspace PASS. |
 | 5 | `tmc-journal` — localizar carpeta y listar diarios | ✅ hecha | e8e6cc8 | TDD 9 FAIL → 9 PASS; revisión aprobada; workspace 44 tests, fmt y clippy PASS. |
 | 6 | `tmc-journal` — lector incremental de líneas | ✅ hecha | 7634de8 | RED 11 FAIL → GREEN 20 journal PASS; revisión y checks workspace PASS. |
-| 7 | `tmc-journal` — Status, compañeros, proceso, HUD y watcher | ✅ hecha | commit de cierre Task 7 | Revisión final aprobada; 37 journal y 72 workspace PASS, fmt/clippy PASS. |
-| 8 | `tmc-store` — SQLite, escritor e importación | 🔄 en curso | — | Step 1: tests. |
-| 9 | `tmc-core` — actor, módulos, topics y alertas | ⬜ | — | |
+| 7 | `tmc-journal` — Status, compañeros, proceso, HUD y watcher | ✅ hecha | 2cc55b7 | Revisión final aprobada; 37 journal y 72 workspace PASS, fmt/clippy PASS. |
+| 8 | `tmc-store` — SQLite, escritor e importación | ✅ hecha | commit de cierre Task 8 | 18 tests store y 90 workspace PASS; revisión, fmt y clippy aprobados. |
+| 9 | `tmc-core` — actor, módulos, topics y alertas | 🔄 en curso | — | Step 1: tests. |
 | 10 | `tmc-i18n` y traducciones | ⬜ | — | |
 | 11 | `tmc-modules` — registro y `dashboard` | ⬜ | — | |
 | 12 | `tmc-server` — HTTP, WS, seguridad, emparejamiento | ⬜ | — | |
@@ -65,6 +65,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
 
 ## Decisiones tomadas
+
+- 2026-10-17 · Task 8: flush_blocking devuelve Result<(), StoreError> para no confirmar persistencia fallida; desviación documentada en plan, sin cambio de spec. R1 conserva el diario como recuperación y offset exclusivo del importador.
 
 - 2026-10-17 · Propietario: aprobada dependencia tmc-store → tmc-journal para la importación de Task 8; spec §3.1 actualizada sin cambiar interfaces.
 
