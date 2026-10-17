@@ -69,55 +69,111 @@ fn message_ids(resource: &FluentResource) -> Vec<String> {
         .collect()
 }
 
-/// Recursos válidos del idioma; si la carga falla (no debería: lo cubre un test) queda vacío.
+type Sources = Vec<(String, Result<String, String>)>;
+
+/// Recursos del idioma en ejecución: degrada por archivo (omite y avisa del defectuoso).
 fn resources(lang: &str) -> Vec<FluentResource> {
-    load_embedded(lang).unwrap_or_default()
+    let (resources, problems) = parse_sources(embedded_sources(lang));
+    for problem in problems {
+        tracing::warn!("{problem}");
+    }
+    resources
 }
 
-/// Carga todos los `*.ftl` embebidos de un idioma, en orden alfabético.
+/// Carga estricta de todos los `*.ftl` embebidos de un idioma, en orden alfabético.
+#[cfg(test)]
 fn load_embedded(lang: &str) -> Result<Vec<FluentResource>, String> {
+    strict(parse_sources(embedded_sources(lang)))
+}
+
+fn embedded_sources(lang: &str) -> Sources {
     let prefix = format!("{lang}/");
-    let mut sources: Vec<(String, String)> = Resources::iter()
+    let mut sources: Sources = Resources::iter()
         .filter(|path| path.starts_with(&prefix) && path.ends_with(".ftl"))
-        .filter_map(|path| {
-            let file = Resources::get(&path)?;
-            let text = std::str::from_utf8(file.data.as_ref()).ok()?.to_owned();
-            Some((path.to_string(), text))
+        .map(|path| {
+            let text = match Resources::get(&path) {
+                Some(file) => std::str::from_utf8(file.data.as_ref())
+                    .map(str::to_owned)
+                    .map_err(|e| format!("{path}: invalid UTF-8: {e}")),
+                None => Err(format!("{path}: not readable")),
+            };
+            (path.to_string(), text)
         })
         .collect();
-    sources.sort();
-    parse_sources(sources)
+    sources.sort_by(|a, b| a.0.cmp(&b.0));
+    sources
 }
 
-/// Carga todos los `*.ftl` de una carpeta, en orden alfabético.
+#[cfg(test)]
+fn strict(
+    (resources, problems): (Vec<FluentResource>, Vec<String>),
+) -> Result<Vec<FluentResource>, String> {
+    match problems.into_iter().next() {
+        Some(problem) => Err(problem),
+        None => Ok(resources),
+    }
+}
+
+#[cfg(test)]
+fn dir_sources(dir: &std::path::Path) -> Sources {
+    let mut sources: Sources = std::fs::read_dir(dir)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.extension().is_some_and(|ext| ext == "ftl"))
+        .map(|path| {
+            let name = path.display().to_string();
+            let text = std::fs::read(&path)
+                .map_err(|e| format!("{name}: {e}"))
+                .and_then(|bytes| {
+                    String::from_utf8(bytes).map_err(|e| format!("{name}: invalid UTF-8: {e}"))
+                });
+            (name, text)
+        })
+        .collect();
+    sources.sort_by(|a, b| a.0.cmp(&b.0));
+    sources
+}
+
+/// Carga estricta de todos los `*.ftl` de una carpeta.
 #[cfg(test)]
 fn load_dir(dir: &std::path::Path) -> Result<Vec<FluentResource>, String> {
-    let mut sources = Vec::new();
-    for entry in std::fs::read_dir(dir).map_err(|e| e.to_string())? {
-        let path = entry.map_err(|e| e.to_string())?.path();
-        if path.extension().is_some_and(|ext| ext == "ftl") {
-            let text = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
-            sources.push((path.display().to_string(), text));
-        }
-    }
-    sources.sort();
-    parse_sources(sources)
+    strict(parse_sources(dir_sources(dir)))
 }
 
-fn parse_sources(sources: Vec<(String, String)>) -> Result<Vec<FluentResource>, String> {
+/// Devuelve los recursos válidos y la lista de problemas; los archivos defectuosos
+/// o con claves ya definidas en otro archivo se omiten completos.
+fn parse_sources(sources: Sources) -> (Vec<FluentResource>, Vec<String>) {
     let mut seen: std::collections::BTreeMap<String, String> = Default::default();
     let mut resources = Vec::new();
-    for (name, text) in sources {
-        let resource = FluentResource::try_new(text)
-            .map_err(|(_, errors)| format!("{name}: invalid Fluent syntax: {errors:?}"))?;
-        for id in message_ids(&resource) {
-            if let Some(first) = seen.insert(id.clone(), name.clone()) {
-                return Err(format!("duplicate key `{id}` in {first} and {name}"));
+    let mut problems = Vec::new();
+    'files: for (name, text) in sources {
+        let text = match text {
+            Ok(text) => text,
+            Err(problem) => {
+                problems.push(problem);
+                continue;
             }
+        };
+        let resource = match FluentResource::try_new(text) {
+            Ok(resource) => resource,
+            Err((_, errors)) => {
+                problems.push(format!("{name}: invalid Fluent syntax: {errors:?}"));
+                continue;
+            }
+        };
+        let ids = message_ids(&resource);
+        for id in &ids {
+            if let Some(first) = seen.get(id) {
+                problems.push(format!("duplicate key `{id}` in {first} and {name}"));
+                continue 'files;
+            }
+        }
+        for id in ids {
+            seen.insert(id, name.clone());
         }
         resources.push(resource);
     }
-    Ok(resources)
+    (resources, problems)
 }
 
 fn bundle(lang: &str, resources: Vec<FluentResource>) -> FluentBundle<FluentResource> {
@@ -256,6 +312,59 @@ mod tests {
         for lang in LANGUAGES {
             assert!(load_embedded(lang).is_ok(), "{lang}");
         }
+    }
+
+    fn temp_dir(tag: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("tmc-i18n-{tag}-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn invalid_utf8_file_is_an_error_naming_the_file() {
+        let dir = temp_dir("utf8");
+        std::fs::write(
+            dir.join("good.ftl"),
+            "ok = 1
+",
+        )
+        .unwrap();
+        std::fs::write(dir.join("broken.ftl"), [0x66u8, 0xff, 0xfe, 0x3d]).unwrap();
+        let error = load_dir(&dir).unwrap_err();
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert!(error.contains("broken.ftl"), "{error}");
+    }
+
+    #[test]
+    fn runtime_loading_skips_broken_file_and_keeps_good_ones() {
+        let dir = temp_dir("lenient");
+        std::fs::write(
+            dir.join("a.ftl"),
+            "good = 1
+",
+        )
+        .unwrap();
+        std::fs::write(dir.join("b.ftl"), [0xffu8, 0xfe]).unwrap();
+        std::fs::write(
+            dir.join("c.ftl"),
+            "good = 2
+other = 3
+",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("d.ftl"),
+            "last = 4
+",
+        )
+        .unwrap();
+        let (resources, problems) = parse_sources(dir_sources(&dir));
+        std::fs::remove_dir_all(&dir).unwrap();
+        let ids: Vec<String> = resources.iter().flat_map(message_ids).collect();
+        assert_eq!(ids, ["good", "last"]);
+        assert_eq!(problems.len(), 2, "{problems:?}");
+        assert!(problems[0].contains("b.ftl"));
+        assert!(problems[1].contains("good"));
     }
 
     #[test]
