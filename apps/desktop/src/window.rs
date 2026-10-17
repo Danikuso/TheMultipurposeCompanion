@@ -23,6 +23,9 @@ pub fn create_or_focus_main_window(app: &AppHandle, local_url: &Url) -> tauri::R
     )
     .title(MAIN_WINDOW_TITLE)
     .inner_size(1600.0, 900.0)
+    .additional_browser_args(
+        "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,Translate,SpareRendererForSitePerProcess,AudioServiceOutOfProcess --enable-features=NetworkServiceInProcess2 --renderer-process-limit=1 --in-process-gpu --disable-gpu-shader-disk-cache --js-flags=--max-old-space-size=64",
+    )
     .build()?;
 
     let win_clone = window.clone();
