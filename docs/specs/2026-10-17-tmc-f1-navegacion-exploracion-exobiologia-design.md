@@ -202,7 +202,7 @@ Tablas nuevas (migraciones con prefijo de módulo):
 
 ### 10.1 Cómo se verifican los criterios con el historial real
 
-Los criterios 3, 4 y 6 se miden con un subcomando nuevo **`tmc-replay eval`** que se ejecuta **en local** sobre la carpeta de diarios del propietario (o la base `tmc.db` ya importada) y solo imprime **métricas agregadas** (nº de casos, aciertos, error medio y máximo), sin nombres de comandante, sistemas ni datos personales. Nada se sube ni se guarda en el repo. Un agente puede ejecutarlo en la máquina del propietario; los tests de CI usan fixtures anonimizados pequeños con los mismos cálculos. *Decisión del redactor.*
+Los criterios 3, 4 y 6 se miden con un subcomando nuevo **`tmc-headless eval`** (decisión del propietario, 2026-10-17: en la app headless para no cambiar las dependencias de §3.1) que se ejecuta **en local** sobre la carpeta de diarios del propietario (o la base `tmc.db` ya importada) y solo imprime **métricas agregadas** (nº de casos, aciertos, error medio y máximo), sin nombres de comandante, sistemas ni datos personales. Nada se sube ni se guarda en el repo. Un agente puede ejecutarlo en la máquina del propietario; los tests de CI usan fixtures anonimizados pequeños con los mismos cálculos. *Decisión del redactor.*
 
 ## 11. Riesgos y spikes previos
 

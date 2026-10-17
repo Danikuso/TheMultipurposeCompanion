@@ -5,20 +5,20 @@
 - **Última actualización:** 2026-10-17 22:20 (Europe/Madrid) · Claude Opus 5.5
 - **Fase actual:** F1 — Navegación, exploración y exobiología (spec aprobada; plan en redacción). F0 ✅ fusionada en `main` (2b953e6).
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md`](docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md) — ✅ aprobada (2026-10-17); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
-- **Plan activo:** [`docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md`](docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md) — escrito (33 tareas, bloques 0–5), **pendiente de aprobación del propietario**. Anterior: [`2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) ✅ 19/19
+- **Plan activo:** [`docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md`](docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md) — ✅ aprobado (2026-10-17), 33 tareas, bloques 0–5. Ejecución con subagentes. Anterior: [`2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) ✅ 19/19
 - **Rama de trabajo:** `fase/f1-navegacion-exploracion` (desde `main` tras fusionar F0)
 
 ## Puntero actual
 
-- **Tarea:** F1 — plan escrito y revisado contra la spec; esperando aprobación.
-- **Siguiente acción:** tras la aprobación, empezar por la Task 0 (Spike 1 — Spansh) del plan de F1, con `superpowers:subagent-driven-development`.
+- **Tarea:** F1 · Task 0 (Spike 1 — Spansh) · 🔄 en curso.
+- **Siguiente acción:** completar la Task 0 (Spike 1 — Spansh) del plan de F1, con `superpowers:subagent-driven-development`.
 
 ## Fases
 
 | Fase | Contenido | Estado |
 |---|---|---|
 | F0 | Cimientos (lectura, estado, SQLite, servidor, UI base, panel general, instalador) | ✅ completada y fusionada (2b953e6) |
-| F1 | Navegación, exploración, exobiología | 🔄 spec aprobada · plan pendiente de aprobación |
+| F1 | Navegación, exploración, exobiología | 🔄 en ejecución |
 | F2 | Cazarrecompensas/combate, minería | ⬜ |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ⬜ |
 | F4 | Ingenieros y materiales | ⬜ |
@@ -57,8 +57,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Bloqueos y pendientes del propietario
 
-- [ ] **F1 — aprobación del plan** (33 tareas).
-- [ ] **F1 — dónde vive `eval`** (spec §10.1 dice `tmc-replay eval`): requiere que `tmc-replay` dependa de `tmc-journal` y `tmc-modules` (cambio de la tabla §3.1 de la spec de arquitectura) o, alternativa sin tocar la arquitectura, `tmc-headless eval`. Task 3 del plan.
+- [x] **F1 — plan aprobado** (2026-10-17).
+- [x] **F1 — dónde vive `eval`:** resuelto → `tmc-headless eval`. Antes: (spec §10.1 dice `tmc-replay eval`): requiere que `tmc-replay` dependa de `tmc-journal` y `tmc-modules` (cambio de la tabla §3.1 de la spec de arquitectura) o, alternativa sin tocar la arquitectura, `tmc-headless eval`. Task 3 del plan.
 
 - [x] **F1 — fuente de las reglas de predicción de exobiología:** el propietario eligió unificar reglas propias + historial (offline) con Canonn como refuerzo online (2026-10-17). Recogido en la spec §5.3, §6 y §11 (spike 3).
 - [x] **F1 — spec aprobada** y **F0 fusionada en `main`** (2b953e6, merge --no-ff; re-verificado: fmt, clippy y 150 tests PASS). Sin push.
@@ -71,6 +71,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
 
 ## Decisiones tomadas
+
+- 2026-10-17 · Propietario: plan de F1 aprobado; `eval` en `tmc-headless` (sin tocar arquitectura); ejecución con subagentes.
 
 - 2026-10-17 · Propietario: spec de F1 aprobada; fusión de F0 en `main` y rama `fase/f1-navegacion-exploracion`.
 

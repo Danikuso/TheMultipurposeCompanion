@@ -65,7 +65,7 @@ Entradas que la spec implica, que ningún test de F0 cubre y que más pueden mor
 | 26 | `exobiology` — muestreo y `exo_sample` | 4 |
 | 27 | `exobiology` — módulo, bonus ×5, bio sin vender y relevancia | 4 |
 | 28 | UI — panel de exobiología | 4 |
-| 29 | `tmc-replay eval` (criterios 3, 4 y 6) | 5 |
+| 29 | `tmc-headless eval` (criterios 3, 4 y 6) | 5 |
 | 30 | Fixtures anonimizados y pruebas de extremo a extremo (criterios 2 y 5) | 5 |
 | 31 | Disposición «Exploración» por defecto y ajustes nuevos en la UI | 5 |
 | 32 | Consumo, verificación de los 10 criterios y cierre de F1 | 5 |
@@ -86,7 +86,7 @@ crates/tmc-modules/src/dashboard/mod.rs*          (respeta settings.alerts_enabl
 crates/tmc-i18n/src/lib.rs*                        (carga todos los .ftl del idioma)
 crates/tmc-app/src/{config.rs*, clipboard.rs*, wiring.rs*, net_service.rs+, lib.rs*}
 crates/tmc-server/src/{lib.rs*, rest.rs*, ws.rs*}
-crates/tmc-replay/{Cargo.toml*, src/main.rs*, src/eval.rs+}
+apps/headless/{Cargo.toml*, src/main.rs*, src/eval.rs+}
 locales/{es,en,fr,de,pt}/{main.ftl*, navigation.ftl+, exploration.ftl+, exobiology.ftl+}
 ui/src/lib/{i18n.ts*, ws.svelte.ts*, format.ts*}
 ui/src/shell/{Grid.svelte*, Panel.svelte*, Sidebar.svelte*, layouts.ts+, VirtualList.svelte+}
@@ -145,7 +145,7 @@ Las tareas de este bloque no escriben código de producción. Las peticiones rea
 **Files:** Modify `status.md` (sección «Bloqueos»).
 
 - [ ] **Step 1:** Registrar en «Bloqueos» y pedir aprobación de:
-  1. **Dependencias de `tmc-replay`**: la spec de arquitectura §3.1 dice `tmc-replay → tmc-model`; `tmc-replay eval` (spec F1 §10.1) necesita `tmc-modules` (cálculos) y `tmc-journal` (listar diarios). Propuesta: `tmc-replay → tmc-model, tmc-journal, tmc-modules` (sin ciclos). Alternativa si se rechaza: subcomando `tmc-headless eval` (las apps pueden depender de todo).
+  1. ~~Dependencias de `tmc-replay`~~ — **resuelto por el propietario (2026-10-17): `eval` vive en `tmc-headless eval`**; no se toca la arquitectura (§3.1).
   2. Resultados de los spikes que cambien alcance (p. ej. Canonn desactivado, política vía EDSM, ToS de Spansh).
 - [ ] **Step 2:** Las tareas 4–28 pueden avanzar mientras tanto; la Task 29 espera la respuesta al punto 1.
 - [ ] **Step 3: Commit** `docs(status): aprobaciones pendientes antes de F1`
@@ -623,7 +623,7 @@ test('disabled planner explains why', ...)
   - `pub enum BodyKind { Star { k: f64 }, Planet { k: f64 } }`; `pub fn body_kind(scan: &Scan) -> Option<BodyKind>` (k por clase/terraformable según `player_roles_domain.md` §1; cinturones/anillos → `None`).
   - `pub struct ValueFlags { pub first_discovery: bool, pub first_mapped: bool, pub efficiency: bool, pub odyssey: bool }`.
   - `pub fn star_value(k: f64, stellar_mass: f64, first_discovery: bool) -> u64`, `pub fn planet_base(k: f64, mass_em: f64) -> f64`, `pub fn planet_scanned_value(base: f64, first_discovery: bool) -> u64`, `pub fn planet_mapped_value(base: f64, f: &ValueFlags) -> u64`, `pub fn body_values(scan: &Scan, odyssey: bool) -> BodyValues { scanned: u64, mapped: Option<u64> }` (primer descubrimiento = `WasDiscovered == Some(false)`; primer mapeo = `WasMapped == Some(false)`).
-  - `pub fn estimate_probes(radius_m: f64) -> u8` a partir de `probes.json` (tramos por radio; valores iniciales del redactor, ajustados con `tmc-replay eval` contra `SAAScanComplete.EfficiencyTarget`).
+  - `pub fn estimate_probes(radius_m: f64) -> u8` a partir de `probes.json` (tramos por radio; valores iniciales del redactor, ajustados con `tmc-headless eval` contra `SAAScanComplete.EfficiencyTarget`).
 - Fórmulas (hechos públicos; implementación propia): estrella `k + m·k/66,25` (×2,6 si primer descubrimiento); planeta `base = max(k + k·0,56591828·M^0,2, 500)`; FSS = base (×2,6 primer descubrimiento); mapeado: ×3,3333333 (ya descubierto y mapeado), ×8,0956 (primer mapeo sin primer descubrimiento), ×3,699622554×2,6 (ambos); eficiencia ×1,25; Odyssey `v + max(0,3·v, 555)`.
 
 - [ ] **Step 1: Tests:**
@@ -693,7 +693,7 @@ test('disabled planner explains why', ...)
 #[test] fn rebuild_from_history_matches_live_accumulation() { /* Store en memoria con exploration_session.log importado → mismo total que aplicando en vivo */ }
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** PASS; Checks. Medir la consulta con el historial del propietario (`tmc-replay eval --timings`, Task 29): si > 50 ms, anotar en «Desviaciones» la tabla de resumen (spec §7).
+- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** PASS; Checks. Medir la consulta con el historial del propietario (`tmc-headless eval --timings`, Task 29): si > 50 ms, anotar en «Desviaciones» la tabla de resumen (spec §7).
 - [ ] **Step 5: Commit** `feat(modules): datos de exploración sin vender reconstruidos del historial`
 
 ### Task 23: UI — panel «Cuerpos del sistema»
@@ -854,16 +854,16 @@ test('first logged badge is marked as estimated', ...)
 
 ## Bloque 5 — Cierre
 
-### Task 29: `tmc-replay eval` (criterios 3, 4 y 6)
+### Task 29: `tmc-headless eval` (criterios 3, 4 y 6)
 
-**Precondición:** aprobación de la Task 3 (punto 1). Si se rechaza, el mismo código va a `apps/headless` como `tmc-headless eval` y se anota en «Desviaciones».
+**Decisión del propietario (2026-10-17):** el subcomando vive en `apps/headless` como `tmc-headless eval` (las apps pueden depender de todo; sin cambio de arquitectura).
 
-**Files:** Create `crates/tmc-modules/src/eval.rs`, `crates/tmc-replay/src/eval.rs`; Modify `crates/tmc-replay/{Cargo.toml, src/main.rs}`, `crates/tmc-modules/src/lib.rs`.
+**Files:** Create `crates/tmc-modules/src/eval.rs`, `apps/headless/src/eval.rs`; Modify `apps/headless/{Cargo.toml, src/main.rs}`, `crates/tmc-modules/src/lib.rs`.
 
 **Interfaces:**
 - Produces:
   - `tmc_modules::eval`: `pub struct RangeReport { cases: u32, within_tolerance: u32, engineered_cases: u32, guardian_cases: u32, max_abs_error: f64, mean_abs_error: f64, full_tank_hits: u32, max_fuel_hits: u32 }` (compara `MaxJumpRange` con la fórmula en «depósito lleno» **y** en «solo combustible máximo por salto»; si solo la segunda coincide, se documenta como discrepancia con spec §5.1 en «Bloqueos»); `pub struct ValueReport { sales: u32, computed: u64, paid: u64, rel_error: f64 }`; `pub struct PredictionReport { bodies: u32, hit_high_or_medium: u32, ratio: f64, first_logged_accuracy: f64 }`; `pub struct ProbeReport { cases: u32, mean_abs_error: f64 }`; `pub fn eval_events(events: impl Iterator<Item = JournalEvent>) -> EvalReport` (puro; la predicción usa historial «hasta ese momento» para no hacer trampa).
-  - CLI: `tmc-replay eval --journal-dir <carpeta> [--timings]` → imprime **solo** métricas agregadas (números, sin nombres de comandante ni sistemas) y `PASS`/`FAIL` por criterio (3: ≥ 5 loadouts, uno con ingeniería y uno con booster, todos ±0,05 al; 4: ±5 %; 6: ≥ 70 %). `--timings` añade el tiempo de las consultas de historial (visitas, sin vender, estadística bio).
+  - CLI: `tmc-headless eval --journal-dir <carpeta> [--timings]` → imprime **solo** métricas agregadas (números, sin nombres de comandante ni sistemas) y `PASS`/`FAIL` por criterio (3: ≥ 5 loadouts, uno con ingeniería y uno con booster, todos ±0,05 al; 4: ±5 %; 6: ≥ 70 %). `--timings` añade el tiempo de las consultas de historial (visitas, sin vender, estadística bio).
 
 - [ ] **Step 1: Tests:**
 
@@ -875,8 +875,8 @@ test('first logged badge is marked as estimated', ...)
 ```
 
 - [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** PASS; Checks.
-- [ ] **Step 5: Ejecutar en local** sobre los diarios del propietario: `cargo run -p tmc-replay -- eval --journal-dir "%USERPROFILE%\Saved Games\Frontier Developments\Elite Dangerous" --timings`; guardar la salida (agregada) como evidencia en este plan («Verificación F1»). Ajustar `probes.json` y, si hace falta, la heurística ×5 y `bio_rules.json` (cada cambio con su fuente).
-- [ ] **Step 6: Commit** `feat(replay): evaluación local de alcance, valores y predicción`
+- [ ] **Step 5: Ejecutar en local** sobre los diarios del propietario: `cargo run -p tmc-headless -- eval --journal-dir "%USERPROFILE%\Saved Games\Frontier Developments\Elite Dangerous" --timings`; guardar la salida (agregada) como evidencia en este plan («Verificación F1»). Ajustar `probes.json` y, si hace falta, la heurística ×5 y `bio_rules.json` (cada cambio con su fuente).
+- [ ] **Step 6: Commit** `feat(headless): evaluación local de alcance, valores y predicción`
 
 ### Task 30: Fixtures anonimizados y pruebas de extremo a extremo (criterios 2 y 5)
 
@@ -921,7 +921,7 @@ test('settings save online services, map threshold and efficiency', ...)
 
 - [ ] **Step 1:** `cargo tauri build` y `pwsh scripts/measure-footprint.ps1 -Exe target/release/TMC.exe -JournalDir <carpeta> -Seconds 120` con la disposición «Exploración» visible y `real_explo_01.log` → `PASS` (< 150 MB, < 1 % CPU en reposo). Si falla, no se cierra F1: anotar números en «Bloqueos».
 - [ ] **Step 2:** `THIRD_PARTY_NOTICES.md`: `reqwest`, `rustls` y transitivas con licencia propia; fuentes y licencias de `fsd.json`, `species.json`, `bio_rules.json`, `probes.json` (según Task 1). Comprobar que no hay datos GPL/AGPL (`grep -ri srvsurvey crates/ ui/ locales/` sin coincidencias en datos).
-- [ ] **Step 3:** Verificar los criterios §10.1–§10.10 uno a uno con evidencia (comando + salida) en «Verificación F1»: 1 Checks + CI; 2 Task 30 (`route_strip_updates_within_500ms_p95`) + replay manual con servicios on/off; 3/4/6 salida de `tmc-replay eval`; 5 `exobiology_fixture_end_to_end`; 7 ruta real de neutrones con Spansh aceptada y copia automática tras 2 saltos (manual, con el juego o replay); 8 test de claves; 9 Step 1; 10 Step 2.
+- [ ] **Step 3:** Verificar los criterios §10.1–§10.10 uno a uno con evidencia (comando + salida) en «Verificación F1»: 1 Checks + CI; 2 Task 30 (`route_strip_updates_within_500ms_p95`) + replay manual con servicios on/off; 3/4/6 salida de `tmc-headless eval`; 5 `exobiology_fixture_end_to_end`; 7 ruta real de neutrones con Spansh aceptada y copia automática tras 2 saltos (manual, con el juego o replay); 8 test de claves; 9 Step 1; 10 Step 2.
 - [ ] **Step 4:** Revisión completa de la rama contra la spec; registrar desviaciones conscientes; actualizar `status.md` (F1 ✅, siguiente: spec de F2).
 - [ ] **Step 5: Commit** `chore: verificación y cierre de F1`
 
@@ -958,4 +958,6 @@ Interfaces a confirmar al ejecutar (verificar en código al ejecutar): nombre de
 
 ## Desviaciones
 
-(Vacío. Anotar aquí cualquier cambio respecto a este plan o a la spec, con fecha, motivo y tareas afectadas.)
+(Anotar aquí cualquier cambio respecto a este plan o a la spec, con fecha, motivo y tareas afectadas.)
+
+- 2026-10-17 · Propietario: `eval` (spec F1 §10.1) se implementa como `tmc-headless eval` en lugar de `tmc-replay eval`, para no cambiar las dependencias de §3.1. Afecta a Tasks 3, 20, 22, 29 y 32. Spec §10.1 actualizada.
