@@ -887,6 +887,87 @@ mod tests {
         );
     }
 
+    async fn send_req(
+        app: &Router,
+        method: &str,
+        uri: &str,
+        extra: &[(&str, &str)],
+        body: &str,
+    ) -> StatusCode {
+        let mut b = Request::builder()
+            .method(method)
+            .uri(uri)
+            .header(header::HOST, "127.0.0.1:47320");
+        for (k, v) in extra {
+            b = b.header(*k, *v);
+        }
+        if !body.is_empty() {
+            b = b.header(header::CONTENT_LENGTH, body.len());
+        }
+        let req = with_peer(
+            b.body(Body::from(body.to_owned())).unwrap(),
+            "127.0.0.1:55000",
+        );
+        app.clone().oneshot(req).await.unwrap().status()
+    }
+
+    #[tokio::test]
+    async fn state_changes_are_protected_against_csrf() {
+        let host = RecHost::new(0, true);
+        let (app, _core) = router_with_host(host.clone(), false, "");
+        let a = "/api/actions/navigation.plan";
+        let json = ("content-type", "application/json");
+        // Origin ajeno
+        let evil = [("origin", "https://evil.example"), json];
+        assert_eq!(
+            send_req(&app, "POST", a, &evil, "{}").await,
+            StatusCode::FORBIDDEN
+        );
+        // Sin Origin, Sec-Fetch-Site cross-site
+        let cross = [("sec-fetch-site", "cross-site"), json];
+        assert_eq!(
+            send_req(&app, "POST", a, &cross, "{}").await,
+            StatusCode::FORBIDDEN
+        );
+        // Config PUT cross-origin
+        assert_eq!(
+            send_req(&app, "PUT", "/api/config", &evil, "{}").await,
+            StatusCode::FORBIDDEN
+        );
+        assert!(host.actions.lock().unwrap().is_empty());
+        // Origin coincidente
+        let same = [("origin", "http://127.0.0.1:47320"), json];
+        assert_eq!(send_req(&app, "POST", a, &same, "{}").await, StatusCode::OK);
+        // Sec-Fetch-Site same-origin sin Origin
+        let sfs = [("sec-fetch-site", "same-origin"), json];
+        assert_eq!(send_req(&app, "POST", a, &sfs, "{}").await, StatusCode::OK);
+        // Cliente no navegador (sin cabeceras)
+        assert_eq!(send_req(&app, "POST", a, &[], "").await, StatusCode::OK);
+        assert_eq!(
+            send_req(&app, "POST", a, &[json], r#"{"to":"X"}"#).await,
+            StatusCode::OK
+        );
+        // Cuerpo no JSON
+        let text = [("content-type", "text/plain")];
+        assert_eq!(
+            send_req(&app, "POST", a, &text, "{}").await,
+            StatusCode::UNSUPPORTED_MEDIA_TYPE
+        );
+        assert_eq!(host.actions.lock().unwrap().len(), 4);
+        // GET de solo lectura con Origin ajeno: permitido (no cambia estado)
+        assert_eq!(
+            send_req(
+                &app,
+                "GET",
+                "/api/health",
+                &[("origin", "https://evil.example")],
+                ""
+            )
+            .await,
+            StatusCode::OK
+        );
+    }
+
     #[tokio::test]
     async fn autocomplete_lan_without_token_is_rejected() {
         let (app, _core) = router_with_host(RecHost::new(3, true), true, "secret-token-123456");
