@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Task 2 (Spike 3 — Canonn) · 🔄 en curso.
-- **Siguiente acción:** completar la Task 2 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
+- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 4 (`tmc-model` — eventos de exploración y exobiología) ⬜ siguiente.
+- **Siguiente acción:** empezar la Task 4 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
 
 ## Fases
 
@@ -35,7 +35,9 @@
 |---|---|---|---|---|
 | 0 | Spike 1 — Spansh | ✅ hecha | 886c597 | Ficha `/api/system/{id64}`, neutrones `/api/route`, galaxia `/api/generic/route`, autocompletado; política/Powerplay desde Spansh; «descubierto» vía EDSM. Revisión aprobada. |
 | 1 | Spike 2 — licencias FSD y especies | ✅ hecha | bdaea77, 6ecb663 | Todos los datos estáticos se construyen desde hechos con procedencia y `verified`; ninguna fuente externa incorporable; Canonn solo por red. Revisión aprobada tras 1 ronda. |
-| 2–32 | Ver plan | ⬜ | — | |
+| 2 | Spike 3 — Canonn | ✅ hecha | 722500c, 6297f2f | Viable técnicamente; permiso formal pendiente → capa 3 desactivada por ahora. Revisión aprobada tras 1 ronda. |
+| 3 | Aprobaciones previas del propietario | ✅ hecha | (este commit) | Bloqueos registrados (Canonn, nombres de especies). |
+| 4–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
@@ -64,6 +66,9 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 18 | Presupuesto de consumo y cierre de F0 | ✅ hecha | fe99cd6 | `measure-footprint.ps1` (`max_mb=144.91` < 150, `avg_cpu_idle=0.09%` < 1% PASS), `README.md` y 9/9 criterios §15 verificados. |
 
 ## Bloqueos y pendientes del propietario
+
+- [ ] **F1 · Canonn (capa 3 de exobiología):** su README exige una **solicitud formal** para usar la API en software propio y pide **capturar/enviar datos de los usuarios**. Decisión del propietario: (a) solicitar permiso sin enviar datos de usuario, (b) aceptar enviar datos (requiere cambio de spec y opt-in), o (c) renunciar a Canonn. Mientras tanto, la capa 3 se implementa desactivada y F1 avanza con reglas propias + historial.
+- [ ] **F1 · Nombres de especies:** aprobar aplazar la tabla propia por idioma (se usa `_Localised` del diario y nombre latino de respaldo).
 
 - [x] **F1 — plan aprobado** (2026-10-17).
 - [x] **F1 — dónde vive `eval`:** resuelto → `tmc-headless eval`. Antes: (spec §10.1 dice `tmc-replay eval`): requiere que `tmc-replay` dependa de `tmc-journal` y `tmc-modules` (cambio de la tabla §3.1 de la spec de arquitectura) o, alternativa sin tocar la arquitectura, `tmc-headless eval`. Task 3 del plan.
