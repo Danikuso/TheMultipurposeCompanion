@@ -3,7 +3,10 @@
 
 pub mod companion;
 pub mod events;
+pub mod source;
+pub mod state;
 pub mod status;
+pub mod theme;
 
 /// Error de análisis compartido por Status.json y los eventos del diario.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
