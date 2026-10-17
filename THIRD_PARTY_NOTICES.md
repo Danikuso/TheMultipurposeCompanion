@@ -40,3 +40,13 @@ Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, 
 - Versión: x.y.z
 - Licencia: MIT OR Apache-2.0
 -->
+
+### windows
+- Versión: 0.61.3 (declarada compatible con 0.61.1)
+- Licencia: MIT OR Apache-2.0
+- Usada por: tmc-journal (solo Windows; localización de Saved Games mediante Known Folders)
+
+### tempfile
+- Versión: 3.27.0
+- Licencia: MIT OR Apache-2.0
+- Usada por: tests de tmc-journal

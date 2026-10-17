@@ -204,7 +204,7 @@ Expected: todo OK, 0 tests.
 
 Reglas que los tests fijan: `LoadGame` reinicia `SessionState` (started_at = timestamp, credits_at_start = Credits); `FSDJump` suma `jumps += 1`, `distance_ly += JumpDist`, actualiza ubicación y `fuel_main`; `next_system` = primer salto de `route.hops` posterior al sistema actual, o `FSDTarget.Name` si no hay ruta; `NavRouteClear` vacía la ruta; `FlightMode` se deriva de Status (prioridad: OnFoot > InTaxi > Multicrew > InSrv > InFighter > Docked > Landed > FSD_JUMP→Hyperspace > Supercruise > NormalSpace); `Status.balance` actualiza `credits_now` y `cmdr.credits`; `Status.fuel` actualiza combustible; `LoadGame` → `game_running = true`, `Shutdown` → `game_running = false`, `GameProcess{running}` lo sobrescribe (lo aplica el actor). `Rgb` se serializa como cadena `"#rrggbb"` (Serialize propio), de modo que `core.theme` llega a la UI listo para CSS.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn loadgame_starts_session_and_sets_cmdr() {}
@@ -219,10 +219,10 @@ Reglas que los tests fijan: `LoadGame` reinicia `SessionState` (started_at = tim
 #[test] fn apply_returns_only_changed_areas() { /* UnderAttack → Changes::empty() */ }
 ```
 
-- [ ] **Step 2:** `cargo test -p tmc-model` → FAIL.
-- [ ] **Step 3: Implementar** los reductores en `state.rs` (sin E/S, sin tiempo real; puro).
-- [ ] **Step 4:** `cargo test -p tmc-model` → PASS.
-- [ ] **Step 5: Commit** `feat(model): GameState y reductores de eventos`
+- [ ] **Step 2:** `cargo test -p tmc-model` → FAIL. Ciclo inicial no observado en esta sesión; sí se observó RED de las cuatro regresiones de revisión (véase verificación incremental).
+- [x] **Step 3: Implementar** los reductores en `state.rs` (sin E/S, sin tiempo real; puro).
+- [x] **Step 4:** `cargo test -p tmc-model` → PASS.
+- [x] **Step 5: Commit** `feat(model): GameState y reductores de eventos`
 
 ---
 
@@ -239,7 +239,7 @@ Reglas que los tests fijan: `LoadGame` reinicia `SessionState` (started_at = tim
   - `pub fn list_journals(dir: &Path) -> io::Result<Vec<PathBuf>>` ordenados por nombre (el formato antiguo va antes que el nuevo).
   - `pub fn graphics_override_path() -> Option<PathBuf>` (Windows `%LOCALAPPDATA%\Frontier Developments\Elite Dangerous\Options\Graphics\GraphicsConfigurationOverride.xml`; Linux dentro del prefijo Proton: `…/pfx/drive_c/users/steamuser/AppData/Local/Frontier Developments/Elite Dangerous/Options/Graphics/…`).
 
-- [ ] **Step 1: Tests** (con `tempfile`):
+- [x] **Step 1: Tests** (con `tempfile`):
 
 ```rust
 #[test] fn recognises_new_and_old_journal_names() {}
@@ -249,8 +249,8 @@ Reglas que los tests fijan: `LoadGame` reinicia `SessionState` (started_at = tim
 #[test] fn reads_journal_from_path_with_spaces_and_accents() { /* tempdir/"Partidas guardadas ñ é"/… → list_journals encuentra 2 archivos */ }
 ```
 
-- [ ] **Step 2:** `cargo test -p tmc-journal` → FAIL. **Step 3:** implementar. **Step 4:** PASS.
-- [ ] **Step 5: Commit** `feat(journal): localización de carpeta y listado de diarios`
+- [x] **Step 2:** `cargo test -p tmc-journal` → FAIL. **Step 3:** implementar. **Step 4:** PASS.
+- [x] **Step 5: Commit** `feat(journal): localización de carpeta y listado de diarios`
 
 ---
 
@@ -675,3 +675,7 @@ Expected: `PASS` (< 150 MB, < 1 % CPU en reposo). Si falla, abrir incidencia con
 - UI aún no existe (Task 15); checks npm no aplicables en este punto. El script de consumo se crea en Task 18; aún no hay aplicación ejecutable para medir.
 
 - Cierre Task 4: regresiones RED (31 PASS/4 FAIL) y GREEN (35 PASS). Revisión de correcciones aprobada. Verificación global: cargo fmt --all --check, cargo clippy --workspace --all-targets -- -D warnings y cargo test --workspace, todos código 0. Avisos de caché incremental por hard links: Rust copia archivos como alternativa; sin fallos de compilación.
+
+- Cierre Task 5: cargo test -p tmc-journal --offline con stubs termina con 9 FAIL (RED); tras implementación, 9 PASS (GREEN). Revisión independiente aprobada, sin hallazgos bloqueantes. cargo fmt --all --check, cargo clippy --workspace --all-targets --offline -- -D warnings y cargo test --workspace --offline: código 0, 44 tests PASS (9 journal + 35 model). git diff --check: código 0.
+- Task 5 no cambia las interfaces previstas. Dependencias directas nuevas: windows 0.61.3 (solo Windows; MIT OR Apache-2.0), tempfile 3.27.0 (tests; MIT OR Apache-2.0), registradas en THIRD_PARTY_NOTICES.md. Se resolvió la restricción DNS mediante cargo fetch autorizado; sin downgrades de dependencias previas.
+- Límite de verificación: ejecución en Windows; helpers Linux probados con carpetas temporales, pendientes ejecución nativa Linux y comprobación manual con Saved Games redirigida. No hay app ni script de consumo todavía; Task 5 no incorpora bucles ni tareas en segundo plano.
