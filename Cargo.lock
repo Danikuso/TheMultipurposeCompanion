@@ -989,6 +989,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tmc-modules"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "tmc-core",
+ "tmc-i18n",
+ "tmc-model",
+ "tokio",
+]
+
+[[package]]
 name = "tmc-store"
 version = "0.1.0"
 dependencies = [

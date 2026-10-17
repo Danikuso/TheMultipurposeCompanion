@@ -424,7 +424,7 @@ Reglas: el actor es el único dueño de `GameState` y módulos; por cada `Source
 
 **Interfaces:**
 - Consumes: `Module`, `ModuleCtx`, `Alert`, `Severity`, `GameState`, `SourceEvent`, `Flags`, `Flags2`.
-- Produces: `pub fn all_modules() -> Vec<Box<dyn Module>>` (F0: `[Dashboard::new()]`); `pub struct Dashboard`; topic `dashboard.alerts` = lista de alertas activas `[{id, severity, key, args, since}]` (máx. 20, se retiran cuando la condición desaparece o tras 60 s las basadas en eventos).
+- Produces: `pub fn all_modules() -> Vec<Box<dyn Module>>` (F0: `[Dashboard::new()]`); `pub struct Dashboard`; topic `dashboard.alerts` = lista de alertas activas `[{id, severity, key, args, since}]` (máx. 20, se retiran cuando la condición desaparece; las basadas en eventos caducan al procesar el siguiente Journal/Status con timestamp >= since + 60 s; véase desviación temporal).
 
 Reglas de alerta (`rules.rs`), con antirrebote: la misma `key` no se repite en **30 s**:
 
@@ -440,7 +440,7 @@ Reglas de alerta (`rules.rs`), con antirrebote: la misma `key` no se repite en *
 
 Relevance: `Urgent` si hay alguna alerta Critical activa, si no `Normal`.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn low_fuel_alert_on_rising_edge_only() {}
@@ -451,8 +451,8 @@ Relevance: `Urgent` si hay alguna alerta Critical activa, si no `Normal`.
 #[test] fn registry_contains_dashboard() {}
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar (el antirrebote usa `timestamp` del evento/Status para ser determinista). **Step 4:** `cargo test -p tmc-modules` PASS.
-- [ ] **Step 5: Commit** `feat(modules): registro de módulos y panel general con alertas`
+- [x] **Step 2:** FAIL. **Step 3:** implementar (el antirrebote usa `timestamp` del evento/Status para ser determinista). **Step 4:** `cargo test -p tmc-modules` PASS.
+- [x] **Step 5: Commit** `feat(modules): registro de módulos y panel general con alertas`
 
 ---
 
@@ -710,3 +710,11 @@ La revisión encontró que flush_blocking sin retorno podía confirmar un lote f
 - Task 9 concreta flush_every con mínimo de 100 ms para cumplir máximo de 10 Hz, y atiende snapshots tras como máximo 32 eventos consecutivos. Sin cambio de las firmas previstas; el cierre del writer maneja Result fuera del runtime.
 
 - Cierre Task 10: RED 4 FAIL → GREEN 8 i18n. 67 claves y variables coherentes en los cinco idiomas, parseo/formato Fluent sin errores y bundle Send+Sync. Revisión aprobada. cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline --quiet; git diff --check: código 0 y 115 tests PASS (17 core + 8 i18n + 37 journal + 35 model + 18 store).
+
+
+### Desviación temporal Task 11 (2026-10-17)
+
+La API on_event del plan no entrega ticks al módulo: el vencimiento de 60 s se evalúa con el siguiente evento Journal/Status que tenga timestamp, igual que el antirrebote de 30 s. Sin nuevos datos de juego no hay retirada autónoma exactamente al segundo 60. Esta limitación se mantiene explícita para conservar determinismo, contrato de módulo y ausencia de sondeos adicionales de rol en core. La spec no fija TTL de alertas; no cambia sus criterios de aceptación. Se verifica el borde exacto de 60 s y no se presenta esta comprobación como temporizador autónomo. Un futuro hook temporal genérico requeriría planificación explícita.
+
+- Cierre Task 11: RED 11 FAIL → GREEN inicial 11 PASS; regresión de escalado de HullDamage dentro de ventana de antirrebote (RED 11 PASS/1 FAIL → GREEN 12 PASS). Revisión contra spec y plan aprobada. cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline: código 0 y 127 tests PASS (17 core + 8 i18n + 37 journal + 35 model + 12 modules + 18 store).
+
