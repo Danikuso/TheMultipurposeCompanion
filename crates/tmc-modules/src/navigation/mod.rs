@@ -1,12 +1,15 @@
 //! Módulo `navigation`: tira de ruta (ficha local + remota) y alcance de salto.
 
 pub mod jump;
+pub mod persist;
+pub mod planner;
 pub mod route;
 pub mod strip;
 
 use crate::data::{fsd_table, star_flags};
 use chrono::{DateTime, SecondsFormat, Utc};
 use jump::{JumpModel, RangeSource, ShipMass, build_jump_model, fuel_for_jump};
+use planner::Planner;
 use route::ActivePlan;
 use serde::Serialize;
 use serde_json::Value;
@@ -24,6 +27,7 @@ use tmc_model::state::{FlightMode, Galaxy, GameState};
 
 const TOPIC_ROUTE: &str = "navigation.route";
 const TOPIC_JUMP: &str = "navigation.jump";
+const TOPIC_PLAN: &str = "navigation.plan";
 const VISITS_TAG: &str = "visits";
 const VISITS_SQL: &str = "SELECT json_extract(json,'$.SystemAddress'), COUNT(*) FROM event WHERE name='FSDJump' AND cmdr=?1 AND ts<=?2 GROUP BY 1";
 /// Una petición sin respuesta pasado este tiempo se da por perdida y puede repetirse.
@@ -100,6 +104,11 @@ impl Visits {
 pub struct Navigation {
     settings: ModuleSettings,
     plan: Option<ActivePlan>,
+    planner: Planner,
+    /// Comandante al que pertenece el plan en memoria.
+    plan_cmdr: Option<String>,
+    /// Hay cambios del plan pendientes de volcar al almacén.
+    plan_dirty: bool,
     model: Option<JumpModel>,
     unladen_mass: Option<f64>,
     supercharged: Option<f64>,
@@ -113,6 +122,7 @@ pub struct Navigation {
     copy_seq: u64,
     route_value: Value,
     jump_value: Value,
+    plan_value: Value,
 }
 
 impl Navigation {
@@ -120,6 +130,9 @@ impl Navigation {
         Self {
             settings: ModuleSettings::default(),
             plan: None,
+            planner: Planner::default(),
+            plan_cmdr: None,
+            plan_dirty: false,
             model: None,
             unladen_mass: None,
             supercharged: None,
@@ -131,6 +144,7 @@ impl Navigation {
             copy_seq: 0,
             route_value: Value::Null,
             jump_value: Value::Null,
+            plan_value: Value::Null,
         }
     }
 
@@ -190,6 +204,7 @@ impl Navigation {
         ctx: &mut ModuleCtx,
     ) {
         self.note_visits_source(state, je.timestamp, ctx);
+        self.note_plan_cmdr(state, ctx);
         match &je.kind {
             EventKind::Loadout(l) => {
                 self.model = Some(build_jump_model(l, fsd_table()));
@@ -201,6 +216,7 @@ impl Navigation {
                 self.visits.on_jump(l.system_address, je.timestamp);
                 if let Some(plan) = &mut self.plan {
                     plan.on_jump(&l.star_system, l.system_address);
+                    self.plan_dirty = true;
                 }
                 if !ctx.replaying {
                     self.copy_seq += 1;
@@ -209,10 +225,12 @@ impl Navigation {
             EventKind::Location(l) | EventKind::CarrierJump(l) => {
                 self.politics = LocalPolitics::from_location(l).map(|p| (l.system_address, p));
                 if let Some(plan) = &mut self.plan {
+                    let before = (plan.current_index, plan.off_route);
                     plan.reconcile(
                         &l.star_system,
                         (l.system_address != 0).then_some(l.system_address),
                     );
+                    self.plan_dirty |= before != (plan.current_index, plan.off_route);
                 }
             }
             EventKind::JetConeBoost(j) => self.supercharged = j.boost_value,
@@ -480,6 +498,7 @@ impl Module for Navigation {
             SourceEvent::Journal { ev, .. } => {
                 self.tick(ev.timestamp);
                 self.on_journal(ev, state, ctx);
+                self.sync_plan(ctx);
                 if !self.route_value.is_null() && !affects_topics(&ev.kind) {
                     return TopicSet::new();
                 }
@@ -491,7 +510,19 @@ impl Module for Navigation {
             {
                 self.visits.load(&value["rows"]);
             }
+            SourceEvent::Stored { module, tag, value }
+                if module == "navigation" && tag == planner::PLAN_TAG =>
+            {
+                self.apply_loaded_plan(value, state);
+            }
+            SourceEvent::Action { name, args } if name.starts_with("navigation.") => {
+                self.on_plan_action(name, args, state, ctx);
+            }
             _ => {}
+        }
+        self.sync_plan(ctx);
+        if let SourceEvent::Net(response) = ev {
+            self.apply_route_response(response);
         }
         let strip = build_strip(self.plan.as_ref(), state);
         if let SourceEvent::Net(response) = ev {
@@ -507,6 +538,11 @@ impl Module for Navigation {
             self.route_value = route;
             dirty.insert(TOPIC_ROUTE.to_owned());
         }
+        let plan = self.render_plan(state);
+        if self.plan_value != plan {
+            self.plan_value = plan;
+            dirty.insert(TOPIC_PLAN.to_owned());
+        }
         let jump = self.render_jump(state);
         if self.jump_value != jump {
             self.jump_value = jump;
@@ -515,17 +551,22 @@ impl Module for Navigation {
         dirty
     }
 
+    fn migrations(&self) -> &'static [tmc_core::Migration] {
+        persist::MIGRATIONS
+    }
+
     fn topic_value(&self, topic: &str) -> Option<Value> {
         let v = match topic {
             TOPIC_ROUTE => &self.route_value,
             TOPIC_JUMP => &self.jump_value,
+            TOPIC_PLAN => &self.plan_value,
             _ => return None,
         };
         (!v.is_null()).then(|| v.clone())
     }
 
     fn topics(&self) -> Vec<String> {
-        vec![TOPIC_ROUTE.into(), TOPIC_JUMP.into()]
+        vec![TOPIC_ROUTE.into(), TOPIC_JUMP.into(), TOPIC_PLAN.into()]
     }
 
     fn relevance(&self, state: &GameState) -> Relevance {
