@@ -509,7 +509,7 @@ Relevance: `Urgent` si hay alguna alerta Critical activa, si no `Normal`.
   - `pub struct Running { pub server: ServerHandle, pub core: CoreHandle, pub store: Store }`; `pub async fn start(config: Config) -> anyhow::Result<Running>`: resuelve carpeta del diario, abre `Store` en `data_dir()/tmc.db`, crea `EventWriter`, `spawn_core(all_modules(), Some(writer), 100ms)`, `spawn_watcher`, lanza `import_history` en un hilo (`throttle` = juego activo; progreso → `SourceEvent::ImportProgress`), arranca `serve`; si `auto_copy_next_system`, tarea que escucha `Update` con `core.route` y copia `next_system` cuando cambia (no durante replay inicial).
   - `apps/headless/src/main.rs`: `tmc-headless [--config <ruta>] [--journal-dir <ruta>] [--ui-dir <ruta>]` → `start`, imprime `local_url` (y `lan_url`), espera Ctrl+C.
 
-- [ ] **Step 1: Tests** (`tmc-app`):
+- [x] **Step 1: Tests** (`tmc-app`):
 
 ```rust
 #[test] fn config_roundtrip_and_defaults() { /* port 47320, language "es", auto_copy true */ }
@@ -520,13 +520,13 @@ Relevance: `Urgent` si hay alguna alerta Critical activa, si no `Normal`.
 #[tokio::test] async fn start_end_to_end_with_temp_journal_dir() { /* tempdir con basic_session.log + Status.json → GET /api/health ok; WS snapshot contiene core.location.system esperado */ }
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-app` PASS.
-- [ ] **Step 5: Verificación manual con tus diarios reales**
+- [x] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-app` PASS.
+- [x] **Step 5: Verificación manual con tus diarios reales**
 
 Run: `cargo run -p tmc-headless` y abrir `http://127.0.0.1:47320/api/health`
 Expected: `{"ok":true,...}`; en el log aparece la importación del historial terminada.
 
-- [ ] **Step 6: Commit** `feat(app): composición, configuración, portapapeles y binario headless`
+- [x] **Step 6: Commit** `feat(app): composición, configuración, portapapeles y binario headless`
 
 ---
 
@@ -720,4 +720,4 @@ La API on_event del plan no entrega ticks al módulo: el vencimiento de 60 s se 
 
 - Cierre Task 12: RED 10 FAIL → GREEN 12 server (HTTP, WebSocket hello/snapshot/update/subscribe, validación anti DNS-rebinding de Host/Origin, autenticación LAN en tiempo constante con cookie HttpOnly SameSite=Strict, emparejamiento QR SVG solo loopback y estáticos con fallback SPA). Dependencias conformes a spec §3.1 (`tmc-server -> tmc-core, tmc-model`). cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline: código 0 y 139 tests PASS (17 core + 8 i18n + 37 journal + 35 model + 12 modules + 12 server + 18 store).
 
-
+- Cierre Task 13: RED 6 FAIL → GREEN 6 app (config TOML con respaldo `.bak` ante sintaxis inválida, token LAN hex de 128 bits, acción `clipboard.copy-next-system`, reconstrucción automática de `tmc.db` corrupta a `tmc.db.corrupt-<timestamp>` y arranque extremo a extremo con `apps/headless`). Paso 5 verificado con diarios reales (`GET /api/health` → `{"ok":true,"version":"0.1.0"}` y `history import completed files=6 events=2599 skipped_lines=0` en el log rotado). cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline: código 0 y 145 tests PASS (6 app + 17 core + 8 i18n + 37 journal + 35 model + 12 modules + 12 server + 18 store).

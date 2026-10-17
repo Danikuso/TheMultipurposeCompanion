@@ -136,3 +136,34 @@ Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, 
 - Licencia: MIT
 - Usada por: tests de tmc-server (adaptador TokioIo / TowerToHyperService)
 
+### toml
+- Versión: 1.1.8+spec-1.1.0
+- Licencia: MIT OR Apache-2.0
+- Usada por: tmc-app (lectura y escritura de `config.toml`)
+
+### directories
+- Versión: 6.0.0
+- Licencia: MIT OR Apache-2.0
+- Usada por: tmc-app (rutas estándar de configuración y datos en Windows/Linux)
+
+### arboard
+- Versión: 3.7.0
+- Licencia: MIT OR Apache-2.0
+- Usada por: tmc-app (copia del siguiente sistema de ruta al portapapeles)
+
+### tracing-subscriber
+- Versión: 0.3.23
+- Licencia: MIT
+- Usada por: tmc-app (formateo y filtrado de logs)
+
+### tracing-appender
+- Versión: 0.2.5
+- Licencia: MIT
+- Usada por: tmc-app (rotación diaria de archivos de log)
+
+### anyhow
+- Versión: 1.0.104
+- Licencia: MIT OR Apache-2.0
+- Usada por: tmc-app, tmc-headless (errores de arranque y composición)
+
+
