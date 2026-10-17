@@ -571,8 +571,8 @@ Expected: `{"ok":true,...}`; en el log aparece la importación del historial ter
   - Shell: `Sidebar` (iconos de módulos de `core.modules`, punto de color según `relevance`), `TopBar` fija (sistema, modo de vuelo, combustible, casco, carga, créditos, indicador de conexión y de `core.game.running`; aviso `galaxy-legacy-warning` si `galaxy == "Legacy"`), `Grid` CSS grid: **4 columnas ≥ 2400 px**, 3 columnas ≥ 1600 px, 2 columnas ≥ 900 px, 1 columna por debajo; `Panel` (título traducido + contenido; borde y título con `--hud-*`); `Toasts` (alertas 8 s, Critical hasta cerrar); `ImportProgress` (barra mientras `done < total`).
   - Reglas de estilo: tipografía del sistema (`system-ui`) sin fuentes externas; contraste AA sobre `--hud-bg`; **sin** `@keyframes` infinitos; `transition` ≤ 200 ms.
 
-- [ ] **Step 1: Scaffold** con Vite + Svelte 5 + TS (`npm create vite@latest ui -- --template svelte-ts`), añadir `@fluent/bundle`, `vitest`, `jsdom`, `@sveltejs/vite-plugin-svelte`, `svelte-check`. Scripts: `dev`, `build`, `check` (`svelte-check`), `test` (`vitest run`). `vite.config.ts`: proxy `/ws` y `/api` → `http://127.0.0.1:47320` en dev; `server.fs.allow` incluye `../locales`.
-- [ ] **Step 2: Tests:**
+- [x] **Step 1: Scaffold** con Vite + Svelte 5 + TS (`npm create vite@latest ui -- --template svelte-ts`), añadir `@fluent/bundle`, `vitest`, `jsdom`, `@sveltejs/vite-plugin-svelte`, `svelte-check`. Scripts: `dev`, `build`, `check` (`svelte-check`), `test` (`vitest run`). `vite.config.ts`: proxy `/ws` y `/api` → `http://127.0.0.1:47320` en dev; `server.fs.allow` incluye `../locales`.
+- [x] **Step 2: Tests:**
 
 ```ts
 test('ws applies snapshot then update', ...)        // mock WebSocket: hello → snapshot → update; topic('core.status') refleja el último valor
@@ -583,8 +583,8 @@ test('all locales define the same keys', ...)       // parsea los 5 .ftl y compa
 test('applyTheme sets css variables', ...)          // document.documentElement.style.getPropertyValue('--hud-primary') === '#ff7100'
 ```
 
-- [ ] **Step 3:** `npm test` en `ui/` → FAIL. **Step 4:** implementar. **Step 5:** `npm test && npm run check && npm run build` → PASS.
-- [ ] **Step 6: Commit** `feat(ui): cliente WebSocket, i18n Fluent, tema HUD y shell con rejilla`
+- [x] **Step 3:** `npm test` en `ui/` → FAIL. **Step 4:** implementar. **Step 5:** `npm test && npm run check && npm run build` → PASS.
+- [x] **Step 6: Commit** `feat(ui): cliente WebSocket, i18n Fluent, tema HUD y shell con rejilla`
 
 ---
 
@@ -723,3 +723,5 @@ La API on_event del plan no entrega ticks al módulo: el vencimiento de 60 s se 
 - Cierre Task 13: RED 6 FAIL → GREEN 6 app (config TOML con respaldo `.bak` ante sintaxis inválida, token LAN hex de 128 bits, acción `clipboard.copy-next-system`, reconstrucción automática de `tmc.db` corrupta a `tmc.db.corrupt-<timestamp>` y arranque extremo a extremo con `apps/headless`). Paso 5 verificado con diarios reales (`GET /api/health` → `{"ok":true,"version":"0.1.0"}` y `history import completed files=6 events=2599 skipped_lines=0` en el log rotado). cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline: código 0 y 145 tests PASS (6 app + 17 core + 8 i18n + 37 journal + 35 model + 12 modules + 12 server + 18 store).
 
 - Cierre Task 14: RED 3 FAIL → GREEN 3 replay (`anonymize` y `play`). Generados fixtures reales anonimizados (`real_01.log` a `real_03.log`) y verificado con búsqueda insensible a mayúsculas que no permanece ningún nombre de comandante, FID ni chat real (0 coincidencias). Snapshot `insta` (`real_fixtures_end_state`) añadido y verificado en `tmc-model`. cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline: código 0 y 149 tests PASS (6 app + 17 core + 8 i18n + 37 journal + 36 model + 12 modules + 3 replay + 12 server + 18 store).
+
+- Cierre Task 15: RED 6 FAIL → GREEN 6 tests UI (`ws.test.ts`, `i18n.test.ts`, `theme.test.ts`), `svelte-check` 0 errores/0 warnings y `vite build` OK. Añadido job `ui` en `.github/workflows/ci.yml` (R5) y ruta `../../../locales/*/main.ftl` en `ui/src/lib/i18n.ts` (R2).
