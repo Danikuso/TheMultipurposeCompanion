@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/*", "apps/headless"]
+members = ["crates/*", "apps/headless", "apps/desktop"]
 
 
 [workspace.package]
@@ -36,3 +36,9 @@ anyhow = "1.0.104"
 tempfile = "3.27.0"
 insta = { version = "1.49.0", features = ["json"] }
 tokio-tungstenite = "0.30.0"
+tauri = { version = "2.12.4", features = ["tray-icon", "wry"] }
+tauri-build = "2.7.3"
+tauri-plugin-single-instance = "2.5.4"
+tauri-plugin-window-state = "2.5.0"
+webview2-com = "0.39.1"
+

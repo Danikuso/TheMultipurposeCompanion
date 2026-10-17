@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-17 20:01 (Europe/Madrid) · Gemini 4 Argon (Medium)
+- **Última actualización:** 2026-10-17 20:17 (Europe/Madrid) · Gemini 4 Argon (Medium)
 - **Fase actual:** F0 — Cimientos
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md) — ✅ aprobada (2026-10-17)
 - **Plan activo:** [`docs/plans/2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) — ✅ aprobado; ejecución por subagentes
@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** Task 16 (`UI — paneles del panel general y ajustes`), Step 1: tests.
-- **Siguiente acción:** crear los paneles del módulo `dashboard` (`CmdrPanel`, `ShipPanel`, `LocationPanel`, `StatusPanel`, `RoutePanel`, `SessionPanel`, `AlertsPanel`), `registry.ts`, `Settings.svelte`, `Pairing.svelte`, `ConfigHost` en `tmc-server` + `tmc-app` (`GET/PUT /api/config`), escribir `ui/tests/dashboard.test.ts` y `ui/tests/e2e/smoke.spec.ts` y verificar RED → GREEN. Task 15 cerrada en `bd78913` (6 tests UI PASS, `svelte-check` 0 errores, `vite build` OK).
+- **Tarea:** Task 17 (`apps/desktop` — Tauri 2, bandeja e instalador), Step 1: verificación de build.
+- **Siguiente acción:** crear `apps/desktop/{Cargo.toml, build.rs, tauri.conf.json, capabilities/default.json, icons/*, src/main.rs, src/tray.rs, src/window.rs}`, añadir `apps/desktop` a `Cargo.toml`, ejecutar `cargo tauri build` para generar el instalador NSIS y verificar funcionamiento. Task 16 cerrada en `8d26c0b` (10 tests unitarios UI PASS, `smoke.spec.ts` Playwright PASS, 150 tests Rust PASS).
 
 ## Fases
 
@@ -51,8 +51,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 13 | `tmc-app` + `apps/headless` | ✅ hecha | 31b439f | RED 6 FAIL → GREEN 6 app y 145 workspace PASS, `tmc-headless` + `/api/health` verificados. |
 | 14 | `tmc-replay` — reproducción y anonimización | ✅ hecha | 885b0a2 | RED 3 FAIL → GREEN 3 replay, fixtures reales anonimizados, snapshot `insta` y 149 workspace PASS. |
 | 15 | UI — base (WS, i18n, tema, shell) | ✅ hecha | bd78913 | RED 6 FAIL → GREEN 6 tests UI, `svelte-check` 0 errores, `vite build` OK y job `ui` en CI. |
-| 16 | UI — panel general y ajustes | 🔄 en curso | — | Step 1: tests. |
-| 17 | `apps/desktop` — Tauri, bandeja, instalador | ⬜ | — | |
+| 16 | UI — panel general y ajustes | ✅ hecha | 8d26c0b | RED 4 FAIL → GREEN 10 tests UI, `smoke.spec.ts` Playwright PASS, `ConfigHost` y 150 tests Rust PASS. |
+| 17 | `apps/desktop` — Tauri, bandeja, instalador | 🔄 en curso | — | Step 1: verificación de build. |
 | 18 | Presupuesto de consumo y cierre de F0 | ⬜ | — | |
 
 ## Bloqueos y pendientes del propietario

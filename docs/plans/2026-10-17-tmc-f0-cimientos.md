@@ -633,14 +633,14 @@ test('session duration does not re-render faster than 30 s', ...) // fake timers
   - `tauri.conf.json`: `identifier = "io.github.danikuso.tmc"`, `productName = "TMC"`, bundle `targets = ["nsis"]`, `windows.webviewInstallMode = { type = "downloadBootstrapper" }`, `nsis.languages = ["Spanish","English","French","German","Portuguese"]`, sin `devUrl` (la UI la sirve el servidor), `beforeBuildCommand = "npm --prefix ../../ui run build"`.
   - `capabilities/default.json`: mínimas (ventana principal, sin `shell`/`fs` expuestos al JS — la UI habla solo con el servidor local).
 
-- [ ] **Step 1: Verificación de build**
+- [x] **Step 1: Verificación de build**
 
 Run: `cargo tauri build` (desde `apps/desktop`)
 Expected: genera `target/release/bundle/nsis/TMC_<versión>_x64-setup.exe`.
 
-- [ ] **Step 2: Prueba manual** (anotar resultado en el PR/commit): instalar el `setup.exe`; arranca, muestra el panel con tus datos reales; cerrar → queda en bandeja y desaparecen los procesos `msedgewebview2.exe` hijos de TMC (comprobar en el Administrador de tareas); «Abrir» desde la bandeja la recrea; una segunda ejecución no abre otra instancia; «Salir» libera el puerto 47320.
+- [x] **Step 2: Prueba manual** (anotar resultado en el PR/commit): instalar el `setup.exe`; arranca, muestra el panel con tus datos reales; cerrar → queda en bandeja y desaparecen los procesos `msedgewebview2.exe` hijos de TMC (comprobar en el Administrador de tareas); «Abrir» desde la bandeja la recrea; una segunda ejecución no abre otra instancia; «Salir» libera el puerto 47320.
 
-- [ ] **Step 3: Commit** `feat(desktop): app Tauri con bandeja, ahorro de memoria e instalador NSIS`
+- [x] **Step 3: Commit** `feat(desktop): app Tauri con bandeja, ahorro de memoria e instalador NSIS`
 
 ---
 
@@ -727,3 +727,5 @@ La API on_event del plan no entrega ticks al módulo: el vencimiento de 60 s se 
 - Cierre Task 15: RED 6 FAIL → GREEN 6 tests UI (`ws.test.ts`, `i18n.test.ts`, `theme.test.ts`), `svelte-check` 0 errores/0 warnings y `vite build` OK. Añadido job `ui` en `.github/workflows/ci.yml` (R5) y ruta `../../../locales/*/main.ftl` en `ui/src/lib/i18n.ts` (R2).
 
 - Cierre Task 16: RED 4 FAIL → GREEN 4 nuevos tests en `dashboard.test.ts` (10 tests unitarios UI en total), `svelte-check` 0 errores/0 warnings, `vite build` OK, `npx playwright test` (`smoke.spec.ts` contra `tmc-headless` + `tmc-replay` sobre `basic_session.log`) 1 PASS, y `ConfigHost` + `GET/PUT /api/config` verificados en `tmc-server` (150 tests Rust en el workspace PASS).
+
+- Cierre Task 17: `cargo tauri build` genera `target/release/TMC.exe` y `target/release/bundle/nsis/TMC_0.1.0_x64-setup.exe` (3.83 MiB). Verificados instalación/desinstalación silenciosa NSIS (`ExitCode=0`), arranque con datos reales (`GET /api/health` → `{"ok":true,"version":"0.1.0"}`), instancia única (segunda ejecución sale inmediatamente y enfoca/recrea la ventana), cierre de la ventana principal a bandeja destruyendo todos los procesos `msedgewebview2.exe` hijos (`Direct msedgewebview2.exe children after WM_CLOSE: 0`), ahorro de memoria al minimizar (`SetIsVisible(false)` + `COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW`) y liberación del puerto 47320 al salir.

@@ -171,6 +171,36 @@ Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, 
 - Licencia: Apache-2.0
 - Usada por: tests de tmc-model (snapshots de estado final sobre fixtures reales)
 
+### tauri
+- Versión: 2.12.4
+- Licencia: Apache-2.0 OR MIT
+- Usada por: tmc-desktop (ventana principal, icono de bandeja y runtime de escritorio)
+
+### tauri-build
+- Versión: 2.7.3
+- Licencia: Apache-2.0 OR MIT
+- Usada por: tmc-desktop (script de compilación de recursos y capacidades de Tauri)
+
+### tauri-plugin-single-instance
+- Versión: 2.5.4
+- Licencia: Apache-2.0 OR MIT
+- Usada por: tmc-desktop (instancia única y enfoque de la ventana existente)
+
+### tauri-plugin-window-state
+- Versión: 2.5.0
+- Licencia: Apache-2.0 OR MIT
+- Usada por: tmc-desktop (persistencia de posición, tamaño y estado maximizado de la ventana)
+
+### webview2-com
+- Versión: 0.39.1
+- Licencia: MIT
+- Usada por: tmc-desktop (solo Windows; reducción de consumo de WebView2 al minimizar)
+
+### windows-core
+- Versión: 0.62.2
+- Licencia: MIT OR Apache-2.0
+- Usada por: tmc-desktop (solo Windows; trait `Interface::cast` para `ICoreWebView2_19`)
+
 ## Dependencias directas de la UI (`ui/package.json`)
 
 ### @fluent/bundle
