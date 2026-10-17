@@ -10,7 +10,7 @@
 
 ## Puntero actual
 
-- **Tarea:** Task 2 (`tmc-model` — Status.json), Step 1.
+- **Tarea:** Task 3 (`tmc-model` — eventos del diario y archivos compañeros), Step 1.
 - **Siguiente acción:** implementar Task 2 según el plan. Ejecución por subagentes (implementador + revisor por tarea); registro detallado en `.superpowers/sdd/2026-10-17-tmc-f0-cimientos/progress.md` (local, no versionado).
 
 ## Fases
@@ -37,7 +37,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 |---|---|---|---|---|
 | 0 | Entorno de desarrollo (Build Tools, rustup, Tauri CLI) | ✅ | — | VS BuildTools 17.14, rustc 1.99.1 MSVC, tauri-cli 2.12.3 |
 | 1 | Workspace, licencia y CI | ✅ | 69b4be8, 83201c9 | job `ui` de CI se añadirá en Task 15 |
-| 2 | `tmc-model` — Status.json | ⬜ | — | |
+| 2 | `tmc-model` — Status.json | ✅ | 65c72d9 | |
 | 3 | `tmc-model` — eventos del diario y archivos compañeros | ⬜ | — | |
 | 4 | `tmc-model` — GameState y SourceEvent | ⬜ | — | |
 | 5 | `tmc-journal` — localizar carpeta y listar diarios | ⬜ | — | |
