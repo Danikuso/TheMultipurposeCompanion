@@ -71,6 +71,10 @@ pub fn jump_range(fsd: &FsdSpec, mass: &ShipMass) -> f64 {
     jump_range_with(fsd, mass, true)
 }
 
+fn pos(x: f64) -> bool {
+    x.is_finite() && x > 0.0
+}
+
 /// Sin recorte usa todo `fuel_main` (lo usa `eval` para comparar con el juego).
 pub fn jump_range_with(fsd: &FsdSpec, mass: &ShipMass, clamp_to_max_fuel: bool) -> f64 {
     let fuel = if clamp_to_max_fuel {
@@ -78,7 +82,12 @@ pub fn jump_range_with(fsd: &FsdSpec, mass: &ShipMass, clamp_to_max_fuel: bool) 
     } else {
         mass.fuel_main
     };
-    if fuel <= 0.0 || mass.total() <= 0.0 {
+    if !(pos(fuel)
+        && pos(mass.total())
+        && pos(fsd.optimal_mass)
+        && pos(fsd.fuel_mul)
+        && pos(fsd.fuel_power))
+    {
         return 0.0;
     }
     (fuel / fsd.fuel_mul).powf(1.0 / fsd.fuel_power) * fsd.optimal_mass / mass.total()
@@ -87,6 +96,15 @@ pub fn jump_range_with(fsd: &FsdSpec, mass: &ShipMass, clamp_to_max_fuel: bool) 
 
 /// Combustible (t) de un salto; `None` si supera el máximo por salto.
 pub fn fuel_for_jump(fsd: &FsdSpec, total_mass: f64, distance_ly: f64) -> Option<f64> {
+    if !(distance_ly.is_finite()
+        && distance_ly >= 0.0
+        && pos(total_mass)
+        && pos(fsd.optimal_mass)
+        && pos(fsd.fuel_mul)
+        && pos(fsd.fuel_power))
+    {
+        return None;
+    }
     let base = (distance_ly - fsd.guardian_bonus_ly).max(0.0);
     let f = fsd.fuel_mul * (base * total_mass / fsd.optimal_mass).powf(fsd.fuel_power);
     (f <= fsd.max_fuel_per_jump + 1e-9).then_some(f)
@@ -145,7 +163,8 @@ pub fn build_jump_model(lo: &Loadout, table: &FsdTable) -> JumpModel {
         fuel_reserve: 0.0,
         cargo: 0.0,
     });
-    let laden_ref_mass = ref_mass.map(|m| m.total());
+    let laden_ref_mass = ref_mass.map(|m| m.total()).filter(|m| pos(*m));
+    let ref_mass = ref_mass.filter(|_| laden_ref_mass.is_some());
     let model = |source| JumpModel {
         source,
         fsd: fsd.clone(),
@@ -166,10 +185,12 @@ pub fn build_jump_model(lo: &Loadout, table: &FsdTable) -> JumpModel {
             None => return model(RangeSource::Formula),
         }
     } else if game_max_range.is_some() {
-        warn_once(
-            lo.ship_id,
-            "FSD fuera de la tabla; alcance escalado desde MaxJumpRange",
-        );
+        let msg = if fsd.is_none() {
+            "FSD fuera de la tabla; alcance escalado desde MaxJumpRange"
+        } else {
+            "Loadout sin masa en vacío válida; no se puede validar el alcance"
+        };
+        warn_once(lo.ship_id, msg);
     }
 
     if game_max_range.is_some() && laden_ref_mass.is_some() {
@@ -186,7 +207,7 @@ impl JumpModel {
             RangeSource::Formula => self.fsd.as_ref().map(|f| jump_range(f, mass)),
             RangeSource::Scaled => {
                 let total = mass.total();
-                if total <= 0.0 {
+                if !pos(total) {
                     return None;
                 }
                 Some(self.game_max_range? * self.laden_ref_mass? / total)

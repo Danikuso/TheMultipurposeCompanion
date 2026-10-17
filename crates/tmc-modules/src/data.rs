@@ -71,7 +71,16 @@ impl FsdTable {
 pub fn fsd_table() -> &'static FsdTable {
     static TABLE: OnceLock<FsdTable> = OnceLock::new();
     TABLE.get_or_init(|| {
-        serde_json::from_str(include_str!("../data/fsd.json")).expect("fsd.json embebido válido")
+        serde_json::from_str(include_str!("../data/fsd.json")).unwrap_or_else(|e| {
+            tracing::error!(error = %e, "fsd.json embebido inválido; tabla vacía");
+            FsdTable {
+                source: String::new(),
+                license: String::new(),
+                version: String::new(),
+                fsd: Vec::new(),
+                boosters: Vec::new(),
+            }
+        })
     })
 }
 
@@ -87,16 +96,22 @@ pub struct StarFlags {
     pub special: Option<StarSpecial>,
 }
 
+const WHITE_DWARF_CLASSES: [&str; 15] = [
+    "D", "DA", "DAB", "DAO", "DAZ", "DAV", "DB", "DBZ", "DBV", "DO", "DOV", "DQ", "DC", "DCV", "DX",
+];
+
 /// Propiedades de una clase de estrella del diario (`StarType`).
 pub fn star_flags(class: &str) -> StarFlags {
-    let first = class.chars().next().map(|c| c.to_ascii_uppercase());
-    let special = match first {
-        Some('N') => Some(StarSpecial::Neutron),
-        Some('D') => Some(StarSpecial::WhiteDwarf),
-        _ => None,
+    let base = class.split('_').next().unwrap_or("");
+    let special = if base == "N" {
+        Some(StarSpecial::Neutron)
+    } else if WHITE_DWARF_CLASSES.contains(&base) {
+        Some(StarSpecial::WhiteDwarf)
+    } else {
+        None
     };
     StarFlags {
-        scoopable: first.is_some_and(|c| "KGBFOAM".contains(c)),
+        scoopable: matches!(base, "O" | "B" | "A" | "F" | "G" | "K" | "M"),
         special,
     }
 }
@@ -107,18 +122,55 @@ mod tests {
 
     #[test]
     fn star_flags_classes() {
-        assert!(star_flags("K").scoopable);
+        for c in [
+            "K",
+            "K_OrangeGiant",
+            "A_BlueWhiteSuperGiant",
+            "M_RedSuperGiant",
+        ] {
+            assert!(star_flags(c).scoopable, "{c}");
+        }
+        for c in [
+            "AeBe",
+            "TTS",
+            "MS",
+            "S",
+            "L",
+            "T",
+            "Y",
+            "W",
+            "WN",
+            "C",
+            "CN",
+            "DAB",
+            "N",
+            "H",
+            "SupermassiveBlackHole",
+            "",
+        ] {
+            assert!(!star_flags(c).scoopable, "{c}");
+        }
         assert_eq!(star_flags("N").special, Some(StarSpecial::Neutron));
+        assert_eq!(star_flags("DAB").special, Some(StarSpecial::WhiteDwarf));
         assert_eq!(star_flags("DA").special, Some(StarSpecial::WhiteDwarf));
-        assert!(!star_flags("DA").scoopable);
-        assert!(!star_flags("N").scoopable);
-        assert!(!star_flags("H").scoopable);
+        assert_eq!(star_flags("DXY").special, None);
         assert_eq!(star_flags("M").special, None);
+        assert_eq!(star_flags("N_x").special, Some(StarSpecial::Neutron));
     }
 
     #[test]
     fn fsd_table_loads_and_has_sco_and_mk2_entries() {
+        let _: FsdTable = serde_json::from_str(include_str!("../data/fsd.json")).unwrap();
         let t = fsd_table();
+        let mut seen = std::collections::HashSet::new();
+        for e in &t.fsd {
+            assert!(e.fuel_mul > 0.0 && e.fuel_power > 0.0, "{}", e.item_prefix);
+            assert!(seen.insert(e.item_prefix.clone()), "dup {}", e.item_prefix);
+        }
+        for b in &t.boosters {
+            assert!(b.bonus_ly > 0.0, "{}", b.item_prefix);
+            assert!(seen.insert(b.item_prefix.clone()), "dup {}", b.item_prefix);
+        }
         assert_eq!(t.version, "2026-10-18");
         assert!(t.fsd.iter().any(|e| e.kind == FsdKind::Sco));
         assert!(t.fsd.iter().any(|e| e.kind == FsdKind::ScoMk2));
