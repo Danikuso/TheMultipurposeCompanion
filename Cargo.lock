@@ -4580,6 +4580,7 @@ dependencies = [
  "fluent-bundle",
  "fluent-syntax",
  "rust-embed",
+ "tracing",
  "unic-langid",
 ]
 
@@ -4621,6 +4622,13 @@ dependencies = [
  "tmc-i18n",
  "tmc-model",
  "tokio",
+]
+
+[[package]]
+name = "tmc-net"
+version = "0.1.0"
+dependencies = [
+ "tmc-model",
 ]
 
 [[package]]
