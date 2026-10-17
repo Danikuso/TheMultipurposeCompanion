@@ -1,0 +1,18 @@
+[package]
+name = "tmc-modules"
+description = "Módulos de juego y panel general de TMC"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[dependencies]
+tmc-core = { path = "../tmc-core" }
+tmc-model = { path = "../tmc-model" }
+tmc-i18n = { path = "../tmc-i18n" }
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

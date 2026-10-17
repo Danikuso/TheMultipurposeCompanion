@@ -1,0 +1,47 @@
+@import './tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--hud-bg);
+  color: var(--hud-text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+  min-height: 100vh;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: var(--hud-surface-alt);
+  border: 1px solid var(--hud-border);
+  color: var(--hud-primary);
+  padding: 0.35rem 0.75rem;
+  border-radius: 3px;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+button:hover:not(:disabled) {
+  background: var(--hud-primary-dim);
+  color: var(--hud-text);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

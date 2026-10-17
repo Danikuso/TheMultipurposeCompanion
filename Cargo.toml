@@ -1,0 +1,44 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "apps/headless", "apps/desktop"]
+
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license-file = "LICENSE"
+repository = "https://github.com/Danikuso/TheMultipurposeCompanion"
+
+[workspace.dependencies]
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.154", features = ["raw_value"] }
+chrono = { version = "0.4.45", features = ["serde"] }
+bitflags = "2.13.2"
+thiserror = "2.0.21"
+tracing = "0.1.44"
+tracing-subscriber = "0.3.23"
+tracing-appender = "0.2.5"
+tokio = { version = "1.53.3", features = ["full"] }
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+axum = { version = "0.8.9", features = ["ws"] }
+tower = "0.5.3"
+rust-embed = "8.13.0"
+fluent-bundle = "0.16.0"
+unic-langid = "0.9.6"
+notify = "8.2.0"
+sysinfo = "0.39.6"
+arboard = "3.7.0"
+qrcode = "0.14.1"
+directories = "6.0.0"
+toml = "1.1.8"
+uuid = { version = "1.28.0", features = ["v4", "serde"] }
+anyhow = "1.0.104"
+tempfile = "3.27.0"
+insta = { version = "1.49.0", features = ["json"] }
+tokio-tungstenite = "0.30.0"
+tauri = { version = "2.12.4", features = ["tray-icon", "wry"] }
+tauri-build = "2.7.3"
+tauri-plugin-single-instance = "2.5.4"
+tauri-plugin-window-state = "2.5.0"
+webview2-com = "0.39.1"
+

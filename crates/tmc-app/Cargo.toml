@@ -1,0 +1,33 @@
+[package]
+name = "tmc-app"
+description = "Composición, configuración, logs y acciones de aplicación de TMC"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[dependencies]
+tmc-model = { path = "../tmc-model" }
+tmc-journal = { path = "../tmc-journal" }
+tmc-store = { path = "../tmc-store" }
+tmc-core = { path = "../tmc-core" }
+tmc-modules = { path = "../tmc-modules" }
+tmc-i18n = { path = "../tmc-i18n" }
+tmc-server = { path = "../tmc-server", features = ["embed-ui"] }
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+toml.workspace = true
+directories.workspace = true
+arboard.workspace = true
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+tracing-appender.workspace = true
+anyhow.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+tower = { workspace = true, features = ["util"] }
+axum.workspace = true
