@@ -186,3 +186,43 @@ fn loadout_without_fsd_hides_fuel_after_jump() {
     assert_eq!(m.source, RangeSource::Unknown);
     assert_eq!(m.range_now(&mass(468.0, 32.0)), None);
 }
+
+#[test]
+fn numeric_guards_reject_degenerate_inputs() {
+    let z = ShipMass {
+        unladen: 0.0,
+        fuel_main: 0.0,
+        fuel_reserve: 0.0,
+        cargo: 0.0,
+    };
+    assert_eq!(jump_range(&spec(0.0), &z), 0.0);
+    assert_eq!(jump_range(&spec(0.0), &mass(468.0, 0.0)), 0.0);
+    let mut bad = spec(0.0);
+    bad.fuel_power = 0.0;
+    assert_eq!(jump_range(&bad, &mass(468.0, 32.0)), 0.0);
+    assert_eq!(fuel_for_jump(&spec(0.0), 500.0, f64::NAN), None);
+    assert_eq!(fuel_for_jump(&spec(0.0), 500.0, -5.0), None);
+    assert_eq!(fuel_for_jump(&spec(0.0), 0.0, 10.0), None);
+    assert!(fuel_for_jump(&spec(0.0), 500.0, 0.0).is_some());
+}
+
+#[test]
+fn scaled_with_zero_mass_is_none_and_zero_ref_mass_is_unknown() {
+    let lo = loadout("int_hyperdrive_size9_class9_future", vec![], Some(40.0));
+    let m = build_jump_model(&lo, fsd_table());
+    assert_eq!(m.source, RangeSource::Scaled);
+    let z = ShipMass {
+        unladen: 0.0,
+        fuel_main: 0.0,
+        fuel_reserve: 0.0,
+        cargo: 0.0,
+    };
+    assert_eq!(m.range_now(&z), None);
+    let mut lo0 = loadout("int_hyperdrive_size9_class9_future", vec![], Some(40.0));
+    lo0.unladen_mass = Some(0.0);
+    lo0.fuel_capacity = None;
+    assert_eq!(
+        build_jump_model(&lo0, fsd_table()).source,
+        RangeSource::Unknown
+    );
+}
