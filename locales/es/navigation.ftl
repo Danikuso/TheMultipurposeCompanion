@@ -1,0 +1,1 @@
+panel-route-strip = Ruta
