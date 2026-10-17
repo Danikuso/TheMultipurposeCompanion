@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 9 (`tmc-net` — limitador, salud y política de caché) 🔄 en curso.
-- **Siguiente acción:** completar la Task 9 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
+- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 10 (`tmc-net` — adaptadores Spansh/EDSM/Canonn y `NetClient`) 🔄 en curso.
+- **Siguiente acción:** completar la Task 10 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
 
 ## Fases
 
@@ -42,7 +42,8 @@
 | 6 | `tmc-model` — tipos de red, `ModuleSettings`, nuevas `SourceEvent` | ✅ hecha | ae32e35 | 58 tests tmc-model; `PlannedHop` con `jumps` y `refuel: Option`. Revisión aprobada. |
 | 7 | `tmc-core` — peticiones de red, tareas de SQLite, migraciones | ✅ hecha | 69ec17a, 2fe3b63 | API pública de SQL y `api_cache` en tmc-store; worker FIFO único para StoreTasks; 27 core / 21 store PASS. Revisión aprobada tras 1 ronda. |
 | 8 | i18n — varios `.ftl` por idioma | ✅ hecha | 9649357, adb1d19 | Rust y UI cargan todos los `*.ftl`; degradación por archivo en ejecución; 12 i18n + 11 Vitest PASS. Revisión aprobada tras 1 ronda. |
-| 9–32 | Ver plan | ⬜ | — | |
+| 9 | `tmc-net` — limitador, salud y política de caché | ✅ hecha | 407de8d | Crate nuevo (solo depende de tmc-model); 7 tests deterministas. Revisión aprobada. |
+| 10–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
