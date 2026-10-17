@@ -180,6 +180,11 @@ impl Harness {
     }
 
     fn stored(&mut self, rows: Value) -> Out {
+        self.stored_for("TESTER", rows)
+    }
+
+    fn stored_for(&mut self, cmdr: &str, rows: Value) -> Out {
+        let rows = json!({"cmdr": cmdr, "rows": rows});
         self.event(
             SourceEvent::Stored {
                 module: "navigation".into(),
@@ -519,7 +524,8 @@ fn visits_query_counts_history_up_to_the_cut_for_the_commander() {
             .unwrap();
     }
     let value = task(&store).unwrap();
-    let mut counts: Vec<(u64, u64)> = value
+    assert_eq!(value["cmdr"], "TESTER");
+    let mut counts: Vec<(u64, u64)> = value["rows"]
         .as_array()
         .unwrap()
         .iter()
@@ -720,4 +726,95 @@ fn registry_includes_navigation_with_both_topics() {
     let modules = crate::all_modules();
     let nav = modules.iter().find(|m| m.id() == "navigation").unwrap();
     assert_eq!(nav.topics(), [TOPIC_ROUTE, TOPIC_JUMP]);
+}
+
+#[test]
+fn visits_for_another_commander_are_ignored() {
+    let mut h = Harness::new();
+    h.with_route();
+    h.stored_for("OTRO", json!([[1, 9]]));
+    assert!(h.route()["current"]["visits"].is_null());
+    h.stored(json!([[1, 2]]));
+    assert_eq!(h.route()["current"]["visits"], 2);
+}
+
+#[test]
+fn lost_request_is_retried_after_60_seconds() {
+    let mut h = Harness::new();
+    h.with_route();
+    assert_eq!(h.requests.len(), 5);
+    h.clock += 59;
+    h.status(10.0, 0.5);
+    assert_eq!(h.requests.len(), 5);
+    h.clock += 2;
+    h.status(10.0, 0.5);
+    assert_eq!(h.requests.len(), 10);
+    let ids: Vec<_> = h.requests[5..].iter().map(|r| r.id).collect();
+    assert_eq!(ids, [6, 7, 8, 9, 10]);
+    // La respuesta a la petición antigua se acepta; una más vieja que la aplicada, no.
+    h.net("system:2", 500, NetOutcome::System(remote("S2", 2)));
+    h.net("system:2", 400, NetOutcome::System(remote("viejo", 2)));
+    assert_eq!(h.route()["next"]["remote"]["data"]["name"], "S2");
+}
+
+#[test]
+fn inflight_of_systems_leaving_the_strip_is_dropped() {
+    let mut h = Harness::new();
+    h.with_route();
+    h.jump_to("S2", 2, 10.0);
+    h.jump_to("S3", 3, 20.0);
+    assert!(!h.nav.inflight.contains_key("system:1"));
+    assert!(h.nav.inflight.contains_key("system:5"));
+}
+
+#[test]
+fn settings_change_purges_non_ok_states_and_rerequests() {
+    let mut h = Harness::new();
+    h.with_route();
+    h.net("system:1", 10, NetOutcome::System(remote("S1", 1)));
+    h.net("system:2", 10, NetOutcome::Disabled);
+    h.net("system:3", 10, NetOutcome::NoData);
+    assert_eq!(h.requests.len(), 5);
+    h.settings(true);
+    let keys: Vec<_> = h.requests[5..].iter().map(|r| r.key.clone()).collect();
+    assert_eq!(keys, ["system:2", "system:3"]);
+    let r = h.route();
+    assert_eq!(r["current"]["remote"]["status"], "ok");
+    assert_eq!(r["next"]["remote"]["status"], "pending");
+}
+
+#[test]
+fn failed_is_retried_after_cooldown_but_no_data_is_not() {
+    let mut h = Harness::new();
+    h.with_route();
+    let at = h.clock;
+    h.net("system:2", at, NetOutcome::Failed(NetFailure::Down));
+    h.net("system:3", at, NetOutcome::NoData);
+    for id in [1, 4, 5] {
+        h.net(
+            &format!("system:{id}"),
+            at,
+            NetOutcome::System(remote("x", id)),
+        );
+    }
+    h.clock = at + 299;
+    h.status(10.0, 0.5);
+    assert_eq!(h.requests.len(), 5);
+    h.clock = at + 301;
+    h.status(10.0, 0.5);
+    assert_eq!(h.requests.len(), 6);
+    assert_eq!(h.requests[5].key, "system:2");
+    h.clock = at + 1000;
+    h.status(10.0, 0.5);
+    assert_eq!(h.route()["following"][0]["remote"]["status"], "no-data");
+    assert!(h.requests[6..].iter().all(|r| r.key != "system:3"));
+}
+
+#[test]
+fn irrelevant_journal_events_do_not_rebuild_topics() {
+    let mut h = Harness::new();
+    h.with_route();
+    let out = h.journal("Music", "");
+    assert!(out.dirty.is_empty());
+    assert_eq!(h.route()["next"]["name"], "S2");
 }
