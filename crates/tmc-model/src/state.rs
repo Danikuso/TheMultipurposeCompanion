@@ -194,120 +194,162 @@ pub struct GameState {
     pub game_running: bool,
 }
 
+/// Asigna `new` en `slot` y devuelve si cambió.
+fn set<T: PartialEq>(slot: &mut T, new: T) -> bool {
+    if *slot == new {
+        false
+    } else {
+        *slot = new;
+        true
+    }
+}
+
+/// Asigna solo si `new` es `Some` (un campo ausente no borra un valor conocido).
+fn set_some<T: PartialEq>(slot: &mut Option<T>, new: Option<T>) -> bool {
+    match new {
+        Some(v) => set(slot, Some(v)),
+        None => false,
+    }
+}
+
 impl GameState {
     /// Aplica un evento del diario y devuelve las áreas que cambiaron.
     pub fn apply_event(&mut self, ev: &JournalEvent) -> Changes {
-        let before = self.clone();
-        self.reduce_event(ev);
-        self.diff(&before)
+        self.reduce_event(ev)
     }
 
     /// Aplica una lectura de Status.json.
     pub fn apply_status(&mut self, s: &Status) -> Changes {
-        let before = self.clone();
-        self.status = Some(s.clone());
-        self.location.mode = FlightMode::from_status(s.flags, s.flags2);
+        let mut c = Changes::empty();
+        if self.status.as_ref() != Some(s) {
+            self.status = Some(s.clone());
+            c |= Changes::STATUS;
+        }
+        if set(
+            &mut self.location.mode,
+            FlightMode::from_status(s.flags, s.flags2),
+        ) {
+            c |= Changes::LOCATION;
+        }
         if let Some(balance) = s.balance {
-            self.session.credits_now = Some(balance);
-            if let Some(c) = self.cmdr.as_mut() {
-                c.credits = Some(balance);
+            if set_some(&mut self.session.credits_now, Some(balance)) {
+                c |= Changes::SESSION;
+            }
+            if let Some(cmdr) = self.cmdr.as_mut()
+                && set_some(&mut cmdr.credits, Some(balance))
+            {
+                c |= Changes::CMDR;
             }
         }
         if let Some(f) = &s.fuel {
             let ship = self.ship.get_or_insert_with(ShipState::default);
-            ship.fuel_main = Some(f.main);
-            ship.fuel_reservoir = Some(f.reservoir);
+            let a = set_some(&mut ship.fuel_main, Some(f.main));
+            let b = set_some(&mut ship.fuel_reservoir, Some(f.reservoir));
+            if a || b {
+                c |= Changes::SHIP;
+            }
         }
-        self.diff(&before)
+        c
     }
 
     /// Aplica un archivo compañero (Cargo.json, NavRoute.json…).
     pub fn apply_companion(&mut self, c: &CompanionFile) -> Changes {
-        let before = self.clone();
         match c {
             CompanionFile::Cargo(f) => {
                 if f.vessel.as_deref().is_none_or(|v| v == "Ship") {
                     let ship = self.ship.get_or_insert_with(ShipState::default);
-                    ship.cargo_count = Some(f.count);
-                    ship.cargo = f.inventory.clone();
+                    let a = set_some(&mut ship.cargo_count, Some(f.count));
+                    let b = set(&mut ship.cargo, f.inventory.clone());
+                    if a || b {
+                        return Changes::SHIP;
+                    }
                 }
+                Changes::empty()
             }
             CompanionFile::NavRoute(f) => {
-                self.route.hops = f.route.clone();
-                self.recompute_next_system();
+                let mut ch = Changes::empty();
+                if set(&mut self.route.hops, f.route.clone()) {
+                    ch |= Changes::ROUTE;
+                }
+                if self.recompute_next_system() {
+                    ch |= Changes::ROUTE;
+                }
+                ch
             }
-            CompanionFile::Raw(..) => {}
+            CompanionFile::Raw(..) => Changes::empty(),
         }
-        self.diff(&before)
-    }
-
-    fn diff(&self, before: &GameState) -> Changes {
-        let mut c = Changes::empty();
-        c.set(Changes::CMDR, self.cmdr != before.cmdr);
-        c.set(Changes::SHIP, self.ship != before.ship);
-        c.set(Changes::LOCATION, self.location != before.location);
-        c.set(Changes::STATUS, self.status != before.status);
-        c.set(Changes::ROUTE, self.route != before.route);
-        c.set(
-            Changes::SESSION,
-            self.session != before.session
-                || self.galaxy != before.galaxy
-                || self.game_running != before.game_running,
-        );
-        c
     }
 
     /// Siguiente sistema: primer salto de la ruta posterior al sistema actual;
-    /// sin ruta se conserva el que fijó `FSDTarget`.
-    fn recompute_next_system(&mut self) {
+    /// sin ruta se conserva el que fijó `FSDTarget`. Devuelve si cambió.
+    fn recompute_next_system(&mut self) -> bool {
         let hops = &self.route.hops;
         if hops.is_empty() {
-            return;
+            return false;
         }
         let cur = self.location.system.as_str();
         let next = match hops.iter().position(|h| h.star_system == cur) {
             Some(i) => hops.get(i + 1),
             None => hops.iter().find(|h| h.star_system != cur),
         };
-        self.route.next_system = next.map(|h| h.star_system.clone());
+        let next = next.map(|h| h.star_system.clone());
+        set(&mut self.route.next_system, next)
     }
 
-    fn set_location(&mut self, l: &LocationInfo) {
+    fn set_location(&mut self, l: &LocationInfo) -> bool {
         let loc = &mut self.location;
-        loc.system = l.star_system.clone();
-        loc.system_address = l.system_address;
-        loc.star_pos = l.star_pos;
-        loc.body = l.body.clone();
-        loc.body_type = l.body_type.clone();
-        if l.docked {
-            loc.station = l.station_name.clone();
-            loc.station_type = l.station_type.clone();
-            loc.market_id = l.market_id;
+        let (station, station_type, market_id) = if l.docked {
+            (l.station_name.clone(), l.station_type.clone(), l.market_id)
         } else {
-            loc.station = None;
-            loc.station_type = None;
-            loc.market_id = None;
-        }
+            (None, None, None)
+        };
+        let mut ch = set(&mut loc.system, l.star_system.clone());
+        ch |= set(&mut loc.system_address, l.system_address);
+        ch |= set(&mut loc.star_pos, l.star_pos);
+        ch |= set(&mut loc.body, l.body.clone());
+        ch |= set(&mut loc.body_type, l.body_type.clone());
+        ch |= set(&mut loc.station, station);
+        ch |= set(&mut loc.station_type, station_type);
+        ch |= set(&mut loc.market_id, market_id);
+        ch
     }
 
-    fn reduce_event(&mut self, ev: &JournalEvent) {
+    fn reduce_event(&mut self, ev: &JournalEvent) -> Changes {
+        let mut c = Changes::empty();
         match &ev.kind {
             EventKind::Fileheader(f) => {
-                if let Some(v) = &f.gameversion {
-                    self.galaxy = Galaxy::from_game_version(v);
+                if let Some(v) = &f.gameversion
+                    && set(&mut self.galaxy, Galaxy::from_game_version(v))
+                {
+                    c |= Changes::SESSION;
                 }
             }
-            EventKind::Commander(c) => {
+            EventKind::Commander(n) => {
+                let fresh = self.cmdr.is_none();
                 let cmdr = self.cmdr.get_or_insert_with(CommanderState::default);
-                if let Some(n) = &c.name {
-                    cmdr.name = n.clone();
-                }
-                if let Some(f) = &c.fid {
+                c.set(Changes::CMDR, fresh);
+                if let Some(f) = &n.fid
+                    && *f != cmdr.fid
+                {
+                    *cmdr = CommanderState::default();
                     cmdr.fid = f.clone();
+                    c |= Changes::CMDR;
+                }
+                if let Some(nm) = &n.name
+                    && set(&mut cmdr.name, nm.clone())
+                {
+                    c |= Changes::CMDR;
                 }
             }
             EventKind::LoadGame(l) => {
                 let credits = l.credits.and_then(|c| i64::try_from(c).ok());
+                // Otro comandante: no arrastrar rangos ni progreso.
+                if let (Some(cm), Some(fid)) = (&self.cmdr, &l.fid)
+                    && !cm.fid.is_empty()
+                    && cm.fid != *fid
+                {
+                    self.cmdr = None;
+                }
                 let cmdr = self.cmdr.get_or_insert_with(CommanderState::default);
                 if let Some(n) = &l.commander {
                     cmdr.name = n.clone();
@@ -338,112 +380,165 @@ impl GameState {
                     self.galaxy = Galaxy::from_game_version(v);
                 }
                 self.game_running = true;
+                c = Changes::CMDR | Changes::SHIP | Changes::SESSION;
             }
             EventKind::Rank(r) => {
-                self.cmdr.get_or_insert_with(CommanderState::default).ranks = Ranks::from(r);
+                let cmdr = self.cmdr.get_or_insert_with(CommanderState::default);
+                if set(&mut cmdr.ranks, Ranks::from(r)) {
+                    c |= Changes::CMDR;
+                }
             }
             EventKind::Progress(r) => {
-                self.cmdr
-                    .get_or_insert_with(CommanderState::default)
-                    .progress = Ranks::from(r);
+                let cmdr = self.cmdr.get_or_insert_with(CommanderState::default);
+                if set(&mut cmdr.progress, Ranks::from(r)) {
+                    c |= Changes::CMDR;
+                }
             }
             EventKind::Location(l) | EventKind::CarrierJump(l) => {
-                self.set_location(l);
-                self.location.mode = if l.docked {
+                let mode = if l.docked {
                     FlightMode::Docked
                 } else {
                     FlightMode::NormalSpace
                 };
-                self.recompute_next_system();
+                if self.set_location(l) | set(&mut self.location.mode, mode) {
+                    c |= Changes::LOCATION;
+                }
+                if self.recompute_next_system() {
+                    c |= Changes::ROUTE;
+                }
             }
             EventKind::FsdJump(l) => {
                 self.set_location(l);
                 self.location.mode = FlightMode::Supercruise;
                 self.session.jumps += 1;
                 self.session.distance_ly += l.jump_dist.unwrap_or(0.0);
+                c |= Changes::LOCATION | Changes::SESSION;
                 if let Some(f) = l.fuel_level {
-                    self.ship.get_or_insert_with(ShipState::default).fuel_main = Some(f);
+                    let ship = self.ship.get_or_insert_with(ShipState::default);
+                    if set_some(&mut ship.fuel_main, Some(f)) {
+                        c |= Changes::SHIP;
+                    }
                 }
                 if self.route.hops.is_empty() {
                     if self.route.next_system.as_deref() == Some(l.star_system.as_str()) {
                         self.route.next_system = None;
                         self.route.remaining_jumps = None;
+                        c |= Changes::ROUTE;
                     }
-                } else {
-                    self.recompute_next_system();
+                } else if self.recompute_next_system() {
+                    c |= Changes::ROUTE;
                 }
             }
             EventKind::Docked(d) => {
                 let loc = &mut self.location;
-                loc.station = d.station_name.clone();
-                loc.station_type = d.station_type.clone();
-                loc.market_id = d.market_id;
-                loc.mode = FlightMode::Docked;
+                let mut ch = set(&mut loc.station, d.station_name.clone());
+                ch |= set(&mut loc.station_type, d.station_type.clone());
+                ch |= set(&mut loc.market_id, d.market_id);
+                ch |= set(&mut loc.mode, FlightMode::Docked);
                 if let Some(s) = &d.star_system {
-                    loc.system = s.clone();
+                    ch |= set(&mut loc.system, s.clone());
                 }
                 if let Some(a) = d.system_address {
-                    loc.system_address = a;
+                    ch |= set(&mut loc.system_address, a);
+                }
+                if ch {
+                    c |= Changes::LOCATION;
                 }
             }
             EventKind::Undocked(_) => {
                 let loc = &mut self.location;
-                loc.station = None;
-                loc.station_type = None;
-                loc.market_id = None;
-                loc.mode = FlightMode::NormalSpace;
-            }
-            EventKind::SupercruiseEntry(_) => self.location.mode = FlightMode::Supercruise,
-            EventKind::SupercruiseExit(x) => {
-                if let Some(s) = &x.star_system {
-                    self.location.system = s.clone();
+                let mut ch = set(&mut loc.station, None);
+                ch |= set(&mut loc.station_type, None);
+                ch |= set(&mut loc.market_id, None);
+                ch |= set(&mut loc.mode, FlightMode::NormalSpace);
+                if ch {
+                    c |= Changes::LOCATION;
                 }
-                self.location.body = x.body.clone();
-                self.location.body_type = x.body_type.clone();
-                self.location.mode = FlightMode::NormalSpace;
             }
-            EventKind::ApproachBody(b) => self.location.body = b.body.clone(),
+            EventKind::SupercruiseEntry(_) => {
+                if set(&mut self.location.mode, FlightMode::Supercruise) {
+                    c |= Changes::LOCATION;
+                }
+            }
+            EventKind::SupercruiseExit(x) => {
+                let loc = &mut self.location;
+                let mut ch = false;
+                if let Some(s) = &x.star_system {
+                    ch |= set(&mut loc.system, s.clone());
+                }
+                ch |= set(&mut loc.body, x.body.clone());
+                ch |= set(&mut loc.body_type, x.body_type.clone());
+                ch |= set(&mut loc.mode, FlightMode::NormalSpace);
+                if ch {
+                    c |= Changes::LOCATION;
+                }
+            }
+            EventKind::ApproachBody(b) => {
+                if set(&mut self.location.body, b.body.clone()) {
+                    c |= Changes::LOCATION;
+                }
+            }
             EventKind::LeaveBody(_) => {
-                self.location.body = None;
-                self.location.body_type = None;
+                let ch =
+                    set(&mut self.location.body, None) | set(&mut self.location.body_type, None);
+                if ch {
+                    c |= Changes::LOCATION;
+                }
             }
-            EventKind::Touchdown => self.location.mode = FlightMode::Landed,
-            EventKind::Liftoff => self.location.mode = FlightMode::NormalSpace,
+            EventKind::Touchdown => {
+                if set(&mut self.location.mode, FlightMode::Landed) {
+                    c |= Changes::LOCATION;
+                }
+            }
+            EventKind::Liftoff => {
+                if set(&mut self.location.mode, FlightMode::NormalSpace) {
+                    c |= Changes::LOCATION;
+                }
+            }
             EventKind::StartJump(j) => {
-                if j.jump_type.as_deref() == Some("Hyperspace") {
-                    self.location.mode = FlightMode::Hyperspace;
+                if j.jump_type.as_deref() == Some("Hyperspace")
+                    && set(&mut self.location.mode, FlightMode::Hyperspace)
+                {
+                    c |= Changes::LOCATION;
                 }
             }
             EventKind::FsdTarget(t) => {
-                self.route.remaining_jumps = t.remaining_jumps_in_route;
+                let mut ch = set(&mut self.route.remaining_jumps, t.remaining_jumps_in_route);
                 if self.route.hops.is_empty() {
-                    self.route.next_system = t.name.clone();
+                    ch |= set(&mut self.route.next_system, t.name.clone());
                 } else {
-                    self.recompute_next_system();
+                    ch |= self.recompute_next_system();
+                }
+                if ch {
+                    c |= Changes::ROUTE;
                 }
             }
             EventKind::NavRouteClear => {
-                self.route = RouteState::default();
+                if set(&mut self.route, RouteState::default()) {
+                    c |= Changes::ROUTE;
+                }
             }
             EventKind::Loadout(l) => {
                 let ship = self.ship.get_or_insert_with(ShipState::default);
                 let new_type = l.ship.clone().unwrap_or_default();
+                let mut ch = false;
                 if ship.ship_type != new_type {
                     ship.ship_type_localised = None;
+                    ch = true;
                 }
-                ship.ship_type = new_type;
-                ship.ship_id = l.ship_id;
-                ship.name = l.ship_name.clone();
-                ship.ident = l.ship_ident.clone();
-                ship.hull_health = l.hull_health;
-                ship.cargo_capacity = l.cargo_capacity;
-                ship.max_jump_range = l.max_jump_range;
-                ship.rebuy = l.rebuy.and_then(|r| i64::try_from(r).ok());
+                ch |= set(&mut ship.ship_type, new_type);
+                ch |= set(&mut ship.ship_id, l.ship_id);
+                ch |= set(&mut ship.name, l.ship_name.clone());
+                ch |= set(&mut ship.ident, l.ship_ident.clone());
+                ch |= set_some(&mut ship.hull_health, l.hull_health);
+                ch |= set(&mut ship.cargo_capacity, l.cargo_capacity);
+                ch |= set(&mut ship.max_jump_range, l.max_jump_range);
+                ch |= set(&mut ship.rebuy, l.rebuy.and_then(|r| i64::try_from(r).ok()));
                 if let Some(fc) = &l.fuel_capacity {
-                    ship.fuel_capacity_main = fc.main;
-                    ship.fuel_capacity_reserve = fc.reserve;
+                    ch |= set(&mut ship.fuel_capacity_main, fc.main);
+                    ch |= set(&mut ship.fuel_capacity_reserve, fc.reserve);
                 }
-                ship.damaged_modules = l
+                let damaged: Vec<String> = l
                     .modules
                     .iter()
                     .filter(|m| m.health.is_some_and(|h| h < 1.0))
@@ -454,20 +549,35 @@ impl GameState {
                             .unwrap_or_default()
                     })
                     .collect();
+                ch |= set(&mut ship.damaged_modules, damaged);
+                if ch {
+                    c |= Changes::SHIP;
+                }
             }
-            EventKind::Cargo(c) => {
-                if c.vessel.as_deref().is_none_or(|v| v == "Ship") {
-                    self.ship.get_or_insert_with(ShipState::default).cargo_count = c.count;
+            EventKind::Cargo(cg) => {
+                if cg.vessel.as_deref().is_none_or(|v| v == "Ship")
+                    && let Some(n) = cg.count
+                {
+                    let ship = self.ship.get_or_insert_with(ShipState::default);
+                    if set_some(&mut ship.cargo_count, Some(n)) {
+                        c |= Changes::SHIP;
+                    }
                 }
             }
             EventKind::HullDamage(h) => {
-                if h.fighter != Some(true) && h.player_pilot != Some(false) {
-                    self.ship.get_or_insert_with(ShipState::default).hull_health = h.health;
+                if h.fighter != Some(true) && h.player_pilot != Some(false) && h.health.is_some() {
+                    let ship = self.ship.get_or_insert_with(ShipState::default);
+                    if set_some(&mut ship.hull_health, h.health) {
+                        c |= Changes::SHIP;
+                    }
                 }
             }
             EventKind::FuelScoop(f) => {
                 if let Some(t) = f.total {
-                    self.ship.get_or_insert_with(ShipState::default).fuel_main = Some(t);
+                    let ship = self.ship.get_or_insert_with(ShipState::default);
+                    if set_some(&mut ship.fuel_main, Some(t)) {
+                        c |= Changes::SHIP;
+                    }
                 }
             }
             EventKind::ShipyardSwap(s) => {
@@ -476,10 +586,15 @@ impl GameState {
                     ship_id: s.ship_id,
                     ..ShipState::default()
                 });
+                c |= Changes::SHIP;
             }
-            EventKind::Shutdown => self.game_running = false,
+            EventKind::Shutdown => {
+                let changed = set(&mut self.game_running, false);
+                c.set(Changes::SESSION, changed);
+            }
             _ => {}
         }
+        c
     }
 }
 
@@ -721,6 +836,8 @@ mod tests {
         serde_json::to_value(&g).unwrap();
     }
 
+    // Mapping: Docked -> LOCATION; Status solo con Balance nuevo -> STATUS|SESSION|CMDR
+    // (+LOCATION la primera vez por el modo); repetir lo mismo -> vacío.
     #[test]
     fn apply_returns_only_changed_areas() {
         let mut g = GameState::default();
@@ -729,5 +846,57 @@ mod tests {
             r#"{"timestamp":"2026-03-05T18:06:31Z","event":"UnderAttack","Target":"You"}"#,
         );
         assert_eq!(c, Changes::empty());
+        let docked = r#"{"timestamp":"2026-03-05T18:06:20Z","event":"Docked","StationName":"Hub","StationType":"Coriolis","StarSystem":"S","SystemAddress":3,"MarketID":5}"#;
+        assert_eq!(apply(&mut g, docked), Changes::LOCATION);
+        assert_eq!(apply(&mut g, docked), Changes::empty());
+
+        apply(&mut g, LOAD);
+        let base = status(Flags::DOCKED.bits(), 0, r#","Balance":1000"#);
+        g.apply_status(&base);
+        let mut richer = base.clone();
+        richer.balance = Some(2000);
+        // Misma marca de tiempo: STATUS cambia por el contenido (balance).
+        assert_eq!(
+            g.apply_status(&richer),
+            Changes::STATUS | Changes::SESSION | Changes::CMDR
+        );
+        assert_eq!(g.apply_status(&richer), Changes::empty());
+    }
+
+    #[test]
+    fn partial_cargo_and_hull_events_keep_known_values() {
+        let mut g = GameState::default();
+        apply(
+            &mut g,
+            r#"{"timestamp":"2026-03-05T18:00:14Z","event":"Cargo","Vessel":"Ship","Count":7}"#,
+        );
+        apply(
+            &mut g,
+            r#"{"timestamp":"2026-03-05T18:00:15Z","event":"HullDamage","Health":0.5,"PlayerPilot":true}"#,
+        );
+        apply(
+            &mut g,
+            r#"{"timestamp":"2026-03-05T18:00:16Z","event":"Cargo","Vessel":"Ship"}"#,
+        );
+        apply(
+            &mut g,
+            r#"{"timestamp":"2026-03-05T18:00:17Z","event":"HullDamage"}"#,
+        );
+        let s = g.ship.as_ref().unwrap();
+        assert_eq!((s.cargo_count, s.hull_health), (Some(7), Some(0.5)));
+    }
+
+    #[test]
+    fn loadgame_of_other_commander_resets_ranks() {
+        let mut g = GameState::default();
+        apply(&mut g, LOAD);
+        apply(
+            &mut g,
+            r#"{"timestamp":"2026-03-05T18:00:13Z","event":"Rank","Combat":3}"#,
+        );
+        assert_eq!(g.cmdr.as_ref().unwrap().ranks.combat, Some(3));
+        apply(&mut g, &LOAD.replace("\"F1\"", "\"F2\""));
+        assert_eq!(g.cmdr.as_ref().unwrap().ranks.combat, None);
+        assert_eq!(g.cmdr.as_ref().unwrap().fid, "F2");
     }
 }
