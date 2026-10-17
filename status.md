@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 11 (`tmc-app` — `NetService`, configuración y ajustes en caliente) 🔄 en curso.
-- **Siguiente acción:** completar la Task 11 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
+- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 12 (`tmc-server` — acciones con argumentos y autocompletado) 🔄 en curso.
+- **Siguiente acción:** completar la Task 12 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
 
 ## Fases
 
@@ -44,7 +44,8 @@
 | 8 | i18n — varios `.ftl` por idioma | ✅ hecha | 9649357, adb1d19 | Rust y UI cargan todos los `*.ftl`; degradación por archivo en ejecución; 12 i18n + 11 Vitest PASS. Revisión aprobada tras 1 ronda. |
 | 9 | `tmc-net` — limitador, salud y política de caché | ✅ hecha | 407de8d | Crate nuevo (solo depende de tmc-model); 7 tests deterministas. Revisión aprobada. |
 | 10 | `tmc-net` — clientes Spansh/EDSM/Canonn y `NetClient` | ✅ hecha | f87f9fb, 1303436 | reqwest 0.13 + rustls; licencias permisivas (incl. Unicode-3.0) en THIRD_PARTY_NOTICES; Canonn devuelve `Disabled`; autocompletado con id64; 56 tmc-net / 245 workspace PASS. Revisión aprobada tras 1 ronda. |
-| 11–32 | Ver plan | ⬜ | — | |
+| 11 | `tmc-app` — `NetService`, configuración y ajustes en caliente | ✅ hecha | 9e8f009, abaa34e | Caché ficha 24 h / política 1 h, agrupación, reintentos con retroceso, semáforo de 4, opt-out revalidado; 21 tmc-app PASS. Revisión aprobada tras 1 ronda. |
+| 12–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
