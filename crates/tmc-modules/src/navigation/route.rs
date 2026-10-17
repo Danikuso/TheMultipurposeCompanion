@@ -47,20 +47,38 @@ fn matches(hop: &PlannedHop, system: &str, id64: Option<u64>) -> bool {
 }
 
 impl ActivePlan {
-    /// Aplica la llegada a un sistema. Si está en el plan (aunque se
-    /// omitan tramos) el índice avanza hasta él; si no, marca fuera de ruta
-    /// y conserva el plan.
+    /// Ajusta `current_index` al rango valido (p. ej. tras deserializar).
+    fn clamp_index(&mut self) {
+        self.current_index = self.current_index.min(self.hops.len().saturating_sub(1));
+    }
+
+    /// Aplica la llegada a un sistema. El hop 0 es el origen (distancia 0,
+    /// 0 saltos): un plan de un solo hop llega de inmediato. Busca primero
+    /// hacia delante desde `current_index` (el hop actual incluido); si no
+    /// hay coincidencia, hacia atras tomando el mas cercano. Con hops
+    /// duplicados gana el mas cercano hacia delante, si no el mas cercano
+    /// hacia atras. Un retroceso al plan no es fuera de ruta. Si el sistema
+    /// no esta en el plan, marca fuera de ruta y conserva el plan. Un plan
+    /// vacio es invalido: devuelve `Arrived` sin tocar `off_route`.
     fn apply(&mut self, system: &str, id64: Option<u64>) -> JumpOutcome {
-        let found = self
-            .hops
+        if self.hops.is_empty() {
+            self.current_index = 0;
+            return JumpOutcome::Arrived;
+        }
+        self.clamp_index();
+        let cur = self.current_index;
+        let fwd = self.hops[cur..]
             .iter()
-            .enumerate()
-            .skip(self.current_index)
-            .find(|(_, h)| matches(h, system, id64))
-            .map(|(i, _)| i);
+            .position(|h| matches(h, system, id64))
+            .map(|i| cur + i);
+        let found = fwd.or_else(|| {
+            self.hops[..cur]
+                .iter()
+                .rposition(|h| matches(h, system, id64))
+        });
         match found {
             Some(j) => {
-                let skipped = j.saturating_sub(self.current_index + 1);
+                let skipped = if j > cur { j - cur - 1 } else { 0 };
                 self.current_index = j;
                 self.off_route = false;
                 if j + 1 == self.hops.len() {
@@ -86,11 +104,11 @@ impl ActivePlan {
     }
 
     pub fn next(&self) -> Option<&PlannedHop> {
-        self.hops.get(self.current_index + 1)
+        self.hops.get(self.current_index.saturating_add(1))
     }
 
     pub fn upcoming(&self, n: usize) -> &[PlannedHop] {
-        let start = (self.current_index + 1).min(self.hops.len());
+        let start = self.current_index.saturating_add(1).min(self.hops.len());
         let end = start.saturating_add(n).min(self.hops.len());
         &self.hops[start..end]
     }
@@ -104,7 +122,7 @@ impl ActivePlan {
     }
 
     pub fn arrived(&self) -> bool {
-        !self.hops.is_empty() && self.current_index + 1 >= self.hops.len()
+        self.current_index.saturating_add(1) >= self.hops.len()
     }
 }
 
@@ -261,5 +279,77 @@ mod tests {
         assert_eq!(p.remaining_ly(), 50.0);
         assert_eq!(p.upcoming(1).len(), 1);
         assert_eq!(p.upcoming(10).len(), 2);
+    }
+
+    #[test]
+    fn jump_back_to_earlier_hop_is_not_off_route() {
+        let mut p = abcd();
+        p.current_index = 2;
+        assert_eq!(p.on_jump("B", 2), JumpOutcome::Advanced { skipped: 0 });
+        assert_eq!(p.current_index, 1);
+        assert!(!p.off_route);
+        assert_eq!(p.next().unwrap().name, "C");
+        p.on_jump("Zeta", 99);
+        assert!(p.off_route);
+        assert_eq!(p.on_jump("A", 1), JumpOutcome::Advanced { skipped: 0 });
+        assert_eq!(p.current_index, 0);
+        assert!(!p.off_route);
+        p.current_index = 3;
+        assert_eq!(p.reconcile("b", None), JumpOutcome::Advanced { skipped: 0 });
+        assert_eq!(p.current_index, 1);
+    }
+
+    #[test]
+    fn duplicate_hops_prefer_closest_forward_then_backward() {
+        let mk = |i| {
+            let mut p = plan(&[("A", 1), ("B", 2), ("C", 3), ("B", 2), ("D", 4)]);
+            p.current_index = i;
+            p
+        };
+        let mut p = mk(1);
+        p.on_jump("B", 2);
+        assert_eq!(p.current_index, 1);
+        let mut p = mk(2);
+        p.on_jump("B", 2);
+        assert_eq!(p.current_index, 3);
+        let mut p = mk(4);
+        p.on_jump("B", 2);
+        assert_eq!(p.current_index, 3);
+    }
+
+    #[test]
+    fn empty_plan_is_arrived_without_off_route() {
+        let mut p = abcd();
+        p.hops.clear();
+        assert!(p.arrived());
+        assert!(p.next().is_none());
+        assert_eq!(p.remaining_ly(), 0.0);
+        assert_eq!(p.on_jump("A", 1), JumpOutcome::Arrived);
+        assert!(!p.off_route);
+    }
+
+    #[test]
+    fn out_of_range_index_is_clamped_without_panic() {
+        let mut p = abcd();
+        p.current_index = usize::MAX;
+        assert!(p.arrived());
+        assert!(p.next().is_none());
+        assert!(p.upcoming(2).is_empty());
+        assert_eq!(
+            p.reconcile("B", Some(2)),
+            JumpOutcome::Advanced { skipped: 0 }
+        );
+        assert_eq!(p.current_index, 1);
+        p.current_index = 7;
+        assert_eq!(p.reconcile("D", Some(4)), JumpOutcome::Arrived);
+        assert_eq!(p.current_index, 3);
+    }
+
+    #[test]
+    fn single_hop_plan_arrives_immediately() {
+        let mut p = plan(&[("A", 1)]);
+        assert!(p.arrived());
+        assert_eq!(p.on_jump("A", 1), JumpOutcome::Arrived);
+        assert_eq!(p.remaining_ly(), 0.0);
     }
 }
