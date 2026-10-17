@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Bloque 0 (spikes) completado; Bloque 1 completado (Tasks 4–12). Task 13 (`navigation` — alcance de salto y combustible) ⬜ siguiente.
-- **Siguiente acción:** empezar la Task 13 del plan de F1 (Bloque 2 — Navegación) (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
+- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 13 (`navigation` — alcance de salto y combustible) 🔄 en curso (Bloque 2).
+- **Siguiente acción:** completar la Task 13 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
 
 ## Fases
 
