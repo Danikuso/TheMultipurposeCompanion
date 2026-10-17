@@ -82,10 +82,16 @@ impl Harness {
     }
 
     fn load_game(&mut self) -> Out {
+        self.load_game_as("TESTER")
+    }
+
+    fn load_game_as(&mut self, cmdr: &str) -> Out {
         self.journal_at(
             100,
             "LoadGame",
-            r#","FID":"F1","Commander":"TESTER","Ship":"python","ShipID":7,"Credits":1,"gameversion":"4.1.0.0""#,
+            &format!(
+                r#","FID":"F1","Commander":"{cmdr}","Ship":"python","ShipID":7,"Credits":1,"gameversion":"4.1.0.0""#
+            ),
             false,
         )
     }
@@ -476,8 +482,9 @@ fn visits_do_not_double_count_jumps_during_query() {
     for (jump_time, expected) in [(101, 3), (100, 2)] {
         let mut h = Harness::new();
         let first = h.load_game();
-        assert_eq!(first.tasks.len(), 1);
+        assert_eq!(first.tasks.len(), 2);
         assert_eq!(first.tasks[0].0, "visits");
+        assert_eq!(first.tasks[1].0, "plan");
         h.jump_at(jump_time, "A", 7, 0.0);
         h.stored(json!([[7, 2]]));
         assert_eq!(h.route()["current"]["visits"], expected, "t={jump_time}");
@@ -492,7 +499,8 @@ fn visits_do_not_double_count_jumps_during_query() {
 fn visits_query_counts_history_up_to_the_cut_for_the_commander() {
     let mut h = Harness::new();
     let mut out = h.load_game();
-    let (_, task) = out.tasks.pop().unwrap();
+    let (tag, task) = out.tasks.remove(0);
+    assert_eq!(tag, "visits");
     let store = tmc_core::Store::open_in_memory().unwrap();
     store
         .exec_json(
@@ -722,10 +730,10 @@ fn route_topic_serializes_under_8_kib() {
 }
 
 #[test]
-fn registry_includes_navigation_with_both_topics() {
+fn registry_includes_navigation_with_its_three_topics() {
     let modules = crate::all_modules();
     let nav = modules.iter().find(|m| m.id() == "navigation").unwrap();
-    assert_eq!(nav.topics(), [TOPIC_ROUTE, TOPIC_JUMP]);
+    assert_eq!(nav.topics(), [TOPIC_ROUTE, TOPIC_JUMP, TOPIC_PLAN]);
 }
 
 #[test]
@@ -817,4 +825,464 @@ fn irrelevant_journal_events_do_not_rebuild_topics() {
     let out = h.journal("Music", "");
     assert!(out.dirty.is_empty());
     assert_eq!(h.route()["next"]["name"], "S2");
+}
+
+// ---- Planificador (Task 16) ----
+
+use tmc_model::net::{GalaxyRouteParams, PlannedRoute};
+
+fn planned(hops: &[(&str, u64)]) -> PlannedRoute {
+    PlannedRoute {
+        hops: hops
+            .iter()
+            .enumerate()
+            .map(|(i, (n, id))| PlannedHop {
+                name: (*n).into(),
+                id64: Some(*id),
+                star_pos: None,
+                distance_ly: 10.0 * i as f64,
+                jumps: 1,
+                neutron: false,
+                refuel: None,
+                star_class: None,
+            })
+            .collect(),
+        total_ly: 10.0 * (hops.len() as f64 - 1.0),
+    }
+}
+
+impl Harness {
+    fn route_requests(&self) -> Vec<&NetRequest> {
+        self.requests.iter().filter(|r| r.key == "route").collect()
+    }
+
+    fn act(&mut self, name: &str, args: Value) -> Out {
+        self.event(
+            SourceEvent::Action {
+                name: name.into(),
+                args,
+            },
+            false,
+        )
+    }
+
+    fn respond_id(&mut self, id: u64, outcome: NetOutcome) -> Out {
+        self.event(
+            SourceEvent::Net(NetResponse {
+                id,
+                module: "navigation".into(),
+                key: "route".into(),
+                source: NetSource::Spansh,
+                fetched_at: t(200),
+                outcome,
+            }),
+            false,
+        )
+    }
+
+    fn respond(&mut self, outcome: NetOutcome) -> Out {
+        let id = self.route_requests().last().unwrap().id;
+        self.respond_id(id, outcome)
+    }
+
+    fn plan_topic(&self) -> Value {
+        self.nav.topic_value(TOPIC_PLAN).unwrap()
+    }
+
+    /// Sesión en `Sol` con FSD conocida, lista para planificar.
+    fn ready_ship(&mut self) {
+        self.load_game();
+        self.loadout(FSD, r#","MaxJumpRange":24.63"#);
+        self.location("Sol", 10, 0.0);
+    }
+
+    /// Planifica, responde y acepta una ruta; devuelve la salida del accept.
+    fn accept_route(&mut self, hops: &[(&str, u64)]) -> Out {
+        let to = hops.last().unwrap().0;
+        self.act("navigation.plan", json!({"to": to, "mode": "neutron"}));
+        self.respond(NetOutcome::Route(planned(hops)));
+        self.act("navigation.accept-plan", json!({}))
+    }
+}
+
+fn run_tasks(
+    store: &tmc_core::Store,
+    tasks: Vec<(String, tmc_core::StoreTask)>,
+) -> Vec<(String, Value)> {
+    tasks
+        .into_iter()
+        .map(|(tag, task)| (tag, task(store).unwrap()))
+        .collect()
+}
+
+fn only_load(tasks: Vec<(String, tmc_core::StoreTask)>) -> Vec<(String, tmc_core::StoreTask)> {
+    tasks.into_iter().filter(|(t, _)| t == "plan").collect()
+}
+
+fn feed(h: &mut Harness, done: Vec<(String, Value)>) {
+    for (tag, value) in done {
+        h.event(
+            SourceEvent::Stored {
+                module: "navigation".into(),
+                tag,
+                value,
+            },
+            false,
+        );
+    }
+}
+
+fn plan_store() -> tmc_core::Store {
+    let store = tmc_core::Store::open_in_memory().unwrap();
+    store
+        .apply_migrations(Navigation::new().migrations())
+        .unwrap();
+    store
+}
+
+fn sync_tasks(tasks: &[(String, tmc_core::StoreTask)]) -> usize {
+    tasks.iter().filter(|(t, _)| t == "plan-sync").count()
+}
+
+fn saved_rows(store: &tmc_core::Store) -> Value {
+    Value::Array(
+        store
+            .query_json(
+                "SELECT cmdr, current_index FROM nav_route_plan ORDER BY cmdr",
+                &[],
+            )
+            .unwrap(),
+    )
+}
+
+#[test]
+fn plan_action_requests_neutron_route_with_current_range() {
+    let mut h = Harness::new();
+    h.ready_ship();
+    let expected = h
+        .nav
+        .model
+        .as_ref()
+        .unwrap()
+        .range_now(&ShipMass {
+            unladen: 468.0,
+            fuel_main: 32.0,
+            fuel_reserve: 0.0,
+            cargo: 0.0,
+        })
+        .unwrap();
+    h.act(
+        "navigation.plan",
+        json!({"to": "Colonia", "mode": "neutron"}),
+    );
+    assert_eq!(h.route_requests().len(), 1);
+    assert_eq!(h.route_requests()[0].key, "route");
+    let NetQuery::NeutronRoute(p) = &h.route_requests()[0].query else {
+        panic!("{:?}", h.route_requests()[0].query);
+    };
+    assert_eq!(p.range_ly, expected);
+    assert!((expected - 24.63).abs() < 0.05, "{expected}");
+    assert_eq!(p.efficiency, 60);
+    assert_eq!(p.from, "Sol");
+    assert_eq!(p.to, "Colonia");
+    assert_eq!(p.supercharge_multiplier, 4.0);
+    assert_eq!(h.plan_topic()["status"], "computing");
+    assert_eq!(h.plan_topic()["request"]["to"], "Colonia");
+}
+
+#[test]
+fn route_response_moves_to_ready_and_accept_activates() {
+    let mut h = Harness::new();
+    h.ready_ship();
+    h.act("navigation.plan", json!({"to": "S2", "mode": "neutron"}));
+    let out = h.respond(NetOutcome::Route(planned(&[("Sol", 10), ("S2", 2)])));
+    assert!(out.dirty.contains(TOPIC_PLAN));
+    let topic = h.plan_topic();
+    assert_eq!(topic["status"], "ready");
+    assert_eq!(topic["result"]["hops"].as_array().unwrap().len(), 2);
+    assert!(topic["active"].is_null());
+    h.act("navigation.accept-plan", json!({}));
+    let topic = h.plan_topic();
+    assert_eq!(topic["status"], "active");
+    assert_eq!(topic["active"]["total"], 2);
+    assert_eq!(topic["active"]["current_index"], 0);
+    assert_eq!(topic["active"]["destination"], "S2");
+    assert_eq!(topic["active"]["off_route"], false);
+    assert_eq!(h.route()["source"], "plan");
+}
+
+#[test]
+fn planner_disabled_without_online_services() {
+    let mut h = Harness::new();
+    h.ready_ship();
+    h.settings(false);
+    h.act(
+        "navigation.plan",
+        json!({"to": "Colonia", "mode": "neutron"}),
+    );
+    assert_eq!(h.plan_topic()["status"], "disabled");
+    assert_eq!(h.plan_topic()["error_key"], "nav-plan-disabled-offline");
+    assert!(h.route_requests().is_empty());
+}
+
+#[test]
+fn legacy_galaxy_planner_never_requests() {
+    let mut h = Harness::new();
+    h.load_game();
+    h.journal("Fileheader", r#","gameversion":"3.8.0.407""#);
+    h.location("Sol", 10, 0.0);
+    assert_eq!(h.state.galaxy, Galaxy::Legacy);
+    h.act(
+        "navigation.plan",
+        json!({"to": "Colonia", "mode": "neutron"}),
+    );
+    assert_eq!(h.plan_topic()["status"], "disabled");
+    assert_eq!(h.plan_topic()["error_key"], "nav-plan-disabled-legacy");
+    assert!(h.route_requests().is_empty());
+}
+
+#[test]
+fn plan_without_known_range_fails_with_reason() {
+    let mut h = Harness::new();
+    h.load_game();
+    h.loadout("int_hyperdrive_size9_class9_future", "");
+    h.location("Sol", 10, 0.0);
+    h.act(
+        "navigation.plan",
+        json!({"to": "Colonia", "mode": "neutron", "use_ship": true}),
+    );
+    assert_eq!(h.plan_topic()["status"], "failed");
+    assert_eq!(h.plan_topic()["error_key"], "nav-plan-error-no-range");
+    assert!(h.route_requests().is_empty());
+}
+
+#[test]
+fn galaxy_plan_without_fsd_fails_with_reason_and_neutron_still_works() {
+    let mut h = Harness::new();
+    h.load_game();
+    h.loadout(
+        "int_hyperdrive_size9_class9_future",
+        r#","MaxJumpRange":24.63"#,
+    );
+    h.location("Sol", 10, 0.0);
+    assert!(h.nav.model.as_ref().unwrap().fsd.is_none());
+    h.act(
+        "navigation.plan",
+        json!({"to": "Colonia", "to_id64": 20, "mode": "galaxy"}),
+    );
+    assert_eq!(h.plan_topic()["status"], "failed");
+    assert_eq!(h.plan_topic()["error_key"], "nav-plan-error-no-fsd");
+    assert!(h.route_requests().is_empty());
+    h.act(
+        "navigation.plan",
+        json!({"to": "Colonia", "mode": "neutron"}),
+    );
+    assert_eq!(h.route_requests().len(), 1);
+    let NetQuery::NeutronRoute(p) = &h.route_requests()[0].query else {
+        panic!("{:?}", h.route_requests()[0].query);
+    };
+    assert!((p.range_ly - 24.63).abs() < 0.01, "{}", p.range_ly);
+    assert_eq!(p.supercharge_multiplier, 4.0);
+}
+
+#[test]
+fn galaxy_plan_uses_id64_and_fsd_params_and_needs_destination_id() {
+    let mut h = Harness::new();
+    h.ready_ship();
+    h.act(
+        "navigation.plan",
+        json!({"to": "Colonia", "mode": "galaxy"}),
+    );
+    assert_eq!(h.plan_topic()["status"], "failed");
+    assert_eq!(
+        h.plan_topic()["error_key"],
+        "nav-plan-error-no-destination-id"
+    );
+    assert!(h.route_requests().is_empty());
+    h.act(
+        "navigation.plan",
+        json!({"to": "Colonia", "to_id64": 3_238_296_097_059u64, "mode": "galaxy", "use_injections": true}),
+    );
+    assert_eq!(h.route_requests().len(), 1);
+    let NetQuery::GalaxyRoute(GalaxyRouteParams {
+        from,
+        to,
+        ship,
+        refuel_scoopable,
+        use_injections,
+    }) = &h.route_requests()[0].query
+    else {
+        panic!("{:?}", h.route_requests()[0].query);
+    };
+    assert_eq!(from, "10");
+    assert_eq!(to, "3238296097059");
+    assert_eq!(ship.unladen_mass, 468.0);
+    assert_eq!(ship.fuel_main_capacity, 32.0);
+    assert_eq!(ship.fuel_reserve, 0.63);
+    assert_eq!(ship.max_fuel_per_jump, 5.0);
+    assert_eq!(ship.supercharge_multiplier, 4.0);
+    assert!(*refuel_scoopable && *use_injections);
+}
+
+#[test]
+fn stale_and_repeated_responses_are_ignored_by_id() {
+    let mut h = Harness::new();
+    h.ready_ship();
+    h.act("navigation.plan", json!({"to": "S2", "mode": "neutron"}));
+    let first = h.route_requests()[0].id;
+    h.act("navigation.plan", json!({"to": "S3", "mode": "neutron"}));
+    let second = h.route_requests()[1].id;
+    assert_ne!(first, second);
+    h.respond_id(first, NetOutcome::Route(planned(&[("Sol", 10), ("S2", 2)])));
+    assert_eq!(h.plan_topic()["status"], "computing");
+    h.respond_id(second, NetOutcome::Failed(NetFailure::Timeout));
+    h.respond_id(second, NetOutcome::Failed(NetFailure::Timeout));
+    assert_eq!(h.plan_topic()["status"], "failed");
+    assert_eq!(h.plan_topic()["error_key"], "nav-plan-error-service");
+    h.respond_id(
+        second,
+        NetOutcome::Route(planned(&[("Sol", 10), ("S3", 3)])),
+    );
+    assert_eq!(h.plan_topic()["status"], "ready");
+    h.respond_id(second, NetOutcome::Failed(NetFailure::Down));
+    assert_eq!(h.plan_topic()["status"], "ready");
+    assert_eq!(h.plan_topic()["result"]["hops"][1]["name"], "S3");
+}
+
+#[test]
+fn recalculate_uses_current_system_as_origin() {
+    let mut h = Harness::new();
+    h.ready_ship();
+    h.accept_route(&[("Sol", 10), ("X", 11), ("Colonia", 12)]);
+    h.jump_to("X", 11, 10.0);
+    h.act("navigation.recalculate", json!({}));
+    assert_eq!(h.route_requests().len(), 2);
+    let NetQuery::NeutronRoute(p) = &h.route_requests()[1].query else {
+        panic!("{:?}", h.route_requests()[1].query);
+    };
+    assert_eq!(p.from, "X");
+    assert_eq!(p.to, "Colonia");
+    assert_eq!(h.plan_topic()["status"], "computing");
+    assert_eq!(h.plan_topic()["active"]["current_index"], 1);
+}
+
+#[test]
+fn active_plan_is_saved_and_restored_per_cmdr() {
+    let store = plan_store();
+    let mut h = Harness::new();
+    h.ready_ship();
+    let out = h.accept_route(&[("Sol", 10), ("X", 11), ("Colonia", 12)]);
+    assert_eq!(sync_tasks(&out.tasks), 1);
+    run_tasks(&store, out.tasks);
+    assert_eq!(saved_rows(&store), json!([["TESTER", 0]]));
+    let out = h.jump_to("X", 11, 10.0);
+    run_tasks(&store, out.tasks);
+    assert_eq!(saved_rows(&store), json!([["TESTER", 1]]));
+
+    // Reinicio: otra instancia, mismo comandante, ya en X.
+    let mut h2 = Harness::new();
+    let out = h2.load_game();
+    let load = only_load(out.tasks);
+    h2.location("X", 11, 10.0);
+    feed(&mut h2, run_tasks(&store, load));
+    let topic = h2.plan_topic();
+    assert_eq!(topic["status"], "active");
+    assert_eq!(topic["active"]["destination"], "Colonia");
+    assert_eq!(topic["active"]["current_index"], 1);
+    assert_eq!(topic["active"]["total"], 3);
+    assert_eq!(h2.route()["source"], "plan");
+
+    // Otro comandante: sin plan.
+    let mut h3 = Harness::new();
+    let out = h3.load_game_as("OTHER");
+    let load = only_load(out.tasks);
+    feed(&mut h3, run_tasks(&store, load));
+    assert!(h3.plan_topic()["active"].is_null());
+    assert_eq!(h3.plan_topic()["status"], "idle");
+}
+
+fn stored_plan(index: usize) -> Value {
+    let route = planned(&[("S1", 1), ("S2", 2), ("S3", 3), ("S4", 4)]);
+    let plan = ActivePlan {
+        created_at: t(0),
+        origin: "S1".into(),
+        destination: "S4".into(),
+        mode: PlanMode::Neutron,
+        params: json!({"to": "S4"}),
+        hops: route.hops,
+        current_index: index,
+        off_route: false,
+    };
+    json!({"cmdr": "TESTER", "plan": plan})
+}
+
+#[test]
+fn restored_plan_is_reconciled_with_current_system() {
+    let mut h = Harness::new();
+    h.load_game();
+    h.location("S1", 1, 0.0);
+    h.jump_to("S3", 3, 20.0);
+    feed(&mut h, vec![("plan".into(), stored_plan(0))]);
+    assert_eq!(h.plan_topic()["active"]["current_index"], 2);
+    assert_eq!(h.plan_topic()["active"]["off_route"], false);
+
+    let mut h = Harness::new();
+    h.load_game();
+    h.location("S1", 1, 0.0);
+    h.jump_to("Zeta", 99, 5.0);
+    feed(&mut h, vec![("plan".into(), stored_plan(0))]);
+    assert_eq!(h.plan_topic()["active"]["current_index"], 0);
+    assert_eq!(h.plan_topic()["active"]["off_route"], true);
+}
+
+#[test]
+fn arrival_deletes_plan() {
+    let store = plan_store();
+    let mut h = Harness::new();
+    h.ready_ship();
+    let out = h.accept_route(&[("Sol", 10), ("Colonia", 12)]);
+    run_tasks(&store, out.tasks);
+    assert_eq!(saved_rows(&store), json!([["TESTER", 0]]));
+    let out = h.jump_to("Colonia", 12, 10.0);
+    assert_eq!(sync_tasks(&out.tasks), 1);
+    run_tasks(&store, out.tasks);
+    assert_eq!(saved_rows(&store), json!([]));
+    assert!(h.plan_topic()["active"].is_null());
+    assert_eq!(h.plan_topic()["status"], "idle");
+    assert_eq!(h.route()["source"], "current");
+}
+
+#[test]
+fn clear_plan_deletes_and_replay_jumps_do_not_write() {
+    let store = plan_store();
+    let mut h = Harness::new();
+    h.ready_ship();
+    let out = h.accept_route(&[("Sol", 10), ("X", 11), ("Y", 12), ("Colonia", 13)]);
+    run_tasks(&store, out.tasks);
+    // Saltos reproducidos: sin escrituras hasta el primer evento en vivo.
+    let out = h.journal_at(
+        150,
+        "FSDJump",
+        r#","StarSystem":"X","SystemAddress":11,"StarPos":[10,0,0],"JumpDist":10.0"#,
+        true,
+    );
+    assert_eq!(sync_tasks(&out.tasks), 0);
+    let out = h.journal_at(
+        151,
+        "FSDJump",
+        r#","StarSystem":"Y","SystemAddress":12,"StarPos":[20,0,0],"JumpDist":10.0"#,
+        true,
+    );
+    assert_eq!(sync_tasks(&out.tasks), 0);
+    assert_eq!(saved_rows(&store), json!([["TESTER", 0]]));
+    let out = h.status(10.0, 0.5);
+    assert_eq!(sync_tasks(&out.tasks), 1);
+    run_tasks(&store, out.tasks);
+    assert_eq!(saved_rows(&store), json!([["TESTER", 2]]));
+
+    let out = h.act("navigation.clear-plan", json!({}));
+    run_tasks(&store, out.tasks);
+    assert_eq!(saved_rows(&store), json!([]));
+    assert_eq!(h.plan_topic()["status"], "idle");
+    assert!(h.plan_topic()["active"].is_null());
 }
