@@ -39,6 +39,30 @@ pub struct LocationInfo {
     pub jump_dist: Option<f64>,
     pub fuel_used: Option<f64>,
     pub fuel_level: Option<f64>,
+    #[serde(rename = "BodyID")]
+    pub body_id: Option<u32>,
+    pub system_allegiance: Option<String>,
+    #[serde(rename = "SystemGovernment_Localised")]
+    pub system_government_localised: Option<String>,
+    #[serde(rename = "SystemEconomy_Localised")]
+    pub system_economy_localised: Option<String>,
+    #[serde(rename = "SystemSecondEconomy_Localised")]
+    pub system_second_economy_localised: Option<String>,
+    #[serde(rename = "SystemSecurity_Localised")]
+    pub system_security_localised: Option<String>,
+    pub population: Option<u64>,
+    pub system_faction: Option<SystemFaction>,
+    pub powers: Vec<String>,
+    pub powerplay_state: Option<String>,
+    pub boost_used: Option<f64>,
+}
+
+/// Facción controladora del sistema (`SystemFaction` de `FSDJump`/`Location`).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct SystemFaction {
+    pub name: Option<String>,
+    pub faction_state: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -133,6 +157,39 @@ pub struct SupercruiseExit {
 #[serde(default, rename_all = "PascalCase")]
 pub struct BodyRef {
     pub body: Option<String>,
+    pub system_address: Option<u64>,
+    #[serde(rename = "BodyID")]
+    pub body_id: Option<u32>,
+}
+
+/// Datos de `Touchdown` y `Liftoff`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct SurfaceEvent {
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub body: Option<String>,
+    #[serde(rename = "BodyID")]
+    pub body_id: Option<u32>,
+    pub system_address: Option<u64>,
+    pub on_planet: Option<bool>,
+    pub player_controlled: Option<bool>,
+}
+
+/// Datos de `Embark` y `Disembark`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct EmbarkEvent {
+    #[serde(rename = "SRV")]
+    pub srv: bool,
+    pub taxi: bool,
+    pub multicrew: bool,
+    pub on_planet: bool,
+    pub on_station: bool,
+    pub body: Option<String>,
+    #[serde(rename = "BodyID")]
+    pub body_id: Option<u32>,
+    pub system_address: Option<u64>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -163,6 +220,37 @@ pub struct LoadoutModule {
     pub slot: Option<String>,
     pub item: Option<String>,
     pub health: Option<f64>,
+    pub engineering: Option<Engineering>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct Engineering {
+    pub blueprint_name: Option<String>,
+    pub level: Option<u32>,
+    pub quality: Option<f64>,
+    pub experimental_effect: Option<String>,
+    pub modifiers: Vec<Modifier>,
+}
+
+/// Modificador de ingeniería. `value` es `None` si el diario trae texto (`ValueStr`).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct Modifier {
+    pub label: String,
+    #[serde(deserialize_with = "lenient_f64")]
+    pub value: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    pub original_value: Option<f64>,
+    pub less_is_good: Option<u8>,
+}
+
+/// Acepta un número; cualquier otro tipo JSON da `None` sin error.
+fn lenient_f64<'de, D>(d: D) -> Result<Option<f64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Ok(Option::<serde_json::Value>::deserialize(d)?.and_then(|v| v.as_f64()))
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -459,17 +547,19 @@ pub enum EventKind {
     LoadGame(LoadGame),
     Rank(Rank),
     Progress(Rank),
-    Location(LocationInfo),
-    FsdJump(LocationInfo),
-    CarrierJump(LocationInfo),
+    Location(Box<LocationInfo>),
+    FsdJump(Box<LocationInfo>),
+    CarrierJump(Box<LocationInfo>),
     Docked(Docked),
     Undocked(Undocked),
     SupercruiseEntry(SupercruiseEntry),
     SupercruiseExit(SupercruiseExit),
     ApproachBody(BodyRef),
     LeaveBody(BodyRef),
-    Touchdown,
-    Liftoff,
+    Touchdown(SurfaceEvent),
+    Liftoff(SurfaceEvent),
+    Embark(EmbarkEvent),
+    Disembark(EmbarkEvent),
     StartJump(StartJump),
     FsdTarget(FsdTarget),
     NavRoute,
@@ -525,17 +615,19 @@ fn classify(name: &str, raw: &RawValue) -> EventKind {
         "LoadGame" => de(name, raw).map(EventKind::LoadGame),
         "Rank" => de(name, raw).map(EventKind::Rank),
         "Progress" => de(name, raw).map(EventKind::Progress),
-        "Location" => de(name, raw).map(EventKind::Location),
-        "FSDJump" => de(name, raw).map(EventKind::FsdJump),
-        "CarrierJump" => de(name, raw).map(EventKind::CarrierJump),
+        "Location" => de::<LocationInfo>(name, raw).map(|l| EventKind::Location(Box::new(l))),
+        "FSDJump" => de::<LocationInfo>(name, raw).map(|l| EventKind::FsdJump(Box::new(l))),
+        "CarrierJump" => de::<LocationInfo>(name, raw).map(|l| EventKind::CarrierJump(Box::new(l))),
         "Docked" => de(name, raw).map(EventKind::Docked),
         "Undocked" => de(name, raw).map(EventKind::Undocked),
         "SupercruiseEntry" => de(name, raw).map(EventKind::SupercruiseEntry),
         "SupercruiseExit" => de(name, raw).map(EventKind::SupercruiseExit),
         "ApproachBody" => de(name, raw).map(EventKind::ApproachBody),
         "LeaveBody" => de(name, raw).map(EventKind::LeaveBody),
-        "Touchdown" => Some(EventKind::Touchdown),
-        "Liftoff" => Some(EventKind::Liftoff),
+        "Touchdown" => de(name, raw).map(EventKind::Touchdown),
+        "Liftoff" => de(name, raw).map(EventKind::Liftoff),
+        "Embark" => de(name, raw).map(EventKind::Embark),
+        "Disembark" => de(name, raw).map(EventKind::Disembark),
         "StartJump" => de(name, raw).map(EventKind::StartJump),
         "FSDTarget" => de(name, raw).map(EventKind::FsdTarget),
         "NavRoute" => Some(EventKind::NavRoute),
@@ -894,5 +986,143 @@ mod tests {
         let expected: std::collections::BTreeSet<String> =
             EXPECTED_OTHER.iter().map(|s| s.to_string()).collect();
         assert_eq!(others, expected);
+    }
+
+    fn loadout_with_modifier(modifier: &str) -> EventKind {
+        ev(&format!(
+            r#"{{"timestamp":"2026-04-10T20:00:00Z","event":"Loadout","Ship":"python","Modules":[{{"Slot":"FrameShiftDrive","Item":"int_hyperdrive_size5_class5","Health":1.0,"Engineering":{{"BlueprintName":"FSD_LongRange","Level":5,"Quality":0.9,"ExperimentalEffect":"special_fsd_fuelcapacity","Modifiers":[{modifier}]}}}}]}}"#
+        ))
+    }
+
+    #[test]
+    fn loadout_fsd_engineering_modifiers_are_parsed() {
+        let EventKind::Loadout(l) = loadout_with_modifier(
+            r#"{"Label":"FSDOptimalMass","Value":1692.6,"OriginalValue":1050.0,"LessIsGood":0}"#,
+        ) else {
+            panic!("Loadout")
+        };
+        let m = &l.modules[0];
+        assert_eq!(m.item.as_deref(), Some("int_hyperdrive_size5_class5"));
+        let e = m.engineering.as_ref().unwrap();
+        assert_eq!(e.blueprint_name.as_deref(), Some("FSD_LongRange"));
+        assert_eq!(e.level, Some(5));
+        assert_eq!(e.quality, Some(0.9));
+        assert_eq!(
+            e.experimental_effect.as_deref(),
+            Some("special_fsd_fuelcapacity")
+        );
+        assert_eq!(e.modifiers.len(), 1);
+        assert_eq!(e.modifiers[0].label, "FSDOptimalMass");
+        assert_eq!(e.modifiers[0].value, Some(1692.6));
+        assert_eq!(e.modifiers[0].original_value, Some(1050.0));
+        assert_eq!(e.modifiers[0].less_is_good, Some(0));
+    }
+
+    #[test]
+    fn non_numeric_modifier_value_does_not_break_loadout() {
+        let EventKind::Loadout(l) = loadout_with_modifier(
+            r#"{"Label":"WeaponMode","ValueStr":"$Weapon_Mode_Burst;","ValueStr_Localised":"Burst"}"#,
+        ) else {
+            panic!("Loadout")
+        };
+        let m = &l.modules[0].engineering.as_ref().unwrap().modifiers[0];
+        assert_eq!(m.label, "WeaponMode");
+        assert_eq!(m.value, None);
+    }
+
+    #[test]
+    fn modifier_value_as_text_is_none() {
+        let EventKind::Loadout(l) =
+            loadout_with_modifier(r#"{"Label":"WeaponMode","Value":"Burst"}"#)
+        else {
+            panic!("Loadout")
+        };
+        let m = &l.modules[0].engineering.as_ref().unwrap().modifiers[0];
+        assert_eq!(m.label, "WeaponMode");
+        assert_eq!(m.value, None);
+    }
+
+    #[test]
+    fn fsdjump_carries_politics_and_body_id() {
+        let EventKind::FsdJump(l) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"FSDJump","StarSystem":"Kappa","SystemAddress":1,"StarPos":[1,2,3],"BodyID":3,"SystemAllegiance":"Federation","SystemGovernment_Localised":"Democracia","SystemEconomy_Localised":"Industrial","SystemSecondEconomy_Localised":"Refinería","SystemSecurity_Localised":"Seguridad alta","Population":4500000,"SystemFaction":{"Name":"Kappa Gov","FactionState":"War"},"Powers":["Zachary Hudson"],"PowerplayState":"Fortified","BoostUsed":1.5}"#,
+        ) else {
+            panic!("FSDJump")
+        };
+        assert_eq!(l.body_id, Some(3));
+        assert_eq!(l.system_allegiance.as_deref(), Some("Federation"));
+        assert_eq!(l.system_government_localised.as_deref(), Some("Democracia"));
+        assert_eq!(l.system_economy_localised.as_deref(), Some("Industrial"));
+        assert_eq!(
+            l.system_second_economy_localised.as_deref(),
+            Some("Refinería")
+        );
+        assert_eq!(
+            l.system_security_localised.as_deref(),
+            Some("Seguridad alta")
+        );
+        assert_eq!(l.population, Some(4_500_000));
+        let f = l.system_faction.as_ref().unwrap();
+        assert_eq!(f.name.as_deref(), Some("Kappa Gov"));
+        assert_eq!(f.faction_state.as_deref(), Some("War"));
+        assert_eq!(l.powers, vec!["Zachary Hudson".to_string()]);
+        assert_eq!(l.powerplay_state.as_deref(), Some("Fortified"));
+        assert_eq!(l.boost_used, Some(1.5));
+    }
+
+    #[test]
+    fn touchdown_carries_position_and_body_id() {
+        let EventKind::Touchdown(t) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Touchdown","Latitude":-12.5,"Longitude":33.1,"Body":"Planeta 1","BodyID":7,"SystemAddress":99,"OnPlanet":true,"PlayerControlled":true}"#,
+        ) else {
+            panic!("Touchdown")
+        };
+        assert_eq!(t.latitude, Some(-12.5));
+        assert_eq!(t.longitude, Some(33.1));
+        assert_eq!(t.body.as_deref(), Some("Planeta 1"));
+        assert_eq!(t.body_id, Some(7));
+        assert_eq!(t.system_address, Some(99));
+        assert_eq!(t.on_planet, Some(true));
+        assert_eq!(t.player_controlled, Some(true));
+        // Sin campos sigue siendo Touchdown, no Other.
+        let EventKind::Liftoff(l) = ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Liftoff"}"#)
+        else {
+            panic!("Liftoff")
+        };
+        assert_eq!(l, SurfaceEvent::default());
+    }
+
+    #[test]
+    fn disembark_on_planet_parsed() {
+        let EventKind::Disembark(d) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Disembark","SRV":true,"Taxi":false,"Multicrew":false,"OnPlanet":true,"OnStation":false,"Body":"Planeta 1","BodyID":7,"SystemAddress":99}"#,
+        ) else {
+            panic!("Disembark")
+        };
+        assert!(d.srv);
+        assert!(!d.taxi);
+        assert!(d.on_planet);
+        assert!(!d.on_station);
+        assert_eq!(d.body.as_deref(), Some("Planeta 1"));
+        assert_eq!(d.body_id, Some(7));
+        assert_eq!(d.system_address, Some(99));
+        let EventKind::Embark(e) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Embark","SRV":false,"OnStation":true}"#,
+        ) else {
+            panic!("Embark")
+        };
+        assert!(e.on_station);
+        assert_eq!(e.body_id, None);
+    }
+
+    #[test]
+    fn approach_body_carries_ids() {
+        let EventKind::ApproachBody(b) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"ApproachBody","Body":"P1","BodyID":4,"SystemAddress":12}"#,
+        ) else {
+            panic!("ApproachBody")
+        };
+        assert_eq!(b.body_id, Some(4));
+        assert_eq!(b.system_address, Some(12));
     }
 }
