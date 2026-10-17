@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 7 (`tmc-core` — peticiones de red, tareas de SQLite y migraciones) 🔄 en curso.
-- **Siguiente acción:** completar la Task 7 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
+- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 8 (i18n — varios `.ftl` por idioma) 🔄 en curso.
+- **Siguiente acción:** completar la Task 8 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
 
 ## Fases
 
@@ -40,7 +40,8 @@
 | 4 | `tmc-model` — eventos de exploración y exobiología | ✅ hecha | 4eec257 | 48 tests tmc-model; workspace, fmt y clippy PASS; fixture `exploration_session.log`. Revisión aprobada. |
 | 5 | `tmc-model` — Loadout con ingeniería, política, superficie | ✅ hecha | c272ae9 | 55 tests tmc-model; snapshots F0 intactos; `LocationInfo` en `Box`. Revisión aprobada. |
 | 6 | `tmc-model` — tipos de red, `ModuleSettings`, nuevas `SourceEvent` | ✅ hecha | ae32e35 | 58 tests tmc-model; `PlannedHop` con `jumps` y `refuel: Option`. Revisión aprobada. |
-| 7–32 | Ver plan | ⬜ | — | |
+| 7 | `tmc-core` — peticiones de red, tareas de SQLite, migraciones | ✅ hecha | 69ec17a, 2fe3b63 | API pública de SQL y `api_cache` en tmc-store; worker FIFO único para StoreTasks; 27 core / 21 store PASS. Revisión aprobada tras 1 ronda. |
+| 8–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
