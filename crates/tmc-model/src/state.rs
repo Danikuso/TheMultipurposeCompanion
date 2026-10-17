@@ -318,6 +318,9 @@ impl GameState {
         let mut c = Changes::empty();
         match &ev.kind {
             EventKind::Fileheader(f) => {
+                if set(&mut self.game_running, true) {
+                    c |= Changes::SESSION;
+                }
                 if let Some(v) = &f.gameversion
                     && set(&mut self.galaxy, Galaxy::from_game_version(v))
                 {
@@ -383,14 +386,16 @@ impl GameState {
                 c = Changes::CMDR | Changes::SHIP | Changes::SESSION;
             }
             EventKind::Rank(r) => {
+                let fresh = self.cmdr.is_none();
                 let cmdr = self.cmdr.get_or_insert_with(CommanderState::default);
-                if set(&mut cmdr.ranks, Ranks::from(r)) {
+                if set(&mut cmdr.ranks, Ranks::from(r)) || fresh {
                     c |= Changes::CMDR;
                 }
             }
             EventKind::Progress(r) => {
+                let fresh = self.cmdr.is_none();
                 let cmdr = self.cmdr.get_or_insert_with(CommanderState::default);
-                if set(&mut cmdr.progress, Ranks::from(r)) {
+                if set(&mut cmdr.progress, Ranks::from(r)) || fresh {
                     c |= Changes::CMDR;
                 }
             }
@@ -519,9 +524,9 @@ impl GameState {
                 }
             }
             EventKind::Loadout(l) => {
+                let mut ch = self.ship.is_none();
                 let ship = self.ship.get_or_insert_with(ShipState::default);
                 let new_type = l.ship.clone().unwrap_or_default();
-                let mut ch = false;
                 if ship.ship_type != new_type {
                     ship.ship_type_localised = None;
                     ch = true;
@@ -764,6 +769,45 @@ mod tests {
         apply(&mut g, &fh("3.8.0.407"));
         assert_eq!(g.galaxy, Galaxy::Legacy);
         assert_eq!(Galaxy::from_game_version("x"), Galaxy::Unknown);
+    }
+
+    #[test]
+    fn fileheader_starts_game_and_notifies_only_when_changed() {
+        let mut g = GameState::default();
+        let header = r#"{"timestamp":"2026-03-05T18:00:01Z","event":"Fileheader"}"#;
+        assert_eq!(apply(&mut g, header), Changes::SESSION);
+        assert!(g.game_running);
+        assert_eq!(apply(&mut g, header), Changes::empty());
+        assert_eq!(
+            apply(
+                &mut g,
+                r#"{"timestamp":"2026-03-05T18:00:02Z","event":"Shutdown"}"#
+            ),
+            Changes::SESSION
+        );
+        assert!(!g.game_running);
+        assert_eq!(apply(&mut g, header), Changes::SESSION);
+        assert!(g.game_running);
+    }
+
+    #[test]
+    fn empty_rank_and_progress_notify_commander_creation() {
+        for name in ["Rank", "Progress"] {
+            let mut g = GameState::default();
+            let line = format!(r#"{{"timestamp":"2026-03-05T18:00:13Z","event":"{name}"}}"#);
+            assert_eq!(apply(&mut g, &line), Changes::CMDR, "{name}");
+            assert_eq!(g.cmdr, Some(CommanderState::default()));
+            assert_eq!(apply(&mut g, &line), Changes::empty(), "{name}");
+        }
+    }
+
+    #[test]
+    fn empty_loadout_notifies_ship_creation() {
+        let mut g = GameState::default();
+        let line = r#"{"timestamp":"2026-03-05T18:00:14Z","event":"Loadout"}"#;
+        assert_eq!(apply(&mut g, line), Changes::SHIP);
+        assert_eq!(g.ship, Some(ShipState::default()));
+        assert_eq!(apply(&mut g, line), Changes::empty());
     }
 
     #[test]

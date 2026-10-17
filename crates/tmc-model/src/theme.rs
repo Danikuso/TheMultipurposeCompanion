@@ -33,9 +33,9 @@ impl Default for HudTheme {
     fn default() -> Self {
         Self {
             primary: Rgb(255, 113, 0),
-            secondary: Rgb(255, 176, 96),
-            background: Rgb(8, 8, 8),
-            danger: Rgb(255, 48, 48),
+            secondary: Rgb(255, 180, 60),
+            background: Rgb(11, 11, 14),
+            danger: Rgb(255, 59, 48),
             is_default: true,
         }
     }
@@ -54,6 +54,16 @@ mod tests {
         );
         let t = serde_json::to_value(HudTheme::default()).unwrap();
         assert_eq!(t["primary"], "#ff7100");
+        assert_eq!(t["is_default"], true);
+    }
+
+    #[test]
+    fn default_theme_matches_hud_base_palette() {
+        let t = serde_json::to_value(HudTheme::default()).unwrap();
+        assert_eq!(t["primary"], "#ff7100");
+        assert_eq!(t["secondary"], "#ffb43c");
+        assert_eq!(t["background"], "#0b0b0e");
+        assert_eq!(t["danger"], "#ff3b30");
         assert_eq!(t["is_default"], true);
     }
 }

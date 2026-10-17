@@ -665,3 +665,13 @@ Expected: `PASS` (< 150 MB, < 1 % CPU en reposo). Si falla, abrir incidencia con
 - **Disposiciones guardadas por perfil y cambio automático de disposición** (spec §8.1, §5.3): F0 entrega la rejilla adaptable y la relevancia por módulo (`core.modules`), pero la edición/guardado de disposiciones y el salto automático llegan en F1, cuando haya más de un módulo que reordenar.
 - **`Module::migrations()`** (spec §5.2) y escritura en tablas propias desde `ModuleCtx`: se añaden cuando el primer módulo lo necesite (F1). El esquema F0 de §6 sí se crea completo.
 - **Secretos en `keyring`** (spec §9): F0 no maneja ningún secreto (no hay servicios online); se introduce en F6.
+
+
+## Reconciliación y verificación incremental (2026-10-17)
+
+- El propietario ratifica la aprobación registrada de spec y plan y autoriza revisar Task 4 existente antes de continuar con Task 5.
+- Task 4 ya estaba implementada en 70e4999 y 177eac1; no se reconstruye su ciclo TDD original. Comprobación inicial: cargo fmt --all --check, cargo clippy --workspace --all-targets -- -D warnings y cargo test --workspace terminan con código 0 (31 tests).
+- Revisión independiente de Task 4: corregir notificación de creación de estado ante Rank/Progress/Loadout parciales; activar game_running en Fileheader sin reiniciar contadores; alinear HudTheme por defecto con la paleta de Task 7. Se añaden regresiones con ciclo RED/GREEN observado.
+- UI aún no existe (Task 15); checks npm no aplicables en este punto. El script de consumo se crea en Task 18; aún no hay aplicación ejecutable para medir.
+
+- Cierre Task 4: regresiones RED (31 PASS/4 FAIL) y GREEN (35 PASS). Revisión de correcciones aprobada. Verificación global: cargo fmt --all --check, cargo clippy --workspace --all-targets -- -D warnings y cargo test --workspace, todos código 0. Avisos de caché incremental por hard links: Rust copia archivos como alternativa; sin fallos de compilación.

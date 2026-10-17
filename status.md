@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-17 · Claude Opus 5.5 (controlador SDD)
+- **Última actualización:** 2026-10-17 18:03 (Europe/Madrid) · Codex
 - **Fase actual:** F0 — Cimientos
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md) — ✅ aprobada (2026-10-17)
 - **Plan activo:** [`docs/plans/2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) — ✅ aprobado; ejecución por subagentes
@@ -10,14 +10,14 @@
 
 ## Puntero actual
 
-- **Tarea:** Task 4 (`tmc-model` — GameState y SourceEvent), Step 1.
-- **Siguiente acción:** implementar Task 2 según el plan. Ejecución por subagentes (implementador + revisor por tarea); registro detallado en `.superpowers/sdd/2026-10-17-tmc-f0-cimientos/progress.md` (local, no versionado).
+- **Tarea:** Task 5 (`tmc-journal` — localizar carpeta y listar diarios), Step 1: tests.
+- **Siguiente acción:** implementar Task 5 con TDD, revisión independiente y checks del workspace. Task 4 reconciliada, corregida y verificada (35 tests; fmt y clippy PASS).
 
 ## Fases
 
 | Fase | Contenido | Estado |
 |---|---|---|
-| F0 | Cimientos (lectura, estado, SQLite, servidor, UI base, panel general, instalador) | 🔄 plan escrito, sin empezar |
+| F0 | Cimientos (lectura, estado, SQLite, servidor, UI base, panel general, instalador) | 🔄 en ejecución |
 | F1 | Navegación, exploración, exobiología | ⬜ |
 | F2 | Cazarrecompensas/combate, minería | ⬜ |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ⬜ |
@@ -39,8 +39,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 1 | Workspace, licencia y CI | ✅ | 69b4be8, 83201c9 | job `ui` de CI se añadirá en Task 15 |
 | 2 | `tmc-model` — Status.json | ✅ | 65c72d9 | |
 | 3 | `tmc-model` — eventos del diario y archivos compañeros | ✅ | d24e813 | |
-| 4 | `tmc-model` — GameState y SourceEvent | ⬜ | — | |
-| 5 | `tmc-journal` — localizar carpeta y listar diarios | ⬜ | — | |
+| 4 | `tmc-model` — GameState y SourceEvent | ✅ hecha | 70e4999, 177eac1; correcciones en este commit | Revisión aprobada; 35 tests PASS, fmt y clippy del workspace PASS. |
+| 5 | `tmc-journal` — localizar carpeta y listar diarios | 🔄 en curso | — | Step 1: tests. |
 | 6 | `tmc-journal` — lector incremental de líneas | ⬜ | — | |
 | 7 | `tmc-journal` — Status, compañeros, proceso, HUD y watcher | ⬜ | — | |
 | 8 | `tmc-store` — SQLite, escritor e importación | ⬜ | — | |
@@ -57,6 +57,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Bloqueos y pendientes del propietario
 
+- [x] **Discrepancia de seguimiento resuelta por autorización del propietario (2026-10-17):** al abrir la sesión, Task 4 figuraba pendiente y en Step 1, pero `git log` y `git show --stat` confirman `70e4999` (GameState, SourceEvent, HudTheme y reductores) y `177eac1` (correcciones de reductores). Además, la siguiente acción apuntaba a Task 2, ya marcada hecha, y F0 figura «sin empezar» pese a Tasks 0–3 hechas. La spec conserva «pendiente de revisión» mientras esta cabecera la declara aprobada. El propietario confirmó «Sí, hazlo»: aprobación de spec y plan válida; se autoriza revisar y verificar Task 4 y continuar con Task 5 si pasa.
 - [ ] **CAPI de Frontier:** solicitud de cliente en user.frontierstore.net (scopes `auth` + `capi`). Pendiente confirmar que se envió y recibir el Client ID → guardarlo en `.env` como `TMC_CAPI_CLIENT_ID` (nunca en el repo). Necesario en F6.
 - [ ] **Inara:** la clave personal se pegó en el chat el 2026-10-17 → regenerarla antes de usarla en TMC. Whitelisting del nombre `TheMultipurposeCompanion` cuando haya versión funcional (F6).
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
@@ -72,5 +73,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
+- 2026-10-17 18:03 (Europe/Madrid) · Codex · Reconciliación autorizada; fmt, clippy y 31 tests del workspace pasan. Revisión de Task 4 en curso. Cargo disponible añadiendo C:\Users\danik\.cargo\bin al PATH del proceso. UI aún no creada (Task 15).
+
+- 2026-10-17 18:03 (Europe/Madrid) · Codex · Lectura de AGENTS.md, spec y plan activos; inspección de rama e historial. Discrepancia de Task 4 documentada; ejecución detenida según AGENTS.md §1. Solo status.md modificado sin commit; pendiente respuesta del propietario y verificación de Task 4.
 - 2026-10-17 · Claude Opus 5.5 · Inicio de ejecución de F0 por subagentes: Tasks 0–1 hechas.
 - 2026-10-17 · Claude Opus 5.5 · Investigación (`docs/research/`), spec de arquitectura y F0 aprobada, plan de F0 escrito, `AGENTS.md` y `status.md` creados.

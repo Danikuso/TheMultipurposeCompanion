@@ -1,7 +1,7 @@
 # TMC — The Multipurpose Companion · Especificación de arquitectura y Fase 0
 
 - **Fecha:** 2026-10-17
-- **Estado:** pendiente de revisión por el propietario (Danikuso)
+- **Estado:** aprobada por el propietario (Danikuso), 2026-10-17; aprobación ratificada al reconciliar el seguimiento
 - **Investigación base:** `docs/research/informe-investigacion.md` y `docs/research/notes/`
 
 ---
