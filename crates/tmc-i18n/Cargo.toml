@@ -1,0 +1,13 @@
+[package]
+name = "tmc-i18n"
+description = "Traducciones Fluent compartidas de TMC"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[dependencies]
+fluent-bundle.workspace = true
+unic-langid.workspace = true
+rust-embed.workspace = true
+fluent-syntax = "0.12.0"

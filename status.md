@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-17 18:41 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-17 18:46 (Europe/Madrid) · Codex
 - **Fase actual:** F0 — Cimientos
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md) — ✅ aprobada (2026-10-17)
 - **Plan activo:** [`docs/plans/2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) — ✅ aprobado; ejecución por subagentes
@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** Task 10 (`tmc-i18n` y traducciones), Step 1: tests.
-- **Siguiente acción:** tests de Task 10 y RED antes de implementar Fluent y traducciones. Task 9 revisada y verificada: 107 tests, fmt/clippy PASS.
+- **Tarea:** Task 11 (`tmc-modules` — registro y dashboard), Step 1: tests.
+- **Siguiente acción:** tests de Task 11 y RED antes de implementar el módulo dashboard. Task 10 aprobada y verificada (115 tests, fmt/clippy PASS).
 
 ## Fases
 
@@ -44,9 +44,9 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 6 | `tmc-journal` — lector incremental de líneas | ✅ hecha | 7634de8 | RED 11 FAIL → GREEN 20 journal PASS; revisión y checks workspace PASS. |
 | 7 | `tmc-journal` — Status, compañeros, proceso, HUD y watcher | ✅ hecha | 2cc55b7 | Revisión final aprobada; 37 journal y 72 workspace PASS, fmt/clippy PASS. |
 | 8 | `tmc-store` — SQLite, escritor e importación | ✅ hecha | 9fb90b7 | 18 tests store y 90 workspace PASS; revisión, fmt y clippy aprobados. |
-| 9 | `tmc-core` — actor, módulos, topics y alertas | ✅ hecha | commit de cierre Task 9 | Revisión aprobada; 17 core/107 workspace PASS, fmt/clippy PASS. |
-| 10 | `tmc-i18n` y traducciones | 🔄 en curso | — | Step 1: tests. |
-| 11 | `tmc-modules` — registro y `dashboard` | ⬜ | — | |
+| 9 | `tmc-core` — actor, módulos, topics y alertas | ✅ hecha | 5565fbb | Revisión aprobada; 17 core/107 workspace PASS, fmt/clippy PASS. |
+| 10 | `tmc-i18n` y traducciones | ✅ hecha | commit de cierre Task 10 | 67 claves/5 idiomas; 8 i18n y 115 workspace PASS, revisión y checks aprobados. |
+| 11 | `tmc-modules` — registro y `dashboard` | 🔄 en curso | — | Step 1: tests. |
 | 12 | `tmc-server` — HTTP, WS, seguridad, emparejamiento | ⬜ | — | |
 | 13 | `tmc-app` + `apps/headless` | ⬜ | — | |
 | 14 | `tmc-replay` — reproducción y anonimización | ⬜ | — | |
@@ -79,10 +79,10 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
-- 2026-10-17 18:12 (Europe/Madrid) · Codex · Continuación del plan: Task 6 cerrada en7634de8 (55tests PASS), Task7 cerrada con revisión de XML/orden Status corregida (72tests PASS). Task8 en curso; dependencia store→journal aprobada.
+- 2026-10-17 18:44 (Europe/Madrid) · Codex · Continuación sin interrupciones: Tasks 6–9 cerradas (7634de8, 2cc55b7, 9fb90b7, 5565fbb) con TDD y revisión; 107 tests, fmt/clippy PASS. Task 10 en curso: RED 4 FAIL, cinco FTL con 67 claves listos. Pendiente validar bundles, revisión y cierre; archivos actuales sin commit: tmc-i18n, locales, Cargo.lock, avisos y seguimiento.
 
 - 2026-10-17 18:12 (Europe/Madrid) · Codex · Task 4 cerrada en 2ec0abe tras revisión y correcciones TDD (31 PASS/4 FAIL → 35 PASS); fmt y clippy del workspace PASS. Task 5 completada con TDD y revisión independiente: 9 tests nuevos, workspace 44 PASS, fmt/clippy PASS. Pendiente ejecución nativa Linux; UI y medición de consumo corresponden a Tasks 15/18. Commits: 2ec0abe (Task 4), e8e6cc8 (Task 5); seguimiento final en commit documental inmediato. Sin código sin commit. Cargo disponible añadiendo C:\Users\danik\.cargo\bin al PATH del proceso. UI aún no creada (Task 15).
 
-- 2026-10-17 18:12 (Europe/Madrid) · Codex · Lectura de AGENTS.md, spec y plan activos; inspección de rama e historial. Discrepancia de Task 4 documentada; ejecución detenida según AGENTS.md §1. Solo status.md modificado sin commit; pendiente respuesta del propietario y verificación de Task 4.
+- 2026-10-17 17:59 (Europe/Madrid) · Codex · Discrepancia de Task 4 documentada; ejecución detenida según AGENTS.md §1, pendiente autorización del propietario (resuelta en la sesión siguiente).
 - 2026-10-17 · Claude Opus 5.5 · Inicio de ejecución de F0 por subagentes: Tasks 0–1 hechas.
 - 2026-10-17 · Claude Opus 5.5 · Investigación (`docs/research/`), spec de arquitectura y F0 aprobada, plan de F0 escrito, `AGENTS.md` y `status.md` creados.

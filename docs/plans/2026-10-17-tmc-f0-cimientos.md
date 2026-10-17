@@ -403,7 +403,7 @@ Reglas: el actor es el único dueño de `GameState` y módulos; por cada `Source
 - Produces: `pub const LANGUAGES: [&str; 5] = ["es","en","fr","de","pt"]`; `pub struct I18n`; `I18n::new(lang: &str) -> I18n` (idioma desconocido → `es`; fallback de claves a `es`); `fn t(&self, key: &str, args: &[(&str, FluentValue)]) -> String` (clave inexistente → la propia clave); `pub fn keys(lang: &str) -> BTreeSet<String>`. Archivos embebidos con `rust-embed` (`folder = "../../locales"`).
 - Claves mínimas de F0 (todas en los 5 idiomas, traducidas de verdad, no copias en español): `app-name`, `nav-dashboard`, `nav-settings`, `panel-cmdr`, `panel-ship`, `panel-location`, `panel-status`, `panel-route`, `panel-session`, `panel-alerts`, `field-credits`, `field-hull`, `field-fuel`, `field-cargo`, `field-rebuy`, `field-jump-range`, `field-system`, `field-body`, `field-station`, `field-next-system`, `field-remaining-jumps`, `field-session-time`, `field-jumps`, `field-distance`, `field-credits-earned`, `mode-docked`, `mode-landed`, `mode-normal-space`, `mode-supercruise`, `mode-hyperspace`, `mode-on-foot`, `mode-in-srv`, `mode-in-fighter`, `mode-in-taxi`, `mode-multicrew`, `mode-unknown`, `flag-shields`, `flag-hardpoints`, `flag-landing-gear`, `flag-mass-locked`, `flag-silent-running`, `flag-cargo-scoop`, `flag-sco`, `alert-low-fuel`, `alert-overheating`, `alert-interdiction`, `alert-under-attack`, `alert-hull-damage` (arg `$pct`), `alert-low-oxygen`, `alert-low-health`, `alert-module-crashed` (arg `$module`), `action-copy-next-system`, `toast-copied` (arg `$system`), `import-progress` (args `$done`, `$total`), `game-not-running`, `galaxy-legacy-warning`, `settings-language`, `settings-lan`, `settings-lan-help`, `settings-pairing-qr`, `settings-auto-copy`, `settings-theme`, `theme-hud`, `theme-classic`, `tray-open`, `tray-quit`, `empty-no-data`.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn all_languages_have_same_keys_as_es() { for l in LANGUAGES { assert_eq!(keys(l), keys("es"), "{l}"); } }
@@ -412,8 +412,8 @@ Reglas: el actor es el único dueño de `GameState` y módulos; por cada `Source
 #[test] fn missing_key_returns_key() {}
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar + escribir los `.ftl`. **Step 4:** `cargo test -p tmc-i18n` PASS.
-- [ ] **Step 5: Commit** `feat(i18n): Fluent compartido y traducciones es/en/fr/de/pt`
+- [x] **Step 2:** FAIL. **Step 3:** implementar + escribir los `.ftl`. **Step 4:** `cargo test -p tmc-i18n` PASS.
+- [x] **Step 5: Commit** `feat(i18n): Fluent compartido y traducciones es/en/fr/de/pt`
 
 ---
 
@@ -706,5 +706,7 @@ La revisión encontró que flush_blocking sin retorno podía confirmar un lote f
 
 - Entorno para verificaciones posteriores: Node24.19.0 y npm11.17.0 disponibles; usar npm.cmd en PowerShell porque npm.ps1 está bloqueado por la política de scripts, sin cambiar esa política. Debian existe en WSL, pero no tiene cargo/rustc/cc/pkg-config en PATH; Docker Desktop está instalado pero su daemon Linux no está activo. Las pruebas nativas Linux siguen pendientes; no se han instalado herramientas ni alterado esos entornos durante esta comprobación.
 
-- Cierre Task 9: RED 15 FAIL → GREEN 15 core; revisión detectó inanición de snapshots con eventos continuos. Regresión con productor sostenido: RED timeout de 150 ms → GREEN tras cuota de 32 eventos; test de las tres variantes CoreMessage incluido. Revisión final aprobada. Verificación global fmt, cargo clippy --workspace --all-targets --offline -- -D warnings, cargo test --workspace --offline --quiet y git diff --check: código 0, 107 tests PASS (17 core + 37 journal + 35 model + 18 store).
+- Cierre Task 9: RED 15 FAIL → GREEN 15 core; revisión detectó inanición de snapshots con eventos continuos. Regresión con productor sostenido: RED timeout de 150 ms → GREEN tras cuota de 32 eventos; test de las tres variantes CoreMessage incluido. Revisión final aprobada. Verificación global cargo fmt --all --check, cargo clippy --workspace --all-targets --offline -- -D warnings, cargo test --workspace --offline --quiet y git diff --check: código 0, 107 tests PASS (17 core + 37 journal + 35 model + 18 store).
 - Task 9 concreta flush_every con mínimo de 100 ms para cumplir máximo de 10 Hz, y atiende snapshots tras como máximo 32 eventos consecutivos. Sin cambio de las firmas previstas; el cierre del writer maneja Result fuera del runtime.
+
+- Cierre Task 10: RED 4 FAIL → GREEN 8 i18n. 67 claves y variables coherentes en los cinco idiomas, parseo/formato Fluent sin errores y bundle Send+Sync. Revisión aprobada. cargo fmt --all --check; cargo clippy --workspace --all-targets --offline -- -D warnings; cargo test --workspace --offline --quiet; git diff --check: código 0 y 115 tests PASS (17 core + 8 i18n + 37 journal + 35 model + 18 store).

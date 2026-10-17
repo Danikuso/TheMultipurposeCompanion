@@ -80,3 +80,23 @@ Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, 
 - Versión: 1.28.0
 - Licencia: MIT OR Apache-2.0
 - Usada por: tmc-core (identificadores UUID v4 de alertas)
+
+### fluent-bundle
+- Versión: 0.16.0
+- Licencia: MIT OR Apache-2.0
+- Usada por: tmc-i18n (formato Fluent y fallback)
+
+### fluent-syntax
+- Versión: 0.12.0
+- Licencia: MIT OR Apache-2.0
+- Usada por: tmc-i18n (enumeración de claves mediante el AST de Fluent)
+
+### unic-langid
+- Versión: 0.9.6
+- Licencia: MIT OR Apache-2.0
+- Usada por: tmc-i18n (identificadores de idioma)
+
+### rust-embed
+- Versión: 8.13.0
+- Licencia: MIT
+- Usada por: tmc-i18n (recursos de traducción compartidos)
