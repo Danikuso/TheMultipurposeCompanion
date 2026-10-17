@@ -129,7 +129,7 @@ pub async fn start(mut config: Config) -> anyhow::Result<Running> {
         server_cfg,
         core.clone(),
         store.clone(),
-        Arc::new(AppActions::new()),
+        Arc::new(AppActions::with_config(config)),
     )
     .await?;
 

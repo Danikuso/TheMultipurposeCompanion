@@ -23,12 +23,25 @@ pub enum ActionError {
     Failed(String),
 }
 
+pub trait ConfigHost: Send + Sync + 'static {
+    fn get_config(&self) -> Value;
+    fn put_config(&self, v: Value) -> Result<Value, ActionError>;
+}
+
 pub trait ActionHost: Send + Sync + 'static {
     fn run_action(
         &self,
         name: &str,
         snapshot: &BTreeMap<String, Value>,
     ) -> Result<Value, ActionError>;
+
+    fn get_config(&self) -> Value {
+        Value::Null
+    }
+
+    fn put_config(&self, _v: Value) -> Result<Value, ActionError> {
+        Err(ActionError::NotFound)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -112,6 +125,10 @@ pub fn build_router(
     Router::new()
         .route("/ws", axum::routing::get(ws::ws_handler))
         .route("/api/health", axum::routing::get(rest::get_health))
+        .route(
+            "/api/config",
+            axum::routing::get(rest::get_config).put(rest::put_config),
+        )
         .route(
             "/api/history/events",
             axum::routing::get(rest::get_history_events),

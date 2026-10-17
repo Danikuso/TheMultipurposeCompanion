@@ -4,6 +4,9 @@ import path from 'node:path';
 
 export default defineConfig({
   plugins: [svelte()],
+  resolve: {
+    conditions: ['browser'],
+  },
   server: {
     fs: {
       allow: ['..', path.resolve(__dirname, '../locales')],

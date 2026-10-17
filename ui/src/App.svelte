@@ -1,15 +1,16 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { t } from './lib/i18n';
   import { connect } from './lib/ws.svelte';
+  import { modules } from './modules/registry';
+  import Settings from './settings/Settings.svelte';
   import Grid from './shell/Grid.svelte';
   import ImportProgress from './shell/ImportProgress.svelte';
-  import Panel from './shell/Panel.svelte';
   import Sidebar from './shell/Sidebar.svelte';
   import Toasts from './shell/Toasts.svelte';
   import TopBar from './shell/TopBar.svelte';
 
   let activeTab = $state('dashboard');
+  const activeModule = $derived(modules.find((m) => m.id === activeTab) ?? modules[0]);
 
   onMount(() => {
     connect();
@@ -22,9 +23,13 @@
   <div class="app-body">
     <Sidebar {activeTab} onSelect={(id) => (activeTab = id)} />
     <Grid>
-      <Panel titleKey="nav-dashboard">
-        <p>{t('empty-no-data')}</p>
-      </Panel>
+      {#if activeTab === 'settings'}
+        <Settings />
+      {:else if activeModule}
+        {#each activeModule.panels as PanelComp, idx (idx)}
+          <PanelComp />
+        {/each}
+      {/if}
     </Grid>
   </div>
   <Toasts />

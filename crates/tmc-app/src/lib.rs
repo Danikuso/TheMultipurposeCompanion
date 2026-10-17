@@ -80,6 +80,23 @@ mod tests {
         assert_eq!(err, ActionError::Failed("no-next-system".into()));
     }
 
+    #[test]
+    fn config_host_roundtrips_and_validates_language() {
+        let actions = AppActions::with_config(Config::default());
+        let current = actions.get_config();
+        assert_eq!(current["language"], "es");
+
+        let mut invalid = current.clone();
+        invalid["language"] = json!("xx");
+        assert!(actions.put_config(invalid).is_err());
+
+        let mut valid = current;
+        valid["language"] = json!("en");
+        let saved = actions.put_config(valid).unwrap();
+        assert_eq!(saved["language"], "en");
+        assert_eq!(actions.get_config()["language"], "en");
+    }
+
     #[tokio::test]
     async fn corrupt_database_is_renamed_and_rebuilt() {
         let jdir = tempdir().unwrap();

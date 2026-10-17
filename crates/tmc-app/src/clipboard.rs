@@ -1,9 +1,8 @@
-//! Portapapeles y acciones de aplicación (`ActionHost`).
-
+use crate::Config;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use std::sync::Mutex;
-use tmc_server::{ActionError, ActionHost};
+use tmc_server::{ActionError, ActionHost, ConfigHost};
 
 pub struct Clipboard {
     last: Mutex<Option<String>>,
@@ -42,12 +41,21 @@ impl Default for Clipboard {
 
 pub struct AppActions {
     clipboard: Clipboard,
+    config: Mutex<Config>,
 }
 
 impl AppActions {
     pub fn new() -> Self {
         Self {
             clipboard: Clipboard::new(),
+            config: Mutex::new(Config::default()),
+        }
+    }
+
+    pub fn with_config(cfg: Config) -> Self {
+        Self {
+            clipboard: Clipboard::new(),
+            config: Mutex::new(cfg),
         }
     }
 
@@ -59,6 +67,28 @@ impl AppActions {
 impl Default for AppActions {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl ConfigHost for AppActions {
+    fn get_config(&self) -> Value {
+        let guard = self.config.lock().unwrap();
+        serde_json::to_value(&*guard).unwrap_or(Value::Null)
+    }
+
+    fn put_config(&self, v: Value) -> Result<Value, ActionError> {
+        let mut updated: Config =
+            serde_json::from_value(v).map_err(|e| ActionError::Failed(e.to_string()))?;
+        if !matches!(updated.language.as_str(), "es" | "en" | "fr" | "de" | "pt") {
+            return Err(ActionError::Failed("invalid-language".into()));
+        }
+        if updated.server.lan {
+            updated.ensure_lan_token();
+        }
+        let _ = updated.save();
+        let out = serde_json::to_value(&updated).map_err(|e| ActionError::Failed(e.to_string()))?;
+        *self.config.lock().unwrap() = updated;
+        Ok(out)
     }
 }
 
@@ -81,5 +111,13 @@ impl ActionHost for AppActions {
             }
             _ => Err(ActionError::NotFound),
         }
+    }
+
+    fn get_config(&self) -> Value {
+        ConfigHost::get_config(self)
+    }
+
+    fn put_config(&self, v: Value) -> Result<Value, ActionError> {
+        ConfigHost::put_config(self, v)
     }
 }

@@ -1,12 +1,11 @@
 <script lang="ts">
   import { t } from '../lib/i18n';
   import { topic } from '../lib/ws.svelte';
+  import { modules } from '../modules/registry';
 
-  interface ModuleEntry {
+  interface LiveModuleState {
     id: string;
-    title_key: string;
-    icon: string;
-    enabled: boolean;
+    title_key?: string;
     relevance: 'Hidden' | 'Low' | 'Normal' | 'High' | 'Critical';
   }
 
@@ -18,31 +17,32 @@
     onSelect?: (id: string) => void;
   } = $props();
 
-  const modulesList = $derived(
-    topic<ModuleEntry[]>('core.modules') ?? [
-      {
-        id: 'dashboard',
-        title_key: 'nav-dashboard',
-        icon: 'gauge',
-        enabled: true,
-        relevance: 'Normal',
-      },
-    ],
+  const liveModules = $derived(topic<LiveModuleState[]>('core.modules'));
+
+  const displayModules = $derived(
+    modules.map((regMod) => {
+      const liveState = liveModules?.find((m) => m.id === regMod.id);
+      return {
+        id: regMod.id,
+        titleKey: regMod.titleKey,
+        relevance: liveState?.relevance ?? 'Normal',
+      };
+    }),
   );
 </script>
 
 <aside class="hud-sidebar" aria-label="Module navigation">
   <div class="sidebar-top">
-    {#each modulesList as mod (mod.id)}
+    {#each displayModules as mod (mod.id)}
       {#if mod.relevance !== 'Hidden'}
         <button
           type="button"
           class="nav-btn"
           class:active={activeTab === mod.id}
-          title={t(mod.title_key)}
+          title={t(mod.titleKey)}
           onclick={() => onSelect?.(mod.id)}
         >
-          <span class="nav-label">{t(mod.title_key)}</span>
+          <span class="nav-label">{t(mod.titleKey)}</span>
           <span class="relevance-dot relevance-{mod.relevance.toLowerCase()}"></span>
         </button>
       {/if}
