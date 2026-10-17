@@ -41,11 +41,19 @@ fn to_sql(value: &serde_json::Value) -> Result<rusqlite::types::Value, StoreErro
     Ok(match value {
         serde_json::Value::Null => Sql::Null,
         serde_json::Value::Bool(b) => Sql::Integer(i64::from(*b)),
-        serde_json::Value::Number(n) => match (n.as_i64(), n.as_f64()) {
-            (Some(i), _) => Sql::Integer(i),
-            (None, Some(f)) => Sql::Real(f),
-            _ => return Err(StoreError::Unsupported(format!("number {n}"))),
-        },
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Sql::Integer(i)
+            } else if n.is_u64() {
+                return Err(StoreError::Unsupported(format!(
+                    "integer {n} exceeds SQLite range"
+                )));
+            } else if let Some(f) = n.as_f64() {
+                Sql::Real(f)
+            } else {
+                return Err(StoreError::Unsupported(format!("number {n}")));
+            }
+        }
         serde_json::Value::String(s) => Sql::Text(s.clone()),
         other => {
             return Err(StoreError::Unsupported(format!(
@@ -68,7 +76,7 @@ fn from_sql(value: rusqlite::types::ValueRef<'_>) -> Result<serde_json::Value, S
 
 #[derive(Clone)]
 pub struct Store {
-    // Serializa transacciones de importaciÃ³n y escritor, tambiÃ©n sobre la misma BD en memoria.
+    // Serializa transacciones de importación y escritor, también sobre la misma BD en memoria.
     connection: Arc<Mutex<Connection>>,
 }
 
@@ -249,6 +257,22 @@ mod tests {
                 )
                 .unwrap(),
             vec![serde_json::json!([2, "b"])]
+        );
+    }
+
+    #[test]
+    fn query_json_rejects_u64_beyond_i64() {
+        let store = Store::open_in_memory().unwrap();
+        let big = serde_json::json!(u64::MAX);
+        assert!(matches!(
+            store.query_json("SELECT ?1", &[big]),
+            Err(StoreError::Unsupported(_))
+        ));
+        assert_eq!(
+            store
+                .query_json("SELECT ?1", &[serde_json::json!(i64::MAX)])
+                .unwrap(),
+            vec![serde_json::json!([i64::MAX])]
         );
     }
 

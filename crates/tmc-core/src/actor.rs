@@ -86,9 +86,14 @@ pub fn spawn_core_with(modules: Vec<Box<dyn Module>>, opts: CoreOptions) -> Core
     tokio::spawn(async move {
         let (stored_tx, stored_rx) = mpsc::channel(64);
         let mut actor = Actor::new(modules, writer, actor_updates);
-        actor.store = store;
         actor.net = net;
-        actor.stored_tx = Some(stored_tx);
+        // Un único worker ejecuta las tareas de SQLite en orden FIFO; termina
+        // cuando el actor suelta `task_tx`.
+        if let Some(store) = store {
+            let (task_tx, task_rx) = std::sync::mpsc::channel::<StoreJob>();
+            actor.task_tx = Some(task_tx);
+            tokio::task::spawn_blocking(move || store_worker(store, task_rx, stored_tx));
+        }
         actor
             .run(event_receiver, snapshot_receiver, stored_rx, period)
             .await;
@@ -97,6 +102,29 @@ pub fn spawn_core_with(modules: Vec<Box<dyn Module>>, opts: CoreOptions) -> Core
         events,
         updates,
         snapshots,
+    }
+}
+
+type StoreJob = (&'static str, String, crate::StoreTask);
+
+fn store_worker(
+    store: Store,
+    jobs: std::sync::mpsc::Receiver<StoreJob>,
+    stored: mpsc::Sender<SourceEvent>,
+) {
+    while let Ok((module, tag, task)) = jobs.recv() {
+        match catch_unwind(AssertUnwindSafe(|| task(&store))) {
+            Ok(Ok(value)) => {
+                // Si el actor ya cerró el receptor, `blocking_send` falla y no bloquea.
+                let _ = stored.blocking_send(SourceEvent::Stored {
+                    module: module.to_owned(),
+                    tag,
+                    value,
+                });
+            }
+            Ok(Err(error)) => tracing::warn!(module, tag, %error, "store task failed"),
+            Err(_) => tracing::error!(module, tag, "store task panicked"),
+        }
     }
 }
 
@@ -116,10 +144,10 @@ struct Actor {
     seq: u64,
     writer: Option<EventWriter>,
     updates: broadcast::Sender<CoreMessage>,
-    store: Option<Store>,
     net: Option<mpsc::Sender<NetRequest>>,
-    // Canal interno propio: no mantiene vivo el actor cuando se cierran las entradas.
-    stored_tx: Option<mpsc::Sender<SourceEvent>>,
+    // Cola (sin límite, nunca bloquea al actor) hacia el worker único de SQLite.
+    // Los resultados vuelven por un canal propio, que no mantiene vivo al actor.
+    task_tx: Option<std::sync::mpsc::Sender<StoreJob>>,
     next_request_id: u64,
 }
 
@@ -138,9 +166,8 @@ impl Actor {
             seq: 0,
             writer,
             updates,
-            store: None,
             net: None,
-            stored_tx: None,
+            task_tx: None,
             next_request_id: 1,
         };
         actor.update_core(Changes::all());
@@ -281,24 +308,13 @@ impl Actor {
 
     fn spawn_store_tasks(&self, module: &'static str, tasks: Vec<(String, crate::StoreTask)>) {
         for (tag, task) in tasks {
-            let (Some(store), Some(sender)) = (&self.store, &self.stored_tx) else {
+            let Some(queue) = &self.task_tx else {
                 tracing::debug!(module, tag, "store task dropped: no store");
                 continue;
             };
-            let (store, sender) = (store.clone(), sender.clone());
-            tokio::task::spawn_blocking(move || {
-                match catch_unwind(AssertUnwindSafe(|| task(&store))) {
-                    Ok(Ok(value)) => {
-                        let _ = sender.blocking_send(SourceEvent::Stored {
-                            module: module.to_owned(),
-                            tag,
-                            value,
-                        });
-                    }
-                    Ok(Err(error)) => tracing::warn!(module, tag, %error, "store task failed"),
-                    Err(_) => tracing::error!(module, tag, "store task panicked"),
-                }
-            });
+            if queue.send((module, tag, task)).is_err() {
+                tracing::warn!(module, "store task dropped: worker stopped");
+            }
         }
     }
 
@@ -440,15 +456,20 @@ impl Actor {
             tokio::select! {
                 biased;
                 _ = tick.tick() => self.flush(),
+                // Antes que `events`: está acotado y lo alimenta trabajo ya terminado.
+                Some(event) = stored.recv() => self.apply(event),
                 event = events.recv(), if events_open => match event {
                     Some(event)=>{self.apply(event); if snapshots_open { events_since_control += 1; }}, None=>events_open=false,
                 },
                 request = snapshots.recv(), if snapshots_open => match request {
                     Some(reply)=>{let _ = reply.send(self.topics.clone()); events_since_control = 0;}, None=>snapshots_open=false,
                 },
-                Some(event) = stored.recv() => self.apply(event),
             }
         }
+        // Cerrar ya el receptor y la cola evita que el worker se quede en `blocking_send`
+        // durante el volcado final y termina al acabar su tarea en curso.
+        drop(stored);
+        self.task_tx = None;
         if let Some(writer) = self.writer.take() {
             let _ = tokio::task::spawn_blocking(move || {
                 if let Err(error) = writer.flush_blocking() {
@@ -1059,6 +1080,86 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn store_task_runs_during_replay() {
+        let core = spawn_core_with(
+            vec![FakeModule::boxed(|ev, ctx| {
+                if let SourceEvent::Journal { replaying, .. } = ev {
+                    assert!(*replaying);
+                    ctx.store_task("replay", Box::new(|_| Ok(Value::from(7))));
+                }
+            })],
+            options(None, Some(Store::open_in_memory().unwrap())),
+        );
+        core.events
+            .send(journal("UnderAttack", "", true))
+            .await
+            .unwrap();
+        assert_eq!(
+            wait_for_stored(&core, 1).await,
+            serde_json::json!([{"module":"fake","tag":"replay","value":7}])
+        );
+    }
+
+    #[tokio::test]
+    async fn store_tasks_run_in_fifo_order_on_one_worker() {
+        let core = spawn_core_with(
+            vec![FakeModule::boxed(|ev, ctx| {
+                if matches!(ev, SourceEvent::Status(_)) {
+                    for n in 0..20 {
+                        ctx.store_task("n", Box::new(move |_| Ok(Value::from(n))));
+                    }
+                }
+            })],
+            options(None, Some(Store::open_in_memory().unwrap())),
+        );
+        core.events.send(status(0)).await.unwrap();
+        let values: Vec<i64> = wait_for_stored(&core, 20)
+            .await
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v["value"].as_i64().unwrap())
+            .collect();
+        assert_eq!(values, (0..20).collect::<Vec<i64>>());
+    }
+
+    #[tokio::test]
+    async fn stored_results_apply_under_continuous_event_flood() {
+        use std::sync::atomic::AtomicBool;
+        let mut first = true;
+        let core = spawn_core_with(
+            vec![FakeModule::boxed(move |ev, ctx| {
+                if matches!(ev, SourceEvent::Status(_)) {
+                    std::thread::sleep(Duration::from_micros(100));
+                    if std::mem::take(&mut first) {
+                        ctx.store_task("flood", Box::new(|_| Ok(Value::from(1))));
+                    }
+                }
+            })],
+            options(None, Some(Store::open_in_memory().unwrap())),
+        );
+        let keep_sending = Arc::new(AtomicBool::new(true));
+        let flag = keep_sending.clone();
+        let sender = core.events.clone();
+        let producer = std::thread::spawn(move || {
+            while flag.load(Ordering::Relaxed) {
+                if sender.blocking_send(status(0)).is_err() {
+                    break;
+                }
+            }
+        });
+        let stored = wait_for_stored(&core, 1).await;
+        keep_sending.store(false, Ordering::Relaxed);
+        tokio::task::spawn_blocking(move || producer.join().unwrap())
+            .await
+            .unwrap();
+        assert_eq!(
+            stored,
+            serde_json::json!([{"module":"fake","tag":"flood","value":1}])
+        );
+    }
+
+    #[tokio::test]
     async fn full_net_channel_never_blocks_actor() {
         let (net, _net_rx) = mpsc::channel(1);
         let core = spawn_core_with(
@@ -1108,7 +1209,7 @@ mod tests {
         started_rx.recv_timeout(Duration::from_secs(2)).unwrap();
         drop(core);
         timeout(Duration::from_secs(1), async {
-            while rx.recv().await.is_ok() {}
+            while !matches!(rx.recv().await, Err(broadcast::error::RecvError::Closed)) {}
         })
         .await
         .expect("actor did not stop with a store task in flight");
