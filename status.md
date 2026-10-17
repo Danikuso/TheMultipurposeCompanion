@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Task 0 (Spike 1 — Spansh) · 🔄 en curso.
-- **Siguiente acción:** completar la Task 0 (Spike 1 — Spansh) del plan de F1, con `superpowers:subagent-driven-development`.
+- **Tarea:** F1 · Task 1 (Spike 2 — licencias FSD y especies) · 🔄 en curso.
+- **Siguiente acción:** completar la Task 1 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
 
 ## Fases
 
@@ -28,6 +28,13 @@
 | F8 | Overlay ligero e integrado | ⬜ |
 | F9 | Crimen y piratería (Law & Disorder, dic. 2026) | ⬜ |
 | F10 | Atajos, Stream Deck, VoiceAttack, build Linux | ⬜ |
+
+## Tareas de F1
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 0 | Spike 1 — Spansh | ✅ hecha | 886c597 | Ficha `/api/system/{id64}`, neutrones `/api/route`, galaxia `/api/generic/route`, autocompletado; política/Powerplay desde Spansh; «descubierto» vía EDSM. Revisión aprobada. |
+| 1–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
