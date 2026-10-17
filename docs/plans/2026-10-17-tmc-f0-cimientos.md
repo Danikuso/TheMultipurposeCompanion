@@ -377,7 +377,7 @@ Algoritmo del watcher (bucle en una tarea tokio; E/S con `spawn_blocking` o sín
 
 Reglas: el actor es el único dueño de `GameState` y módulos; por cada `SourceEvent::Journal` envía `StoredEvent` al `writer` (cmdr = `GameState.cmdr.name` vigente); llama a cada módulo dentro de `std::panic::catch_unwind(AssertUnwindSafe(..))` — si un módulo hace panic se elimina de la lista y se emite `Alert::new(Critical, "alert-module-crashed").arg("module", id)`; acumula topics sucios y, cada `flush_every`, emite un único `CoreMessage::Update` con `seq` creciente (nada si no hay sucios); alertas e `ImportProgress` se emiten inmediatamente.
 
-- [ ] **Step 1: Tests** (tokio, módulos falsos en el propio test):
+- [x] **Step 1: Tests** (tokio, módulos falsos en el propio test):
 
 ```rust
 #[tokio::test] async fn journal_event_updates_core_topics() { /* FSDJump → Update contiene core.location y core.session */ }
@@ -389,8 +389,8 @@ Reglas: el actor es el único dueño de `GameState` y módulos; por cada `Source
 #[tokio::test] async fn no_update_when_nothing_changed() {}
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-core` PASS.
-- [ ] **Step 5: Commit** `feat(core): actor de estado, contrato de módulos, topics y alertas`
+- [x] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** `cargo test -p tmc-core` PASS.
+- [x] **Step 5: Commit** `feat(core): actor de estado, contrato de módulos, topics y alertas`
 
 ---
 
@@ -703,3 +703,8 @@ La revisión encontró que flush_blocking sin retorno podía confirmar un lote f
 
 - Cierre Task 8: RED 15 FAIL → GREEN inicial 17; revisión de importación/migraciones aprobada y corrección de flush validada mediante bloqueo SQLite (RED falso éxito → GREEN 18 store). Revisión final aprobada. cargo fmt --all --check, cargo clippy --workspace --all-targets --offline -- -D warnings, cargo test --workspace --offline --quiet y git diff --check terminan con código 0: 90 tests PASS (37 journal + 35 model + 18 store).
 - Riesgos para Task18: LineTailer materializa las líneas nuevas hasta EOF y Store serializa el acceso a una conexión; medir RAM y latencia de importaciones grandes antes de cerrar F0. No hay todavía aplicación final ni script de consumo para validar el presupuesto.
+
+- Entorno para verificaciones posteriores: Node24.19.0 y npm11.17.0 disponibles; usar npm.cmd en PowerShell porque npm.ps1 está bloqueado por la política de scripts, sin cambiar esa política. Debian existe en WSL, pero no tiene cargo/rustc/cc/pkg-config en PATH; Docker Desktop está instalado pero su daemon Linux no está activo. Las pruebas nativas Linux siguen pendientes; no se han instalado herramientas ni alterado esos entornos durante esta comprobación.
+
+- Cierre Task 9: RED 15 FAIL → GREEN 15 core; revisión detectó inanición de snapshots con eventos continuos. Regresión con productor sostenido: RED timeout de 150 ms → GREEN tras cuota de 32 eventos; test de las tres variantes CoreMessage incluido. Revisión final aprobada. Verificación global fmt, cargo clippy --workspace --all-targets --offline -- -D warnings, cargo test --workspace --offline --quiet y git diff --check: código 0, 107 tests PASS (17 core + 37 journal + 35 model + 18 store).
+- Task 9 concreta flush_every con mínimo de 100 ms para cumplir máximo de 10 Hz, y atiende snapshots tras como máximo 32 eventos consecutivos. Sin cambio de las firmas previstas; el cierre del writer maneja Result fuera del runtime.

@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-17 18:32 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-17 18:41 (Europe/Madrid) · Codex
 - **Fase actual:** F0 — Cimientos
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md) — ✅ aprobada (2026-10-17)
 - **Plan activo:** [`docs/plans/2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) — ✅ aprobado; ejecución por subagentes
@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** Task 9 (`tmc-core` — actor, módulos, topics y alertas), Step 1: tests.
-- **Siguiente acción:** tests de Task 9 y RED antes de implementar. Task 8 cerrada con revisión y checks globales aprobados (90 tests, fmt y clippy PASS); flush_blocking devuelve Result.
+- **Tarea:** Task 10 (`tmc-i18n` y traducciones), Step 1: tests.
+- **Siguiente acción:** tests de Task 10 y RED antes de implementar Fluent y traducciones. Task 9 revisada y verificada: 107 tests, fmt/clippy PASS.
 
 ## Fases
 
@@ -43,9 +43,9 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 5 | `tmc-journal` — localizar carpeta y listar diarios | ✅ hecha | e8e6cc8 | TDD 9 FAIL → 9 PASS; revisión aprobada; workspace 44 tests, fmt y clippy PASS. |
 | 6 | `tmc-journal` — lector incremental de líneas | ✅ hecha | 7634de8 | RED 11 FAIL → GREEN 20 journal PASS; revisión y checks workspace PASS. |
 | 7 | `tmc-journal` — Status, compañeros, proceso, HUD y watcher | ✅ hecha | 2cc55b7 | Revisión final aprobada; 37 journal y 72 workspace PASS, fmt/clippy PASS. |
-| 8 | `tmc-store` — SQLite, escritor e importación | ✅ hecha | commit de cierre Task 8 | 18 tests store y 90 workspace PASS; revisión, fmt y clippy aprobados. |
-| 9 | `tmc-core` — actor, módulos, topics y alertas | 🔄 en curso | — | Step 1: tests. |
-| 10 | `tmc-i18n` y traducciones | ⬜ | — | |
+| 8 | `tmc-store` — SQLite, escritor e importación | ✅ hecha | 9fb90b7 | 18 tests store y 90 workspace PASS; revisión, fmt y clippy aprobados. |
+| 9 | `tmc-core` — actor, módulos, topics y alertas | ✅ hecha | commit de cierre Task 9 | Revisión aprobada; 17 core/107 workspace PASS, fmt/clippy PASS. |
+| 10 | `tmc-i18n` y traducciones | 🔄 en curso | — | Step 1: tests. |
 | 11 | `tmc-modules` — registro y `dashboard` | ⬜ | — | |
 | 12 | `tmc-server` — HTTP, WS, seguridad, emparejamiento | ⬜ | — | |
 | 13 | `tmc-app` + `apps/headless` | ⬜ | — | |
