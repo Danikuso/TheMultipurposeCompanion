@@ -162,6 +162,52 @@ lan = false
     }
 
     #[test]
+    fn module_action_is_forwarded_as_source_event() {
+        let (events, mut rx) = tokio::sync::mpsc::channel(1);
+        let (net_events, _nrx) = tokio::sync::mpsc::channel(1);
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let _guard = rt.enter();
+        let online = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+        let net = spawn_net_service(
+            std::sync::Arc::new(tmc_net::NetClient::new(std::sync::Arc::new(
+                tmc_net::ReqwestTransport::new().unwrap(),
+            ))),
+            tmc_core::Store::open_in_memory().unwrap(),
+            net_events,
+            online.clone(),
+        );
+        let actions = AppActions::with_runtime(Config::default(), events, online, net);
+        let snap = BTreeMap::new();
+        let args = json!({ "to": "X" });
+        let out = actions
+            .run_action_with("navigation.plan", &args, &snap)
+            .unwrap();
+        assert_eq!(out, json!({ "accepted": true }));
+        match rx.try_recv().unwrap() {
+            tmc_model::source::SourceEvent::Action { name, args } => {
+                assert_eq!(name, "navigation.plan");
+                assert_eq!(args, json!({ "to": "X" }));
+            }
+            other => panic!("unexpected event {other:?}"),
+        }
+        // Cola de capacidad 1 llena: la segunda acción falla sin bloquear.
+        actions
+            .run_action_with("exploration.refresh", &json!(null), &snap)
+            .unwrap();
+        let err = actions
+            .run_action_with("exobiology.x", &json!(null), &snap)
+            .unwrap_err();
+        assert_eq!(err, ActionError::Failed("busy".into()));
+        // Prefijo desconocido: no existe.
+        assert_eq!(
+            actions
+                .run_action_with("other.thing", &json!(null), &snap)
+                .unwrap_err(),
+            ActionError::NotFound
+        );
+    }
+
+    #[test]
     fn invalid_config_is_backed_up_and_defaulted() {
         let dir = tempdir().unwrap();
         let path = dir.path().join("config.toml");

@@ -3,6 +3,7 @@
 use crate::{ActionError, AppState};
 use axum::{
     Json,
+    body::Bytes,
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -68,9 +69,27 @@ pub async fn get_history_events(
     Ok(Json(dtos))
 }
 
-pub async fn post_action(State(state): State<AppState>, Path(name): Path<String>) -> Response {
+pub async fn post_action(
+    State(state): State<AppState>,
+    Path(name): Path<String>,
+    body: Bytes,
+) -> Response {
+    let args: Value = if body.iter().all(u8::is_ascii_whitespace) {
+        Value::Null
+    } else {
+        match serde_json::from_slice(&body) {
+            Ok(v) => v,
+            Err(_) => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({ "error": "invalid-json" })),
+                )
+                    .into_response();
+            }
+        }
+    };
     let snapshot = state.core.snapshot().await;
-    match state.host.run_action(&name, &snapshot) {
+    match state.host.run_action_with(&name, &args, &snapshot) {
         Ok(value) => (StatusCode::OK, Json(value)).into_response(),
         Err(ActionError::NotFound) => {
             (StatusCode::NOT_FOUND, Json(json!({ "error": "not-found" }))).into_response()
@@ -79,6 +98,52 @@ pub async fn post_action(State(state): State<AppState>, Path(name): Path<String>
             (StatusCode::BAD_REQUEST, Json(json!({ "error": reason }))).into_response()
         }
     }
+}
+
+const AUTOCOMPLETE_PAGE_SIZE: usize = 20;
+
+#[derive(Debug, Deserialize, Default)]
+pub struct AutocompleteParams {
+    pub q: Option<String>,
+    pub page: Option<usize>,
+}
+
+pub async fn get_autocomplete(
+    State(state): State<AppState>,
+    Query(params): Query<AutocompleteParams>,
+) -> Response {
+    let snapshot = state.core.snapshot().await;
+    let q = params.q.unwrap_or_default();
+    let raw = match state.host.autocomplete(q, &snapshot).await {
+        Ok(v) => v,
+        Err(ActionError::NotFound) => {
+            return (StatusCode::NOT_FOUND, Json(json!({ "error": "not-found" }))).into_response();
+        }
+        Err(ActionError::Failed(reason)) => {
+            return (StatusCode::BAD_REQUEST, Json(json!({ "error": reason }))).into_response();
+        }
+    };
+    let items: Vec<Value> = match raw {
+        Value::Array(a) => a,
+        Value::Object(mut o) => match o.remove("items") {
+            Some(Value::Array(a)) => a,
+            _ => Vec::new(),
+        },
+        _ => Vec::new(),
+    };
+    let page = params.page.unwrap_or(0);
+    let start = page.saturating_mul(AUTOCOMPLETE_PAGE_SIZE);
+    let more = items.len() > start.saturating_add(AUTOCOMPLETE_PAGE_SIZE);
+    let slice: Vec<Value> = items
+        .into_iter()
+        .skip(start)
+        .take(AUTOCOMPLETE_PAGE_SIZE)
+        .collect();
+    (
+        StatusCode::OK,
+        Json(json!({ "items": slice, "page": page, "more": more })),
+    )
+        .into_response()
 }
 
 pub async fn get_config(State(state): State<AppState>) -> Json<Value> {
