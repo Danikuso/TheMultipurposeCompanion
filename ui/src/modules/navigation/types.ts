@@ -54,3 +54,22 @@ export interface JumpTopic {
   max_fuel_per_jump: number | null;
   supercharged: number | null;
 }
+
+export interface PlannedHop {
+  name: string;
+  id64: number;
+  distance_ly: number;
+  jumps: number;
+  neutron: boolean;
+  refuel: boolean | null;
+  star_class: string | null;
+}
+
+/** Topic `navigation.plan` (ver `planner.rs`). */
+export interface PlanTopic {
+  status: 'idle' | 'computing' | 'ready' | 'active' | 'failed' | 'disabled';
+  request: Record<string, unknown> | null;
+  result: { total_ly: number; hops_total: number; hops: PlannedHop[] } | null;
+  active: { destination: string; current_index: number; total: number; off_route: boolean } | null;
+  error_key: string | null;
+}
