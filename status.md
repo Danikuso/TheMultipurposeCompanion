@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 15), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
+- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 16), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
 
 ## Fases
 
@@ -50,8 +50,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 12 | `combat` — mi nave | ✅ hecha | 7d87eea, 872f9d6 | Escudos, casco por escalones (Hull/All/RepairAll), calor de 3 estados con cronómetro, pips en medios pips, alertas. Revisión aprobada tras 1 ronda. |
 | 13 | `combat` — libro de vales | ✅ hecha | 78e6e49, 46ce565 | Libro de vales: recompensas y bonos por facción, canje por tipo/facción con resto a vales sin facción, muerte a cero, sistema de origen. Revisión aprobada tras 1 ronda. |
 | 14 | `combat` — sesión de caza y reconstrucción | ✅ hecha | 0f3368c, 7e7ecdf | Sesión de caza (bajas, créditos/h, rango) y reconstrucción de vales desde el historial; paginador de historial compartido con F1; sin asistencias. Revisión aprobada tras 1 ronda. |
-| 15 | `combat` — zona de conflicto y AX | 🔄 en curso | — |  |
-| 16 | `combat` — módulo, topics, relevancia, red y registro | ⬜ | — | |
+| 15 | `combat` — zona de conflicto y AX | ✅ hecha | 4934f4f, 6b9f97a | Zona de conflicto (vista por zona) y AX (tipos tolerantes, objetivo pendiente que caduca, presencia thargoide), todo AX sin verificar. Revisión aprobada. |
+| 16 | `combat` — módulo, topics, relevancia, red y registro | 🔄 en curso | — |  |
 | 17 | UI — paneles «Objetivo» y «Mi nave» | ⬜ | — | |
 | 18 | UI — «Sesión de caza», «Zona de conflicto» y «AX» | ⬜ | — | |
 | 19 | `mining` — prospector | ⬜ | — | |
