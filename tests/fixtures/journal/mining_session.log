@@ -1,0 +1,3 @@
+{"timestamp":"2026-10-18T13:00:00Z","event":"FSDJump","StarSystem":"Synthetic Ring","SystemAddress":2,"StarPos":[0,0,0]}
+{"timestamp":"2026-10-18T13:05:00Z","event":"ProspectedAsteroid","Materials":[{"Name":"Platinum","Name_Localised":"Platinum","Proportion":31.5},{"Name":"bauxite","Name_Localised":"Bauxite","Proportion":12.0}],"Content":"$AsteroidMaterialContent_High;","Content_Localised":"Material Content: High","Remaining":100.0}
+{"timestamp":"2026-10-18T13:06:00Z","event":"ProspectedAsteroid","Materials":[{"Name":"bauxite","Name_Localised":"Bauxite","Proportion":5.0}],"Content":"$AsteroidMaterialContent_Low;","Content_Localised":"Material Content: Low","MotherlodeMaterial":"Monazite","MotherlodeMaterial_Localised":"Monazite","Remaining":100.0}

@@ -9,6 +9,7 @@ pub mod exobiology;
 pub mod exploration;
 pub mod history;
 pub mod inflight;
+pub mod mining;
 pub mod navigation;
 pub mod registry;
 pub use dashboard::Dashboard;
