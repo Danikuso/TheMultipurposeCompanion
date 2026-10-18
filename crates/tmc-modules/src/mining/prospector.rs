@@ -20,6 +20,7 @@ pub struct MaterialRow {
     pub name: Option<String>,
     /// Porcentaje (0-100) tal como lo da el diario.
     pub proportion: f64,
+    /// Valor del asteroide completo (fórmula de la spec); `Remaining` no se aplica.
     pub est_value: Option<u64>,
     pub interest: bool,
 }
@@ -105,22 +106,28 @@ fn build_view(ev: &ProspectedAsteroid, prices: PriceFn, s: &ModuleSettings) -> A
     );
     let has_interest = materials.iter().any(|m| m.interest);
 
+    let all_interest_priced = materials
+        .iter()
+        .filter(|m| m.interest)
+        .all(|m| m.est_value.is_some());
+
     let verdict = if motherlode_interest {
         Verdict::Worth {
             est_value: interest_sum,
         }
-    } else if let Some(sum) = interest_sum {
-        if sum >= s.mining_threshold_cr {
-            Verdict::Worth {
-                est_value: Some(sum),
-            }
-        } else {
-            Verdict::NotWorth
-        }
     } else if !has_interest {
         Verdict::NotWorth
+    } else if interest_sum.is_some_and(|sum| sum >= s.mining_threshold_cr) {
+        Verdict::Worth {
+            est_value: interest_sum,
+        }
+    } else if all_interest_priced {
+        Verdict::NotWorth
     } else if content == AsteroidContent::High {
-        Verdict::Worth { est_value: None }
+        // Precios parciales o ausentes: no se puede descartar, se usa el contenido.
+        Verdict::Worth {
+            est_value: interest_sum,
+        }
     } else {
         Verdict::NoData
     };
@@ -136,12 +143,10 @@ fn build_view(ev: &ProspectedAsteroid, prices: PriceFn, s: &ModuleSettings) -> A
 }
 
 impl ProspectorTracker {
-    /// Registra un asteroide prospectado; devuelve `true` si el estado cambió.
+    /// Registra un asteroide prospectado (cada evento cuenta, sin deduplicar);
+    /// devuelve siempre `true`.
     pub fn apply(&mut self, ev: &ProspectedAsteroid, prices: PriceFn, s: &ModuleSettings) -> bool {
         let view = build_view(ev, prices, s);
-        if self.current.as_ref() == Some(&view) {
-            return false;
-        }
         self.history.push_back(view.clone());
         while self.history.len() > HISTORY_MAX {
             self.history.pop_front();
@@ -262,6 +267,71 @@ mod tests {
         assert_eq!(t.history().len(), 8);
         assert_eq!(t.history()[0].materials[0].proportion, 3.0);
         assert_eq!(t.current().unwrap().materials[0].proportion, 10.0);
+    }
+
+    fn mixed_price(key: &str) -> Option<PriceInfo> {
+        priced(key)
+    }
+
+    #[test]
+    fn partial_prices_do_not_give_not_worth() {
+        let s = ModuleSettings::default();
+        let mats = vec![mat("Platinum", 3.0), mat("Painite", 25.0)];
+        let mut t = ProspectorTracker::default();
+        t.apply(&ev("High", mats.clone(), None), &mixed_price, &s);
+        assert_eq!(
+            t.current().unwrap().verdict,
+            Verdict::Worth {
+                est_value: Some(198_000)
+            }
+        );
+        t.apply(&ev("Medium", mats, None), &mixed_price, &s);
+        assert_eq!(t.current().unwrap().verdict, Verdict::NoData);
+    }
+
+    #[test]
+    fn history_does_not_dedup_identical_prospects() {
+        let s = ModuleSettings::default();
+        let mut t = ProspectorTracker::default();
+        let e = ev("Low", vec![mat("Bauxite", 5.0)], None);
+        assert!(t.apply(&e, &none, &s));
+        assert!(t.apply(&e, &none, &s));
+        assert_eq!(t.history().len(), 2);
+    }
+
+    #[test]
+    fn verdict_worth_at_exact_threshold() {
+        let s = ModuleSettings {
+            mining_threshold_cr: 66_000,
+            ..Default::default()
+        };
+        let mut t = ProspectorTracker::default();
+        t.apply(&ev("Low", vec![mat("Platinum", 3.0)], None), &priced, &s);
+        assert_eq!(
+            t.current().unwrap().verdict,
+            Verdict::Worth {
+                est_value: Some(66_000)
+            }
+        );
+    }
+
+    #[test]
+    fn motherlode_outside_interest_without_interest_materials_is_not_worth() {
+        let mut t = ProspectorTracker::default();
+        let e = ev("High", vec![mat("Bauxite", 5.0)], Some("Bauxite"));
+        t.apply(&e, &none, &ModuleSettings::default());
+        assert_eq!(t.current().unwrap().verdict, Verdict::NotWorth);
+    }
+
+    #[test]
+    fn unknown_content_has_no_est_value() {
+        let mut t = ProspectorTracker::default();
+        let e = ev("Whatever", vec![mat("Platinum", 30.0)], None);
+        t.apply(&e, &priced, &ModuleSettings::default());
+        let v = t.current().unwrap();
+        assert_eq!(v.content, AsteroidContent::Unknown);
+        assert_eq!(v.materials[0].est_value, None);
+        assert_eq!(v.est_total, None);
     }
 
     #[test]
