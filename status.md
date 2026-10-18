@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 23), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
+- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 25), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
 
 ## Fases
 
@@ -58,9 +58,9 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 20 | `mining` — sesión de minería | ✅ hecha | 73915e4, df3e786 | Sesión de minería; Cargo sin inventario conserva limpets |
 | 21 | `mining` — `PriceBook` y «Dónde vender» | ✅ hecha | 570cdcb, 99365d2 | PriceBook y Dónde vender; Market.json soportado; clear_remote al cambiar nave |
 | 22 | `mining` — módulo, topics, relevancia, red y registro | ✅ hecha | 846516e, 2c98f49 | Módulo de minería; clave con plataforma; reinicio por cmdr/LoadGame; 408 tests |
-| 23 | UI — panel «Prospector» | 🔄 en curso | — |  |
-| 24 | UI — «Sesión de minería» y «Dónde vender» | ⬜ | — | |
-| 25 | UI — disposiciones «Combate» y «Minería», relevancia y ajustes | ⬜ | — | |
+| 23 | UI — panel «Prospector» | ✅ hecha | 3c8e204, 650bfc6 | Panel prospector |
+| 24 | UI — «Sesión de minería» y «Dónde vender» | ✅ hecha | 928ad55, 650bfc6 | Sesión y Dónde vender; hora del diario (as_of), nombres localizados |
+| 25 | UI — disposiciones «Combate» y «Minería», relevancia y ajustes | 🔄 en curso | — |  |
 | 26 | fixtures sintéticos y pruebas de extremo a extremo | ⬜ | — | |
 | 27 | `tmc-headless eval` — vales y rendimiento de asteroides | ⬜ | — | |
 | 28 | avisos, consumo, verificación de los 10 criterios y cierre | ⬜ | — | |
