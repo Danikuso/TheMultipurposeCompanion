@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») empezando por la Task 0, con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
+- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (Task 0 hecha; siguiente Task 1 — Spike Ardent), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
 
 ## Fases
 
@@ -28,6 +28,42 @@
 | F8 | Overlay ligero e integrado | ⬜ |
 | F9 | Crimen y piratería (Law & Disorder, dic. 2026) | ⬜ |
 | F10 | Atajos, Stream Deck, VoiceAttack, build Linux | ⬜ |
+
+## Tareas de F2
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 0 | Spike AX | ✅ hecha | a2276dd | Sin datos AX en los 7 diarios; AX desde fuentes secundarias (sin verificar); BrokerPercentage: Amount tal cual; sin asistencias. Revisión aprobada. |
+| 1 | Spike Ardent | 🔄 en curso | — | |
+| 2 | Aprobaciones del propietario tras los spikes | ⬜ | — | |
+| 3 | `tmc-model` — eventos de combate | ⬜ | — | |
+| 4 | `tmc-model` — eventos de minería y mercado, `Cargo` con inventario, reparaciones | ⬜ | — | |
+| 5 | `tmc-model` — bloque `ThargoidWar` y facciones en `LocationInfo` | ⬜ | — | |
+| 6 | `tmc-model` — consultas de Ardent, `PadSize` y ajustes de minería | ⬜ | — | |
+| 7 | `tmc-net` — adaptador Ardent | ⬜ | — | |
+| 8 | configuración nueva en `config.toml` y `PUT /api/config` | ⬜ | — | |
+| 9 | datos estáticos `ship_pads.json` y `mining_yield.json` | ⬜ | — | |
+| 10 | i18n — `combat.ftl` y `mining.ftl` | ⬜ | — | |
+| 11 | `combat` — objetivo actual | ⬜ | — | |
+| 12 | `combat` — mi nave | ⬜ | — | |
+| 13 | `combat` — libro de vales | ⬜ | — | |
+| 14 | `combat` — sesión de caza y reconstrucción | ⬜ | — | |
+| 15 | `combat` — zona de conflicto y AX | ⬜ | — | |
+| 16 | `combat` — módulo, topics, relevancia, red y registro | ⬜ | — | |
+| 17 | UI — paneles «Objetivo» y «Mi nave» | ⬜ | — | |
+| 18 | UI — «Sesión de caza», «Zona de conflicto» y «AX» | ⬜ | — | |
+| 19 | `mining` — prospector | ⬜ | — | |
+| 20 | `mining` — sesión de minería | ⬜ | — | |
+| 21 | `mining` — `PriceBook` y «Dónde vender» | ⬜ | — | |
+| 22 | `mining` — módulo, topics, relevancia, red y registro | ⬜ | — | |
+| 23 | UI — panel «Prospector» | ⬜ | — | |
+| 24 | UI — «Sesión de minería» y «Dónde vender» | ⬜ | — | |
+| 25 | UI — disposiciones «Combate» y «Minería», relevancia y ajustes | ⬜ | — | |
+| 26 | fixtures sintéticos y pruebas de extremo a extremo | ⬜ | — | |
+| 27 | `tmc-headless eval` — vales y rendimiento de asteroides | ⬜ | — | |
+| 28 | avisos, consumo, verificación de los 10 criterios y cierre | ⬜ | — | |
 
 ## Tareas de F1
 

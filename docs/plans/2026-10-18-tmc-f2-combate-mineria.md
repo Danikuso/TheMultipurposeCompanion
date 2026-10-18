@@ -755,4 +755,6 @@ test('settings put sends json with content type and reverts on 400', /* 400 → 
 
 (Anotar aquí cualquier cambio respecto a este plan o a la spec, con fecha, motivo y tareas afectadas. Las omisiones AX del spike y los ajustes de adaptador de Ardent se registran aquí.)
 
+- 2026-10-18 · Spike AX (Task 0): los diarios del propietario no tienen ningún dato AX. Se mantiene `THARGOID_SHIPS` como constante pequeña **no verificada** y tolerante a valores desconocidos (Tasks 11/15); bonos AX y `ThargoidWar` según fuentes secundarias con fixtures sintéticos. Se **omiten** las asistencias (`SharedWithOthers` no aparece): cada `Bounty` cuenta como baja completa. `BrokerPercentage`: se usa `Amount` tal cual (informativo); si un diario real demuestra que es neto, se aplicará `Amount/(1−B/100)`. Afecta a Tasks 5, 11, 13, 14, 15, 26.
+- 2026-10-18 · Controlador: `NearestService` incluye `min_pad`; la sesión de minería empieza en `LoadGame` (spec §10.4).
 - 2026-10-18 · Preflight: aplicadas las resoluciones de la revisión previa (ver preflight.md del ledger).
