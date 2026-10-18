@@ -55,8 +55,8 @@ fn planet_k(class: &str, terraformable: bool) -> f64 {
         "Earthlike body" => (181_126.0, 0.0),
         "Water world" => (64_831.0, 116_295.0),
         "Ammonia world" => (96_932.0, 0.0),
-        "Sudarsky class I gaseous giant" => (1_656.0, 0.0),
-        "Sudarsky class II gaseous giant" | "High metal content body" => (9_654.0, 100_677.0),
+        "Sudarsky class I gas giant" => (1_656.0, 0.0),
+        "Sudarsky class II gas giant" | "High metal content body" => (9_654.0, 100_677.0),
         "Metal rich body" => (21_790.0, 65_631.0),
         _ => (300.0, 93_328.0),
     };
@@ -66,6 +66,7 @@ fn planet_k(class: &str, terraformable: bool) -> f64 {
 /// Clasifica un `Scan`; cinturones y anillos (sin clase ni tipo) devuelven `None`.
 pub fn body_kind(scan: &Scan) -> Option<BodyKind> {
     if let Some(class) = scan.planet_class.as_deref().filter(|c| !c.is_empty()) {
+        // «Terraformed» (ya terraformado) NO cuenta como terraformable.
         let terraformable = matches!(
             scan.terraform_state.as_deref(),
             Some("Terraformable") | Some("Terraforming")
@@ -277,7 +278,7 @@ mod tests {
     #[test]
     fn gas_giant_is_mappable() {
         let s = Scan {
-            planet_class: Some("Sudarsky class I gaseous giant".into()),
+            planet_class: Some("Sudarsky class I gas giant".into()),
             mass_em: Some(300.0),
             was_discovered: Some(true),
             was_mapped: Some(true),
@@ -339,6 +340,68 @@ mod tests {
             k("Metal rich body", ""),
             Some(BodyKind::Planet { k: 21_790.0 })
         );
+    }
+
+    fn planet_k_of(class: &str, tf: &str) -> Option<f64> {
+        let s = Scan {
+            planet_class: Some(class.into()),
+            terraform_state: Some(tf.into()),
+            ..Default::default()
+        };
+        match body_kind(&s) {
+            Some(BodyKind::Planet { k }) => Some(k),
+            _ => None,
+        }
+    }
+
+    fn fixture_k(file: &str, class: &str) -> f64 {
+        let path = format!(
+            "{}/../../tests/fixtures/journal/{file}",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let text = std::fs::read_to_string(path).unwrap();
+        let needle = format!("\"PlanetClass\":\"{class}\"");
+        let line = text
+            .lines()
+            .find(|l| l.contains("\"event\":\"Scan\"") && l.contains(&needle))
+            .unwrap();
+        let scan: Scan = serde_json::from_str(line).unwrap();
+        assert_eq!(scan.planet_class.as_deref(), Some(class));
+        match body_kind(&scan) {
+            Some(BodyKind::Planet { k }) => k,
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn gas_giant_k_from_real_fixtures() {
+        assert_eq!(
+            fixture_k("real_02.log", "Sudarsky class II gas giant"),
+            9_654.0
+        );
+        assert_eq!(
+            fixture_k("exploration_session.log", "Sudarsky class I gas giant"),
+            1_656.0
+        );
+    }
+
+    #[test]
+    fn planet_k_other_classes() {
+        assert_eq!(planet_k_of("Ammonia world", ""), Some(96_932.0));
+        assert_eq!(planet_k_of("High metal content body", ""), Some(9_654.0));
+        assert_eq!(
+            planet_k_of("High metal content body", "Terraformable"),
+            Some(110_331.0)
+        );
+        for c in [
+            "Helium rich gas giant",
+            "Water giant",
+            "Gas giant with water based life",
+        ] {
+            assert_eq!(planet_k_of(c, ""), Some(300.0), "{c}");
+        }
+        // Ya terraformado: no es terraformable.
+        assert_eq!(planet_k_of("Water world", "Terraformed"), Some(64_831.0));
     }
 
     #[test]
