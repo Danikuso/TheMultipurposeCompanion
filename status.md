@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 6), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
+- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 7), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
 
 ## Fases
 
@@ -41,8 +41,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 3 | `tmc-model` — eventos de combate | ✅ hecha | ecce185 | ShipTargeted (alias ShipTargetted), Bounty, bonos, RedeemVoucher, calor, escudos… Revisión aprobada. |
 | 4 | `tmc-model` — eventos de minería y mercado, `Cargo` con inventario, reparaciones | ✅ hecha | ac3eacb | ProspectedAsteroid, MiningRefined, LaunchDrone, MarketSell, Cargo con inventario, reparaciones. Revisión aprobada. |
 | 5 | `tmc-model` — bloque `ThargoidWar` y facciones en `LocationInfo` | ✅ hecha | 99d0f19, a76ba18 | Bloque ThargoidWar y facciones tolerantes a tipos inesperados; thargoid_presence. Revisión aprobada. |
-| 6 | `tmc-model` — consultas de Ardent, `PadSize` y ajustes de minería | 🔄 en curso | — |  |
-| 7 | `tmc-net` — adaptador Ardent | ⬜ | — | |
+| 6 | `tmc-model` — consultas de Ardent, `PadSize` y ajustes de minería | ✅ hecha | eac8347 | NetQuery CommodityImportsNearby/NearestService (con min_pad), NetSource::Ardent, PadSize, ajustes de minería. Revisión aprobada. |
+| 7 | `tmc-net` — adaptador Ardent | 🔄 en curso | — |  |
 | 8 | configuración nueva en `config.toml` y `PUT /api/config` | ⬜ | — | |
 | 9 | datos estáticos `ship_pads.json` y `mining_yield.json` | ⬜ | — | |
 | 10 | i18n — `combat.ftl` y `mining.ftl` | ⬜ | — | |
