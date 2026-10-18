@@ -10,8 +10,8 @@ use crate::exobiology::predict::{
 use crate::exobiology::species::SpeciesTable;
 use crate::exploration::unsold::UnsoldLedger;
 use crate::exploration::value::{body_kind, estimate_probes};
-use crate::navigation::jump::{ShipMass, fsd_from_loadout, jump_range_with};
-use std::collections::{BTreeSet, HashMap, HashSet};
+use crate::navigation::jump::{RangeSource, ShipMass, build_jump_model, jump_range_with};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use tmc_model::events::{
     EventKind, JournalEvent, Loadout, OrganicScanType, SaaScanComplete, Scan, ScanOrganic,
     SellOrganicData,
@@ -29,6 +29,18 @@ pub struct RangeReport {
     pub max_fuel_hits: u32,
     /// Aciertos con masa = vacío + solo el combustible máximo por salto.
     pub max_fuel_mass_hits: u32,
+    /// Por FSD visto: cuántos loadouts y masas de referencia distintas lo respaldan.
+    pub fsd_stats: Vec<FsdStat>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FsdStat {
+    pub item: String,
+    pub loadouts: u32,
+    pub distinct_masses: u32,
+    /// `optimal_mass` ajustado con este mismo historial (comprobación circular).
+    pub fitted: bool,
+    pub verified: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -120,7 +132,7 @@ struct Run<'a> {
     /// Clase y `WasDiscovered` de la estrella principal por sistema.
     primary: HashMap<u64, (String, Option<bool>)>,
     genera: HashMap<BodyKey, Vec<String>>,
-    evaluated: HashSet<BodyKey>,
+    evaluated: HashSet<(BodyKey, String)>,
     history: HistoryStats,
     history_seen: HashSet<(BodyKey, String)>,
     completed: Vec<(String, Option<String>, BodyKey)>,
@@ -135,6 +147,7 @@ struct Run<'a> {
     species_values: SpeciesValueReport,
     missing_fsd: BTreeSet<String>,
     /// Cuerpos escaneados (estrellas/planetas) y `BodyCount` del FSS por sistema.
+    fsd_stats: BTreeMap<String, (u32, BTreeSet<i64>, bool, bool)>,
     coverage: HashMap<String, (Option<u32>, HashSet<u32>)>,
     at_carrier: bool,
 }
@@ -182,6 +195,7 @@ impl<'a> Run<'a> {
             probes: ProbeReport::default(),
             species_values: SpeciesValueReport::default(),
             missing_fsd: BTreeSet::new(),
+            fsd_stats: BTreeMap::new(),
             coverage: HashMap::new(),
             at_carrier: false,
         }
@@ -272,38 +286,54 @@ impl<'a> Run<'a> {
         }) {
             self.range.guardian_cases += 1;
         }
-        let Some(spec) = fsd_from_loadout(lo, self.fsd) else {
-            if let Some(item) = fsd_module.item.as_deref() {
-                self.missing_fsd.insert(item.to_ascii_lowercase());
-            }
+        let item = fsd_module
+            .item
+            .as_deref()
+            .unwrap_or_default()
+            .to_ascii_lowercase();
+        let entry = self.fsd.find_fsd(&item);
+        if entry.is_none() {
+            self.missing_fsd.insert(item.clone());
+        }
+        // Usa el modelo de producción: la referencia de masa sale de él.
+        let model = build_jump_model(lo, self.fsd);
+        let stat = self.fsd_stats.entry(item).or_default();
+        stat.0 += 1;
+        stat.2 = entry.is_some_and(|e| e.provenance.starts_with("ajustado"));
+        stat.3 = entry.is_some_and(|e| e.verified);
+        if let Some(reference) = model.laden_ref_mass {
+            stat.1.insert((reference * 10.0).round() as i64);
+        }
+        let (Some(spec), Some(reference)) = (&model.fsd, model.laden_ref_mass) else {
             return;
         };
-        let mass = ShipMass {
+        let at_reference = ShipMass {
             unladen,
+            fuel_main: reference - unladen,
+            fuel_reserve: 0.0,
+            cargo: 0.0,
+        };
+        let Some(modelled) = model.range_now(&at_reference) else {
+            return;
+        };
+        let error = (modelled - game).abs();
+        if model.source == RangeSource::Formula && error <= RANGE_TOLERANCE_LY {
+            self.range.within_tolerance += 1;
+            self.range.max_fuel_mass_hits += 1;
+        }
+        // Columnas heredadas (masa con depósito lleno), solo para comparar.
+        let mass = ShipMass {
             fuel_main: lo
                 .fuel_capacity
                 .as_ref()
                 .and_then(|f| f.main)
                 .unwrap_or(0.0),
-            fuel_reserve: 0.0,
-            cargo: 0.0,
+            ..at_reference
         };
-        let capped = jump_range_with(&spec, &mass, true);
-        let full = jump_range_with(&spec, &mass, false);
-        // Referencia del juego: solo el combustible máximo por salto a bordo.
-        let light = ShipMass {
-            fuel_main: mass.fuel_main.min(spec.max_fuel_per_jump),
-            ..mass
-        };
-        let error = (jump_range_with(&spec, &light, true) - game).abs();
-        if error <= RANGE_TOLERANCE_LY {
-            self.range.within_tolerance += 1;
-            self.range.max_fuel_mass_hits += 1;
-        }
-        if (capped - game).abs() <= RANGE_TOLERANCE_LY {
+        if (jump_range_with(spec, &mass, true) - game).abs() <= RANGE_TOLERANCE_LY {
             self.range.max_fuel_hits += 1;
         }
-        if (full - game).abs() <= RANGE_TOLERANCE_LY {
+        if (jump_range_with(spec, &mass, false) - game).abs() <= RANGE_TOLERANCE_LY {
             self.range.full_tank_hits += 1;
         }
         self.range_measured += 1;
@@ -402,7 +432,7 @@ impl<'a> Run<'a> {
         };
         let star = self.primary.get(&address).map(|(class, _)| class.as_str());
         let profile = body_profile(scan, star);
-        if self.evaluated.insert(key) {
+        if self.evaluated.insert((key, species.to_ascii_lowercase())) {
             let genera = self.genera.get(&key).map(Vec::as_slice);
             let level = predict(
                 &profile,
@@ -483,6 +513,16 @@ impl<'a> Run<'a> {
     }
 
     fn finish(mut self) -> EvalReport {
+        self.range.fsd_stats = std::mem::take(&mut self.fsd_stats)
+            .into_iter()
+            .map(|(item, (loadouts, masses, fitted, verified))| FsdStat {
+                item,
+                loadouts,
+                distinct_masses: masses.len() as u32,
+                fitted,
+                verified,
+            })
+            .collect();
         if self.range_measured > 0 {
             self.range.mean_abs_error = self.range_error_sum / f64::from(self.range_measured);
         }
@@ -516,6 +556,7 @@ impl<'a> Run<'a> {
 mod tests {
     use super::*;
     use crate::exploration::value::body_values;
+    use crate::navigation::jump::fsd_from_loadout;
     use tmc_model::events::parse_line;
 
     fn events(lines: &[String]) -> Vec<JournalEvent> {
@@ -588,6 +629,10 @@ mod tests {
         assert_eq!(report.range.within_tolerance, 3);
         assert!(report.range.max_abs_error < 0.05, "{:?}", report.range);
         assert!(report.missing_fsd.is_empty());
+        assert_eq!(report.range.fsd_stats.len(), 1);
+        assert_eq!(report.range.fsd_stats[0].loadouts, 3);
+        assert_eq!(report.range.fsd_stats[0].distinct_masses, 1);
+        assert!(!report.range.fsd_stats[0].fitted);
     }
 
     #[test]
@@ -725,5 +770,28 @@ mod tests {
             vec![Some(Likelihood::Medium), Some(Likelihood::High)]
         );
         assert!((report.prediction.ratio - 1.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn prediction_is_evaluated_per_species_not_once_per_body() {
+        let rules = BioRules::from_json(
+            r#"{"source":"t","license":"t","version":"t","rules":[
+              {"species":"$Codex_Ent_Bacterial_01_Name;","body_class":["Rocky body"],
+               "atmosphere_type":["CarbonDioxide"],"gravity_max":0.27,"source":"synthetic"}]}"#,
+        )
+        .unwrap();
+        let lines = vec![
+            rocky_scan(1, 5),
+            analyse(1, 5, "$Codex_Ent_Bacterial_01_Name;"),
+            analyse(1, 5, "$Codex_Ent_Bacterial_02_Name;"),
+        ];
+        let report = eval_with(
+            events(&lines).into_iter(),
+            fsd_table(),
+            &rules,
+            species_table(),
+        );
+        assert_eq!(report.prediction.bodies, 2);
+        assert_eq!(report.prediction.hit_high_or_medium, 1);
     }
 }

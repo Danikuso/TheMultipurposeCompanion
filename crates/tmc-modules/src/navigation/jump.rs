@@ -199,7 +199,9 @@ pub fn build_jump_model(lo: &Loadout, table: &FsdTable) -> JumpModel {
         warn_once(lo.ship_id, msg);
     }
 
-    if game_max_range.is_some() && laden_ref_mass.is_some() {
+    // Sin FSD conocido no se sabe cuánto combustible usa el juego como referencia
+    // (máx. por salto): el alcance se oculta en vez de escalar con sesgo.
+    if game_max_range.is_some() && laden_ref_mass.is_some() && fsd.is_some() {
         model(RangeSource::Scaled)
     } else {
         model(RangeSource::Unknown)
