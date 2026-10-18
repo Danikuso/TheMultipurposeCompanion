@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (Task 0 hecha; siguiente Task 1 — Spike Ardent), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
+- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (Bloque 0 hecho; siguiente Task 3 — eventos de combate), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
 
 ## Fases
 
@@ -36,8 +36,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | # | Tarea | Estado | Commit | Notas |
 |---|---|---|---|---|
 | 0 | Spike AX | ✅ hecha | a2276dd | Sin datos AX en los 7 diarios; AX desde fuentes secundarias (sin verificar); BrokerPercentage: Amount tal cual; sin asistencias. Revisión aprobada. |
-| 1 | Spike Ardent | 🔄 en curso | — | |
-| 2 | Aprobaciones del propietario tras los spikes | ⬜ | — | |
+| 1 | Spike Ardent | ✅ hecha | e9937cd | Rutas por address OK; filtro de plataforma local; nombres = Type del diario; fixtures sintéticos. |
+| 2 | Aprobaciones del propietario tras los spikes | ✅ hecha | (este commit) | Registradas en Bloqueos; no bloquean. |
 | 3 | `tmc-model` — eventos de combate | ⬜ | — | |
 | 4 | `tmc-model` — eventos de minería y mercado, `Cargo` con inventario, reparaciones | ⬜ | — | |
 | 5 | `tmc-model` — bloque `ThargoidWar` y facciones en `LocationInfo` | ⬜ | — | |
@@ -132,6 +132,12 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 18 | Presupuesto de consumo y cierre de F0 | ✅ hecha | fe99cd6 | `measure-footprint.ps1` (`max_mb=144.91` < 150, `avg_cpu_idle=0.09%` < 1% PASS), `README.md` y 9/9 criterios §15 verificados. |
 
 ## Bloqueos y pendientes del propietario
+
+- [ ] **F2 · Resultados de los spikes (para tu visto bueno; F2 sigue avanzando):**
+  - **AX:** tus 7 diarios no tienen ningún dato AX. Los paneles AX se construyen con nombres de eventos y naves de fuentes secundarias, marcados como no verificados, y se prueban con datos sintéticos; se ajustarán cuando juegues una sesión AX.
+  - **Asistencias:** no aparecen en tus diarios (`SharedWithOthers`), así que cada recompensa cuenta como baja completa.
+  - **Vales cobrados en Interstellar Factors:** se usa el importe del diario tal cual; el % del broker se muestra como información.
+  - **Ardent:** valores por defecto de «Dónde vender»: radio 100 al, volumen mínimo 100 t, datos de hasta 3 días, sin carriers; el filtro de plataforma se hace en TMC (Ardent no lo aplica en esa consulta). Se excluyen asentamientos a pie.
 
 - [x] **F1 · Corrección de spec §5.1:** propietario aprueba explícitamente el 2026-10-18 validar MaxJumpRange con masa en vacío más combustible máximo por salto (no depósito lleno). Spec actualizada; evidencia de 15 loadouts en Task 29. Código ya alineado.
 - [x] **F1 · Cierre con el historial local actual (7 diarios):** propietario ordena finalizar F1 (2026-10-18). Los criterios 3, 4 y 6 pasan en fixtures y los 15/15 loadouts locales coinciden (±0,0023 al); `tmc-headless eval` queda disponible para validar futuras sesiones con FSD de ingeniería/Guardian, ventas de exploración cubiertas y exobiología.
