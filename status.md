@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Task 30 (fixtures anonimizados y pruebas de extremo a extremo) 🔄 en curso (Bloque 5).
-- **Siguiente acción:** completar la Task 30 (ejecución con subagentes; ledger local `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`). CI de GitHub deshabilitada por orden del propietario (2026-10-18); checks en local.
+- **Tarea:** F1 · Task 31 (disposición «Exploración» por defecto y ajustes nuevos en la UI) 🔄 en curso (Bloque 5).
+- **Siguiente acción:** completar la Task 31 (ejecución con subagentes; ledger local `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`). CI de GitHub deshabilitada por orden del propietario (2026-10-18); checks en local.
 
 ## Fases
 
@@ -65,7 +65,8 @@
 | 27 | `exobiology` — módulo, bonus ×5, bio sin vender y relevancia | ✅ hecha | 0d228b4 | Módulo `Exobiology` registrado (4 módulos); topics body/sampling/unsold; ×5 estimado; reconstrucción idempotente al arrancar; 236 tmc-modules PASS. Revisión aprobada. |
 | 28 | UI — panel de exobiología | ✅ hecha | 9578414, 1b824dd | Candidatos con probabilidad y origen, muestreo con barra/dirección/sin vender, tipo y atmósfera localizados; 69 tests UI PASS. Revisión aprobada tras 1 ronda. |
 | 29 | `tmc-headless eval` (criterios 3, 4 y 6) | ✅ hecha | 98f93e9, cdc921e, d16ebb0, e734e5f | Eval local con solo agregados. Tus 7 diarios: C3 15/15 loadouts dentro de ±0,05 al pero INSUFICIENTE (sin ingeniería ni Guardian); C4 y C6 INSUFICIENTE (sin ventas cubiertas ni exobiología). Corrección de §5.1 (ver Bloqueos). |
-| 30–32 | Ver plan | ⬜ | — | |
+| 30 | Fixtures anonimizados y pruebas de extremo a extremo | ✅ hecha | 1ee4697 | `real_explo_01.log` (87 líneas, anonimizado y revisado); tira p95 310,8 ms con juego en marcha; exobiología e2e con fixture sintético (sin datos reales). Revisión aprobada. |
+| 31–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
