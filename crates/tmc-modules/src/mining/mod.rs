@@ -53,6 +53,16 @@ const RESULT_MAX_AGE_MIN: i64 = 15;
 const FAILED_COOLDOWN_S: i64 = 300;
 /// Ventana de actividad tras lanzar un limpet o prospectar.
 const ACTIVE_WINDOW_MIN: i64 = 10;
+/// Re-render de la sesión sin eventos de minería (para las tasas por hora).
+const SESSION_REFRESH_S: i64 = 30;
+
+fn pad_tag(p: PadSize) -> &'static str {
+    match p {
+        PadSize::Small => "s",
+        PadSize::Medium => "m",
+        PadSize::Large => "l",
+    }
+}
 
 #[derive(Serialize)]
 struct SellTopic<'a> {
@@ -76,8 +86,9 @@ pub struct Mining {
     last_prospect: Option<DateTime<Utc>>,
     /// Sistema para el que valen `results`, `answered` y `failed`.
     addr: u64,
-    /// Plataforma de la nave vista por última vez (`None` = aún sin ver ninguna).
-    pad: Option<Option<PadSize>>,
+    /// Última plataforma conocida de la nave.
+    pad: Option<PadSize>,
+    last_session_render: Option<DateTime<Utc>>,
     results: BTreeMap<String, Vec<RemoteMarket>>,
     answered: HashMap<String, DateTime<Utc>>,
     failed: HashMap<String, DateTime<Utc>>,
@@ -101,6 +112,7 @@ impl Mining {
             last_prospect: None,
             addr: 0,
             pad: None,
+            last_session_render: None,
             results: BTreeMap::new(),
             answered: HashMap::new(),
             failed: HashMap::new(),
@@ -145,19 +157,29 @@ impl Mining {
             self.failed.clear();
             self.fetched_at = None;
         }
+        // Una nave desconocida (p. ej. entre eventos) no cuenta como cambio.
         let pad = Self::ship_pad(state);
-        let changed = matches!(self.pad, Some(old) if old != pad);
+        let changed = pad.is_some() && self.pad != pad;
         if changed {
             // Los mercados guardados se filtraron para otra plataforma.
             self.prices.clear_remote();
-            self.results.clear();
-            self.answered.clear();
-            self.failed.clear();
-            self.fetched_at = None;
-            self.inflight.finish_prefix("sell:");
+            self.clear_results();
+            self.pad = pad;
         }
-        self.pad = Some(pad);
         changed
+    }
+
+    fn clear_results(&mut self) {
+        self.results.clear();
+        self.answered.clear();
+        self.failed.clear();
+        self.fetched_at = None;
+        self.inflight.finish_prefix("sell:");
+    }
+
+    /// Plataforma de la nave: la actual o, si se desconoce un instante, la última.
+    fn cur_pad(&self, state: &GameState) -> Option<PadSize> {
+        Self::ship_pad(state).or(self.pad)
     }
 
     /// Un cambio de comandante descarta lo aprendido de su historial.
@@ -173,10 +195,21 @@ impl Mining {
         if self.cmdr.as_deref() == Some(name.as_str()) {
             return;
         }
+        let switched = self.cmdr.is_some();
         self.cmdr = Some(name);
         self.prices = PriceBook::default();
         self.prices_loaded = false;
         self.inflight.finish(PRICES_KEY);
+        if switched {
+            // Otro comandante: nada de lo aprendido sirve.
+            self.session = MiningSession::default();
+            self.session.reset(self.clock());
+            self.inventory.clear();
+            self.prospector = ProspectorTracker::default();
+            self.last_drone = None;
+            self.last_prospect = None;
+            self.clear_results();
+        }
     }
 
     /// Pide la reconstrucción de las últimas ventas (solo en vivo, una vez por
@@ -212,6 +245,10 @@ impl Mining {
                 {
                     self.last_drone = Some(at);
                 }
+            }
+            EventKind::LoadGame(_) => {
+                // Nueva partida: los resultados de venta se piden de nuevo.
+                self.clear_results();
             }
             EventKind::MarketSell(m) => {
                 self.prices.on_market_sell(m, now);
@@ -297,7 +334,7 @@ impl Mining {
         }
         let now = self.clock();
         // Nave desconocida: sin filtro (`Small`), el filtrado fino se hace en local.
-        let min_pad = Self::ship_pad(state).unwrap_or(PadSize::Small);
+        let min_pad = self.cur_pad(state).unwrap_or(PadSize::Small);
         for key in self.request_keys() {
             if self
                 .answered
@@ -313,7 +350,7 @@ impl Mining {
             {
                 continue;
             }
-            let rk = format!("sell:{addr}:{key}");
+            let rk = format!("sell:{addr}:{key}:{}", pad_tag(min_pad));
             if !self.inflight.begin(&rk, now) {
                 continue;
             }
@@ -331,22 +368,30 @@ impl Mining {
 
     /// Devuelve `true` si cambió el libro de precios.
     fn apply_response(&mut self, r: &NetResponse, state: &GameState) -> bool {
-        let Some((addr, commodity)) = r
+        let Some((addr, commodity, pad)) = r
             .key
             .strip_prefix("sell:")
             .and_then(|rest| rest.split_once(':'))
-            .and_then(|(a, c)| Some((a.parse::<u64>().ok()?, c.to_owned())))
+            .and_then(|(a, rest)| {
+                let (c, p) = rest.rsplit_once(':')?;
+                Some((a.parse::<u64>().ok()?, c.to_owned(), p.to_owned()))
+            })
             .filter(|_| r.module == "mining")
         else {
             return false;
         };
         self.inflight.finish(&r.key);
+        // Pedida para otra plataforma (la nave cambió): no vale.
+        let cur = self.cur_pad(state).unwrap_or(PadSize::Small);
+        if pad != pad_tag(cur) {
+            return false;
+        }
         let current = addr == state.location.system_address && addr == self.addr;
         let key = commodity_key(&commodity);
         let now = self.clock();
         match &r.outcome {
             NetOutcome::Markets(ms) => {
-                let ms = filter_compatible(ms, Self::ship_pad(state));
+                let ms = filter_compatible(ms, self.cur_pad(state));
                 self.prices.on_remote(&key, &ms, r.fetched_at);
                 if current {
                     self.results.insert(key.clone(), ms);
@@ -356,11 +401,13 @@ impl Mining {
                 true
             }
             NetOutcome::NoData => {
+                // Sin mercados: se olvida un precio remoto antiguo.
+                self.prices.on_remote(&key, &[], r.fetched_at);
                 if current {
                     self.results.insert(key.clone(), Vec::new());
                     self.answered.insert(key, now);
                 }
-                false
+                true
             }
             NetOutcome::Failed(_) => {
                 if current {
@@ -454,7 +501,7 @@ impl Mining {
             SellPlan::build(
                 &self.inventory,
                 &results,
-                self.pad.flatten(),
+                self.pad,
                 self.fetched_at.unwrap_or_else(|| self.clock()),
             )
         });
@@ -499,16 +546,34 @@ impl Module for Mining {
     fn on_event(&mut self, ev: &SourceEvent, state: &GameState, ctx: &mut ModuleCtx) -> TopicSet {
         let mut recompute = self.sync(state);
         let mut request = false;
+        let mut session_dirty = false;
         match ev {
             SourceEvent::Settings(s) => {
                 let enabling = s.online_services && !self.settings.online_services;
+                let radius = s.sell_search_radius_ly != self.settings.sell_search_radius_ly;
                 recompute = true;
+                session_dirty = true;
                 self.settings = s.clone();
-                request = enabling;
+                if radius {
+                    self.clear_results();
+                }
+                request = enabling || radius;
             }
             SourceEvent::Journal { ev, .. } => {
                 self.on_journal(ev, state);
                 self.ensure_prices_task(ctx);
+                session_dirty = matches!(
+                    ev.kind,
+                    EventKind::MiningRefined(_)
+                        | EventKind::LaunchDrone(_)
+                        | EventKind::ProspectedAsteroid(_)
+                        | EventKind::AsteroidCracked(_)
+                        | EventKind::Cargo(_)
+                        | EventKind::Loadout(_)
+                        | EventKind::EjectCargo(_)
+                        | EventKind::MarketSell(_)
+                        | EventKind::LoadGame(_)
+                );
                 request = matches!(
                     ev.kind,
                     EventKind::Location(_)
@@ -525,11 +590,13 @@ impl Module for Mining {
                     self.inventory =
                         inventory_of(f.inventory.iter().map(|i| (i.name.as_str(), i.count)));
                     request = true;
+                    session_dirty = true;
                 }
             }
             SourceEvent::Companion(CompanionFile::Raw(CompanionKind::Market, v)) => {
                 let now = self.clock();
                 self.prices.on_market_json(v, now);
+                session_dirty = true;
             }
             SourceEvent::Stored { module, tag, value } if module == "mining" => {
                 if ctx.replaying || tag != TAG_PRICES {
@@ -546,6 +613,7 @@ impl Module for Mining {
             SourceEvent::Action { name, .. } if name == ACTION_RESET => {
                 let now = self.clock();
                 self.session.reset(now);
+                session_dirty = true;
             }
             _ => return TopicSet::new(),
         }
@@ -558,8 +626,15 @@ impl Module for Mining {
         let mut dirty = TopicSet::new();
         let v = self.render_prospector();
         self.set(TOPIC_PROSPECTOR, v, &mut dirty);
-        let v = self.render_session();
-        self.set(TOPIC_SESSION, v, &mut dirty);
+        let now = self.clock();
+        let stale = self
+            .last_session_render
+            .is_none_or(|t| (now - t).num_seconds() >= SESSION_REFRESH_S);
+        if session_dirty || recompute || stale {
+            self.last_session_render = Some(now);
+            let v = self.render_session();
+            self.set(TOPIC_SESSION, v, &mut dirty);
+        }
         let v = self.render_sell(state);
         self.set(TOPIC_SELL, v, &mut dirty);
         dirty
