@@ -48,3 +48,5 @@ combat-alert-shields-down = Boucliers tombés
 combat-alert-overheating = Surchauffe
 combat-alert-under-attack = Sous attaque
 combat-alert-interdiction = Interdiction en cours
+
+panel-combat-ship = Mon vaisseau

@@ -48,3 +48,5 @@ combat-alert-shields-down = Escudos caíram
 combat-alert-overheating = Sobreaquecimento
 combat-alert-under-attack = Sob ataque
 combat-alert-interdiction = Interdição em curso
+
+panel-combat-ship = Minha nave
