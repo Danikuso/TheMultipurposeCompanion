@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 10), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
+- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 11), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
 
 ## Fases
 
@@ -45,8 +45,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 7 | `tmc-net` — adaptador Ardent | ✅ hecha | 934b660 | Adaptador Ardent (mercados cercanos con filtro local de plataforma, fecha, obras y carriers; IF más cercano), límite 1/s, caché 15 min/1 h. Revisión aprobada. |
 | 8 | configuración nueva en `config.toml` y `PUT /api/config` | ✅ hecha | d022ecd | Ajustes de minería en config.toml con validación y en caliente; caché de Ardent en NetService. Revisión aprobada. |
 | 9 | datos estáticos `ship_pads.json` y `mining_yield.json` | ✅ hecha | cad0c42, d3529c5 | ship_pads.json (47 naves, alias, tamaño conservador si hay duda) y mining_yield.json, todo verified:false hasta eval. Revisión aprobada tras 1 ronda. |
-| 10 | i18n — `combat.ftl` y `mining.ftl` | 🔄 en curso | — |  |
-| 11 | `combat` — objetivo actual | ⬜ | — | |
+| 10 | i18n — `combat.ftl` y `mining.ftl` | ✅ hecha | 740fa37, 9e05655, a89d18d | combat.ftl y mining.ftl en 5 idiomas (63 claves), plurales correctos en fr/pt. Revisión aprobada tras 1 ronda. |
+| 11 | `combat` — objetivo actual | 🔄 en curso | — |  |
 | 12 | `combat` — mi nave | ⬜ | — | |
 | 13 | `combat` — libro de vales | ⬜ | — | |
 | 14 | `combat` — sesión de caza y reconstrucción | ⬜ | — | |
