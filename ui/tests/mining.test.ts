@@ -4,6 +4,8 @@ import { flushSync, mount, unmount } from 'svelte';
 import { disconnect, live } from '../src/lib/ws.svelte';
 import { setLocale } from '../src/lib/i18n';
 import ProspectorPanel from '../src/modules/mining/ProspectorPanel.svelte';
+import MiningSessionPanel from '../src/modules/mining/MiningSessionPanel.svelte';
+import SellPanel from '../src/modules/mining/SellPanel.svelte';
 
 let target: HTMLDivElement;
 let mounted: ReturnType<typeof mount> | undefined;
@@ -78,4 +80,102 @@ test('material table uses localized name, marks interest and core', () => {
 test('empty topic shows no data', () => {
   mountWith(ProspectorPanel, { 'mining.prospector': { current: null, history: [] } });
   expect(q('prospector-empty')!.textContent).toContain('sin datos');
+});
+
+function sessionTopic(extra: Record<string, unknown> = {}) {
+  return {
+    started_at: '2030-01-01T00:00:00Z', refined: { platinum: 29, palladium: 7 },
+    limpets_launched: { Prospector: 9, Collection: 33 }, limpets_left: 18, cargo: 38, capacity: 256,
+    asteroids_prospected: 4, cracked: 3, tons_per_hour: 24, est_credits: 9100000, credits_per_hour: 11600000,
+    refinery_bins: [{ key: 'platinum', tons: 3 }, { key: 'palladium', tons: 1 }], ...extra,
+  };
+}
+function option(extra: Record<string, unknown> = {}) {
+  return {
+    station_name: 'Ogden Port', system_name: 'LHS 20', distance_ly: 12.3, sell_price: 220000, demand: 1500,
+    pad: 'Medium', pad_ok: true, updated_at: '2030-01-01T10:00:00Z', ...extra,
+  };
+}
+function sellTopic(options = [option()]) {
+  return {
+    status: 'ok', by_commodity: { platinum: options }, best_station_total: ['Ogden Port', 9400000],
+    fetched_at: '2030-01-01T10:00:00Z', source: 'remote',
+  };
+}
+
+test('sell panel shows price distance pad and age', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2030-01-01T12:00:00Z'));
+  mountWith(SellPanel, {
+    'mining.sell': sellTopic(),
+    'mining.prospector': { current: asteroid(), history: [] },
+  });
+  const row = q('sell-option')!;
+  expect(row.textContent).toContain('220.000');
+  expect(row.textContent).toContain('12,3 al');
+  expect(row.textContent).toContain('M');
+  expect(row.textContent).toContain('hace 2 h');
+  expect(row.textContent).toContain('Ogden Port');
+  expect(target.textContent).toContain('Platino');
+  expect(q('sell-best')!.textContent).toContain('9.400.000');
+  expect(q('sell-best')!.textContent).toContain('≈');
+  expect(q('sell-source')!.textContent).toContain('Ardent');
+});
+
+test('unknown pad shows a warning', () => {
+  mountWith(SellPanel, { 'mining.sell': sellTopic([option({ pad_ok: null, pad: null })]) });
+  expect(q('pad-warning')).not.toBeNull();
+});
+
+test('disabled status shows no data without error', () => {
+  const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+  mountWith(SellPanel, { 'mining.sell': { status: 'disabled' } });
+  expect(q('sell-empty')!.textContent).toContain('sin datos');
+  expect(err).not.toHaveBeenCalled();
+  err.mockRestore();
+});
+
+test('loading status shows loading text', () => {
+  mountWith(SellPanel, { 'mining.sell': { status: 'loading' } });
+  expect(q('sell-empty')!.textContent).toContain('consultando');
+});
+
+test('session shows tons per hour', () => {
+  mountWith(MiningSessionPanel, { 'mining.session': sessionTopic() });
+  expect(q('tons-hour')!.textContent).toContain('24 t/h');
+  expect(q('credits-total')!.textContent).toContain('≈');
+  expect(q('credits-total')!.textContent).toContain('9.100.000');
+  expect(q('credits-hour')!.textContent).toContain('11.600.000');
+  expect(target.querySelectorAll('[data-testid="refined-row"]').length).toBe(2);
+  expect(q('limpets-left')!.textContent).toContain('18');
+  expect(q('limpets-launched')!.textContent).toContain('42');
+  expect(q('cargo')!.textContent).toContain('38');
+  expect(q('cargo')!.textContent).toContain('256');
+  expect(target.querySelector('[role="progressbar"][data-testid="cargo-bar"]')).not.toBeNull();
+  expect(target.querySelectorAll('[data-testid="bin"]').length).toBeGreaterThan(0);
+  expect(q('refinery')!.textContent).toContain('estimado');
+});
+
+test('session without rates shows dashes', () => {
+  mountWith(MiningSessionPanel, { 'mining.session': sessionTopic({ tons_per_hour: null, est_credits: null, credits_per_hour: null }) });
+  expect(q('tons-hour')!.textContent).toContain('—');
+});
+
+test('reset posts json action', async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+  vi.stubGlobal('fetch', fetchMock);
+  mountWith(MiningSessionPanel, { 'mining.session': sessionTopic() });
+  (q('reset-session') as HTMLButtonElement).click();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  const [url, init] = fetchMock.mock.calls[0];
+  expect(url).toBe('/api/actions/mining.reset_session');
+  expect(init.method).toBe('POST');
+  expect(init.headers['content-type']).toBe('application/json');
+});
+
+test('reset failure shows alert', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) }));
+  mountWith(MiningSessionPanel, { 'mining.session': sessionTopic() });
+  (q('reset-session') as HTMLButtonElement).click();
+  await vi.waitFor(() => { flushSync(); expect(target.querySelector('[role="alert"]')).not.toBeNull(); });
 });
