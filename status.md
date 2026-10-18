@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 17), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
+- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 18), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
 
 ## Fases
 
@@ -52,8 +52,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 14 | `combat` — sesión de caza y reconstrucción | ✅ hecha | 0f3368c, 7e7ecdf | Sesión de caza (bajas, créditos/h, rango) y reconstrucción de vales desde el historial; paginador de historial compartido con F1; sin asistencias. Revisión aprobada tras 1 ronda. |
 | 15 | `combat` — zona de conflicto y AX | ✅ hecha | 4934f4f, 6b9f97a | Zona de conflicto (vista por zona) y AX (tipos tolerantes, objetivo pendiente que caduca, presencia thargoide), todo AX sin verificar. Revisión aprobada. |
 | 16 | `combat` — módulo, topics, relevancia, red y registro | ✅ hecha | a0c1c19, 8c74cae | Módulo Combat registrado: 5 topics, relevancia, IF más cercano (Ardent), reconciliación exacta del libro, render solo cuando cambia. Revisión aprobada tras 1 ronda. |
-| 17 | UI — paneles «Objetivo» y «Mi nave» | 🔄 en curso | — |  |
-| 18 | UI — «Sesión de caza», «Zona de conflicto» y «AX» | ⬜ | — | |
+| 17 | UI — paneles «Objetivo» y «Mi nave» | ✅ hecha | f8e0a72, 1171e5d | Paneles Objetivo (insignia BUSCADO/LIMPIO, subsistema destacado) y Mi nave (casco por escalones, calor de 3 estados con cronómetro, pips 3×4), accesibles; 103 tests UI. Revisión aprobada tras 1 ronda. |
+| 18 | UI — «Sesión de caza», «Zona de conflicto» y «AX» | 🔄 en curso | — |  |
 | 19 | `mining` — prospector | ⬜ | — | |
 | 20 | `mining` — sesión de minería | ⬜ | — | |
 | 21 | `mining` — `PriceBook` y «Dónde vender» | ⬜ | — | |
