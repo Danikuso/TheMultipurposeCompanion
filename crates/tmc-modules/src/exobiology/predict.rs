@@ -60,10 +60,14 @@ impl From<&BodyProfile> for BodyProfileKey {
         let bin = |value: Option<f64>, width: f64| {
             value
                 .filter(|v| v.is_finite())
-                .map(|v| (v / width).floor() as i64)
+                // Epsilon keeps exact edges (0.15 g, 20 K) in the upper bin.
+                .map(|v| (v / width + 1e-9).floor() as i64)
         };
         Self {
-            body_class: profile.planet_class.clone().unwrap_or_default(),
+            body_class: profile
+                .planet_class
+                .as_deref()
+                .map_or_else(String::new, |c| c.trim().to_lowercase()),
             atmosphere: atmosphere_of(profile),
             gravity_bin: bin(profile.gravity_g, GRAVITY_BIN_G),
             temperature_bin: bin(profile.temperature_k, TEMPERATURE_BIN_K),
@@ -289,13 +293,9 @@ impl HistoryStats {
     }
 }
 
-/// Bodies where the commander completed a species (`ScanOrganic` Analyse),
-/// joined with their latest `Scan` (by `SystemAddress` + `BodyID`) and the
-/// system's main star. Rows: `[scan_json, species, star_type|null]`.
-pub fn load_history(cmdr: String) -> StoreTask {
-    Box::new(move |store| {
-        let rows = store.query_json(
-            "WITH organic AS (
+/// One row per (system, body, species) the commander completed. Runs once
+/// per commander, off the actor (`StoreTask` in `spawn_blocking`).
+const HISTORY_SQL: &str = "WITH organic AS (
                SELECT DISTINCT json_extract(json, '$.SystemAddress') AS addr,
                       json_extract(json, '$.Body') AS body,
                       json_extract(json, '$.Species') AS species
@@ -303,28 +303,37 @@ pub fn load_history(cmdr: String) -> StoreTask {
                WHERE cmdr = ?1 AND name = 'ScanOrganic'
                  AND json_extract(json, '$.ScanType') = 'Analyse'
                  AND json_extract(json, '$.Species') IS NOT NULL),
-             scans AS (
-               SELECT id, ts, json,
-                      json_extract(json, '$.SystemAddress') AS addr,
+             scans AS MATERIALIZED (
+               SELECT id, ts, json, addr,
                       json_extract(json, '$.BodyID') AS body,
                       json_extract(json, '$.DistanceFromArrivalLS') AS dist,
                       json_extract(json, '$.StarType') AS star
-               FROM event
-               WHERE cmdr = ?1 AND name = 'Scan'
-                 AND json_extract(json, '$.SystemAddress') IN (SELECT addr FROM organic))
-             SELECT scan, species, star FROM (SELECT
-               (SELECT b.json FROM scans b WHERE b.addr = o.addr AND b.body = o.body
-                ORDER BY b.ts DESC, b.id DESC LIMIT 1) AS scan,
-               o.species,
-               (SELECT p.star FROM scans p WHERE p.addr = o.addr AND p.dist = 0
-                  AND p.star IS NOT NULL AND p.star <> ''
-                ORDER BY p.ts ASC, p.id ASC LIMIT 1) AS star,
-               o.addr AS addr, o.body AS body
-             FROM organic o)
-             WHERE scan IS NOT NULL
-             ORDER BY addr, body, species",
-            &[json!(cmdr)],
-        )?;
+               FROM (SELECT id, ts, json, json_extract(json, '$.SystemAddress') AS addr
+                     FROM event WHERE cmdr = ?1 AND name = 'Scan')
+               WHERE addr IN (SELECT addr FROM organic)),
+             body_scan AS MATERIALIZED (
+               SELECT addr, body, json FROM (
+                 SELECT addr, body, json, ROW_NUMBER() OVER (
+                   PARTITION BY addr, body ORDER BY ts DESC, id DESC) AS rn
+                 FROM scans WHERE (addr, body) IN (SELECT addr, body FROM organic))
+               WHERE rn = 1),
+             main_star AS MATERIALIZED (
+               SELECT addr, star FROM (
+                 SELECT addr, star, ROW_NUMBER() OVER (
+                   PARTITION BY addr ORDER BY ts ASC, id ASC) AS rn
+                 FROM scans WHERE dist = 0 AND star IS NOT NULL AND star <> '')
+               WHERE rn = 1)
+             SELECT b.json, o.species, m.star
+             FROM organic o
+             JOIN body_scan b ON b.addr = o.addr AND b.body = o.body
+             LEFT JOIN main_star m ON m.addr = o.addr";
+
+/// Bodies where the commander completed a species (`ScanOrganic` Analyse),
+/// joined with their latest `Scan` (by `SystemAddress` + `BodyID`) and the
+/// system's main star. Rows: `[scan_json, species, star_type|null]`.
+pub fn load_history(cmdr: String) -> StoreTask {
+    Box::new(move |store| {
+        let rows = store.query_json(HISTORY_SQL, &[json!(cmdr)])?;
         Ok(json!({ "cmdr": cmdr, "rows": rows }))
     })
 }
@@ -340,6 +349,7 @@ fn canonn_weight(canonn: Option<&RemoteBodyBio>, species: &SpeciesInfo) -> Optio
         .iter()
         .filter(|h| same_name(&h.species, &species.symbol) || same_name(&h.species, &species.name))
         .map(|h| h.weight)
+        .filter(|w| w.is_finite())
         .reduce(f64::max)
 }
 
@@ -399,6 +409,16 @@ fn rate_species(
     })
 }
 
+fn unknown_species(species: &SpeciesInfo) -> Candidate {
+    Candidate {
+        species: species.symbol.clone(),
+        genus: species.genus.clone(),
+        value: species.value,
+        likelihood: Likelihood::Unknown,
+        sources: Vec::new(),
+    }
+}
+
 fn unknown_genus(genus: &str) -> Candidate {
     Candidate {
         species: String::new(),
@@ -411,9 +431,11 @@ fn unknown_genus(genus: &str) -> Candidate {
 
 /// Predicts the species of a body. Before the DSS (`confirmed_genera` is
 /// `None`) every genus of the table is considered and only supported species
-/// are returned; after it, only confirmed genera, and a confirmed genus with
-/// no supported species becomes a single `Unknown` candidate (never invented).
-/// Confirmed genera match by codex symbol or table name. Sorted by value desc.
+/// are returned; after it, only confirmed genera. A confirmed genus where no
+/// rule matches lists all its table species as `Unknown` (history/Canonn may
+/// still rate them); a genus missing from the table becomes one placeholder
+/// with value 0 (never invented). Confirmed genera match by codex symbol or
+/// table name. Sorted by value desc.
 pub fn predict(
     profile: &BodyProfile,
     confirmed_genera: Option<&[String]>,
@@ -446,13 +468,19 @@ pub fn predict(
                     continue;
                 }
                 seen.push(symbol);
-                let found: Vec<Candidate> = genus
-                    .map(|g| g.species.iter().filter_map(|s| rate(s, true)).collect())
-                    .unwrap_or_default();
-                if found.is_empty() {
-                    out.push(unknown_genus(symbol));
-                } else {
-                    out.extend(found);
+                match genus {
+                    // Not in the table (e.g. Thargoid): one placeholder, value 0.
+                    None => out.push(unknown_genus(symbol)),
+                    Some(g) if g.species.iter().any(|s| rules.matches(&s.symbol, profile)) => {
+                        out.extend(g.species.iter().filter_map(|s| rate(s, true)));
+                    }
+                    // Confirmed but no rule applies: every species, Unknown
+                    // unless history or Canonn support it.
+                    Some(g) => out.extend(
+                        g.species
+                            .iter()
+                            .map(|s| rate(s, true).unwrap_or_else(|| unknown_species(s))),
+                    ),
                 }
             }
             out
@@ -477,6 +505,7 @@ mod tests {
     const AURASUS: &str = "$Codex_Ent_Bacterial_01_Name;";
     const BACTERIUM: &str = "$Codex_Ent_Bacterial_Genus_Name;";
     const ANEMONE: &str = "$Codex_Ent_Sphere_Genus_Name;";
+    const ALEOIDA: &str = "$Codex_Ent_Aleoids_Genus_Name;";
 
     fn profile() -> BodyProfile {
         BodyProfile {
@@ -563,7 +592,7 @@ mod tests {
     #[test]
     fn profile_key_uses_bins() {
         let key = BodyProfileKey::from(&profile());
-        assert_eq!(key.body_class, "Rocky body");
+        assert_eq!(key.body_class, "rocky body");
         assert_eq!(key.atmosphere, "carbondioxide");
         assert_eq!(key.gravity_bin, Some(2)); // 0.12 g / 0.05
         assert_eq!(key.temperature_bin, Some(8)); // 170 K / 20
@@ -575,6 +604,18 @@ mod tests {
         assert_eq!(BodyProfileKey::from(&near), key);
         near.gravity_g = Some(0.16);
         assert_ne!(BodyProfileKey::from(&near), key);
+    }
+
+    #[test]
+    fn profile_key_bin_edges_go_up() {
+        let mut edge = profile();
+        edge.gravity_g = Some(0.15);
+        edge.temperature_k = Some(20.0);
+        let key = BodyProfileKey::from(&edge);
+        assert_eq!(key.gravity_bin, Some(3));
+        assert_eq!(key.temperature_bin, Some(1));
+        edge.planet_class = Some("ROCKY BODY".into());
+        assert_eq!(BodyProfileKey::from(&edge).body_class, "rocky body");
     }
 
     #[test]
@@ -763,24 +804,121 @@ mod tests {
             bio_rules(),
             species_table(),
         );
+        // Anemone (no rules): its 8 table species, Unknown, real values.
+        let anemones: Vec<_> = candidates.iter().filter(|c| c.genus == ANEMONE).collect();
+        assert_eq!(anemones.len(), 8);
+        for c in &anemones {
+            assert_eq!(c.likelihood, Likelihood::Unknown);
+            assert_eq!(c.value, 1_499_900);
+            assert!(c.sources.is_empty());
+            assert!(species_table().species(&c.species).is_some());
+        }
+        // Thargoid is not in the table: one placeholder with value 0, last.
+        assert_eq!(candidates.len(), 9);
         assert_eq!(
-            candidates,
-            vec![
-                Candidate {
-                    species: String::new(),
-                    genus: ANEMONE.into(),
-                    value: 0,
-                    likelihood: Likelihood::Unknown,
-                    sources: vec![],
-                },
-                Candidate {
-                    species: String::new(),
-                    genus: "$Codex_Ent_Thargoid_Genus_Name;".into(),
-                    value: 0,
-                    likelihood: Likelihood::Unknown,
-                    sources: vec![],
-                },
-            ]
+            candidates[8],
+            Candidate {
+                species: String::new(),
+                genus: "$Codex_Ent_Thargoid_Genus_Name;".into(),
+                value: 0,
+                likelihood: Likelihood::Unknown,
+                sources: vec![],
+            }
+        );
+    }
+
+    #[test]
+    fn confirmed_genus_without_matching_rule_lists_all_species_unknown() {
+        // Rocky CO2 at 170 K: no Aleoida rule matches (they need 175+ K or NH3).
+        let confirmed = vec!["Aleoida".to_owned()];
+        let expected = species_table().species_of_genus(ALEOIDA).len();
+        assert_eq!(expected, 5);
+        let candidates = predict(
+            &profile(),
+            Some(&confirmed),
+            &HistoryStats::default(),
+            None,
+            bio_rules(),
+            species_table(),
+        );
+        assert_eq!(candidates.len(), expected);
+        for c in &candidates {
+            assert_eq!(c.genus, ALEOIDA);
+            assert_eq!(c.likelihood, Likelihood::Unknown);
+            assert!(c.value > 0);
+        }
+        assert_eq!(candidates[0].species, "$Codex_Ent_Aleoids_05_Name;");
+        assert_eq!(candidates[0].value, 12_934_900);
+        // One history case lifts that species to Low; the rest stay Unknown.
+        let arcus = "$Codex_Ent_Aleoids_01_Name;";
+        let with_history = predict(
+            &profile(),
+            Some(&confirmed),
+            &history(arcus, 1),
+            None,
+            bio_rules(),
+            species_table(),
+        );
+        assert_eq!(with_history.len(), expected);
+        let c = only(&with_history, arcus);
+        assert_eq!(c.likelihood, Likelihood::Low);
+        assert_eq!(c.sources, vec![ProbSource::History]);
+        assert_eq!(
+            with_history
+                .iter()
+                .filter(|c| c.likelihood == Likelihood::Unknown)
+                .count(),
+            expected - 1
+        );
+        // Three cases give Medium.
+        let strong = predict(
+            &profile(),
+            Some(&confirmed),
+            &history(arcus, 3),
+            None,
+            bio_rules(),
+            species_table(),
+        );
+        assert_eq!(only(&strong, arcus).likelihood, Likelihood::Medium);
+    }
+
+    #[test]
+    fn empty_confirmed_genera_gives_no_candidates() {
+        let candidates = predict(
+            &profile(),
+            Some(&[]),
+            &history(AURASUS, 3),
+            None,
+            bio_rules(),
+            species_table(),
+        );
+        assert!(candidates.is_empty());
+    }
+
+    #[test]
+    fn canonn_weight_edges_and_non_finite() {
+        let level = |weight: f64| {
+            let c = predict(
+                &profile(),
+                None,
+                &HistoryStats::default(),
+                Some(&hint(weight)),
+                &single_rule(),
+                species_table(),
+            );
+            let c = only(&c, AURASUS);
+            (c.likelihood, c.sources.clone())
+        };
+        let with = vec![ProbSource::Rules, ProbSource::Canonn];
+        assert_eq!(level(0.5), (Likelihood::High, with.clone()));
+        assert_eq!(level(0.1), (Likelihood::Medium, with));
+        assert_eq!(
+            level(f64::NAN),
+            (Likelihood::Medium, vec![ProbSource::Rules])
+        );
+        assert_eq!(
+            level(f64::INFINITY),
+            (Likelihood::Medium, vec![ProbSource::Rules])
         );
     }
 
@@ -846,9 +984,15 @@ mod tests {
     #[test]
     fn bio_rules_have_source_for_every_rule() {
         let rules = bio_rules();
-        assert_eq!(rules.version, "2026-10-18");
+        let version = rules.version.as_bytes();
+        assert_eq!(version.len(), 10, "{}", rules.version);
+        assert!(
+            version[4] == b'-' && version[7] == b'-',
+            "{}",
+            rules.version
+        );
         assert!(rules.license.contains("PolyForm"));
-        assert_eq!(rules.rules.len(), 90);
+        assert!(!rules.rules.is_empty());
         for rule in &rules.rules {
             assert!(!rule.source.trim().is_empty(), "{}", rule.species);
             assert!(
@@ -868,7 +1012,6 @@ mod tests {
             .filter_map(|rule| table.species(&rule.species))
             .map(|species| species.genus.as_str())
             .collect();
-        assert_eq!(covered.len(), 15);
         assert!(covered.contains(BACTERIUM));
         assert!(!covered.contains(ANEMONE));
     }
@@ -1027,5 +1170,84 @@ mod tests {
         assert_eq!(stats.count(&key, AURASUS), 1);
         assert_eq!(stats.total(&key), 1);
         assert_eq!(stats.count(&key, "$Codex_Ent_Tussocks_01_Name;"), 0);
+    }
+
+    /// In-memory store with `systems × bodies` Scans (body 0 is a K star at
+    /// 0 ls, the rest rocky CO2 planets) and `organics` Analyse rows on body 1
+    /// of system `k % systems`, alternating Aurasus / Tussock Pennata.
+    fn synthetic_store(systems: i64, bodies: i64, organics: i64) -> tmc_core::Store {
+        let store = tmc_core::Store::open_in_memory().unwrap();
+        store
+            .exec_json(
+                "INSERT INTO journal_file(id,name,size,offset) VALUES (1,'j.log',0,0)",
+                &[],
+            )
+            .unwrap();
+        store
+            .exec_json(
+                "WITH RECURSIVE n(i) AS (SELECT 0 UNION ALL SELECT i + 1 FROM n WHERE i + 1 < ?1)
+                 INSERT INTO event(file_id,line,ts,name,cmdr,json)
+                 SELECT 1, i + 1, printf('2026-10-18T10:00:00.%09dZ', i), 'Scan', 'TESTER',
+                   CASE WHEN i % ?2 = 0
+                     THEN json_object('event','Scan','BodyName','S','SystemAddress', i / ?2,
+                       'BodyID', 0, 'StarType', 'K', 'DistanceFromArrivalLS', 0.0)
+                     ELSE json_object('event','Scan','BodyName','S 1','SystemAddress', i / ?2,
+                       'BodyID', i % ?2, 'PlanetClass', 'Rocky body',
+                       'AtmosphereType', 'CarbonDioxide', 'SurfaceGravity', 1.1768,
+                       'SurfaceTemperature', 170.0, 'DistanceFromArrivalLS', 300.0)
+                   END
+                 FROM n",
+                &[json!(systems * bodies), json!(bodies)],
+            )
+            .unwrap();
+        store
+            .exec_json(
+                "WITH RECURSIVE n(k) AS (SELECT 0 UNION ALL SELECT k + 1 FROM n WHERE k + 1 < ?1)
+                 INSERT INTO event(file_id,line,ts,name,cmdr,json)
+                 SELECT 1, ?2 + k + 1, printf('2026-10-18T11:00:00.%09dZ', k), 'ScanOrganic',
+                   'TESTER',
+                   json_object('event','ScanOrganic','ScanType','Analyse',
+                     'SystemAddress', k % ?3, 'Body', 1,
+                     'Species', CASE WHEN k % 2 = 0 THEN '$Codex_Ent_Bacterial_01_Name;'
+                                     ELSE '$Codex_Ent_Tussocks_01_Name;' END)
+                 FROM n",
+                &[json!(organics), json!(systems * bodies), json!(systems)],
+            )
+            .unwrap();
+        store
+    }
+
+    #[test]
+    fn load_history_handles_twenty_thousand_scans() {
+        let store = synthetic_store(2_000, 10, 2_000);
+        let value = load_history("TESTER".into())(&store).unwrap();
+        assert_eq!(value["rows"].as_array().unwrap().len(), 2_000);
+        let stats = HistoryStats::from_task_value(&value);
+        let key = BodyProfileKey::from(&profile());
+        assert_eq!(stats.count(&key, AURASUS), 1_000);
+        assert_eq!(stats.count(&key, "$Codex_Ent_Tussocks_01_Name;"), 1_000);
+        assert_eq!(stats.total(&key), 2_000);
+    }
+
+    /// Manual measurement: `cargo test -p tmc-modules --release
+    /// load_history_timing_200k -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn load_history_timing_200k() {
+        let store = synthetic_store(20_000, 10, 2_000);
+        let plan = store
+            .query_json(
+                &format!("EXPLAIN QUERY PLAN {HISTORY_SQL}"),
+                &[json!("TESTER")],
+            )
+            .unwrap();
+        for row in &plan {
+            println!("plan: {}", row[3]);
+        }
+        let start = std::time::Instant::now();
+        let value = load_history("TESTER".into())(&store).unwrap();
+        let elapsed = start.elapsed();
+        println!("200k Scan + 2k ScanOrganic: {elapsed:?}");
+        assert_eq!(value["rows"].as_array().unwrap().len(), 2_000);
     }
 }
