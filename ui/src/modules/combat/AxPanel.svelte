@@ -3,11 +3,19 @@
   import { credits } from '../../lib/format';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
-  import type { AxTopic } from './types';
+  import { cleanFaction, type AxTopic } from './types';
 
   const ax = $derived(topic<AxTopic>('combat.ax'));
   const visible = $derived(ax != null && (ax.active || ax.presence));
   const kills = $derived(Object.entries(ax?.kills_by_type ?? {}).sort((a, b) => b[1] - a[1]));
+
+  // Nombre localizado del tipo; si no hay clave, texto crudo limpio.
+  function typeName(raw: string): string {
+    const key = `combat-ax-type-${raw.trim().toLowerCase()}`;
+    const name = t(key);
+    if (name !== key) return name;
+    return cleanFaction(raw).replaceAll('_', ' ') || t('combat-ax-type-unknown');
+  }
 </script>
 
 {#if ax && visible}
@@ -17,12 +25,12 @@
         <p class="banner" role="status" data-testid="ax-presence">{t('combat-thargoid-presence')}</p>
       {/if}
       {#if ax.target}
-        <p data-testid="ax-target">{t('combat-ax-target', { target: ax.target })}</p>
+        <p data-testid="ax-target">{t('combat-ax-target', { target: typeName(ax.target) })}</p>
       {/if}
       <p class="mono" data-testid="ax-bonds">{t('combat-ax-bonds', { credits: credits(ax.bonds) })}</p>
       <ul>
         {#each kills as [type, n] (type)}
-          <li data-testid="ax-kill-{type}"><span>{type}</span><strong class="mono">{n}</strong></li>
+          <li data-testid="ax-kill-{type}"><span>{typeName(type)}</span><strong class="mono">{n}</strong></li>
         {/each}
       </ul>
     </div>

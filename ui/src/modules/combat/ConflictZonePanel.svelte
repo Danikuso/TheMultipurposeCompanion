@@ -16,7 +16,7 @@
     <div data-testid="zone-panel">
       <div class="row">
         <span data-testid="zone-system">{zone.system ?? '—'}</span>
-        {#if zone.side}<strong data-testid="zone-side">{t('combat-zone-side', { side: zone.side })}</strong>{/if}
+        {#if cleanFaction(zone.side)}<strong data-testid="zone-side">{t('combat-zone-side', { side: cleanFaction(zone.side) })}</strong>{/if}
       </div>
       <p data-testid="zone-kills">{t('combat-kills', { count: zone.kills })}</p>
       <ul>
