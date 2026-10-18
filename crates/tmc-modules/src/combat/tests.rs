@@ -159,10 +159,7 @@ fn station_response(id: u64, key: &str) -> SourceEvent {
 #[test]
 fn combat_session_fixture_produces_expected_topics() {
     let mut h = H::new();
-    let mut lines = FIXTURE.lines().collect::<Vec<_>>();
-    let extra = r#"{ "timestamp":"2026-10-18T10:26:00Z", "event":"ShipTargeted", "TargetLocked":true, "Ship":"anaconda", "ScanStage":3, "LegalStatus":"Wanted", "Bounty":42000 }"#;
-    lines.push(extra);
-    for l in lines {
+    for l in FIXTURE.lines() {
         h.line(l);
     }
     assert_eq!(
@@ -176,10 +173,89 @@ fn combat_session_fixture_produces_expected_topics() {
         .iter()
         .map(|r| r["amount"].as_u64().unwrap())
         .sum();
-    assert_eq!(sum, 550_000);
+    assert_eq!(sum, 190_000);
     assert_eq!(session["if_fee_pct"], 25);
     assert_eq!(h.val("combat.conflict_zone")["kills"], 1);
     assert_eq!(h.val("combat.ax")["active"], false);
+}
+
+#[test]
+fn combat_fixture_vouchers_match_redeemed_sum() {
+    // Criterio 4: lo ganado antes del canje (3 Bounty = 500 000 + bono 50 000) coincide con
+    // la suma de los tres RedeemVoucher (300 000 + 200 000 + 50 000), sin diferencia.
+    let (mut earned, mut redeemed) = (0u64, 0u64);
+    let mut h = H::new();
+    for l in FIXTURE.lines() {
+        let v: serde_json::Value = serde_json::from_str(l).unwrap();
+        match v["event"].as_str().unwrap() {
+            "Died" => break,
+            "Bounty" => earned += v["TotalReward"].as_u64().unwrap(),
+            "FactionKillBond" => earned += v["Reward"].as_u64().unwrap(),
+            "RedeemVoucher" => redeemed += v["Amount"].as_u64().unwrap(),
+            _ => {}
+        }
+        if v["event"] == "Bounty" && v["TotalReward"] == 70000 {
+            // Bounty posterior al canje, anterior a Died: no entra en la comparación.
+            earned -= 70000;
+        }
+        h.line(l);
+    }
+    assert_eq!((earned, redeemed), (550_000, 550_000));
+    // Tras Died, el libro conserva solo lo posterior: 150 000 (bounty) + 40 000 (bono).
+    let mut h = H::new();
+    for l in FIXTURE.lines() {
+        h.line(l);
+    }
+    let rows = h.val("combat.session")["vouchers"].clone();
+    let total: u64 = rows
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| r["amount"].as_u64().unwrap())
+        .sum();
+    assert_eq!(total, 190_000);
+    assert_eq!(rows.as_array().unwrap().len(), 2);
+}
+
+#[test]
+fn combat_fixture_ship_states() {
+    // Criterio 3: pips [3,5,4] -> (1.5, 2.5, 2.0); casco 100 -> 80 -> 60;
+    // calor Normal -> Overheating -> HeatDamage -> Normal.
+    let status = |text: &str| Status::parse(text).unwrap();
+    let normal = status(include_str!(
+        "../../../../tests/fixtures/status/combat_normal.json"
+    ));
+    let half = status(include_str!(
+        "../../../../tests/fixtures/status/combat_pips_half.json"
+    ));
+    let hot = status(include_str!(
+        "../../../../tests/fixtures/status/combat_overheating.json"
+    ));
+    let mut h = H::new();
+    let ship = |h: &H| h.val("combat.ship");
+    let mut lines = FIXTURE.lines();
+    for l in lines.by_ref().take(4) {
+        h.line(l);
+    }
+    h.send(SourceEvent::Status(normal.clone()));
+    assert_eq!(ship(&h)["hull_pct"], 100);
+    assert_eq!(ship(&h)["heat"], "normal");
+    for l in lines.by_ref().take(9) {
+        h.line(l); // hasta HullDamage 0.8 (línea 13)
+    }
+    assert_eq!(ship(&h)["hull_pct"], 80);
+    h.send(SourceEvent::Status(half));
+    assert_eq!(ship(&h)["pips"], json!({"sys":1.5,"eng":2.5,"wep":2.0}));
+    assert_eq!(ship(&h)["heat"], "normal");
+    h.line(lines.next().unwrap()); // HeatWarning
+    h.send(SourceEvent::Status(hot));
+    assert_eq!(ship(&h)["heat"], "overheating");
+    h.line(lines.next().unwrap()); // HullDamage 0.6
+    assert_eq!(ship(&h)["hull_pct"], 60);
+    h.line(lines.next().unwrap()); // HeatDamage
+    assert_eq!(ship(&h)["heat"], "heat_damage");
+    h.send(SourceEvent::Status(normal));
+    assert_eq!(ship(&h)["heat"], "normal");
 }
 
 #[test]
@@ -191,7 +267,7 @@ fn replay_emits_no_requests_or_store_writes() {
     }
     assert!(h.requests.is_empty());
     assert!(h.tags.is_empty());
-    assert_eq!(h.val("combat.session")["kills"], 4);
+    assert_eq!(h.val("combat.session")["kills"], 8);
 }
 
 #[test]

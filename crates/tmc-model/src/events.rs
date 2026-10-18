@@ -1413,6 +1413,53 @@ mod tests {
         assert_eq!(others, expected);
     }
 
+    #[test]
+    fn every_line_of_f2_fixtures_is_typed() {
+        // Eventos que los fixtures de F2 contienen sin tipar a propósito: ninguno.
+        const EXPECTED_OTHER: [&str; 0] = [];
+        let fixtures = [
+            (
+                "combat",
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../../tests/fixtures/journal/combat_session.log"
+                )),
+                24,
+            ),
+            (
+                "mining",
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../../tests/fixtures/journal/mining_session.log"
+                )),
+                27,
+            ),
+            (
+                "ax",
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../../tests/fixtures/journal/ax_session.log"
+                )),
+                8,
+            ),
+        ];
+        let mut others = std::collections::BTreeSet::new();
+        for (name, text, expected_lines) in fixtures {
+            let mut n = 0;
+            for line in text.lines() {
+                let ev = parse_line(line).unwrap_or_else(|e| panic!("{name}: {line}: {e}"));
+                if ev.kind == EventKind::Other {
+                    others.insert(ev.name.clone());
+                }
+                n += 1;
+            }
+            assert_eq!(n, expected_lines, "líneas de {name}");
+        }
+        let expected: std::collections::BTreeSet<String> =
+            EXPECTED_OTHER.iter().map(|s| s.to_string()).collect();
+        assert_eq!(others, expected);
+    }
+
     fn loadout_with_modifier(modifier: &str) -> EventKind {
         ev(&format!(
             r#"{{"timestamp":"2026-04-10T20:00:00Z","event":"Loadout","Ship":"python","Modules":[{{"Slot":"FrameShiftDrive","Item":"int_hyperdrive_size5_class5","Health":1.0,"Engineering":{{"BlueprintName":"FSD_LongRange","Level":5,"Quality":0.9,"ExperimentalEffect":"special_fsd_fuelcapacity","Modifiers":[{modifier}]}}}}]}}"#

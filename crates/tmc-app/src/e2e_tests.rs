@@ -302,3 +302,88 @@ async fn real_exploration_fixture_replays_end_to_end() {
     );
     running.server.shutdown();
 }
+
+#[tokio::test]
+async fn burst_of_1000_combat_events_stays_under_10hz_and_500ms() {
+    let (jdir, ddir) = (tempdir().unwrap(), tempdir().unwrap());
+    let journal = jdir.path().join("Journal.2026-10-18T100000.01.log");
+    std::fs::write(&journal, HEAD).unwrap();
+    let running = start_custom(
+        config(jdir.path(), ddir.path(), false),
+        Arc::new(FakeTransport),
+        Some(Duration::from_millis(250)),
+    )
+    .await
+    .unwrap();
+    wait_for(&running, "start", |s| s.contains_key("combat.ship")).await;
+    let mut rx = running.core.subscribe();
+
+    // 5 ráfagas de 200 eventos (ShipTargeted y UnderAttack alternados); el último
+    // ShipTargeted de cada ráfaga lleva un casco único que identifica la ráfaga.
+    let mut latencies = Vec::new();
+    let mut arrivals = Vec::new();
+    for burst in 0..5u32 {
+        let mut text = String::new();
+        for i in 0..200u32 {
+            let hull = if i == 198 {
+                50.0 + f64::from(burst)
+            } else {
+                10.0 + f64::from(i % 7)
+            };
+            text.push_str(&format!(
+                r#"{{"timestamp":"2026-10-18T10:{:02}:{:02}Z","event":"ShipTargeted","TargetLocked":true,"Ship":"anaconda","ScanStage":3,"LegalStatus":"Wanted","Bounty":42000,"HullHealth":{hull}}}"#,
+                10 + burst,
+                i / 4
+            ));
+            text.push('\n');
+            text.push_str(&format!(
+                r#"{{"timestamp":"2026-10-18T10:{:02}:{:02}Z","event":"UnderAttack","Target":"You"}}"#,
+                10 + burst,
+                i / 4
+            ));
+            text.push('\n');
+        }
+        // El último evento de la ráfaga vuelve a un valor fijo reconocible.
+        let marker = 50.0 + f64::from(burst);
+        text.push_str(&format!(
+            r#"{{"timestamp":"2026-10-18T10:{:02}:59Z","event":"ShipTargeted","TargetLocked":true,"Ship":"anaconda","ScanStage":3,"LegalStatus":"Wanted","Bounty":42000,"HullHealth":{marker}}}"#,
+            10 + burst
+        ));
+        text.push('\n');
+        let t0 = Instant::now();
+        std::fs::OpenOptions::new()
+            .append(true)
+            .open(&journal)
+            .unwrap()
+            .write_all(text.as_bytes())
+            .unwrap();
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if let Ok(CoreMessage::Update { topics, .. }) = rx.recv().await {
+                    arrivals.push(Instant::now());
+                    if let Some(t) = topics.get("combat.target")
+                        && t["hull_pct"] == marker
+                    {
+                        return;
+                    }
+                }
+            }
+        })
+        .await
+        .unwrap_or_else(|_| panic!("burst {burst} not reflected"));
+        latencies.push(t0.elapsed());
+    }
+    latencies.sort();
+    let p95 = latencies[4];
+    eprintln!("combat burst p95 = {p95:?}, updates = {}", arrivals.len());
+    assert!(p95 < Duration::from_millis(500), "p95 = {p95:?}");
+    // Nunca más de 10 difusiones en cualquier ventana de 1 s.
+    for (i, a) in arrivals.iter().enumerate() {
+        let n = arrivals[i..]
+            .iter()
+            .take_while(|b| b.duration_since(*a) < Duration::from_secs(1))
+            .count();
+        assert!(n <= 10, "{n} difusiones en 1 s");
+    }
+    running.server.shutdown();
+}
