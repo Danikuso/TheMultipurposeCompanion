@@ -180,7 +180,7 @@ test('lawless badge has a label', () => {
 
 function sessionTopic(extra: Record<string, unknown> = {}) {
   return {
-    started_at: '2026-10-18T12:00:00Z', kills: 4, credits: 120000, kills_by_type: { python: 3, viper: 1 },
+    as_of: new Date().toISOString(), started_at: '2026-10-18T12:00:00Z', kills: 4, credits: 120000, kills_by_type: { python: 3, viper: 1 },
     combat_rank: 5, combat_progress: 40,
     vouchers: [
       { kind: 'Bounty', faction: 'Los Pacíficos', amount: 50000, systems: ['Sol', 'Alpha Centauri'], ax: false, other: false, count: 1 },

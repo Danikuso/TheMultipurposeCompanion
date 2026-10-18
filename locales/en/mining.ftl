@@ -81,3 +81,4 @@ mining-source-local-sell = your last sale
 mining-source-local-market = current market
 mining-best-total = Estimated sale of your cargo: ≈ { $credits } at { $station }
 mining-sell-loading = querying markets…
+mining-age-now = now

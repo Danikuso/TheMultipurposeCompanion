@@ -81,3 +81,4 @@ mining-source-local-sell = dein letzter Verkauf
 mining-source-local-market = aktueller Markt
 mining-best-total = Geschätzter Verkauf der Fracht: ≈ { $credits } bei { $station }
 mining-sell-loading = Märkte werden abgefragt…
+mining-age-now = gerade eben

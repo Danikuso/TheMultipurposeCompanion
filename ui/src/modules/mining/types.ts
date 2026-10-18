@@ -32,6 +32,10 @@ export interface ProspectorTopic {
 
 /** Topic `mining.session`. */
 export interface MiningSessionTopic {
+  /** Último instante del diario (base de tiempo); ausente o época cero sin eventos. */
+  as_of?: string | null;
+  /** Clave de materia -> nombre localizado aprendido del diario. */
+  names?: Record<string, string>;
   started_at: string | null;
   refined: Record<string, number>;
   limpets_launched: Record<string, number>;
@@ -66,14 +70,18 @@ export type PriceSource = 'remote' | 'local_sell' | 'local_market';
 export interface SellPlan {
   by_commodity: Record<string, SellOption[]>;
   best_station_total: [string, number] | null;
-  fetched_at: string;
+  fetched_at: string | null;
   source: PriceSource;
 }
 
 /** Topic `mining.sell`: el plan solo viene con `status === 'ok'`. */
+export interface SellBase {
+  as_of?: string | null;
+  names?: Record<string, string>;
+}
 export type SellTopic =
-  | ({ status: 'ok' } & SellPlan)
-  | { status: 'no_data' | 'disabled' | 'loading' };
+  | ({ status: 'ok' } & SellBase & SellPlan)
+  | ({ status: 'no_data' | 'disabled' | 'loading' } & SellBase);
 
 /** Nombre legible de una materia: localizado si se conoce; si no, la clave capitalizada. */
 export function materialName(key: string, names: Map<string, string>): string {
@@ -82,12 +90,16 @@ export function materialName(key: string, names: Map<string, string>): string {
   return key ? key.charAt(0).toUpperCase() + key.slice(1) : key;
 }
 
-/** Nombres localizados vistos en los asteroides prospectados. */
-export function namesFrom(p: ProspectorTopic | undefined): Map<string, string> {
+/** Nombres localizados: los del backend (`names`) y, tras ellos, los de los asteroides. */
+export function namesFrom(
+  p: ProspectorTopic | undefined,
+  known: Record<string, string> | undefined = undefined,
+): Map<string, string> {
   const map = new Map<string, string>();
+  for (const [k, v] of Object.entries(known ?? {})) if (v) map.set(k, v);
   if (!p) return map;
   for (const a of [...(p.current ? [p.current] : []), ...p.history]) {
-    for (const m of a.materials) if (m.name) map.set(m.key, m.name);
+    for (const m of a.materials) if (m.name && !map.has(m.key)) map.set(m.key, m.name);
   }
   return map;
 }

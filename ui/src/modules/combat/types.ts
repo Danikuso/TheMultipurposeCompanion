@@ -71,6 +71,8 @@ export interface RemoteStation {
 
 /** Topic `combat.session`. */
 export interface SessionTopic {
+  /** Último instante del diario (base de tiempo); ausente o época cero sin eventos. */
+  as_of?: string | null;
   started_at: string | null;
   kills: number;
   credits: number;

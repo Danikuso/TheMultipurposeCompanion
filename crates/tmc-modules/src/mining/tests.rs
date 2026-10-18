@@ -475,3 +475,32 @@ fn session_topic_not_dirty_on_unrelated_events_until_30_s() {
     let d = h.journal(100, "Music", r#","MusicTrack":"Exploration""#);
     assert!(d.contains("mining.session"));
 }
+
+#[test]
+fn as_of_does_not_dirty_topics_and_names_are_learned() {
+    let mut h = H::new();
+    h.start();
+    h.journal(
+        10,
+        "MiningRefined",
+        r#","Type":"$platinum_name;","Type_Localised":"Platino""#,
+    );
+    let s = h.val("mining.session");
+    assert_eq!(s["names"]["platinum"], json!("Platino"));
+    assert_eq!(s["as_of"], json!(t(10)));
+    assert_eq!(h.val("mining.sell")["names"]["platinum"], json!("Platino"));
+    // Un evento sin efecto avanza el reloj pero no ensucia ningún topic.
+    let dirty = h.journal(50, "Music", r#","MusicTrack":"NoTrack""#);
+    assert!(dirty.is_empty(), "{dirty:?}");
+    assert_eq!(h.val("mining.session")["as_of"], json!(t(10)));
+}
+
+#[test]
+fn as_of_is_null_before_any_event() {
+    let m = Mining::new();
+    assert!(m.topic_value("mining.session").is_none());
+    let mut h = H::new();
+    let ev = SourceEvent::Settings(ModuleSettings::default());
+    h.send(ev);
+    assert_eq!(h.val("mining.sell")["as_of"], json!(null));
+}

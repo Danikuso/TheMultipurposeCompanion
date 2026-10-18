@@ -1,28 +1,32 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
-  import { credits, cssPct, decimal, duration } from '../../lib/format';
+  import { credits, cssPct, decimal, duration, skewFrom } from '../../lib/format';
   import { action, topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
   import { materialName, namesFrom, type MiningSessionTopic, type ProspectorTopic } from './types';
 
   const s = $derived(topic<MiningSessionTopic>('mining.session'));
-  const names = $derived(namesFrom(topic<ProspectorTopic>('mining.prospector')));
-  let now = $state(Date.now());
+  const names = $derived(namesFrom(topic<ProspectorTopic>('mining.prospector'), s?.names));
+  let tick = $state(Date.now());
+  let skew = $state<number | null>(null);
+  // Hora del diario; `null` si no se conoce (se oculta la duración).
+  const now = $derived(skew == null ? null : tick + skew);
   let failed = $state(false);
 
   // Un único setInterval de 30 s para la duración; no corre sin sesión.
   $effect(() => {
     if (!s) return;
-    now = Date.now();
+    skew = skewFrom(s.as_of);
+    tick = Date.now();
     const id = setInterval(() => {
-      now = Date.now();
+      tick = Date.now();
     }, 30_000);
     return () => clearInterval(id);
   });
 
   const elapsed = $derived.by(() => {
     const ts = s?.started_at ? Date.parse(s.started_at) : NaN;
-    return Number.isNaN(ts) ? null : duration(Math.max(0, now - ts));
+    return Number.isNaN(ts) || now == null ? null : duration(Math.max(0, now - ts));
   });
   const refined = $derived(Object.entries(s?.refined ?? {}).sort((a, b) => b[1] - a[1]));
   const totalTons = $derived(refined.reduce((n, [, tons]) => n + tons, 0));
@@ -90,7 +94,7 @@
           aria-label={t('mining-bin-aria', { material: materialName(b.key, names), tons: b.tons })}
         >
           <i style:height={cssPct((b.tons / maxBin) * 100)}></i>
-          <span>{materialName(b.key, names).slice(0, 3)}</span>
+          <span class="label">{materialName(b.key, names)}</span>
         </li>
       {/each}
     </ul>
@@ -136,7 +140,7 @@
   .bins { list-style: none; margin: 0.25rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.25rem; }
   .bin { border: 1px solid var(--hud-border); height: 2.6rem; position: relative; font-size: 0.7em; text-align: center; }
   .bin i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--hud-primary); opacity: 0.35; }
-  .bin span { position: relative; }
+  .bin span { position: relative; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 0.1rem; }
   .bar { height: 0.9rem; background: var(--hud-surface-alt); border: 1px solid var(--hud-border); position: relative; margin: 0.2rem 0 0.6rem; }
   .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--hud-primary); }
   .err { color: var(--hud-danger); }

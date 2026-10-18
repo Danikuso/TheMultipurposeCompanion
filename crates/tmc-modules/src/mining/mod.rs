@@ -67,9 +67,15 @@ fn pad_tag(p: PadSize) -> &'static str {
 #[derive(Serialize)]
 struct SellTopic<'a> {
     status: &'static str,
+    /// Último instante del diario (base de tiempo de la UI); `None` sin eventos.
+    as_of: Option<DateTime<Utc>>,
+    names: &'a BTreeMap<String, String>,
     #[serde(flatten)]
     plan: Option<&'a SellPlan>,
 }
+
+/// Máximo de nombres localizados recordados.
+const NAMES_MAX: usize = 300;
 
 pub struct Mining {
     settings: ModuleSettings,
@@ -95,6 +101,8 @@ pub struct Mining {
     fetched_at: Option<DateTime<Utc>>,
     inflight: Inflight,
     values: HashMap<&'static str, Value>,
+    /// Clave de materia -> nombre localizado, aprendido de los eventos.
+    names: BTreeMap<String, String>,
 }
 
 impl Mining {
@@ -119,6 +127,7 @@ impl Mining {
             fetched_at: None,
             inflight: Inflight::default(),
             values: HashMap::new(),
+            names: BTreeMap::new(),
         }
     }
 
@@ -129,6 +138,21 @@ impl Mining {
         if self.now.is_none_or(|n| at > n) {
             self.now = Some(at);
         }
+    }
+
+    /// Aprende el nombre localizado de una materia (ignora vacíos).
+    fn learn(&mut self, raw: &str, localised: Option<&str>) {
+        let Some(name) = localised.map(str::trim).filter(|n| !n.is_empty()) else {
+            return;
+        };
+        let key = commodity_key(raw);
+        if key.is_empty() {
+            return;
+        }
+        if self.names.len() >= NAMES_MAX && !self.names.contains_key(&key) {
+            return;
+        }
+        self.names.insert(key, name.to_owned());
     }
 
     fn clock(&self) -> DateTime<Utc> {
@@ -234,6 +258,9 @@ impl Mining {
         let now = self.clock();
         match &je.kind {
             EventKind::ProspectedAsteroid(p) => {
+                for m in &p.materials {
+                    self.learn(&m.name, m.name_localised.as_deref());
+                }
                 let book = &self.prices;
                 let f = |k: &str| book.best_price(k, now);
                 self.prospector.apply(p, &f, &self.settings);
@@ -251,6 +278,7 @@ impl Mining {
                 self.clear_results();
             }
             EventKind::MarketSell(m) => {
+                self.learn(&m.type_, m.type_localised.as_deref());
                 self.prices.on_market_sell(m, now);
                 self.take_from_inventory(&commodity_key(&m.type_), m.count);
             }
@@ -258,10 +286,16 @@ impl Mining {
                 self.take_from_inventory(&commodity_key(&e.type_), e.count);
             }
             EventKind::MiningRefined(r) => {
+                self.learn(&r.type_, r.type_localised.as_deref());
                 *self.inventory.entry(commodity_key(&r.type_)).or_default() += 1;
             }
             EventKind::Cargo(c) => {
                 let ship = c.vessel.as_deref().is_none_or(|v| v == "Ship");
+                if let Some(inv) = &c.inventory {
+                    for i in inv {
+                        self.learn(&i.name, i.name_localised.as_deref());
+                    }
+                }
                 if ship && let Some(inv) = &c.inventory {
                     self.inventory = inventory_of(inv.iter().map(|i| (i.name.as_str(), i.count)));
                 }
@@ -454,6 +488,8 @@ impl Mining {
         let f = |k: &str| book.best_price(k, now);
         let mut v = serde_json::to_value(&self.session).unwrap_or_default();
         if let Some(o) = v.as_object_mut() {
+            o.insert("as_of".into(), json!(self.now));
+            o.insert("names".into(), json!(self.names));
             o.insert(
                 "tons_per_hour".into(),
                 json!(self.session.tons_per_hour(now)),
@@ -477,7 +513,7 @@ impl Mining {
 
     fn render_sell(&self, state: &GameState) -> Value {
         if !self.online(state) {
-            return json!({"status": "disabled"});
+            return json!({"status": "disabled", "as_of": self.now, "names": self.names});
         }
         let keys = self.plan_keys();
         let results: BTreeMap<String, Vec<RemoteMarket>> = self
@@ -497,27 +533,34 @@ impl Mining {
         } else {
             "no_data"
         };
-        let plan = any.then(|| {
-            SellPlan::build(
-                &self.inventory,
-                &results,
-                self.pad,
-                self.fetched_at.unwrap_or_else(|| self.clock()),
-            )
-        });
+        let plan =
+            any.then(|| SellPlan::build(&self.inventory, &results, self.pad, self.fetched_at));
         serde_json::to_value(SellTopic {
             status,
+            as_of: self.now,
+            names: &self.names,
             plan: plan.as_ref(),
         })
         .unwrap_or_default()
     }
 
     fn set(&mut self, topic: &'static str, v: Value, dirty: &mut TopicSet) {
-        if self.values.get(topic) != Some(&v) {
+        // `as_of` avanza con cada evento: no cuenta para detectar cambios.
+        if strip_as_of(self.values.get(topic)) != strip_as_of(Some(&v)) {
             self.values.insert(topic, v);
             dirty.insert(topic.to_owned());
         }
     }
+}
+
+fn strip_as_of(v: Option<&Value>) -> Option<Value> {
+    v.map(|v| {
+        let mut v = v.clone();
+        if let Some(o) = v.as_object_mut() {
+            o.remove("as_of");
+        }
+        v
+    })
 }
 
 fn inventory_of<'a>(items: impl Iterator<Item = (&'a str, u32)>) -> BTreeMap<String, u32> {
@@ -586,6 +629,9 @@ impl Module for Mining {
                 );
             }
             SourceEvent::Companion(CompanionFile::Cargo(f)) => {
+                for i in &f.inventory {
+                    self.learn(&i.name, i.name_localised.as_deref());
+                }
                 if f.vessel.as_deref().is_none_or(|v| v == "Ship") {
                     self.inventory =
                         inventory_of(f.inventory.iter().map(|i| (i.name.as_str(), i.count)));
@@ -595,6 +641,15 @@ impl Module for Mining {
             }
             SourceEvent::Companion(CompanionFile::Raw(CompanionKind::Market, v)) => {
                 let now = self.clock();
+                if let Some(items) = v.get("Items").and_then(Value::as_array) {
+                    for it in items {
+                        let name = it.get("Name").and_then(Value::as_str);
+                        let loc = it.get("Name_Localised").and_then(Value::as_str);
+                        if let Some(name) = name {
+                            self.learn(name, loc);
+                        }
+                    }
+                }
                 self.prices.on_market_json(v, now);
                 session_dirty = true;
             }

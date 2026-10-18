@@ -1,4 +1,4 @@
-import { getLocale } from './i18n';
+import { getLocale, t } from './i18n';
 
 export function credits(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
@@ -97,13 +97,23 @@ export function cssPct(n: number | null | undefined): string {
   return `${Math.round(v * 10) / 10}%`;
 }
 
-/** Tiempo relativo ("hace 2 h") a partir de una marca ISO; `—` si no hay. */
-export function relativeAge(iso: string | null | undefined, nowMs: number): string {
+/**
+ * Desfase entre el reloj del diario (`as_of`) y el local, en ms. `null` si falta
+ * o es el instante cero (módulo sin eventos): entonces no hay base de tiempo.
+ */
+export function skewFrom(asOf: string | null | undefined, localMs: number = Date.now()): number | null {
+  const ts = asOf ? Date.parse(asOf) : NaN;
+  if (Number.isNaN(ts) || ts < Date.UTC(2000, 0, 1)) return null;
+  return ts - localMs;
+}
+
+/** Tiempo relativo ("hace 2 h", "ahora") a partir de una marca ISO; `—` si no hay. */
+export function relativeAge(iso: string | null | undefined, nowMs: number | null): string {
   const ts = iso ? Date.parse(iso) : NaN;
-  if (Number.isNaN(ts)) return '—';
+  if (Number.isNaN(ts) || nowMs == null || ts < Date.UTC(2000, 0, 1)) return '—';
   const secs = Math.max(0, Math.round((nowMs - ts) / 1000));
+  if (secs < 60) return t('mining-age-now');
   const rtf = new Intl.RelativeTimeFormat(getLocale(), { numeric: 'always', style: 'narrow' });
-  if (secs < 60) return rtf.format(0, 'minute');
   if (secs < 3600) return rtf.format(-Math.floor(secs / 60), 'minute');
   if (secs < 86400) return rtf.format(-Math.floor(secs / 3600), 'hour');
   return rtf.format(-Math.floor(secs / 86400), 'day');
