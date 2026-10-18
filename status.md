@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Task 29 (`tmc-headless eval`, criterios 3, 4 y 6) 🔄 en curso (Bloque 5).
-- **Siguiente acción:** completar la Task 29 (ejecución con subagentes; ledger local `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`). CI de GitHub deshabilitada por orden del propietario (2026-10-18); checks en local.
+- **Tarea:** F1 · Task 30 (fixtures anonimizados y pruebas de extremo a extremo) 🔄 en curso (Bloque 5).
+- **Siguiente acción:** completar la Task 30 (ejecución con subagentes; ledger local `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`). CI de GitHub deshabilitada por orden del propietario (2026-10-18); checks en local.
 
 ## Fases
 
@@ -64,7 +64,8 @@
 | 26 | `exobiology` — muestreo y `exo_sample` | ✅ hecha | 5225eb9, e13064a | Máquina Log→Sample→Analyse, posiciones persistidas y reanudables, distancia y rumbo al punto previo más cercano, replay sin borrados. Revisión aprobada tras 1 ronda. |
 | 27 | `exobiology` — módulo, bonus ×5, bio sin vender y relevancia | ✅ hecha | 0d228b4 | Módulo `Exobiology` registrado (4 módulos); topics body/sampling/unsold; ×5 estimado; reconstrucción idempotente al arrancar; 236 tmc-modules PASS. Revisión aprobada. |
 | 28 | UI — panel de exobiología | ✅ hecha | 9578414, 1b824dd | Candidatos con probabilidad y origen, muestreo con barra/dirección/sin vender, tipo y atmósfera localizados; 69 tests UI PASS. Revisión aprobada tras 1 ronda. |
-| 29–32 | Ver plan | ⬜ | — | |
+| 29 | `tmc-headless eval` (criterios 3, 4 y 6) | ✅ hecha | 98f93e9, cdc921e, d16ebb0, e734e5f | Eval local con solo agregados. Tus 7 diarios: C3 15/15 loadouts dentro de ±0,05 al pero INSUFICIENTE (sin ingeniería ni Guardian); C4 y C6 INSUFICIENTE (sin ventas cubiertas ni exobiología). Corrección de §5.1 (ver Bloqueos). |
+| 30–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
@@ -93,6 +94,9 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 18 | Presupuesto de consumo y cierre de F0 | ✅ hecha | fe99cd6 | `measure-footprint.ps1` (`max_mb=144.91` < 150, `avg_cpu_idle=0.09%` < 1% PASS), `README.md` y 9/9 criterios §15 verificados. |
 
 ## Bloqueos y pendientes del propietario
+
+- [ ] **F1 · Corrección de la spec §5.1 (para tu visto bueno):** el juego calcula `MaxJumpRange` con masa = vacío + **combustible máximo por salto** (no con el depósito lleno, como decía la spec). Evidencia: tus 15 loadouts. TMC ya valida así; `fsd.json` se ajustó con tus loadouts (5A y 1A SCO verificados). Con un FSD desconocido, el alcance se oculta y el planificador usa el `MaxJumpRange` del juego.
+- [ ] **F1 · Criterios 3, 4 y 6 sin datos suficientes:** tu historial local (7 diarios) no tiene ingeniería/Guardian, ventas de exploración cubiertas ni exobiología. Para cerrarlos hace falta jugar una sesión de exploración con venta y otra de exobiología con venta, y relanzar `tmc-headless eval`.
 
 
 - [x] **Sincronización de F1:** propietario autoriza explícitamente push de `fase/f1-navegacion-exploracion` al repo privado Danikuso/TheMultipurposeCompanion (2026-10-18). Rechazo previo resuelto por esta autorización; sincronización pendiente de ejecutar.
