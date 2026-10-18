@@ -43,7 +43,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   if (mounted) unmount(mounted);
-  mounted = undefined; target.remove(); vi.useRealTimers();
+  mounted = undefined; target.remove(); vi.useRealTimers(); vi.unstubAllGlobals();
 });
 
 test('wanted badge shows localized bounty', () => {
@@ -164,7 +164,7 @@ test('accessibility: labelled shields, bars and live badge', () => {
   const bar = target.querySelector('[role="progressbar"]')!;
   expect(bar.getAttribute('aria-label')).toBe('Casco');
   expect(bar.getAttribute('aria-valuenow')).toBe('73');
-  unmount(mounted!);
+  unmount(mounted!); mounted = undefined;
   mountTarget(targetTopic());
   const bars = target.querySelectorAll('[role="progressbar"]');
   expect(bars.length).toBe(3);
@@ -218,7 +218,7 @@ test('vouchers grouped by faction and kind with IF fee', () => {
   expect(target.querySelector('[data-testid="if-station"]')!.textContent).toContain('Hutton Orbital');
   expect(target.querySelector('[data-testid="if-age"]')!.textContent).toContain('2h');
   expect(target.querySelector('[data-testid="session-credits"]')!.textContent).toContain('120.000');
-  expect(target.querySelector('[data-testid="rank-progress"]')!.textContent).toContain('40');
+  expect(target.querySelector('[data-testid="rank-progress"]')!.textContent).toBe('Maestro · 40 %');
 });
 
 test('credits per hour is computed locally from started_at', () => {
@@ -257,14 +257,14 @@ test('ax panel lists kills by type and presence banner', () => {
 test('ax and conflict zone panels hide when not applicable', () => {
   mountWith(AxPanel, 'combat.ax', { active: false, presence: false, kills_by_type: {}, bonds: 0, target: null });
   expect(target.querySelector('[data-testid="ax-panel"]')).toBeNull();
-  unmount(mounted!);
+  unmount(mounted!); mounted = undefined;
   mountWith(ConflictZonePanel, 'combat.conflict_zone', null);
   expect(target.querySelector('[data-testid="zone-panel"]')).toBeNull();
 });
 
 test('conflict zone panel shows side, kills and bonds by faction', () => {
   mountWith(ConflictZonePanel, 'combat.conflict_zone', {
-    system: 'Sol', side: 'Federation', kills: 7, bonds_by_faction: { 'Los Pacíficos': 15000, '': 500 },
+    system: 'Sol', side: '$faction_Federation;', kills: 7, bonds_by_faction: { 'Los Pacíficos': 15000, '': 500 },
   });
   const z = target.querySelector('[data-testid="zone-panel"]')!;
   expect(z.textContent).toContain('Federation');
@@ -274,4 +274,48 @@ test('conflict zone panel shows side, kills and bonds by faction', () => {
   expect(bonds.length).toBe(2);
   expect(bonds[0].textContent).toContain('15.000');
   expect(bonds[1].textContent).toContain('facción desconocida');
+});
+
+test('rank progress 1 is shown as 1 %', () => {
+  mountWith(HuntingPanel, 'combat.session', sessionTopic({ combat_progress: 1 }));
+  expect(target.querySelector('[data-testid="rank-progress"]')!.textContent).toBe('Maestro · 1 %');
+});
+
+test('other voucher row counts vouchers, not factions', () => {
+  mountWith(HuntingPanel, 'combat.session', sessionTopic({
+    vouchers: [{ kind: null, faction: '', amount: 9000, systems: [], ax: false, other: true, count: 5 }],
+  }));
+  const row = target.querySelector('[data-testid="voucher-row"]')!;
+  expect(row.textContent).toContain('5 vales más');
+  expect(row.textContent).not.toContain('desconocida');
+});
+
+test('reset failure shows alert', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) }));
+  mountWith(HuntingPanel, 'combat.session', sessionTopic());
+  (target.querySelector('[data-testid="reset-session"]') as HTMLButtonElement).click();
+  await vi.waitFor(() => {
+    flushSync();
+    expect(target.querySelector('[role="alert"]')!.textContent).toBe('No se pudo reiniciar la sesión');
+  });
+});
+
+test('invalid IF updated_at shows a dash', () => {
+  mountWith(HuntingPanel, 'combat.session', sessionTopic({
+    nearest_if: { station_name: 'H', system_name: 'S', distance_ly: 1, distance_to_arrival_ls: null, max_pad: null, updated_at: 'garbage' },
+  }));
+  expect(target.querySelector('[data-testid="if-age"]')!.textContent).toBe('—');
+});
+
+test('conflict zone side is cleaned', () => {
+  mountWith(ConflictZonePanel, 'combat.conflict_zone', { system: 'Sol', side: '$faction_Federation;', kills: 1, bonds_by_faction: {} });
+  expect(target.querySelector('[data-testid="zone-side"]')!.textContent).toBe('Bando: Federation');
+});
+
+test('ax types are localized with raw fallback', () => {
+  mountWith(AxPanel, 'combat.ax', { active: true, presence: false, kills_by_type: { scout: 3, cyclops: 1, Weird_Thing: 2 }, bonds: 0, target: 'medusa' });
+  expect(target.querySelector('[data-testid="ax-kill-scout"]')!.textContent).toContain('Explorador');
+  expect(target.querySelector('[data-testid="ax-kill-cyclops"]')!.textContent).toContain('Cíclope');
+  expect(target.querySelector('[data-testid="ax-kill-Weird_Thing"]')!.textContent).toContain('Weird Thing');
+  expect(target.querySelector('[data-testid="ax-target"]')!.textContent).toBe('Objetivo: Medusa');
 });

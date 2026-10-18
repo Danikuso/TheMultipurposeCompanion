@@ -29,11 +29,10 @@
       ? t(`combat-rank-${s.combat_rank}`)
       : null,
   );
-  const ifAge = $derived(
-    s?.nearest_if?.updated_at
-      ? ageShort(Math.max(0, (now - Date.parse(s.nearest_if.updated_at)) / 1000))
-      : null,
-  );
+  const ifAge = $derived.by(() => {
+    const ts = s?.nearest_if?.updated_at ? Date.parse(s.nearest_if.updated_at) : NaN;
+    return Number.isNaN(ts) ? null : ageShort(Math.max(0, (now - ts) / 1000));
+  });
   const unredeemed = $derived(s ? s.vouchers_total.bounty + s.vouchers_total.combat_bond : 0);
 
   function fee(amount: number): string {
@@ -64,7 +63,7 @@
     {#if rankName}
       <div class="row">
         <span class="label">{t('combat-rank')}</span>
-        <span data-testid="rank-progress">{t('combat-rank-progress', { rank: rankName, pct: pct(s.combat_progress) })}</span>
+        <span data-testid="rank-progress">{t('combat-rank-progress', { rank: rankName, pct: pct(s.combat_progress == null ? null : s.combat_progress / 100) })}</span>
       </div>
     {/if}
     <h3>{t('combat-vouchers-title')}</h3>
@@ -92,7 +91,7 @@
       <span class="label">{t('combat-if-nearest')}</span>
       {#if s.nearest_if}
         <span data-testid="if-station">{t('combat-if-station', { station: s.nearest_if.station_name, system: s.nearest_if.system_name, distance: ly(s.nearest_if.distance_ly) })}</span>
-        {#if ifAge}<span class="muted" data-testid="if-age">{t('combat-if-age', { age: ifAge })}</span>{/if}
+        <span class="muted" data-testid="if-age">{ifAge == null ? '—' : t('combat-if-age', { age: ifAge })}</span>
       {:else}
         <span class="muted" data-testid="if-none">{t('combat-no-data')}</span>
       {/if}
