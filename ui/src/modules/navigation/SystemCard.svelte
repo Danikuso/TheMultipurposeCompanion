@@ -1,6 +1,7 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
   import { ageShort, ly, pct, starClassLabel } from '../../lib/format';
+  import { getLocale } from '../../lib/i18n';
   import type { Card, Politics } from './types';
 
   let {
@@ -44,9 +45,9 @@
         : t('strip-undiscovered'),
   );
   const population = $derived(
-    pol?.population == null ? null : new Intl.NumberFormat().format(pol.population),
+    pol?.population == null ? null : new Intl.NumberFormat(getLocale()).format(pol.population),
   );
-  const jumpLy = $derived(card.jump_ly == null ? '—' : card.jump_ly.toFixed(2));
+  const jumpLy = $derived(ly(card.jump_ly));
 </script>
 
 {#snippet scoopTag()}
@@ -65,6 +66,9 @@
 
 {#snippet stateTag()}
   {#if pol?.faction_state}
+    {#if danger}
+      <span class="warn" role="img" aria-label={t('strip-state-danger')}>⚠</span>
+    {/if}
     <span class="state" class:danger data-testid="faction-state">{pol.faction_state}</span>
   {/if}
 {/snippet}
@@ -75,7 +79,7 @@
       <section class="col">
         <h3>{t('strip-col-jump')}</h3>
         <strong class="name">{card.name}</strong>
-        <div><span class="label">{t('strip-jump-ly')}</span> <span class="mono">{jumpLy}</span> ly</div>
+        <div><span class="label">{t('strip-jump-ly')}</span> <span class="mono">{jumpLy}</span></div>
         {#if remainingJumps != null}
           <div><span class="label">{t('strip-remaining-jumps')}</span> <span class="mono">{remainingJumps}</span></div>
         {/if}
@@ -159,7 +163,7 @@
         {@render scoopTag()}
       {/if}
     </div>
-    <div><span class="label">{t('strip-jump-ly')}</span> <span class="mono">{jumpLy}</span> ly</div>
+    <div><span class="label">{t('strip-jump-ly')}</span> <span class="mono">{jumpLy}</span></div>
     <div><span class="label">{t('strip-discovered')}</span> <span>{discovered}</span></div>
     {#if pol}
       <div>{pol.allegiance ?? '—'} · {pol.government ?? '—'}</div>
@@ -186,6 +190,18 @@
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1rem;
+  }
+
+  @media (max-width: 1599px) {
+    .cols {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 899px) {
+    .cols {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   .col {
@@ -245,6 +261,11 @@
     color: var(--hud-warning);
     border-color: var(--hud-warning);
     font-weight: 700;
+  }
+
+  .warn {
+    color: var(--hud-danger);
+    margin-right: 0.25rem;
   }
 
   .state.danger {

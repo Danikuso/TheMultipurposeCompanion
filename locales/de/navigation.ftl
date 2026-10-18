@@ -58,3 +58,4 @@ strip-bodies = Körper
 strip-powerplay = Powerplay
 strip-recalculate = Neu berechnen
 strip-cache-age = Im Cache seit { $age }
+strip-state-danger = Gefahrenzustand

@@ -21,11 +21,16 @@ describe('layouts', () => {
   });
 
   test('format helpers', () => {
-    expect(ageShort(45)).toBe('45 s');
-    expect(ageShort(125)).toBe('2 min');
-    expect(ageShort(7300)).toBe('2 h');
-    expect(ageShort(200000)).toBe('2 d');
-    expect(ageShort(-5)).toBe('0 s');
+    setLocale('es');
+    expect(ageShort(45)).toBe('45s');
+    expect(ageShort(125)).toBe('2min');
+    expect(ageShort(7300)).toBe('2h');
+    expect(ageShort(200000)).toBe('2d');
+    expect(ageShort(-5)).toBe('0s');
+    setLocale('en');
+    expect(ageShort(125)).toBe('2m');
+    expect(ageShort(45)).toBe('45s');
+    setLocale('es');
     expect(starClassLabel('K')).toBe('K');
     expect(starClassLabel('da')).toBe('DA');
     expect(starClassLabel('O_BLUE')).toBe('O');
