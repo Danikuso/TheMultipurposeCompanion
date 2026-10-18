@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (Bloque 0 hecho; siguiente Task 3 — eventos de combate), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
+- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 4), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
 
 ## Fases
 
@@ -38,8 +38,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 0 | Spike AX | ✅ hecha | a2276dd | Sin datos AX en los 7 diarios; AX desde fuentes secundarias (sin verificar); BrokerPercentage: Amount tal cual; sin asistencias. Revisión aprobada. |
 | 1 | Spike Ardent | ✅ hecha | e9937cd | Rutas por address OK; filtro de plataforma local; nombres = Type del diario; fixtures sintéticos. |
 | 2 | Aprobaciones del propietario tras los spikes | ✅ hecha | (este commit) | Registradas en Bloqueos; no bloquean. |
-| 3 | `tmc-model` — eventos de combate | ⬜ | — | |
-| 4 | `tmc-model` — eventos de minería y mercado, `Cargo` con inventario, reparaciones | ⬜ | — | |
+| 3 | `tmc-model` — eventos de combate | ✅ hecha | ecce185 | ShipTargeted (alias ShipTargetted), Bounty, bonos, RedeemVoucher, calor, escudos… Revisión aprobada. |
+| 4 | `tmc-model` — eventos de minería y mercado, `Cargo` con inventario, reparaciones | 🔄 en curso | — | |
 | 5 | `tmc-model` — bloque `ThargoidWar` y facciones en `LocationInfo` | ⬜ | — | |
 | 6 | `tmc-model` — consultas de Ardent, `PadSize` y ajustes de minería | ⬜ | — | |
 | 7 | `tmc-net` — adaptador Ardent | ⬜ | — | |
