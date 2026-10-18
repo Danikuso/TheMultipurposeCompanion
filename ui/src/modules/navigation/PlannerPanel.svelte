@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { t } from '../../lib/i18n';
   import { ly } from '../../lib/format';
   import { action, topic } from '../../lib/ws.svelte';
@@ -16,7 +16,9 @@
     id64: number | null;
     items: Suggestion[];
     seq: number;
+    open: boolean;
     timer: ReturnType<typeof setTimeout> | null;
+    ctrl: AbortController | null;
   }
 
   const DEBOUNCE_MS = 300;
@@ -27,26 +29,63 @@
   const disabled = $derived(status === 'disabled');
   const computing = $derived(status === 'computing');
 
-  let to = $state<Field>({ text: '', id64: null, items: [], seq: 0, timer: null });
-  let from = $state<Field>({ text: '', id64: null, items: [], seq: 0, timer: null });
+  let to = $state<Field>({ text: '', id64: null, items: [], seq: 0, open: false, timer: null, ctrl: null });
+  let from = $state<Field>({ text: '', id64: null, items: [], seq: 0, open: false, timer: null, ctrl: null });
   let mode = $state<'neutron' | 'galaxy'>('neutron');
-  let efficiency = $state(60);
+  let efficiency = $state<number | null>(null);
+  let defaultEfficiency = $state<number | null>(null);
   let useShip = $state(true);
   let refuelScoopable = $state(true);
   let useInjections = $state(false);
 
-  onDestroy(() => {
-    for (const f of [to, from]) {
-      if (f.timer !== null) clearTimeout(f.timer);
+  onMount(async () => {
+    try {
+      const res = await fetch('/api/config');
+      if (!res.ok) return;
+      const cfg = (await res.json()) as { default_neutron_efficiency?: unknown };
+      const v = cfg.default_neutron_efficiency;
+      if (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 100) defaultEfficiency = v;
+    } catch {
+      // sin ajustes: se usa el texto genérico
     }
   });
 
+  onDestroy(() => {
+    for (const f of [to, from]) {
+      if (f.timer !== null) clearTimeout(f.timer);
+      f.ctrl?.abort();
+    }
+  });
+
+  const efficiencyValue = $derived.by(() => {
+    const raw: unknown = efficiency;
+    if (raw === null || raw === undefined || raw === '') return null;
+    const n = Number(raw);
+    return Number.isInteger(n) && n >= 1 && n <= 100 ? n : NaN;
+  });
+  const efficiencyInvalid = $derived(Number.isNaN(efficiencyValue));
+  const toNeedsPick = $derived(mode === 'galaxy' && to.text.trim() !== '' && to.id64 == null);
+  const fromNeedsPick = $derived(mode === 'galaxy' && from.text.trim() !== '' && from.id64 == null);
+  const blocked = $derived(disabled || computing || efficiencyInvalid || toNeedsPick || fromNeedsPick);
+
   async function fetchSuggestions(f: Field, seq: number) {
+    f.ctrl?.abort();
+    const ctrl = new AbortController();
+    f.ctrl = ctrl;
     try {
-      const res = await fetch(`/api/navigation/autocomplete?q=${encodeURIComponent(f.text.trim())}&page=0`);
-      if (!res.ok) return;
+      const res = await fetch(`/api/navigation/autocomplete?q=${encodeURIComponent(f.text.trim())}&page=0`, {
+        signal: ctrl.signal,
+      });
+      if (seq !== f.seq) return;
+      if (!res.ok) {
+        f.items = [];
+        return;
+      }
       const body = (await res.json()) as { items?: Suggestion[] };
-      if (seq === f.seq) f.items = body.items ?? [];
+      if (seq === f.seq) {
+        f.items = body.items ?? [];
+        f.open = f.items.length > 0;
+      }
     } catch {
       if (seq === f.seq) f.items = [];
     }
@@ -55,12 +94,14 @@
   function onType(f: Field) {
     f.id64 = null;
     f.seq += 1;
+    f.ctrl?.abort();
     if (f.timer !== null) {
       clearTimeout(f.timer);
       f.timer = null;
     }
     if (f.text.trim().length < MIN_CHARS) {
       f.items = [];
+      f.open = false;
       return;
     }
     const seq = f.seq;
@@ -75,16 +116,29 @@
     f.text = s.name;
     f.id64 = s.id64;
     f.items = [];
+    f.open = false;
+  }
+
+  function closeLater(f: Field) {
+    // deja que el clic en una sugerencia se procese antes de cerrar la lista
+    setTimeout(() => {
+      f.open = false;
+    }, 150);
+  }
+
+  function onKey(ev: KeyboardEvent, f: Field) {
+    if (ev.key === 'Escape') f.open = false;
   }
 
   function submit(ev: Event) {
     ev.preventDefault();
+    if (blocked) return;
     const args: Record<string, unknown> = {
       to: to.text.trim(),
       mode,
-      efficiency: Math.min(100, Math.max(1, Math.round(Number(efficiency) || 60))),
       use_ship: useShip,
     };
+    if (efficiencyValue !== null) args.efficiency = efficiencyValue;
     if (to.id64 != null) args.to_id64 = to.id64;
     if (from.text.trim()) {
       args.from = from.text.trim();
@@ -125,12 +179,18 @@
         placeholder={t('nav-plan-from-hint')}
         {disabled}
         bind:value={from.text}
+        role="combobox"
+        aria-expanded={from.open && from.items.length > 0}
+        aria-controls="plan-from-list"
+        aria-autocomplete="list"
         oninput={() => onType(from)}
+        onkeydown={(e) => onKey(e, from)}
+        onblur={() => closeLater(from)}
       />
-      {#if from.items.length > 0}
-        <ul class="suggestions">
+      {#if from.open && from.items.length > 0}
+        <ul class="suggestions" id="plan-from-list" role="listbox">
           {#each from.items as s (s.id64)}
-            <li><button type="button" data-testid="suggestion-from" onclick={() => pick(from, s)}>{s.name}</button></li>
+            <li role="option" aria-selected="false"><button type="button" data-testid="suggestion-from" onclick={() => pick(from, s)}>{s.name}</button></li>
           {/each}
         </ul>
       {/if}
@@ -144,12 +204,18 @@
         autocomplete="off"
         {disabled}
         bind:value={to.text}
+        role="combobox"
+        aria-expanded={to.open && to.items.length > 0}
+        aria-controls="plan-to-list"
+        aria-autocomplete="list"
         oninput={() => onType(to)}
+        onkeydown={(e) => onKey(e, to)}
+        onblur={() => closeLater(to)}
       />
-      {#if to.items.length > 0}
-        <ul class="suggestions">
+      {#if to.open && to.items.length > 0}
+        <ul class="suggestions" id="plan-to-list" role="listbox">
           {#each to.items as s (s.id64)}
-            <li><button type="button" data-testid="suggestion" onclick={() => pick(to, s)}>{s.name}</button></li>
+            <li role="option" aria-selected="false"><button type="button" data-testid="suggestion" onclick={() => pick(to, s)}>{s.name}</button></li>
           {/each}
         </ul>
       {/if}
@@ -172,6 +238,10 @@
           min="1"
           max="100"
           data-testid="plan-efficiency"
+          placeholder={defaultEfficiency != null
+            ? t('nav-plan-efficiency-default', { value: defaultEfficiency })
+            : t('nav-plan-efficiency-hint')}
+          aria-invalid={efficiencyInvalid}
           {disabled}
           bind:value={efficiency}
         />
@@ -193,12 +263,18 @@
     </div>
 
     <div class="actions">
-      <button type="submit" class="primary" data-testid="plan-submit" disabled={disabled || computing}>
+      <button type="submit" class="primary" data-testid="plan-submit" disabled={blocked}>
         {t('nav-plan-submit')}
       </button>
     </div>
   </form>
 
+  {#if efficiencyInvalid}
+    <p class="error" data-testid="plan-efficiency-error">{t('nav-plan-efficiency-invalid')}</p>
+  {/if}
+  {#if toNeedsPick || fromNeedsPick}
+    <p class="note" data-testid="plan-pick-hint">{t('nav-plan-pick-destination')}</p>
+  {/if}
   {#if computing}
     <p class="note" data-testid="plan-computing">{t('nav-plan-computing')}</p>
   {/if}
@@ -235,7 +311,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each plan.result.hops as hop (hop.id64)}
+          {#each plan.result.hops as hop, i (`${hop.id64}-${i}`)}
             <tr data-testid="hop">
               <td>
                 {hop.name}
@@ -287,7 +363,7 @@
   }
 
   input.num {
-    width: 4.5rem;
+    width: 9rem;
     margin-left: 0.4rem;
   }
 

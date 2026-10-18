@@ -300,6 +300,7 @@ describe('navigation panels', () => {
     }
     function fetchRouter(calls: string[]) {
       return vi.fn(async (url: string, init?: RequestInit) => {
+        if (url === '/api/config') return { ok: true, json: async () => ({ default_neutron_efficiency: 55 }) };
         calls.push(`${url}|${init?.body ?? ''}`);
         if (url.startsWith('/api/navigation/autocomplete')) {
           return {
@@ -362,6 +363,129 @@ describe('navigation panels', () => {
       expect(body.use_ship).toBe(true);
       expect(body.from).toBeUndefined();
       expect(body.from_id64).toBeUndefined();
+    });
+
+    async function submitWith(eff: string | null, pick = true) {
+      vi.useFakeTimers();
+      const calls: string[] = [];
+      vi.stubGlobal('fetch', fetchRouter(calls));
+      live.topics['navigation.plan'] = planTopic();
+      render(PlannerPanel);
+      const input = target.querySelector('[data-testid="plan-to"]') as HTMLInputElement;
+      typeIn(input, 'Col');
+      await vi.advanceTimersByTimeAsync(300);
+      flushSync();
+      if (pick) (target.querySelector('[data-testid="suggestion"]') as HTMLElement).click();
+      flushSync();
+      if (eff !== null) typeIn(target.querySelector('[data-testid="plan-efficiency"]') as HTMLInputElement, eff);
+      (target.querySelector('[data-testid="plan-submit"]') as HTMLButtonElement).click();
+      await vi.advanceTimersByTimeAsync(0);
+      const c = calls.find((x) => x.startsWith('/api/actions/navigation.plan'));
+      return c ? JSON.parse(c.split('|')[1]) : null;
+    }
+
+    test('untouched efficiency is omitted and settings default shown as placeholder', async () => {
+      const body = await submitWith(null);
+      expect(body).not.toBeNull();
+      expect('efficiency' in body).toBe(false);
+      const eff = target.querySelector('[data-testid="plan-efficiency"]') as HTMLInputElement;
+      expect(eff.placeholder).toBe(t('nav-plan-efficiency-default', { value: 55 }));
+    });
+
+    test('typed efficiency 75 is sent', async () => {
+      const body = await submitWith('75');
+      expect(body.efficiency).toBe(75);
+    });
+
+    test('efficiency 0 is invalid and not submitted', async () => {
+      const body = await submitWith('0');
+      expect(body).toBeNull();
+      expect(target.querySelector('[data-testid="plan-efficiency-error"]')?.textContent).toContain(
+        'entero entre 1 y 100',
+      );
+      expect((target.querySelector('[data-testid="plan-submit"]') as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    test('galaxy mode without picked destination blocks submit with hint', async () => {
+      const body = await (async () => {
+        vi.useFakeTimers();
+        const calls: string[] = [];
+        vi.stubGlobal('fetch', fetchRouter(calls));
+        live.topics['navigation.plan'] = planTopic();
+        render(PlannerPanel);
+        (target.querySelector('[data-testid="mode-galaxy"]') as HTMLInputElement).click();
+        typeIn(target.querySelector('[data-testid="plan-to"]') as HTMLInputElement, 'Colonia');
+        flushSync();
+        return calls;
+      })();
+      expect((target.querySelector('[data-testid="plan-submit"]') as HTMLButtonElement).disabled).toBe(true);
+      expect(target.querySelector('[data-testid="plan-pick-hint"]')?.textContent).toContain(
+        t('nav-plan-pick-destination'),
+      );
+      expect(body.filter((c) => c.startsWith('/api/actions')).length).toBe(0);
+    });
+
+    test('galaxy mode with typed origin but no id64 blocks submit', async () => {
+      vi.stubGlobal('fetch', fetchRouter([]));
+      live.topics['navigation.plan'] = planTopic();
+      render(PlannerPanel);
+      (target.querySelector('[data-testid="mode-galaxy"]') as HTMLInputElement).click();
+      typeIn(target.querySelector('[data-testid="plan-from"]') as HTMLInputElement, 'Sol');
+      expect((target.querySelector('[data-testid="plan-submit"]') as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    test('stale autocomplete response is ignored', async () => {
+      vi.useFakeTimers();
+      const resolvers: Record<string, (v: unknown) => void> = {};
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((url: string) => {
+          if (url === '/api/config') return Promise.resolve({ ok: true, json: async () => ({}) });
+          return new Promise((res) => {
+            resolvers[url] = res;
+          });
+        }),
+      );
+      live.topics['navigation.plan'] = planTopic();
+      render(PlannerPanel);
+      const input = target.querySelector('[data-testid="plan-to"]') as HTMLInputElement;
+      typeIn(input, 'Col');
+      await vi.advanceTimersByTimeAsync(300);
+      typeIn(input, 'Colo');
+      await vi.advanceTimersByTimeAsync(300);
+      const answer = (name: string) => ({ ok: true, json: async () => ({ items: [{ name, id64: 1 }] }) });
+      resolvers['/api/navigation/autocomplete?q=Colo&page=0'](answer('Fresh'));
+      await vi.advanceTimersByTimeAsync(0);
+      resolvers['/api/navigation/autocomplete?q=Col&page=0'](answer('Stale'));
+      await vi.advanceTimersByTimeAsync(0);
+      flushSync();
+      expect([...target.querySelectorAll('[data-testid="suggestion"]')].map((o) => o.textContent?.trim())).toEqual([
+        'Fresh',
+      ]);
+      expect(input.getAttribute('aria-expanded')).toBe('true');
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      flushSync();
+      expect(target.querySelectorAll('[data-testid="suggestion"]').length).toBe(0);
+      expect(input.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    test('hop with null star class shows dash', () => {
+      live.topics['navigation.plan'] = planTopic({
+        status: 'ready',
+        result: {
+          total_ly: 10,
+          hops_total: 2,
+          hops: [
+            { name: 'A', id64: 7, distance_ly: 5, jumps: 1, neutron: false, refuel: false, star_class: null },
+            { name: 'B', id64: 7, distance_ly: 5, jumps: 1, neutron: false, refuel: false, star_class: 'M' },
+          ],
+        },
+      });
+      render(PlannerPanel);
+      const rows = [...target.querySelectorAll('[data-testid="hop"]')];
+      expect(rows.length).toBe(2);
+      expect(rows[0].querySelectorAll('td')[2].textContent).toBe('—');
+      expect(rows[1].querySelectorAll('td')[2].textContent).toBe('M');
     });
 
     test('computing state is text only', () => {

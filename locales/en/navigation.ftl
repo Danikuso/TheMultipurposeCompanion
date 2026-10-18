@@ -81,3 +81,7 @@ nav-plan-more = +{ $count } more
 nav-plan-accept = Accept
 nav-plan-clear = Clear plan
 nav-plan-active = Active route to { $destination }: leg { $current } of { $total }
+nav-plan-efficiency-default = Default: { $value }
+nav-plan-efficiency-hint = From your settings
+nav-plan-efficiency-invalid = Efficiency must be an integer between 1 and 100.
+nav-plan-pick-destination = In Galaxy mode, pick the origin and destination from the suggestions.
