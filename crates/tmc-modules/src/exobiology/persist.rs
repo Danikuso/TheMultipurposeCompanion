@@ -88,6 +88,36 @@ fn open_rows(rows: Vec<ExoSampleRow>) -> Vec<ExoSampleRow> {
     all
 }
 
+/// Especies completadas (`ScanOrganic` Analyse) desde la última
+/// `SellOrganicData` o `Died` del comandante, con el último `Scan` de su
+/// cuerpo. Resultado: `{"cmdr", "rows": [[addr, body, species, ts, scan_json|null]]}`.
+const UNSOLD_SQL: &str = "SELECT o.addr, o.body, o.species, o.ts,
+               (SELECT s.json FROM event s
+                 WHERE s.cmdr = ?1 AND s.name = 'Scan'
+                   AND json_extract(s.json, '$.SystemAddress') = o.addr
+                   AND json_extract(s.json, '$.BodyID') = o.body
+                 ORDER BY s.ts DESC, s.id DESC LIMIT 1)
+             FROM (SELECT json_extract(json, '$.SystemAddress') AS addr,
+                          json_extract(json, '$.Body') AS body,
+                          json_extract(json, '$.Species') AS species,
+                          MAX(ts) AS ts
+                   FROM event
+                   WHERE cmdr = ?1 AND name = 'ScanOrganic'
+                     AND json_extract(json, '$.ScanType') = 'Analyse'
+                     AND json_extract(json, '$.Species') IS NOT NULL
+                     AND ts > COALESCE((SELECT MAX(ts) FROM event
+                                        WHERE cmdr = ?1
+                                          AND name IN ('SellOrganicData', 'Died')), '')
+                   GROUP BY 1, 2, 3) o
+             ORDER BY o.ts";
+
+pub fn load_unsold(cmdr: String) -> StoreTask {
+    Box::new(move |store: &Store| {
+        let rows = store.query_json(UNSOLD_SQL, &[Value::from(cmdr.as_str())])?;
+        Ok(json!({"cmdr": cmdr, "rows": rows}))
+    })
+}
+
 /// Borra todo el rastro del comandante (`Died`).
 pub fn clear_samples(cmdr: String) -> StoreTask {
     Box::new(move |store: &Store| {

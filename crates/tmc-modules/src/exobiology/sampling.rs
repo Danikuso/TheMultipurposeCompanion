@@ -243,6 +243,15 @@ impl SamplingTracker {
         ctx.store_task("clear_samples", persist::clear_samples(cmdr.to_owned()));
     }
 
+    /// Añade una especie completada que el rastreador no vio (reconstruida
+    /// del almacén al arrancar). Idempotente.
+    pub fn mark_completed(&mut self, system_address: u64, body_id: u32, species: &str) {
+        let key = (system_address, body_id, species.to_owned());
+        if !self.completed.contains(&key) {
+            self.completed.push(key);
+        }
+    }
+
     pub fn on_sold(&mut self) {
         self.completed.clear();
         if self.current.as_ref().is_some_and(|cur| cur.complete) {
