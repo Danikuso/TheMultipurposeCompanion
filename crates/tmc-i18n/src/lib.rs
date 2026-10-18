@@ -363,7 +363,10 @@ mod tests {
             assert!(text.contains('0'), "{lang} {key}: {text}");
         }
         let fr = I18n::new("fr").t("combat-kills", &[("count", FluentValue::from(0))]);
-        assert!(fr.ends_with("destruction") && !fr.ends_with("destructions"), "{fr}");
+        assert!(
+            fr.ends_with("destruction") && !fr.ends_with("destructions"),
+            "{fr}"
+        );
     }
 
     #[test]
