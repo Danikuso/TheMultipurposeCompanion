@@ -258,6 +258,17 @@ mod tests {
                 ("count", FluentValue::from(5)),
                 ("destination", FluentValue::from("Colonia")),
                 ("current", FluentValue::from(2)),
+                ("completed", FluentValue::from(1)),
+                ("signals", FluentValue::from(3)),
+                ("genus", FluentValue::from("Bacterium")),
+                ("genera", FluentValue::from("Bacterium, Stratum")),
+                ("n", FluentValue::from(2)),
+                ("meters", FluentValue::from("160 m")),
+                ("dir", FluentValue::from("a tu espalda")),
+                ("compass", FluentValue::from("SO")),
+                ("name", FluentValue::from("Bacterium Aurasus")),
+                ("after", FluentValue::from("5 CR")),
+                ("species", FluentValue::from("Bacterium Aurasus")),
             ] {
                 args.set(name, value);
             }

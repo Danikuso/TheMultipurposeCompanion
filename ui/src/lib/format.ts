@@ -57,6 +57,21 @@ export function starClassLabel(cls: string | null | undefined): string {
   return base ? base : '—';
 }
 
+export function meters(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return '—';
+  return `${new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 0 }).format(n)} m`;
+}
+
+export function gravity(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return '—';
+  return `${new Intl.NumberFormat(getLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)} g`;
+}
+
+export function kelvin(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return '—';
+  return `${new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 0 }).format(n)} K`;
+}
+
 export function num1(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
   return new Intl.NumberFormat(getLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
