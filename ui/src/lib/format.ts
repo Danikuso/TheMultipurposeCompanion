@@ -33,13 +33,22 @@ export function duration(ms: number | null | undefined): string {
   return `${minutes}m`;
 }
 
+function unitFmt(unit: 'second' | 'minute' | 'hour' | 'day', n: number): string {
+  return new Intl.NumberFormat(getLocale(), {
+    style: 'unit',
+    unit,
+    unitDisplay: 'narrow',
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
 export function ageShort(seconds: number | null | undefined): string {
-  if (seconds == null || Number.isNaN(seconds) || seconds < 0) return '0 s';
+  if (seconds == null || Number.isNaN(seconds) || seconds < 0) return unitFmt('second', 0);
   const s = Math.floor(seconds);
-  if (s < 60) return `${s} s`;
-  if (s < 3600) return `${Math.floor(s / 60)} min`;
-  if (s < 86400) return `${Math.floor(s / 3600)} h`;
-  return `${Math.floor(s / 86400)} d`;
+  if (s < 60) return unitFmt('second', s);
+  if (s < 3600) return unitFmt('minute', Math.floor(s / 60));
+  if (s < 86400) return unitFmt('hour', Math.floor(s / 3600));
+  return unitFmt('day', Math.floor(s / 86400));
 }
 
 export function starClassLabel(cls: string | null | undefined): string {
@@ -50,5 +59,5 @@ export function starClassLabel(cls: string | null | undefined): string {
 
 export function num1(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
-  return n.toFixed(1);
+  return new Intl.NumberFormat(getLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
 }

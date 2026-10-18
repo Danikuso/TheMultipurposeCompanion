@@ -63,6 +63,27 @@
     gap: 0.6rem;
   }
 
+  @media (max-width: 1599px) {
+    .strip {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .following {
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+
+    .following > :global(*) {
+      flex: 1 1 14rem;
+    }
+  }
+
+  @media (max-width: 899px) {
+    .following {
+      flex-direction: column;
+    }
+  }
+
   .off-route {
     display: flex;
     align-items: center;

@@ -97,7 +97,7 @@ describe('navigation panels', () => {
     expect(small[0]).toContain('Followa');
     expect(small[1]).toContain('Followb');
     expect(small[1]).toContain(t('strip-neutron'));
-    expect(target.textContent).toContain('12.34');
+    expect(target.textContent).toContain('12,34');
     expect(target.textContent).toContain('Federation');
     expect(target.querySelector('section')?.style.gridColumn).toBe('1 / -1');
   });
@@ -109,7 +109,7 @@ describe('navigation panels', () => {
     render(RouteStrip);
     const next = target.querySelector('[data-testid="next-card"]')?.textContent ?? '';
     expect(next).toContain(t('empty-no-data'));
-    expect(next).toContain('12.34');
+    expect(next).toContain('12,34');
     expect(next).toContain('Nextara');
   });
 
@@ -140,7 +140,7 @@ describe('navigation panels', () => {
       next: card('Nextara', { remote: remoteOk({}, 'Cache') }),
     });
     render(RouteStrip);
-    expect(target.querySelector('[data-testid="next-card"]')?.textContent).toContain('2 min');
+    expect(target.querySelector('[data-testid="next-card"]')?.textContent).toContain('2min');
     expect(target.querySelectorAll('[data-testid="cache-age"]').length).toBe(1);
   });
 
@@ -178,12 +178,99 @@ describe('navigation panels', () => {
     };
     render(JumpPanel);
     const txt = target.textContent ?? '';
-    expect(txt).toContain('24.6');
-    expect(txt).toContain('31.2');
-    expect(txt).toContain('12.5');
-    expect(txt).toContain('5.2');
+    expect(txt).toContain('24,6 ly');
+    expect(txt).toContain('31,2 ly');
+    expect(txt).toContain('12,5 / 32,0 t');
+    expect(txt).toContain('5,2 t');
     expect(txt).toContain('×4');
     expect(txt).not.toContain(t('empty-no-data'));
+  });
+
+  test('jump panel formats numbers with the active locale', () => {
+    setLocale('en');
+    live.topics['navigation.jump'] = {
+      range_ly: 24.6,
+      range_full_ly: 31.2,
+      source: 'formula',
+      fuel_main: 12.5,
+      fuel_capacity: 32,
+      max_fuel_per_jump: 5.2,
+      supercharged: null,
+    };
+    render(JumpPanel);
+    expect(target.textContent).toContain('24.6 ly');
+    expect(target.textContent).toContain('12.5 / 32.0 t');
+    expect(target.querySelector('[data-testid="supercharged"]')).toBeNull();
+  });
+
+  test('falls back to local politics when remote is not ok', () => {
+    const pol = { allegiance: 'Empire', government: 'Patronage', faction_state: 'CivilWar', population: 5000 };
+    live.topics['navigation.route'] = routeTopic({
+      next: card('Nextara', {
+        remote: { status: 'pending', source: null, fetched_at: null, data: null },
+        local_politics: pol,
+      }),
+    });
+    render(RouteStrip);
+    const next = target.querySelector('[data-testid="next-card"]')!;
+    expect(next.textContent).toContain('Empire');
+    expect(next.textContent).toContain('Patronage');
+    const st = next.querySelector('[data-testid="faction-state"]')!;
+    expect(st.textContent?.trim()).toBe('CivilWar');
+    expect(st.classList.contains('danger')).toBe(true);
+    expect(next.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe(t('strip-state-danger'));
+    // exploración remota no disponible
+    expect(next.textContent).toContain(t('empty-no-data'));
+  });
+
+  test('remote disabled and pending without local politics show no-data in politics', () => {
+    for (const status of ['pending', 'disabled']) {
+      live.topics['navigation.route'] = routeTopic({
+        next: card('Nextara', { remote: { status, source: null, fetched_at: null, data: null } }),
+      });
+      render(RouteStrip);
+      const next = target.querySelector('[data-testid="next-card"]')!;
+      // discovered, bodies, politics y sistema
+      expect(next.textContent!.split(t('empty-no-data')).length - 1).toBe(4);
+      expect(next.querySelector('[data-testid="faction-state"]')).toBeNull();
+      unmount(mounted.pop()!);
+    }
+  });
+
+  test('non-danger state has no warning cue', () => {
+    live.topics['navigation.route'] = routeTopic();
+    render(RouteStrip);
+    expect(target.querySelectorAll('[role="img"]').length).toBe(0);
+  });
+
+  test('route without next shows strip-no-route and current card', () => {
+    live.topics['navigation.route'] = routeTopic({ next: null, following: [], source: 'current' });
+    render(RouteStrip);
+    expect(target.textContent).toContain(t('strip-no-route'));
+    expect(target.querySelector('[data-testid="next-card"]')?.textContent).toContain('Currentia');
+    expect(target.querySelectorAll('[data-testid="small-card"]').length).toBe(0);
+  });
+
+  test('unreachable next star is flagged', () => {
+    live.topics['navigation.route'] = routeTopic({ next: card('Nextara', { reachable: false }) });
+    render(RouteStrip);
+    const txt = target.querySelector('[data-testid="next-card"]')!.textContent!;
+    expect(txt).toContain(t('strip-unreachable'));
+    expect(txt).not.toContain(t('strip-reachable'));
+  });
+
+  test('no duplicate data-testid inside one card', () => {
+    live.topics['navigation.route'] = routeTopic({
+      next: card('Nextara', { special: 'neutron', remote: remoteOk({ faction_state: 'War' }, 'Cache') }),
+    });
+    render(RouteStrip);
+    for (const sel of ['[data-testid="next-card"]', '[data-testid="small-card"]']) {
+      for (const el of target.querySelectorAll(sel)) {
+        const ids = [...el.querySelectorAll('[data-testid]')].map((e) => e.getAttribute('data-testid'));
+        expect(new Set(ids).size).toBe(ids.length);
+      }
+    }
+    expect(target.querySelectorAll('[data-testid="next-card"] [data-testid="special"]').length).toBe(1);
   });
 
   test('jump panel with unknown source shows no-data', () => {
