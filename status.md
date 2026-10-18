@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-18 04:53 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-18 13:55 (Europe/Madrid) · Claude Opus 5.5
 - **Fase actual:** F1 — Navegación, exploración y exobiología (spec y plan aprobados; en ejecución). F0 ✅ fusionada en `main` (2b953e6).
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md`](docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md) — ✅ aprobada (2026-10-17); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
 - **Plan activo:** [`docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md`](docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md) — ✅ aprobado (2026-10-17), 33 tareas, bloques 0–5. Ejecución con subagentes. Anterior: [`2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) ✅ 19/19
@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Task 24 (`exobiology` — tabla de especies y geodesia), geodesia verificada; Step 1: tests de SpeciesTable.
-- **Siguiente acción:** escribir tests de SpeciesTable, observar RED y construir tabla propia con procedencia; completar Task 24. El propietario aprobó `_Localised` + latino de respaldo para F1 y el push a la rama privada (2026-10-18). Geodesia ya revisada en 458fc84; no rehacer. Últimos checks: 421 Rust y 56 UI, fmt/clippy/check/build PASS.
+- **Tarea:** F1 · Task 25 (`exobiology` — predicción: reglas + historial + Canonn) 🔄 en curso (Bloque 4).
+- **Siguiente acción:** completar la Task 25 (ejecución con subagentes; ledger local `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`). CI de GitHub deshabilitada por orden del propietario (2026-10-18); checks en local.
 
 ## Fases
 
@@ -56,10 +56,10 @@
 | 18b | Ajuste de la tira (cabecera «Siguiente salto») | ✅ hecha | 9815cce | Verificado en una demo en vivo con datos reales de Spansh. |
 | 19 | UI — panel del planificador | ✅ código hecho | 34d3b9c, a15b5ee | Formulario, autocompletado con id64, eficiencia por defecto de Ajustes, resultado y aceptar/borrar; 46 tests UI PASS. Revisión aprobada tras 1 ronda. Validación visual del propietario: ✅ aprobada (2026-10-18). |
 | 20 | `exploration` — valor de cuerpos y sondas | ✅ hecha | fe26c90, 123b335, 7cfb305 | Fórmulas propias (FSS, mapeo con eficiencia, primeros, Odyssey), gigantes gaseosos mapeables, nombres reales del diario, `probes.json` con `verified:false`; 18 exploration PASS. Revisión aprobada tras 1 ronda. |
-| 21 | `exploration` — cuerpos del sistema, FSS y consejo | ✅ hecha | 9940901, c25b238 | P2 de payload y Terraforming corregidos; marks compacto documentado para Task 23; 392 Rust/46 UI PASS, revisión aprobada. |
+| 21 | `exploration` — cuerpos del sistema, FSS y consejo | ✅ hecha | 9940901, c25b238, 3984224 | P2 de payload y Terraforming corregidos; marks compacto documentado para Task 23; 392 Rust/46 UI PASS, revisión aprobada. |
 | 22 | `exploration` — datos sin vender | ✅ hecha | ffa3433 | Libro compartido, reconstrucción cronológica paginada y conciliación/retry; 413 Rust/46 UI PASS, revisión aprobada. |
 | 23 | UI — cuerpos del sistema | ✅ hecha | b669a77 | Tabla virtualizada ≤30 filas, cinco idiomas, visual 2560/1366 px; 413 Rust/56 UI PASS, revisión aprobada. |
-| 24 | Exobiología — especies y geodesia | 🔄 en curso | 458fc84 (geodesia) | Geo verificada; aprobación de nombres recibida. Tabla: Step 1 tests. |
+| 24 | Exobiología — especies y geodesia | ✅ hecha | 458fc84, c1857be | Geodesia + tabla propia de 21 géneros/117 especies (CCR y valores, `verified:false`, a verificar con eval). Revisión aprobada. |
 | 25–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
@@ -139,6 +139,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-18 13:55 (Europe/Madrid) · Claude Opus 5.5 · Retomado tras la sesión de Codex (Tasks 21–23 y geodesia de 24). Task 21 fix (3984224) revisado; Task 24 tabla de especies completada (c1857be). CI de GitHub deshabilitada por el propietario.
 
 - 2026-10-18 04:11 (Europe/Madrid) · Codex · Geodesia de Task 24 revisada y verificada: 8/8 nuevos, 421 Rust/56 UI, fmt/clippy/check/build correctos. Task 24 incompleta: nombres/tabla esperan decisión; Task 25 no iniciada. Sin archivos de código pendientes tras commit parcial. Push retenido por rechazo de revisión automática hasta autorización explícita.
 
