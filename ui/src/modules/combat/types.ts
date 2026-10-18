@@ -47,3 +47,63 @@ export interface ShipTopic {
   hardpoints: boolean;
   alerts: ShipAlert[];
 }
+
+export type VoucherKind = 'Bounty' | 'CombatBond';
+
+export interface VoucherRow {
+  kind: VoucherKind | null;
+  faction: string;
+  amount: number;
+  systems: string[];
+  ax: boolean;
+  other: boolean;
+  count: number;
+}
+
+export interface RemoteStation {
+  station_name: string;
+  system_name: string;
+  distance_ly: number;
+  distance_to_arrival_ls: number | null;
+  max_pad: 'Small' | 'Medium' | 'Large' | null;
+  updated_at: string | null;
+}
+
+/** Topic `combat.session`. */
+export interface SessionTopic {
+  started_at: string | null;
+  kills: number;
+  credits: number;
+  kills_by_type: Record<string, number>;
+  combat_rank: number | null;
+  combat_progress: number | null;
+  vouchers: VoucherRow[];
+  vouchers_total: { bounty: number; combat_bond: number };
+  nearest_if: RemoteStation | null;
+  if_fee_pct: number;
+}
+
+/** Topic `combat.conflict_zone` (null fuera de una zona de conflicto). */
+export interface ZoneTopic {
+  system: string | null;
+  side: string | null;
+  kills: number;
+  bonds_by_faction: Record<string, number>;
+}
+
+/** Topic `combat.ax`. */
+export interface AxTopic {
+  active: boolean;
+  presence: boolean;
+  kills_by_type: Record<string, number>;
+  bonds: number;
+  target: string | null;
+}
+
+/** Nombre de facción legible: limpia `$faction_X;` y deja vacío si no hay. */
+export function cleanFaction(raw: string | null | undefined): string {
+  const s = (raw ?? '').trim();
+  const m = s.match(/^\$(.*?);?$/);
+  if (!m) return s;
+  return m[1].replace(/^faction_/i, '').replaceAll('_', ' ').trim();
+}

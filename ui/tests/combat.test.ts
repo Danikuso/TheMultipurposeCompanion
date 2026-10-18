@@ -1,9 +1,13 @@
+import type { Component } from 'svelte';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { disconnect, live } from '../src/lib/ws.svelte';
 import { setLocale } from '../src/lib/i18n';
 import TargetPanel from '../src/modules/combat/TargetPanel.svelte';
 import ShipPanel from '../src/modules/combat/ShipPanel.svelte';
+import HuntingPanel from '../src/modules/combat/HuntingPanel.svelte';
+import ConflictZonePanel from '../src/modules/combat/ConflictZonePanel.svelte';
+import AxPanel from '../src/modules/combat/AxPanel.svelte';
 import PipsGauge from '../src/modules/combat/PipsGauge.svelte';
 
 let target: HTMLDivElement;
@@ -172,4 +176,102 @@ test('accessibility: labelled shields, bars and live badge', () => {
 test('lawless badge has a label', () => {
   mountTarget(targetTopic({ badge: { kind: 'lawless' } }));
   expect(target.querySelector('[data-testid="target-badge"]')!.textContent).toBe('SIN LEY');
+});
+
+function sessionTopic(extra: Record<string, unknown> = {}) {
+  return {
+    started_at: '2026-10-18T12:00:00Z', kills: 4, credits: 120000, kills_by_type: { python: 3, viper: 1 },
+    combat_rank: 5, combat_progress: 40,
+    vouchers: [
+      { kind: 'Bounty', faction: 'Los Pacíficos', amount: 50000, systems: ['Sol', 'Alpha Centauri'], ax: false, other: false, count: 1 },
+      { kind: 'CombatBond', faction: '$faction_Federation;', amount: 30000, systems: ['Sol'], ax: false, other: false, count: 1 },
+      { kind: 'CombatBond', faction: '', amount: 1000, systems: [], ax: false, other: false, count: 1 },
+    ],
+    vouchers_total: { bounty: 50000, combat_bond: 31000 },
+    nearest_if: {
+      station_name: 'Hutton Orbital', system_name: 'Alpha Centauri', distance_ly: 4.38,
+      distance_to_arrival_ls: 100, max_pad: 'Large', updated_at: new Date(Date.now() - 7200_000).toISOString(),
+    },
+    if_fee_pct: 25, ...extra,
+  };
+}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mountWith(comp: Component<any>, name: string, v: unknown) {
+  live.topics[name] = v;
+  mounted = mount(comp, { target });
+  flushSync();
+}
+
+test('vouchers grouped by faction and kind with IF fee', () => {
+  mountWith(HuntingPanel, 'combat.session', sessionTopic());
+  const rows = target.querySelectorAll('[data-testid="voucher-row"]');
+  expect(rows.length).toBe(3);
+  expect(rows[0].textContent).toContain('Los Pacíficos');
+  expect(rows[0].textContent).toContain('50.000');
+  expect(rows[0].textContent).toContain('Sol, Alpha Centauri');
+  expect(rows[0].querySelector('[data-testid="voucher-fee"]')!.textContent).toContain('12.500');
+  expect(rows[0].getAttribute('data-kind')).toBe('Bounty');
+  expect(rows[1].textContent).toContain('Federation');
+  expect(rows[1].textContent).not.toContain('$faction');
+  expect(rows[1].querySelector('[data-testid="voucher-fee"]')!.textContent).toContain('7500');
+  expect(rows[2].textContent).toContain('facción desconocida');
+  expect(target.querySelector('[data-testid="if-station"]')!.textContent).toContain('Hutton Orbital');
+  expect(target.querySelector('[data-testid="if-age"]')!.textContent).toContain('2h');
+  expect(target.querySelector('[data-testid="session-credits"]')!.textContent).toContain('120.000');
+  expect(target.querySelector('[data-testid="rank-progress"]')!.textContent).toContain('40');
+});
+
+test('credits per hour is computed locally from started_at', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-10-18T13:00:00Z'));
+  mountWith(HuntingPanel, 'combat.session', sessionTopic());
+  expect(target.querySelector('[data-testid="credits-hour"]')!.textContent).toContain('120.000');
+});
+
+test('reset session posts json action', async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+  vi.stubGlobal('fetch', fetchMock);
+  mountWith(HuntingPanel, 'combat.session', sessionTopic());
+  (target.querySelector('[data-testid="reset-session"]') as HTMLButtonElement).click();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  const [url, init] = fetchMock.mock.calls[0];
+  expect(url).toBe('/api/actions/combat.reset_session');
+  expect(init.method).toBe('POST');
+  expect(init.headers['content-type']).toBe('application/json');
+  vi.unstubAllGlobals();
+});
+
+test('no IF data shows no-data label', () => {
+  mountWith(HuntingPanel, 'combat.session', sessionTopic({ nearest_if: null }));
+  expect(target.querySelector('[data-testid="if-none"]')!.textContent).toBe('sin datos');
+  expect(target.querySelector('[data-testid="voucher-fee"]')).toBeNull();
+});
+
+test('ax panel lists kills by type and presence banner', () => {
+  mountWith(AxPanel, 'combat.ax', { active: true, presence: true, kills_by_type: { scout: 3 }, bonds: 24000, target: 'scout' });
+  expect(target.querySelector('[data-testid="ax-kill-scout"]')!.textContent).toContain('3');
+  expect(target.querySelector('[data-testid="ax-presence"]')!.textContent).toContain('presencia thargoide');
+  expect(target.querySelector('[data-testid="ax-bonds"]')!.textContent).toContain('24.000');
+});
+
+test('ax and conflict zone panels hide when not applicable', () => {
+  mountWith(AxPanel, 'combat.ax', { active: false, presence: false, kills_by_type: {}, bonds: 0, target: null });
+  expect(target.querySelector('[data-testid="ax-panel"]')).toBeNull();
+  unmount(mounted!);
+  mountWith(ConflictZonePanel, 'combat.conflict_zone', null);
+  expect(target.querySelector('[data-testid="zone-panel"]')).toBeNull();
+});
+
+test('conflict zone panel shows side, kills and bonds by faction', () => {
+  mountWith(ConflictZonePanel, 'combat.conflict_zone', {
+    system: 'Sol', side: 'Federation', kills: 7, bonds_by_faction: { 'Los Pacíficos': 15000, '': 500 },
+  });
+  const z = target.querySelector('[data-testid="zone-panel"]')!;
+  expect(z.textContent).toContain('Federation');
+  expect(z.textContent).toContain('Sol');
+  expect(target.querySelector('[data-testid="zone-kills"]')!.textContent).toContain('7 bajas');
+  const bonds = target.querySelectorAll('[data-testid="zone-bond"]');
+  expect(bonds.length).toBe(2);
+  expect(bonds[0].textContent).toContain('15.000');
+  expect(bonds[1].textContent).toContain('facción desconocida');
 });

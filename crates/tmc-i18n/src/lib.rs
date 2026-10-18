@@ -286,6 +286,9 @@ mod tests {
                 ("sys", FluentValue::from("1,5")),
                 ("eng", FluentValue::from("2,5")),
                 ("wep", FluentValue::from(2)),
+                ("target", FluentValue::from("scout")),
+                ("side", FluentValue::from("Federación")),
+                ("rank", FluentValue::from("Experto")),
             ] {
                 args.set(name, value);
             }
