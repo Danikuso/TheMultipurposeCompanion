@@ -106,11 +106,17 @@ impl HuntingSession {
 }
 
 /// Reconstruye el libro de vales del comandante desde el último `Died`
-/// (resultado `Stored` con tag `combat.vouchers`: `{cmdr, ledger, cut}`).
+/// (resultado `Stored` con tag `combat.vouchers`: `{cmdr, ledger, cut, cut_ts}`).
 pub fn rebuild_task(cmdr: String) -> StoreTask {
     Box::new(move |store| {
         let rows = store.query_json("SELECT COALESCE(MAX(id), 0) FROM event", &[])?;
         let cut = rows[0][0].as_i64().unwrap_or_default();
+        // Instante del último evento cubierto: los posteriores aún no están en el almacén.
+        let cut_ts = store
+            .query_json("SELECT ts FROM event WHERE id = ?1", &[json!(cut)])?
+            .first()
+            .map(|r| r[0].clone())
+            .unwrap_or(serde_json::Value::Null);
         let reset = history::last_before(store, &cmdr, cut, &["Died"], None)?;
         let mut system = match &reset {
             Some(p) => system_before(store, &cmdr, cut, p)?,
@@ -127,7 +133,7 @@ pub fn rebuild_task(cmdr: String) -> StoreTask {
         })?;
         let ledger =
             serde_json::to_value(&ledger).map_err(|e| StoreError::Unsupported(e.to_string()))?;
-        Ok(json!({"cmdr": cmdr, "ledger": ledger, "cut": cut}))
+        Ok(json!({"cmdr": cmdr, "ledger": ledger, "cut": cut, "cut_ts": cut_ts}))
     })
 }
 
