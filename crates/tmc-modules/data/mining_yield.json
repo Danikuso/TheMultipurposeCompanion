@@ -1,0 +1,10 @@
+{
+ "source": "Estimación propia de TMC (sin datos de terceros)",
+ "license": "Datos propios del proyecto (PolyForm NC)",
+ "version": 1,
+ "entries": [
+  {"content": "Low", "tons_per_asteroid": 10.0, "source": "estimación propia de TMC 2026-10-18, a ajustar con datos reales (Task 27)", "verified": false},
+  {"content": "Medium", "tons_per_asteroid": 20.0, "source": "estimación propia de TMC 2026-10-18, a ajustar con datos reales (Task 27)", "verified": false},
+  {"content": "High", "tons_per_asteroid": 30.0, "source": "estimación propia de TMC 2026-10-18, a ajustar con datos reales (Task 27)", "verified": false}
+ ]
+}
