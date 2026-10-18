@@ -18,7 +18,7 @@ Se registran las licencias admitidas por el proyecto (MIT, Apache-2.0, BSD, ISC,
 ### chrono
 - Versión: 0.4.45
 - Licencia: MIT OR Apache-2.0
-- Usada por: tmc-model, tmc-store
+- Usada por: tmc-model, tmc-store, tmc-net
 
 ### bitflags
 - Versión: 2.13.2
