@@ -48,3 +48,5 @@ combat-alert-shields-down = Schilde unten
 combat-alert-overheating = Überhitzung
 combat-alert-under-attack = Unter Beschuss
 combat-alert-interdiction = Abfangmanöver läuft
+
+panel-combat-ship = Mein Schiff
