@@ -1,4 +1,8 @@
 //! Mi nave: escudos, casco por escalones, calor de tres estados y pips exactos.
+//!
+//! Nota para el cableado (Task 16): `view(now)` cambia solo con el paso del
+//! tiempo (caducidad de `HeatDamage` a los 10 s, `UnderAttack` a los 30 s), así
+//! que hay que volver a renderizar con un tick periódico o en el siguiente evento.
 
 use chrono::{DateTime, Duration, Utc};
 use serde::Serialize;
@@ -91,12 +95,10 @@ impl HeatTracker {
     }
 
     pub fn on_heat_damage(&mut self, now: DateTime<Utc>) -> bool {
+        let visible = self.state_at(now);
         self.last_damage = Some(now);
-        if self.state == HeatState::HeatDamage {
-            return false;
-        }
         self.enter(HeatState::HeatDamage, now);
-        true
+        visible != HeatState::HeatDamage
     }
 
     pub fn state(&self) -> HeatState {
@@ -137,8 +139,9 @@ fn to_pct(v: f64) -> u8 {
     (v * 100.0).round().clamp(0.0, 100.0) as u8
 }
 
+/// `Wear` es integridad de la nave, no casco; `All` repara todo.
 fn is_hull_item(s: &str) -> bool {
-    matches!(s.to_ascii_lowercase().as_str(), "hull" | "wear")
+    matches!(s.to_ascii_lowercase().as_str(), "hull" | "all")
 }
 
 impl HullTracker {
@@ -250,7 +253,18 @@ impl ShipTracker {
                 self.under_attack_at = Some(now);
                 changed = true;
             }
-            EventKind::Died => changed |= self.heat.reset(now),
+            EventKind::Died => {
+                changed |= self.heat.reset(now);
+                changed |= self.shields_up.is_some()
+                    || self.interdicted
+                    || self.hardpoints
+                    || self.under_attack_at.is_some();
+                self.shields_up = None;
+                self.interdicted = false;
+                self.hardpoints = false;
+                self.under_attack_at = None;
+                self.last_key = None;
+            }
             _ => {}
         }
         changed
@@ -460,5 +474,69 @@ mod tests {
         let flags = Flags::SHIELDS_UP | Flags::BEING_INTERDICTED;
         s.on_status(&status(flags, None), secs(31));
         assert_eq!(s.view(secs(31)).alerts, vec![ShipAlert::Interdiction]);
+    }
+
+    #[test]
+    fn expired_heat_damage_then_new_damage_reports_change() {
+        let mut h = HeatTracker::default();
+        assert!(h.on_heat_damage(t0()));
+        assert!(!h.on_heat_damage(secs(5)));
+        assert_eq!(h.state_at(secs(20)), HeatState::Overheating);
+        assert!(h.on_heat_damage(secs(20)));
+        assert_eq!(h.state_at(secs(20)), HeatState::HeatDamage);
+    }
+
+    #[test]
+    fn repair_hull_items_rules() {
+        let rep = |item: &str| {
+            let mut h = HullTracker::default();
+            h.apply(&hull_dmg(0.5, false));
+            h.apply(&EventKind::Repair(Repair {
+                item: Some(item.into()),
+                ..Default::default()
+            }));
+            h.pct()
+        };
+        assert_eq!(rep("Hull"), Some(100));
+        assert_eq!(rep("hull"), Some(100));
+        assert_eq!(rep("All"), Some(100));
+        assert_eq!(rep("Wear"), Some(50));
+        let mut h = HullTracker::default();
+        h.apply(&hull_dmg(0.3, false));
+        assert!(h.apply(&EventKind::Resurrect));
+        assert_eq!(h.pct(), Some(100));
+    }
+
+    #[test]
+    fn died_clears_ship_flags() {
+        let mut s = ShipTracker::default();
+        let flags = Flags::SHIELDS_UP | Flags::BEING_INTERDICTED;
+        s.on_status(&status(flags, None), t0());
+        s.on_event(&EventKind::UnderAttack(Default::default()), t0());
+        s.on_event(&EventKind::Died, secs(1));
+        let v = s.view(secs(2));
+        assert_eq!(v.shields_up, None);
+        assert!(v.alerts.is_empty());
+        assert!(s.on_status(&status(flags, None), secs(3)));
+    }
+
+    #[test]
+    fn view_changes_with_time_alone() {
+        let mut s = ShipTracker::default();
+        s.on_status(&status(Flags::SHIELDS_UP | Flags::OVERHEATING, None), t0());
+        s.on_event(&EventKind::HeatDamage, t0());
+        assert_eq!(s.view(secs(9)).heat, HeatState::HeatDamage);
+        assert_eq!(s.view(secs(11)).heat, HeatState::Overheating);
+    }
+
+    #[test]
+    fn flapping_overheat_accumulates_total() {
+        let mut h = HeatTracker::default();
+        h.on_status(true, t0());
+        h.on_status(false, secs(5));
+        h.on_status(true, secs(7));
+        h.on_status(false, secs(9));
+        assert_eq!(h.overheat_total_s(), 7);
+        assert_eq!(h.overheating_since(), None);
     }
 }
