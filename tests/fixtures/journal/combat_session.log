@@ -1,0 +1,14 @@
+{ "timestamp":"2026-10-18T10:00:00Z", "event":"Commander", "FID":"F0000001", "Name":"TESTER" }
+{ "timestamp":"2026-10-18T10:00:01Z", "event":"LoadGame", "FID":"F0000001", "Commander":"TESTER", "Odyssey":true, "Ship":"python", "Credits":1000000, "gameversion":"4.1.0.0" }
+{ "timestamp":"2026-10-18T10:00:02Z", "event":"Location", "StarSystem":"Alpha Test", "SystemAddress":1, "StarPos":[0,0,0] }
+{ "timestamp":"2026-10-18T10:05:00Z", "event":"Bounty", "Rewards":[{"Faction":"Alpha Test Navy","Reward":99999}], "Target":"empire_eagle", "TotalReward":99999, "VictimFaction":"Pirates of Alpha" }
+{ "timestamp":"2026-10-18T10:06:00Z", "event":"FSDJump", "StarSystem":"Beta Test", "SystemAddress":2, "StarPos":[1,0,0], "JumpDist":5.0 }
+{ "timestamp":"2026-10-18T10:07:00Z", "event":"Died", "KillerName":"Fictional Pirate" }
+{ "timestamp":"2026-10-18T10:10:00Z", "event":"LoadGame", "FID":"F0000001", "Commander":"TESTER", "Odyssey":true, "Ship":"python", "Credits":900000, "gameversion":"4.1.0.0" }
+{ "timestamp":"2026-10-18T10:10:01Z", "event":"Location", "StarSystem":"Alpha Test", "SystemAddress":1, "StarPos":[0,0,0] }
+{ "timestamp":"2026-10-18T10:15:00Z", "event":"Bounty", "Rewards":[{"Faction":"Alpha Test Navy","Reward":100000}], "Target":"federation_dropship", "TotalReward":100000, "VictimFaction":"Pirates of Alpha" }
+{ "timestamp":"2026-10-18T10:16:00Z", "event":"Bounty", "Rewards":[{"Faction":"Alpha Test Navy","Reward":200000}], "Target":"python", "TotalReward":200000, "VictimFaction":"Pirates of Alpha", "SharedWithOthers":1 }
+{ "timestamp":"2026-10-18T10:17:00Z", "event":"FSDJump", "StarSystem":"Beta Test", "SystemAddress":2, "StarPos":[1,0,0], "JumpDist":5.0 }
+{ "timestamp":"2026-10-18T10:20:00Z", "event":"Bounty", "Rewards":[{"Faction":"Beta Test Union","Reward":300000}], "Target":"asp", "TotalReward":300000, "VictimFaction":"Pirates of Beta" }
+{ "timestamp":"2026-10-18T10:21:00Z", "event":"FactionKillBond", "Reward":50000, "AwardingFaction":"Beta Test Union", "VictimFaction":"Pirates of Beta" }
+{ "timestamp":"2026-10-18T10:25:00Z", "event":"RedeemVoucher", "Type":"bounty", "Amount":100000, "Factions":[{"Faction":"Alpha Test Navy","Amount":100000}] }

@@ -3,7 +3,7 @@
 //! Lógica pura: sin E/S. Reglas en la spec F2 §10.
 
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tmc_model::events::{EventKind, RedeemVoucher};
 
 use super::ax::is_thargoid_faction;
@@ -12,13 +12,13 @@ use super::ax::is_thargoid_faction;
 /// `BrokerPercentage` es solo informativo.
 pub const BROKER_AMOUNT_IS_NET: bool = false;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum VoucherKind {
     Bounty,
     CombatBond,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VoucherEntry {
     pub kind: VoucherKind,
     pub faction: String,
@@ -58,7 +58,7 @@ fn faction_key(f: &str) -> String {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct VoucherLedger {
     entries: Vec<VoucherEntry>,
 }
