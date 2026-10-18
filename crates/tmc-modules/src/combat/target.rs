@@ -37,7 +37,11 @@ pub enum SubsystemKind {
 impl SubsystemKind {
     pub fn from_journal(s: &str) -> Self {
         let s = s.to_ascii_lowercase();
-        if s.contains("powerplant") {
+        if s.contains("guardianfsdbooster") {
+            Self::Other
+        } else if s.contains("hpt_") || s.contains("hardpoint") || s.contains("weapon") {
+            Self::Weapons
+        } else if s.contains("powerplant") {
             Self::PowerPlant
         } else if s.contains("hyperdrive") || s.contains("fsd") {
             Self::Fsd
@@ -51,8 +55,6 @@ impl SubsystemKind {
             Self::Sensors
         } else if s.contains("cargobay") || s.contains("cargohatch") {
             Self::CargoHatch
-        } else if s.contains("hardpoint") || s.contains("weapon") {
-            Self::Weapons
         } else {
             Self::Other
         }
@@ -87,12 +89,13 @@ fn badge_for(ev: &ShipTargeted) -> LegalBadge {
     }
     let bounty = ev.bounty.unwrap_or(0);
     let wanted = LegalBadge::Wanted { bounty };
-    match ev.legal_status.as_deref() {
-        Some("Wanted") => wanted,
+    let status = ev.legal_status.as_deref().map(str::to_ascii_lowercase);
+    match status.as_deref() {
+        Some("wanted") => wanted,
         _ if bounty > 0 => wanted,
-        Some("Clean") => LegalBadge::Clean,
-        Some("Lawless") => LegalBadge::Lawless,
-        Some("Enemy" | "WantedEnemy" | "Hostile") => LegalBadge::Enemy,
+        Some("clean") => LegalBadge::Clean,
+        Some("lawless") => LegalBadge::Lawless,
+        Some("enemy" | "wantedenemy" | "hostile") => LegalBadge::Enemy,
         _ => LegalBadge::Unknown,
     }
 }
@@ -273,5 +276,57 @@ mod tests {
         assert!(is_thargoid_ship("Cyclops"));
         assert!(!is_thargoid_ship("anaconda"));
         assert_eq!(SubsystemKind::from_journal("$weird;"), SubsystemKind::Other);
+    }
+
+    #[test]
+    fn other_legal_badges() {
+        assert_eq!(badge(&lock(3, "Lawless", None)), LegalBadge::Lawless);
+        assert_eq!(badge(&lock(3, "Enemy", None)), LegalBadge::Enemy);
+        assert_eq!(badge(&lock(3, "WantedEnemy", None)), LegalBadge::Enemy);
+        assert_eq!(
+            badge(&lock(3, "wanted", None)),
+            LegalBadge::Wanted { bounty: 0 }
+        );
+        assert_eq!(
+            badge(&lock(3, "Enemy", Some(500))),
+            LegalBadge::Wanted { bounty: 500 }
+        );
+    }
+
+    #[test]
+    fn clean_with_bounty_is_wanted() {
+        // Contrato: bounty > 0 siempre es Wanted.
+        assert_eq!(
+            badge(&lock(3, "Clean", Some(10))),
+            LegalBadge::Wanted { bounty: 10 }
+        );
+    }
+
+    #[test]
+    fn subsystem_kinds_from_journal() {
+        use SubsystemKind::*;
+        let cases = [
+            ("$int_powerdistributor_size3_class5_name;", Distributor),
+            ("$int_hyperdrive_size5_class5_name;", Fsd),
+            ("$int_engine_size6_class5_name;", Drive),
+            ("$int_lifesupport_size3_class2_name;", LifeSupport),
+            ("$int_sensors_size3_class2_name;", Sensors),
+            ("$modularcargobaydoor_name;", CargoHatch),
+            ("$hpt_pulselaser_gimbal_large_name;", Weapons),
+            ("$int_guardianfsdbooster_size5_name;", Other),
+        ];
+        for (s, k) in cases {
+            assert_eq!(SubsystemKind::from_journal(s), k, "{s}");
+        }
+    }
+
+    #[test]
+    fn scan_stage_upgrade_reports_change_and_second_loss_keeps_lost_at() {
+        let mut t = TargetTracker::default();
+        assert!(t.apply(&lock(1, "Clean", None), t0()));
+        assert!(t.apply(&lock(3, "Clean", None), t0()));
+        assert!(t.apply(&ShipTargeted::default(), t0()));
+        assert!(!t.apply(&ShipTargeted::default(), t0() + Duration::seconds(4)));
+        assert_eq!(t.view(t0()).unwrap().lost_at, Some(t0()));
     }
 }
