@@ -47,9 +47,15 @@ exploration-probes-exact = { $count } sondes
 exploration-probes-estimated = ≈ { $count } sondes
 exploration-col-body = Corps
 exploration-col-type = Type
-exploration-col-distance = Distance
+exploration-col-distance = Distance (ls)
 exploration-col-scanned = Valeur scannée
 exploration-col-mapped = Valeur si cartographié
 exploration-col-signals = Signaux
 exploration-col-marks = Marques
 exploration-col-advice = Conseil
+
+nav-exploration = Exploration
+exploration-scanned-count = { $scanned } / { $total } corps analysés
+exploration-unsold = Données non vendues
+exploration-unsold-systems = { $count } systèmes
+exploration-at-risk = Données en danger

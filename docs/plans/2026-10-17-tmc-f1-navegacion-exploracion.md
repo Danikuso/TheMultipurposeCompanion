@@ -737,7 +737,7 @@ test('disabled planner explains why', ...)
   - Contrato JSON de Task 21: en cada fila, `advice ?? ['not_worth']`, `probes.estimated ?? false`, marcas desde `marks ?? 0` (bits 1 terraformable, 2 landable, 4 scoopable, 8 first_discovery, 16 already_mapped, 32 mapped_by_you), `bio`/`geo` ausentes = 0; `kind_key` se traduce con `exploration-kind-<id>` y el consejo `not_worth` usa `exploration-advice-not-worth`.
   - `registry.ts`: entrada `exploration`.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```ts
 test('body_table_renders_only_visible_rows', ...)      // 300 filas, height 600, rowHeight 30 → ≤ 30 filas en el DOM
@@ -746,8 +746,9 @@ test('stars show dash in mapped column', ...)
 test('footer shows unsold total and unidentified count', ...)
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** PASS; Checks UI.
-- [ ] **Step 5: Commit** `feat(ui): panel de cuerpos del sistema con tabla virtualizada`
+- [x] **Step 2:** RED observado: 8/8 tests nuevos fallan con stubs (`npm.cmd --prefix ui test -- exploration.test.ts`). Incluye scroll, reducción de items, marks/defaults e idioma reactivo.
+- [x] **Step 3:** implementar. **Step 4:** revisión independiente aprobada; 10 tests exploration/56 UI PASS, check 0 errores/avisos y build PASS. Global: fmt, clippy y 413 Rust PASS. Test Rust de formato Fluent necesitó añadir argumento sintético scanned (RED observado → 12 i18n PASS). Visual local Edge con 300 cuerpos a 2560×1080 y 1366×768: sin errores JS ni desbordamiento de página; tabla desplazable horizontalmente por debajo de 1350 px, textos largos con title. Evidencias PNG locales en ledger ignorado.
+- [x] **Step 5: Commit** `feat(ui): panel de cuerpos del sistema con tabla virtualizada`
 
 ---
 

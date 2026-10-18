@@ -47,9 +47,15 @@ exploration-probes-exact = { $count } probes
 exploration-probes-estimated = ≈ { $count } probes
 exploration-col-body = Body
 exploration-col-type = Type
-exploration-col-distance = Distance
+exploration-col-distance = Distance (ls)
 exploration-col-scanned = Scanned value
 exploration-col-mapped = Value if mapped
 exploration-col-signals = Signals
 exploration-col-marks = Marks
 exploration-col-advice = Advice
+
+nav-exploration = Exploration
+exploration-scanned-count = { $scanned } / { $total } bodies scanned
+exploration-unsold = Unsold data
+exploration-unsold-systems = { $count } systems
+exploration-at-risk = Data at risk

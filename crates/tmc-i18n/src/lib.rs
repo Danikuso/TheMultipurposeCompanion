@@ -251,6 +251,7 @@ mod tests {
                 ("module", FluentValue::from("dashboard")),
                 ("system", FluentValue::from("Sol")),
                 ("done", FluentValue::from(3)),
+                ("scanned", FluentValue::from(3)),
                 ("total", FluentValue::from(9)),
                 ("age", FluentValue::from("2 min")),
                 ("value", FluentValue::from(60)),

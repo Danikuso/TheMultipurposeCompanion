@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-18 04:01 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-18 04:08 (Europe/Madrid) · Codex
 - **Fase actual:** F1 — Navegación, exploración y exobiología (spec y plan aprobados; en ejecución). F0 ✅ fusionada en `main` (2b953e6).
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md`](docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md) — ✅ aprobada (2026-10-17); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
 - **Plan activo:** [`docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md`](docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md) — ✅ aprobado (2026-10-17), 33 tareas, bloques 0–5. Ejecución con subagentes. Anterior: [`2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) ✅ 19/19
@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Task 23 (UI — cuerpos del sistema), Step 1: tests.
-- **Siguiente acción:** escribir tests de virtualización y presentación del panel de cuerpos. Task 22 terminada: revisión aprobada, 413 tests Rust/46 UI, fmt/clippy/check/build PASS. Ledger local: `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`.
+- **Tarea:** F1 · Task 24 (`exobiology` — tabla de especies y geodesia), Step 1: tests; nombres pendientes de aprobación.
+- **Siguiente acción:** avanzar la geodesia y sus tests de Task 24 mientras se resuelve la desviación de nombres de especies. Task 23 cerrada: revisión y visual aprobadas; 413 Rust/56 UI, fmt/clippy/check/build PASS. No aplicar el aplazamiento de nombres por idioma sin respuesta del propietario.
 
 ## Fases
 
@@ -58,8 +58,9 @@
 | 20 | `exploration` — valor de cuerpos y sondas | ✅ hecha | fe26c90, 123b335, 7cfb305 | Fórmulas propias (FSS, mapeo con eficiencia, primeros, Odyssey), gigantes gaseosos mapeables, nombres reales del diario, `probes.json` con `verified:false`; 18 exploration PASS. Revisión aprobada tras 1 ronda. |
 | 21 | `exploration` — cuerpos del sistema, FSS y consejo | ✅ hecha | 9940901, c25b238 | P2 de payload y Terraforming corregidos; marks compacto documentado para Task 23; 392 Rust/46 UI PASS, revisión aprobada. |
 | 22 | `exploration` — datos sin vender | ✅ hecha | ffa3433 | Libro compartido, reconstrucción cronológica paginada y conciliación/retry; 413 Rust/46 UI PASS, revisión aprobada. |
-| 23 | UI — cuerpos del sistema | 🔄 en curso | — | Step 1: tests. |
-| 24–32 | Ver plan | ⬜ | — | |
+| 23 | UI — cuerpos del sistema | ✅ hecha | (este commit) | Tabla virtualizada ≤30 filas, cinco idiomas, visual 2560/1366 px; 413 Rust/56 UI PASS, revisión aprobada. |
+| 24 | Exobiología — especies y geodesia | 🔄 en curso | — | Step 1: tests; geodesia independiente de aprobación de nombres. |
+| 25–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
@@ -110,6 +111,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Decisiones tomadas
 
+- 2026-10-18 · Task 22: reconstrucción ordenada por timestamp UTC, diario y línea, manteniendo snapshot por ID; corrige la suposición de orden de inserción del plan. Checkpoints y reintento conservan equivalencia vivo/historial sin cambiar interfaces públicas.
+
 - 2026-10-18 · Propietario: panel del planificador validado en demo en vivo.
 
 - 2026-10-18 · Seguridad (Task 12): toda petición que cambia estado exige Origin coincidente (o ausencia de cabeceras de navegador) y `Content-Type: application/json` si lleva cuerpo; clientes externos (Stream Deck, VoiceAttack) deben enviar JSON.
@@ -134,6 +137,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-18 04:02 (Europe/Madrid) · Codex · Task 22 cerrada (ffa3433; status9bd4ba8), revisión aprobada y 413 Rust/46 UI con fmt/clippy/check/build PASS. Task 23 en curso: virtualización y panel de cuerpos, tests pendientes. Push y nombres de especies siguen pendientes de respuesta del propietario.
 
 - 2026-10-18 03:48 (Europe/Madrid) · Codex · Task 21 revisada y cerrada (c25b238; status96dc926), con marca Terraforming y payload300cuerpos corregidos (máximo54.560bytes). Test de configuración aislado en4e01e51. 392 Rust/46 UI yfmt/clippy/check/build PASS. Task22 en curso; push retenido por revisión automática hasta autorización explícita.
 
