@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 18 (UI — disposiciones, ancho completo, tipografía y tira de ruta) 🔄 en curso (Bloque 2).
-- **Siguiente acción:** completar la Task 18 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
+- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 19 (UI — panel del planificador) 🔄 en curso (Bloque 2).
+- **Siguiente acción:** completar la Task 19 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
 
 ## Fases
 
@@ -52,7 +52,8 @@
 | 16 | `navigation` — planificador Spansh y persistencia | ✅ hecha | aea8686, ec87d82 | Acciones plan/accept/clear/recalculate, topic `navigation.plan` (resumen ≤ 50 saltos), tabla `nav_route_plan` por comandante, validación de argumentos; 78 navigation PASS. Revisión aprobada tras 1 ronda. |
 | — | Arreglo CI Linux (`apps/desktop`) | ✅ hecha | f68abb0 | Import solo de Windows bajo `cfg`; el fallo venía de F0 y **sigue en `main`** hasta fusionar F1. |
 | 17 | `tmc-app` — copia automática y manual desde la ruta activa | ✅ hecha | 0b60442, 9d66ac4 | Navigation decide copia y aviso (`nav-auto-copied`) solo en saltos en vivo con el ajuste activo; ajuste en caliente vía Settings; portapapeles compartido con respaldo en memoria; 27 tmc-app PASS. Revisión aprobada tras 1 ronda. |
-| 18–32 | Ver plan | ⬜ | — | |
+| 18 | UI — disposiciones, ancho completo, tipografía y tira de ruta | ✅ hecha | 468f00b, a3d53ed | `RouteStrip`/`SystemCard`/`JumpPanel` según maqueta aprobada; fuente 17/24 px ≥ 2400 px; números con Intl según idioma; tira adaptable; aviso de peligro no solo por color; 31 tests UI PASS. Revisión aprobada tras 1 ronda. |
+| 19–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
