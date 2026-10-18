@@ -486,7 +486,7 @@ fn mapped_with(scan: &Scan, odyssey: bool, efficiency: bool) -> Option<u64> {
 }
 
 /// Identificador del tipo de cuerpo; la UI lo traduce con la clave Fluent `exploration-kind-<id>`.
-fn kind_key(scan: &Scan) -> String {
+pub(crate) fn kind_key(scan: &Scan) -> String {
     let slug = match scan.planet_class.as_deref().filter(|c| !c.is_empty()) {
         Some(class) => match class {
             "Earthlike body" => "earthlike",

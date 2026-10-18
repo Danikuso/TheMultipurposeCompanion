@@ -13,6 +13,7 @@ pub mod sampling;
 pub mod species;
 
 use crate::data::{bio_rules, species_table};
+use crate::exploration::system::kind_key;
 use chrono::{DateTime, Utc};
 use geo::RelDir;
 use predict::{Candidate, HistoryStats, Likelihood, body_profile, is_primary_star};
@@ -750,6 +751,8 @@ impl Exobiology {
             "body_id": key.1,
             "system_address": key.0,
             "kind": scan.and_then(|s| s.planet_class.clone()),
+            "kind_key": scan.filter(|s| s.planet_class.as_deref().is_some_and(|c| !c.is_empty())).map(kind_key),
+            "atmosphere_key": scan.map(|s| atmosphere_key(s.atmosphere_type.as_deref())),
             "gravity_g": scan.and_then(|s| s.surface_gravity).map(|g| (g / STANDARD_GRAVITY * 100.0).round() / 100.0),
             "temperature_k": scan.and_then(|s| s.surface_temperature).map(round1),
             "atmosphere": atmosphere,
@@ -945,6 +948,31 @@ impl Module for Exobiology {
             Relevance::Normal
         }
     }
+}
+
+/// Kebab-case id of a journal `AtmosphereType` (`CarbonDioxide` -> `carbon-dioxide`);
+/// missing or empty is `"none"`. The UI translates it with `exobiology-atmosphere-<id>`.
+fn atmosphere_key(atmosphere_type: Option<&str>) -> String {
+    let raw = atmosphere_type.map(str::trim).unwrap_or("");
+    if raw.is_empty() {
+        return "none".to_owned();
+    }
+    let mut key = String::new();
+    for (index, ch) in raw.chars().enumerate() {
+        if ch.is_whitespace() || ch == '_' {
+            if !key.ends_with('-') {
+                key.push('-');
+            }
+        } else if ch.is_uppercase() {
+            if index > 0 && !key.ends_with('-') {
+                key.push('-');
+            }
+            key.extend(ch.to_lowercase());
+        } else {
+            key.push(ch);
+        }
+    }
+    key
 }
 
 #[cfg(test)]

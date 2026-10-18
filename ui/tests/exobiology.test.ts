@@ -117,3 +117,47 @@ test('numbers and labels follow the locale',()=>{
   expect(target.querySelector('[data-testid="direction"]')?.textContent).toBe('the previous one is behind you (SW)');
   expect(target.querySelector('[data-testid="candidate-row"]')?.textContent).toContain('High');
 });
+
+test('kind and atmosphere are localized and fall back to raw text',()=>{
+  render(bodyTopic({kind_key:'rocky-ice',atmosphere_key:'carbon-dioxide-rich'}));
+  const header=target.querySelector('[data-testid="body-header"]')!;
+  expect(header.textContent).toContain('Rocoso helado');
+  expect(header.textContent).toContain('Rica en dióxido de carbono');
+  expect(header.textContent).not.toContain('CarbonDioxide');
+  unmount(mounted!);target.innerHTML='';
+  live.topics['exobiology.body']=bodyTopic({kind_key:'rocky-ice',atmosphere_key:'carbon-dioxide'});
+  setLocale('fr');
+  mounted=mount(ExobiologyPanel,{target});flushSync();
+  expect(target.querySelector('[data-testid="body-header"]')?.textContent).toContain('Dioxyde de carbone');
+  unmount(mounted!);target.innerHTML='';
+  live.topics['exobiology.body']=bodyTopic({kind_key:'zzz',atmosphere_key:'zzz'});
+  mounted=mount(ExobiologyPanel,{target});flushSync();
+  expect(target.querySelector('[data-testid="body-header"]')?.textContent).toContain('Rocky body');
+  expect(target.querySelector('[data-testid="body-header"]')?.textContent).toContain('CarbonDioxide');
+});
+
+test('distance bar is an accessible progressbar and ok color when nothing remains',()=>{
+  render(bodyTopic(),samplingTopic());
+  const bar=target.querySelector('[role="progressbar"]')!;
+  expect(bar.getAttribute('aria-valuemin')).toBe('0');
+  expect(bar.getAttribute('aria-valuemax')).toBe('500');
+  expect(bar.getAttribute('aria-valuenow')).toBe('262');
+  expect(bar.getAttribute('aria-label')).toBe('Progreso de la distancia al punto anterior');
+  expect(target.querySelector('[data-testid="distance-value"]')?.classList.contains('warn')).toBe(true);
+  unmount(mounted!);target.innerHTML='';
+  live.topics['exobiology.sampling']=samplingTopic({distance_m:520,remaining_m:0});
+  mounted=mount(ExobiologyPanel,{target});flushSync();
+  expect(target.querySelector('[data-testid="distance-value"]')?.classList.contains('ok')).toBe(true);
+  expect(target.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('500');
+});
+
+test('discarded notice without name uses the generic text',()=>{
+  render(bodyTopic(),samplingTopic({discarded_species:'$x;',discarded_name:null}));
+  expect(target.querySelector('[data-testid="discarded"]')?.textContent).toBe('Muestreo descartado');
+});
+
+test('a single biological signal uses the singular',()=>{
+  render(bodyTopic({bio_signals:1}));
+  expect(target.querySelector('[data-testid="body-header"]')?.textContent).toContain('1 señal biológica');
+  expect(target.querySelector('[data-testid="body-header"]')?.textContent).not.toContain('1 señales');
+});
