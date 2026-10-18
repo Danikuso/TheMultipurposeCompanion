@@ -14,14 +14,16 @@
 
 - Código e identificadores en inglés; documentación, commits y textos de referencia (`es`) en español.
 - Presupuesto (requisito): **< 150 MB** RAM del árbol de procesos, **< 1 %** CPU en reposo, difusión **máx. 10 Hz**, latencia evento→UI **p95 < 500 ms**. Sin animaciones infinitas ni `requestAnimationFrame` continuo; los cronómetros de la UI usan un `setInterval` de 1 s **solo mientras hay algo que contar** (sobrecalentamiento) o un `setTimeout` único (vaciado del objetivo a los 10 s).
-- **Todo test afirma un valor concreto; no hay tests vacíos** (ningún cuerpo `{}` ni solo comentario). Los `/* … */` de este plan describen entrada y valor esperado; el test real los escribe como datos y `assert_eq!`.
+- **Todo test afirma un valor concreto; no hay tests vacíos** (ningún cuerpo `{}` ni solo comentario). Los `/* … */` de este plan describen entrada y valor esperado; el test real los escribe como datos y `assert_eq!`. Los marcadores `<valor>`/`<n>` de los tests con fixture se sustituyen por el número concreto al escribir el fixture, en el mismo commit.
 - Tipos: variantes grandes de enums van en `Box` (clippy `large_enum_variant`), como `EventKind::Scan(Box<Scan>)`. Las variantes nuevas de `EventKind`, `NetQuery`, `NetOutcome`, `NetSource` siguen el patrón existente (`de(name, raw).map(...)`; un struct que no deserializa cae en `Other`, nunca error).
 - **Módulos** (lecciones de F1, obligatorias):
   - nunca emiten `NetQuery` ni `StoreTask` de **escritura** durante el replay (`ModuleCtx` ya suprime peticiones en replay: comprobarlo con test por módulo);
   - todo resultado `SourceEvent::Stored` comprueba el comandante (y generación) antes de aplicarse; si no coincide, se descarta;
   - peticiones en vuelo caducan a los **60 s** (`INFLIGHT_TTL_S`, como `navigation`); un `Failed` se reintenta solo tras el enfriamiento que marca `NetClient::retry_at`; peticiones idénticas en vuelo no se duplican;
   - un topic se marca sucio **solo si su valor cambió**; cada topic tiene tamaño acotado con test (< 16 KiB);
-  - respuestas tardías (de otro sistema o de una consulta anterior) se guardan en caché pero no se aplican ni pisan datos más nuevos.
+  - respuestas tardías (de otro sistema o de una consulta anterior) se guardan en caché pero no se aplican ni pisan datos más nuevos;
+  - `Module::relevance(&self, &GameState)` no recibe reloj: cada módulo guarda `last_ts` (marca del último evento/`Status`) y la caducidad por tiempo (10 s, 30 s, 10 min) se evalúa en el siguiente evento; los tests avanzan el tiempo con un evento posterior;
+  - el control de peticiones en vuelo (TTL 60 s, deduplicación, descarte de tardías) vive en un único helper `crate::inflight::Inflight` (reutilizar el de `navigation` si ya existe; verificar) que usan `combat` y `mining`.
 - Red: nunca se consulta con `Galaxy::Legacy` ni con «Consultar servicios online» desactivado. Ardent: **1 petición/s**, timeout 5 s, reintentos y salud como F1 (3 fallos = caído 10 min), `User-Agent: TMC/<versión>`. Caché `api_cache`: mercados cercanos **15 min** por (sistema, mineral, radio), servicio más cercano **1 h** por (sistema, servicio). Solo se envía `SystemAddress` y nombre del mineral; nada del comandante.
 - Licencias: Ardent es AGPL-3.0, **solo uso por red**; sus respuestas van a `api_cache`, nunca al repo. Los fixtures de red de F2 son **sintéticos con la forma real** observada en el spike (valores inventados). Nada GPL/AGPL incorporado; toda fuente nueva en `THIRD_PARTY_NOTICES.md`.
 - **Datos estáticos propios** (`crates/tmc-modules/data/*.json`): hechos del juego o estimaciones propias, cada entrada con `source` (procedencia) y `verified: bool`; carga **tolerante** (JSON inválido o entrada mala → se registra con `tracing::warn!` y se ignora; nunca `panic!`/`unwrap` en producción), con test de carga real y de carga corrupta.
@@ -82,7 +84,7 @@ Entradas que la spec implica, que ningún test de F0/F1 cubre y que más pueden 
 crates/tmc-model/src/{events.rs*, net.rs*, settings.rs*}
 crates/tmc-net/src/{ardent.rs+, client.rs*, health.rs*, limiter.rs*, cache_policy.rs*, lib.rs*}
 crates/tmc-modules/data/{ship_pads.json+, mining_yield.json+}
-crates/tmc-modules/src/{lib.rs*, registry.rs*, data.rs*, eval.rs*}
+crates/tmc-modules/src/{lib.rs*, registry.rs*, data.rs*, eval.rs*, inflight.rs+}
 crates/tmc-modules/src/combat/{mod.rs+, target.rs+, ship.rs+, vouchers.rs+, session.rs+, cz.rs+, ax.rs+, tests.rs+}
 crates/tmc-modules/src/mining/{mod.rs+, prospector.rs+, session.rs+, prices.rs+, sell.rs+, tests.rs+}
 crates/tmc-i18n/src/lib.rs*                      (lista de argumentos del test de formato)
@@ -157,6 +159,8 @@ Sin código de producción. Peticiones reales a mano (curl o script desechable e
   - `ShieldState { shields_up: bool }`, `EscapeInterdiction { interdictor, is_player: Option<bool> }`, `PvpKill { victim, combat_rank: Option<u8> }`, `Promotion { combat: Option<u8>, trade, explore, cqc, soldier, exobiologist, federation, empire }` (todos `Option<u8>`).
   - `EventKind` + `ShipTargeted(Box<ShipTargeted>)`, `Bounty(Box<Bounty>)`, `FactionKillBond(FactionKillBond)`, `CapShipBond(FactionKillBond)`, `RedeemVoucher(RedeemVoucher)`, `ShieldState(ShieldState)`, `HeatWarning`, `HeatDamage`, `EscapeInterdiction(EscapeInterdiction)`, `PvpKill(PvpKill)` (`"PVPKill"`), `FighterDestroyed`, `Promotion(Promotion)`.
 
+  - `HullDamage` (ya tipado): verificar que tiene `fighter: Option<bool>`; si falta, añadirlo aquí (lo consume Task 12).
+
 - [ ] **Step 1: Tests** (en `events.rs`):
 
 ```rust
@@ -193,7 +197,7 @@ Sin código de producción. Peticiones reales a mano (curl o script desechable e
 #[test] fn mining_refined_and_launch_drone_parse() { /* MiningRefined Type "$platinum_name;" → commodity_key "platinum"; LaunchDrone Type "Prospector" */ }
 #[test] fn market_sell_parses_prices() { /* Type "platinum", Count 20, SellPrice 220000, TotalSale 4400000 */ }
 #[test] fn cargo_event_with_inventory_parses_limpets() { /* Inventory [{Name:"drones",Count:18},{Name:"platinum",Count:42}] → inventory.len()==2, drones 18 */ }
-#[test] fn commodity_key_normalizes_variants() { /* "$lowtemperaturediamond_name;"→"lowtemperaturediamond", "Platinum"→"platinum", "Low Temperature Diamonds"→"lowtemperaturediamonds" */ }
+#[test] fn commodity_key_normalizes_variants() { /* "$lowtemperaturediamond_name;"→"lowtemperaturediamond", "Platinum"→"platinum", "Low Temperature Diamond"→"lowtemperaturediamond" */ }
 ```
 
 - [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** PASS; Checks (snapshots sin cambios).
@@ -251,10 +255,10 @@ Sin código de producción. Peticiones reales a mano (curl o script desechable e
 - Consumes: `Transport` (`get`), `Service` (verificar en código al ejecutar), fixtures de Task 1.
 - Produces:
   - `Service::Ardent`; límite 1 petición/s; salud como F1.
-  - `ardent::imports_nearby_url(system_address: u64, commodity: &str, max_distance_ly: u32) -> String` (con `fleetCarriers=false`, `minVolume` y `maxDaysAgo` del spike); `ardent::nearest_url(system_address: u64, service: NearbyService) -> String`.
+  - `ardent::imports_nearby_url(system_address: u64, commodity: &str, max_distance_ly: u32, min_pad: PadSize) -> String` (con `fleetCarriers=false`, `minVolume` y `maxDaysAgo` del spike; añade `minLandingPadSize` solo si el spike confirma que Ardent lo acepta, si no `min_pad` se ignora); `ardent::nearest_url(system_address: u64, service: NearbyService) -> String`.
   - `ardent::parse_markets(body: &str) -> Result<Vec<RemoteMarket>, NetFailure>` (excluye obras de construcción/colonización y carriers; tolera `demandBracket` texto o número; ordena por `sell_price` desc; máximo 50 entradas); `ardent::parse_stations(body: &str) -> Result<Vec<RemoteStation>, NetFailure>` (máx. 5, por distancia).
-  - `cache_policy`: clave `ardent:imports:<addr>:<commodity>:<radio>` TTL 15 min; `ardent:nearest:<addr>:<servicio>` TTL 1 h.
-  - `NetClient::execute_inner`: brazos nuevos → `(NetSource::Ardent, …)`; `retry_at`/`is_down_for` con `Service::Ardent`; respeta `online_allowed` (como F1, revalidado tras esperar turno).
+  - `cache_policy`: clave `ardent:imports:<addr>:<commodity>:<radio>:<pad>` TTL 15 min; `ardent:nearest:<addr>:<servicio>` TTL 1 h.
+  - `NetClient::execute_inner`: brazos nuevos → `(NetSource::Ardent, …)`; `retry_at`/`is_down_for` con `Service::Ardent`; respeta `online_allowed` (como F1, revalidado tras esperar turno); la URL base de Ardent es sustituible por la misma vía que usan los servicios falsos de F1 en e2e (verificar en código al ejecutar; la usa Task 26).
 
 - [ ] **Step 1: Tests** (en `ardent.rs` y `client.rs`, con `FakeTransport` existente):
 
@@ -319,7 +323,7 @@ Sin código de producción. Peticiones reales a mano (curl o script desechable e
 
 **Interfaces:**
 - Produces: claves base de ambos módulos (títulos de panel, «escaneando…», `combat-badge-wanted = BUSCADO · { $reward }`, `combat-badge-clean = LIMPIO · NO DISPARAR`, estados de calor, nombres de tipo de subsistema `combat-subsystem-{powerplant,drive,fsd,lifesupport,distributor,sensors,weapons,cargohatch,other}`, `mining-verdict-worth = ✔ merece la pena · ≈ { $credits }`, `mining-verdict-not-worth`, `mining-no-data`…). Las tareas de UI añaden las que falten.
-- Lista de argumentos del test de formato ampliada con `reward`, `credits`, `rate`, `tons`, `fee`, `faction`, `ship`, `material`, `remaining`, `distance`, `days`.
+- Lista de argumentos del test de formato ampliada con `reward`, `credits`, `price`, `rate`, `tons`, `fee`, `faction`, `ship`, `material`, `remaining`, `distance`, `days` (misma lista que «Restricciones globales»).
 
 - [ ] **Step 1: Tests:** el test de claves por idioma existente debe fallar al crear solo `es`; `combat_and_mining_resources_load_in_all_languages` → `format("es","combat-badge-clean", {})` == `"LIMPIO · NO DISPARAR"` y `format("en", …)` == `"CLEAN · DO NOT FIRE"`.
 - [ ] **Step 2–4:** FAIL → completar 5 idiomas con traducciones reales → PASS; Checks; `npm --prefix ui test` (test de claves de la UI).
@@ -333,10 +337,10 @@ Todas las piezas de `combat` son puras (sin E/S): reciben eventos y `now: DateTi
 
 ### Task 11: `combat` — objetivo actual
 
-**Files:** Create `crates/tmc-modules/src/combat/target.rs`.
+**Files:** Create `crates/tmc-modules/src/combat/target.rs`, `crates/tmc-modules/src/combat/ax.rs` (solo `THARGOID_SHIPS`, `is_thargoid_ship(key)` e `is_thargoid_faction(f)`, con valores del Spike AX; Task 15 añade `AxTracker`) y el esqueleto `crates/tmc-modules/src/combat/mod.rs` (solo `pub mod`; Task 16 lo completa).
 
 **Interfaces:**
-- Produces: `pub enum LegalBadge { Scanning, Wanted { bounty: u64 }, Clean, Lawless, Enemy, Unknown }` (`ScanStage` < 3 → `Scanning`; `LegalStatus` `"Wanted"` o `bounty > 0` → `Wanted`; `"Clean"` → `Clean`; `"Lawless"` → `Lawless`; `"Enemy"`/`"WantedEnemy"`/`"Hostile"` → `Enemy`, salvo `bounty > 0` → `Wanted`; otro → `Unknown`). `pub enum SubsystemKind { PowerPlant, Drive, Fsd, LifeSupport, Distributor, Sensors, Weapons, CargoHatch, Other }` con `fn from_journal(s: &str)`. `TargetView { ship_key, ship_name: Option<String>, pilot, rank, faction, badge: LegalBadge, shield_pct: Option<f64>, hull_pct: Option<f64>, subsystem: Option<SubsystemView { kind, name: Option<String>, health_pct: Option<f64> }>, thargoid: bool, lost_at: Option<DateTime<Utc>> }`. `TargetTracker { fn apply(&mut self, ev: &ShipTargeted, now) -> bool; fn view(&self, now) -> Option<TargetView> }` — `view` devuelve `None` si `lost_at + 10 s <= now`. `ship_name` = `Ship_Localised` o `data::ship_pads().display_name`. `thargoid` = `ship_key` en `ax::THARGOID_SHIPS` (Task 15).
+- Produces: `pub enum LegalBadge { Scanning, Wanted { bounty: u64 }, Clean, Lawless, Enemy, Unknown }` (`ScanStage` < 3 → `Scanning`; `LegalStatus` `"Wanted"` o `bounty > 0` → `Wanted`; `"Clean"` → `Clean`; `"Lawless"` → `Lawless`; `"Enemy"`/`"WantedEnemy"`/`"Hostile"` → `Enemy`, salvo `bounty > 0` → `Wanted`; otro → `Unknown`). `pub enum SubsystemKind { PowerPlant, Drive, Fsd, LifeSupport, Distributor, Sensors, Weapons, CargoHatch, Other }` con `fn from_journal(s: &str)`. `TargetView { ship_key, ship_name: Option<String>, pilot, rank, faction, badge: LegalBadge, shield_pct: Option<f64>, hull_pct: Option<f64>, subsystem: Option<SubsystemView { kind, name: Option<String>, health_pct: Option<f64> }>, thargoid: bool, lost_at: Option<DateTime<Utc>> }`. `TargetTracker { fn apply(&mut self, ev: &ShipTargeted, now) -> bool; fn view(&self, now) -> Option<TargetView> }` — `view` devuelve `None` si `lost_at + 10 s <= now`. `ship_name` = `Ship_Localised` o `data::ship_pads().display_name`. `thargoid` = `ax::is_thargoid_ship(&ship_key)` (creado aquí, ampliado en Task 15). `LegalBadge` serializa etiquetado (`#[serde(tag = "kind", rename_all = "snake_case")]`: `{"kind":"wanted","bounty":125000}`) y `SubsystemKind` en `snake_case`; `types.ts` (Task 17) los refleja.
 
 - [ ] **Step 1: Tests:**
 
@@ -349,6 +353,7 @@ Todas las piezas de `combat` son puras (sin E/S): reciben eventos y `now: DateTi
 #[test] fn target_lost_sets_lost_at_and_keeps_data() { /* lock, luego TargetLocked:false a t0 → view(t0+9s).hull_pct == Some(80.0), lost_at==Some(t0) */ }
 #[test] fn view_clears_10s_after_loss() { /* view(t0+10s) == None */ }
 #[test] fn new_lock_after_loss_resets_lost_at() { /* lock nuevo a t0+5s → lost_at None */ }
+#[test] fn legal_badge_serializes_tagged() { /* Wanted{bounty:125000} → {"kind":"wanted","bounty":125000}; Clean → {"kind":"clean"} */ }
 #[test] fn identical_targeted_event_reports_no_change() { /* apply dos veces el mismo → segunda devuelve false */ }
 ```
 
@@ -363,7 +368,7 @@ Todas las piezas de `combat` son puras (sin E/S): reciben eventos y `now: DateTi
 - Produces:
   - `Pips { sys: f32, eng: f32, wep: f32 }` con `fn from_half_pips(p: [u8; 3]) -> Pips` (valores en unidades 0.0–4.0 con paso 0.5).
   - `pub enum HeatState { Normal, Overheating, HeatDamage }`; `HeatTracker { fn on_status(&mut self, overheating: bool, now) -> bool; fn on_heat_warning(&mut self, now) -> bool; fn on_heat_damage(&mut self, now) -> bool; fn state(&self) -> HeatState; fn overheating_since(&self) -> Option<DateTime<Utc>>; fn overheat_total_s(&self) -> u64 }` — `HeatDamage` persiste hasta que `Status` llega sin `OVERHEATING` o pasan 10 s sin otro `HeatDamage`; `overheating_since` se fija al entrar en `Overheating`/`HeatDamage` y se borra al volver a `Normal` (acumulando en `overheat_total_s`).
-  - `HullTracker { fn apply(&mut self, ev) -> bool; fn pct(&self) -> Option<u8> }` — escalón = último valor conocido redondeado a entero: `Loadout.HullHealth` y `HullDamage.Health` (×100; se ignora `HullDamage` con `Fighter == true` o `PlayerPilot == false`), `RepairAll` → 100, `Repair` con ítem de casco (`"Hull"`/`"Wear"`, verificar en diario) → 100, `Died` → `None`, `Resurrect` → 100.
+  - `HullTracker { fn apply(&mut self, ev) -> bool; fn pct(&self) -> Option<u8> }` — escalón = último valor conocido redondeado a entero: `Loadout.HullHealth` y `HullDamage.Health` (×100; se ignora `HullDamage` con `Fighter == true` o `PlayerPilot == false`), `RepairAll` → 100, `Repair` con ítem de casco (`"Hull"`/`"Wear"`, verificar en diario) → 100, `Died` → `None`, `Resurrect` → 100. **Sin duplicar lógica:** `state.rs` ya guarda `ship.hull_health` desde `Loadout`/`HullDamage` (filtro `PlayerPilot`); `HullTracker` parte de ese valor y solo añade lo que `GameState` no hace (`Fighter`, `RepairAll`/`Repair`, `Died`, `Resurrect`).
   - `ShipView { shields_up: Option<bool>, hull_pct: Option<u8>, heat: HeatState, overheating_since, overheat_total_s, pips: Option<Pips>, hardpoints: bool, alerts: Vec<ShipAlert> }`; `pub enum ShipAlert { HullLow, ShieldsDown, Overheating, UnderAttack, Interdiction }` (`HullLow` < 25 %; `UnderAttack` 30 s tras el evento; `Interdiction` mientras `BEING_INTERDICTED`).
   - `ShipTracker` que compone lo anterior: `fn on_status(&mut self, s: &Status, now) -> bool`, `fn on_event(&mut self, ev: &EventKind, now) -> bool`, `fn view(&self, now) -> ShipView`.
 
@@ -387,8 +392,8 @@ Todas las piezas de `combat` son puras (sin E/S): reciben eventos y `now: DateTi
 **Files:** Create `crates/tmc-modules/src/combat/vouchers.rs`.
 
 **Interfaces:**
-- Produces: `pub enum VoucherKind { Bounty, CombatBond }` (`FactionKillBond` y `CapShipBond` → `CombatBond`; los bonos AX son `CombatBond` con `ax: true`). `VoucherEntry { kind, faction: String, amount: u64, system: String, earned_at: DateTime<Utc>, ax: bool }`. `VoucherLedger { fn apply_event(&mut self, ev: &EventKind, system: &str, now) -> bool; fn unredeemed(&self) -> Vec<FactionTotal { kind, faction, amount, systems: Vec<String>, ax: bool }>; fn total(&self, kind: VoucherKind) -> u64; fn reset(&mut self) }`.
-- Reglas (spec §10): `Bounty` → una entrada por `normalized_rewards`; `RedeemVoucher` con `Type` `"bounty"` → `Bounty`, `"CombatBond"` → `CombatBond`, otros tipos ignorados; con `Factions[]` resta por facción su importe; con `Faction` resta de esa facción; sin facción resta `Amount` del tipo empezando por la entrada más antigua; con `BrokerPercentage` aplica la regla del Spike AX (nominal = `Amount` o `Amount/(1−p/100)`); nunca baja de 0. `Died` → `reset()`. Orden FIFO estable por `earned_at`.
+- Produces: `pub enum VoucherKind { Bounty, CombatBond }` (`FactionKillBond` y `CapShipBond` → `CombatBond`; los bonos AX son `CombatBond` con `ax: true`). `VoucherEntry { kind, faction: String, amount: u64, system: String, earned_at: DateTime<Utc>, ax: bool }` (`ax` = `ax::is_thargoid_faction(victim_faction)`, de Task 11). `VoucherLedger { fn apply_event(&mut self, ev: &EventKind, system: &str, now) -> bool; fn unredeemed(&self) -> Vec<FactionTotal { kind, faction, amount, systems: Vec<String>, ax: bool }>; fn total(&self, kind: VoucherKind) -> u64; fn reset(&mut self) }`.
+- Reglas (spec §10): `Bounty` → una entrada por `normalized_rewards`; `RedeemVoucher` con `Type` `"bounty"` → `Bounty`, `"CombatBond"` → `CombatBond`, otros tipos ignorados; con `Factions[]` resta por facción su importe; con `Faction` resta de esa facción; sin facción resta `Amount` del tipo empezando por la entrada más antigua; con `BrokerPercentage` aplica la regla del Spike AX (nominal = `Amount` o `Amount/(1−p/100)`), codificada en `const BROKER_AMOUNT_IS_NET: bool` y `fn nominal(amount: u64, pct: f64, is_net: bool) -> u64`; nunca baja de 0. `Died` → `reset()`. Orden FIFO estable por `earned_at`.
 
 - [ ] **Step 1: Tests:**
 
@@ -397,7 +402,8 @@ Todas las piezas de `combat` son puras (sin E/S): reciben eventos y `now: DateTi
 #[test] fn redeem_with_factions_subtracts_per_faction() { /* RedeemVoucher bounty Factions [{A,50000}] → Bounty A 0, B 10000 */ }
 #[test] fn redeem_combat_bond_with_single_faction() { /* RedeemVoucher CombatBond Faction A Amount 20000 → CombatBond total 0 */ }
 #[test] fn redeem_without_faction_subtracts_oldest_first() { /* Bounty A 30000 (t0), B 20000 (t1); RedeemVoucher bounty Amount 40000 → A 0, B 10000 */ }
-#[test] fn broker_redeem_clears_face_value() { /* Bounty A 50000; RedeemVoucher bounty Amount 37500 BrokerPercentage 25, sin Factions → total(Bounty)==0 (con la regla confirmada en Task 0) */ }
+#[test] fn broker_redeem_clears_face_value() { /* Bounty A 50000; RedeemVoucher bounty Amount 37500 BrokerPercentage 25, sin Factions → total(Bounty)==0 con `BROKER_AMOUNT_IS_NET = true` (regla de Task 0; si el spike dice lo contrario, se invierte la constante y la entrada del test) */ }
+#[test] fn nominal_value_rule_both_variants() { /* nominal(37500, 25.0, true)==50000 y nominal(50000, 25.0, false)==50000 */ }
 #[test] fn other_voucher_types_are_ignored() { /* RedeemVoucher "scannable" 1000 → sin cambios, apply_event false */ }
 #[test] fn died_zeroes_all_unredeemed_vouchers() { /* tras 3 vales, Died → unredeemed() vacío */ }
 #[test] fn never_goes_negative() { /* Redeem 999999 sin vales → total 0 */ }
@@ -407,12 +413,12 @@ Todas las piezas de `combat` son puras (sin E/S): reciben eventos y `now: DateTi
 
 ### Task 14: `combat` — sesión de caza y reconstrucción
 
-**Files:** Create `crates/tmc-modules/src/combat/session.rs`.
+**Files:** Create `crates/tmc-modules/src/combat/session.rs`, `tests/fixtures/journal/combat_session.log` (sintético, contenido descrito en Task 26; Task 26 lo completa y valida).
 
 **Interfaces:**
 - Consumes: `VoucherLedger`, eventos `LoadGame`, `Bounty`, `FactionKillBond`, `CapShipBond`, `PvpKill`, `Rank`, `Progress`, `Promotion`; paginador de historial de `exploration::unsold` (orden `(ts, archivo, línea, id)`, páginas de 256 — verificar en código al ejecutar; si es privado, moverlo a `crate::history` en esta tarea sin cambiar su comportamiento).
 - Produces: `HuntingSession { started_at, kills: u32, assists: u32, credits: u64, kills_by_type: BTreeMap<String, u32>, combat_rank: Option<u8>, combat_progress: Option<u8> }` + `fn apply_event(&mut self, ev, now) -> bool`, `fn credits_per_hour(&self, now) -> Option<u64>` (`None` si < 60 s), `fn reset(&mut self, now)`. **Decisión del redactor:** baja = `Bounty`/`FactionKillBond`/`CapShipBond` sin `SharedWithOthers` > 0 o `PvpKill`; asistencia = `SharedWithOthers` > 0 (a confirmar en Task 0/2). La sesión empieza en `LoadGame` o en la acción `reset_session`.
-- Reconstrucción al arrancar: `fn rebuild_task(cmdr: String) -> StoreTask` que lee `event` del comandante desde el último `Died` y aplica `VoucherLedger::apply_event` (resultado `Stored { tag: "combat.vouchers" }` con el libro serializado y el `cmdr`).
+- Reconstrucción al arrancar: `fn rebuild_task(cmdr: String) -> StoreTask` que lee `event` del comandante desde el último `Died` y aplica `VoucherLedger::apply_event` siguiendo `Location`/`FsdJump` para conocer el `system` de cada vale (resultado `Stored { tag: "combat.vouchers" }` con el libro serializado y el `cmdr`).
 
 - [ ] **Step 1: Tests:**
 
@@ -429,13 +435,13 @@ Todas las piezas de `combat` son puras (sin E/S): reciben eventos y `now: DateTi
 
 ### Task 15: `combat` — zona de conflicto y AX
 
-**Files:** Create `crates/tmc-modules/src/combat/cz.rs`, `crates/tmc-modules/src/combat/ax.rs`.
+**Files:** Create `crates/tmc-modules/src/combat/cz.rs`, `tests/fixtures/journal/ax_session.log` (según Task 0; sintético si no hay datos reales); Modify `crates/tmc-modules/src/combat/ax.rs` (creado en Task 11: aquí se añade `AxTracker`).
 
 **Interfaces:**
 - Produces:
   - `ConflictZone { system: String, side: Option<String>, kills: u32, bonds_by_faction: BTreeMap<String, u64> }`; `CzTracker { fn apply_event(&mut self, ev, system, now) -> bool; fn view(&self) -> Option<ConflictZone> }` — activo desde el primer `FactionKillBond` no thargoide en el sistema; `side` = `AwardingFaction` del primero; se cierra en `FsdJump`, `Docked` o `Died`.
-  - `pub const THARGOID_SHIPS: &[&str]` (valores de `Ship` confirmados en Task 0); `fn is_thargoid_faction(f: &str) -> bool` (`$faction_Thargoid;` u otro confirmado).
-  - `AxTracker { kills_by_type: BTreeMap<String, u32>, bonds: u64, presence: bool, last_activity: Option<DateTime<Utc>> }` + `fn apply_event(&mut self, ev, now) -> bool`, `fn on_location(&mut self, loc: &LocationInfo) -> bool` (usa `thargoid_presence`), `fn active(&self, now) -> bool` (presencia o actividad ≤ 5 min).
+  - `THARGOID_SHIPS`, `is_thargoid_ship` e `is_thargoid_faction` ya existen (Task 11); aquí solo se contrastan con Task 0. El bando de la ZC es el `AwardingFaction` del primer bono (los `Comms` no se tipan en F2: omisión a anotar en «Desviaciones»).
+  - `AxTracker { kills_by_type: BTreeMap<String, u32>, bonds: u64, presence: bool, last_activity: Option<DateTime<Utc>> }` + `fn apply_event(&mut self, ev, now) -> bool`, `fn on_location(&mut self, loc: &LocationInfo) -> bool` (usa `thargoid_presence`), `fn active(&self, now) -> bool` (presencia o actividad ≤ 5 min); recuerda el `Ship` del último `ShipTargeted` thargoide (`last_target_ship`) para atribuir cada bono AX a un tipo.
 
 - [ ] **Step 1: Tests:**
 
@@ -451,15 +457,15 @@ Todas las piezas de `combat` son puras (sin E/S): reciben eventos y `now: DateTi
 
 ### Task 16: `combat` — módulo, topics, relevancia, red y registro
 
-**Files:** Create `crates/tmc-modules/src/combat/{mod.rs, tests.rs}`; Modify `crates/tmc-modules/src/{lib.rs, registry.rs}`.
+**Files:** Create `crates/tmc-modules/src/inflight.rs`, `crates/tmc-modules/src/combat/tests.rs`; Modify `crates/tmc-modules/src/combat/mod.rs` (esqueleto de Task 11), `crates/tmc-modules/src/{lib.rs, registry.rs}`.
 
 **Interfaces:**
 - Consumes: `Module`, `ModuleCtx::{request, store_task, alert}`, `SourceEvent::{Journal, Status, Net, Stored, Settings, Action}`, `GameState` (sistema, galaxia, comandante — verificar nombres de campos en código al ejecutar).
-- Produces: `pub struct Combat` con `Combat::new()`; `id() = "combat"`; topics `combat.target`, `combat.ship`, `combat.session`, `combat.conflict_zone`, `combat.ax` (formato de nombre de topic como en `exploration` — verificar); `combat.session` incluye `vouchers: Vec<FactionTotal>` (máx. 32 filas; el resto agregado en «otras»), `nearest_if: Option<RemoteStation>`, `if_fee_pct: 25`.
-  - Red: tras `FsdJump`/`Location`, si hay vales sin cobrar, `online_services` y galaxia Live → `ctx.request("if:<addr>", NetQuery::NearestService { system_address, service: InterstellarFactors })`; respuesta aplicada solo si `addr` sigue siendo el sistema actual; `INFLIGHT_TTL_S = 60`.
+- Produces: `pub struct Combat` con `Combat::new()`; `id() = "combat"`; topics `combat.target`, `combat.ship`, `combat.session`, `combat.conflict_zone` (`null` fuera de una ZC), `combat.ax { active, presence, kills_by_type, bonds, target }` (formato de nombre de topic como en `exploration` — verificar); `combat.session` incluye `vouchers: Vec<FactionTotal>` (máx. 32 filas; el resto agregado en «otras»), `nearest_if: Option<RemoteStation>`, `if_fee_pct: 25`.
+  - Red: tras `FsdJump`/`Location`, si hay vales sin cobrar, `online_services` y galaxia Live → `ctx.request("if:<addr>", NetQuery::NearestService { system_address, service: InterstellarFactors })`; respuesta aplicada solo si `addr` sigue siendo el sistema actual; control de vuelo con `inflight::Inflight { fn begin(&mut self, key: &str, now) -> bool /* false si ya en vuelo y no caducada */; fn finish(&mut self, key: &str); }` (TTL `INFLIGHT_TTL_S = 60`).
   - Acción `reset_session` → `HuntingSession::reset`.
-  - `relevance`: `Active` si objetivo fijado, `UnderAttack` ≤ 30 s, hardpoints desplegados con ZC activa o vale ganado ≤ 5 min, o `AxTracker::active`; si no, `Normal`.
-  - Alertas (`ShipAlert` nuevas, solo en vivo y con `alerts_enabled`) con claves i18n de `combat.ftl`.
+  - `relevance`: `Active` si objetivo fijado, `UnderAttack` ≤ 30 s, hardpoints desplegados con ZC activa, o `AxTracker::active` (spec §3.1); si no, `Normal`. Sin reloj: usa `last_ts` (Restricciones).
+  - Alertas (las `ShipAlert` de Task 12 al activarse, solo en vivo y con `alerts_enabled`) con claves i18n de `combat.ftl`.
 
 - [ ] **Step 1: Tests** (en `combat/tests.rs`):
 
@@ -470,7 +476,7 @@ Todas las piezas de `combat` son puras (sin E/S): reciben eventos y `now: DateTi
 #[test] fn stored_result_for_other_cmdr_is_ignored() { /* Stored{tag:"combat.vouchers"} con cmdr "OTRO" → vouchers sin cambios */ }
 #[test] fn late_if_response_for_previous_system_not_applied() { /* salto a X, luego a Y; llega Stations de X → nearest_if None */ }
 #[test] fn inflight_if_request_expires_after_60s() { /* sin respuesta, nuevo FsdJump al mismo sistema a t+61s → se emite de nuevo */ }
-#[test] fn relevance_active_with_locked_target() { /* ShipTargeted TargetLocked true → Active; tras perderlo y 10 s → Normal */ }
+#[test] fn relevance_active_with_locked_target() { /* ShipTargeted TargetLocked true → Active; TargetLocked false y un Status 11 s después → Normal */ }
 #[test] fn topics_stay_under_16_kib_with_200_factions() { /* 200 facciones con vales → combat.session serializado < 16384 bytes y 33 filas */ }
 #[test] fn reset_session_action_zeroes_session_only() { /* Action reset_session → session.kills 0, vouchers sin cambios */ }
 ```
@@ -482,7 +488,7 @@ Todas las piezas de `combat` son puras (sin E/S): reciben eventos y `now: DateTi
 **Files:** Create `ui/src/modules/combat/{index.ts, types.ts, TargetPanel.svelte, ShipPanel.svelte, PipsGauge.svelte}`; Modify `ui/src/modules/registry.ts`, `locales/*/combat.ftl`; Create `ui/tests/combat.test.ts`.
 
 **Interfaces:**
-- Consumes: topics `combat.target`, `combat.ship` (tipos espejo en `types.ts`).
+- Consumes: topics `combat.target`, `combat.ship` (tipos espejo en `types.ts`; `badge` etiquetado `{kind:'wanted',bounty}` como Task 11).
 - Produces: según spec §3.2 / maqueta v2: insignia grande arriba a la derecha (BUSCADO rojo / LIMPIO · NO DISPARAR verde / «escaneando…»); barras de escudo/casco del objetivo; recuadro de subsistema (nombre grande, icono por `SubsystemKind`, barra). El panel se vacía con un `setTimeout` único a `lost_at + 10 s`. «Mi nave»: escudos, casco por escalones, calor de 3 estados con cronómetro (`setInterval` 1 s solo si `overheating_since`), `PipsGauge` 3 columnas × 4 unidades con medio pip, alertas.
 
 - [ ] **Step 1: Tests** (Vitest + Testing Library):
@@ -521,11 +527,12 @@ test('ax panel lists kills by type and presence banner', /* {kills_by_type:{scou
 
 ### Task 19: `mining` — prospector
 
-**Files:** Create `crates/tmc-modules/src/mining/prospector.rs`.
+**Files:** Create `crates/tmc-modules/src/mining/prospector.rs`, `crates/tmc-modules/src/mining/prices.rs` (solo `PriceSource`, `PriceInfo` y `pub type PriceFn<'a> = &'a dyn Fn(&str) -> Option<PriceInfo>`; Task 21 añade `PriceBook`), `crates/tmc-modules/src/mining/mod.rs` (esqueleto con `pub mod`; Task 22 lo completa), `tests/fixtures/journal/mining_session.log` (sintético; Task 26 lo completa y valida).
 
 **Interfaces:**
-- Consumes: `ProspectedAsteroid`, `data::mining_yield`, `PriceBook` (Task 21; aquí se inyecta como `&dyn Fn(&str) -> Option<PriceInfo>` para no acoplar el orden de tareas), `ModuleSettings::{mining_interest, mining_threshold_cr}`.
+- Consumes: `ProspectedAsteroid`, `data::mining_yield`, `PriceFn` (definido aquí en `prices.rs`; la resolución real es `PriceBook::best_price` de Task 21), `ModuleSettings::{mining_interest, mining_threshold_cr}`.
 - Produces: `MaterialRow { key: String, name: Option<String>, proportion: f64, est_value: Option<u64>, interest: bool }`; `pub enum Verdict { Worth { est_value: Option<u64> }, NotWorth, NoData }`; `AsteroidView { content: AsteroidContent, motherlode: Option<String>, materials: Vec<MaterialRow>, remaining: Option<f64>, verdict: Verdict, est_total: Option<u64> }`; `ProspectorTracker { fn apply(&mut self, ev: &ProspectedAsteroid, prices, settings) -> bool; fn current(&self) -> Option<&AsteroidView>; fn history(&self) -> &VecDeque<AsteroidView> /* máx. 8 */ }`.
+- `Verdict` serializa etiquetado (`{"kind":"worth","est_value":2079000}`, `not_worth`, `no_data`) como `LegalBadge`; `types.ts` (Task 23) lo refleja.
 - Fórmula (spec §3.3): `est_value = round(proportion/100 × tons_for(content) × price)`. **Decisión del redactor:** el veredicto suma solo materiales de la lista de interés: `Worth` si `motherlode ∈ interés` o suma ≥ umbral; sin precio para ningún material de interés → `Worth` si hay material de interés con contenido `High`, si no `NoData`; en otro caso `NotWorth`.
 
 - [ ] **Step 1: Tests:**
@@ -547,7 +554,7 @@ test('ax panel lists kills by type and presence banner', /* {kills_by_type:{scou
 
 **Interfaces:**
 - Consumes: `MiningRefined`, `LaunchDrone`, `ProspectedAsteroid`, `AsteroidCracked`, `Cargo` (evento e inventario), `Loadout.cargo_capacity`, `EjectCargo`, `MarketSell`, `LoadGame`.
-- Produces: `MiningSession { started_at: Option<DateTime<Utc>>, refined: BTreeMap<String, u32>, limpets_launched: BTreeMap<String, u32>, limpets_left: Option<u32>, cargo: Option<u32>, capacity: Option<u32>, asteroids_prospected: u32, cracked: u32 }` + `fn apply_event(&mut self, ev, now) -> bool`, `fn tons_per_hour(&self, now) -> Option<f64>` (`None` si < 60 s), `fn est_credits(&self, prices) -> Option<u64>`, `fn credits_per_hour(&self, now, prices) -> Option<u64>`, `fn refinery_bins(&self) -> Vec<(String, u32)>` (máx. 10 tipos más recientes; estimado), `fn reset(&mut self, now)`. **Decisión del redactor:** la sesión empieza en la primera actividad minera (`LaunchDrone` Prospector/Collection o `ProspectedAsteroid`) tras `LoadGame`/reinicio; limpets restantes = `drones` del inventario de `Cargo`.
+- Produces: `MiningSession { started_at: Option<DateTime<Utc>>, refined: BTreeMap<String, u32>, limpets_launched: BTreeMap<String, u32>, limpets_left: Option<u32>, cargo: Option<u32>, capacity: Option<u32>, asteroids_prospected: u32, cracked: u32 }` + `fn apply_event(&mut self, ev, now) -> bool`, `fn tons_per_hour(&self, now) -> Option<f64>` (`None` si < 60 s), `fn est_credits(&self, prices: PriceFn) -> Option<u64>`, `fn credits_per_hour(&self, now, prices: PriceFn) -> Option<u64>`, `fn refinery_bins(&self) -> Vec<(String, u32)>` (máx. 10 tipos más recientes; estimado), `fn reset(&mut self, now)`. Sesión desde `LoadGame` o `reset_session` (spec §10, decisión 4); limpets restantes = `drones` del último `Cargo`, −1 por cada `LaunchDrone` posterior; `cargo` = último `Cargo.count`, +1 por cada `MiningRefined` posterior (estimado hasta el siguiente `Cargo`).
 
 - [ ] **Step 1: Tests:**
 
@@ -557,19 +564,20 @@ test('ax panel lists kills by type and presence banner', /* {kills_by_type:{scou
 #[test] fn limpets_launched_by_type_and_left_from_cargo() { /* 3 Prospector + 5 Collection; Cargo drones 12 → launched {Prospector:3, Collection:5}, left Some(12) */ }
 #[test] fn est_credits_uses_prices() { /* 12 t platinum a 220000 → 2_640_000 */ }
 #[test] fn refinery_bins_capped_at_10() { /* 12 tipos distintos → 10 */ }
-#[test] fn session_starts_at_first_mining_activity() { /* LoadGame t0, LaunchDrone Prospector t0+10min → started_at t0+10min */ }
+#[test] fn session_starts_at_load_game_and_reset() { /* LoadGame t0 → started_at Some(t0); reset(t0+1h) → Some(t0+1h) y refined vacío */ }
+#[test] fn launch_and_refine_after_cargo_adjust_counters() { /* Cargo Count 40 con drones 12, luego 2 LaunchDrone y 3 MiningRefined → limpets_left Some(10), cargo Some(43) */ }
 ```
 
 - [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(mining): sesión con refinados, t/h, refinería, limpets y carga`
 
 ### Task 21: `mining` — `PriceBook` y «Dónde vender»
 
-**Files:** Create `crates/tmc-modules/src/mining/{prices.rs, sell.rs}`.
+**Files:** Modify `crates/tmc-modules/src/mining/prices.rs` (creado en Task 19); Create `crates/tmc-modules/src/mining/sell.rs`.
 
 **Interfaces:**
 - Consumes: `MarketSell`, contenido de `Market.json` si `SourceEvent::Companion` lo trae (verificar en código al ejecutar; si solo avisa del cambio, se omite `Market.json` y se anota en «Desviaciones»), `NetOutcome::Markets`, `data::ship_pads`, `Loadout.ship`.
 - Produces:
-  - `pub enum PriceSource { Remote, LocalSell, LocalMarket }`; `PriceInfo { price: u64, source: PriceSource, at: DateTime<Utc> }`; `PriceBook { fn on_market_sell(&mut self, ev, now); fn on_remote(&mut self, commodity: &str, markets: &[RemoteMarket], fetched_at); fn best_price(&self, commodity: &str) -> Option<PriceInfo> }` — prioridad: mejor precio remoto compatible (< 15 min) > último `MarketSell` > `Market.json`.
+  - `pub enum PriceSource { Remote, LocalSell, LocalMarket }`; `PriceInfo { price: u64, source: PriceSource, at: DateTime<Utc> }`; `PriceBook { fn on_market_sell(&mut self, ev, now); fn on_remote(&mut self, commodity: &str, markets: &[RemoteMarket], fetched_at); fn best_price(&self, commodity: &str, now: DateTime<Utc>) -> Option<PriceInfo> }` — prioridad: mejor precio remoto compatible (< 15 min respecto a `now`) > último `MarketSell` > `Market.json`. `fn price_rebuild_task(cmdr: String) -> StoreTask` lee de la tabla `event` el último `MarketSell` por mineral (resultado `Stored { tag: "mining.prices" }` con `cmdr`), para que el respaldo local sobreviva a un reinicio (spec §10).
   - `SellOption { station_name, system_name, distance_ly, sell_price, demand, pad: Option<PadSize>, pad_ok: Option<bool>, updated_at }`; `fn rank_markets(markets: &[RemoteMarket], ship_pad: Option<PadSize>, top: usize) -> Vec<SellOption>` (excluye los que no caben si se conoce `ship_pad`; nave desconocida → no excluye y `pad_ok = None`); `SellPlan { by_commodity: BTreeMap<String, Vec<SellOption>> /* top 5 */, best_station_total: Option<(String, u64)>, fetched_at, source }` con `fn build(cargo, results, ship_pad) -> SellPlan` (la «mejor estación» maximiza la venta total de la carga).
 
 - [ ] **Step 1: Tests:**
@@ -580,6 +588,7 @@ test('ax panel lists kills by type and presence banner', /* {kills_by_type:{scou
 #[test] fn price_prefers_recent_remote_over_local() { /* remoto 230000 hace 5 min y MarketSell 210000 → 230000 Remote */ }
 #[test] fn price_falls_back_to_last_market_sell() { /* sin remoto → 210000 LocalSell */ }
 #[test] fn stale_remote_price_older_than_15_min_falls_back() { /* remoto hace 16 min → LocalSell */ }
+#[test] fn prices_rebuilt_from_history_after_restart() { /* store en memoria con MarketSell platinum 210000 y luego 215000, y painite 500000 → price_rebuild_task: platinum 215000 LocalSell, painite 500000 */ }
 #[test] fn best_station_maximizes_total_sale() { /* carga 20 platinum + 10 painite; X paga 220000 y 500000, Y solo platinum a 240000 → best == ("X", 9_400_000) */ }
 ```
 (`late_markets_for_previous_system_not_applied` vive en Task 22, donde está el estado del sistema actual.)
@@ -588,13 +597,14 @@ test('ax panel lists kills by type and presence banner', /* {kills_by_type:{scou
 
 ### Task 22: `mining` — módulo, topics, relevancia, red y registro
 
-**Files:** Create `crates/tmc-modules/src/mining/{mod.rs, tests.rs}`; Modify `crates/tmc-modules/src/{lib.rs, registry.rs}`.
+**Files:** Create `crates/tmc-modules/src/mining/tests.rs`; Modify `crates/tmc-modules/src/mining/mod.rs` (esqueleto de Task 19), `crates/tmc-modules/src/{lib.rs, registry.rs}`.
 
 **Interfaces:**
 - Produces: `pub struct Mining` (`Mining::new()`, `id() = "mining"`); topics `mining.prospector` (actual + histórico de 8), `mining.session`, `mining.sell` (`SellPlan` + `status: "ok" | "no_data" | "disabled" | "loading"`).
-  - Red: por cada mineral de la carga (máx. 10) y por cada material de interés del asteroide actual sin precio, `ctx.request("sell:<addr>:<commodity>", CommodityImportsNearby { system_address, commodity, max_distance_ly: settings.sell_search_radius_ly, min_pad })` tras `FsdJump`/`Location`/`Cargo` con cambios; nunca en replay, Legacy u offline; respuestas de otro sistema no se aplican; `INFLIGHT_TTL_S = 60`; `Failed` reintento según `retry_at`.
+  - Red: por cada mineral de la carga (máx. 10) y por cada material de interés del asteroide actual sin precio, `ctx.request("sell:<addr>:<commodity>", CommodityImportsNearby { system_address, commodity, max_distance_ly: settings.sell_search_radius_ly, min_pad })` tras `FsdJump`/`Location`/`Cargo` con cambios; nunca en replay, Legacy u offline; respuestas de otro sistema no se aplican; control de vuelo con `inflight::Inflight` (Task 16; TTL 60 s); `min_pad` = plataforma de la nave si se conoce y `PadSize::Small` (sin filtro) si no; `Failed` reintento según `retry_at`.
+  - Precios: `PriceBook::best_price(commodity, now)` es el único origen para el `PriceFn` de prospector y sesión. Al arrancar/`LoadGame`: `store_task(price_rebuild_task(cmdr))`; `Stored { tag: "mining.prices" }` solo se aplica si el comandante (y generación) coincide y nunca en replay.
   - Acción `reset_session` → `MiningSession::reset`. `SourceEvent::Settings` recalcula veredictos.
-  - `relevance`: `Active` si `LaunchDrone` Prospector/Collection o `ProspectedAsteroid` ≤ 10 min; si no, `Normal`.
+  - `relevance`: `Active` si `LaunchDrone` Prospector/Collection o `ProspectedAsteroid` ≤ 10 min (sin reloj: `last_ts`, Restricciones); si no, `Normal`.
 
 - [ ] **Step 1: Tests:**
 
@@ -603,11 +613,11 @@ test('ax panel lists kills by type and presence banner', /* {kills_by_type:{scou
 #[test] fn prospector_topic_shows_composition_and_verdict() { /* fixture → materials.len()==<n>, verdict Worth */ }
 #[test] fn replay_emits_no_requests_or_store_writes() { /* replaying=true → sin NetRequest ni StoreTask */ }
 #[test] fn no_requests_in_legacy_or_offline() { /* Legacy → 0; online_services=false → 0 y mining.sell.status "disabled" */ }
-#[test] fn stored_result_for_other_cmdr_is_ignored() { /* Stored de otro cmdr → sin cambios */ }
+#[test] fn stored_result_for_other_cmdr_is_ignored() { /* Stored{tag:"mining.prices"} con cmdr "OTRO" → best_price("platinum", now) sigue None */ }
 #[test] fn late_markets_for_previous_system_not_applied() { /* respuesta Markets de X tras saltar a Y → mining.sell sin ella; PriceBook sí la guarda */ }
 #[test] fn settings_change_recomputes_verdict() { /* umbral 1_000_000 → Worth; Settings con 5_000_000 → NotWorth y topic sucio */ }
 #[test] fn sell_topic_stays_under_16_kib() { /* 10 minerales × 50 mercados → < 16384 bytes, 5 por mineral */ }
-#[test] fn relevance_active_after_prospector_launch() { /* LaunchDrone Prospector → Active; 11 min después → Normal */ }
+#[test] fn relevance_active_after_prospector_launch() { /* LaunchDrone Prospector → Active; un evento 11 min después → Normal */ }
 ```
 
 - [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(mining): módulo de minería con topics, relevancia y consulta de mercados`
@@ -671,7 +681,7 @@ test('settings put sends json with content type and reverts on 400', /* 400 → 
 
 ### Task 26: fixtures sintéticos y pruebas de extremo a extremo
 
-**Files:** Create `tests/fixtures/journal/{combat_session.log, mining_session.log, ax_session.log}`, `tests/fixtures/status/combat_{pips_half,overheating,normal}.json`; Modify las pruebas e2e/rendimiento de F1 (verificar en código al ejecutar su ubicación).
+**Files:** Create `tests/fixtures/status/combat_{pips_half,overheating,normal}.json`; Modify (creados en Tasks 14, 15 y 19) `tests/fixtures/journal/{combat_session.log, ax_session.log, mining_session.log}` para completar el contenido descrito abajo; Modify las pruebas e2e/rendimiento de F1 (verificar en código al ejecutar su ubicación).
 
 **Interfaces:** Fixtures escritos a mano, `CMDR TESTER`, sistemas/facciones/pilotos ficticios, sin FID real. `combat_session.log`: objetivo limpio y buscado, subsistema, 6 `Bounty` (uno compartido), 2 `FactionKillBond`, `HullDamage`, `HeatWarning`/`HeatDamage`, `RedeemVoucher` parcial con `Factions[]` y otro sin facción, `Died` y vales posteriores. `mining_session.log`: 10 `ProspectedAsteroid` (uno con núcleo), `MiningRefined` conocidos, `LaunchDrone`, `Cargo`, `MarketSell`. `ax_session.log` según Task 0.
 
@@ -684,7 +694,7 @@ test('settings put sends json with content type and reverts on 400', /* 400 → 
 #[test] fn ax_fixture_kills_bonds_and_presence() { /* criterio 7: kills_by_type, bonds y presence según fixture */ }
 #[test] fn burst_of_1000_combat_events_stays_under_10hz_and_500ms() { /* criterio 2: p95 evento→UI < 500 ms y ≤ 10 difusiones/s */ }
 ```
-  más e2e Playwright (servidor con `online_services=false` y otro con Ardent falso): `combat_layout_shows_wanted_badge_and_subsystem` (criterio 2), `mining_sell_lists_fake_markets_with_pad_and_age` y `mining_sell_no_data_when_disabled` (criterio 6), `prospector_shows_composition_core_and_verdict` (criterio 5).
+  más e2e Playwright (servidor con `online_services=false` y otro con Ardent falso vía la URL base sustituible de Task 7): `combat_layout_shows_wanted_badge_and_subsystem` (criterio 2), `mining_sell_lists_fake_markets_with_pad_and_age` y `mining_sell_no_data_when_disabled` (criterio 6), `prospector_shows_composition_core_and_verdict` (criterio 5).
 - [ ] **Step 2:** revisar los fixtures (sin datos reales de comandante). **Step 3–4:** PASS; checks.
 - [ ] **Step 5: Commit** `test: fixtures sintéticos de combate, minería y AX con pruebas de extremo a extremo`
 
@@ -692,7 +702,7 @@ test('settings put sends json with content type and reverts on 400', /* 400 → 
 
 **Files:** Modify `apps/headless/src/eval.rs`, `crates/tmc-modules/src/eval.rs`.
 
-**Interfaces:** `eval` añade dos informes agregados (sin nombres): (a) conciliación de vales por `RedeemVoucher` (ganado vs. canjeado por tipo, diferencia); (b) toneladas refinadas por asteroide prospectado por nivel de contenido (media, n) para ajustar `mining_yield.json` (si n ≥ 5 por nivel, se propone el valor; `verified` sigue `false` salvo aprobación).
+**Interfaces:** `eval` añade dos informes agregados (sin nombres): (a) conciliación de vales por `RedeemVoucher` (ganado vs. canjeado por tipo, diferencia); (b) toneladas refinadas por asteroide prospectado por nivel de contenido (media, n; cada `MiningRefined` se atribuye al último `ProspectedAsteroid` anterior, heurística indicada en la salida; reutiliza `VoucherLedger::apply_event` y `MiningSession::apply_event`, sin lógica propia) para ajustar `mining_yield.json` (si n ≥ 5 por nivel, se propone el valor; `verified` sigue `false` salvo aprobación).
 
 - [ ] **Step 1: Tests:** `eval_reports_voucher_reconciliation_for_fixture` (diferencia 0 en `combat_session.log`); `eval_reports_tons_per_asteroid_by_content` (High: media == <valor del fixture>, n == <n>).
 - [ ] **Step 2–4:** FAIL → implementar → PASS; checks; ejecutar sobre el historial del propietario y anotar solo agregados en «Verificación F2».
@@ -744,3 +754,5 @@ test('settings put sends json with content type and reverts on 400', /* 400 → 
 ## Desviaciones
 
 (Anotar aquí cualquier cambio respecto a este plan o a la spec, con fecha, motivo y tareas afectadas. Las omisiones AX del spike y los ajustes de adaptador de Ardent se registran aquí.)
+
+- 2026-10-18 · Preflight: aplicadas las resoluciones de la revisión previa (ver preflight.md del ledger).
