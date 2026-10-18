@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 12), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
+- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 13), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
 
 ## Fases
 
@@ -47,8 +47,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 9 | datos estáticos `ship_pads.json` y `mining_yield.json` | ✅ hecha | cad0c42, d3529c5 | ship_pads.json (47 naves, alias, tamaño conservador si hay duda) y mining_yield.json, todo verified:false hasta eval. Revisión aprobada tras 1 ronda. |
 | 10 | i18n — `combat.ftl` y `mining.ftl` | ✅ hecha | 740fa37, 9e05655, a89d18d | combat.ftl y mining.ftl en 5 idiomas (63 claves), plurales correctos en fr/pt. Revisión aprobada tras 1 ronda. |
 | 11 | `combat` — objetivo actual | ✅ hecha | ecd1a8f, a1ef396 | Seguimiento del objetivo: estado legal (BUSCADO/LIMPIO/…), escaneando, subsistema, vaciado a los 10 s; constante thargoide no verificada. Revisión aprobada. |
-| 12 | `combat` — mi nave | 🔄 en curso | — |  |
-| 13 | `combat` — libro de vales | ⬜ | — | |
+| 12 | `combat` — mi nave | ✅ hecha | 7d87eea, 872f9d6 | Escudos, casco por escalones (Hull/All/RepairAll), calor de 3 estados con cronómetro, pips en medios pips, alertas. Revisión aprobada tras 1 ronda. |
+| 13 | `combat` — libro de vales | 🔄 en curso | — |  |
 | 14 | `combat` — sesión de caza y reconstrucción | ⬜ | — | |
 | 15 | `combat` — zona de conflicto y AX | ⬜ | — | |
 | 16 | `combat` — módulo, topics, relevancia, red y registro | ⬜ | — | |
