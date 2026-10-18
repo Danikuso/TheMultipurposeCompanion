@@ -116,6 +116,8 @@ pub struct ShipPadEntry {
     pub name: String,
     pub pad: String,
     #[serde(default)]
+    pub aliases: Vec<String>,
+    #[serde(default)]
     pub source: String,
     #[serde(default)]
     pub verified: bool,
@@ -139,7 +141,9 @@ fn pad_from_str(s: &str) -> Option<PadSize> {
 impl ShipPads {
     fn find(&self, ship: &str) -> Option<&ShipPadEntry> {
         let ship = ship.to_ascii_lowercase();
-        self.entries.iter().find(|e| e.ship == ship)
+        self.entries
+            .iter()
+            .find(|e| e.ship == ship || e.aliases.iter().any(|a| a.eq_ignore_ascii_case(&ship)))
     }
 
     pub fn pad_for(&self, ship: &str) -> Option<PadSize> {
@@ -227,6 +231,7 @@ fn parse_mining_yield(json: &str) -> MiningYield {
             a.iter()
                 .filter_map(|v| serde_json::from_value::<MiningYieldEntry>(v.clone()).ok())
                 .filter(|e| matches!(e.content.as_str(), "Low" | "Medium" | "High"))
+                .filter(|e| e.tons_per_asteroid.is_finite() && e.tons_per_asteroid > 0.0)
                 .collect()
         })
         .unwrap_or_default();
@@ -378,7 +383,7 @@ mod tests {
     fn every_ship_pad_entry_has_source_and_valid_pad() {
         let p = ship_pads();
         assert!(p.entries.len() >= 40, "{}", p.entries.len());
-        assert_eq!(p.entries.len(), 46);
+        assert_eq!(p.entries.len(), 47);
         for e in &p.entries {
             assert!(!e.source.is_empty(), "{}", e.ship);
             assert!(!e.name.is_empty(), "{}", e.ship);
@@ -422,5 +427,38 @@ mod tests {
         );
         assert_eq!(m.tons_for(AsteroidContent::High), Some(7.5));
         assert_eq!(m.tons_for(AsteroidContent::Low), None);
+    }
+
+    #[test]
+    fn ship_pads_table_values_aliases_and_vulture() {
+        let p = ship_pads();
+        for (ship, pad) in [
+            ("type6", PadSize::Medium),
+            ("independant_trader", PadSize::Medium),
+            ("cutter", PadSize::Large),
+            ("empire_trader", PadSize::Large),
+            ("typex", PadSize::Medium),
+            ("anaconda", PadSize::Large),
+            ("python", PadSize::Medium),
+            ("cobramkiii", PadSize::Small),
+            ("vulture", PadSize::Small),
+            ("type11", PadSize::Large),
+            ("explorer_nx", PadSize::Large),
+        ] {
+            assert_eq!(p.pad_for(ship), Some(pad), "{ship}");
+        }
+        assert_eq!(p.display_name("independant_trader"), Some("Keelback"));
+        assert_eq!(p.pad_for("Kestrel_MkII"), Some(PadSize::Small));
+        assert_eq!(p.display_name("kestrel_mkii"), Some("Kestrel Mk II"));
+    }
+
+    #[test]
+    fn mining_yield_rejects_non_positive_or_non_finite() {
+        let m = parse_mining_yield(
+            r#"{"entries":[{"content":"Low","tons_per_asteroid":0.0},
+            {"content":"Medium","tons_per_asteroid":-3.0},
+            {"content":"High","tons_per_asteroid":1e999}]}"#,
+        );
+        assert_eq!(m.entries.len(), 0);
     }
 }
