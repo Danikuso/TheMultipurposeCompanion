@@ -129,8 +129,12 @@ pub fn planet_mapped_value(base: f64, f: &ValueFlags) -> u64 {
     round(v)
 }
 
-/// Valores de un `Scan` sin eficiencia (se desconoce hasta el DSS).
-/// Los gigantes gaseosos no se pueden mapear: `mapped` es `None`.
+/// Valores de un `Scan`. `mapped` es el «valor si se mapea»: asume DSS con
+/// el bonus de eficiencia (x1,25) conseguido, más los multiplicadores de primer
+/// descubrimiento/mapeo según `WasDiscovered`/`WasMapped` y el bonus Odyssey si
+/// `odyssey`. Todo planeta o luna (gigantes gaseosos incluidos) es mapeable;
+/// estrellas, cinturones y anillos no tienen valor de mapeo (`None`). Para la
+/// eficiencia real usar `planet_mapped_value` con `ValueFlags`.
 pub fn body_values(scan: &Scan, odyssey: bool) -> BodyValues {
     let first_discovery = scan.was_discovered == Some(false);
     let first_mapped = scan.was_mapped == Some(false);
@@ -149,19 +153,15 @@ pub fn body_values(scan: &Scan, odyssey: bool) -> BodyValues {
                 };
             };
             let base = planet_base(k, mass);
-            let giant = scan
-                .planet_class
-                .as_deref()
-                .is_some_and(|c| c.to_ascii_lowercase().contains("giant"));
             let flags = ValueFlags {
                 first_discovery,
                 first_mapped,
-                efficiency: false,
+                efficiency: true,
                 odyssey,
             };
             BodyValues {
                 scanned: planet_scanned_value(base, first_discovery),
-                mapped: (!giant).then(|| planet_mapped_value(base, &flags)),
+                mapped: Some(planet_mapped_value(base, &flags)),
             }
         }
         None => BodyValues {
@@ -258,14 +258,34 @@ mod tests {
     #[test]
     fn first_mapping_without_first_discovery_uses_8_0956() {
         let v = body_values(&elw(true, false), false);
-        within(v.mapped.unwrap(), 2_296_143.0, 0.001);
+        within(v.mapped.unwrap(), 2_870_179.0, 0.001);
         assert_eq!(v.scanned, 283_629);
     }
 
     #[test]
     fn first_discovery_and_first_mapping_use_combined_multiplier() {
         let v = body_values(&elw(false, false), false);
-        within(v.mapped.unwrap(), 2_728_228.0, 0.001);
+        within(v.mapped.unwrap(), 3_410_285.0, 0.001);
+    }
+
+    #[test]
+    fn body_values_mapped_assumes_efficiency_and_odyssey() {
+        let v = body_values(&elw(true, true), true);
+        within(v.mapped.unwrap(), 1_536_321.0, 0.005);
+    }
+
+    #[test]
+    fn gas_giant_is_mappable() {
+        let s = Scan {
+            planet_class: Some("Sudarsky class I gaseous giant".into()),
+            mass_em: Some(300.0),
+            was_discovered: Some(true),
+            was_mapped: Some(true),
+            ..Default::default()
+        };
+        let v = body_values(&s, false);
+        within(v.mapped.expect("mapeable"), 19_117.5, 0.002);
+        assert_eq!(v.scanned, 4_589);
     }
 
     #[test]
