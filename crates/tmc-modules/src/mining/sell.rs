@@ -98,13 +98,16 @@ impl SellPlan {
             if tons == 0 {
                 continue;
             }
+            // Dedupe por (estación, materia): vale el mejor precio.
+            let mut best: BTreeMap<(String, String), (u64, f64)> = BTreeMap::new();
             for m in compatible(markets, ship_pad) {
-                let e = totals
-                    .entry((m.station_name.clone(), m.system_name.clone()))
-                    .or_insert((0, m.distance_ly));
-                // Una estación aparece una vez por materia; si se repitiera, vale el mejor precio.
-                e.0 = e.0.saturating_add(tons.saturating_mul(m.sell_price));
-                e.1 = e.1.min(m.distance_ly);
+                best.entry((m.station_name.clone(), m.system_name.clone()))
+                    .or_insert((m.sell_price, m.distance_ly));
+            }
+            for (station, (price, dist)) in best {
+                let e = totals.entry(station).or_insert((0, dist));
+                e.0 = e.0.saturating_add(tons.saturating_mul(price));
+                e.1 = e.1.min(dist);
             }
         }
         let best_station_total = totals
@@ -178,6 +181,37 @@ mod tests {
         let plan = SellPlan::build(&cargo, &results, None, DateTime::UNIX_EPOCH);
         assert_eq!(plan.best_station_total, Some(("X".to_string(), 9_400_000)));
         assert_eq!(plan.by_commodity["platinum"][0].station_name, "Y");
+    }
+
+    #[test]
+    fn duplicate_station_rows_count_once_with_best_price() {
+        let cargo = BTreeMap::from([("platinum".to_string(), 10)]);
+        let results = BTreeMap::from([(
+            "platinum".to_string(),
+            vec![market("X", 100, None, 1.0), market("X", 90, None, 1.0)],
+        )]);
+        let plan = SellPlan::build(&cargo, &results, None, DateTime::UNIX_EPOCH);
+        assert_eq!(plan.best_station_total, Some(("X".to_string(), 1000)));
+    }
+
+    #[test]
+    fn known_ship_with_unknown_market_pad_is_kept() {
+        let ms = vec![market("A", 100, None, 1.0)];
+        let r = rank_markets(&ms, Some(PadSize::Large), 5);
+        assert_eq!((r.len(), r[0].pad_ok), (1, None));
+    }
+
+    #[test]
+    fn rank_orders_by_price_then_distance_and_truncates() {
+        let ms = vec![
+            market("Low", 10, None, 1.0),
+            market("FarTie", 50, None, 9.0),
+            market("NearTie", 50, None, 2.0),
+            market("Top", 99, None, 5.0),
+        ];
+        let r = rank_markets(&ms, None, 3);
+        let names: Vec<_> = r.iter().map(|o| o.station_name.as_str()).collect();
+        assert_eq!(names, ["Top", "NearTie", "FarTie"]);
     }
 
     #[test]
