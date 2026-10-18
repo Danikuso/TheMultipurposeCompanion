@@ -1,0 +1,446 @@
+//! Estado de los cuerpos del sistema actual y su proyección al tópico
+//! `exploration.system` (progreso del FSS, valores, señales y consejo).
+
+use super::value::planet_mapped_value;
+use super::value::{BodyKind, ValueFlags, body_kind, body_values, estimate_probes, planet_base};
+use crate::data::{StarSpecial, star_flags};
+use serde::Serialize;
+use std::collections::{BTreeMap, HashMap};
+use tmc_model::events::{Scan, Signal};
+
+/// Sondas DSS: `estimated` es `true` mientras sea una aproximación por radio.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct ProbeHint {
+    pub n: u8,
+    pub estimated: bool,
+}
+
+/// Consejo por cuerpo. Se serializa en `snake_case` (`map`, `land`, `not_worth`); la UI lo traduce con `exploration-advice-<valor>` (con `_` como `-`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Advice {
+    Map,
+    Land,
+    NotWorth,
+}
+
+fn is_false(b: &bool) -> bool {
+    !*b
+}
+
+fn is_zero(n: &u32) -> bool {
+    *n == 0
+}
+
+/// Fila del panel. Los booleanos a `false`, las señales a 0 y los `Option` a
+/// `None` se omiten para mantener el tópico compacto (300 cuerpos < 64 KiB).
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct BodyRow {
+    pub body_id: u32,
+    pub short_name: String,
+    /// Tipo de cuerpo; etiqueta en la clave Fluent `exploration-kind-<kind_key>`.
+    pub kind_key: String,
+    /// Clase espectral de las estrellas (para mostrar «Estrella K»).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub star_class: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub distance_ls: Option<f64>,
+    pub scanned_value: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mapped_value: Option<u64>,
+    #[serde(skip_serializing_if = "is_zero")]
+    pub bio: u32,
+    #[serde(skip_serializing_if = "is_zero")]
+    pub geo: u32,
+    #[serde(skip_serializing_if = "is_false")]
+    pub terraformable: bool,
+    #[serde(skip_serializing_if = "is_false")]
+    pub landable: bool,
+    #[serde(skip_serializing_if = "is_false")]
+    pub scoopable: bool,
+    #[serde(skip_serializing_if = "is_false")]
+    pub first_discovery: bool,
+    #[serde(skip_serializing_if = "is_false")]
+    pub already_mapped: bool,
+    #[serde(skip_serializing_if = "is_false")]
+    pub mapped_by_you: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub probes: Option<ProbeHint>,
+    pub advice: Vec<Advice>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct FssProgress {
+    /// Fracción 0..1 de cuerpos escaneados sobre el total del sistema.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub progress: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub body_count: Option<u32>,
+    pub scanned: u32,
+    pub complete: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct SystemTopic {
+    pub system: String,
+    pub system_address: u64,
+    /// `WasDiscovered` de la estrella de llegada; `None` hasta escanearla.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub discovered: Option<bool>,
+    pub fss: FssProgress,
+    /// Lo que el comandante ha ganado de verdad en este sistema hasta ahora:
+    /// valor escaneado de cada cuerpo o, si lo mapeó él, su valor de mapeo.
+    pub value_now: u64,
+    /// `value_now` más lo que añadiría mapear las filas con consejo `Map`
+    /// (valor de mapeo menos valor escaneado de cada una).
+    pub value_if_mapped: u64,
+    /// Cuerpos del FSS aún sin escanear (`body_count` − escaneados).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unidentified: Option<u32>,
+    pub rows: Vec<BodyRow>,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct Signals {
+    bio: u32,
+    geo: u32,
+    from_saa: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Mapping {
+    probes_used: Option<u32>,
+    target: Option<u32>,
+}
+
+#[derive(Debug, Clone)]
+struct Body {
+    scan: Scan,
+    mapping: Option<Mapping>,
+}
+
+/// Cuerpos conocidos del sistema actual.
+#[derive(Debug, Default)]
+pub struct SystemBodies {
+    known: bool,
+    name: String,
+    address: u64,
+    discovered: Option<bool>,
+    body_count: Option<u32>,
+    complete: bool,
+    bodies: BTreeMap<u32, Body>,
+    signals: HashMap<u32, Signals>,
+}
+
+fn count(signals: &[Signal], pick: fn(&Signal) -> bool) -> u32 {
+    signals
+        .iter()
+        .filter(|s| pick(s))
+        .fold(0u32, |a, s| a.saturating_add(s.count))
+}
+
+impl SystemBodies {
+    pub fn has_data(&self) -> bool {
+        self.known || !self.bodies.is_empty()
+    }
+
+    pub fn address(&self) -> u64 {
+        self.address
+    }
+
+    pub fn scanned(&self) -> u32 {
+        u32::try_from(self.bodies.len()).unwrap_or(u32::MAX)
+    }
+
+    pub fn body_count(&self) -> Option<u32> {
+        self.body_count
+    }
+
+    /// Entra en un sistema. Devuelve `true` si cambió algo (otro sistema o primera vez).
+    pub fn enter(&mut self, name: &str, address: u64) -> bool {
+        let same = self.known
+            && if address != 0 {
+                self.address == address
+            } else {
+                self.name == name
+            };
+        if same {
+            return false;
+        }
+        *self = Self {
+            known: true,
+            name: name.to_owned(),
+            address,
+            ..Self::default()
+        };
+        true
+    }
+
+    pub fn on_scan(&mut self, scan: &Scan) -> bool {
+        let Some(id) = scan.body_id else {
+            return false;
+        };
+        let Some(kind) = body_kind(scan) else {
+            return false; // anillos y cinturones: sin valor, no son filas
+        };
+        if matches!(kind, BodyKind::Star { .. })
+            && (scan.distance_from_arrival_ls == Some(0.0) || id == 0)
+            && scan.was_discovered.is_some()
+        {
+            self.discovered = scan.was_discovered;
+        }
+        let mapping = self.bodies.get(&id).and_then(|b| b.mapping);
+        self.bodies.insert(
+            id,
+            Body {
+                scan: scan.clone(),
+                mapping,
+            },
+        );
+        true
+    }
+
+    fn other_system(&self, address: Option<u64>) -> bool {
+        self.known && address.is_some_and(|a| a != 0 && a != self.address)
+    }
+
+    pub fn on_fss_discovery(&mut self, body_count: Option<u32>, address: Option<u64>) -> bool {
+        if self.other_system(address) || body_count.is_none() || self.body_count == body_count {
+            return false;
+        }
+        self.body_count = body_count;
+        true
+    }
+
+    pub fn on_all_found(&mut self, count: Option<u32>, address: Option<u64>) -> bool {
+        if self.other_system(address) {
+            return false;
+        }
+        let before = (self.complete, self.body_count);
+        self.complete = true;
+        if self.body_count.is_none() {
+            self.body_count = count;
+        }
+        before != (self.complete, self.body_count)
+    }
+
+    pub fn on_fss_signals(&mut self, body_id: Option<u32>, signals: &[Signal]) -> bool {
+        let Some(id) = body_id else { return false };
+        let entry = self.signals.entry(id).or_default();
+        if entry.from_saa {
+            return false; // el DSS manda sobre el FSS
+        }
+        entry.bio = count(signals, Signal::is_biological);
+        entry.geo = count(signals, Signal::is_geological);
+        true
+    }
+
+    pub fn on_saa_signals(&mut self, body_id: Option<u32>, signals: &[Signal]) -> bool {
+        let Some(id) = body_id else { return false };
+        self.signals.insert(
+            id,
+            Signals {
+                bio: count(signals, Signal::is_biological),
+                geo: count(signals, Signal::is_geological),
+                from_saa: true,
+            },
+        );
+        true
+    }
+
+    pub fn on_saa_complete(
+        &mut self,
+        body_id: Option<u32>,
+        probes_used: Option<u32>,
+        target: Option<u32>,
+    ) -> bool {
+        let Some(body) = body_id.and_then(|id| self.bodies.get_mut(&id)) else {
+            return false;
+        };
+        body.mapping = Some(Mapping {
+            probes_used,
+            target,
+        });
+        true
+    }
+
+    fn short_name(&self, full: &str) -> String {
+        let rest = full
+            .strip_prefix(self.name.as_str())
+            .map(str::trim)
+            .filter(|r| !r.is_empty());
+        rest.unwrap_or(full).to_owned()
+    }
+
+    fn row(&self, id: u32, body: &Body, threshold: u64, odyssey: bool) -> BodyRow {
+        let scan = &body.scan;
+        let first_discovery = scan.was_discovered == Some(false);
+        let values = body_values(scan, odyssey);
+        let efficiency = body
+            .mapping
+            .is_none_or(|m| match (m.probes_used, m.target) {
+                (Some(used), Some(target)) => used <= target,
+                _ => true,
+            });
+        let mapped_value = mapped_with(scan, odyssey, efficiency).or(values.mapped);
+        let probes = mapped_value.and_then(|_| match body.mapping.and_then(|m| m.target) {
+            Some(t) => Some(ProbeHint {
+                n: u8::try_from(t).unwrap_or(u8::MAX),
+                estimated: false,
+            }),
+            None => scan.radius.map(|r| ProbeHint {
+                n: estimate_probes(r),
+                estimated: true,
+            }),
+        });
+        let sig = self.signals.get(&id).copied().unwrap_or_default();
+        let landable = scan.landable == Some(true);
+        let mapped_by_you = body.mapping.is_some();
+        let mut advice = Vec::new();
+        if !mapped_by_you && mapped_value.is_some_and(|v| v >= threshold) {
+            advice.push(Advice::Map);
+        }
+        if sig.bio > 0 && landable {
+            advice.push(Advice::Land);
+        }
+        if advice.is_empty() {
+            advice.push(Advice::NotWorth);
+        }
+        let star_class = scan
+            .star_type
+            .clone()
+            .filter(|_| scan.planet_class.as_deref().is_none_or(str::is_empty));
+        BodyRow {
+            body_id: id,
+            short_name: self.short_name(&scan.body_name),
+            kind_key: kind_key(scan),
+            scoopable: star_class
+                .as_deref()
+                .is_some_and(|c| star_flags(c).scoopable),
+            star_class,
+            distance_ls: scan
+                .distance_from_arrival_ls
+                .filter(|d| d.is_finite())
+                .map(|d| (d * 10.0).round() / 10.0),
+            scanned_value: values.scanned,
+            mapped_value,
+            bio: sig.bio,
+            geo: sig.geo,
+            terraformable: scan.terraform_state.as_deref() == Some("Terraformable"),
+            landable,
+            first_discovery,
+            already_mapped: scan.was_mapped == Some(true),
+            mapped_by_you,
+            probes,
+            advice,
+        }
+    }
+
+    pub fn render(&self, threshold: u64, odyssey: bool) -> SystemTopic {
+        let mut rows: Vec<BodyRow> = self
+            .bodies
+            .iter()
+            .map(|(id, b)| self.row(*id, b, threshold, odyssey))
+            .collect();
+        rows.sort_by(|a, b| {
+            let key = |r: &BodyRow| (r.mapped_value.unwrap_or(0), r.scanned_value);
+            key(b).cmp(&key(a)).then(a.body_id.cmp(&b.body_id))
+        });
+        let mut value_now = 0u64;
+        let mut extra = 0u64;
+        for r in &rows {
+            value_now = value_now.saturating_add(match (r.mapped_by_you, r.mapped_value) {
+                (true, Some(m)) => m,
+                _ => r.scanned_value,
+            });
+            if r.advice.contains(&Advice::Map) {
+                extra = extra
+                    .saturating_add(r.mapped_value.unwrap_or(0).saturating_sub(r.scanned_value));
+            }
+        }
+        let scanned = self.scanned();
+        let progress = if self.complete {
+            Some(1.0)
+        } else {
+            self.body_count
+                .filter(|n| *n > 0)
+                .map(|n| (f64::from(scanned.min(n)) / f64::from(n) * 1000.0).round() / 1000.0)
+        };
+        SystemTopic {
+            system: self.name.clone(),
+            system_address: self.address,
+            discovered: self.discovered,
+            fss: FssProgress {
+                progress,
+                body_count: self.body_count,
+                scanned,
+                complete: self.complete,
+            },
+            value_now,
+            value_if_mapped: value_now.saturating_add(extra),
+            unidentified: self.body_count.map(|n| n.saturating_sub(scanned)),
+            rows,
+        }
+    }
+}
+
+/// Valor de mapeo con la eficiencia indicada (planetas y lunas); `None` si no aplica.
+fn mapped_with(scan: &Scan, odyssey: bool, efficiency: bool) -> Option<u64> {
+    let BodyKind::Planet { k } = body_kind(scan)? else {
+        return None;
+    };
+    let mass = scan.mass_em.filter(|m| m.is_finite() && *m > 0.0)?;
+    let flags = ValueFlags {
+        first_discovery: scan.was_discovered == Some(false),
+        first_mapped: scan.was_mapped == Some(false),
+        efficiency,
+        odyssey,
+    };
+    Some(planet_mapped_value(planet_base(k, mass), &flags))
+}
+
+/// Identificador del tipo de cuerpo; la UI lo traduce con la clave Fluent `exploration-kind-<id>`.
+fn kind_key(scan: &Scan) -> String {
+    let slug = match scan.planet_class.as_deref().filter(|c| !c.is_empty()) {
+        Some(class) => match class {
+            "Earthlike body" => "earthlike",
+            "Water world" => "water-world",
+            "Ammonia world" => "ammonia-world",
+            "Sudarsky class I gas giant" => "gas-giant-1",
+            "Sudarsky class II gas giant" => "gas-giant-2",
+            "Sudarsky class III gas giant" => "gas-giant-3",
+            "Sudarsky class IV gas giant" => "gas-giant-4",
+            "Sudarsky class V gas giant" => "gas-giant-5",
+            "Helium rich gas giant" => "helium-gas-giant",
+            "Water giant" => "water-giant",
+            "Gas giant with water based life" | "Gas giant with ammonia based life" => {
+                "gas-giant-life"
+            }
+            "Rocky body" => "rocky",
+            "Rocky ice body" => "rocky-ice",
+            "Icy body" => "icy",
+            "High metal content body" => "high-metal",
+            "Metal rich body" => "metal-rich",
+            _ => "other-planet",
+        },
+        None => {
+            let class = scan.star_type.as_deref().unwrap_or("");
+            let base = class.split('_').next().unwrap_or("");
+            match base {
+                "O" | "B" | "A" | "F" | "G" | "K" | "M" => "star-main",
+                "N" => "star-neutron",
+                "H" | "SupermassiveBlackHole" => "star-black-hole",
+                "L" | "T" | "Y" => "star-brown-dwarf",
+                "W" | "WN" | "WNC" | "WC" | "WO" => "star-wolf-rayet",
+                "C" | "CN" | "CJ" | "CH" | "CHd" => "star-carbon",
+                "MS" | "S" => "star-s",
+                "TTS" | "AeBe" => "star-protostar",
+                _ if star_flags(class).special == Some(StarSpecial::WhiteDwarf) => {
+                    "star-white-dwarf"
+                }
+                _ => "star-other",
+            }
+        }
+    };
+    slug.to_owned()
+}
