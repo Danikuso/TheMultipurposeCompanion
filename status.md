@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Task 25 (`exobiology` — predicción: reglas + historial + Canonn) 🔄 en curso (Bloque 4).
-- **Siguiente acción:** completar la Task 25 (ejecución con subagentes; ledger local `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`). CI de GitHub deshabilitada por orden del propietario (2026-10-18); checks en local.
+- **Tarea:** F1 · Task 26 (`exobiology` — muestreo y `exo_sample`) 🔄 en curso (Bloque 4).
+- **Siguiente acción:** completar la Task 26 (ejecución con subagentes; ledger local `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`). CI de GitHub deshabilitada por orden del propietario (2026-10-18); checks en local.
 
 ## Fases
 
@@ -60,7 +60,8 @@
 | 22 | `exploration` — datos sin vender | ✅ hecha | ffa3433 | Libro compartido, reconstrucción cronológica paginada y conciliación/retry; 413 Rust/46 UI PASS, revisión aprobada. |
 | 23 | UI — cuerpos del sistema | ✅ hecha | b669a77 | Tabla virtualizada ≤30 filas, cinco idiomas, visual 2560/1366 px; 413 Rust/56 UI PASS, revisión aprobada. |
 | 24 | Exobiología — especies y geodesia | ✅ hecha | 458fc84, c1857be | Geodesia + tabla propia de 21 géneros/117 especies (CCR y valores, `verified:false`, a verificar con eval). Revisión aprobada. |
-| 25–32 | Ver plan | ⬜ | — | |
+| 25 | `exobiology` — predicción (reglas + historial + Canonn) | ✅ hecha | 73261c4, 2f44b17 | 90 reglas propias (15 géneros Odyssey) con procedencia por género y nota `docs/research/notes/bio_rules_f1.md`; historial en SQL (200k Scan ≈ 0,4 s); Canonn soportado pero desactivado. Revisión aprobada tras 1 ronda. |
+| 26–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
