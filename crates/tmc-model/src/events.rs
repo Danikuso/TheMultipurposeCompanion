@@ -275,6 +275,18 @@ pub struct Loadout {
 pub struct Cargo {
     pub vessel: Option<String>,
     pub count: Option<u32>,
+    pub inventory: Vec<CargoItem>,
+}
+
+/// Entrada del inventario del evento `Cargo` (distinta de `companion::CargoItem`).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct CargoItem {
+    pub name: String,
+    #[serde(rename = "Name_Localised")]
+    pub name_localised: Option<String>,
+    pub count: u32,
+    pub stolen: Option<u32>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -668,6 +680,124 @@ pub struct Promotion {
     pub empire: Option<u8>,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct ProspectedMaterial {
+    pub name: String,
+    #[serde(rename = "Name_Localised")]
+    pub name_localised: Option<String>,
+    pub proportion: f64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AsteroidContent {
+    Low,
+    Medium,
+    High,
+    Unknown,
+}
+
+impl AsteroidContent {
+    pub fn from_journal(s: &str) -> Self {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "$asteroidmaterialcontent_low;" => Self::Low,
+            "$asteroidmaterialcontent_medium;" => Self::Medium,
+            "$asteroidmaterialcontent_high;" => Self::High,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct ProspectedAsteroid {
+    pub materials: Vec<ProspectedMaterial>,
+    pub content: String,
+    #[serde(rename = "Content_Localised")]
+    pub content_localised: Option<String>,
+    pub motherlode_material: Option<String>,
+    #[serde(rename = "MotherlodeMaterial_Localised")]
+    pub motherlode_material_localised: Option<String>,
+    pub remaining: Option<f64>,
+}
+
+impl ProspectedAsteroid {
+    pub fn content_level(&self) -> AsteroidContent {
+        AsteroidContent::from_journal(&self.content)
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct AsteroidCracked {
+    pub body: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MiningRefined {
+    #[serde(rename = "Type")]
+    pub type_: String,
+    #[serde(rename = "Type_Localised")]
+    pub type_localised: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct LaunchDrone {
+    #[serde(rename = "Type")]
+    pub type_: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct EjectCargo {
+    #[serde(rename = "Type")]
+    pub type_: String,
+    #[serde(rename = "Type_Localised")]
+    pub type_localised: Option<String>,
+    pub count: u32,
+    pub abandoned: Option<bool>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MarketSell {
+    #[serde(rename = "MarketID")]
+    pub market_id: Option<u64>,
+    #[serde(rename = "Type")]
+    pub type_: String,
+    #[serde(rename = "Type_Localised")]
+    pub type_localised: Option<String>,
+    pub count: u32,
+    pub sell_price: u64,
+    pub total_sale: u64,
+    pub avg_price_paid: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct RepairAll {
+    pub cost: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct Repair {
+    pub items: Vec<String>,
+    pub item: Option<String>,
+    pub cost: Option<u64>,
+}
+
+/// Normaliza el nombre de una mercancía: minúsculas, sin `$`, `_name;` ni espacios.
+pub fn commodity_key(raw: &str) -> String {
+    let lower = raw.trim().to_lowercase();
+    let t = lower.strip_prefix('$').unwrap_or(&lower);
+    let t = t.strip_suffix(';').unwrap_or(t);
+    let t = t.strip_suffix("_name").unwrap_or(t);
+    t.chars().filter(|c| !c.is_whitespace()).collect()
+}
+
 /// Variante tipada de un evento. Lo desconocido o malformado cae en `Other`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum EventKind {
@@ -736,6 +866,14 @@ pub enum EventKind {
     PvpKill(PvpKill),
     FighterDestroyed,
     Promotion(Promotion),
+    ProspectedAsteroid(Box<ProspectedAsteroid>),
+    AsteroidCracked(AsteroidCracked),
+    MiningRefined(MiningRefined),
+    LaunchDrone(LaunchDrone),
+    EjectCargo(EjectCargo),
+    MarketSell(MarketSell),
+    RepairAll(RepairAll),
+    Repair(Repair),
     Other,
 }
 
@@ -818,6 +956,16 @@ fn classify(name: &str, raw: &RawValue) -> EventKind {
         "PVPKill" => de(name, raw).map(EventKind::PvpKill),
         "FighterDestroyed" => Some(EventKind::FighterDestroyed),
         "Promotion" => de(name, raw).map(EventKind::Promotion),
+        "ProspectedAsteroid" => {
+            de::<ProspectedAsteroid>(name, raw).map(|p| EventKind::ProspectedAsteroid(Box::new(p)))
+        }
+        "AsteroidCracked" => de(name, raw).map(EventKind::AsteroidCracked),
+        "MiningRefined" => de(name, raw).map(EventKind::MiningRefined),
+        "LaunchDrone" => de(name, raw).map(EventKind::LaunchDrone),
+        "EjectCargo" => de(name, raw).map(EventKind::EjectCargo),
+        "MarketSell" => de(name, raw).map(EventKind::MarketSell),
+        "RepairAll" => de(name, raw).map(EventKind::RepairAll),
+        "Repair" => de(name, raw).map(EventKind::Repair),
         _ => None,
     };
     kind.unwrap_or(EventKind::Other)
@@ -1430,6 +1578,154 @@ mod tests {
         assert_eq!(
             ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"FighterDestroyed"}"#),
             EventKind::FighterDestroyed
+        );
+    }
+
+    #[test]
+    fn prospected_asteroid_parses_materials_content_and_motherlode() {
+        let EventKind::ProspectedAsteroid(p) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"ProspectedAsteroid","Materials":[{"Name":"Platinum","Name_Localised":"Platino","Proportion":31.5},{"Name":"Painite","Proportion":12.0}],"Content":"$AsteroidMaterialContent_High;","Content_Localised":"Alto","MotherlodeMaterial":"Monazite","Remaining":100.0}"#,
+        ) else {
+            panic!("ProspectedAsteroid")
+        };
+        assert_eq!(p.materials.len(), 2);
+        assert_eq!(p.materials[0].name, "Platinum");
+        assert_eq!(p.materials[0].name_localised.as_deref(), Some("Platino"));
+        assert_eq!(p.materials[0].proportion, 31.5);
+        assert_eq!(p.materials[1].proportion, 12.0);
+        assert_eq!(p.content_level(), AsteroidContent::High);
+        assert_eq!(p.motherlode_material.as_deref(), Some("Monazite"));
+        assert_eq!(p.remaining, Some(100.0));
+        // Sin campos opcionales sigue siendo ProspectedAsteroid.
+        let EventKind::ProspectedAsteroid(m) =
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"ProspectedAsteroid"}"#)
+        else {
+            panic!("minimal")
+        };
+        assert!(m.materials.is_empty());
+        assert_eq!(m.motherlode_material, None);
+        assert_eq!(m.content_level(), AsteroidContent::Unknown);
+    }
+
+    #[test]
+    fn unknown_asteroid_content_is_unknown() {
+        assert_eq!(
+            AsteroidContent::from_journal("$Foo;"),
+            AsteroidContent::Unknown
+        );
+        assert_eq!(
+            AsteroidContent::from_journal("$AsteroidMaterialContent_Low;"),
+            AsteroidContent::Low
+        );
+        assert_eq!(
+            AsteroidContent::from_journal("$AsteroidMaterialContent_Medium;"),
+            AsteroidContent::Medium
+        );
+    }
+
+    #[test]
+    fn mining_refined_and_launch_drone_parse() {
+        let EventKind::MiningRefined(r) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MiningRefined","Type":"$platinum_name;","Type_Localised":"Platino"}"#,
+        ) else {
+            panic!("MiningRefined")
+        };
+        assert_eq!(r.type_, "$platinum_name;");
+        assert_eq!(commodity_key(&r.type_), "platinum");
+        let EventKind::LaunchDrone(d) =
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"LaunchDrone","Type":"Prospector"}"#)
+        else {
+            panic!("LaunchDrone")
+        };
+        assert_eq!(d.type_, "Prospector");
+        let EventKind::AsteroidCracked(a) =
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"AsteroidCracked","Body":"Ring A"}"#)
+        else {
+            panic!("AsteroidCracked")
+        };
+        assert_eq!(a.body.as_deref(), Some("Ring A"));
+    }
+
+    #[test]
+    fn eject_cargo_and_repairs_parse() {
+        let EventKind::EjectCargo(e) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"EjectCargo","Type":"limpet","Count":3,"Abandoned":true}"#,
+        ) else {
+            panic!("EjectCargo")
+        };
+        assert_eq!(e.type_, "limpet");
+        assert_eq!(e.count, 3);
+        assert_eq!(e.abandoned, Some(true));
+        let EventKind::RepairAll(r) =
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"RepairAll","Cost":1200}"#)
+        else {
+            panic!("RepairAll")
+        };
+        assert_eq!(r.cost, Some(1200));
+        let EventKind::Repair(p) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Repair","Items":["Hull","Cockpit"],"Cost":300}"#,
+        ) else {
+            panic!("Repair")
+        };
+        assert_eq!(p.items, vec!["Hull".to_string(), "Cockpit".to_string()]);
+        assert_eq!(p.cost, Some(300));
+        let EventKind::Repair(q) =
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Repair","Item":"Hull"}"#)
+        else {
+            panic!("Repair single")
+        };
+        assert_eq!(q.item.as_deref(), Some("Hull"));
+        assert_eq!(q.cost, None);
+    }
+
+    #[test]
+    fn market_sell_parses_prices() {
+        let EventKind::MarketSell(m) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MarketSell","MarketID":3700000001,"Type":"platinum","Count":20,"SellPrice":220000,"TotalSale":4400000,"AvgPricePaid":0}"#,
+        ) else {
+            panic!("MarketSell")
+        };
+        assert_eq!(m.market_id, Some(3700000001));
+        assert_eq!(m.type_, "platinum");
+        assert_eq!(m.count, 20);
+        assert_eq!(m.sell_price, 220000);
+        assert_eq!(m.total_sale, 4400000);
+        assert_eq!(m.avg_price_paid, Some(0));
+    }
+
+    #[test]
+    fn cargo_event_with_inventory_parses_limpets() {
+        let EventKind::Cargo(c) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Cargo","Vessel":"Ship","Count":60,"Inventory":[{"Name":"drones","Name_Localised":"Limpet","Count":18},{"Name":"platinum","Count":42,"Stolen":0}]}"#,
+        ) else {
+            panic!("Cargo")
+        };
+        assert_eq!(c.count, Some(60));
+        assert_eq!(c.inventory.len(), 2);
+        assert_eq!(c.inventory[0].name, "drones");
+        assert_eq!(c.inventory[0].count, 18);
+        assert_eq!(c.inventory[0].stolen, None);
+        assert_eq!(c.inventory[1].name, "platinum");
+        assert_eq!(c.inventory[1].count, 42);
+        assert_eq!(c.inventory[1].stolen, Some(0));
+        let EventKind::Cargo(n) =
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Cargo","Vessel":"Ship","Count":7}"#)
+        else {
+            panic!("Cargo no inventory")
+        };
+        assert!(n.inventory.is_empty());
+    }
+
+    #[test]
+    fn commodity_key_normalizes_variants() {
+        assert_eq!(
+            commodity_key("$lowtemperaturediamond_name;"),
+            "lowtemperaturediamond"
+        );
+        assert_eq!(commodity_key("Platinum"), "platinum");
+        assert_eq!(
+            commodity_key("Low Temperature Diamond"),
+            "lowtemperaturediamond"
         );
     }
 }
