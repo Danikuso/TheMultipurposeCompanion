@@ -266,6 +266,25 @@ describe('navigation panels', () => {
     expect(target.querySelectorAll('[data-testid="small-card"]').length).toBe(0);
   });
 
+  test('current card in route strip shows multiple star classes from exploration system', () => {
+    live.topics['navigation.route'] = routeTopic({ next: null, following: [], source: 'current' });
+    live.topics['exploration.system'] = {
+      system: 'Currentia',
+      system_address: 100,
+      fss: { scanned: 3, complete: true },
+      value_now: 1000,
+      value_if_mapped: 2000,
+      star_classes: ['K', 'M', 'L'],
+      rows: [],
+    };
+    render(RouteStrip);
+    expect(target.querySelector('[data-testid="card-label"]')?.textContent).toBe('Sistema actual');
+    const starClassesEl = target.querySelector('[data-testid="star-classes"]');
+    expect(starClassesEl).not.toBeNull();
+    expect(starClassesEl?.textContent).toBe('K, M, L');
+    expect(target.textContent).toContain(t('strip-star-classes'));
+  });
+
   test('unreachable next star is flagged', () => {
     live.topics['navigation.route'] = routeTopic({ next: card('Nextara', { reachable: false }) });
     render(RouteStrip);

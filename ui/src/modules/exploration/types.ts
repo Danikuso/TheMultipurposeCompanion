@@ -22,6 +22,7 @@ export interface SystemTopic {
   value_if_mapped: number;
   unidentified?: number;
   truncated?: number;
+  star_classes?: string[];
   rows: BodyRow[];
 }
 
