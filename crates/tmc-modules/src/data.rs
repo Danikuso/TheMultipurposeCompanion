@@ -1,7 +1,19 @@
 //! Datos estáticos del juego: tabla de FSD y clases de estrella.
 
+use crate::exobiology::species::SpeciesTable;
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
+
+/// Species and colony distances embedded once, without runtime file access.
+pub fn species_table() -> &'static SpeciesTable {
+    static TABLE: OnceLock<SpeciesTable> = OnceLock::new();
+    TABLE.get_or_init(|| {
+        SpeciesTable::from_json(include_str!("../data/species.json")).unwrap_or_else(|error| {
+            tracing::error!(%error, "invalid embedded species.json; using empty table");
+            SpeciesTable::default()
+        })
+    })
+}
 
 /// Tipo de FSD (determina los multiplicadores de supercarga).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
