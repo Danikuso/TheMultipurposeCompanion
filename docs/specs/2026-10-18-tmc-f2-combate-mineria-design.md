@@ -1,6 +1,6 @@
 # TMC · Especificación de F2 — Cazarrecompensas/combate (incl. AX) y minería
 
-- **Estado:** borrador pendiente de aprobación del propietario
+- **Estado:** ✅ aprobada por el propietario (2026-10-18)
 - **Fecha:** 2026-10-18
 - **Depende de:** [`2026-10-17-tmc-arquitectura-y-f0-design.md`](2026-10-17-tmc-arquitectura-y-f0-design.md) y la infraestructura de F1 ([`2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md`](2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md)): `tmc-net` (limitador, salud, caché `api_cache`, opt-out), `ModuleCtx::request`/`store_task`, disposiciones y relevancia, i18n por módulo.
 - **Maquetas aprobadas (2026-10-18):** `f2-combate-v2.html` y `f2-mineria-v2.html` (sesión de diseño en `.superpowers/brainstorm/`). La descripción escrita es la referencia.
