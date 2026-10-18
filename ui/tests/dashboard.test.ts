@@ -9,6 +9,7 @@ import StatusPanel from '../src/modules/dashboard/StatusPanel.svelte';
 import RoutePanel from '../src/modules/dashboard/RoutePanel.svelte';
 import SessionPanel from '../src/modules/dashboard/SessionPanel.svelte';
 import AlertsPanel from '../src/modules/dashboard/AlertsPanel.svelte';
+import Settings from '../src/settings/Settings.svelte';
 
 describe('dashboard panels', () => {
   let target: HTMLElement;
@@ -61,6 +62,133 @@ describe('dashboard panels', () => {
     const fuelFill = target.querySelector('[data-testid="fuel-main-fill"]') as HTMLElement | null;
     expect(fuelFill).not.toBeNull();
     expect(fuelFill?.style.width).toBe('50%');
+  });
+
+  test('cmdr panel groups career ranks and superpower ranks in separate sections', () => {
+    live.topics['core.cmdr'] = {
+      name: 'DANIKUSO',
+      credits: 15_401_236,
+      ranks: {
+        combat: 2,
+        trade: 6,
+        explore: 5,
+        soldier: 0,
+        exobiologist: 0,
+        cqc: 0,
+        federation: 5,
+        empire: 0,
+      },
+      progress: {
+        combat: 67,
+        trade: 42,
+        explore: 94,
+        soldier: 40,
+        exobiologist: 0,
+        cqc: 0,
+        federation: 25,
+        empire: 100,
+      },
+    };
+
+    renderPanel(CmdrPanel);
+    const careerGroup = target.querySelector('[data-testid="rank-group-career"]');
+    const superpowerGroup = target.querySelector('[data-testid="rank-group-superpowers"]');
+    expect(careerGroup).not.toBeNull();
+    expect(superpowerGroup).not.toBeNull();
+
+    const careerKeys = Array.from(careerGroup!.querySelectorAll('[data-rank-key]')).map((el) =>
+      el.getAttribute('data-rank-key'),
+    );
+    const superpowerKeys = Array.from(superpowerGroup!.querySelectorAll('[data-rank-key]')).map(
+      (el) => el.getAttribute('data-rank-key'),
+    );
+    expect(careerKeys).toEqual(['combat', 'trade', 'explore', 'soldier', 'exobiologist', 'cqc']);
+    expect(superpowerKeys).toEqual(['federation', 'empire']);
+  });
+
+  test('settings save online services, map threshold and efficiency', async () => {
+    const config = { language: 'es', auto_copy_next_system: false, online_services: true,
+      map_value_threshold: 600000, default_neutron_efficiency: 65,
+      server: { lan: false, port: 47320, lan_token: 'synthetic-token' }, alerts_enabled: false };
+    const fetchMock = vi.fn().mockImplementation(async (_url, options) => ({ ok: true,
+      json: async () => options?.method === 'PUT' ? JSON.parse(options.body) : config }));
+    vi.stubGlobal('fetch', fetchMock);
+    renderPanel(Settings);
+    await vi.waitFor(() => {
+      flushSync();
+      expect((target.querySelector('[data-testid="map-threshold"]') as HTMLInputElement)?.value).toBe('600000');
+    });
+    await Promise.resolve(); flushSync();
+    const online = target.querySelector('[data-testid="online-services"]') as HTMLInputElement;
+    const threshold = target.querySelector('[data-testid="map-threshold"]') as HTMLInputElement;
+    const efficiency = target.querySelector('[data-testid="planner-efficiency"]') as HTMLInputElement;
+    expect(online.checked).toBe(true);
+    expect(threshold.value).toBe('600000');
+    expect(efficiency.value).toBe('65');
+    online.click();
+    threshold.value = '750000'; threshold.dispatchEvent(new Event('input', { bubbles: true }));
+    threshold.dispatchEvent(new Event('change', { bubbles: true }));
+    efficiency.value = '75'; efficiency.dispatchEvent(new Event('input', { bubbles: true }));
+    efficiency.dispatchEvent(new Event('change', { bubbles: true }));
+    await vi.waitFor(() => {
+      const requests = fetchMock.mock.calls.filter(([, options]) => options?.method === 'PUT');
+      expect(requests.length).toBeGreaterThan(0);
+      expect(JSON.parse(requests.at(-1)![1].body)).toMatchObject({ ...config, online_services: false,
+        map_value_threshold: 750000, default_neutron_efficiency: 75 });
+    });
+  });
+
+  test('settings accept efficiency zero and one hundred and reject invalid numbers', async () => {
+    const config = { language: 'es', online_services: true, map_value_threshold: 500000,
+      default_neutron_efficiency: 60, server: { lan: false } };
+    const fetchMock = vi.fn().mockImplementation(async (_url, options) => ({ ok: true,
+      json: async () => options?.method === 'PUT' ? JSON.parse(options.body) : config }));
+    vi.stubGlobal('fetch', fetchMock);
+    renderPanel(Settings);
+    await vi.waitFor(() => expect(target.querySelector('[data-testid="planner-efficiency"]')).not.toBeNull());
+    await Promise.resolve(); flushSync();
+    const efficiency = target.querySelector('[data-testid="planner-efficiency"]') as HTMLInputElement;
+    const threshold = target.querySelector('[data-testid="map-threshold"]') as HTMLInputElement;
+    const change = (input: HTMLInputElement, value: string) => {
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    const puts = () => fetchMock.mock.calls.filter(([, options]) => options?.method === 'PUT');
+    for (const value of ['0', '100']) {
+      change(efficiency, value);
+      await vi.waitFor(() => expect(JSON.parse(puts().at(-1)![1].body).default_neutron_efficiency).toBe(Number(value)));
+    }
+    const count = puts().length;
+    for (const value of ['101', '-1', '', '1.5']) change(efficiency, value);
+    expect(puts()).toHaveLength(count);
+    efficiency.value = '60'; efficiency.dispatchEvent(new Event('input', { bubbles: true }));
+    for (const value of ['-1', '', '0.5']) change(threshold, value);
+    expect(puts()).toHaveLength(count);
+  });
+
+  test.each(['http', 'network'])('failed settings save rolls back opt out and shows an error (%s)', async (failure) => {
+    const config = { language: 'es', online_services: true, map_value_threshold: 600000,
+      default_neutron_efficiency: 65, server: { lan: false } };
+    const fetchMock = vi.fn().mockImplementation(async (_url, options) => {
+      if (options?.method === 'PUT') {
+        if (failure === 'network') throw new Error('offline');
+        return { ok: false, status: 500 };
+      }
+      return { ok: true, json: async () => config };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPanel(Settings);
+    await vi.waitFor(() => { flushSync(); expect((target.querySelector('[data-testid="map-threshold"]') as HTMLInputElement)?.value).toBe('600000'); });
+    const online = target.querySelector('[data-testid="online-services"]') as HTMLInputElement;
+    online.click();
+    await vi.waitFor(() => {
+      flushSync();
+      expect(online.checked).toBe(true);
+      expect(target.querySelector('[role="alert"]')?.textContent).toBe(t('settings-save-error'));
+    });
+    expect((target.querySelector('[data-testid="map-threshold"]') as HTMLInputElement).value).toBe('600000');
+    expect((target.querySelector('[data-testid="planner-efficiency"]') as HTMLInputElement).value).toBe('65');
   });
 
   test('route panel copy button calls action', async () => {

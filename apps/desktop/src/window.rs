@@ -1,7 +1,9 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(windows)]
+use tauri::WebviewWindow;
 use tauri::webview::Url;
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 pub const MAIN_WINDOW_LABEL: &str = "main";
 pub const MAIN_WINDOW_TITLE: &str = "TMC — The Multipurpose Companion";
@@ -24,9 +26,12 @@ pub fn create_or_focus_main_window(app: &AppHandle, local_url: &Url) -> tauri::R
     .title(MAIN_WINDOW_TITLE)
     .inner_size(1600.0, 900.0)
     .additional_browser_args(
-        "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,Translate,SpareRendererForSitePerProcess,AudioServiceOutOfProcess --enable-features=NetworkServiceInProcess2 --renderer-process-limit=1 --in-process-gpu --disable-gpu-shader-disk-cache --js-flags=--max-old-space-size=64",
+        "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,Translate,SpareRendererForSitePerProcess,AudioServiceOutOfProcess,StorageServiceOutOfProcess --enable-features=NetworkServiceInProcess2 --renderer-process-limit=1 --in-process-gpu --disable-gpu --disable-gpu-compositing --disable-gpu-shader-disk-cache --num-raster-threads=1 --js-flags=--max-old-space-size=32",
     )
     .build()?;
+
+    #[cfg(windows)]
+    set_webview_low_memory(&window, false);
 
     let win_clone = window.clone();
     let was_minimized = Arc::new(AtomicBool::new(false));
@@ -64,8 +69,7 @@ pub fn open_or_focus_async(app: AppHandle, local_url: Url) {
 #[cfg(windows)]
 fn set_webview_low_memory(window: &WebviewWindow, low_memory: bool) {
     use webview2_com::Microsoft::Web::WebView2::Win32::{
-        COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL,
-        ICoreWebView2_19,
+        COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW, ICoreWebView2_19,
     };
     use windows_core::Interface;
 
@@ -76,12 +80,8 @@ fn set_webview_low_memory(window: &WebviewWindow, low_memory: bool) {
             if let Ok(core) = controller.CoreWebView2()
                 && let Ok(core19) = core.cast::<ICoreWebView2_19>()
             {
-                let level = if low_memory {
-                    COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW
-                } else {
-                    COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL
-                };
-                let _ = core19.SetMemoryUsageTargetLevel(level);
+                let _ =
+                    core19.SetMemoryUsageTargetLevel(COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW);
             }
         }
     });

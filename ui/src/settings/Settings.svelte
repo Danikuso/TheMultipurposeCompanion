@@ -10,6 +10,9 @@
     language?: string;
     auto_copy_next_system?: boolean;
     alerts_enabled?: boolean;
+    online_services?: boolean;
+    map_value_threshold?: number;
+    default_neutron_efficiency?: number;
     theme_mode?: string;
     server?: {
       port?: number;
@@ -20,8 +23,14 @@
   let language = $state(getLocale());
   let themeMode = $state<'hud' | 'classic' | 'contrast'>('hud');
   let autoCopy = $state(true);
+  let onlineServices = $state(true);
+  let mapThreshold = $state<number | undefined>(500000);
+  let plannerEfficiency = $state<number | undefined>(60);
   let lanEnabled = $state(false);
   let fullConfig = $state<ConfigDto>({});
+  let saveError = $state(false);
+  let saveQueue = Promise.resolve();
+  let saveRevision = 0;
 
   const CLASSIC_THEME: HudThemeInput = {
     primary: '#ff7100',
@@ -54,6 +63,9 @@
       if (res.ok) {
         const cfg = (await res.json()) as ConfigDto;
         fullConfig = cfg;
+        onlineServices = cfg.online_services ?? true;
+        mapThreshold = cfg.map_value_threshold ?? 500000;
+        plannerEfficiency = cfg.default_neutron_efficiency ?? 60;
         if (cfg.language) {
           language = cfg.language;
           setLocale(cfg.language);
@@ -74,35 +86,59 @@
     }
   });
 
-  async function saveConfig() {
+  function restoreSavedConfig() {
+    language = fullConfig.language ?? getLocale();
+    autoCopy = fullConfig.auto_copy_next_system ?? true;
+    onlineServices = fullConfig.online_services ?? true;
+    mapThreshold = fullConfig.map_value_threshold ?? 500000;
+    plannerEfficiency = fullConfig.default_neutron_efficiency ?? 60;
+    lanEnabled = fullConfig.server?.lan ?? false;
+    themeMode = fullConfig.theme_mode === 'classic' || fullConfig.theme_mode === 'contrast' ? fullConfig.theme_mode : 'hud';
     setLocale(language);
     applySelectedTheme(themeMode);
+  }
+
+  function saveConfig() {
+    if (mapThreshold === undefined || !Number.isSafeInteger(mapThreshold) || mapThreshold < 0
+      || plannerEfficiency === undefined || !Number.isInteger(plannerEfficiency)
+      || plannerEfficiency < 0 || plannerEfficiency > 100) return;
+    saveError = false;
+    const revision = ++saveRevision;
     const updated: ConfigDto = {
       ...fullConfig,
       language,
       auto_copy_next_system: autoCopy,
+      online_services: onlineServices,
+      map_value_threshold: mapThreshold,
+      default_neutron_efficiency: plannerEfficiency,
       theme_mode: themeMode,
       server: {
         ...(fullConfig.server ?? {}),
         lan: lanEnabled,
       },
     };
-    try {
-      const res = await fetch('/api/config', {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(updated),
-      });
-      if (res.ok) {
+    saveQueue = saveQueue.then(async () => {
+      try {
+        const res = await fetch('/api/config', {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(updated),
+        });
+        if (!res.ok) throw new Error('config-save-failed');
         fullConfig = (await res.json()) as ConfigDto;
+        if (revision === saveRevision) restoreSavedConfig();
+      } catch {
+        if (revision === saveRevision) {
+          restoreSavedConfig();
+          saveError = true;
+        }
       }
-    } catch {
-      // Ignore save error in UI
-    }
+    });
   }
 </script>
 
 <Panel titleKey="nav-settings">
+  {#if saveError}<p role="alert">{t('settings-save-error')}</p>{/if}
   <div class="settings-form">
     <label class="field-row">
       <span>{t('settings-language')}</span>
@@ -134,6 +170,21 @@
       <input type="checkbox" bind:checked={lanEnabled} onchange={saveConfig} />
     </label>
     <p class="help-text">{t('settings-lan-help')}</p>
+
+    <label class="field-row">
+      <span>{t('settings-online-services')}</span>
+      <input type="checkbox" bind:checked={onlineServices} onchange={saveConfig} data-testid="online-services"
+        aria-describedby="online-services-help" />
+    </label>
+    <p id="online-services-help" class="help-text">{t('settings-online-services-help')}</p>
+    <label class="field-row">
+      <span>{t('settings-map-threshold')}</span>
+      <input type="number" min="0" step="1" bind:value={mapThreshold} onchange={saveConfig} data-testid="map-threshold" />
+    </label>
+    <label class="field-row">
+      <span>{t('settings-planner-efficiency')}</span>
+      <input type="number" min="0" max="100" step="1" bind:value={plannerEfficiency} onchange={saveConfig} data-testid="planner-efficiency" />
+    </label>
 
     <Pairing />
   </div>

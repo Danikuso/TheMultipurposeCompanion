@@ -4,13 +4,14 @@ use serde_json::Value;
 use std::collections::BTreeMap;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::time::Duration;
+use tmc_model::net::NetRequest;
 use tmc_model::source::SourceEvent;
 use tmc_model::{
     state::{Changes, GameState},
     theme::HudTheme,
 };
-use tmc_store::EventWriter;
 use tmc_store::StoredEvent;
+use tmc_store::{EventWriter, Store};
 use tokio::sync::{broadcast, mpsc, oneshot};
 
 #[derive(Debug, Clone, Serialize)]
@@ -46,11 +47,36 @@ impl CoreHandle {
     }
 }
 
+pub struct CoreOptions {
+    pub writer: Option<EventWriter>,
+    pub flush_every: Duration,
+    pub store: Option<Store>,
+    pub net: Option<mpsc::Sender<NetRequest>>,
+}
+
 pub fn spawn_core(
     modules: Vec<Box<dyn Module>>,
     writer: Option<EventWriter>,
     flush_every: Duration,
 ) -> CoreHandle {
+    spawn_core_with(
+        modules,
+        CoreOptions {
+            writer,
+            flush_every,
+            store: None,
+            net: None,
+        },
+    )
+}
+
+pub fn spawn_core_with(modules: Vec<Box<dyn Module>>, opts: CoreOptions) -> CoreHandle {
+    let CoreOptions {
+        writer,
+        flush_every,
+        store,
+        net,
+    } = opts;
     let (events, event_receiver) = mpsc::channel(256);
     let (snapshots, snapshot_receiver) = mpsc::channel(32);
     let (updates, _) = broadcast::channel(256);
@@ -58,13 +84,47 @@ pub fn spawn_core(
     // Nunca se publica más de diez veces por segundo, incluso con configuración inválida.
     let period = flush_every.max(Duration::from_millis(100));
     tokio::spawn(async move {
+        let (stored_tx, stored_rx) = mpsc::channel(64);
         let mut actor = Actor::new(modules, writer, actor_updates);
-        actor.run(event_receiver, snapshot_receiver, period).await;
+        actor.net = net;
+        // Un único worker ejecuta las tareas de SQLite en orden FIFO; termina
+        // cuando el actor suelta `task_tx`.
+        if let Some(store) = store {
+            let (task_tx, task_rx) = std::sync::mpsc::channel::<StoreJob>();
+            actor.task_tx = Some(task_tx);
+            tokio::task::spawn_blocking(move || store_worker(store, task_rx, stored_tx));
+        }
+        actor
+            .run(event_receiver, snapshot_receiver, stored_rx, period)
+            .await;
     });
     CoreHandle {
         events,
         updates,
         snapshots,
+    }
+}
+
+type StoreJob = (&'static str, String, crate::StoreTask);
+
+fn store_worker(
+    store: Store,
+    jobs: std::sync::mpsc::Receiver<StoreJob>,
+    stored: mpsc::Sender<SourceEvent>,
+) {
+    while let Ok((module, tag, task)) = jobs.recv() {
+        match catch_unwind(AssertUnwindSafe(|| task(&store))) {
+            Ok(Ok(value)) => {
+                // Si el actor ya cerró el receptor, `blocking_send` falla y no bloquea.
+                let _ = stored.blocking_send(SourceEvent::Stored {
+                    module: module.to_owned(),
+                    tag,
+                    value,
+                });
+            }
+            Ok(Err(error)) => tracing::warn!(module, tag, %error, "store task failed"),
+            Err(_) => tracing::error!(module, tag, "store task panicked"),
+        }
     }
 }
 
@@ -84,6 +144,11 @@ struct Actor {
     seq: u64,
     writer: Option<EventWriter>,
     updates: broadcast::Sender<CoreMessage>,
+    net: Option<mpsc::Sender<NetRequest>>,
+    // Cola (sin límite, nunca bloquea al actor) hacia el worker único de SQLite.
+    // Los resultados vuelven por un canal propio, que no mantiene vivo al actor.
+    task_tx: Option<std::sync::mpsc::Sender<StoreJob>>,
+    next_request_id: u64,
 }
 
 impl Actor {
@@ -101,6 +166,9 @@ impl Actor {
             seq: 0,
             writer,
             updates,
+            net: None,
+            task_tx: None,
+            next_request_id: 1,
         };
         actor.update_core(Changes::all());
         actor.set_topic("core.theme", value(&actor.theme));
@@ -226,6 +294,30 @@ impl Actor {
         }
     }
 
+    fn dispatch_requests(&self, requests: Vec<NetRequest>) {
+        for request in requests {
+            let Some(net) = &self.net else {
+                tracing::debug!(key = %request.key, "network request dropped: no network channel");
+                continue;
+            };
+            if let Err(error) = net.try_send(request) {
+                tracing::warn!(%error, "network request dropped");
+            }
+        }
+    }
+
+    fn spawn_store_tasks(&self, module: &'static str, tasks: Vec<(String, crate::StoreTask)>) {
+        for (tag, task) in tasks {
+            let Some(queue) = &self.task_tx else {
+                tracing::debug!(module, tag, "store task dropped: no store");
+                continue;
+            };
+            if queue.send((module, tag, task)).is_err() {
+                tracing::warn!(module, "store task dropped: worker stopped");
+            }
+        }
+    }
+
     fn apply(&mut self, event: SourceEvent) {
         let replaying = matches!(
             &event,
@@ -267,12 +359,16 @@ impl Actor {
                 });
                 Changes::empty()
             }
+            SourceEvent::Net(_)
+            | SourceEvent::Action { .. }
+            | SourceEvent::Settings(_)
+            | SourceEvent::Stored { .. } => Changes::empty(),
         };
         self.update_core(changes);
         let mut index = 0;
         while index < self.modules.len() {
             let slot = &mut self.modules[index];
-            let mut context = ModuleCtx::new(replaying);
+            let mut context = ModuleCtx::new(slot.id, replaying, self.next_request_id);
             let processed = catch_unwind(AssertUnwindSafe(|| {
                 let dirty = slot.module.on_event(&event, &self.state, &mut context);
                 let declared: TopicSet = slot.module.topics().into_iter().collect();
@@ -298,6 +394,11 @@ impl Actor {
                     for alert in context.drain_alerts() {
                         let _ = self.updates.send(CoreMessage::Alert(alert));
                     }
+                    let (requests, tasks, next_id) = context.take_outputs();
+                    self.next_request_id = next_id;
+                    let id = self.modules[index].id;
+                    self.dispatch_requests(requests);
+                    self.spawn_store_tasks(id, tasks);
                     index += 1;
                 }
                 Err(_) => {
@@ -332,6 +433,7 @@ impl Actor {
         &mut self,
         mut events: mpsc::Receiver<SourceEvent>,
         mut snapshots: mpsc::Receiver<oneshot::Sender<BTreeMap<String, Value>>>,
+        mut stored: mpsc::Receiver<SourceEvent>,
         period: Duration,
     ) {
         let mut tick = tokio::time::interval_at(tokio::time::Instant::now() + period, period);
@@ -354,6 +456,8 @@ impl Actor {
             tokio::select! {
                 biased;
                 _ = tick.tick() => self.flush(),
+                // Antes que `events`: está acotado y lo alimenta trabajo ya terminado.
+                Some(event) = stored.recv() => self.apply(event),
                 event = events.recv(), if events_open => match event {
                     Some(event)=>{self.apply(event); if snapshots_open { events_since_control += 1; }}, None=>events_open=false,
                 },
@@ -362,6 +466,10 @@ impl Actor {
                 },
             }
         }
+        // Cerrar ya el receptor y la cola evita que el worker se quede en `blocking_send`
+        // durante el volcado final y termina al acabar su tarea en curso.
+        drop(stored);
+        self.task_tx = None;
         if let Some(writer) = self.writer.take() {
             let _ = tokio::task::spawn_blocking(move || {
                 if let Err(error) = writer.flush_blocking() {
@@ -793,6 +901,319 @@ mod tests {
             replied_while_producing,
             "snapshot starved behind a continuous event backlog"
         );
+    }
+
+    type Script = Box<dyn FnMut(&SourceEvent, &mut ModuleCtx) + Send>;
+
+    struct FakeModule {
+        script: Script,
+        stored: Vec<Value>,
+    }
+    impl FakeModule {
+        fn boxed(script: impl FnMut(&SourceEvent, &mut ModuleCtx) + Send + 'static) -> Box<Self> {
+            Box::new(Self {
+                script: Box::new(script),
+                stored: Vec::new(),
+            })
+        }
+    }
+    impl Module for FakeModule {
+        fn id(&self) -> &'static str {
+            "fake"
+        }
+        fn on_event(&mut self, ev: &SourceEvent, _: &GameState, ctx: &mut ModuleCtx) -> TopicSet {
+            if let SourceEvent::Stored { module, tag, value } = ev {
+                self.stored
+                    .push(serde_json::json!({"module":module,"tag":tag,"value":value}));
+            }
+            (self.script)(ev, ctx);
+            ["fake.stored".into()].into()
+        }
+        fn topic_value(&self, _: &str) -> Option<Value> {
+            Some(Value::Array(self.stored.clone()))
+        }
+        fn topics(&self) -> Vec<String> {
+            vec!["fake.stored".into()]
+        }
+    }
+
+    fn sol_query() -> tmc_model::net::NetQuery {
+        tmc_model::net::NetQuery::System {
+            id64: 1,
+            name: "Sol".into(),
+        }
+    }
+
+    fn options(net: Option<mpsc::Sender<NetRequest>>, store: Option<Store>) -> CoreOptions {
+        CoreOptions {
+            writer: None,
+            flush_every: Duration::from_millis(100),
+            store,
+            net,
+        }
+    }
+
+    #[tokio::test]
+    async fn module_request_reaches_net_channel_with_module_and_id() {
+        let (net, mut net_rx) = mpsc::channel(8);
+        let ids = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let seen = ids.clone();
+        let core = spawn_core_with(
+            vec![FakeModule::boxed(move |ev, ctx| {
+                if matches!(ev, SourceEvent::Status(_)) {
+                    seen.lock()
+                        .unwrap()
+                        .push(ctx.request("system:1", sol_query()));
+                }
+            })],
+            options(Some(net), None),
+        );
+        core.events.send(status(0)).await.unwrap();
+        core.events.send(status(1)).await.unwrap();
+        core.snapshot().await;
+        let first = net_rx.try_recv().unwrap();
+        assert_eq!(
+            (first.id, first.module.as_str(), first.key.as_str()),
+            (1, "fake", "system:1")
+        );
+        assert_eq!(first.query, sol_query());
+        assert_eq!(net_rx.try_recv().unwrap().id, 2);
+        assert_eq!(*ids.lock().unwrap(), vec![Some(1), Some(2)]);
+    }
+
+    #[tokio::test]
+    async fn requests_during_replay_are_dropped() {
+        let (net, mut net_rx) = mpsc::channel(8);
+        let result = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let seen = result.clone();
+        let core = spawn_core_with(
+            vec![FakeModule::boxed(move |ev, ctx| {
+                if matches!(ev, SourceEvent::Journal { .. }) {
+                    seen.lock()
+                        .unwrap()
+                        .push(ctx.request("system:1", sol_query()));
+                }
+            })],
+            options(Some(net), None),
+        );
+        core.events
+            .send(journal("UnderAttack", "", true))
+            .await
+            .unwrap();
+        core.snapshot().await;
+        assert_eq!(*result.lock().unwrap(), vec![None]);
+        assert!(matches!(
+            net_rx.try_recv(),
+            Err(mpsc::error::TryRecvError::Empty)
+        ));
+    }
+
+    async fn wait_for_stored(core: &CoreHandle, count: usize) -> Value {
+        timeout(Duration::from_secs(2), async {
+            loop {
+                let snapshot = core.snapshot().await;
+                if snapshot["fake.stored"].as_array().unwrap().len() >= count {
+                    return snapshot["fake.stored"].clone();
+                }
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+        })
+        .await
+        .unwrap()
+    }
+
+    #[tokio::test]
+    async fn store_task_result_returns_as_stored_event() {
+        let core = spawn_core_with(
+            vec![FakeModule::boxed(|ev, ctx| {
+                if matches!(ev, SourceEvent::Status(_)) {
+                    ctx.store_task(
+                        "t",
+                        Box::new(|store| Ok(store.query_json("SELECT 42", &[])?[0][0].clone())),
+                    );
+                }
+            })],
+            options(None, Some(Store::open_in_memory().unwrap())),
+        );
+        core.events.send(status(0)).await.unwrap();
+        assert_eq!(
+            wait_for_stored(&core, 1).await,
+            serde_json::json!([{"module":"fake","tag":"t","value":42}])
+        );
+    }
+
+    #[tokio::test]
+    async fn failed_store_task_is_not_reinjected_and_tasks_without_store_are_dropped() {
+        let core = spawn_core_with(
+            vec![FakeModule::boxed(|ev, ctx| {
+                if matches!(ev, SourceEvent::Status(_)) {
+                    ctx.store_task(
+                        "bad",
+                        Box::new(|store| {
+                            store.exec_json("THIS IS NOT SQL", &[])?;
+                            Ok(Value::Null)
+                        }),
+                    );
+                    ctx.store_task("ok", Box::new(|_| Ok(Value::from(1))));
+                }
+            })],
+            options(None, Some(Store::open_in_memory().unwrap())),
+        );
+        core.events.send(status(0)).await.unwrap();
+        assert_eq!(
+            wait_for_stored(&core, 1).await,
+            serde_json::json!([{"module":"fake","tag":"ok","value":1}])
+        );
+        let without_store = spawn_core_with(
+            vec![FakeModule::boxed(|ev, ctx| {
+                if matches!(ev, SourceEvent::Status(_)) {
+                    ctx.store_task("t", Box::new(|_| Ok(Value::from(1))));
+                }
+            })],
+            options(None, None),
+        );
+        without_store.events.send(status(0)).await.unwrap();
+        assert_eq!(
+            without_store.snapshot().await["fake.stored"],
+            serde_json::json!([])
+        );
+    }
+
+    #[tokio::test]
+    async fn store_task_runs_during_replay() {
+        let core = spawn_core_with(
+            vec![FakeModule::boxed(|ev, ctx| {
+                if let SourceEvent::Journal { replaying, .. } = ev {
+                    assert!(*replaying);
+                    ctx.store_task("replay", Box::new(|_| Ok(Value::from(7))));
+                }
+            })],
+            options(None, Some(Store::open_in_memory().unwrap())),
+        );
+        core.events
+            .send(journal("UnderAttack", "", true))
+            .await
+            .unwrap();
+        assert_eq!(
+            wait_for_stored(&core, 1).await,
+            serde_json::json!([{"module":"fake","tag":"replay","value":7}])
+        );
+    }
+
+    #[tokio::test]
+    async fn store_tasks_run_in_fifo_order_on_one_worker() {
+        let core = spawn_core_with(
+            vec![FakeModule::boxed(|ev, ctx| {
+                if matches!(ev, SourceEvent::Status(_)) {
+                    for n in 0..20 {
+                        ctx.store_task("n", Box::new(move |_| Ok(Value::from(n))));
+                    }
+                }
+            })],
+            options(None, Some(Store::open_in_memory().unwrap())),
+        );
+        core.events.send(status(0)).await.unwrap();
+        let values: Vec<i64> = wait_for_stored(&core, 20)
+            .await
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v["value"].as_i64().unwrap())
+            .collect();
+        assert_eq!(values, (0..20).collect::<Vec<i64>>());
+    }
+
+    #[tokio::test]
+    async fn stored_results_apply_under_continuous_event_flood() {
+        use std::sync::atomic::AtomicBool;
+        let mut first = true;
+        let core = spawn_core_with(
+            vec![FakeModule::boxed(move |ev, ctx| {
+                if matches!(ev, SourceEvent::Status(_)) {
+                    std::thread::sleep(Duration::from_micros(100));
+                    if std::mem::take(&mut first) {
+                        ctx.store_task("flood", Box::new(|_| Ok(Value::from(1))));
+                    }
+                }
+            })],
+            options(None, Some(Store::open_in_memory().unwrap())),
+        );
+        let keep_sending = Arc::new(AtomicBool::new(true));
+        let flag = keep_sending.clone();
+        let sender = core.events.clone();
+        let producer = std::thread::spawn(move || {
+            while flag.load(Ordering::Relaxed) {
+                if sender.blocking_send(status(0)).is_err() {
+                    break;
+                }
+            }
+        });
+        let stored = wait_for_stored(&core, 1).await;
+        keep_sending.store(false, Ordering::Relaxed);
+        tokio::task::spawn_blocking(move || producer.join().unwrap())
+            .await
+            .unwrap();
+        assert_eq!(
+            stored,
+            serde_json::json!([{"module":"fake","tag":"flood","value":1}])
+        );
+    }
+
+    #[tokio::test]
+    async fn full_net_channel_never_blocks_actor() {
+        let (net, _net_rx) = mpsc::channel(1);
+        let core = spawn_core_with(
+            vec![FakeModule::boxed(|ev, ctx| {
+                if matches!(ev, SourceEvent::Status(_)) {
+                    for _ in 0..50 {
+                        ctx.request("system:1", sol_query());
+                    }
+                }
+            })],
+            options(Some(net), None),
+        );
+        core.events.send(status(0)).await.unwrap();
+        let snapshot = timeout(Duration::from_millis(100), core.snapshot())
+            .await
+            .expect("actor blocked on a full network channel");
+        assert!(snapshot.contains_key("core.modules"));
+    }
+
+    #[tokio::test]
+    async fn actor_still_stops_when_inputs_close_with_store() {
+        let (release_tx, release_rx) = std::sync::mpsc::channel::<()>();
+        let (started_tx, started_rx) = std::sync::mpsc::channel::<()>();
+        let core = spawn_core_with(
+            vec![FakeModule::boxed({
+                let mut slot = Some((release_rx, started_tx));
+                move |ev, ctx| {
+                    if matches!(ev, SourceEvent::Status(_))
+                        && let Some((release, started)) = slot.take()
+                    {
+                        ctx.store_task(
+                            "slow",
+                            Box::new(move |_| {
+                                let _ = started.send(());
+                                let _ = release.recv_timeout(Duration::from_secs(5));
+                                Ok(Value::Null)
+                            }),
+                        );
+                    }
+                }
+            })],
+            options(None, Some(Store::open_in_memory().unwrap())),
+        );
+        let mut rx = core.subscribe();
+        core.events.send(status(0)).await.unwrap();
+        core.snapshot().await;
+        started_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+        drop(core);
+        timeout(Duration::from_secs(1), async {
+            while !matches!(rx.recv().await, Err(broadcast::error::RecvError::Closed)) {}
+        })
+        .await
+        .expect("actor did not stop with a store task in flight");
+        let _ = release_tx.send(());
     }
 
     #[test]

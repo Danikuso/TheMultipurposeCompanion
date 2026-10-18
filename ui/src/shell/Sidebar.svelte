@@ -2,15 +2,16 @@
   import { t } from '../lib/i18n';
   import { topic } from '../lib/ws.svelte';
   import { modules } from '../modules/registry';
+  import { layouts } from './layouts';
 
   interface LiveModuleState {
     id: string;
     title_key?: string;
-    relevance: 'Hidden' | 'Low' | 'Normal' | 'High' | 'Critical';
+    relevance: string;
   }
 
   let {
-    activeTab = 'dashboard',
+    activeTab = 'layout:exploration',
     onSelect,
   }: {
     activeTab?: string;
@@ -25,27 +26,34 @@
       return {
         id: regMod.id,
         titleKey: regMod.titleKey,
-        relevance: liveState?.relevance ?? 'Normal',
+        relevance: (liveState?.relevance ?? 'normal').toLowerCase(),
       };
     }),
   );
 </script>
 
-<aside class="hud-sidebar" aria-label="Module navigation">
+<aside class="hud-sidebar" aria-label={t('nav-modules')}>
   <div class="sidebar-top">
+    <h2>{t('nav-layouts')}</h2>
+    {#each layouts as layout (layout.id)}
+      <button type="button" class="nav-btn" class:active={activeTab === `layout:${layout.id}`}
+        title={t(layout.titleKey)} onclick={() => onSelect?.(`layout:${layout.id}`)}>
+        <span class="nav-label">{t(layout.titleKey)}</span>
+      </button>
+    {/each}
+    <h2>{t('nav-modules')}</h2>
     {#each displayModules as mod (mod.id)}
-      {#if mod.relevance !== 'Hidden'}
         <button
           type="button"
           class="nav-btn"
           class:active={activeTab === mod.id}
           title={t(mod.titleKey)}
+          data-module={mod.id}
           onclick={() => onSelect?.(mod.id)}
         >
           <span class="nav-label">{t(mod.titleKey)}</span>
-          <span class="relevance-dot relevance-{mod.relevance.toLowerCase()}"></span>
+          <span class="relevance-dot relevance-{mod.relevance}"></span>
         </button>
-      {/if}
     {/each}
   </div>
   <div class="sidebar-bottom">
@@ -81,6 +89,8 @@
     gap: 0.4rem;
   }
 
+  h2 { font-size: 0.75rem; color: var(--hud-muted); margin: 0.6rem 0 0; }
+
   .nav-btn {
     display: flex;
     align-items: center;
@@ -109,6 +119,14 @@
 
   .relevance-low {
     background: var(--hud-muted);
+  }
+
+  .relevance-active {
+    background: var(--hud-warning);
+  }
+
+  .relevance-urgent {
+    background: var(--hud-danger);
   }
 
   .relevance-normal {

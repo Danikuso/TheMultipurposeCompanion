@@ -1,7 +1,7 @@
 import { FluentBundle, FluentResource } from '@fluent/bundle';
 import { localeRef } from './locale.svelte';
 
-const rawFiles = import.meta.glob<string>('../../../locales/*/main.ftl', {
+const rawFiles = import.meta.glob<string>('../../../locales/*/*.ftl', {
   query: '?raw',
   eager: true,
   import: 'default',
@@ -10,23 +10,31 @@ const rawFiles = import.meta.glob<string>('../../../locales/*/main.ftl', {
 const bundles = new Map<string, FluentBundle>();
 const keysMap: Record<string, string[]> = {};
 
-for (const [filePath, content] of Object.entries(rawFiles)) {
-  const match = filePath.match(/locales\/([^/]+)\/main\.ftl$/);
+const keySets: Record<string, Set<string>> = {};
+
+for (const filePath of Object.keys(rawFiles).sort()) {
+  const match = filePath.match(/locales\/([^/]+)\/([^/]+)\.ftl$/);
   if (!match) continue;
   const lang = match[1];
-  const resource = new FluentResource(content);
-  const bundle = new FluentBundle(lang, { useIsolating: false });
-  bundle.addResource(resource);
-  bundles.set(lang, bundle);
-
-  const keys: string[] = [];
+  const resource = new FluentResource(rawFiles[filePath]);
+  let bundle = bundles.get(lang);
+  if (!bundle) {
+    bundle = new FluentBundle(lang, { useIsolating: false });
+    bundles.set(lang, bundle);
+    keySets[lang] = new Set();
+  }
+  const errors = bundle.addResource(resource);
+  if (errors.length > 0) {
+    throw new Error(`${filePath}: ${errors.map((e) => e.message).join('; ')}`);
+  }
   for (const entry of resource.body) {
     if ('id' in entry && typeof entry.id === 'string' && !entry.id.startsWith('-')) {
-      keys.push(entry.id);
+      keySets[lang].add(entry.id);
     }
   }
-  keys.sort();
-  keysMap[lang] = keys;
+}
+for (const [lang, set] of Object.entries(keySets)) {
+  keysMap[lang] = [...set].sort();
 }
 
 export function setLocale(lang: string): void {

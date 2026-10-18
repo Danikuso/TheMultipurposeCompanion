@@ -1,0 +1,92 @@
+{
+  "created_at": "2026-10-17T20:49:16",
+  "job": "37ED219E-CA6C-11F1-9E95-FDE05351826C",
+  "parameters": {
+    "algorithm": "optimistic",
+    "base_mass": 300,
+    "cargo": 0,
+    "destination_system": "3238296097059",
+    "exclude_secondary": false,
+    "fuel_multiplier": 0.012,
+    "fuel_power": 2.45,
+    "internal_tank_size": 2,
+    "is_supercharged": false,
+    "max_fuel_per_jump": 5.2,
+    "optimal_mass": 1052,
+    "range_boost": 0,
+    "reserve_size": 0,
+    "ship_build": null,
+    "source_system": "10477373803",
+    "tank_size": 32,
+    "use_injections": false,
+    "use_injections_when_required": false,
+    "use_supercharge": false
+  },
+  "result": {
+    "jumps": [
+      {
+        "distance": 0,
+        "distance_to_destination": 22000.4740453411,
+        "fuel_in_tank": 32,
+        "fuel_used": 0,
+        "has_neutron": false,
+        "id64": 10477373803,
+        "is_scoopable": false,
+        "must_inject": 0,
+        "must_refuel": false,
+        "name": "Sol",
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      {
+        "distance": 37.8882255554199,
+        "distance_to_destination": 21963.6585909587,
+        "fuel_in_tank": 32,
+        "fuel_used": 5.16341876983643,
+        "has_neutron": false,
+        "id64": 11665802339769,
+        "is_scoopable": true,
+        "must_inject": 0,
+        "must_refuel": true,
+        "name": "Core Sys Sector QT-R b4-5",
+        "x": -8.40625,
+        "y": -4.84375,
+        "z": 36.625
+      },
+      {
+        "distance": 35.1300163269043,
+        "distance_to_destination": 21928.5510565884,
+        "fuel_in_tank": 32,
+        "fuel_used": 4.29055881500244,
+        "has_neutron": false,
+        "id64": 2869709252033,
+        "is_scoopable": true,
+        "must_inject": 0,
+        "must_refuel": true,
+        "name": "LP 751-15",
+        "x": -24.125,
+        "y": -7.40625,
+        "z": 67.9375
+      },
+      {
+        "distance": 8.14234924316406,
+        "distance_to_destination": 0,
+        "fuel_in_tank": 31.8806171417236,
+        "fuel_used": 0.119381964206696,
+        "has_neutron": false,
+        "id64": 3238296097059,
+        "is_scoopable": false,
+        "must_inject": 0,
+        "must_refuel": false,
+        "name": "Colonia",
+        "x": -9530.5,
+        "y": -910.28125,
+        "z": 19808.125
+      }
+    ]
+  },
+  "state": "completed",
+  "status": "ok",
+  "updated_at": "2026-10-17T20:50:21"
+}

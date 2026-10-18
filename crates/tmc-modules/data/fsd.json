@@ -1,0 +1,789 @@
+{
+ "source": "Hechos del juego transcritos por TMC",
+ "license": "Datos propios del proyecto (PolyForm NC); sin datos de terceros",
+ "version": "2026-10-18",
+ "fsd": [
+  {
+   "item_prefix": "int_hyperdrive_size2_class5",
+   "optimal_mass": 48.0,
+   "max_fuel_per_jump": 0.6,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.0,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size2_class4",
+   "optimal_mass": 54.0,
+   "max_fuel_per_jump": 0.6,
+   "fuel_mul": 0.01,
+   "fuel_power": 2.0,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size2_class3",
+   "optimal_mass": 60.0,
+   "max_fuel_per_jump": 0.6,
+   "fuel_mul": 0.008,
+   "fuel_power": 2.0,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size2_class2",
+   "optimal_mass": 54.0,
+   "max_fuel_per_jump": 0.6,
+   "fuel_mul": 0.01,
+   "fuel_power": 2.0,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size2_class1",
+   "optimal_mass": 48.0,
+   "max_fuel_per_jump": 0.6,
+   "fuel_mul": 0.011,
+   "fuel_power": 2.0,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size3_class5",
+   "optimal_mass": 80.0,
+   "max_fuel_per_jump": 1.2,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.15,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size3_class4",
+   "optimal_mass": 90.0,
+   "max_fuel_per_jump": 1.2,
+   "fuel_mul": 0.01,
+   "fuel_power": 2.15,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size3_class3",
+   "optimal_mass": 100.0,
+   "max_fuel_per_jump": 1.2,
+   "fuel_mul": 0.008,
+   "fuel_power": 2.15,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size3_class2",
+   "optimal_mass": 90.0,
+   "max_fuel_per_jump": 1.2,
+   "fuel_mul": 0.01,
+   "fuel_power": 2.15,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size3_class1",
+   "optimal_mass": 80.0,
+   "max_fuel_per_jump": 1.2,
+   "fuel_mul": 0.011,
+   "fuel_power": 2.15,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size4_class5",
+   "optimal_mass": 280.0,
+   "max_fuel_per_jump": 2.0,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.3,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size4_class4",
+   "optimal_mass": 315.0,
+   "max_fuel_per_jump": 2.0,
+   "fuel_mul": 0.01,
+   "fuel_power": 2.3,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size4_class3",
+   "optimal_mass": 350.0,
+   "max_fuel_per_jump": 2.0,
+   "fuel_mul": 0.008,
+   "fuel_power": 2.3,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size4_class2",
+   "optimal_mass": 315.0,
+   "max_fuel_per_jump": 2.0,
+   "fuel_mul": 0.01,
+   "fuel_power": 2.3,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size4_class1",
+   "optimal_mass": 280.0,
+   "max_fuel_per_jump": 2.0,
+   "fuel_mul": 0.011,
+   "fuel_power": 2.3,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size5_class5",
+   "optimal_mass": 1050.0,
+   "max_fuel_per_jump": 5.0,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.45,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size5_class4",
+   "optimal_mass": 1181.25,
+   "max_fuel_per_jump": 5.0,
+   "fuel_mul": 0.01,
+   "fuel_power": 2.45,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size5_class3",
+   "optimal_mass": 1312.5,
+   "max_fuel_per_jump": 5.0,
+   "fuel_mul": 0.008,
+   "fuel_power": 2.45,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size5_class2",
+   "optimal_mass": 1181.25,
+   "max_fuel_per_jump": 5.0,
+   "fuel_mul": 0.01,
+   "fuel_power": 2.45,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size5_class1",
+   "optimal_mass": 473.92,
+   "max_fuel_per_jump": 5.0,
+   "fuel_mul": 0.011,
+   "fuel_power": 2.45,
+   "kind": "standard",
+   "provenance": "ajustado con un solo Loadout.MaxJumpRange del historial del propietario, 2026-10-18; sin verificar (se exigen al menos 3 masas distintas)",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size6_class5",
+   "optimal_mass": 1260.0,
+   "max_fuel_per_jump": 5.3,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.6,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size6_class4",
+   "optimal_mass": 1417.5,
+   "max_fuel_per_jump": 5.3,
+   "fuel_mul": 0.01,
+   "fuel_power": 2.6,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size6_class3",
+   "optimal_mass": 1575.0,
+   "max_fuel_per_jump": 5.3,
+   "fuel_mul": 0.008,
+   "fuel_power": 2.6,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size6_class2",
+   "optimal_mass": 1417.5,
+   "max_fuel_per_jump": 5.3,
+   "fuel_mul": 0.01,
+   "fuel_power": 2.6,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size6_class1",
+   "optimal_mass": 1260.0,
+   "max_fuel_per_jump": 5.3,
+   "fuel_mul": 0.011,
+   "fuel_power": 2.6,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size7_class5",
+   "optimal_mass": 1440.0,
+   "max_fuel_per_jump": 6.4,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.75,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size7_class4",
+   "optimal_mass": 1620.0,
+   "max_fuel_per_jump": 6.4,
+   "fuel_mul": 0.01,
+   "fuel_power": 2.75,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size7_class3",
+   "optimal_mass": 1800.0,
+   "max_fuel_per_jump": 6.4,
+   "fuel_mul": 0.008,
+   "fuel_power": 2.75,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size7_class2",
+   "optimal_mass": 1620.0,
+   "max_fuel_per_jump": 6.4,
+   "fuel_mul": 0.01,
+   "fuel_power": 2.75,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size7_class1",
+   "optimal_mass": 1440.0,
+   "max_fuel_per_jump": 6.4,
+   "fuel_mul": 0.011,
+   "fuel_power": 2.75,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size8_class5",
+   "optimal_mass": 1700.0,
+   "max_fuel_per_jump": 8.0,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.9,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size8_class4",
+   "optimal_mass": 1912.5,
+   "max_fuel_per_jump": 8.0,
+   "fuel_mul": 0.01,
+   "fuel_power": 2.9,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size8_class3",
+   "optimal_mass": 2125.0,
+   "max_fuel_per_jump": 8.0,
+   "fuel_mul": 0.008,
+   "fuel_power": 2.9,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size8_class2",
+   "optimal_mass": 1912.5,
+   "max_fuel_per_jump": 8.0,
+   "fuel_mul": 0.01,
+   "fuel_power": 2.9,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_size8_class1",
+   "optimal_mass": 1700.0,
+   "max_fuel_per_jump": 8.0,
+   "fuel_mul": 0.011,
+   "fuel_power": 2.9,
+   "kind": "standard",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size2_class5",
+   "optimal_mass": 48.0,
+   "max_fuel_per_jump": 0.6,
+   "fuel_mul": 0.013,
+   "fuel_power": 2.0,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size2_class4",
+   "optimal_mass": 54.0,
+   "max_fuel_per_jump": 0.6,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.0,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size2_class3",
+   "optimal_mass": 60.0,
+   "max_fuel_per_jump": 0.6,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.0,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size2_class2",
+   "optimal_mass": 54.0,
+   "max_fuel_per_jump": 0.6,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.0,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size2_class1",
+   "optimal_mass": 48.0,
+   "max_fuel_per_jump": 0.6,
+   "fuel_mul": 0.008,
+   "fuel_power": 2.0,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size3_class5",
+   "optimal_mass": 80.0,
+   "max_fuel_per_jump": 1.2,
+   "fuel_mul": 0.013,
+   "fuel_power": 2.15,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size3_class4",
+   "optimal_mass": 90.0,
+   "max_fuel_per_jump": 1.2,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.15,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size3_class3",
+   "optimal_mass": 100.0,
+   "max_fuel_per_jump": 1.2,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.15,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size3_class2",
+   "optimal_mass": 90.0,
+   "max_fuel_per_jump": 1.2,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.15,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size3_class1",
+   "optimal_mass": 80.0,
+   "max_fuel_per_jump": 1.2,
+   "fuel_mul": 0.008,
+   "fuel_power": 2.15,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size4_class5",
+   "optimal_mass": 280.0,
+   "max_fuel_per_jump": 2.0,
+   "fuel_mul": 0.013,
+   "fuel_power": 2.3,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size4_class4",
+   "optimal_mass": 315.0,
+   "max_fuel_per_jump": 2.0,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.3,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size4_class3",
+   "optimal_mass": 350.0,
+   "max_fuel_per_jump": 2.0,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.3,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size4_class2",
+   "optimal_mass": 315.0,
+   "max_fuel_per_jump": 2.0,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.3,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size4_class1",
+   "optimal_mass": 280.0,
+   "max_fuel_per_jump": 2.0,
+   "fuel_mul": 0.008,
+   "fuel_power": 2.3,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size5_class5",
+   "optimal_mass": 1193.6,
+   "max_fuel_per_jump": 5.0,
+   "fuel_mul": 0.013,
+   "fuel_power": 2.45,
+   "kind": "sco",
+   "provenance": "ajustado con 7 Loadout.MaxJumpRange del historial del propietario (masas de referencia distintas y concordantes), 2026-10-18",
+   "verified": true
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size5_class4",
+   "optimal_mass": 1181.25,
+   "max_fuel_per_jump": 5.0,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.45,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size5_class3",
+   "optimal_mass": 1050.0,
+   "max_fuel_per_jump": 5.0,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.45,
+   "kind": "sco",
+   "provenance": "ajustado con un solo Loadout.MaxJumpRange del historial del propietario, 2026-10-18; sin verificar (se exigen al menos 3 masas distintas)",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size5_class2",
+   "optimal_mass": 1181.25,
+   "max_fuel_per_jump": 5.0,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.45,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size5_class1",
+   "optimal_mass": 592.89,
+   "max_fuel_per_jump": 5.0,
+   "fuel_mul": 0.008,
+   "fuel_power": 2.45,
+   "kind": "sco",
+   "provenance": "ajustado con 3 Loadout.MaxJumpRange del historial del propietario (masas de referencia distintas y concordantes), 2026-10-18",
+   "verified": true
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size6_class5",
+   "optimal_mass": 1260.0,
+   "max_fuel_per_jump": 5.3,
+   "fuel_mul": 0.013,
+   "fuel_power": 2.6,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size6_class4",
+   "optimal_mass": 1417.5,
+   "max_fuel_per_jump": 5.3,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.6,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size6_class3",
+   "optimal_mass": 1575.0,
+   "max_fuel_per_jump": 5.3,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.6,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size6_class2",
+   "optimal_mass": 1417.5,
+   "max_fuel_per_jump": 5.3,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.6,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size6_class1",
+   "optimal_mass": 1260.0,
+   "max_fuel_per_jump": 5.3,
+   "fuel_mul": 0.008,
+   "fuel_power": 2.6,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size7_class5",
+   "optimal_mass": 1440.0,
+   "max_fuel_per_jump": 6.4,
+   "fuel_mul": 0.013,
+   "fuel_power": 2.75,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size7_class4",
+   "optimal_mass": 1620.0,
+   "max_fuel_per_jump": 6.4,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.75,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size7_class3",
+   "optimal_mass": 1800.0,
+   "max_fuel_per_jump": 6.4,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.75,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size7_class2",
+   "optimal_mass": 1620.0,
+   "max_fuel_per_jump": 6.4,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.75,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size7_class1",
+   "optimal_mass": 1440.0,
+   "max_fuel_per_jump": 6.4,
+   "fuel_mul": 0.008,
+   "fuel_power": 2.75,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size8_class5",
+   "optimal_mass": 1700.0,
+   "max_fuel_per_jump": 8.0,
+   "fuel_mul": 0.013,
+   "fuel_power": 2.9,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size8_class4",
+   "optimal_mass": 1912.5,
+   "max_fuel_per_jump": 8.0,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.9,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size8_class3",
+   "optimal_mass": 2125.0,
+   "max_fuel_per_jump": 8.0,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.9,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size8_class2",
+   "optimal_mass": 1912.5,
+   "max_fuel_per_jump": 8.0,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.9,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overcharge_size8_class1",
+   "optimal_mass": 1700.0,
+   "max_fuel_per_jump": 8.0,
+   "fuel_mul": 0.008,
+   "fuel_power": 2.9,
+   "kind": "sco",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overchargemk2_size8_class5",
+   "optimal_mass": 1900.0,
+   "max_fuel_per_jump": 9.0,
+   "fuel_mul": 0.013,
+   "fuel_power": 2.9,
+   "kind": "sco_mk2",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overchargemk2_size8_class4",
+   "optimal_mass": 2137.5,
+   "max_fuel_per_jump": 9.0,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.9,
+   "kind": "sco_mk2",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overchargemk2_size8_class3",
+   "optimal_mass": 2375.0,
+   "max_fuel_per_jump": 9.0,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.9,
+   "kind": "sco_mk2",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overchargemk2_size8_class2",
+   "optimal_mass": 2137.5,
+   "max_fuel_per_jump": 9.0,
+   "fuel_mul": 0.012,
+   "fuel_power": 2.9,
+   "kind": "sco_mk2",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_hyperdrive_overchargemk2_size8_class1",
+   "optimal_mass": 1900.0,
+   "max_fuel_per_jump": 9.0,
+   "fuel_mul": 0.008,
+   "fuel_power": 2.9,
+   "kind": "sco_mk2",
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  }
+ ],
+ "boosters": [
+  {
+   "item_prefix": "int_guardianfsdbooster_size1",
+   "bonus_ly": 4.0,
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_guardianfsdbooster_size2",
+   "bonus_ly": 6.0,
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_guardianfsdbooster_size3",
+   "bonus_ly": 7.75,
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_guardianfsdbooster_size4",
+   "bonus_ly": 9.25,
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  },
+  {
+   "item_prefix": "int_guardianfsdbooster_size5",
+   "bonus_ly": 10.5,
+   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "verified": false
+  }
+ ]
+}

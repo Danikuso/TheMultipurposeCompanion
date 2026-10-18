@@ -6,17 +6,18 @@ import { fileURLToPath } from 'node:url';
 
 const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
 const uiDir = path.resolve(scriptsDir, '..');
+const port = Number(process.env.TMC_E2E_PORT ?? 47320);
 const smokeDir = path.join(os.tmpdir(), `tmc-playwright-smoke-${process.pid}`);
 const journalDir = path.join(smokeDir, 'journal');
 const dataDir = path.join(smokeDir, 'data');
 const configPath = path.join(smokeDir, 'config.toml');
-const fixturePath = path.resolve(uiDir, '../tests/fixtures/journal/basic_session.log');
+const fixturePath = path.resolve(uiDir, '../tests/fixtures/journal/real_explo_01.log');
 
 fs.mkdirSync(journalDir, { recursive: true });
 fs.mkdirSync(dataDir, { recursive: true });
 fs.writeFileSync(
   configPath,
-  `data_dir = "${dataDir.replace(/\\/g, '/')}"\nauto_copy_next_system = false\n[server]\nport = 47320\nlan = false\n`,
+  `data_dir = "${dataDir.replace(/\\/g, '/')}"\nauto_copy_next_system = false\nonline_services = false\n[server]\nport = ${port}\nlan = false\n`,
 );
 
 const exeSuffix = process.platform === 'win32' ? '.exe' : '';
@@ -57,7 +58,7 @@ const headless = fs.existsSync(headlessBin)
 
 setTimeout(() => {
   if (fs.existsSync(replayBin)) {
-    spawn(replayBin, ['play', '--from', fixturePath, '--to', journalDir, '--speed', '50'], {
+    spawn(replayBin, ['play', '--from', fixturePath, '--to', journalDir, '--speed', '10000'], {
       stdio: 'ignore',
     });
   } else {
@@ -76,7 +77,7 @@ setTimeout(() => {
         '--to',
         journalDir,
         '--speed',
-        '50',
+        '10000',
       ],
       { stdio: 'ignore' },
     );

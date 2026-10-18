@@ -490,12 +490,12 @@ impl GameState {
                     c |= Changes::LOCATION;
                 }
             }
-            EventKind::Touchdown => {
+            EventKind::Touchdown(_) => {
                 if set(&mut self.location.mode, FlightMode::Landed) {
                     c |= Changes::LOCATION;
                 }
             }
-            EventKind::Liftoff => {
+            EventKind::Liftoff(_) => {
                 if set(&mut self.location.mode, FlightMode::NormalSpace) {
                     c |= Changes::LOCATION;
                 }

@@ -2,10 +2,24 @@
   import type { Snippet } from 'svelte';
   import { t } from '../lib/i18n';
 
-  let { titleKey, children }: { titleKey: string; children?: Snippet } = $props();
+  let {
+    titleKey,
+    span,
+    size = 'normal',
+    children,
+  }: {
+    titleKey: string;
+    span?: 'full' | 1 | 2;
+    size?: 'normal' | 'large';
+    children?: Snippet;
+  } = $props();
+
+  const gridColumn = $derived(
+    span === 'full' ? '1 / -1' : span === 1 || span === 2 ? `span ${span}` : undefined,
+  );
 </script>
 
-<section class="hud-panel">
+<section class="hud-panel" class:large={size === 'large'} style:grid-column={gridColumn}>
   <header class="hud-panel-header">
     <h2>{t(titleKey)}</h2>
   </header>
@@ -38,6 +52,14 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--hud-primary);
+  }
+
+  .hud-panel.large .hud-panel-header h2 {
+    font-size: var(--font-title-lg);
+  }
+
+  .hud-panel.large .hud-panel-body {
+    font-size: var(--font-body-lg);
   }
 
   .hud-panel-body {

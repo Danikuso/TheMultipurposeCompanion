@@ -3,6 +3,8 @@
 
 pub mod companion;
 pub mod events;
+pub mod net;
+pub mod settings;
 pub mod source;
 pub mod state;
 pub mod status;

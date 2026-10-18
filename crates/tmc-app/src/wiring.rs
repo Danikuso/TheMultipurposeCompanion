@@ -1,6 +1,6 @@
 //! Arranque y cableado de todos los subsistemas.
 
-use crate::{AppActions, Clipboard, Config, data_dir};
+use crate::{AppActions, Clipboard, Config, data_dir, spawn_net_service};
 use chrono::Utc;
 use std::path::Path;
 use std::sync::{
@@ -8,17 +8,20 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 use std::time::Duration;
-use tmc_core::{CoreHandle, CoreMessage, spawn_core};
+use tmc_core::{CoreHandle, CoreMessage, CoreOptions, spawn_core_with};
 use tmc_journal::{WatchOptions, is_game_running, resolve_journal_dir, spawn_watcher};
 use tmc_model::source::SourceEvent;
 use tmc_modules::all_modules;
+use tmc_net::{NetClient, ReqwestTransport, Transport};
 use tmc_server::{ServerConfig, ServerHandle, serve};
 use tmc_store::{EventWriter, ImportOptions, Store, import_history};
+use tokio::sync::broadcast::error::RecvError;
 
 pub struct Running {
     pub server: ServerHandle,
     pub core: CoreHandle,
     pub store: Store,
+    pub clipboard: Arc<Clipboard>,
 }
 
 fn open_or_rebuild_store(db_dir: &Path) -> anyhow::Result<Store> {
@@ -38,22 +41,77 @@ fn open_or_rebuild_store(db_dir: &Path) -> anyhow::Result<Store> {
     }
 }
 
-pub async fn start(mut config: Config) -> anyhow::Result<Running> {
+pub async fn start(config: Config) -> anyhow::Result<Running> {
+    let transport = ReqwestTransport::new()
+        .map_err(|err| anyhow::anyhow!("could not build HTTP transport: {err:?}"))?;
+    start_custom(config, Arc::new(transport), None).await
+}
+
+/// Igual que [`start`] pero con el transporte HTTP inyectado (tests de extremo a extremo).
+pub async fn start_with_transport(
+    config: Config,
+    transport: Arc<dyn Transport>,
+) -> anyhow::Result<Running> {
+    start_custom(config, transport, None).await
+}
+
+/// Como [`start_with_transport`], y con `poll_idle` del vigilante del diario
+/// sustituible (los tests emulan «juego en marcha», que sondea cada 250 ms).
+pub async fn start_custom(
+    mut config: Config,
+    transport: Arc<dyn Transport>,
+    poll_idle: Option<Duration>,
+) -> anyhow::Result<Running> {
     let journal_dir = resolve_journal_dir(config.journal_dir.as_deref())?;
     let db_dir = config.data_dir.clone().unwrap_or_else(data_dir);
     let store = open_or_rebuild_store(&db_dir)?;
     store.kv_set("locale", &config.language);
 
     let writer = EventWriter::spawn(&store);
-    let modules = if config.alerts_enabled {
-        all_modules()
-    } else {
-        Vec::new()
-    };
-    let core = spawn_core(modules, Some(writer), Duration::from_millis(100));
+    // Los módulos se registran siempre; cada uno respeta los ajustes que recibe
+    // por `SourceEvent::Settings` (p. ej. `Dashboard` y `alerts_enabled`).
+    let modules = all_modules();
+    for module in &modules {
+        store.apply_migrations(module.migrations())?;
+    }
+
+    let online = Arc::new(AtomicBool::new(config.online_services));
+    // El servicio de red necesita el canal de eventos del núcleo, que a su vez
+    // necesita el emisor de peticiones: se enlazan con un canal intermedio.
+    let (net_events, mut net_events_rx) = tokio::sync::mpsc::channel::<SourceEvent>(64);
+    let net = spawn_net_service(
+        Arc::new(NetClient::new(transport)),
+        store.clone(),
+        net_events,
+        online.clone(),
+    );
+    let core = spawn_core_with(
+        modules,
+        CoreOptions {
+            writer: Some(writer),
+            flush_every: Duration::from_millis(100),
+            store: Some(store.clone()),
+            net: Some(net.tx.clone()),
+        },
+    );
+    let forward = core.events.clone();
+    tokio::spawn(async move {
+        while let Some(event) = net_events_rx.recv().await {
+            if forward.send(event).await.is_err() {
+                break;
+            }
+        }
+    });
+    // Suscripción previa al watcher para no perder la primera actualización.
+    let mut rx = core.subscribe();
+    let _ = core
+        .events
+        .send(SourceEvent::Settings(config.module_settings()))
+        .await;
 
     let watch_opts = WatchOptions {
         journal_dir: journal_dir.clone(),
+        poll_idle: poll_idle.unwrap_or(WatchOptions::default().poll_idle),
         ..Default::default()
     };
     spawn_watcher(watch_opts, core.events.clone());
@@ -84,34 +142,41 @@ pub async fn start(mut config: Config) -> anyhow::Result<Running> {
         }
     });
 
-    if config.auto_copy_next_system {
-        let mut rx = core.subscribe();
-        let clipboard = Clipboard::new();
+    // Navigation decide (sube `copy_seq` solo con el ajuste activo y en vivo);
+    // aquí se copia cada vez que `copy_seq` aumenta.
+    let clipboard = Arc::new(Clipboard::new());
+    {
+        let task_clipboard = clipboard.clone();
         let throttle_flag = throttle.clone();
         tokio::spawn(async move {
-            let mut last_next: Option<String> = None;
-            let mut initialized = false;
-            while let Ok(msg) = rx.recv().await {
+            // El replay nunca incrementa `copy_seq`: arranca en 0 y solo suben los saltos en vivo.
+            let mut last_seq: u64 = 0;
+            loop {
+                // Si el canal se retrasa se descartan mensajes pero se sigue:
+                // `copy_seq` es acumulativo, la siguiente actualización lo recupera.
+                let msg = match rx.recv().await {
+                    Ok(msg) => msg,
+                    Err(RecvError::Lagged(_)) => continue,
+                    Err(RecvError::Closed) => break,
+                };
                 if let CoreMessage::Update { topics, .. } = msg {
                     if let Some(game) = topics.get("core.game")
                         && let Some(running) = game.get("running").and_then(|v| v.as_bool())
                     {
                         throttle_flag.store(running, Ordering::Relaxed);
                     }
-                    if let Some(route) = topics.get("core.route") {
-                        let current = route
-                            .get("next_system")
-                            .and_then(|v| v.as_str())
-                            .filter(|s| !s.is_empty())
-                            .map(str::to_owned);
-                        if initialized
-                            && current != last_next
-                            && let Some(ref sys) = current
+                    if let Some(route) = topics.get("navigation.route")
+                        && let Some(seq) = route.get("copy_seq").and_then(|v| v.as_u64())
+                    {
+                        if seq > last_seq
+                            && let Some(target) = route
+                                .get("copy_target")
+                                .and_then(|v| v.as_str())
+                                .filter(|s| !s.is_empty())
                         {
-                            let _ = clipboard.set_text(sys);
+                            let _ = task_clipboard.set_text(target);
                         }
-                        last_next = current;
-                        initialized = true;
+                        last_seq = seq;
                     }
                 }
             }
@@ -129,7 +194,10 @@ pub async fn start(mut config: Config) -> anyhow::Result<Running> {
         server_cfg,
         core.clone(),
         store.clone(),
-        Arc::new(AppActions::with_config(config)),
+        Arc::new(
+            AppActions::with_runtime(config, core.events.clone(), online, net)
+                .with_clipboard(clipboard.clone()),
+        ),
     )
     .await?;
 
@@ -137,5 +205,6 @@ pub async fn start(mut config: Config) -> anyhow::Result<Running> {
         server,
         core,
         store,
+        clipboard,
     })
 }

@@ -32,3 +32,47 @@ export function duration(ms: number | null | undefined): string {
   }
   return `${minutes}m`;
 }
+
+function unitFmt(unit: 'second' | 'minute' | 'hour' | 'day', n: number): string {
+  return new Intl.NumberFormat(getLocale(), {
+    style: 'unit',
+    unit,
+    unitDisplay: 'narrow',
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+export function ageShort(seconds: number | null | undefined): string {
+  if (seconds == null || Number.isNaN(seconds) || seconds < 0) return unitFmt('second', 0);
+  const s = Math.floor(seconds);
+  if (s < 60) return unitFmt('second', s);
+  if (s < 3600) return unitFmt('minute', Math.floor(s / 60));
+  if (s < 86400) return unitFmt('hour', Math.floor(s / 3600));
+  return unitFmt('day', Math.floor(s / 86400));
+}
+
+export function starClassLabel(cls: string | null | undefined): string {
+  if (!cls) return '—';
+  const base = cls.split('_')[0]?.trim().toUpperCase();
+  return base ? base : '—';
+}
+
+export function meters(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return '—';
+  return `${new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 0 }).format(n)} m`;
+}
+
+export function gravity(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return '—';
+  return `${new Intl.NumberFormat(getLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)} g`;
+}
+
+export function kelvin(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return '—';
+  return `${new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 0 }).format(n)} K`;
+}
+
+export function num1(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return '—';
+  return new Intl.NumberFormat(getLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
+}

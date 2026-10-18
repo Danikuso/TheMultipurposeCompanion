@@ -11,6 +11,7 @@ tmc-model = { path = "../tmc-model" }
 tmc-journal = { path = "../tmc-journal" }
 tmc-store = { path = "../tmc-store" }
 tmc-core = { path = "../tmc-core" }
+tmc-net = { path = "../tmc-net" }
 tmc-modules = { path = "../tmc-modules" }
 tmc-i18n = { path = "../tmc-i18n" }
 tmc-server = { path = "../tmc-server", features = ["embed-ui"] }
@@ -29,5 +30,6 @@ uuid.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+tokio = { workspace = true, features = ["test-util"] }
 tower = { workspace = true, features = ["util"] }
 axum.workspace = true
