@@ -298,15 +298,15 @@ mod tests {
         let expected = live.unredeemed();
         assert_eq!(
             live.total(super::super::vouchers::VoucherKind::Bounty),
-            500_000
+            150_000
         );
-        assert_eq!(expected.len(), 3);
+        assert_eq!(expected.len(), 2);
         let result = rebuild_task("TESTER".into())(&store).unwrap();
         assert_eq!(result["cmdr"], "TESTER");
         let rebuilt: VoucherLedger = serde_json::from_value(result["ledger"].clone()).unwrap();
         assert_eq!(rebuilt.unredeemed(), expected);
         assert_eq!(result["cut_pos"]["file"], "combat.log");
-        assert_eq!(result["cut_pos"]["line"], 14);
+        assert_eq!(result["cut_pos"]["line"], 24);
         let other = rebuild_task("OTHER".into())(&store).unwrap();
         let empty: VoucherLedger = serde_json::from_value(other["ledger"].clone()).unwrap();
         assert!(empty.unredeemed().is_empty());

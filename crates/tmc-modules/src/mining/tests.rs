@@ -148,19 +148,24 @@ fn mining_session_fixture_matches_refined_and_tph() {
     for l in FIXTURE.lines() {
         h.line(l);
     }
-    // El fixture (13:00-13:06) no incluye refinados: sesión vacía, 0 t/h a los 6 min.
-    assert_eq!(h.val("mining.session")["refined"], json!({}));
-    assert_eq!(h.val("mining.session")["tons_per_hour"], json!(0.0));
-    assert_eq!(h.val("mining.session")["asteroids_prospected"], json!(2));
-    // 3 refinados a las 14:00:00 (la sesión empezó a las 13:00:00): 3 t/h.
-    // 13:00:00 es t(3600).
-    for i in 0..3 {
-        h.journal(7200 + i, "MiningRefined", REFINED);
-    }
     let s = h.val("mining.session");
-    assert_eq!(s["refined"], json!({"platinum": 3}));
+    // 4 platino + 2 painita + 1 bauxita refinados.
+    assert_eq!(
+        s["refined"],
+        json!({"platinum": 4, "painite": 2, "bauxite": 1})
+    );
+    assert_eq!(s["asteroids_prospected"], json!(10));
+    assert_eq!(
+        s["limpets_launched"],
+        json!({"Prospector": 1, "Collection": 1})
+    );
+    assert_eq!(s["limpets_left"], json!(2));
+    // Sesión desde LoadGame (13:00:00) hasta el último evento (13:12:00): 720 s = 0,2 h.
     let tph = s["tons_per_hour"].as_f64().unwrap();
-    assert!((tph - 3.0 / (3602.0 / 3600.0)).abs() < 1e-9, "{tph}");
+    assert!((tph - 7.0 / 0.2).abs() < 1e-9, "{tph}");
+    // Solo la bauxita tiene precio (MarketSell 450): 450 cr en 0,2 h = 2250 cr/h.
+    assert_eq!(s["est_credits"], json!(450));
+    assert_eq!(s["credits_per_hour"], json!(2250));
 }
 
 #[test]
@@ -174,11 +179,17 @@ fn prospector_topic_shows_composition_and_verdict() {
     assert_eq!(p["current"]["materials"][0]["key"], json!("bauxite"));
     assert_eq!(p["current"]["motherlode"], json!("Monazite"));
     assert_eq!(p["current"]["verdict"]["kind"], json!("worth"));
-    assert_eq!(p["history"].as_array().unwrap().len(), 2);
-    // El primer asteroide tiene platino de interés sin precio: una consulta.
-    let reqs = h.sell_requests();
-    assert_eq!(reqs.len(), 1);
-    assert_eq!(reqs[0].key, "sell:2:platinum:s");
+    // 10 asteroides prospectados; el historial conserva los 8 últimos.
+    assert_eq!(p["history"].as_array().unwrap().len(), 8);
+    // Una consulta por materia que estuvo en la carga (la bauxita, hasta venderla a las
+    // 13:10:30) o que interesa del asteroide; nave mediana (python).
+    let mut keys: Vec<_> = h.sell_requests().iter().map(|r| r.key.clone()).collect();
+    keys.sort();
+    keys.dedup();
+    assert_eq!(
+        keys,
+        vec!["sell:2:bauxite:m", "sell:2:painite:m", "sell:2:platinum:m"]
+    );
 }
 
 #[test]

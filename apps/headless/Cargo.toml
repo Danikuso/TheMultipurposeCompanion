@@ -12,6 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 tmc-app = { path = "../../crates/tmc-app" }
+tmc-net = { path = "../../crates/tmc-net" }
 tmc-model = { path = "../../crates/tmc-model" }
 tmc-journal = { path = "../../crates/tmc-journal" }
 tmc-store = { path = "../../crates/tmc-store" }

@@ -247,7 +247,7 @@ mod tests {
     }
 
     #[test]
-    fn ax_session_fixture_gives_presence_kills_and_bonds() {
+    fn ax_fixture_kills_bonds_and_presence() {
         let fixture = include_str!("../../../../tests/fixtures/journal/ax_session.log");
         let mut ax = AxTracker::default();
         let mut presence_seen = false;
@@ -262,7 +262,11 @@ mod tests {
         assert!(presence_seen);
         assert!(!ax.presence);
         assert_eq!(ax.kills_by_type.get("scout"), Some(&1));
-        assert_eq!(ax.bonds, 6_000_000);
+        assert_eq!(ax.kills_by_type.get("cyclops"), Some(&1));
+        assert_eq!(ax.kills_by_type.get(UNKNOWN_TYPE), Some(&1));
+        assert_eq!(ax.kills_by_type.values().sum::<u32>(), 3);
+        // 6 M + (8 M + 2 M, misma baja a 2 s) + 6 M sin objetivo.
+        assert_eq!(ax.bonds, 22_000_000);
     }
 
     #[test]
