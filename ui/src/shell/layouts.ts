@@ -38,7 +38,10 @@ export function contextPanel(
 const isActive = (r?: string) => r === 'active' || r === 'urgent';
 const rel = (mods: { id: string; relevance: string }[], id: string) =>
   mods.find((m) => m.id === id)?.relevance?.toLowerCase();
-const axVisible = () => topic<{ active?: boolean } | null>('combat.ax')?.active === true;
+const axVisible = () => {
+  const ax = topic<{ active?: boolean; presence?: boolean } | null>('combat.ax');
+  return ax?.active === true || ax?.presence === true;
+};
 const czVisible = () => (topic<unknown>('combat.conflict_zone') ?? null) !== null;
 
 /** Disposición elegida por relevancia: manual > combate > minería > exploración > null. */
@@ -51,6 +54,11 @@ export function autoLayout(
   if (rel(mods, 'mining') === 'active') return 'mining';
   if (isActive(rel(mods, 'exploration')) || isActive(rel(mods, 'exobiology'))) return 'exploration';
   return null;
+}
+
+/** Fija la elección manual solo hasta que el resultado automático cambie de valor. */
+export function nextPin(prevAuto: string | null, newAuto: string | null, pin: string | null): string | null {
+  return prevAuto === newAuto ? pin : null;
 }
 
 export const layouts: LayoutDef[] = [{
