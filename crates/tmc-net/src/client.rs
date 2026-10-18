@@ -145,6 +145,10 @@ impl NetClient {
             }
             // Capa 3 desactivada en F1 (a la espera del permiso de Canonn).
             NetQuery::BodyBio { .. } => (NetSource::Canonn, NetOutcome::Disabled),
+            // Provisional hasta la Task 7 (cliente de Ardent).
+            NetQuery::CommodityImportsNearby { .. } | NetQuery::NearestService { .. } => {
+                (NetSource::Ardent, NetOutcome::Disabled)
+            }
         }
     }
 

@@ -21,6 +21,51 @@ pub enum NetQuery {
         body_name: String,
         profile: BodyProfile,
     },
+    /// Estaciones cercanas que importan una materia (Ardent). El filtro de
+    /// plataforma se aplica en local sobre el resultado.
+    CommodityImportsNearby {
+        system_address: u64,
+        commodity: String,
+        max_distance_ly: u32,
+        min_pad: PadSize,
+    },
+    /// Estación más cercana con un servicio (Ardent; filtra en servidor).
+    NearestService {
+        system_address: u64,
+        service: NearbyService,
+        min_pad: PadSize,
+    },
+}
+
+/// Tamaño de plataforma de aterrizaje.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum PadSize {
+    Small,
+    Medium,
+    Large,
+}
+
+impl PadSize {
+    /// Convierte el `maxLandingPadSize` de Ardent (1=S, 2=M, 3=L).
+    pub fn from_ardent(n: u8) -> Option<Self> {
+        match n {
+            1 => Some(Self::Small),
+            2 => Some(Self::Medium),
+            3 => Some(Self::Large),
+            _ => None,
+        }
+    }
+
+    /// `true` si una plataforma máxima `self` admite una nave de tamaño `ship`.
+    pub fn fits(self, ship: PadSize) -> bool {
+        self >= ship
+    }
+}
+
+/// Servicio buscable por cercanía (ampliable).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum NearbyService {
+    InterstellarFactors,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -69,6 +114,7 @@ pub enum NetSource {
     Spansh,
     Edsm,
     Canonn,
+    Ardent,
     Cache,
 }
 
@@ -89,6 +135,8 @@ pub enum NetOutcome {
     Route(PlannedRoute),
     Autocomplete(Vec<SystemSuggestion>),
     BodyBio(RemoteBodyBio),
+    Markets(Vec<RemoteMarket>),
+    Stations(Vec<RemoteStation>),
     NoData,
     Disabled,
     Failed(NetFailure),
@@ -173,6 +221,31 @@ pub struct RemoteSpeciesHint {
     pub weight: f64,
 }
 
+/// Mercado remoto que compra una materia (`sell_price` = lo que paga al jugador).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RemoteMarket {
+    pub station_name: String,
+    pub system_name: String,
+    pub market_id: Option<u64>,
+    pub distance_ly: f64,
+    pub distance_to_arrival_ls: Option<f64>,
+    pub sell_price: u64,
+    pub demand: Option<u64>,
+    pub max_pad: Option<PadSize>,
+    pub station_type: Option<String>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RemoteStation {
+    pub station_name: String,
+    pub system_name: String,
+    pub distance_ly: f64,
+    pub distance_to_arrival_ls: Option<f64>,
+    pub max_pad: Option<PadSize>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -232,6 +305,65 @@ mod tests {
             assert_eq!(back, x);
         }
         assert_eq!(response(NetOutcome::NoData).id, 3);
+    }
+
+    #[test]
+    fn commodity_imports_query_roundtrips_json() {
+        let q = NetQuery::CommodityImportsNearby {
+            system_address: 10477373803,
+            commodity: "platinum".into(),
+            max_distance_ly: 100,
+            min_pad: PadSize::Large,
+        };
+        let back: NetQuery = serde_json::from_str(&serde_json::to_string(&q).unwrap()).unwrap();
+        assert_eq!(back, q);
+        let n = NetQuery::NearestService {
+            system_address: 1,
+            service: NearbyService::InterstellarFactors,
+            min_pad: PadSize::Medium,
+        };
+        let back: NetQuery = serde_json::from_str(&serde_json::to_string(&n).unwrap()).unwrap();
+        assert_eq!(back, n);
+    }
+
+    #[test]
+    fn markets_outcome_roundtrips_with_ardent_source() {
+        let mut r = response(NetOutcome::Markets(vec![RemoteMarket {
+            station_name: "Jameson Memorial".into(),
+            system_name: "Shinrarta Dezhra".into(),
+            market_id: Some(128666762),
+            distance_ly: 12.0,
+            distance_to_arrival_ls: Some(450.5),
+            sell_price: 220000,
+            demand: Some(300),
+            max_pad: Some(PadSize::Medium),
+            station_type: None,
+            updated_at: Some("2026-10-17T12:00:00Z".parse().unwrap()),
+        }]));
+        r.source = NetSource::Ardent;
+        let back: NetResponse = serde_json::from_str(&serde_json::to_string(&r).unwrap()).unwrap();
+        assert_eq!(back, r);
+        assert_eq!(back.source, NetSource::Ardent);
+        let st = response(NetOutcome::Stations(vec![RemoteStation {
+            station_name: "X".into(),
+            system_name: "Y".into(),
+            distance_ly: 3.0,
+            distance_to_arrival_ls: None,
+            max_pad: Some(PadSize::Small),
+            updated_at: None,
+        }]));
+        let back: NetResponse = serde_json::from_str(&serde_json::to_string(&st).unwrap()).unwrap();
+        assert_eq!(back, st);
+    }
+
+    #[test]
+    fn pad_size_fits() {
+        assert!(PadSize::Large.fits(PadSize::Medium));
+        assert!(!PadSize::Medium.fits(PadSize::Large));
+        assert!(PadSize::Small.fits(PadSize::Small));
+        assert_eq!(PadSize::from_ardent(3), Some(PadSize::Large));
+        assert_eq!(PadSize::from_ardent(1), Some(PadSize::Small));
+        assert_eq!(PadSize::from_ardent(9), None);
     }
 
     #[test]

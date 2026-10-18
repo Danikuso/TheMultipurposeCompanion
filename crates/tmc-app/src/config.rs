@@ -120,6 +120,8 @@ impl Config {
             auto_copy_next_system: self.auto_copy_next_system,
             map_value_threshold: self.map_value_threshold,
             default_neutron_efficiency: self.default_neutron_efficiency,
+            // Ajustes de minería: aún sin persistir en config (valores por defecto).
+            ..ModuleSettings::default()
         }
     }
 
