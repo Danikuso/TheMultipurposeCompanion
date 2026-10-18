@@ -397,7 +397,7 @@ pub struct Loadout {
 pub struct Cargo {
     pub vessel: Option<String>,
     pub count: Option<u32>,
-    pub inventory: Vec<CargoItem>,
+    pub inventory: Option<Vec<CargoItem>>,
 }
 
 /// Entrada del inventario del evento `Cargo` (distinta de `companion::CargoItem`).
@@ -1892,19 +1892,19 @@ mod tests {
             panic!("Cargo")
         };
         assert_eq!(c.count, Some(60));
-        assert_eq!(c.inventory.len(), 2);
-        assert_eq!(c.inventory[0].name, "drones");
-        assert_eq!(c.inventory[0].count, 18);
-        assert_eq!(c.inventory[0].stolen, None);
-        assert_eq!(c.inventory[1].name, "platinum");
-        assert_eq!(c.inventory[1].count, 42);
-        assert_eq!(c.inventory[1].stolen, Some(0));
+        assert_eq!(c.inventory.as_ref().unwrap().len(), 2);
+        assert_eq!(c.inventory.as_ref().unwrap()[0].name, "drones");
+        assert_eq!(c.inventory.as_ref().unwrap()[0].count, 18);
+        assert_eq!(c.inventory.as_ref().unwrap()[0].stolen, None);
+        assert_eq!(c.inventory.as_ref().unwrap()[1].name, "platinum");
+        assert_eq!(c.inventory.as_ref().unwrap()[1].count, 42);
+        assert_eq!(c.inventory.as_ref().unwrap()[1].stolen, Some(0));
         let EventKind::Cargo(n) =
             ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Cargo","Vessel":"Ship","Count":7}"#)
         else {
             panic!("Cargo no inventory")
         };
-        assert!(n.inventory.is_empty());
+        assert!(n.inventory.is_none());
     }
 
     #[test]

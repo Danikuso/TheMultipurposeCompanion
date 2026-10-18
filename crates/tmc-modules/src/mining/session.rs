@@ -38,6 +38,9 @@ impl MiningSession {
     }
 
     /// Aplica un evento; devuelve `true` si cambió la sesión.
+    ///
+    /// `LaunchDrone` no reduce la carga estimada (los limpets sí ocupan bodega,
+    /// pero la estimación se corrige con el siguiente `Cargo`).
     pub fn apply_event(&mut self, ev: &EventKind, now: DateTime<Utc>) -> bool {
         match ev {
             EventKind::LoadGame(_) => {
@@ -74,18 +77,24 @@ impl MiningSession {
                 if c.vessel.as_deref().is_some_and(|v| v != "Ship") {
                     return false;
                 }
-                let drones = c
-                    .inventory
-                    .iter()
-                    .filter(|i| commodity_key(&i.name) == "drones")
-                    .map(|i| i.count)
-                    .sum();
-                let count = c
-                    .count
-                    .unwrap_or_else(|| c.inventory.iter().map(|i| i.count).sum());
-                let changed = self.cargo != Some(count) || self.limpets_left != Some(drones);
-                self.cargo = Some(count);
-                self.limpets_left = Some(drones);
+                let mut changed = false;
+                let count = c.count.or_else(|| {
+                    c.inventory
+                        .as_ref()
+                        .map(|inv| inv.iter().map(|i| i.count).sum())
+                });
+                if let Some(count) = count {
+                    changed |= self.cargo.replace(count) != Some(count);
+                }
+                // Sin `Inventory` (vive en Cargo.json) se conservan los limpets.
+                if let Some(inv) = &c.inventory {
+                    let drones = inv
+                        .iter()
+                        .filter(|i| commodity_key(&i.name) == "drones")
+                        .map(|i| i.count)
+                        .sum();
+                    changed |= self.limpets_left.replace(drones) != Some(drones);
+                }
                 changed
             }
             EventKind::Loadout(l) => match l.cargo_capacity {
@@ -181,11 +190,11 @@ mod tests {
         EventKind::Cargo(Cargo {
             vessel: Some("Ship".into()),
             count: Some(count),
-            inventory: vec![CargoItem {
+            inventory: Some(vec![CargoItem {
                 name: "drones".into(),
                 count: drones,
                 ..Default::default()
-            }],
+            }]),
         })
     }
     fn prices(key: &str) -> Option<PriceInfo> {
@@ -302,5 +311,63 @@ mod tests {
         assert!(s.apply_event(&l, t0()));
         assert!(!s.apply_event(&l, t0()));
         assert_eq!(s.capacity, Some(256));
+    }
+
+    #[test]
+    fn cargo_without_inventory_keeps_limpets_and_srv_is_ignored() {
+        let mut s = started();
+        s.apply_event(&cargo_ev(40, 12), t0());
+        let no_inv = EventKind::Cargo(Cargo {
+            vessel: Some("Ship".into()),
+            count: Some(50),
+            inventory: None,
+        });
+        assert!(s.apply_event(&no_inv, t0()));
+        assert_eq!((s.cargo, s.limpets_left), (Some(50), Some(12)));
+        let srv = EventKind::Cargo(Cargo {
+            vessel: Some("SRV".into()),
+            count: Some(1),
+            inventory: Some(vec![]),
+        });
+        assert!(!s.apply_event(&srv, t0()));
+        assert_eq!((s.cargo, s.limpets_left), (Some(50), Some(12)));
+    }
+
+    #[test]
+    fn limpets_saturate_and_sell_decrements_and_reset_keeps_state() {
+        let mut s = started();
+        s.apply_event(&cargo_ev(40, 1), t0());
+        s.apply_event(
+            &EventKind::Loadout(Loadout {
+                cargo_capacity: Some(256),
+                ..Default::default()
+            }),
+            t0(),
+        );
+        launch(&mut s, "Prospector", 3);
+        assert_eq!(s.limpets_left, Some(0));
+        s.apply_event(
+            &EventKind::MarketSell(tmc_model::events::MarketSell {
+                count: 10,
+                ..Default::default()
+            }),
+            t0(),
+        );
+        assert_eq!(s.cargo, Some(30));
+        s.reset(t0() + Duration::hours(1));
+        assert_eq!(
+            (s.cargo, s.capacity, s.limpets_left),
+            (Some(30), Some(256), Some(0))
+        );
+    }
+
+    #[test]
+    fn credits_per_hour_none_under_60s() {
+        let mut s = started();
+        refine(&mut s, "platinum", 1);
+        assert_eq!(
+            s.credits_per_hour(t0() + Duration::seconds(59), &prices),
+            None
+        );
     }
 }
