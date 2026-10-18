@@ -11,7 +11,10 @@ pub use clipboard::{AppActions, Clipboard};
 pub use config::{Config, ServerSection, config_path, data_dir};
 pub use logging::init_logging;
 pub use net_service::{NetServiceHandle, spawn_net_service};
-pub use wiring::{Running, start};
+pub use wiring::{Running, start, start_custom, start_with_transport};
+
+#[cfg(test)]
+mod e2e_tests;
 
 #[cfg(test)]
 mod tests {
