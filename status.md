@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 20), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
+- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 21), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
 
 ## Fases
 
@@ -55,8 +55,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 17 | UI — paneles «Objetivo» y «Mi nave» | ✅ hecha | f8e0a72, 1171e5d | Paneles Objetivo (insignia BUSCADO/LIMPIO, subsistema destacado) y Mi nave (casco por escalones, calor de 3 estados con cronómetro, pips 3×4), accesibles; 103 tests UI. Revisión aprobada tras 1 ronda. |
 | 18 | UI — «Sesión de caza», «Zona de conflicto» y «AX» | ✅ hecha | d42a6d9, 8a4567d | Paneles Sesión de caza, Zona de conflicto y AX (visibles solo cuando aplican), tipos AX localizados. Revisión aprobada tras 1 ronda. Nombres de rangos en es/de/pt por confirmar con el juego. |
 | 19 | `mining` — prospector | ✅ hecha | 2274422, cb9cfeb | Prospector; fix precios parciales y sin dedup; 364 tests tmc-modules |
-| 20 | `mining` — sesión de minería | 🔄 en curso | — |  |
-| 21 | `mining` — `PriceBook` y «Dónde vender» | ⬜ | — | |
+| 20 | `mining` — sesión de minería | ✅ hecha | 73915e4, df3e786 | Sesión de minería; Cargo sin inventario conserva limpets |
+| 21 | `mining` — `PriceBook` y «Dónde vender» | 🔄 en curso | — |  |
 | 22 | `mining` — módulo, topics, relevancia, red y registro | ⬜ | — | |
 | 23 | UI — panel «Prospector» | ⬜ | — | |
 | 24 | UI — «Sesión de minería» y «Dónde vender» | ⬜ | — | |
