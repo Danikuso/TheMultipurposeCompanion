@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
-import { contextPanel, layouts } from '../src/shell/layouts';
+import { autoLayout, contextPanel, layouts } from '../src/shell/layouts';
 import { ageShort, starClassLabel } from '../src/lib/format';
 import { setLocale } from '../src/lib/i18n';
 import Panel from '../src/shell/Panel.svelte';
@@ -175,5 +175,31 @@ describe('Panel span and size', () => {
     const el = target.querySelector('section') as HTMLElement;
     expect(el.style.gridColumn).toBe('span 2');
     expect(el.classList.contains('large')).toBe(false);
+  });
+});
+
+describe('combat and mining layouts', () => {
+  beforeEach(() => { disconnect(); });
+  afterEach(() => { disconnect(); });
+  const visible = (id: string) => layouts.find((l) => l.id === id)!.slots
+    .filter((slot) => !slot.when || slot.when({ modules: [], manual: null }));
+
+  test('combat active switches to combat layout', () => {
+    expect(autoLayout([{ id: 'combat', relevance: 'active' }], null)).toBe('combat');
+    expect(autoLayout([{ id: 'combat', relevance: 'urgent' }, { id: 'mining', relevance: 'active' }], null)).toBe('combat');
+    expect(autoLayout([{ id: 'mining', relevance: 'active' }], null)).toBe('mining');
+    expect(autoLayout([{ id: 'combat', relevance: 'normal' }], null)).toBeNull();
+  });
+  test('manual choice wins', () => {
+    expect(autoLayout([{ id: 'combat', relevance: 'active' }], 'mining')).toBe('mining');
+  });
+  test('ax and cz slots hidden when not applicable', () => {
+    live.topics['combat.ax'] = { active: false };
+    live.topics['combat.conflict_zone'] = null;
+    expect(visible('combat')).toHaveLength(3);
+    live.topics['combat.ax'] = { active: true };
+    live.topics['combat.conflict_zone'] = { system: 'X', side: null, kills: 0, bonds_by_faction: {} };
+    expect(visible('combat')).toHaveLength(5);
+    expect(visible('mining')).toHaveLength(3);
   });
 });
