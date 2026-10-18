@@ -85,3 +85,4 @@ nav-plan-efficiency-default = Por defecto: { $value }
 nav-plan-efficiency-hint = Según tus ajustes
 nav-plan-efficiency-invalid = La eficiencia debe ser un entero entre 1 y 100.
 nav-plan-pick-destination = En modo Galaxia elige el origen y el destino de la lista de sugerencias.
+strip-next-jump = Siguiente salto
