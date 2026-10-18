@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 20 (`exploration` — valor de cuerpos y sondas) 🔄 en curso (Bloque 3).
-- **Siguiente acción:** completar la Task 20 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
+- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 21 (`exploration` — cuerpos del sistema, FSS y consejo) 🔄 en curso (Bloque 3).
+- **Siguiente acción:** completar la Task 21 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
 
 ## Fases
 
@@ -55,7 +55,8 @@
 | 18 | UI — disposiciones, ancho completo, tipografía y tira de ruta | ✅ hecha | 468f00b, a3d53ed | `RouteStrip`/`SystemCard`/`JumpPanel` según maqueta aprobada; fuente 17/24 px ≥ 2400 px; números con Intl según idioma; tira adaptable; aviso de peligro no solo por color; 31 tests UI PASS. Revisión aprobada tras 1 ronda. |
 | 18b | Ajuste de la tira (cabecera «Siguiente salto») | ✅ hecha | 9815cce | Verificado en una demo en vivo con datos reales de Spansh. |
 | 19 | UI — panel del planificador | ✅ código hecho | 34d3b9c, a15b5ee | Formulario, autocompletado con id64, eficiencia por defecto de Ajustes, resultado y aceptar/borrar; 46 tests UI PASS. Revisión aprobada tras 1 ronda. Validación visual del propietario: ✅ aprobada (2026-10-18). |
-| 20–32 | Ver plan | ⬜ | — | |
+| 20 | `exploration` — valor de cuerpos y sondas | ✅ hecha | fe26c90, 123b335, 7cfb305 | Fórmulas propias (FSS, mapeo con eficiencia, primeros, Odyssey), gigantes gaseosos mapeables, nombres reales del diario, `probes.json` con `verified:false`; 18 exploration PASS. Revisión aprobada tras 1 ronda. |
+| 21–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
