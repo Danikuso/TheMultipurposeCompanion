@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 19 (UI — panel del planificador) 🔄 en curso (Bloque 2).
-- **Siguiente acción:** completar la Task 19 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
+- **Tarea:** F1 · Bloque 0 (spikes) completado; Bloque 2 completado (Tasks 13–19); pendiente validación visual del planificador por el propietario (Task 19, paso 5). Siguiente: Task 20 (Bloque 3 — exploración).
+- **Siguiente acción:** obtener la validación del planificador y empezar la Task 20 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
 
 ## Fases
 
@@ -53,7 +53,9 @@
 | — | Arreglo CI Linux (`apps/desktop`) | ✅ hecha | f68abb0 | Import solo de Windows bajo `cfg`; el fallo venía de F0 y **sigue en `main`** hasta fusionar F1. |
 | 17 | `tmc-app` — copia automática y manual desde la ruta activa | ✅ hecha | 0b60442, 9d66ac4 | Navigation decide copia y aviso (`nav-auto-copied`) solo en saltos en vivo con el ajuste activo; ajuste en caliente vía Settings; portapapeles compartido con respaldo en memoria; 27 tmc-app PASS. Revisión aprobada tras 1 ronda. |
 | 18 | UI — disposiciones, ancho completo, tipografía y tira de ruta | ✅ hecha | 468f00b, a3d53ed | `RouteStrip`/`SystemCard`/`JumpPanel` según maqueta aprobada; fuente 17/24 px ≥ 2400 px; números con Intl según idioma; tira adaptable; aviso de peligro no solo por color; 31 tests UI PASS. Revisión aprobada tras 1 ronda. |
-| 19–32 | Ver plan | ⬜ | — | |
+| 18b | Ajuste de la tira (cabecera «Siguiente salto») | ✅ hecha | 9815cce | Verificado en una demo en vivo con datos reales de Spansh. |
+| 19 | UI — panel del planificador | ✅ código hecho | 34d3b9c, a15b5ee | Formulario, autocompletado con id64, eficiencia por defecto de Ajustes, resultado y aceptar/borrar; 46 tests UI PASS. Revisión aprobada tras 1 ronda. **Paso 5 pendiente: validación visual del propietario.** |
+| 20–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
