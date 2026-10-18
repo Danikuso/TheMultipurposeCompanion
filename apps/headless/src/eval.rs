@@ -76,12 +76,15 @@ impl Verdict {
 }
 
 fn range_verdict(r: &tmc_modules::eval::RangeReport) -> Verdict {
-    if r.cases < MIN_CASES || r.engineered_cases == 0 || r.guardian_cases == 0 {
+    if r.cases < MIN_CASES {
         Verdict::Insufficient
-    } else if r.within_tolerance == r.cases {
-        Verdict::Pass
-    } else {
+    } else if r.within_tolerance < r.cases {
         Verdict::Fail
+    } else if r.engineered_cases == 0 || r.guardian_cases == 0 {
+        // Todos los casos disponibles coinciden, pero faltan ingeniería/Guardian.
+        Verdict::Insufficient
+    } else {
+        Verdict::Pass
     }
 }
 
@@ -123,6 +126,13 @@ pub fn render(
         "\nCriterio 3, alcance de salto (±{RANGE_TOLERANCE_LY} al): {}",
         range_verdict(r).label(r.cases)
     );
+    if range_verdict(r) == Verdict::Insufficient && r.cases >= MIN_CASES {
+        let _ = writeln!(
+            out,
+            "  motivo: los {} casos disponibles coinciden, pero el historial no incluye ingeniería y Guardian",
+            r.cases
+        );
+    }
     let _ = writeln!(
         out,
         "  casos={} dentro_de_tolerancia={} con_ingenieria={} con_guardian={}",
@@ -154,8 +164,9 @@ pub fn render(
     );
     let _ = writeln!(
         out,
-        "  ventas={} calculado={} cobrado={} error_relativo={:.2} % ventas_sin_cobertura={}",
+        "  ventas_cubiertas={} (en_portaaviones={}) calculado={} cobrado={} error_relativo={:.2} % ventas_sin_cobertura={}",
         v.sales,
+        v.carrier_sales,
         v.computed,
         v.paid,
         v.rel_error * 100.0,

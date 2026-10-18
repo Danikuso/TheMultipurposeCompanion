@@ -287,7 +287,7 @@ fn strip_without_route_shows_current_system_card() {
 fn fuel_after_jump_uses_jump_model_and_hides_when_unknown() {
     let mut h = Harness::new();
     h.with_route();
-    h.loadout(FSD, r#","MaxJumpRange":24.63"#);
+    h.loadout(FSD, r#","MaxJumpRange":26.04"#);
     h.status(16.0, 0.5);
     let lo = tmc_model::events::Loadout {
         unladen_mass: Some(468.0),
@@ -639,7 +639,7 @@ fn jump_topic_recomputes_on_loadout_status_and_cargo() {
     };
     let mut h = Harness::new();
     h.load_game();
-    let out = h.loadout(FSD, r#","MaxJumpRange":24.63"#);
+    let out = h.loadout(FSD, r#","MaxJumpRange":26.04"#);
     assert!(out.dirty.contains(TOPIC_JUMP));
     assert!(h.jump()["range_ly"].is_null());
     assert_eq!(h.jump()["source"], "formula");
@@ -945,7 +945,7 @@ impl Harness {
     /// Sesión en `Sol` con FSD conocida, lista para planificar.
     fn ready_ship(&mut self) {
         self.load_game();
-        self.loadout(FSD, r#","MaxJumpRange":24.63"#);
+        self.loadout(FSD, r#","MaxJumpRange":26.04"#);
         self.location("Sol", 10, 0.0);
     }
 

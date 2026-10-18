@@ -1039,12 +1039,52 @@ Hallazgos (sin datos personales):
 - Criterio 6 (INSUFICIENTE): 0 cuerpos con especie analizada en el historial.
 - Tiempos: visitas 1,3 ms, sin vender 9,9 ms, estadística bio 0,6 ms (todas < 50 ms; sin entrada en «Desviaciones»).
 
+#### Task 29, segunda pasada (tras corregir alcance y tabla FSD, 2026-10-18)
+
+```
+TMC eval: 7 diarios, 3641 eventos, 0 líneas descartadas
+
+Criterio 3, alcance de salto (±0.05 al): INSUFICIENTE (15 casos)
+  motivo: los 15 casos disponibles coinciden, pero el historial no incluye ingeniería y Guardian
+  casos=15 dentro_de_tolerancia=15 con_ingenieria=0 con_guardian=0
+  error_max=0.0023 al error_medio=0.0006 al (fórmula con tope por salto)
+  aciertos_combustible_maximo_por_salto=0 aciertos_deposito_lleno=0
+  aciertos_masa_vacio_mas_combustible_maximo_por_salto=15
+  fsd_fuera_de_tabla=ninguno
+
+Criterio 4, valores de exploración (±5 %): INSUFICIENTE (0 casos)
+  ventas_cubiertas=0 (en_portaaviones=0) calculado=0 cobrado=0 error_relativo=0.00 % ventas_sin_cobertura=4
+  bruto(base+bonus)=0 error_relativo_bruto=0.00 %
+  sondas: casos=0 error_medio=0.00
+
+Criterio 6, predicción de especies (≥ 70 %): INSUFICIENTE (0 casos)
+  cuerpos=0 alta_o_media=0 ratio=0.0 %
+  alta=0 media=0 baja=0 no_candidata=0
+  bonus_x5_primer_registro: casos=0 acierto=0.0 %
+
+Calidad de datos de especies (valor de venta frente a species.json)
+  entradas=0 coinciden=0 difieren=0 sin_tabla=0
+  especies_que_difieren=ninguno
+  especies_sin_tabla=ninguno
+
+Tiempos de consultas de historial (3630 eventos importados, SQLite en memoria)
+  visitas=2.3 ms
+  sin_vender=10.4 ms
+  estadistica_bio=0.6 ms
+```
+
+- Criterio 3: 15 de 15 loadouts dentro de +/-0,05 al (error máx. 0,0023 al); sigue INSUFICIENTE porque el historial no tiene FSD de ingeniería ni booster Guardian.
+- Criterio 4: 0 ventas totalmente escaneadas dentro de los diarios disponibles (4 sin cobertura): INSUFICIENTE.
+- Criterio 6: 0 cuerpos con especie analizada: INSUFICIENTE.
+- Tiempos < 50 ms.
 
 ## Desviaciones
 
 - 2026-10-18 · Task 22: conciliación interna por comandante/generación y archivo/línea; checkpoints a 256 eventos/60 s y retry a 60 s para tareas SQLite sin respuesta. El libro JSON interno representa claves tupla como filas. Si SQLite falla persistentemente se conserva la cola para evitar perder saldo; la poda de eventos confirmados se verifica con DB operativa. API pública y topic de tres campos intactos; sin dependencias nuevas.
 
 - 2026-10-18 · Task 22: el plan asumía que id de SQLite representaba cronología; watcher e importación pueden insertar fuera de orden. Para cumplir spec §5.2 se usa (ts, nombre de diario, línea, id) con paginación de 256 y corte estable id <= cut. 	s ya se guarda normalizado a UTC con nanosegundos por writer/import. Regresión observada RED (5 PASS/2 FAIL) → GREEN 7/7 history: muerte antigua insertada después del Scan y empates de segundo insertados en orden inverso. Sin cambio de API pública ni alcance.
+
+- 2026-10-18 · Task 29 (corrige spec §5.1): `build_jump_model` valida `MaxJumpRange` con masa de referencia = masa en vacío + min(depósito principal, `max_fuel_per_jump`), no con el depósito lleno. Evidencia agregada (15 loadouts del historial del propietario, 4 FSD distintos): `MaxJumpRange x (masa_vacío + min(depósito, máx. por salto))` es constante por FSD (5A SCO: 13551 +/- 0,3 en 9 loadouts; 1A SCO: 8206 +/- 1 en 6), mientras que con el depósito lleno varía hasta un 3 %. `optimal_mass` ajustado y marcado `verified` en `fsd.json` para 5A SCO (1193,6), 3A SCO (1050) y 1A SCO (592,89); 5E estándar (473,92) ajustado con un solo loadout y valor dudoso: queda `verified: false`. Afecta a Tasks 13-14 (alcance/combustible de la tira) y 16-17 (planificador) solo a través del modelo; sin cambio de API.
 
 (Anotar aquí cualquier cambio respecto a este plan o a la spec, con fecha, motivo y tareas afectadas.)
 

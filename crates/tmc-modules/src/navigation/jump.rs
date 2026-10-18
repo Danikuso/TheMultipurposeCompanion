@@ -150,15 +150,19 @@ fn warn_once(ship_id: Option<u64>, msg: &str) {
 }
 
 /// Construye el modelo de alcance validando la fórmula contra `MaxJumpRange`
-/// (nave sin carga y con el depósito principal lleno).
+/// (nave sin carga y con el combustible máximo por salto a bordo).
 pub fn build_jump_model(lo: &Loadout, table: &FsdTable) -> JumpModel {
     let fsd = fsd_from_loadout(lo, table);
     let game_max_range = lo.max_jump_range.filter(|r| *r > 0.0);
-    let fuel_main = lo
+    let tank = lo
         .fuel_capacity
         .as_ref()
         .and_then(|f| f.main)
         .unwrap_or(0.0);
+    // El juego calcula `MaxJumpRange` con solo el combustible máximo por salto
+    // a bordo (observado: `MaxJumpRange * (masa_vacío + min(depósito, máx.
+    // por salto))` es constante por FSD en el historial real; spec §5.1 corregida).
+    let fuel_main = fsd.as_ref().map_or(tank, |f| tank.min(f.max_fuel_per_jump));
     let ref_mass = lo.unladen_mass.map(|u| ShipMass {
         unladen: u,
         fuel_main,

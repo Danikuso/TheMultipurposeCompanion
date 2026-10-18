@@ -195,12 +195,12 @@
   },
   {
    "item_prefix": "int_hyperdrive_size5_class1",
-   "optimal_mass": 1050.0,
+   "optimal_mass": 473.92,
    "max_fuel_per_jump": 5.0,
    "fuel_mul": 0.011,
    "fuel_power": 2.45,
    "kind": "standard",
-   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
+   "provenance": "ajustado con un solo Loadout.MaxJumpRange del historial del propietario, 2026-10-18; valor dudoso, sin verificar",
    "verified": false
   },
   {
@@ -505,13 +505,13 @@
   },
   {
    "item_prefix": "int_hyperdrive_overcharge_size5_class5",
-   "optimal_mass": 1050.0,
+   "optimal_mass": 1193.6,
    "max_fuel_per_jump": 5.0,
    "fuel_mul": 0.013,
    "fuel_power": 2.45,
    "kind": "sco",
-   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
-   "verified": false
+   "provenance": "ajustado con Loadout.MaxJumpRange del historial del propietario, 2026-10-18",
+   "verified": true
   },
   {
    "item_prefix": "int_hyperdrive_overcharge_size5_class4",
@@ -525,13 +525,13 @@
   },
   {
    "item_prefix": "int_hyperdrive_overcharge_size5_class3",
-   "optimal_mass": 1312.5,
+   "optimal_mass": 1050.0,
    "max_fuel_per_jump": 5.0,
    "fuel_mul": 0.012,
    "fuel_power": 2.45,
    "kind": "sco",
-   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
-   "verified": false
+   "provenance": "ajustado con Loadout.MaxJumpRange del historial del propietario, 2026-10-18",
+   "verified": true
   },
   {
    "item_prefix": "int_hyperdrive_overcharge_size5_class2",
@@ -545,13 +545,13 @@
   },
   {
    "item_prefix": "int_hyperdrive_overcharge_size5_class1",
-   "optimal_mass": 1050.0,
+   "optimal_mass": 592.89,
    "max_fuel_per_jump": 5.0,
    "fuel_mul": 0.008,
    "fuel_power": 2.45,
    "kind": "sco",
-   "provenance": "valor del juego (pantalla de equipamiento), transcrito por TMC 2026-10-18",
-   "verified": false
+   "provenance": "ajustado con Loadout.MaxJumpRange del historial del propietario, 2026-10-18",
+   "verified": true
   },
   {
    "item_prefix": "int_hyperdrive_overcharge_size6_class5",

@@ -9,7 +9,7 @@ use crate::exobiology::predict::{
 };
 use crate::exobiology::species::SpeciesTable;
 use crate::exploration::unsold::UnsoldLedger;
-use crate::exploration::value::estimate_probes;
+use crate::exploration::value::{body_kind, estimate_probes};
 use crate::navigation::jump::{ShipMass, fsd_from_loadout, jump_range_with};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use tmc_model::events::{
@@ -40,6 +40,10 @@ pub struct ValueReport {
     pub uncovered_sales: u32,
     /// Suma de `BaseValue + Bonus` de las mismas ventas (bruto antes de descuentos).
     pub gross: u64,
+    /// Suma del valor bruto del libro (sin factor de portaaviones) de las ventas cubiertas.
+    pub computed_raw: u64,
+    /// Ventas en portaaviones a las que se aplicó el factor observado.
+    pub carrier_sales: u32,
     pub gross_rel_error: f64,
 }
 
@@ -85,6 +89,9 @@ pub fn eval_events(events: impl Iterator<Item = JournalEvent>) -> EvalReport {
 
 /// Tolerancia (al) de la spec §10.3.
 const RANGE_TOLERANCE_LY: f64 = 0.05;
+/// Factor observado (no documentado por Frontier) en `TotalEarnings` /
+/// (`BaseValue` + `Bonus`) de las ventas de cartografía en portaaviones.
+const CARRIER_PAYOUT_FACTOR: f64 = 0.88;
 
 pub(crate) fn eval_with(
     events: impl Iterator<Item = JournalEvent>,
@@ -127,6 +134,9 @@ struct Run<'a> {
     probes: ProbeReport,
     species_values: SpeciesValueReport,
     missing_fsd: BTreeSet<String>,
+    /// Cuerpos escaneados (estrellas/planetas) y `BodyCount` del FSS por sistema.
+    coverage: HashMap<String, (Option<u32>, HashSet<u32>)>,
+    at_carrier: bool,
 }
 
 fn same(a: &str, b: &str) -> bool {
@@ -172,6 +182,8 @@ impl<'a> Run<'a> {
             probes: ProbeReport::default(),
             species_values: SpeciesValueReport::default(),
             missing_fsd: BTreeSet::new(),
+            coverage: HashMap::new(),
+            at_carrier: false,
         }
     }
 
@@ -180,6 +192,15 @@ impl<'a> Run<'a> {
             EventKind::LoadGame(load) => self.odyssey = load.odyssey.unwrap_or(self.odyssey),
             EventKind::FsdJump(l) | EventKind::CarrierJump(l) | EventKind::Location(l) => {
                 self.system = l.star_system.clone();
+            }
+            EventKind::Docked(docked) => {
+                self.at_carrier = docked.station_type.as_deref() == Some("FleetCarrier");
+            }
+            EventKind::Undocked(_) => self.at_carrier = false,
+            EventKind::FssDiscoveryScan(fss) => {
+                if let (Some(name), Some(count)) = (fss.system_name.as_ref(), fss.body_count) {
+                    self.coverage.entry(name.clone()).or_default().0 = Some(count);
+                }
             }
             EventKind::Loadout(lo) => self.loadout(lo),
             EventKind::Scan(scan) => self.scan(scan),
@@ -269,20 +290,21 @@ impl<'a> Run<'a> {
         };
         let capped = jump_range_with(&spec, &mass, true);
         let full = jump_range_with(&spec, &mass, false);
-        let error = (capped - game).abs();
-        if error <= RANGE_TOLERANCE_LY {
-            self.range.within_tolerance += 1;
-            self.range.max_fuel_hits += 1;
-        }
-        if (full - game).abs() <= RANGE_TOLERANCE_LY {
-            self.range.full_tank_hits += 1;
-        }
+        // Referencia del juego: solo el combustible máximo por salto a bordo.
         let light = ShipMass {
             fuel_main: mass.fuel_main.min(spec.max_fuel_per_jump),
             ..mass
         };
-        if (jump_range_with(&spec, &light, true) - game).abs() <= RANGE_TOLERANCE_LY {
+        let error = (jump_range_with(&spec, &light, true) - game).abs();
+        if error <= RANGE_TOLERANCE_LY {
+            self.range.within_tolerance += 1;
             self.range.max_fuel_mass_hits += 1;
+        }
+        if (capped - game).abs() <= RANGE_TOLERANCE_LY {
+            self.range.max_fuel_hits += 1;
+        }
+        if (full - game).abs() <= RANGE_TOLERANCE_LY {
+            self.range.full_tank_hits += 1;
         }
         self.range_measured += 1;
         self.range_error_sum += error;
@@ -290,6 +312,15 @@ impl<'a> Run<'a> {
     }
 
     fn scan(&mut self, scan: &Scan) {
+        if let (Some(system), Some(id)) = (scan.star_system.as_ref(), scan.body_id)
+            && body_kind(scan).is_some()
+        {
+            self.coverage
+                .entry(system.clone())
+                .or_default()
+                .1
+                .insert(id);
+        }
         let Some(address) = scan.system_address else {
             return;
         };
@@ -324,17 +355,30 @@ impl<'a> Run<'a> {
         if paid == 0 {
             return;
         }
-        let computed = if systems.is_empty() {
+        let covered = !systems.is_empty()
+            && systems.iter().all(|name| {
+                self.coverage.get(name).is_some_and(|(count, ids)| {
+                    count.is_some_and(|c| c > 0 && ids.len() as u32 >= c)
+                })
+            });
+        let raw = if systems.is_empty() {
             self.ledger.total()
         } else {
             self.ledger.total_for(systems)
         };
-        if computed == 0 {
+        if !covered || raw == 0 {
             self.value.uncovered_sales += 1;
             return;
         }
+        let computed = if self.at_carrier {
+            self.value.carrier_sales += 1;
+            (raw as f64 * CARRIER_PAYOUT_FACTOR).round() as u64
+        } else {
+            raw
+        };
         self.value.sales += 1;
         self.value.computed += computed;
+        self.value.computed_raw += raw;
         self.value.paid += paid;
         self.value.gross += gross;
     }
@@ -450,7 +494,7 @@ impl<'a> Run<'a> {
         self.prediction.first_logged_accuracy =
             ratio(self.first_logged_hits, self.prediction.first_logged_cases);
         if self.value.gross > 0 {
-            self.value.gross_rel_error = (self.value.computed as f64 - self.value.gross as f64)
+            self.value.gross_rel_error = (self.value.computed_raw as f64 - self.value.gross as f64)
                 .abs()
                 / self.value.gross as f64;
         }
@@ -510,7 +554,23 @@ mod tests {
     const BOOSTER: &str =
         r#",{"Slot":"GuardianFSDBooster","Item":"int_guardianfsdbooster_size3","Health":1.0}"#;
 
-    /// Builds a loadout whose `MaxJumpRange` is the game-like (capped) range.
+    /// Game-like range: unladen mass plus only the max fuel per jump aboard.
+    fn game_like(line_fn: impl Fn(f64) -> String) -> String {
+        let probe = line_fn(1.0);
+        let EventKind::Loadout(lo) = parse_line(&probe).unwrap().kind else {
+            panic!("Loadout")
+        };
+        let fsd = fsd_from_loadout(&lo, fsd_table()).unwrap();
+        let mass = ShipMass {
+            unladen: lo.unladen_mass.unwrap(),
+            fuel_main: 5.0,
+            fuel_reserve: 0.0,
+            cargo: 0.0,
+        };
+        line_fn((jump_range_with(&fsd, &mass, true) * 1e4).round() / 1e4)
+    }
+
+    /// Builds a loadout whose `MaxJumpRange` is the capped range at full-tank mass (legacy convention).
     fn clamped(line_fn: impl Fn(f64) -> String) -> String {
         let probe = line_fn(1.0);
         line_fn((expected_range(&probe, true) * 1e4).round() / 1e4)
@@ -518,9 +578,9 @@ mod tests {
 
     #[test]
     fn range_eval_counts_engineered_and_guardian_cases() {
-        let plain = clamped(|r| loadout_line(1, FSD, "", "", r));
-        let engineered = clamped(|r| loadout_line(2, FSD, ENG, "", r));
-        let guardian = clamped(|r| loadout_line(3, FSD, "", BOOSTER, r));
+        let plain = game_like(|r| loadout_line(1, FSD, "", "", r));
+        let engineered = game_like(|r| loadout_line(2, FSD, ENG, "", r));
+        let guardian = game_like(|r| loadout_line(3, FSD, "", BOOSTER, r));
         let report = eval_events(events(&[plain, engineered, guardian]).into_iter());
         assert_eq!(report.range.cases, 3);
         assert_eq!(report.range.engineered_cases, 1);
@@ -542,7 +602,8 @@ mod tests {
         let report = eval_events(events(&[line]).into_iter());
         assert_eq!(report.range.max_fuel_hits, 1);
         assert_eq!(report.range.full_tank_hits, 0);
-        assert_eq!(report.range.within_tolerance, 1);
+        // The game-like reference (unladen + 5 t) does not match this legacy line.
+        assert_eq!(report.range.max_fuel_mass_hits, 0);
     }
 
     #[test]
@@ -574,6 +635,7 @@ mod tests {
         let lines = vec![
             r#"{"timestamp":"2026-04-10T20:00:00Z","event":"LoadGame","Odyssey":true}"#.to_owned(),
             r#"{"timestamp":"2026-04-10T20:05:00Z","event":"FSDJump","StarSystem":"Sys","SystemAddress":11,"StarPos":[0,0,0]}"#.to_owned(),
+            r#"{"timestamp":"2026-04-10T20:05:40Z","event":"FSSDiscoveryScan","Progress":1.0,"BodyCount":1,"NonBodyCount":0,"SystemName":"Sys","SystemAddress":11}"#.to_owned(),
             star_scan("Sys"),
             format!(
                 r#"{{"timestamp":"2026-04-10T20:45:10Z","event":"SellExplorationData","Systems":["Sys"],"Discovered":[],"BaseValue":{paid},"Bonus":0,"TotalEarnings":{paid}}}"#
@@ -585,6 +647,42 @@ mod tests {
         assert_eq!(report.value.paid, 1_250);
         assert!((report.value.rel_error - 36.0 / 1_250.0).abs() < 1e-12);
         assert!(report.value.rel_error <= 0.05);
+    }
+
+    fn sale_lines(fss: bool, carrier: bool, paid: u64) -> Vec<JournalEvent> {
+        let mut lines = vec![
+            r#"{"timestamp":"2026-04-10T20:05:00Z","event":"FSDJump","StarSystem":"Sys","SystemAddress":11,"StarPos":[0,0,0]}"#.to_owned(),
+            star_scan("Sys"),
+        ];
+        if fss {
+            lines.insert(1, r#"{"timestamp":"2026-04-10T20:05:40Z","event":"FSSDiscoveryScan","Progress":1.0,"BodyCount":1,"NonBodyCount":0,"SystemName":"Sys","SystemAddress":11}"#.to_owned());
+        }
+        if carrier {
+            lines.push(r#"{"timestamp":"2026-04-10T20:40:00Z","event":"Docked","StationName":"X","StationType":"FleetCarrier","MarketID":1,"StarSystem":"Sys","SystemAddress":11}"#.to_owned());
+        }
+        lines.push(format!(
+            r#"{{"timestamp":"2026-04-10T20:45:10Z","event":"SellExplorationData","Systems":["Sys"],"Discovered":[],"BaseValue":1214,"Bonus":0,"TotalEarnings":{paid}}}"#
+        ));
+        events(&lines)
+    }
+
+    #[test]
+    fn sales_of_partially_scanned_systems_are_not_covered() {
+        let report = eval_events(sale_lines(false, false, 1_214).into_iter());
+        assert_eq!(report.value.sales, 0);
+        assert_eq!(report.value.uncovered_sales, 1);
+    }
+
+    #[test]
+    fn carrier_sales_apply_the_observed_payout_factor_only_when_docked_at_a_carrier() {
+        let carrier = eval_events(sale_lines(true, true, 1_068).into_iter());
+        assert_eq!(carrier.value.carrier_sales, 1);
+        assert_eq!(carrier.value.computed, 1_068);
+        assert_eq!(carrier.value.computed_raw, 1_214);
+        assert!(carrier.value.rel_error < 1e-12);
+        let station = eval_events(sale_lines(true, false, 1_068).into_iter());
+        assert_eq!(station.value.carrier_sales, 0);
+        assert_eq!(station.value.computed, 1_214);
     }
 
     fn rocky_scan(body: u32, address: u64) -> String {

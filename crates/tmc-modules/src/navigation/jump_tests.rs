@@ -115,10 +115,11 @@ fn supercharge_multipliers() {
 
 #[test]
 fn formula_validated_against_game_max_jump_range() {
-    let lo = loadout("int_hyperdrive_size5_class5", vec![], Some(24.63));
+    // El juego usa unladen + min(depósito, máx. por salto) = 468 + 5 t.
+    let lo = loadout("int_hyperdrive_size5_class5", vec![], Some(26.04));
     let m = build_jump_model(&lo, fsd_table());
     assert_eq!(m.source, RangeSource::Formula);
-    assert_eq!(m.laden_ref_mass, Some(500.0));
+    assert_eq!(m.laden_ref_mass, Some(473.0));
     let r = m.range_now(&mass(468.0, 32.0)).unwrap();
     assert!((r - 24.63).abs() < 0.01, "{r}");
 }
@@ -225,4 +226,22 @@ fn scaled_with_zero_mass_is_none_and_zero_ref_mass_is_unknown() {
         build_jump_model(&lo0, fsd_table()).source,
         RangeSource::Unknown
     );
+}
+
+#[test]
+fn reference_mass_uses_only_max_fuel_per_jump_not_the_full_tank() {
+    // Con depósito lleno (468 + 32) la fórmula daría 24,63 al y no valida.
+    let full_tank = loadout("int_hyperdrive_size5_class5", vec![], Some(24.63));
+    assert_eq!(
+        build_jump_model(&full_tank, fsd_table()).source,
+        RangeSource::Scaled
+    );
+    // Dos naves con el mismo FSD y distinta masa en vacío: MaxJumpRange * (masa + 5) es constante.
+    let mut heavy = loadout("int_hyperdrive_size5_class5", vec![], Some(25.0));
+    heavy.unladen_mass = Some(500.0);
+    let ratio: f64 = 26.04 * 473.0 / 505.0;
+    heavy.max_jump_range = Some((ratio * 100.0).round() / 100.0);
+    let m = build_jump_model(&heavy, fsd_table());
+    assert_eq!(m.source, RangeSource::Formula);
+    assert_eq!(m.laden_ref_mass, Some(505.0));
 }
