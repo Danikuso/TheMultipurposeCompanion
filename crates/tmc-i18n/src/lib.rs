@@ -283,6 +283,9 @@ mod tests {
                 ("days", FluentValue::from(3)),
                 ("time", FluentValue::from("00:45")),
                 ("station", FluentValue::from("Jameson Memorial")),
+                ("sys", FluentValue::from("1,5")),
+                ("eng", FluentValue::from("2,5")),
+                ("wep", FluentValue::from(2)),
             ] {
                 args.set(name, value);
             }

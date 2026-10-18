@@ -50,3 +50,9 @@ combat-alert-under-attack = Unter Beschuss
 combat-alert-interdiction = Abfangmanöver läuft
 
 panel-combat-ship = Mein Schiff
+combat-shields-up = Schilde aktiv
+combat-shields-down = Schilde unten
+combat-pips-summary = Energie: SYS { $sys }, MOT { $eng }, WAF { $wep } von 4
+combat-badge-lawless = GESETZLOS
+combat-badge-enemy = FEIND
+combat-badge-unknown = UNBEKANNT

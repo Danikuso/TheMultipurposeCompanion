@@ -50,3 +50,9 @@ combat-alert-under-attack = Sous attaque
 combat-alert-interdiction = Interdiction en cours
 
 panel-combat-ship = Mon vaisseau
+combat-shields-up = Boucliers actifs
+combat-shields-down = Boucliers tombés
+combat-pips-summary = Énergie : SYS { $sys }, MOT { $eng }, ARM { $wep } sur 4
+combat-badge-lawless = HORS-LA-LOI
+combat-badge-enemy = ENNEMI
+combat-badge-unknown = INCONNU

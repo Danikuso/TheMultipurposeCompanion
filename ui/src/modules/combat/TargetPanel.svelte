@@ -19,13 +19,14 @@
   const lostAt = $derived(tgt?.lost_at ?? null);
   let expiredFor = $state<string | null>(null);
 
-  // Un único setTimeout a lost_at + 10 s; el backend también vacía el topic.
+  // Respaldo: setTimeout único de 10 s desde la RECEPCIÓN de un nuevo `lost_at`
+  // (nunca se compara el reloj del diario con el del cliente). Se cancela al
+  // cambiar de objetivo o al destruir el panel; el backend también vacía el topic.
   $effect(() => {
     if (lostAt == null) return;
-    const delay = Math.max(0, Date.parse(lostAt) + LOST_TTL_MS - Date.now());
     const id = setTimeout(() => {
       expiredFor = lostAt;
-    }, delay);
+    }, LOST_TTL_MS);
     return () => clearTimeout(id);
   });
 
@@ -37,7 +38,7 @@
     if (b.kind === 'wanted') return t('combat-badge-wanted', { reward: credits(b.bounty) });
     if (b.kind === 'clean') return t('combat-badge-clean');
     if (b.kind === 'scanning') return t('combat-scanning');
-    return '';
+    return t(`combat-badge-${b.kind}`);
   });
 </script>
 
@@ -51,19 +52,21 @@
         {#if tgt.pilot}<div class="dim">{tgt.pilot}{tgt.rank ? ` · ${tgt.rank}` : ''}</div>{/if}
         {#if tgt.faction}<div class="dim">{t('combat-target-faction', { faction: tgt.faction })}</div>{/if}
       </div>
-      {#if badgeText}
-        <span class="badge" data-testid="target-badge" data-kind={badgeKind}>{badgeText}</span>
-      {/if}
+      <div aria-live="polite">
+        {#if badgeText}
+          <span class="badge" data-testid="target-badge" data-kind={badgeKind}>{badgeText}</span>
+        {/if}
+      </div>
     </div>
     <div class="bars">
       <div class="bar-row">
         <span class="dim">{t('combat-shields')}</span>
-        <div class="bar"><i class="shield" style:width="{tgt.shield_pct ?? 0}%"></i></div>
+        <div class="bar" role="progressbar" aria-label={t('combat-shields')} aria-valuemin="0" aria-valuemax="100" aria-valuenow={tgt.shield_pct ?? 0}><i class="shield" style:width="{tgt.shield_pct ?? 0}%"></i></div>
         <span class="mono" data-testid="shield-value">{pct(tgt.shield_pct)}</span>
       </div>
       <div class="bar-row">
         <span class="dim">{t('combat-hull')}</span>
-        <div class="bar"><i class="hull" style:width="{tgt.hull_pct ?? 0}%"></i></div>
+        <div class="bar" role="progressbar" aria-label={t('combat-hull')} aria-valuemin="0" aria-valuemax="100" aria-valuenow={tgt.hull_pct ?? 0}><i class="hull" style:width="{tgt.hull_pct ?? 0}%"></i></div>
         <span class="mono" data-testid="hull-value">{pct(tgt.hull_pct)}</span>
       </div>
     </div>
@@ -73,7 +76,7 @@
         <div class="sub-body">
           <div class="dim">{t('combat-subsystem')}</div>
           <strong class="sub-name">{t(`combat-subsystem-${KEYS[tgt.subsystem.kind] ?? 'other'}`)}</strong>
-          <div class="bar"><i class="subbar" style:width="{tgt.subsystem.health_pct ?? 0}%"></i></div>
+          <div class="bar" role="progressbar" aria-label={t('combat-subsystem')} aria-valuemin="0" aria-valuemax="100" aria-valuenow={tgt.subsystem.health_pct ?? 0}><i class="subbar" style:width="{tgt.subsystem.health_pct ?? 0}%"></i></div>
         </div>
         <span class="mono">{pct(tgt.subsystem.health_pct)}</span>
       </div>
@@ -90,7 +93,8 @@
   .badge { border: 2px solid currentColor; padding: 0.2rem 0.7rem; font-weight: bold; font-size: 1.2em; white-space: nowrap; }
   .badge[data-kind='wanted'] { color: var(--hud-danger); }
   .badge[data-kind='clean'] { color: var(--hud-ok); }
-  .badge[data-kind='scanning'] { color: var(--hud-muted); }
+  .badge[data-kind='scanning'], .badge[data-kind='unknown'] { color: var(--hud-muted); }
+  .badge[data-kind='lawless'], .badge[data-kind='enemy'] { color: var(--hud-warning); }
   .bar-row { display: grid; grid-template-columns: 5rem 1fr 4rem; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; }
   .bar { height: 0.6rem; border: 1px solid var(--hud-border); }
   .bar i { display: block; height: 100%; }

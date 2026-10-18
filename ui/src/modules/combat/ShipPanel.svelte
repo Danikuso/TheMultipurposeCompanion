@@ -8,21 +8,23 @@
 
   const ship = $derived(topic<ShipTopic>('combat.ship'));
   const since = $derived(
-    ship?.heat === 'overheating' && ship.overheating_since ? Date.parse(ship.overheating_since) : null,
+    ship?.heat === 'overheating' && ship.overheating_since ? ship.overheating_since : null,
   );
-  let nowMs = $state(Date.now());
+  let elapsed = $state(0);
 
-  // Cronómetro local: un único setInterval de 1 s solo mientras hay sobrecalentamiento.
+  // Cronómetro anclado a la recepción (nunca se compara con el reloj del diario):
+  // parte de 0 al recibir un nuevo `overheating_since` y cuenta con un único
+  // setInterval de 1 s solo mientras hay sobrecalentamiento.
   $effect(() => {
     if (since == null) return;
-    nowMs = Date.now();
+    elapsed = 0;
+    const receivedAt = Date.now();
     const id = setInterval(() => {
-      nowMs = Date.now();
+      elapsed = Math.floor((Date.now() - receivedAt) / 1000);
     }, 1000);
     return () => clearInterval(id);
   });
 
-  const elapsed = $derived(since == null ? 0 : Math.max(0, Math.floor((nowMs - since) / 1000)));
   const timer = $derived(`${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`);
   const heatKey = $derived(
     ship?.heat === 'overheating'
@@ -43,12 +45,14 @@
       <strong
         class="ind"
         data-testid="ship-shields"
+        role="img"
+        aria-label={ship.shields_up == null ? t('combat-no-data') : t(ship.shields_up ? 'combat-shields-up' : 'combat-shields-down')}
         data-state={ship.shields_up == null ? 'unknown' : ship.shields_up ? 'up' : 'down'}
       >{ship.shields_up == null ? '—' : ship.shields_up ? '●' : '○'}</strong>
     </div>
     <div class="row">
       <span class="label">{t('combat-hull')}</span>
-      <span class="steps" aria-hidden="true">
+      <span class="steps" role="progressbar" aria-label={t('combat-hull')} aria-valuemin="0" aria-valuemax="100" aria-valuenow={ship.hull_pct ?? 0}>
         {#each Array.from({ length: 10 }, (_, i) => i) as i (i)}
           <i data-testid="hull-step" data-on={i < steps}></i>
         {/each}
