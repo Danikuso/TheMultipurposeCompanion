@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Task 28 (UI — panel de exobiología) 🔄 en curso (Bloque 4).
-- **Siguiente acción:** completar la Task 28 (ejecución con subagentes; ledger local `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`). CI de GitHub deshabilitada por orden del propietario (2026-10-18); checks en local.
+- **Tarea:** F1 · Task 29 (`tmc-headless eval`, criterios 3, 4 y 6) 🔄 en curso (Bloque 5).
+- **Siguiente acción:** completar la Task 29 (ejecución con subagentes; ledger local `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`). CI de GitHub deshabilitada por orden del propietario (2026-10-18); checks en local.
 
 ## Fases
 
@@ -63,7 +63,8 @@
 | 25 | `exobiology` — predicción (reglas + historial + Canonn) | ✅ hecha | 73261c4, 2f44b17 | 90 reglas propias (15 géneros Odyssey) con procedencia por género y nota `docs/research/notes/bio_rules_f1.md`; historial en SQL (200k Scan ≈ 0,4 s); Canonn soportado pero desactivado. Revisión aprobada tras 1 ronda. |
 | 26 | `exobiology` — muestreo y `exo_sample` | ✅ hecha | 5225eb9, e13064a | Máquina Log→Sample→Analyse, posiciones persistidas y reanudables, distancia y rumbo al punto previo más cercano, replay sin borrados. Revisión aprobada tras 1 ronda. |
 | 27 | `exobiology` — módulo, bonus ×5, bio sin vender y relevancia | ✅ hecha | 0d228b4 | Módulo `Exobiology` registrado (4 módulos); topics body/sampling/unsold; ×5 estimado; reconstrucción idempotente al arrancar; 236 tmc-modules PASS. Revisión aprobada. |
-| 28–32 | Ver plan | ⬜ | — | |
+| 28 | UI — panel de exobiología | ✅ hecha | 9578414, 1b824dd | Candidatos con probabilidad y origen, muestreo con barra/dirección/sin vender, tipo y atmósfera localizados; 69 tests UI PASS. Revisión aprobada tras 1 ronda. |
+| 29–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
