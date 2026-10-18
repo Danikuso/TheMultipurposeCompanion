@@ -183,6 +183,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
+- 2026-10-18 20:56 (Europe/Madrid) · Antigravity · Solicitud del propietario completada: añadida visualización de todos los tipos de estrellas del sistema actual en la vista de exploración (commit `6e4276e`). Incluye `star_classes` ordenadas y desduplicadas en `SystemTopic`, insignias por tipo con marcado repostable en `SystemBodiesPanel`, reflejo en la tarjeta de `RouteStrip` y textos en los 5 idiomas. 527 tests Rust PASS, 91 tests Vitest PASS, svelte-check y build en verde.
 - 2026-10-18 18:43 (Europe/Madrid) · Gemini 4 Argon (Medium) · Task 32 y cierre de F1 completados: `cargo tauri build` (`TMC_0.1.0_x64-setup.exe` 5,79 MiB), `measure-footprint.ps1 -ShowWindow -Seconds 120` (`max_mb=108.01` < 150 MB, `avg_cpu_idle=0.00%` < 1 % PASS), Criterio 7 verificado en vivo contra Spansh + portapapeles, 526 tests Rust PASS, 89 tests Vitest PASS, Playwright E2E PASS y 10/10 criterios documentados en el plan. Fase F1 cerrada.
 - 2026-10-18 18:01 (Europe/Madrid) · Codex · Task31 terminada con TDD, revisión y 3 rondas de corrección de bordes: 515 Rust/81 UI, fmt/clippy/check/build y smoke real PASS (puerto47322, viewport2560/800). §5.1 aprobada por el propietario y sincronizada. Task32 inicia build/consumo; criterios3/4/6 sin datos suficientes siguen pendientes.
 
