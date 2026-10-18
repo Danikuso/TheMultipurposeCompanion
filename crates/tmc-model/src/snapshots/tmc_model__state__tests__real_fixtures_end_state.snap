@@ -188,5 +188,81 @@ expression: end_states
     },
     "galaxy": "Live",
     "game_running": false
+  },
+  "real_explo_01.log": {
+    "cmdr": {
+      "name": "CMDR TESTER",
+      "fid": "F0000001",
+      "credits": 15401236,
+      "loan": 0,
+      "ranks": {
+        "combat": null,
+        "trade": null,
+        "explore": null,
+        "soldier": null,
+        "exobiologist": null,
+        "empire": null,
+        "federation": null,
+        "cqc": null
+      },
+      "progress": {
+        "combat": null,
+        "trade": null,
+        "explore": null,
+        "soldier": null,
+        "exobiologist": null,
+        "empire": null,
+        "federation": null,
+        "cqc": null
+      }
+    },
+    "ship": {
+      "ship_type": "mediumtransport01",
+      "ship_type_localised": null,
+      "ship_id": 7,
+      "name": "TMC VESSEL 01",
+      "ident": "TMC-01",
+      "hull_health": 1.0,
+      "fuel_main": 27.872124,
+      "fuel_reservoir": null,
+      "fuel_capacity_main": 32.0,
+      "fuel_capacity_reserve": 0.75,
+      "cargo_count": null,
+      "cargo_capacity": 0,
+      "rebuy": 0,
+      "max_jump_range": 16.746778,
+      "damaged_modules": [],
+      "cargo": []
+    },
+    "location": {
+      "system": "Crucis Sector GH-V b2-6",
+      "system_address": 13865362466233,
+      "star_pos": [
+        25.34375,
+        7.9375,
+        53.375
+      ],
+      "body": "Crucis Sector GH-V b2-6 A",
+      "body_type": "Star",
+      "station": null,
+      "station_type": null,
+      "market_id": null,
+      "mode": "Supercruise"
+    },
+    "status": null,
+    "route": {
+      "hops": [],
+      "next_system": "Nagnatae",
+      "remaining_jumps": 9
+    },
+    "session": {
+      "started_at": "2026-10-17T23:41:01Z",
+      "jumps": 6,
+      "distance_ly": 90.726,
+      "credits_at_start": 15401236,
+      "credits_now": 15401236
+    },
+    "galaxy": "Live",
+    "game_running": true
   }
 }

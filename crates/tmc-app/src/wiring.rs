@@ -12,7 +12,7 @@ use tmc_core::{CoreHandle, CoreMessage, CoreOptions, spawn_core_with};
 use tmc_journal::{WatchOptions, is_game_running, resolve_journal_dir, spawn_watcher};
 use tmc_model::source::SourceEvent;
 use tmc_modules::all_modules;
-use tmc_net::{NetClient, ReqwestTransport};
+use tmc_net::{NetClient, ReqwestTransport, Transport};
 use tmc_server::{ServerConfig, ServerHandle, serve};
 use tmc_store::{EventWriter, ImportOptions, Store, import_history};
 use tokio::sync::broadcast::error::RecvError;
@@ -41,7 +41,27 @@ fn open_or_rebuild_store(db_dir: &Path) -> anyhow::Result<Store> {
     }
 }
 
-pub async fn start(mut config: Config) -> anyhow::Result<Running> {
+pub async fn start(config: Config) -> anyhow::Result<Running> {
+    let transport = ReqwestTransport::new()
+        .map_err(|err| anyhow::anyhow!("could not build HTTP transport: {err:?}"))?;
+    start_custom(config, Arc::new(transport), None).await
+}
+
+/// Igual que [`start`] pero con el transporte HTTP inyectado (tests de extremo a extremo).
+pub async fn start_with_transport(
+    config: Config,
+    transport: Arc<dyn Transport>,
+) -> anyhow::Result<Running> {
+    start_custom(config, transport, None).await
+}
+
+/// Como [`start_with_transport`], y con `poll_idle` del vigilante del diario
+/// sustituible (los tests emulan «juego en marcha», que sondea cada 250 ms).
+pub async fn start_custom(
+    mut config: Config,
+    transport: Arc<dyn Transport>,
+    poll_idle: Option<Duration>,
+) -> anyhow::Result<Running> {
     let journal_dir = resolve_journal_dir(config.journal_dir.as_deref())?;
     let db_dir = config.data_dir.clone().unwrap_or_else(data_dir);
     let store = open_or_rebuild_store(&db_dir)?;
@@ -55,14 +75,12 @@ pub async fn start(mut config: Config) -> anyhow::Result<Running> {
         store.apply_migrations(module.migrations())?;
     }
 
-    let transport = ReqwestTransport::new()
-        .map_err(|err| anyhow::anyhow!("could not build HTTP transport: {err:?}"))?;
     let online = Arc::new(AtomicBool::new(config.online_services));
     // El servicio de red necesita el canal de eventos del núcleo, que a su vez
     // necesita el emisor de peticiones: se enlazan con un canal intermedio.
     let (net_events, mut net_events_rx) = tokio::sync::mpsc::channel::<SourceEvent>(64);
     let net = spawn_net_service(
-        Arc::new(NetClient::new(Arc::new(transport))),
+        Arc::new(NetClient::new(transport)),
         store.clone(),
         net_events,
         online.clone(),
@@ -93,6 +111,7 @@ pub async fn start(mut config: Config) -> anyhow::Result<Running> {
 
     let watch_opts = WatchOptions {
         journal_dir: journal_dir.clone(),
+        poll_idle: poll_idle.unwrap_or(WatchOptions::default().poll_idle),
         ..Default::default()
     };
     spawn_watcher(watch_opts, core.events.clone());
