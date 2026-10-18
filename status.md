@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-18 04:08 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-18 04:11 (Europe/Madrid) · Codex
 - **Fase actual:** F1 — Navegación, exploración y exobiología (spec y plan aprobados; en ejecución). F0 ✅ fusionada en `main` (2b953e6).
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md`](docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md) — ✅ aprobada (2026-10-17); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
 - **Plan activo:** [`docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md`](docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md) — ✅ aprobado (2026-10-17), 33 tareas, bloques 0–5. Ejecución con subagentes. Anterior: [`2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) ✅ 19/19
@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Task 24 (`exobiology` — tabla de especies y geodesia), Step 1: tests; nombres pendientes de aprobación.
-- **Siguiente acción:** avanzar la geodesia y sus tests de Task 24 mientras se resuelve la desviación de nombres de especies. Task 23 cerrada: revisión y visual aprobadas; 413 Rust/56 UI, fmt/clippy/check/build PASS. No aplicar el aplazamiento de nombres por idioma sin respuesta del propietario.
+- **Tarea:** F1 · Task 24 (`exobiology` — tabla de especies y geodesia), geodesia verificada; tabla pendiente de decisión del propietario.
+- **Siguiente acción:** resolver el pendiente de nombres (aprobar `_Localised` + latino de respaldo y aplazar tabla por idioma, o completar tabla propia por idioma en F1); después escribir tests de SpeciesTable y completar Task 24. Geodesia revisada: 8 tests nuevos, 421 Rust globales y fmt/clippy PASS; UI sin cambios, 56 tests/check/build PASS. Task 25 no iniciada. Todos los cambios de esta sesión se guardan en commits locales; push pendiente de autorización explícita.
 
 ## Fases
 
@@ -59,7 +59,7 @@
 | 21 | `exploration` — cuerpos del sistema, FSS y consejo | ✅ hecha | 9940901, c25b238 | P2 de payload y Terraforming corregidos; marks compacto documentado para Task 23; 392 Rust/46 UI PASS, revisión aprobada. |
 | 22 | `exploration` — datos sin vender | ✅ hecha | ffa3433 | Libro compartido, reconstrucción cronológica paginada y conciliación/retry; 413 Rust/46 UI PASS, revisión aprobada. |
 | 23 | UI — cuerpos del sistema | ✅ hecha | b669a77 | Tabla virtualizada ≤30 filas, cinco idiomas, visual 2560/1366 px; 413 Rust/56 UI PASS, revisión aprobada. |
-| 24 | Exobiología — especies y geodesia | 🔄 en curso | — | Step 1: tests; geodesia independiente de aprobación de nombres. |
+| 24 | Exobiología — especies y geodesia | ⛔ bloqueada (parcial verificada) | (este commit: geodesia) | Geo RED 0/8 → GREEN; 421 Rust/56 UI PASS. Tabla pendiente de decisión sobre nombres; tarea incompleta. |
 | 25–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
@@ -137,6 +137,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-18 04:11 (Europe/Madrid) · Codex · Geodesia de Task 24 revisada y verificada: 8/8 nuevos, 421 Rust/56 UI, fmt/clippy/check/build correctos. Task 24 incompleta: nombres/tabla esperan decisión; Task 25 no iniciada. Sin archivos de código pendientes tras commit parcial. Push retenido por rechazo de revisión automática hasta autorización explícita.
 
 - 2026-10-18 04:08 (Europe/Madrid) · Codex · Task 23 cerrada b669a77, revisión y visual local aprobadas, 413 Rust/56 UI con fmt/clippy/check/build PASS. Task 24 avanza solo geodesia; la tabla/nombres espera aprobación de la desviación registrada.
 

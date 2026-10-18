@@ -3,6 +3,7 @@
 
 pub mod dashboard;
 pub mod data;
+pub mod exobiology;
 pub mod exploration;
 pub mod navigation;
 pub mod registry;

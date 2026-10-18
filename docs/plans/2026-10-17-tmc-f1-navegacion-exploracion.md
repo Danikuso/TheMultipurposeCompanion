@@ -756,6 +756,8 @@ test('footer shows unsold total and unidentified count', ...)
 
 ### Task 24: `exobiology` — tabla de especies y geodesia
 
+**Avance parcial (2026-10-18):** geodesia implementada y revisada; RED 0/8 → GREEN 8/8 geo, 161 módulos y 421 Rust globales; fmt/clippy/diff PASS. UI sin cambios desde Task 23 (56 tests/check/build PASS). Registro en lib.rs y exobiology/{mod,geo}.rs. La tabla, sus tests y el cierre de Task 24 esperan decisión sobre nombres por idioma; no se ha aplicado la desviación pendiente ni empezado Task 25.
+
 **Files:** Create `crates/tmc-modules/data/species.json`, `crates/tmc-modules/src/exobiology/{mod.rs, species.rs, geo.rs}`; Modify `THIRD_PARTY_NOTICES.md` si Task 1 lo exige.
 
 **Interfaces:**
