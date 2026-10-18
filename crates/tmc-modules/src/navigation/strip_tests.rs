@@ -1235,6 +1235,66 @@ fn recalculate_uses_current_system_as_origin() {
 }
 
 #[test]
+fn zero_default_efficiency_survives_plan_accept_and_recalculate() {
+    let mut h = Harness::new();
+    h.ready_ship();
+    h.event(
+        SourceEvent::Settings(ModuleSettings {
+            default_neutron_efficiency: 0,
+            ..ModuleSettings::default()
+        }),
+        false,
+    );
+    h.act(
+        "navigation.plan",
+        json!({"to": "Colonia", "mode": "neutron"}),
+    );
+    let requests = h.route_requests();
+    assert_eq!(requests.len(), 1);
+    let NetQuery::NeutronRoute(initial) = &requests[0].query else {
+        panic!("expected neutron route");
+    };
+    assert_eq!(initial.efficiency, 0);
+    h.respond(NetOutcome::Route(planned(&[
+        ("Sol", 10),
+        ("X", 11),
+        ("Colonia", 12),
+    ])));
+    h.act("navigation.accept-plan", json!({}));
+    assert_eq!(h.plan_topic()["status"], "active");
+    h.jump_to("X", 11, 10.0);
+    h.act("navigation.recalculate", json!({}));
+    assert_eq!(h.plan_topic()["status"], "computing");
+    let requests = h.route_requests();
+    assert_eq!(requests.len(), 2);
+    let NetQuery::NeutronRoute(recalculated) = &requests[1].query else {
+        panic!("expected neutron route");
+    };
+    assert_eq!(recalculated.efficiency, 0);
+    assert_eq!(recalculated.from, "X");
+    assert_eq!(recalculated.to, "Colonia");
+}
+
+#[test]
+fn explicit_efficiency_accepts_entire_zero_to_100_range() {
+    for efficiency in 0..=100 {
+        let mut h = Harness::new();
+        h.ready_ship();
+        h.act(
+            "navigation.plan",
+            json!({"to": "Colonia", "mode": "neutron", "efficiency": efficiency}),
+        );
+        assert_eq!(h.plan_topic()["status"], "computing", "{efficiency}");
+        let requests = h.route_requests();
+        assert_eq!(requests.len(), 1);
+        let NetQuery::NeutronRoute(request) = &requests[0].query else {
+            panic!("expected neutron route");
+        };
+        assert_eq!(request.efficiency, efficiency);
+    }
+}
+
+#[test]
 fn active_plan_is_saved_and_restored_per_cmdr() {
     let store = plan_store();
     let mut h = Harness::new();
@@ -1408,8 +1468,9 @@ fn invalid_plan_arguments_fail_with_bad_request() {
         json!({"to": "", "mode": "neutron"}),
         json!({"to": long, "mode": "neutron"}),
         json!({"to": "A", "from": long, "mode": "neutron"}),
-        json!({"to": "A", "mode": "neutron", "efficiency": 0}),
+        json!({"to": "A", "mode": "neutron", "efficiency": -1}),
         json!({"to": "A", "mode": "neutron", "efficiency": 101}),
+        json!({"to": "A", "mode": "neutron", "efficiency": 0.5}),
         json!({"to": "A", "mode": "neutron", "efficiency": "x"}),
         json!({"to": "A"}),
         json!({"to": "A", "mode": "warp"}),

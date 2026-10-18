@@ -83,6 +83,6 @@ nav-plan-clear = Plan löschen
 nav-plan-active = Aktive Route nach { $destination }: Etappe { $current } von { $total }
 nav-plan-efficiency-default = Standard: { $value }
 nav-plan-efficiency-hint = Aus deinen Einstellungen
-nav-plan-efficiency-invalid = Die Effizienz muss eine ganze Zahl zwischen 1 und 100 sein.
+nav-plan-efficiency-invalid = Die Effizienz muss eine ganze Zahl zwischen 0 und 100 sein.
 nav-plan-pick-destination = Wähle im Galaxie-Modus Start und Ziel aus den Vorschlägen.
 strip-next-jump = Nächster Sprung

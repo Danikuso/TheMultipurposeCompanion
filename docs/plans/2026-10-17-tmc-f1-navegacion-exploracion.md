@@ -947,7 +947,7 @@ test('discarded species is shown in the sampling block', ...)   // discarded_spe
   - `layouts` = `[{ id: 'exploration', titleKey: 'layout-exploration', icon: 'compass', slots: [RouteStrip (full), contexto (span 2: SystemBodiesPanel o ExobiologyPanel según `contextPanel`), PlannerPanel (1), `JumpPanel` de alcance/combustible (1, Task 18)] }]`; la barra lateral muestra las disposiciones antes de los módulos; botones manuales «Cuerpos»/«Exobiología» fijan `manual` hasta el siguiente cambio de cuerpo.
   - Ajustes: «Consultar servicios online (Spansh, EDSM, Canonn)» (por defecto sí, texto de ayuda con qué se envía), copia automática (existente), umbral de «Mapear» (número, cr), eficiencia por defecto del planificador (0–100). Guardan con `PUT /api/config` (Task 11 los propaga en caliente).
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```ts
 test('exploration layout puts route strip first at full width', ...)
@@ -956,8 +956,9 @@ test('settings save online services, map threshold and efficiency', ...)
 ```
 `smoke.spec.ts`: con `tmc-replay play` de `real_explo_01.log`, la disposición «Exploración» muestra la tira y el panel de cuerpos, sin errores de consola.
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** PASS (`npm test`, `npx playwright test`); Checks.
-- [ ] **Step 5: Commit** `feat(ui): disposición Exploración por defecto y ajustes de F1`
+- [x] **Step 2:** RED observado (2026-10-18): `npm.cmd --prefix ui test -- --run tests/layouts.test.ts tests/dashboard.test.ts` → 8 PASS/6 FAIL. Casos nuevos: definición/disposición por defecto, contexto automático, selección manual hasta cambio de cuerpo y guardado/límites de los tres ajustes.
+- [x] **Step 3:** implementar. **Step 4:** revisión independiente aprobada tras corregir 3 P2 (eficiencia cero/recalcular; fallo de guardado; identidad del cuerpo y metadatos tardíos). Rust: fmt, clippy workspace/all-targets y 515 tests PASS/1 ignorado de rendimiento; i18n final 12/12 PASS. UI: 81 tests PASS; check 0 errores/avisos; build PASS. Smoke: `$env:TMC_E2E_PORT = '47322'; node node_modules/@playwright/test/cli.js test` desde `ui` → 1 PASS (9,0 s), fixture real_explo_01, servicios offline, viewports 2560 y 800. Binarios headless/replay compilados antes de ejecutar. Visual sintético 2560/1366: sin errores JS ni overflow de página.
+- [x] **Step 5: Commit** `feat(ui): disposición Exploración por defecto y ajustes de F1`
 
 ### Task 32: Consumo, verificación de los 10 criterios y cierre de F1
 
@@ -1122,6 +1123,10 @@ Tiempos de consultas de historial (3630 eventos importados, SQLite en memoria)
 - `fsd.json`: `verified: true` solo 5A SCO (7 masas de referencia distintas) y 1A SCO (3); 3A SCO y 5E estándar (1 loadout cada una) quedan `verified: false`.
 
 ## Desviaciones
+
+- 2026-10-18 · Task 31: se amplía a planner.rs/strip_tests.rs y PlannerPanel/navigation.ftl para respetar 0–100 también al recalcular; RED 2 regresiones → GREEN 53 navigation. Settings serializa guardados, revierte al último confirmado y muestra error ante HTTP/red. Contexto usa BodyID válido como identidad estable antes que el nombre (incluida llegada tardía de metadatos). Smoke acepta TMC_E2E_PORT y usa 47322 para no parar la instancia del usuario; e2e-server usa fixture real_explo_01 y online_services=false. Sin dependencias nuevas ni cambios de alcance.
+
+- 2026-10-18 · §5.1: propietario aprueba explícitamente validar MaxJumpRange con masa en vacío y combustible máximo por salto; spec sincronizada con Task 29. No cambia el código de esa tarea ya verificada.
 
 - 2026-10-18 · Task 22: conciliación interna por comandante/generación y archivo/línea; checkpoints a 256 eventos/60 s y retry a 60 s para tareas SQLite sin respuesta. El libro JSON interno representa claves tupla como filas. Si SQLite falla persistentemente se conserva la cola para evitar perder saldo; la poda de eventos confirmados se verifica con DB operativa. API pública y topic de tres campos intactos; sin dependencias nuevas.
 

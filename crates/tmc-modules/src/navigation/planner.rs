@@ -153,7 +153,7 @@ fn parse_request(
     let efficiency = match args.get("efficiency") {
         None | Some(Value::Null) => default_efficiency,
         Some(v) => match v.as_u64() {
-            Some(e @ 1..=100) => e as u8,
+            Some(e @ 0..=100) => e as u8,
             _ => return Err(ERR_BAD_REQUEST),
         },
     };

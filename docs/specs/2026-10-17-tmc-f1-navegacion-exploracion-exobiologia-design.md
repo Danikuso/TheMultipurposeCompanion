@@ -118,9 +118,11 @@ Se mantienen la arquitectura y reglas de dependencia de F0. Cambios:
 
 ### 5.1 Alcance de salto y combustible
 
+Corrección aprobada explícitamente por el propietario el 2026-10-18: la validación contra MaxJumpRange usa masa en vacío más combustible máximo por salto, no depósito lleno; evidencia agregada de 15 loadouts en el plan (Task 29).
+
 - Fórmula estándar del FSD: `alcance = (masa_óptima / masa_total) · (1000 · combustible / coef_clase_rating)^(1/exponente_clase)` + bonus del **Guardian FSD Booster** si lo hay; `masa_total = masa sin carga + combustible + carga`.
 - `masa_óptima` y `combustible máximo por salto` salen de la **tabla de FSD** propia (clase/rating → masa óptima, máx. combustible por salto, coeficiente, exponente; incluye FSD SCO y Mk II) **modificada por la ingeniería** del `Loadout` (`Modifiers` con `FSDOptimalMass`, `MaxFuelPerJump`, etc.).
-- **Validación:** el alcance calculado para «sin carga y depósito lleno» debe coincidir con `Loadout.MaxJumpRange` del juego con tolerancia ±0,05 al; si no coincide (o falta la tabla para ese FSD), se usa `MaxJumpRange` **escalado por masa** y se registra un aviso en el log. Este respaldo es aceptable en producción, de modo que el planificador nunca queda bloqueado por la tabla; el criterio §10.3 mide la fórmula completa. *Decisión del redactor.*
+- **Validación:** el alcance calculado para «sin carga y con combustible máximo por salto (o capacidad del depósito, si es menor)» debe coincidir con `Loadout.MaxJumpRange` del juego con tolerancia ±0,05 al; si no coincide (o falta la tabla para ese FSD), se usa `MaxJumpRange` **escalado por masa** y se registra un aviso en el log. Este respaldo es aceptable en producción, de modo que el planificador nunca queda bloqueado por la tabla; el criterio §10.3 mide la fórmula completa. *Decisión del redactor.*
 - Se recalcula con cada `Loadout`, cambio de combustible (`Status`) y cambio de carga (`Cargo`).
 - **Supercarga** (`JetConeBoost`) se refleja en la ruta (neutrón ×4, enana blanca ×1,5; FSD SCO Mk II: ×6 / ×3 según `docs/research/notes/player_roles_domain.md`).
 - Combustible tras el salto: `combustible − f(distancia, masa)` con la inversa de la fórmula; si excede el máximo por salto, el salto se marca como no realizable.

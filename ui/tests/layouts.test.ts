@@ -1,11 +1,46 @@
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { contextPanel, layouts } from '../src/shell/layouts';
 import { ageShort, starClassLabel } from '../src/lib/format';
 import { setLocale } from '../src/lib/i18n';
 import Panel from '../src/shell/Panel.svelte';
+import App from '../src/App.svelte';
+import { disconnect, live } from '../src/lib/ws.svelte';
+import { RouteStrip, PlannerPanel, JumpPanel } from '../src/modules/navigation';
+import SystemBodiesPanel from '../src/modules/exploration/SystemBodiesPanel.svelte';
+import ExobiologyPanel from '../src/modules/exobiology/ExobiologyPanel.svelte';
+
+vi.mock('../src/lib/ws.svelte', async (original) => ({
+  ...(await original<typeof import('../src/lib/ws.svelte')>()),
+  connect: vi.fn(),
+}));
 
 describe('layouts', () => {
+  test('exploration layout puts route strip first at full width', () => {
+    const layout = layouts.find((layout) => layout.id === 'exploration');
+    expect(layout).toBeDefined();
+    expect(layout?.titleKey).toBe('layout-exploration');
+    expect(layout?.icon).toBe('compass');
+    expect(layout?.slots[0]).toMatchObject({ panel: RouteStrip, span: 'full' });
+    expect(layout?.slots).toEqual(expect.arrayContaining([
+      expect.objectContaining({ panel: PlannerPanel, span: 1 }),
+      expect.objectContaining({ panel: JumpPanel, span: 1 }),
+    ]));
+  });
+
+  test('context slot switches to exobiology when it becomes active', () => {
+    const layout = layouts.find((layout) => layout.id === 'exploration');
+    expect(layout).toBeDefined();
+    const visible = (relevance: string, manual: string | null = null) => layout!.slots
+      .filter((slot) => !slot.when || slot.when({ modules: [{ id: 'exobiology', relevance }], manual }))
+      .map((slot) => slot.panel);
+    expect(visible('normal')).toContain(SystemBodiesPanel);
+    expect(visible('normal')).not.toContain(ExobiologyPanel);
+    expect(visible('active')).toContain(ExobiologyPanel);
+    expect(visible('active')).not.toContain(SystemBodiesPanel);
+    expect(visible('urgent', 'exploration')).toContain(SystemBodiesPanel);
+    expect(visible('normal', 'exobiology')).toContain(ExobiologyPanel);
+  });
   test('contextPanel prefers manual, then active exobiology, else exploration', () => {
     const mods = [
       { id: 'exploration', relevance: 'normal' },
@@ -35,6 +70,80 @@ describe('layouts', () => {
     expect(starClassLabel('da')).toBe('DA');
     expect(starClassLabel('O_BLUE')).toBe('O');
     expect(starClassLabel(null)).toBe('—');
+  });
+});
+
+describe('default exploration layout', () => {
+  let target: HTMLElement;
+  let instance: Record<string, unknown>;
+  beforeEach(() => {
+    disconnect();
+    setLocale('es');
+    live.topics['core.location'] = { system: 'Testia', system_address: 1, body: 'Testia 1' };
+    live.topics['core.modules'] = [
+      { id: 'exploration', relevance: 'normal' },
+      { id: 'exobiology', relevance: 'normal' },
+      { id: 'navigation', relevance: 'hidden' },
+    ];
+    target = document.createElement('div');
+    document.body.appendChild(target);
+    instance = mount(App, { target });
+    flushSync();
+  });
+  afterEach(() => { unmount(instance); target.remove(); disconnect(); });
+
+  test('defaults to exploration and keeps all four modules manually accessible', () => {
+    expect(target.querySelector('[data-layout-slot="route"]')).not.toBeNull();
+    expect(target.querySelector('[data-layout-slot="context-bodies"]')).not.toBeNull();
+    const buttons = Array.from(target.querySelectorAll('aside button')) as HTMLButtonElement[];
+    expect(buttons[0].textContent).toContain('Exploración');
+    for (const id of ['dashboard', 'navigation', 'exploration', 'exobiology']) {
+      const button = target.querySelector(`[data-module="${id}"]`) as HTMLButtonElement;
+      expect(button).not.toBeNull();
+      button.click(); flushSync();
+      expect(target.querySelector('[data-layout-slot]')).toBeNull();
+      expect(target.querySelector('main section')).not.toBeNull();
+    }
+  });
+
+  test('manual context remains through status updates and resets on the next body change', () => {
+    live.topics['core.modules'] = [{ id: 'exobiology', relevance: 'active' }]; flushSync();
+    expect(target.querySelector('[data-layout-slot="context-exobiology"]')).not.toBeNull();
+    (target.querySelector('[data-testid="context-bodies"]') as HTMLButtonElement).click(); flushSync();
+    expect(target.querySelector('[data-layout-slot="context-bodies"]')).not.toBeNull();
+    live.topics['core.status'] = { flags: 0, fuel: 2 }; flushSync();
+    live.topics['core.location'] = { system: 'Testia', system_address: 1, body: 'Testia 1', mode: 'Landed' }; flushSync();
+    expect(target.querySelector('[data-layout-slot="context-bodies"]')).not.toBeNull();
+    live.topics['core.location'] = { system: 'Testia', system_address: 1, body: 'Testia 2' }; flushSync();
+    expect(target.querySelector('[data-layout-slot="context-exobiology"]')).not.toBeNull();
+    live.topics['core.location'] = { system: 'Testia', system_address: 1, body: 'Testia 1' }; flushSync();
+    expect(target.querySelector('[data-layout-slot="context-exobiology"]')).not.toBeNull();
+  });
+
+  test.each([null, 'Testia 1'])('body id resets manual context when core body is %s', (bodyName) => {
+    const body = (id: number) => ({ system_address: 1, body_id: id, body: `Testia ${id}`,
+      candidates: [], confirmed_genera: [], bio_signals: 1, completed: 0 });
+    live.topics['core.location'] = { system: 'Testia', system_address: 1, body: bodyName };
+    live.topics['exobiology.body'] = body(1);
+    live.topics['core.modules'] = [{ id: 'exobiology', relevance: 'active' }]; flushSync();
+    (target.querySelector('[data-testid="context-bodies"]') as HTMLButtonElement).click(); flushSync();
+    live.topics['exobiology.body'] = { ...body(1), bio_signals: 2 }; flushSync();
+    expect(target.querySelector('[data-layout-slot="context-bodies"]')).not.toBeNull();
+    live.topics['exobiology.body'] = body(2); flushSync();
+    expect(target.querySelector('[data-layout-slot="context-exobiology"]')).not.toBeNull();
+  });
+
+  test('late core body name does not reset manual selection already made for that body id', () => {
+    const body = (id: number) => ({ system_address: 1, body_id: id, body: `Testia ${id}`,
+      candidates: [], confirmed_genera: [], bio_signals: 1, completed: 0 });
+    live.topics['exobiology.body'] = body(1);
+    live.topics['core.modules'] = [{ id: 'exobiology', relevance: 'active' }]; flushSync();
+    (target.querySelector('[data-testid="context-bodies"]') as HTMLButtonElement).click(); flushSync();
+    live.topics['exobiology.body'] = body(2); flushSync();
+    expect(target.querySelector('[data-layout-slot="context-exobiology"]')).not.toBeNull();
+    (target.querySelector('[data-testid="context-bodies"]') as HTMLButtonElement).click(); flushSync();
+    live.topics['core.location'] = { system: 'Testia', system_address: 1, body: 'Testia 2' }; flushSync();
+    expect(target.querySelector('[data-layout-slot="context-bodies"]')).not.toBeNull();
   });
 });
 

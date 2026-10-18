@@ -1,4 +1,15 @@
 app-name = TMC — The Multipurpose Companion
+settings-save-error = No se han podido guardar los ajustes. Se ha restaurado la última configuración guardada.
+layout-exploration = Exploración
+nav-layouts = Disposiciones
+nav-modules = Módulos
+layout-context = Panel de contexto
+layout-context-bodies = Cuerpos
+layout-context-exobiology = Exobiología
+settings-online-services = Consultar servicios online (Spansh, EDSM, Canonn)
+settings-online-services-help = Se envían el nombre o identificador del sistema y los datos del cuerpo consultado. Desactívalo para usar solo datos locales.
+settings-map-threshold = Umbral de «Mapear» (cr)
+settings-planner-efficiency = Eficiencia predeterminada del planificador (%)
 nav-dashboard = Panel general
 nav-settings = Ajustes
 panel-cmdr = Comandante

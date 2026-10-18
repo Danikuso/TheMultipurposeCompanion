@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-18 13:55 (Europe/Madrid) · Claude Opus 5.5
+- **Última actualización:** 2026-10-18 18:01 (Europe/Madrid) · Codex
 - **Fase actual:** F1 — Navegación, exploración y exobiología (spec y plan aprobados; en ejecución). F0 ✅ fusionada en `main` (2b953e6).
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md`](docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md) — ✅ aprobada (2026-10-17); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
 - **Plan activo:** [`docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md`](docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md) — ✅ aprobado (2026-10-17), 33 tareas, bloques 0–5. Ejecución con subagentes. Anterior: [`2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) ✅ 19/19
@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Task 31 (disposición «Exploración» por defecto y ajustes nuevos en la UI) 🔄 en curso (Bloque 5).
-- **Siguiente acción:** completar la Task 31 (ejecución con subagentes; ledger local `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`). CI de GitHub deshabilitada por orden del propietario (2026-10-18); checks en local.
+- **Tarea:** F1 · Task 32 (consumo, criterios de aceptación y revisión de cierre), Step 1: construir instalador y medir consumo.
+- **Siguiente acción:** construir Tauri y ejecutar medición de 120 s con la disposición Exploración y fixture real_explo_01; después auditar licencias y criterios. Task 31 cerrada: 515 Rust/81 UI, fmt/clippy/check/build y smoke PASS, revisión aprobada. §5.1 aprobada y spec actualizada. Los criterios 3/4/6 siguen sin historial suficiente, por lo que F1 no puede marcarse completada. No detener la instancia de TMC del usuario sin autorización.
 
 ## Fases
 
@@ -66,7 +66,8 @@
 | 28 | UI — panel de exobiología | ✅ hecha | 9578414, 1b824dd | Candidatos con probabilidad y origen, muestreo con barra/dirección/sin vender, tipo y atmósfera localizados; 69 tests UI PASS. Revisión aprobada tras 1 ronda. |
 | 29 | `tmc-headless eval` (criterios 3, 4 y 6) | ✅ hecha | 98f93e9, cdc921e, d16ebb0, e734e5f | Eval local con solo agregados. Tus 7 diarios: C3 15/15 loadouts dentro de ±0,05 al pero INSUFICIENTE (sin ingeniería ni Guardian); C4 y C6 INSUFICIENTE (sin ventas cubiertas ni exobiología). Corrección de §5.1 (ver Bloqueos). |
 | 30 | Fixtures anonimizados y pruebas de extremo a extremo | ✅ hecha | 1ee4697 | `real_explo_01.log` (87 líneas, anonimizado y revisado); tira p95 310,8 ms con juego en marcha; exobiología e2e con fixture sintético (sin datos reales). Revisión aprobada. |
-| 31–32 | Ver plan | ⬜ | — | |
+| 31 | Disposición Exploración y ajustes F1 | ✅ hecha | (este commit) | 515 Rust/81 UI, fmt/clippy/check/build y smoke real PASS; 3 P2 corregidos, revisión aprobada. |
+| 32 | Consumo y cierre F1 | 🔄 en curso | — | Step 1: build/medición. Criterios 3/4/6 aún sin datos suficientes; cierre pendiente. |
 
 ## Tareas de F0
 
@@ -96,11 +97,11 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Bloqueos y pendientes del propietario
 
-- [ ] **F1 · Corrección de la spec §5.1 (para tu visto bueno):** el juego calcula `MaxJumpRange` con masa = vacío + **combustible máximo por salto** (no con el depósito lleno, como decía la spec). Evidencia: tus 15 loadouts. TMC ya valida así; `fsd.json` se ajustó con tus loadouts (5A y 1A SCO verificados). Con un FSD desconocido, el alcance se oculta y el planificador usa el `MaxJumpRange` del juego.
+- [x] **F1 · Corrección de spec §5.1:** propietario aprueba explícitamente el 2026-10-18 validar MaxJumpRange con masa en vacío más combustible máximo por salto (no depósito lleno). Spec actualizada; evidencia de 15 loadouts en Task 29. Código ya alineado.
 - [ ] **F1 · Criterios 3, 4 y 6 sin datos suficientes:** tu historial local (7 diarios) no tiene ingeniería/Guardian, ventas de exploración cubiertas ni exobiología. Para cerrarlos hace falta jugar una sesión de exploración con venta y otra de exobiología con venta, y relanzar `tmc-headless eval`.
 
 
-- [x] **Sincronización de F1:** propietario autoriza explícitamente push de `fase/f1-navegacion-exploracion` al repo privado Danikuso/TheMultipurposeCompanion (2026-10-18). Rechazo previo resuelto por esta autorización; sincronización pendiente de ejecutar.
+- [x] **Sincronización de F1:** propietario autoriza explícitamente push de `fase/f1-navegacion-exploracion` al repo privado Danikuso/TheMultipurposeCompanion (2026-10-18). Rechazo previo resuelto por esta autorización; push ejecutado correctamente hasta 3656ee3, los cierres siguientes se sincronizarán tras verificar.
 
 - [ ] **F1 · Canonn (capa 3 de exobiología)** — decidido 2026-10-17: queda **desactivada**; el propietario solicitará permiso a Canonn **sin enviar datos de usuarios**. Pendiente: respuesta de Canonn. Contexto: su README exige una **solicitud formal** para usar la API en software propio y pide **capturar/enviar datos de los usuarios**. Decisión del propietario: (a) solicitar permiso sin enviar datos de usuario, (b) aceptar enviar datos (requiere cambio de spec y opt-in), o (c) renunciar a Canonn. Mientras tanto, la capa 3 se implementa desactivada y F1 avanza con reglas propias + historial.
 - [x] **F1 · Nombres de especies:** propietario aprueba aplazar tabla propia por idioma; F1 usa `_Localised` del diario y nombre latino de respaldo (2026-10-18). Spec §8 y plan actualizados.
@@ -119,6 +120,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
 
 ## Decisiones tomadas
+
+- 2026-10-18 · Propietario: aprueba corrección §5.1 de validación MaxJumpRange con masa en vacío y combustible máximo por salto; spec sincronizada.
 
 - 2026-10-18 · Propietario: aprobados nombres de especies desde diario con respaldo latino y aplazamiento de tabla por idioma para después de F1; autorizado push de la rama F1 al repositorio privado.
 
@@ -148,6 +151,10 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-18 18:01 (Europe/Madrid) · Codex · Task31 terminada con TDD, revisión y 3 rondas de corrección de bordes: 515 Rust/81 UI, fmt/clippy/check/build y smoke real PASS (puerto47322, viewport2560/800). §5.1 aprobada por el propietario y sincronizada. Task32 inicia build/consumo; criterios3/4/6 sin datos suficientes siguen pendientes.
+
+- 2026-10-18 17:44 (Europe/Madrid) · Codex · Reconciliado estado tras sesión posterior: Tasks 24–30 completas, HEAD66f10b8 y árbol limpio. Continúo Task31 con TDD y subagente. Nombres y push ya aprobados; §5.1 y datos suficientes para criterios3/4/6 siguen pendientes. No rehacer código de especies ni geodesia.
 
 - 2026-10-18 13:55 (Europe/Madrid) · Claude Opus 5.5 · Retomado tras la sesión de Codex (Tasks 21–23 y geodesia de 24). Task 21 fix (3984224) revisado; Task 24 tabla de especies completada (c1857be). CI de GitHub deshabilitada por el propietario.
 

@@ -1,4 +1,7 @@
 import type { Component } from 'svelte';
+import { RouteStrip, PlannerPanel, JumpPanel } from '../modules/navigation';
+import SystemBodiesPanel from '../modules/exploration/SystemBodiesPanel.svelte';
+import ExobiologyPanel from '../modules/exobiology/ExobiologyPanel.svelte';
 
 export interface LayoutCtx {
   modules: { id: string; relevance: string }[];
@@ -29,5 +32,17 @@ export function contextPanel(
   return 'exploration';
 }
 
-/** Se rellena en la Task 31. */
-export const layouts: LayoutDef[] = [];
+export const layouts: LayoutDef[] = [{
+  id: 'exploration',
+  titleKey: 'layout-exploration',
+  icon: 'compass',
+  slots: [
+    { id: 'route', panel: RouteStrip, span: 'full' },
+    { id: 'context-bodies', panel: SystemBodiesPanel, span: 2,
+      when: (ctx) => contextPanel(ctx.modules, ctx.manual) === 'exploration' },
+    { id: 'context-exobiology', panel: ExobiologyPanel, span: 2,
+      when: (ctx) => contextPanel(ctx.modules, ctx.manual) === 'exobiology' },
+    { id: 'planner', panel: PlannerPanel, span: 1 },
+    { id: 'jump', panel: JumpPanel, span: 1 },
+  ],
+}];
