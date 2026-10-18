@@ -50,3 +50,9 @@ combat-alert-under-attack = Bajo ataque
 combat-alert-interdiction = Interdicción en curso
 
 panel-combat-ship = Mi nave
+combat-shields-up = Escudos activos
+combat-shields-down = Escudos caídos
+combat-pips-summary = Energía: SIS { $sys }, MOT { $eng }, ARM { $wep } de 4
+combat-badge-lawless = SIN LEY
+combat-badge-enemy = ENEMIGO
+combat-badge-unknown = DESCONOCIDO

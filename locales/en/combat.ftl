@@ -50,3 +50,9 @@ combat-alert-under-attack = Under attack
 combat-alert-interdiction = Being interdicted
 
 panel-combat-ship = My ship
+combat-shields-up = Shields up
+combat-shields-down = Shields down
+combat-pips-summary = Pips: SYS { $sys }, ENG { $eng }, WEP { $wep } of 4
+combat-badge-lawless = LAWLESS
+combat-badge-enemy = ENEMY
+combat-badge-unknown = UNKNOWN

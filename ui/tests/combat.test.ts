@@ -81,6 +81,13 @@ test('pips gauge renders half pips', () => {
   expect(target.querySelectorAll('[data-state="half"]').length).toBe(2);
   expect(target.querySelectorAll('[data-state="empty"]').length).toBe(5);
   expect(target.querySelectorAll('[data-col]').length).toBe(3);
+  const halves = (c: string) => target.querySelectorAll(`[data-col="${c}"] [data-state="half"]`).length;
+  const fulls = (c: string) => target.querySelectorAll(`[data-col="${c}"] [data-state="full"]`).length;
+  expect([fulls('sys'), halves('sys')]).toEqual([1, 1]);
+  expect([fulls('eng'), halves('eng')]).toEqual([2, 1]);
+  expect([fulls('wep'), halves('wep')]).toEqual([2, 0]);
+  expect(target.querySelector('[data-testid="pips"]')!.getAttribute('aria-label'))
+    .toBe('Energía: SIS 1,5, MOT 2,5, ARM 2 de 4');
 });
 
 test('heat timer only runs while overheating', () => {
@@ -93,10 +100,10 @@ test('heat timer only runs while overheating', () => {
   mounted = mount(ShipPanel, { target });
   flushSync();
   expect(vi.getTimerCount()).toBe(1);
-  expect(target.querySelector('[data-testid="heat-timer"]')!.textContent).toContain('0:30');
+  expect(target.querySelector('[data-testid="heat-timer"]')!.textContent).toBe('0:00');
   vi.advanceTimersByTime(5000);
   flushSync();
-  expect(target.querySelector('[data-testid="heat-timer"]')!.textContent).toContain('0:35');
+  expect(target.querySelector('[data-testid="heat-timer"]')!.textContent).toBe('0:05');
   unmount(mounted!); mounted = undefined;
   expect(vi.getTimerCount()).toBe(0);
 });
@@ -122,4 +129,47 @@ test('target panel empties 10 s after lost_at', () => {
   expect(target.querySelector('[data-testid="target-badge"]')).toBeNull();
   expect(target.querySelector('[data-testid="empty"]')!.textContent).toContain('Sin objetivo fijado');
   expect(vi.getTimerCount()).toBe(0);
+});
+
+test('heat timer is anchored to reception, not to the journal clock', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2030-01-01T00:00:00Z'));
+  mountShip(shipTopic({ heat: 'overheating', overheating_since: '2026-10-18T12:00:00Z' }));
+  expect(target.querySelector('[data-testid="heat-timer"]')!.textContent).toBe('0:00');
+  vi.advanceTimersByTime(65000);
+  flushSync();
+  expect(target.querySelector('[data-testid="heat-timer"]')!.textContent).toBe('1:05');
+});
+
+test('target timeout runs from reception even with an old lost_at', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2030-01-01T00:00:00Z'));
+  mountTarget(targetTopic({ lost_at: '2026-10-18T12:00:00Z' }));
+  expect(target.querySelector('[data-testid="target-badge"]')).not.toBeNull();
+  vi.advanceTimersByTime(9999);
+  flushSync();
+  expect(target.querySelector('[data-testid="target-badge"]')).not.toBeNull();
+  vi.advanceTimersByTime(1);
+  flushSync();
+  expect(target.querySelector('[data-testid="empty"]')).not.toBeNull();
+});
+
+test('accessibility: labelled shields, bars and live badge', () => {
+  mountShip(shipTopic({ shields_up: false }));
+  expect(target.querySelector('[data-testid="ship-shields"]')!.getAttribute('aria-label')).toBe('Escudos caídos');
+  const bar = target.querySelector('[role="progressbar"]')!;
+  expect(bar.getAttribute('aria-label')).toBe('Casco');
+  expect(bar.getAttribute('aria-valuenow')).toBe('73');
+  unmount(mounted!);
+  mountTarget(targetTopic());
+  const bars = target.querySelectorAll('[role="progressbar"]');
+  expect(bars.length).toBe(3);
+  expect(bars[0].getAttribute('aria-label')).toBe('Escudos');
+  expect(bars[0].getAttribute('aria-valuenow')).toBe('80');
+  expect(target.querySelector('[data-testid="target-badge"]')!.parentElement!.getAttribute('aria-live')).toBe('polite');
+});
+
+test('lawless badge has a label', () => {
+  mountTarget(targetTopic({ badge: { kind: 'lawless' } }));
+  expect(target.querySelector('[data-testid="target-badge"]')!.textContent).toBe('SIN LEY');
 });

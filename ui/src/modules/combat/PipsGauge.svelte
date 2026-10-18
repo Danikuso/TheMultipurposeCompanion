@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { t } from '../../lib/i18n';
+  import { getLocale, t } from '../../lib/i18n';
   import type { Pips } from './types';
 
   let { pips }: { pips: Pips } = $props();
@@ -10,6 +10,11 @@
     { key: 'wep', value: pips.wep },
   ] as const);
 
+  const summary = $derived.by(() => {
+    const f = new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 1 });
+    return t('combat-pips-summary', { sys: f.format(pips.sys), eng: f.format(pips.eng), wep: f.format(pips.wep) });
+  });
+
   function state(value: number, i: number): 'full' | 'half' | 'empty' {
     if (value >= i + 1) return 'full';
     if (value >= i + 0.5) return 'half';
@@ -17,7 +22,7 @@
   }
 </script>
 
-<div class="pips" data-testid="pips">
+<div class="pips" data-testid="pips" role="img" aria-label={summary}>
   {#each columns as col (col.key)}
     <div class="col" data-col={col.key}>
       <div class="blocks">
