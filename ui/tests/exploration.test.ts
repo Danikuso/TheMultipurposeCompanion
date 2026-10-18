@@ -63,6 +63,28 @@ test('footer shows unsold total and unidentified count',()=>{
   expect(target.textContent).toContain(credits(2345678));
 });
 
+test.each(['es','en','fr','de','pt'])('truncated bodies show a localized count separately from FSS in %s',locale=>{
+  setLocale(locale);
+  live.topics['exploration.system']={...system([body(1)]),truncated:1234,unidentified:7};
+  mounted=mount(SystemBodiesPanel,{target});flushSync();
+  const notice=target.querySelector('[data-testid="exploration-truncated"]');
+  expect(notice).not.toBeNull();
+  const message=t('exploration-truncated',{count:1234});
+  expect(message).not.toBe('exploration-truncated');
+  expect(notice?.textContent).toBe(message);
+  expect(notice?.textContent).toContain(new Intl.NumberFormat(locale).format(1234));
+  expect(target.querySelector('[data-testid="exploration-footer"]')?.textContent).toContain(`${t('exploration-unidentified')}: 7`);
+  setLocale(locale==='es'?'de':'es');flushSync();
+  expect(notice?.textContent).toBe(t('exploration-truncated',{count:1234}));
+});
+
+test.each([undefined,0])('no truncated notice for count %s',truncated=>{
+  live.topics['exploration.system']={...system([body(1)]),truncated};
+  mounted=mount(SystemBodiesPanel,{target});flushSync();
+  expect(target.querySelector('[data-testid="exploration-truncated"]')).toBeNull();
+  expect(target.querySelector('[data-testid="exploration-footer"]')?.textContent).toContain(`${t('exploration-unidentified')}: 599`);
+});
+
 test('scroll updates visible rows and shrinking items clamps to real rows',()=>{
   render(Array.from({length:300},(_,i)=>body(i+1)));
   const viewport=target.querySelector('[data-testid="virtual-list"]') as HTMLDivElement;

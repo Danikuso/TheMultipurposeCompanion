@@ -66,7 +66,12 @@ impl NetServiceHandle {
         let query = NetQuery::Autocomplete {
             prefix: prefix.to_owned(),
         };
-        match self.client.execute(&query).await.1 {
+        match self
+            .client
+            .execute_with_online(&query, &self.online)
+            .await
+            .1
+        {
             NetOutcome::Autocomplete(items) => Ok(items),
             NetOutcome::Failed(failure) => Err(failure),
             _ => Ok(Vec::new()),
@@ -193,7 +198,12 @@ async fn run(ctx: &Ctx, query: &NetQuery) -> Option<(NetSource, NetOutcome)> {
     if !ctx.online.load(Ordering::Relaxed) {
         return None;
     }
-    Some(ctx.client.execute(query).await)
+    let result = ctx.client.execute_with_online(query, &ctx.online).await;
+    if result.1 == NetOutcome::Disabled && !ctx.online.load(Ordering::Acquire) {
+        None
+    } else {
+        Some(result)
+    }
 }
 
 async fn disabled(ctx: &Ctx, qkey: &str) {
@@ -572,6 +582,61 @@ mod tests {
         assert_eq!(r.id, 1);
         assert_eq!(r.outcome, NetOutcome::Disabled);
         assert_eq!(rig.fake.calls(), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn opt_out_while_client_waits_for_rate_limit_returns_disabled_without_retry() {
+        let mut rig = rig(vec![ok(200, SYSTEM)]);
+        rig.handle.client.execute(&sol()).await;
+        rig.handle.tx.send(request(1)).await.unwrap();
+        for _ in 0..10 {
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(rig.fake.calls(), 1);
+        rig.online.store(false, Ordering::Release);
+        tokio::time::advance(Duration::from_secs(1)).await;
+        assert_eq!(next_response(&mut rig).await.outcome, NetOutcome::Disabled);
+        assert_eq!(rig.fake.calls(), 1);
+        tokio::time::advance(Duration::from_secs(120)).await;
+        assert_eq!(rig.fake.calls(), 1);
+        assert!(rig.events.try_recv().is_err());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn opt_out_after_run_enters_client_prevents_http() {
+        let rig = rig(vec![ok(200, SYSTEM)]);
+        rig.handle.client.execute(&sol()).await;
+        let (events, _responses) = mpsc::channel(1);
+        let ctx = Arc::new(Ctx {
+            client: rig.handle.client.clone(),
+            store: rig.store.clone(),
+            events,
+            online: rig.online.clone(),
+            shared: Mutex::new(Shared::default()),
+            permits: Semaphore::new(MAX_CONCURRENT),
+        });
+        let pending = tokio::spawn(async move { run(&ctx, &sol()).await });
+        tokio::task::yield_now().await;
+        assert_eq!(rig.fake.calls(), 1);
+        rig.online.store(false, Ordering::Release);
+        tokio::time::advance(Duration::from_secs(1)).await;
+        assert!(pending.await.unwrap().is_none());
+        assert_eq!(rig.fake.calls(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn opt_out_while_autocomplete_waits_prevents_direct_http() {
+        let rig = rig(vec![ok(200, r#"{"min_max":[],"values":["Sol"]}"#)]);
+        assert_eq!(rig.handle.autocomplete("Sol").await.unwrap().len(), 1);
+        let pending = tokio::spawn({
+            let handle = rig.handle.clone();
+            async move { handle.autocomplete("Col").await }
+        });
+        tokio::task::yield_now().await;
+        rig.online.store(false, Ordering::Release);
+        tokio::time::advance(Duration::from_secs(1)).await;
+        assert_eq!(pending.await.unwrap(), Ok(vec![]));
+        assert_eq!(rig.fake.calls(), 1);
     }
 
     #[tokio::test]

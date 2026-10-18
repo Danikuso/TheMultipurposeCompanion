@@ -35,6 +35,7 @@ exploration-fss-progress = Varredura FSS
 exploration-value-now = Valor do sistema
 exploration-value-if-mapped = Se mapear os recomendados
 exploration-unidentified = Corpos ainda não identificados no FSS
+exploration-truncated = Corpos omitidos da tabela devido ao limite de visualização: { $count }. Os totais incluem todos os corpos.
 exploration-signals-bio = Bio
 exploration-signals-geo = Geo
 exploration-mark-terraformable = Terraformável

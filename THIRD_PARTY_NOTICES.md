@@ -1,7 +1,7 @@
 # Avisos de terceros
 
 Cada dependencia directa se registra aquí al añadirla (nombre, versión, licencia).
-Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, CC0).
+Se registran las licencias admitidas por el proyecto (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, CC0 y las alternativas declaradas abajo). Una dependencia con licencia dual se utiliza bajo la alternativa compatible indicada.
 
 ## Dependencias directas
 
@@ -248,6 +248,8 @@ Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, 
 - Licencia: Apache-2.0
 - Usada por: tests e2e de ui (prueba de humo extremo a extremo)
 
+## Dependencias Rust de red y TLS (F1)
+
 ### reqwest
 - Versión: 0.13.5 (`default-features = false`; características `rustls`, `form`, `gzip`, `http2`, `charset`)
 - Licencia: MIT OR Apache-2.0
@@ -255,10 +257,37 @@ Solo se admiten licencias permisivas (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, 
 
 ### rustls (y pila TLS transitiva de reqwest)
 - Versión: rustls 0.23.46, rustls-webpki 0.103.15, rustls-platform-verifier 0.7.1, hyper-rustls 0.27.10, tokio-rustls 0.26.6, aws-lc-rs 1.18.2, aws-lc-sys 0.46.0
-- Licencia: rustls Apache-2.0 OR ISC OR MIT; rustls-webpki ISC; aws-lc-rs ISC AND (Apache-2.0 OR ISC); aws-lc-sys ISC AND (Apache-2.0 OR ISC) AND Apache-2.0 AND MIT AND BSD-3-Clause; resto MIT OR Apache-2.0
+- Licencia: rustls e hyper-rustls Apache-2.0 OR ISC OR MIT; rustls-webpki ISC; aws-lc-rs ISC AND (Apache-2.0 OR ISC); aws-lc-sys ISC AND (Apache-2.0 OR ISC) AND Apache-2.0 AND MIT AND BSD-3-Clause AND (Apache-2.0 OR ISC OR MIT) AND (Apache-2.0 OR ISC OR MIT-0); rustls-platform-verifier y tokio-rustls MIT OR Apache-2.0.
 - Usada por: tmc-net (TLS de reqwest; proveedor criptográfico aws-lc-rs)
 
 ### Otras dependencias transitivas de reqwest (revisión C19)
 - Árbol revisado con `cargo metadata` + `cargo tree -p tmc-net -e normal` (Windows). Todas permisivas: MIT, Apache-2.0, ISC, BSD-3-Clause, Zlib, 0BSD, Unlicense, BSL-1.0 (solo como alternativa en `ryu`, que también es Apache-2.0) y Unicode-3.0 (tablas ICU de `icu_*`, `idna`, `url`; licencia permisiva del Consorcio Unicode con aviso). Sin GPL/AGPL/CC-BY(-SA).
 - Incluye, entre otras: hyper 1.12.0, hyper-util 0.1.21, h2 0.4.20, http 1.5.0, tower-http 0.6.11, url 2.5.8, idna 1.1.0, encoding_rs 0.8.42 ((Apache-2.0 OR MIT) AND BSD-3-Clause), flate2 1.1.10, miniz_oxide 0.9.1, async-compression 0.4.51, serde_urlencoded 0.7.1, subtle 2.6.1 (BSD-3-Clause), untrusted 0.9.0 (ISC), ipnet 2.12.2, mime 0.3.17.
 - Usadas por: tmc-net
+
+## Revisión de dependencias transitivas (2026-10-18)
+
+Evidencia: `cargo metadata --offline --locked --format-version 1 --filter-platform x86_64-pc-windows-msvc`; recorrido de `resolve.nodes` desde los 12 miembros del workspace, incluyendo dependencias de compilación y pruebas. Resultado: 404 paquetes externos activos en Windows; ninguna licencia ausente y todas las dependencias directas con un aviso nominal en este documento. El cierre de dependencias normales/de compilación de `tmc-net` contiene 151 paquetes externos y no requiere GPL, AGPL ni CC-BY(-SA). La revisión corresponde a este `Cargo.lock` y plataforma; no sustituye una auditoría de otras plataformas o futuras actualizaciones.
+
+### self_cell (transitiva de Fluent)
+- Versión: 1.3.0.
+- Declaración del paquete: `Apache-2.0 OR GPL-2.0-only`. **TMC utiliza la alternativa Apache-2.0**; no la GPL. El paquete instalado incluye `LICENSE-APACHE`, verificado junto con su `Cargo.toml`.
+- Es la única coincidencia textual de GPL en las expresiones de licencia del árbol Windows revisado; no representa una obligación de usar GPL.
+
+### Otras transitivas con licencia propia
+- `clipboard-win` 5.4.1 y `error-code` 3.4.0: BSL-1.0 (**Boost Software License 1.0**).
+- `cssparser` 0.37.0, `cssparser-macros` 0.7.1, `dtoa-short` 0.3.5, `option-ext` 0.2.0 y `selectors` 0.38.0: MPL-2.0; no se modifica su código.
+- Los avisos de las pilas Unicode y criptográfica se conservan con sus expresiones compuestas indicadas arriba. Las expresiones antiguas con `/` en los manifiestos se registran como las declara cada paquete; no se infieren licencias nuevas.
+
+## Datos estáticos propios de F1
+
+La procedencia declarada en los archivos y la decisión de construcción están documentadas en [spike_licencias_f1.md](docs/research/notes/spike_licencias_f1.md), sin incorporar datasets de terceros. Los cuatro archivos llevan versión `2026-10-18` y licencia de datos propios del proyecto **PolyForm Noncommercial 1.0.0**:
+
+| Archivo | Contenido y procedencia declarada | Verificación |
+|---|---|---|
+| `crates/tmc-modules/data/fsd.json` | 75 entradas FSD; hechos del juego transcritos por TMC, con procedencia por entrada. | Solo las entradas marcadas `verified: true` tienen la verificación registrada; el resto conserva `false`. Los ajustes con el mismo historial no constituyen validación independiente. |
+| `crates/tmc-modules/data/species.json` | 117 especies, valores y CCR por género; hechos del juego transcritos por TMC. | Procedencia y estado `verified` explícitos; nombres localizados desde el diario y latinos como respaldo, según decisión del propietario. |
+| `crates/tmc-modules/data/bio_rules.json` | 90 reglas redactadas por TMC a partir de condiciones conocidas del juego; estructura propia. | Condiciones y límites pendientes de contraste con historial; referencia adicional en `docs/research/notes/bio_rules_f1.md`. |
+| `crates/tmc-modules/data/probes.json` | 7 bandas de radio con estimación de sondas; hechos transcritos por TMC. | Entradas `verified: false`; la UI identifica la estimación. |
+
+Las menciones de SrvSurvey en `bio_rules.json` explican su exclusión como fuente; no son código ni datos importados. Las búsquedas en `crates/`, `ui/src/` y `locales/` solo encuentran esas declaraciones de procedencia. No se incorporan tablas de wikis, Coriolis, EDSY ni datos de Canonn. El adaptador Canonn permanece desactivado hasta confirmar el permiso formal de uso por red ([spike_canonn_f1.md](docs/research/notes/spike_canonn_f1.md)); sus fixtures son sintéticos.

@@ -19,6 +19,7 @@
 //!   sin tocar el transporte.
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -35,6 +36,7 @@ const POLL_LIMIT: Duration = Duration::from_secs(120);
 
 /// Resultado no exitoso de una llamada (más pequeño que `NetOutcome`).
 enum Miss {
+    Disabled,
     NoData,
     Fail(NetFailure),
 }
@@ -42,6 +44,7 @@ enum Miss {
 impl From<Miss> for NetOutcome {
     fn from(m: Miss) -> Self {
         match m {
+            Miss::Disabled => NetOutcome::Disabled,
             Miss::NoData => NetOutcome::NoData,
             Miss::Fail(f) => NetOutcome::Failed(f),
         }
@@ -69,6 +72,10 @@ fn now() -> std::time::Instant {
     tokio::time::Instant::now().into_std()
 }
 
+fn online_allowed(online: Option<&AtomicBool>) -> bool {
+    online.is_none_or(|online| online.load(Ordering::Acquire))
+}
+
 fn source_of(service: Service) -> NetSource {
     match service {
         Service::Spansh => NetSource::Spansh,
@@ -78,6 +85,15 @@ fn source_of(service: Service) -> NetSource {
 }
 
 impl NetClient {
+    /// Revalida el opt-out después de las esperas y antes de cada envío HTTP.
+    /// Las peticiones ya enviadas no se pueden retirar.
+    pub async fn execute_with_online(
+        &self,
+        q: &NetQuery,
+        online: &AtomicBool,
+    ) -> (NetSource, NetOutcome) {
+        self.execute_inner(q, Some(online)).await
+    }
     pub fn new(transport: Arc<dyn Transport>) -> NetClient {
         let services = [Service::Spansh, Service::Edsm, Service::Canonn];
         NetClient {
@@ -97,20 +113,31 @@ impl NetClient {
     }
 
     pub async fn execute(&self, q: &NetQuery) -> (NetSource, NetOutcome) {
+        self.execute_inner(q, None).await
+    }
+
+    async fn execute_inner(
+        &self,
+        q: &NetQuery,
+        online: Option<&AtomicBool>,
+    ) -> (NetSource, NetOutcome) {
+        if !online_allowed(online) {
+            return (NetSource::Cache, NetOutcome::Disabled);
+        }
         match q {
-            NetQuery::System { id64, name } => self.system(*id64, name).await,
+            NetQuery::System { id64, name } => self.system(*id64, name, online).await,
             NetQuery::NeutronRoute(p) => {
                 let req = Req::Post(spansh::neutron_url(), spansh::neutron_form(p));
-                (NetSource::Spansh, self.route(req).await)
+                (NetSource::Spansh, self.route(req, online).await)
             }
             NetQuery::GalaxyRoute(p) => {
                 let req = Req::Post(spansh::galaxy_url(), spansh::galaxy_form(p));
-                (NetSource::Spansh, self.route(req).await)
+                (NetSource::Spansh, self.route(req, online).await)
             }
             NetQuery::Autocomplete { prefix } => {
                 let req = Req::Get(spansh::autocomplete_url(prefix));
                 let out = self
-                    .fetch(Service::Spansh, req, |b| {
+                    .fetch(Service::Spansh, req, online, |b| {
                         spansh::parse_autocomplete(b).map(|v| Some(NetOutcome::Autocomplete(v)))
                     })
                     .await;
@@ -121,11 +148,16 @@ impl NetClient {
         }
     }
 
-    async fn system(&self, id64: u64, name: &str) -> (NetSource, NetOutcome) {
+    async fn system(
+        &self,
+        id64: u64,
+        name: &str,
+        online: Option<&AtomicBool>,
+    ) -> (NetSource, NetOutcome) {
         if !self.is_down(Service::Spansh) {
             let req = Req::Get(spansh::system_url(id64));
             let out = self
-                .fetch(Service::Spansh, req, |b| {
+                .fetch(Service::Spansh, req, online, |b| {
                     spansh::parse_system(b).map(|s| s.map(NetOutcome::System))
                 })
                 .await;
@@ -136,7 +168,7 @@ impl NetClient {
         }
         let req = Req::Get(edsm::system_url(name));
         let out = self
-            .fetch(Service::Edsm, req, |b| {
+            .fetch(Service::Edsm, req, online, |b| {
                 edsm::parse_system(b).map(|s| s.map(NetOutcome::System))
             })
             .await;
@@ -148,12 +180,16 @@ impl NetClient {
         &self,
         service: Service,
         req: Req,
+        online: Option<&AtomicBool>,
         parse: impl FnOnce(&str) -> Result<Option<NetOutcome>, NetFailure>,
     ) -> NetOutcome {
+        if !online_allowed(online) {
+            return NetOutcome::Disabled;
+        }
         if self.is_down(service) {
             return NetOutcome::Failed(NetFailure::Down);
         }
-        let body = match self.call(service, req).await {
+        let body = match self.call(service, req, online).await {
             Ok(body) => body,
             Err(miss) => return miss.into(),
         };
@@ -180,13 +216,13 @@ impl NetClient {
     /// intervalo de sondeo + tiempo máximo de una petición, sin contar la espera
     /// del cerrojo). Se toleran hasta 2 fallos transitorios consecutivos de
     /// sondeo (5xx, tiempo agotado, 429); el 3.º se devuelve.
-    async fn route(&self, post: Req) -> NetOutcome {
+    async fn route(&self, post: Req, online: Option<&AtomicBool>) -> NetOutcome {
         let service = Service::Spansh;
         if self.is_down(service) {
             return NetOutcome::Failed(NetFailure::Down);
         }
         let _one_at_a_time = self.route_lock.lock().await;
-        let job = match self.call(service, post).await {
+        let job = match self.call(service, post, online).await {
             Ok(body) => match spansh::parse_job(&body) {
                 Ok(job) => job,
                 Err(e) => {
@@ -202,7 +238,7 @@ impl NetClient {
         let deadline = tokio::time::Instant::now() + POLL_LIMIT;
         loop {
             let body = match self
-                .call(service, Req::Get(spansh::results_url(&job)))
+                .call(service, Req::Get(spansh::results_url(&job)), online)
                 .await
             {
                 Ok(body) => {
@@ -248,8 +284,19 @@ impl NetClient {
 
     /// Limitador + transporte + traducción de estado HTTP. `Ok(cuerpo)` solo
     /// para 2xx; el éxito de salud lo registra quien interpreta el cuerpo.
-    async fn call(&self, service: Service, req: Req) -> Result<String, Miss> {
+    async fn call(
+        &self,
+        service: Service,
+        req: Req,
+        online: Option<&AtomicBool>,
+    ) -> Result<String, Miss> {
+        if !online_allowed(online) {
+            return Err(Miss::Disabled);
+        }
         self.wait_turn(service).await;
+        if !online_allowed(online) {
+            return Err(Miss::Disabled);
+        }
         let reply = match &req {
             Req::Get(url) => self.transport.get(url).await,
             Req::Post(url, form) => self.transport.post_form(url, form).await,
@@ -467,6 +514,114 @@ mod tests {
             efficiency: 60,
             supercharge_multiplier: 4.0,
         })
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn opt_out_after_rate_wait_prevents_http_without_health_change() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        let transport = FakeTransport::new();
+        transport.script("/api/system/", vec![ok(200, SYSTEM)]);
+        let client = Arc::new(client(&transport));
+        let online = Arc::new(AtomicBool::new(true));
+        client.execute(&sol_query()).await;
+        let pending = tokio::spawn({
+            let client = client.clone();
+            let online = online.clone();
+            async move { client.execute_with_online(&sol_query(), &online).await }
+        });
+        tokio::task::yield_now().await;
+        assert_eq!(transport.total(), 1);
+        online.store(false, Ordering::Release);
+        tokio::time::advance(Duration::from_secs(1)).await;
+        assert_eq!(pending.await.unwrap().1, NetOutcome::Disabled);
+        assert_eq!(transport.total(), 1);
+        assert!(client.retry_at(&sol_query()).is_none());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn opt_out_while_waiting_for_route_lock_prevents_submission() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        let transport = FakeTransport::new();
+        transport.script("/api/route", vec![ok(202, JOB)]);
+        transport.script("/api/results/", vec![ok(200, NEUTRON)]);
+        let client = Arc::new(client(&transport));
+        let online = Arc::new(AtomicBool::new(true));
+        let lock = client.route_lock.lock().await;
+        let pending = tokio::spawn({
+            let client = client.clone();
+            let online = online.clone();
+            async move { client.execute_with_online(&neutron_query(), &online).await }
+        });
+        tokio::task::yield_now().await;
+        online.store(false, Ordering::Release);
+        drop(lock);
+        assert_eq!(pending.await.unwrap().1, NetOutcome::Disabled);
+        assert_eq!(transport.total(), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn opt_out_between_route_polls_prevents_next_http() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        let transport = FakeTransport::new();
+        transport.script("/api/route", vec![ok(202, JOB)]);
+        transport.script("/api/results/", vec![ok(202, PENDING)]);
+        let client = Arc::new(client(&transport));
+        let online = Arc::new(AtomicBool::new(true));
+        let pending = tokio::spawn({
+            let client = client.clone();
+            let online = online.clone();
+            async move { client.execute_with_online(&neutron_query(), &online).await }
+        });
+        tokio::task::yield_now().await;
+        tokio::time::advance(Duration::from_secs(1)).await;
+        tokio::task::yield_now().await;
+        assert_eq!(transport.total(), 2);
+        online.store(false, Ordering::Release);
+        tokio::time::advance(Duration::from_secs(2)).await;
+        assert_eq!(pending.await.unwrap().1, NetOutcome::Disabled);
+        assert_eq!(transport.total(), 2);
+        assert!(client.retry_at(&neutron_query()).is_none());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn opt_out_after_fallback_rate_wait_prevents_edsm_http() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        let transport = FakeTransport::new();
+        transport.script("edsm.net", vec![ok(200, EDSM_SOL)]);
+        let client = Arc::new(client(&transport));
+        for _ in 0..3 {
+            client.fail(Service::Spansh);
+        }
+        {
+            let mut state = client.state.lock().unwrap();
+            for _ in 0..10 {
+                state
+                    .limiters
+                    .get_mut(&Service::Edsm)
+                    .unwrap()
+                    .try_acquire(now())
+                    .unwrap();
+            }
+        }
+        let online = Arc::new(AtomicBool::new(true));
+        let pending = tokio::spawn({
+            let client = client.clone();
+            let online = online.clone();
+            async move { client.execute_with_online(&sol_query(), &online).await }
+        });
+        tokio::task::yield_now().await;
+        online.store(false, Ordering::Release);
+        tokio::time::advance(Duration::from_secs(10)).await;
+        assert_eq!(
+            pending.await.unwrap(),
+            (NetSource::Edsm, NetOutcome::Disabled)
+        );
+        assert_eq!(transport.total(), 0);
+        assert!(
+            client.state.lock().unwrap().health[&Service::Edsm]
+                .retry_at()
+                .is_none()
+        );
     }
 
     #[tokio::test(start_paused = true)]

@@ -21,6 +21,7 @@ export interface SystemTopic {
   value_now: number;
   value_if_mapped: number;
   unidentified?: number;
+  truncated?: number;
   rows: BodyRow[];
 }
 

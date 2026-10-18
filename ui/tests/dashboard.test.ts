@@ -64,6 +64,48 @@ describe('dashboard panels', () => {
     expect(fuelFill?.style.width).toBe('50%');
   });
 
+  test('cmdr panel groups career ranks and superpower ranks in separate sections', () => {
+    live.topics['core.cmdr'] = {
+      name: 'DANIKUSO',
+      credits: 15_401_236,
+      ranks: {
+        combat: 2,
+        trade: 6,
+        explore: 5,
+        soldier: 0,
+        exobiologist: 0,
+        cqc: 0,
+        federation: 5,
+        empire: 0,
+      },
+      progress: {
+        combat: 67,
+        trade: 42,
+        explore: 94,
+        soldier: 40,
+        exobiologist: 0,
+        cqc: 0,
+        federation: 25,
+        empire: 100,
+      },
+    };
+
+    renderPanel(CmdrPanel);
+    const careerGroup = target.querySelector('[data-testid="rank-group-career"]');
+    const superpowerGroup = target.querySelector('[data-testid="rank-group-superpowers"]');
+    expect(careerGroup).not.toBeNull();
+    expect(superpowerGroup).not.toBeNull();
+
+    const careerKeys = Array.from(careerGroup!.querySelectorAll('[data-rank-key]')).map((el) =>
+      el.getAttribute('data-rank-key'),
+    );
+    const superpowerKeys = Array.from(superpowerGroup!.querySelectorAll('[data-rank-key]')).map(
+      (el) => el.getAttribute('data-rank-key'),
+    );
+    expect(careerKeys).toEqual(['combat', 'trade', 'explore', 'soldier', 'exobiologist', 'cqc']);
+    expect(superpowerKeys).toEqual(['federation', 'empire']);
+  });
+
   test('settings save online services, map threshold and efficiency', async () => {
     const config = { language: 'es', auto_copy_next_system: false, online_services: true,
       map_value_threshold: 600000, default_neutron_efficiency: 65,

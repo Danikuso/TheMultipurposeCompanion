@@ -252,6 +252,11 @@ impl SamplingTracker {
         }
     }
 
+    /// Replace the persisted balance without discarding the current sampling.
+    pub(crate) fn replace_completed(&mut self, completed: Vec<(u64, u32, String)>) {
+        self.completed = completed;
+    }
+
     pub fn on_sold(&mut self) {
         self.completed.clear();
         if self.current.as_ref().is_some_and(|cur| cur.complete) {

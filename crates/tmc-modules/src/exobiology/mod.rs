@@ -128,6 +128,11 @@ pub struct Exobiology {
     tracker: SamplingTracker,
     history: HistoryStats,
     infos: HashMap<(u64, u32, String), CompletedInfo>,
+    /// One unconfirmed live completion per key; confirmed snapshots prune it.
+    live_completed: HashMap<(u64, u32, String), (DateTime<Utc>, CompletedInfo)>,
+    history_generation: u64,
+    /// Body to which the last Status coordinates were bound when received.
+    status_body: Option<BodyKey>,
     system: Option<u64>,
     system_discovered: Option<bool>,
     star_class: Option<String>,
@@ -164,6 +169,9 @@ impl Exobiology {
             tracker: SamplingTracker::default(),
             history: HistoryStats::default(),
             infos: HashMap::new(),
+            live_completed: HashMap::new(),
+            history_generation: 0,
+            status_body: None,
             system: None,
             system_discovered: None,
             star_class: None,
@@ -218,6 +226,7 @@ impl Exobiology {
             return;
         }
         self.system = Some(address);
+        self.status_body = None;
         self.system_discovered = None;
         self.star_class = None;
         self.scans.clear();
@@ -249,13 +258,39 @@ impl Exobiology {
         self.tracker = SamplingTracker::default();
         self.history = HistoryStats::default();
         self.infos.clear();
+        self.live_completed.clear();
         self.organic_bodies.clear();
         self.discarded = None;
         self.last_reset = None;
         self.accuracy = (0, 0);
         ctx.store_task(TAG_OPEN, persist::load_open_samples(name.clone()));
-        ctx.store_task(TAG_HISTORY, predict::load_history(name.clone()));
-        ctx.store_task(TAG_UNSOLD, persist::load_unsold(name));
+        self.request_history(ctx);
+    }
+
+    fn request_history(&mut self, ctx: &mut ModuleCtx) {
+        let Some(cmdr) = self.cmdr.clone() else {
+            return;
+        };
+        self.history_generation = self.history_generation.wrapping_add(1);
+        let generation = self.history_generation;
+        for (tag, task) in [
+            (TAG_HISTORY, predict::load_history(cmdr.clone())),
+            (TAG_UNSOLD, persist::load_unsold(cmdr.clone())),
+        ] {
+            let cmdr = cmdr.clone();
+            ctx.store_task(tag, Box::new(move |store| {
+                let mut value = task(store)?;
+                value["generation"] = json!(generation);
+                if tag == TAG_UNSOLD {
+                    let reset = store.query_json(
+                        "SELECT MAX(ts) FROM event WHERE cmdr=?1 AND name IN ('SellOrganicData','Died')",
+                        &[json!(cmdr)],
+                    )?;
+                    value["last_reset"] = reset.first().and_then(|r| r.get(0)).cloned().unwrap_or(Value::Null);
+                }
+                Ok(value)
+            }));
+        }
     }
 
     fn set_current(
@@ -273,6 +308,9 @@ impl Exobiology {
             return;
         };
         self.enter_system(address);
+        if self.current != Some((address, body_id)) {
+            self.status_body = None;
+        }
         self.current = Some((address, body_id));
         if let Some(name) = name {
             self.current_name = Some(name.clone());
@@ -360,6 +398,7 @@ impl Exobiology {
         let pos = state
             .status
             .as_ref()
+            .filter(|_| self.status_body == Some(key))
             .and_then(|s| Some((s.latitude?, s.longitude?)));
         let cmdr = self.cmdr.clone().unwrap_or_default();
         match self.tracker.handle_scan(ev, &cmdr, at, pos, ctx) {
@@ -377,6 +416,8 @@ impl Exobiology {
                     ),
                 };
                 self.infos.insert((address, body, species.to_owned()), info);
+                self.live_completed
+                    .insert((address, body, species.to_owned()), (at, info));
             }
             SamplingChange::Progressed(_) | SamplingChange::Ignored => {}
         }
@@ -403,6 +444,7 @@ impl Exobiology {
             );
         }
         self.infos.clear();
+        self.live_completed.clear();
         self.last_reset = Some(at);
         let cmdr = self.cmdr.clone().unwrap_or_default();
         self.tracker.handle_sold(&cmdr, ctx);
@@ -410,6 +452,7 @@ impl Exobiology {
 
     fn on_died(&mut self, at: DateTime<Utc>, ctx: &mut ModuleCtx) {
         self.infos.clear();
+        self.live_completed.clear();
         self.discarded = None;
         self.last_reset = Some(at);
         let cmdr = self.cmdr.clone().unwrap_or_default();
@@ -447,6 +490,7 @@ impl Exobiology {
                     self.signals_body = None;
                 }
                 self.current = None;
+                self.status_body = None;
                 self.current_name = None;
             }
             EventKind::ScanOrganic(ev) => self.on_organic(ev, je.timestamp, state, ctx),
@@ -458,6 +502,12 @@ impl Exobiology {
 
     fn on_stored(&mut self, tag: &str, value: &Value) {
         if value.get("cmdr").and_then(Value::as_str) != self.cmdr.as_deref() {
+            return;
+        }
+        if matches!(tag, TAG_HISTORY | TAG_UNSOLD)
+            && value.get("generation").and_then(Value::as_u64).unwrap_or(1)
+                != self.history_generation
+        {
             return;
         }
         match tag {
@@ -483,6 +533,16 @@ impl Exobiology {
     }
 
     fn apply_unsold_rows(&mut self, value: &Value) {
+        let snapshot_reset = value
+            .get("last_reset")
+            .and_then(Value::as_str)
+            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+            .map(|t| t.to_utc());
+        let reset = self.last_reset.max(snapshot_reset);
+        let previous_infos = std::mem::take(&mut self.infos);
+        self.tracker.replace_completed(Vec::new());
+        self.live_completed
+            .retain(|_, (at, _)| reset.is_none_or(|r| *at > r));
         for row in value["rows"].as_array().into_iter().flatten() {
             let (Some(address), Some(body), Some(species)) = (
                 row.get(0).and_then(Value::as_u64),
@@ -499,10 +559,7 @@ impl Exobiology {
                 .and_then(|t| DateTime::parse_from_rfc3339(t).ok())
                 .map(|t| t.to_utc());
             // Una venta o muerte ya vista en esta sesión invalida filas más viejas.
-            if self
-                .last_reset
-                .is_some_and(|reset| at.is_none_or(|t| t <= reset))
-            {
+            if reset.is_some_and(|reset| at.is_none_or(|t| t <= reset)) {
                 continue;
             }
             self.tracker.mark_completed(address, body, species);
@@ -510,12 +567,25 @@ impl Exobiology {
                 .get(4)
                 .and_then(Value::as_str)
                 .and_then(|json| serde_json::from_str(json).ok());
+            let key = (address, body, species.to_owned());
+            if self
+                .live_completed
+                .get(&key)
+                .is_some_and(|(live_at, _)| at.is_some_and(|stored_at| stored_at >= *live_at))
+            {
+                self.live_completed.remove(&key);
+            }
             self.infos
-                .entry((address, body, species.to_owned()))
+                .entry(key.clone())
                 .or_insert_with(|| CompletedInfo {
                     value: species_table().species(species).map_or(0, |s| s.value),
-                    first_logged: first_logged_estimate(scan.as_ref(), None),
+                    first_logged: first_logged_estimate(scan.as_ref(), None)
+                        .or_else(|| previous_infos.get(&key).and_then(|i| i.first_logged)),
                 });
+        }
+        for (key, (_, info)) in &self.live_completed {
+            self.tracker.mark_completed(key.0, key.1, &key.2);
+            self.infos.insert(key.clone(), *info);
         }
     }
 
@@ -796,9 +866,15 @@ impl Exobiology {
         let min_m = species_table()
             .genus(&genus)
             .map_or(DEFAULT_CCR_M, |g| g.ccr_m);
+        let key = (s.system_address, s.body_id);
         let pos = state
             .status
             .as_ref()
+            .filter(|_| {
+                self.status_body == Some(key)
+                    && self.current == Some(key)
+                    && self.system == Some(key.0)
+            })
             .and_then(|st| Some((st.latitude?, st.longitude?, st.planet_radius?, st.heading)));
         let (mut distance, mut direction) = (None, None);
         if !s.complete
@@ -813,7 +889,6 @@ impl Exobiology {
                 .map(|(rel, compass)| DirectionView { rel, compass });
         }
         let remaining = distance.map(|d| (f64::from(min_m) - d).max(0.0));
-        let key = (s.system_address, s.body_id);
         let pending = if s.complete {
             0
         } else {
@@ -867,6 +942,21 @@ impl Module for Exobiology {
         match ev {
             SourceEvent::Status(st) => {
                 self.tick(st.timestamp);
+                self.status_body = self.current.filter(|key| {
+                    if self.system != Some(key.0)
+                        || (state.location.system_address != 0
+                            && state.location.system_address != key.0)
+                    {
+                        return false;
+                    }
+                    let name = self
+                        .current_name
+                        .as_deref()
+                        .or_else(|| self.scans.get(key).map(|scan| scan.body_name.as_str()));
+                    st.body_name
+                        .as_deref()
+                        .is_none_or(|actual| name == Some(actual))
+                });
                 let sampling = self.render_sampling(state);
                 update(
                     &mut self.sampling_value,
@@ -888,6 +978,13 @@ impl Module for Exobiology {
                 self.on_stored(tag, value);
             }
             SourceEvent::Net(response) => self.apply_response(response),
+            SourceEvent::ImportProgress { done, total } if done == total => {
+                let previous = self.cmdr.clone();
+                self.check_cmdr(state, ctx);
+                if previous == self.cmdr {
+                    self.request_history(ctx);
+                }
+            }
             _ => return dirty,
         }
         self.request_canonn(state, ctx);

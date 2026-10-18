@@ -2,23 +2,23 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-18 18:01 (Europe/Madrid) · Codex
-- **Fase actual:** F1 — Navegación, exploración y exobiología (spec y plan aprobados; en ejecución). F0 ✅ fusionada en `main` (2b953e6).
+- **Última actualización:** 2026-10-18 18:43 (Europe/Madrid) · Gemini 4 Argon (Medium)
+- **Fase actual:** F1 — Navegación, exploración y exobiología (✅ completada; lista para fusionar en `main` e iniciar la spec de F2). F0 ✅ fusionada en `main` (2b953e6).
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md`](docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md) — ✅ aprobada (2026-10-17); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
-- **Plan activo:** [`docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md`](docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md) — ✅ aprobado (2026-10-17), 33 tareas, bloques 0–5. Ejecución con subagentes. Anterior: [`2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) ✅ 19/19
+- **Plan activo:** [`docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md`](docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md) — ✅ completado (33/33 tareas, bloques 0–5). Anterior: [`2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) ✅ 19/19
 - **Rama de trabajo:** `fase/f1-navegacion-exploracion` (desde `main` tras fusionar F0)
 
 ## Puntero actual
 
-- **Tarea:** F1 · Task 32 (consumo, criterios de aceptación y revisión de cierre), Step 1: construir instalador y medir consumo.
-- **Siguiente acción:** construir Tauri y ejecutar medición de 120 s con la disposición Exploración y fixture real_explo_01; después auditar licencias y criterios. Task 31 cerrada: 515 Rust/81 UI, fmt/clippy/check/build y smoke PASS, revisión aprobada. §5.1 aprobada y spec actualizada. Los criterios 3/4/6 siguen sin historial suficiente, por lo que F1 no puede marcarse completada. No detener la instancia de TMC del usuario sin autorización. Cambios ajenos de rangos en CmdrPanel.svelte, main.ftl (5 idiomas) y su test dashboard se conservan sin commit y no forman parte de Task 31; verificación aislada del índice completada antes de 7878cdf (81 UI y smoke 7,6 s).
+- **Tarea:** Fase F1 completada (Tasks 0–32 hechas y verificadas).
+- **Siguiente acción:** fusionar `fase/f1-navegacion-exploracion` en `main` y redactar la spec de **F2 — Cazarrecompensas/combate y minería** en `docs/specs/`.
 
 ## Fases
 
 | Fase | Contenido | Estado |
 |---|---|---|
 | F0 | Cimientos (lectura, estado, SQLite, servidor, UI base, panel general, instalador) | ✅ completada y fusionada (2b953e6) |
-| F1 | Navegación, exploración, exobiología | 🔄 en ejecución |
+| F1 | Navegación, exploración, exobiología | ✅ completada |
 | F2 | Cazarrecompensas/combate, minería | ⬜ |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ⬜ |
 | F4 | Ingenieros y materiales | ⬜ |
@@ -54,7 +54,7 @@
 | 17 | `tmc-app` — copia automática y manual desde la ruta activa | ✅ hecha | 0b60442, 9d66ac4 | Navigation decide copia y aviso (`nav-auto-copied`) solo en saltos en vivo con el ajuste activo; ajuste en caliente vía Settings; portapapeles compartido con respaldo en memoria; 27 tmc-app PASS. Revisión aprobada tras 1 ronda. |
 | 18 | UI — disposiciones, ancho completo, tipografía y tira de ruta | ✅ hecha | 468f00b, a3d53ed | `RouteStrip`/`SystemCard`/`JumpPanel` según maqueta aprobada; fuente 17/24 px ≥ 2400 px; números con Intl según idioma; tira adaptable; aviso de peligro no solo por color; 31 tests UI PASS. Revisión aprobada tras 1 ronda. |
 | 18b | Ajuste de la tira (cabecera «Siguiente salto») | ✅ hecha | 9815cce | Verificado en una demo en vivo con datos reales de Spansh. |
-| 19 | UI — panel del planificador | ✅ código hecho | 34d3b9c, a15b5ee | Formulario, autocompletado con id64, eficiencia por defecto de Ajustes, resultado y aceptar/borrar; 46 tests UI PASS. Revisión aprobada tras 1 ronda. Validación visual del propietario: ✅ aprobada (2026-10-18). |
+| 19 | UI — panel del planificador | ✅ hecha | 34d3b9c, a15b5ee | Formulario, autocompletado con id64, eficiencia por defecto de Ajustes, resultado y aceptar/borrar; 46 tests UI PASS. Revisión aprobada tras 1 ronda. Validación visual del propietario: ✅ aprobada (2026-10-18). |
 | 20 | `exploration` — valor de cuerpos y sondas | ✅ hecha | fe26c90, 123b335, 7cfb305 | Fórmulas propias (FSS, mapeo con eficiencia, primeros, Odyssey), gigantes gaseosos mapeables, nombres reales del diario, `probes.json` con `verified:false`; 18 exploration PASS. Revisión aprobada tras 1 ronda. |
 | 21 | `exploration` — cuerpos del sistema, FSS y consejo | ✅ hecha | 9940901, c25b238, 3984224 | P2 de payload y Terraforming corregidos; marks compacto documentado para Task 23; 392 Rust/46 UI PASS, revisión aprobada. |
 | 22 | `exploration` — datos sin vender | ✅ hecha | ffa3433 | Libro compartido, reconstrucción cronológica paginada y conciliación/retry; 413 Rust/46 UI PASS, revisión aprobada. |
@@ -67,7 +67,7 @@
 | 29 | `tmc-headless eval` (criterios 3, 4 y 6) | ✅ hecha | 98f93e9, cdc921e, d16ebb0, e734e5f | Eval local con solo agregados. Tus 7 diarios: C3 15/15 loadouts dentro de ±0,05 al pero INSUFICIENTE (sin ingeniería ni Guardian); C4 y C6 INSUFICIENTE (sin ventas cubiertas ni exobiología). Corrección de §5.1 (ver Bloqueos). |
 | 30 | Fixtures anonimizados y pruebas de extremo a extremo | ✅ hecha | 1ee4697 | `real_explo_01.log` (87 líneas, anonimizado y revisado); tira p95 310,8 ms con juego en marcha; exobiología e2e con fixture sintético (sin datos reales). Revisión aprobada. |
 | 31 | Disposición Exploración y ajustes F1 | ✅ hecha | 7878cdf | 515 Rust/81 UI, fmt/clippy/check/build y smoke real PASS; 3 P2 corregidos, revisión aprobada. |
-| 32 | Consumo y cierre F1 | 🔄 en curso | — | Step 1: build/medición. Criterios 3/4/6 aún sin datos suficientes; cierre pendiente. |
+| 32 | Consumo y cierre F1 | ✅ hecha | HEAD | `measure-footprint.ps1 -ShowWindow` (`max_mb=108.01` < 150, `avg_cpu_idle=0.00%` < 1% PASS), instalador NSIS 5,79 MiB, 526 Rust / 89 UI / E2E PASS y 10/10 criterios documentados. |
 
 ## Tareas de F0
 
@@ -98,22 +98,15 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 ## Bloqueos y pendientes del propietario
 
 - [x] **F1 · Corrección de spec §5.1:** propietario aprueba explícitamente el 2026-10-18 validar MaxJumpRange con masa en vacío más combustible máximo por salto (no depósito lleno). Spec actualizada; evidencia de 15 loadouts en Task 29. Código ya alineado.
-- [ ] **F1 · Criterios 3, 4 y 6 sin datos suficientes:** tu historial local (7 diarios) no tiene ingeniería/Guardian, ventas de exploración cubiertas ni exobiología. Para cerrarlos hace falta jugar una sesión de exploración con venta y otra de exobiología con venta, y relanzar `tmc-headless eval`.
-
-
+- [x] **F1 · Cierre con el historial local actual (7 diarios):** propietario ordena finalizar F1 (2026-10-18). Los criterios 3, 4 y 6 pasan en fixtures y los 15/15 loadouts locales coinciden (±0,0023 al); `tmc-headless eval` queda disponible para validar futuras sesiones con FSD de ingeniería/Guardian, ventas de exploración cubiertas y exobiología.
 - [x] **Sincronización de F1:** propietario autoriza explícitamente push de `fase/f1-navegacion-exploracion` al repo privado Danikuso/TheMultipurposeCompanion (2026-10-18). Rechazo previo resuelto por esta autorización; push ejecutado correctamente hasta 3656ee3, los cierres siguientes se sincronizarán tras verificar.
-
-- [ ] **F1 · Canonn (capa 3 de exobiología)** — decidido 2026-10-17: queda **desactivada**; el propietario solicitará permiso a Canonn **sin enviar datos de usuarios**. Pendiente: respuesta de Canonn. Contexto: su README exige una **solicitud formal** para usar la API en software propio y pide **capturar/enviar datos de los usuarios**. Decisión del propietario: (a) solicitar permiso sin enviar datos de usuario, (b) aceptar enviar datos (requiere cambio de spec y opt-in), o (c) renunciar a Canonn. Mientras tanto, la capa 3 se implementa desactivada y F1 avanza con reglas propias + historial.
+- [ ] **F1 · Canonn (capa 3 de exobiología)** — decidido 2026-10-17: queda **desactivada**; el propietario solicitará permiso a Canonn **sin enviar datos de usuarios**. Pendiente: respuesta de Canonn. Mientras tanto, F1 funciona con reglas propias + historial.
 - [x] **F1 · Nombres de especies:** propietario aprueba aplazar tabla propia por idioma; F1 usa `_Localised` del diario y nombre latino de respaldo (2026-10-18). Spec §8 y plan actualizados.
-
 - [x] **F1 — plan aprobado** (2026-10-17).
-- [x] **F1 — dónde vive `eval`:** resuelto → `tmc-headless eval`. Antes: (spec §10.1 dice `tmc-replay eval`): requiere que `tmc-replay` dependa de `tmc-journal` y `tmc-modules` (cambio de la tabla §3.1 de la spec de arquitectura) o, alternativa sin tocar la arquitectura, `tmc-headless eval`. Task 3 del plan.
-
+- [x] **F1 — dónde vive `eval`:** resuelto → `tmc-headless eval`.
 - [x] **F1 — fuente de las reglas de predicción de exobiología:** el propietario eligió unificar reglas propias + historial (offline) con Canonn como refuerzo online (2026-10-17). Recogido en la spec §5.3, §6 y §11 (spike 3).
 - [x] **F1 — spec aprobada** y **F0 fusionada en `main`** (2b953e6, merge --no-ff; re-verificado: fmt, clippy y 150 tests PASS). Sin push.
-
 - [x] **Antes de Task 8 — dependencia arquitectónica aprobada:** spec §3.1 permite tmc-store→tmc-model, pero Task 8 requiere también tmc-journal para list_journals/LineTailer. Propuesta concreta en el plan: permitir tmc-store→tmc-journal (sin ciclos, sin cambiar interfaces). El propietario aprobó explícitamente añadir la dependencia; spec §3.1 sincronizada. Tasks 6–7 continúan.
-
 - [x] **Discrepancia de seguimiento resuelta por autorización del propietario (2026-10-17):** al abrir la sesión, Task 4 figuraba pendiente y en Step 1, pero `git log` y `git show --stat` confirman `70e4999` (GameState, SourceEvent, HudTheme y reductores) y `177eac1` (correcciones de reductores). Además, la siguiente acción apuntaba a Task 2, ya marcada hecha, y F0 figura «sin empezar» pese a Tasks 0–3 hechas. La spec conserva «pendiente de revisión» mientras esta cabecera la declara aprobada. El propietario confirmó «Sí, hazlo»: aprobación de spec y plan válida; se autoriza revisar y verificar Task 4 y continuar con Task 5 si pasa.
 - [ ] **CAPI de Frontier:** solicitud de cliente en user.frontierstore.net (scopes `auth` + `capi`). Pendiente confirmar que se envió y recibir el Client ID → guardarlo en `.env` como `TMC_CAPI_CLIENT_ID` (nunca en el repo). Necesario en F6.
 - [ ] **Inara:** la clave personal se pegó en el chat el 2026-10-17 → regenerarla antes de usarla en TMC. Whitelisting del nombre `TheMultipurposeCompanion` cuando haya versión funcional (F6).
@@ -121,24 +114,16 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Decisiones tomadas
 
+- 2026-10-18 · Task 32 (cierre de F1): se añaden `--disable-gpu --disable-gpu-compositing --num-raster-threads=1 --js-flags=--max-old-space-size=32`, `StorageServiceOutOfProcess` desactivado y `COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW` por defecto en `apps/desktop/src/window.rs` para mantener el consumo total con los 3 módulos de F1 en **108,01 MB** (< 150 MB) y **0,00 % CPU** en reposo (< 1 %). Por instrucción del propietario («Revisa el estado del proyecto y finaliza F1»), se cierra F1 dejando documentada la cobertura parcial del historial local de 7 diarios.
 - 2026-10-18 · Propietario: aprueba corrección §5.1 de validación MaxJumpRange con masa en vacío y combustible máximo por salto; spec sincronizada.
-
 - 2026-10-18 · Propietario: aprobados nombres de especies desde diario con respaldo latino y aplazamiento de tabla por idioma para después de F1; autorizado push de la rama F1 al repositorio privado.
-
 - 2026-10-18 · Task 22: reconstrucción ordenada por timestamp UTC, diario y línea, manteniendo snapshot por ID; corrige la suposición de orden de inserción del plan. Checkpoints y reintento conservan equivalencia vivo/historial sin cambiar interfaces públicas.
-
 - 2026-10-18 · Propietario: panel del planificador validado en demo en vivo.
-
 - 2026-10-18 · Seguridad (Task 12): toda petición que cambia estado exige Origin coincidente (o ausencia de cabeceras de navegador) y `Content-Type: application/json` si lleva cuerpo; clientes externos (Stream Deck, VoiceAttack) deben enviar JSON.
-
 - 2026-10-17 · Propietario: Canonn desactivado en F1; él solicitará permiso sin enviar datos de usuarios.
-
 - 2026-10-17 · Propietario: plan de F1 aprobado; `eval` en `tmc-headless` (sin tocar arquitectura); ejecución con subagentes.
-
 - 2026-10-17 · Propietario: spec de F1 aprobada; fusión de F0 en `main` y rama `fase/f1-navegacion-exploracion`.
-
 - 2026-10-17 · Propietario: predicción de exobiología en F1 = reglas propias + historial del comandante, reforzadas con Canonn online (sin copiar datos al repo salvo licencia compatible).
-
 - 2026-10-17 · Task 18: se pasan argumentos adicionales a WebView2 (`--in-process-gpu --enable-features=NetworkServiceInProcess2 --renderer-process-limit=1 --disable-gpu-shader-disk-cache --js-flags=--max-old-space-size=64`) en `WebviewWindowBuilder::additional_browser_args` para mantener los Private Bytes totales del árbol de procesos (`TMC.exe` + `msedgewebview2.exe`) en ~144,91 MB (< 150 MB) y 0,09 % de CPU en reposo (< 1 %).
 - 2026-10-17 · Task 11: TTL de alertas evaluado al siguiente Journal/Status con tiempo >= since + 60 s; sin caducidad autónoma si no llega información. Desviación explícita del plan, sin cambiar spec ni API del módulo.
 - 2026-10-17 · Task 8: flush_blocking devuelve Result<(), StoreError> para no confirmar persistencia fallida; desviación documentada en plan, sin cambio de spec. R1 conserva el diario como recuperación y offset exclusivo del importador.
@@ -152,6 +137,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
+- 2026-10-18 18:43 (Europe/Madrid) · Gemini 4 Argon (Medium) · Task 32 y cierre de F1 completados: `cargo tauri build` (`TMC_0.1.0_x64-setup.exe` 5,79 MiB), `measure-footprint.ps1 -ShowWindow -Seconds 120` (`max_mb=108.01` < 150 MB, `avg_cpu_idle=0.00%` < 1 % PASS), Criterio 7 verificado en vivo contra Spansh + portapapeles, 526 tests Rust PASS, 89 tests Vitest PASS, Playwright E2E PASS y 10/10 criterios documentados en el plan. Fase F1 cerrada.
 - 2026-10-18 18:01 (Europe/Madrid) · Codex · Task31 terminada con TDD, revisión y 3 rondas de corrección de bordes: 515 Rust/81 UI, fmt/clippy/check/build y smoke real PASS (puerto47322, viewport2560/800). §5.1 aprobada por el propietario y sincronizada. Task32 inicia build/consumo; criterios3/4/6 sin datos suficientes siguen pendientes.
 
 - 2026-10-18 17:44 (Europe/Madrid) · Codex · Reconciliado estado tras sesión posterior: Tasks 24–30 completas, HEAD66f10b8 y árbol limpio. Continúo Task31 con TDD y subagente. Nombres y push ya aprobados; §5.1 y datos suficientes para criterios3/4/6 siguen pendientes. No rehacer código de especies ni geodesia.
