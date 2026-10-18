@@ -86,7 +86,11 @@ impl PriceBook {
         }
     }
 
-    /// Guarda el mejor precio de `markets` (el llamador pasa solo los compatibles).
+    /// Guarda el mejor precio de `markets`.
+    ///
+    /// Contrato: llamar solo tras una consulta correcta, con mercados ya filtrados
+    /// por la plataforma de la nave actual. Si la nave cambia, el módulo llama a
+    /// [`Self::clear_remote`] y vuelve a consultar.
     pub fn on_remote(
         &mut self,
         commodity: &str,
@@ -102,6 +106,11 @@ impl PriceBook {
                 self.remote.remove(&key);
             }
         }
+    }
+
+    /// Descarta todos los precios remotos (p. ej. al cambiar de nave).
+    pub fn clear_remote(&mut self) {
+        self.remote.clear();
     }
 
     /// Carga las últimas ventas reconstruidas por [`price_rebuild_task`]; no pisa
@@ -206,6 +215,65 @@ mod tests {
         );
         let p = b.best_price("platinum", now()).unwrap();
         assert_eq!((p.price, p.source), (230_000, PriceSource::Remote));
+    }
+
+    #[test]
+    fn remote_exactly_15_min_old_is_stale() {
+        let mut b = PriceBook::default();
+        b.on_remote(
+            "platinum",
+            &[remote(230_000)],
+            now() - Duration::minutes(15),
+        );
+        assert!(b.best_price("platinum", now()).is_none());
+    }
+
+    #[test]
+    fn clear_remote_falls_back_to_local_sell() {
+        let mut b = PriceBook::default();
+        b.on_market_sell(&sell("Platinum", 210_000), now());
+        b.on_remote("platinum", &[remote(230_000)], now());
+        b.clear_remote();
+        let p = b.best_price("platinum", now()).unwrap();
+        assert_eq!((p.price, p.source), (210_000, PriceSource::LocalSell));
+    }
+
+    #[test]
+    fn restore_does_not_overwrite_newer_local_sell() {
+        let mut b = PriceBook::default();
+        b.on_market_sell(&sell("Platinum", 300_000), now());
+        b.restore_local_sells(&json!({"prices": {"platinum":
+            {"price": 1, "at": "2026-10-18T10:00:00Z"}}}));
+        assert_eq!(b.best_price("platinum", now()).unwrap().price, 300_000);
+    }
+
+    #[test]
+    fn rebuild_excludes_other_cmdr_and_zero_price() {
+        let store = Store::open_in_memory().unwrap();
+        let writer = EventWriter::spawn(&store);
+        let rows = [
+            ("TESTER", "Platinum", 0, "2026-10-18T11:00:00Z"),
+            ("TESTER", "Platinum", 100, "2026-10-18T10:00:00Z"),
+            ("OTHER", "Painite", 500, "2026-10-18T10:00:00Z"),
+        ];
+        for (i, (c, ty, price, ts)) in rows.iter().enumerate() {
+            let raw = format!(
+                r#"{{"timestamp":"{ts}","event":"MarketSell","Type":"{ty}","Count":1,"SellPrice":{price}}}"#
+            );
+            let ev = parse_line(&raw).unwrap();
+            writer.send(StoredEvent {
+                file_name: "a.log".into(),
+                line: i as u64 + 1,
+                ts: ev.timestamp,
+                name: ev.name,
+                cmdr: Some((*c).into()),
+                json: raw,
+            });
+        }
+        writer.flush_blocking().unwrap();
+        let stored = price_rebuild_task("TESTER".into())(&store).unwrap();
+        assert_eq!(stored["prices"]["platinum"]["price"], 100);
+        assert!(stored["prices"].get("painite").is_none());
     }
 
     #[test]
