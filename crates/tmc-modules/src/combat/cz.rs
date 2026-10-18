@@ -8,6 +8,8 @@ use tmc_model::events::EventKind;
 
 use super::ax::is_thargoid_faction;
 
+/// Vista por zona de conflicto. El total canónico de bonos es el libro de vales
+/// (`VoucherLedger`); aquí solo se desglosa la zona actual.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ConflictZone {
     pub system: String,
@@ -111,5 +113,32 @@ mod tests {
         assert!(ax.apply_event(&ev, now()));
         assert_eq!(cz.view(), None);
         assert_eq!(ax.bonds, 6_000_000);
+    }
+
+    #[test]
+    fn cz_bond_sum_equals_ledger_non_ax_combat_bond_delta() {
+        use crate::combat::vouchers::{VoucherKind, VoucherLedger};
+        let seq = [
+            bond(20000, "A", "B"),
+            bond(6_000_000, "Aegis", "$faction_Thargoid;"),
+            bond(30000, "A", "B"),
+            bond(7000, "C", "B"),
+        ];
+        let mut cz = CzTracker::default();
+        let mut ledger = VoucherLedger::default();
+        for ev in &seq {
+            cz.apply_event(ev, "Kappa", now());
+            ledger.apply_event(ev, "Kappa", now());
+        }
+        let cz_sum: u64 = cz.view().unwrap().bonds_by_faction.values().sum();
+        let non_ax: u64 = ledger
+            .unredeemed()
+            .iter()
+            .filter(|t| t.kind == VoucherKind::CombatBond && !t.ax)
+            .map(|t| t.amount)
+            .sum();
+        assert_eq!(cz_sum, 57000);
+        assert_eq!(cz_sum, non_ax);
+        assert_eq!(ledger.total(VoucherKind::CombatBond), 6_057_000);
     }
 }
