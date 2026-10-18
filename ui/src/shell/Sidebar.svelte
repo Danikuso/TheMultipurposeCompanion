@@ -6,7 +6,7 @@
   interface LiveModuleState {
     id: string;
     title_key?: string;
-    relevance: 'Hidden' | 'Low' | 'Normal' | 'High' | 'Critical';
+    relevance: string;
   }
 
   let {
@@ -25,7 +25,7 @@
       return {
         id: regMod.id,
         titleKey: regMod.titleKey,
-        relevance: liveState?.relevance ?? 'Normal',
+        relevance: (liveState?.relevance ?? 'normal').toLowerCase(),
       };
     }),
   );
@@ -34,7 +34,7 @@
 <aside class="hud-sidebar" aria-label="Module navigation">
   <div class="sidebar-top">
     {#each displayModules as mod (mod.id)}
-      {#if mod.relevance !== 'Hidden'}
+      {#if mod.relevance !== 'hidden'}
         <button
           type="button"
           class="nav-btn"
@@ -43,7 +43,7 @@
           onclick={() => onSelect?.(mod.id)}
         >
           <span class="nav-label">{t(mod.titleKey)}</span>
-          <span class="relevance-dot relevance-{mod.relevance.toLowerCase()}"></span>
+          <span class="relevance-dot relevance-{mod.relevance}"></span>
         </button>
       {/if}
     {/each}
@@ -109,6 +109,14 @@
 
   .relevance-low {
     background: var(--hud-muted);
+  }
+
+  .relevance-active {
+    background: var(--hud-warning);
+  }
+
+  .relevance-urgent {
+    background: var(--hud-danger);
   }
 
   .relevance-normal {
