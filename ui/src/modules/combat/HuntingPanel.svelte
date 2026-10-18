@@ -1,26 +1,30 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
-  import { ageShort, credits, ly, pct } from '../../lib/format';
+  import { ageShort, credits, ly, pct, skewFrom } from '../../lib/format';
   import { action, topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
   import { cleanFaction, type SessionTopic } from './types';
 
   const s = $derived(topic<SessionTopic>('combat.session'));
-  let now = $state(Date.now());
+  let tick = $state(Date.now());
+  let skew = $state<number | null>(null);
+  // Hora del diario; `null` si no se conoce (se ocultan duraciones y edades).
+  const now = $derived(skew == null ? null : tick + skew);
   let failed = $state(false);
 
   // Un único setInterval de 30 s (antigüedad del IF y créditos/hora); no corre sin sesión.
   $effect(() => {
     if (!s) return;
-    now = Date.now();
+    skew = skewFrom(s.as_of);
+    tick = Date.now();
     const id = setInterval(() => {
-      now = Date.now();
+      tick = Date.now();
     }, 30_000);
     return () => clearInterval(id);
   });
 
   const perHour = $derived.by(() => {
-    if (!s?.started_at) return null;
+    if (!s?.started_at || now == null) return null;
     const secs = Math.max(60, (now - Date.parse(s.started_at)) / 1000);
     return Math.round((s.credits / secs) * 3600);
   });
@@ -31,7 +35,7 @@
   );
   const ifAge = $derived.by(() => {
     const ts = s?.nearest_if?.updated_at ? Date.parse(s.nearest_if.updated_at) : NaN;
-    return Number.isNaN(ts) ? null : ageShort(Math.max(0, (now - ts) / 1000));
+    return Number.isNaN(ts) || now == null ? null : ageShort(Math.max(0, (now - ts) / 1000));
   });
   const unredeemed = $derived(s ? s.vouchers_total.bounty + s.vouchers_total.combat_bond : 0);
 

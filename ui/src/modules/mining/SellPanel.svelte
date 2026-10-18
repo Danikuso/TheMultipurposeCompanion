@@ -1,20 +1,24 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
-  import { credits, decimal, relativeAge } from '../../lib/format';
+  import { credits, decimal, relativeAge, skewFrom } from '../../lib/format';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
   import { materialName, namesFrom, type PadSize, type ProspectorTopic, type SellTopic } from './types';
 
   const s = $derived(topic<SellTopic>('mining.sell'));
-  const names = $derived(namesFrom(topic<ProspectorTopic>('mining.prospector')));
-  let now = $state(Date.now());
+  const names = $derived(namesFrom(topic<ProspectorTopic>('mining.prospector'), s?.names));
+  let tick = $state(Date.now());
+  let skew = $state<number | null>(null);
+  // Hora del diario; `null` si no se conoce (se ocultan las antigüedades).
+  const now = $derived(skew == null ? null : tick + skew);
 
   // Un único setInterval de 30 s para las antigüedades; no corre sin plan.
   $effect(() => {
     if (s?.status !== 'ok') return;
-    now = Date.now();
+    skew = skewFrom(s.as_of);
+    tick = Date.now();
     const id = setInterval(() => {
-      now = Date.now();
+      tick = Date.now();
     }, 30_000);
     return () => clearInterval(id);
   });
@@ -69,7 +73,7 @@
       </table>
     {/each}
     <p class="muted" data-testid="sell-source">
-      {t('mining-source', { source: sourceLabel(plan.source) })} · {relativeAge(plan.fetched_at, now)}
+      {t('mining-source', { source: sourceLabel(plan.source) })}{#if plan.fetched_at && now != null} · {relativeAge(plan.fetched_at, now)}{/if}
     </p>
     {#if plan.best_station_total}
       <p data-testid="sell-best">{t('mining-best-total', { credits: credits(plan.best_station_total[1]), station: plan.best_station_total[0] })}</p>

@@ -486,3 +486,19 @@ fn ship_topic_reports_overheating_and_identical_status_is_not_dirty() {
     );
     assert!(h.status(6, Flags::OVERHEATING).is_empty());
 }
+
+#[test]
+fn session_as_of_does_not_dirty_and_follows_journal_clock() {
+    let mut h = H::new();
+    h.start();
+    h.bounty(10, "Navy", 5000);
+    let first = h.val("combat.session")["as_of"].clone();
+    assert!(first.is_string(), "{first}");
+    h.status(5, Flags::SHIELDS_UP);
+    let before = h.m.session_renders;
+    for i in 0..5 {
+        assert!(h.status(6 + i, Flags::SHIELDS_UP).is_empty());
+    }
+    assert_eq!(h.m.session_renders, before);
+    assert_eq!(h.val("combat.session")["as_of"], first);
+}

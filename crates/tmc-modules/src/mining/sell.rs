@@ -82,7 +82,7 @@ pub struct SellPlan {
     pub by_commodity: BTreeMap<String, Vec<SellOption>>,
     /// (estación, venta total estimada de la carga).
     pub best_station_total: Option<(String, u64)>,
-    pub fetched_at: DateTime<Utc>,
+    pub fetched_at: Option<DateTime<Utc>>,
     pub source: PriceSource,
 }
 
@@ -94,7 +94,7 @@ impl SellPlan {
         cargo: &BTreeMap<String, u32>,
         results: &BTreeMap<String, Vec<RemoteMarket>>,
         ship_pad: Option<PadSize>,
-        fetched_at: DateTime<Utc>,
+        fetched_at: Option<DateTime<Utc>>,
     ) -> Self {
         let mut by_commodity = BTreeMap::new();
         // (estación, sistema) -> (total, distancia mínima)
@@ -188,7 +188,7 @@ mod tests {
                 vec![market("X", 500_000, Some(PadSize::Large), 5.0)],
             ),
         ]);
-        let plan = SellPlan::build(&cargo, &results, None, DateTime::UNIX_EPOCH);
+        let plan = SellPlan::build(&cargo, &results, None, None);
         assert_eq!(plan.best_station_total, Some(("X".to_string(), 9_400_000)));
         assert_eq!(plan.by_commodity["platinum"][0].station_name, "Y");
     }
@@ -200,7 +200,7 @@ mod tests {
             "platinum".to_string(),
             vec![market("X", 100, None, 1.0), market("X", 90, None, 1.0)],
         )]);
-        let plan = SellPlan::build(&cargo, &results, None, DateTime::UNIX_EPOCH);
+        let plan = SellPlan::build(&cargo, &results, None, None);
         assert_eq!(plan.best_station_total, Some(("X".to_string(), 1000)));
     }
 
@@ -234,7 +234,7 @@ mod tests {
                 market("Near", 200_000, None, 2.0),
             ],
         )]);
-        let plan = SellPlan::build(&cargo, &results, None, DateTime::UNIX_EPOCH);
+        let plan = SellPlan::build(&cargo, &results, None, None);
         assert_eq!(plan.best_station_total.unwrap().0, "Near");
         assert_eq!(plan.by_commodity["platinum"][0].station_name, "Near");
     }

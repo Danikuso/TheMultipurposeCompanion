@@ -455,11 +455,22 @@ impl Combat {
     }
 
     fn set(&mut self, topic: &'static str, v: Value, dirty: &mut TopicSet) {
-        if self.values.get(topic) != Some(&v) {
+        // `as_of` avanza con cada evento: no cuenta para detectar cambios.
+        if strip_as_of(self.values.get(topic)) != strip_as_of(Some(&v)) {
             self.values.insert(topic, v);
             dirty.insert(topic.to_owned());
         }
     }
+}
+
+fn strip_as_of(v: Option<&Value>) -> Option<Value> {
+    v.map(|v| {
+        let mut v = v.clone();
+        if let Some(o) = v.as_object_mut() {
+            o.remove("as_of");
+        }
+        v
+    })
 }
 
 impl Default for Combat {
@@ -557,7 +568,10 @@ impl Module for Combat {
             {
                 self.session_renders += 1;
             }
-            let session = self.render_session(state);
+            let mut session = self.render_session(state);
+            if let (Some(o), Some(at)) = (session.as_object_mut(), self.now) {
+                o.insert("as_of".into(), serde_json::json!(at));
+            }
             self.set(TOPIC_SESSION, session, &mut dirty);
             let zone = self
                 .cz

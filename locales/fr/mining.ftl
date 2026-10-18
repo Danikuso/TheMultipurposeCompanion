@@ -81,3 +81,4 @@ mining-source-local-sell = votre dernière vente
 mining-source-local-market = marché actuel
 mining-best-total = Vente estimée de la soute : ≈ { $credits } à { $station }
 mining-sell-loading = consultation des marchés…
+mining-age-now = à l'instant

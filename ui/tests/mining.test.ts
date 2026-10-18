@@ -6,6 +6,8 @@ import { setLocale } from '../src/lib/i18n';
 import ProspectorPanel from '../src/modules/mining/ProspectorPanel.svelte';
 import MiningSessionPanel from '../src/modules/mining/MiningSessionPanel.svelte';
 import SellPanel from '../src/modules/mining/SellPanel.svelte';
+import { namesFrom, materialName } from '../src/modules/mining/types';
+import { relativeAge, skewFrom } from '../src/lib/format';
 
 let target: HTMLDivElement;
 let mounted: ReturnType<typeof mount> | undefined;
@@ -84,7 +86,7 @@ test('empty topic shows no data', () => {
 
 function sessionTopic(extra: Record<string, unknown> = {}) {
   return {
-    started_at: '2030-01-01T00:00:00Z', refined: { platinum: 29, palladium: 7 },
+    as_of: '2030-01-01T00:47:00Z', started_at: '2030-01-01T00:00:00Z', refined: { platinum: 29, palladium: 7 },
     limpets_launched: { Prospector: 9, Collection: 33 }, limpets_left: 18, cargo: 38, capacity: 256,
     asteroids_prospected: 4, cracked: 3, tons_per_hour: 24, est_credits: 9100000, credits_per_hour: 11600000,
     refinery_bins: [{ key: 'platinum', tons: 3 }, { key: 'palladium', tons: 1 }], ...extra,
@@ -98,14 +100,15 @@ function option(extra: Record<string, unknown> = {}) {
 }
 function sellTopic(options = [option()]) {
   return {
-    status: 'ok', by_commodity: { platinum: options }, best_station_total: ['Ogden Port', 9400000],
+    status: 'ok', as_of: '2030-01-01T12:00:00Z', by_commodity: { platinum: options }, best_station_total: ['Ogden Port', 9400000],
     fetched_at: '2030-01-01T10:00:00Z', source: 'remote',
   };
 }
 
 test('sell panel shows price distance pad and age', () => {
   vi.useFakeTimers();
-  vi.setSystemTime(new Date('2030-01-01T12:00:00Z'));
+  // El reloj local va muy por delante del del diario: manda `as_of`.
+  vi.setSystemTime(new Date('2031-06-01T00:00:00Z'));
   mountWith(SellPanel, {
     'mining.sell': sellTopic(),
     'mining.prospector': { current: asteroid(), history: [] },
@@ -178,4 +181,54 @@ test('reset failure shows alert', async () => {
   mountWith(MiningSessionPanel, { 'mining.session': sessionTopic() });
   (q('reset-session') as HTMLButtonElement).click();
   await vi.waitFor(() => { flushSync(); expect(target.querySelector('[role="alert"]')).not.toBeNull(); });
+});
+
+test('age advances with the timer on the journal clock', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2031-06-01T00:00:00Z'));
+  mountWith(SellPanel, { 'mining.sell': sellTopic([option({ updated_at: '2030-01-01T11:59:20Z' })]) });
+  expect(q('sell-option')!.textContent).toContain('ahora');
+  vi.advanceTimersByTime(30_000);
+  flushSync();
+  expect(q('sell-option')!.textContent).toContain('hace 1 min');
+});
+
+test('without as_of ages and durations are hidden', () => {
+  mountWith(SellPanel, { 'mining.sell': { ...sellTopic(), as_of: '1970-01-01T00:00:00Z' } });
+  expect(q('sell-option')!.textContent).not.toContain('hace');
+  expect(q('sell-option')!.textContent).toContain('—');
+  unmount(mounted!); mounted = undefined; target.innerHTML = '';
+  mountWith(MiningSessionPanel, { 'mining.session': sessionTopic({ as_of: undefined }) });
+  expect(q('session-time')).toBeNull();
+});
+
+test('session duration follows the journal clock', () => {
+  mountWith(MiningSessionPanel, { 'mining.session': sessionTopic() });
+  expect(q('session-time')!.textContent).toContain('47m');
+});
+
+test('relativeAge: now, minutes and days', () => {
+  const base = Date.parse('2030-01-10T00:00:00Z');
+  expect(relativeAge('2030-01-09T23:59:30Z', base)).toBe('ahora');
+  expect(relativeAge('2030-01-09T23:55:00Z', base)).toContain('5 min');
+  expect(relativeAge('2030-01-07T00:00:00Z', base)).toContain('3');
+  expect(relativeAge('2030-01-09T23:59:30Z', null)).toBe('—');
+  expect(skewFrom('1970-01-01T00:00:00Z')).toBeNull();
+  expect(skewFrom(undefined)).toBeNull();
+});
+
+test('names: backend first, then prospector, then capitalized key', () => {
+  const p = { current: asteroid(), history: [] } as never;
+  const names = namesFrom(p, { platinum: 'Platino (diario)', gold: 'Oro' });
+  expect(materialName('platinum', names)).toBe('Platino (diario)');
+  expect(materialName('palladium', names)).toBe('Paladio');
+  expect(materialName('gold', names)).toBe('Oro');
+  expect(materialName('bauxite', names)).toBe('Bauxite');
+});
+
+test('session uses backend names and full bin labels', () => {
+  mountWith(MiningSessionPanel, { 'mining.session': sessionTopic({ names: { platinum: 'Platino', palladium: 'Paladio' } }) });
+  const bins = [...target.querySelectorAll('[data-testid="bin"]')];
+  expect(bins[0].textContent).toContain('Platino');
+  expect(bins[1].textContent).toContain('Paladio');
 });
