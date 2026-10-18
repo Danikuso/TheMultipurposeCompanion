@@ -1000,6 +1000,46 @@ Interfaces a confirmar al ejecutar (verificar en código al ejecutar): nombre de
 
 (Se rellena en las Tasks 29 y 32.)
 
+### Task 29: `tmc-headless eval` (2026-10-18, historial local del propietario, solo agregados)
+
+```
+TMC eval: 7 diarios, 3641 eventos, 0 líneas descartadas
+
+Criterio 3, alcance de salto (±0.05 al): INSUFICIENTE (15 casos)
+  casos=15 dentro_de_tolerancia=0 con_ingenieria=0 con_guardian=0
+  error_max=11.8669 al error_medio=6.9747 al (fórmula con tope por salto)
+  aciertos_combustible_maximo_por_salto=0 aciertos_deposito_lleno=0
+  aciertos_masa_vacio_mas_combustible_maximo_por_salto=0
+  fsd_fuera_de_tabla=ninguno
+
+Criterio 4, valores de exploración (±5 %): FAIL
+  ventas=3 calculado=398459 cobrado=1975037 error_relativo=79.83 % ventas_sin_cobertura=1
+  bruto(base+bonus)=2197860 error_relativo_bruto=81.87 %
+  sondas: casos=0 error_medio=0.00
+
+Criterio 6, predicción de especies (≥ 70 %): INSUFICIENTE (0 casos)
+  cuerpos=0 alta_o_media=0 ratio=0.0 %
+  alta=0 media=0 baja=0 no_candidata=0
+  bonus_x5_primer_registro: casos=0 acierto=0.0 %
+
+Calidad de datos de especies (valor de venta frente a species.json)
+  entradas=0 coinciden=0 difieren=0 sin_tabla=0
+  especies_que_difieren=ninguno
+  especies_sin_tabla=ninguno
+
+Tiempos de consultas de historial (3630 eventos importados, SQLite en memoria)
+  visitas=1.3 ms
+  sin_vender=9.9 ms
+  estadistica_bio=0.6 ms
+```
+
+Hallazgos (sin datos personales):
+- Criterio 3 (INSUFICIENTE): 15 loadouts distintos, 0 con ingeniería y 0 con Guardian; 0 aciertos con las tres variantes de masa. El FSD de la nave del propietario es SCO (`int_hyperdrive_overcharge_*`). Todas las `MaxJumpRange` observadas cumplen `MaxJumpRange * (masa_vacio + min(depósito, max_combustible_por_salto))` = constante por FSD (p. ej. 5A SCO: 13551 +/- 0,3 en 5 loadouts), es decir, el juego calcula el alcance con solo el combustible máximo por salto a bordo, no con el depósito lleno (discrepancia con spec §5.1). Además las constantes de `fsd.json` (`(max/mul)^(1/p)*masa_óptima`) no coinciden: 5A SCO 11921 (juego 13551), 3A SCO 15396 (12317), 1A SCO 14533 (8206), 5E estándar 12762 (5760). Pendiente de afinar tras revisión (no se tocan datos en esta tarea).
+- Criterio 4 (FAIL, datos limitados): 3 ventas cubiertas, calculado 398 459 frente a cobrado 1 975 037; el historial solo trae 7 diarios y la mayoría de escaneos de lo vendido son anteriores. Las ventas en portaaviones cobran un 12 % menos que `BaseValue` (`TotalEarnings` = 0,88 x `BaseValue`).
+- Criterio 6 (INSUFICIENTE): 0 cuerpos con especie analizada en el historial.
+- Tiempos: visitas 1,3 ms, sin vender 9,9 ms, estadística bio 0,6 ms (todas < 50 ms; sin entrada en «Desviaciones»).
+
+
 ## Desviaciones
 
 - 2026-10-18 · Task 22: conciliación interna por comandante/generación y archivo/línea; checkpoints a 256 eventos/60 s y retry a 60 s para tareas SQLite sin respuesta. El libro JSON interno representa claves tupla como filas. Si SQLite falla persistentemente se conserva la cola para evitar perder saldo; la poda de eventos confirmados se verifica con DB operativa. API pública y topic de tres campos intactos; sin dependencias nuevas.

@@ -258,15 +258,20 @@ impl HistoryStats {
     pub fn from_rows(rows: impl Iterator<Item = (BodyProfileKey, String)>) -> Self {
         let mut stats = Self::default();
         for (key, species) in rows {
-            *stats
-                .counts
-                .entry(key.clone())
-                .or_default()
-                .entry(species)
-                .or_default() += 1;
-            *stats.totals.entry(key).or_default() += 1;
+            stats.add(key, species);
         }
         stats
+    }
+
+    /// Records one completed species for a body similarity key.
+    pub fn add(&mut self, key: BodyProfileKey, species: String) {
+        *self
+            .counts
+            .entry(key.clone())
+            .or_default()
+            .entry(species)
+            .or_default() += 1;
+        *self.totals.entry(key).or_default() += 1;
     }
 
     pub fn count(&self, key: &BodyProfileKey, species: &str) -> u32 {

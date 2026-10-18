@@ -29,7 +29,7 @@ const TOPIC_ROUTE: &str = "navigation.route";
 const TOPIC_JUMP: &str = "navigation.jump";
 const TOPIC_PLAN: &str = "navigation.plan";
 const VISITS_TAG: &str = "visits";
-const VISITS_SQL: &str = "SELECT json_extract(json,'$.SystemAddress'), COUNT(*) FROM event WHERE name='FSDJump' AND cmdr=?1 AND ts<=?2 GROUP BY 1";
+pub const VISITS_SQL: &str = "SELECT json_extract(json,'$.SystemAddress'), COUNT(*) FROM event WHERE name='FSDJump' AND cmdr=?1 AND ts<=?2 GROUP BY 1";
 /// Una petición sin respuesta pasado este tiempo se da por perdida y puede repetirse.
 const INFLIGHT_TTL_S: i64 = 60;
 /// Un `Failed` se reintenta pasado este tiempo (la red ya hace su propio backoff).

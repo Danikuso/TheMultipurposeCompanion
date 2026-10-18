@@ -12,6 +12,14 @@ path = "src/main.rs"
 
 [dependencies]
 tmc-app = { path = "../../crates/tmc-app" }
+tmc-model = { path = "../../crates/tmc-model" }
+tmc-journal = { path = "../../crates/tmc-journal" }
+tmc-store = { path = "../../crates/tmc-store" }
+tmc-modules = { path = "../../crates/tmc-modules" }
+serde_json.workspace = true
 tokio.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
