@@ -103,6 +103,19 @@ describe('navigation panels', () => {
     expect(target.querySelector('section')?.style.gridColumn).toBe('1 / -1');
   });
 
+  test('big card is the next jump and small cards are the stars after it', () => {
+    live.topics['navigation.route'] = routeTopic();
+    render(RouteStrip);
+    const big = target.querySelector('[data-testid="next-card"]')!;
+    expect(big.querySelector('.name')?.textContent).toBe('Nextara');
+    expect(big.textContent).not.toContain('Currentia');
+    expect(target.querySelector('[data-testid="card-label"]')?.textContent).toBe('Siguiente salto');
+    const names = [...target.querySelectorAll('[data-testid="small-card"] .name')].map((e) => e.textContent);
+    expect(names).toEqual(['Followa', 'Followb', 'Followc']);
+    expect(big.textContent).toContain('9');
+    expect(big.textContent).toContain('321,50 ly');
+  });
+
   test('remote missing shows no-data without hiding local fields', () => {
     live.topics['navigation.route'] = routeTopic({
       next: card('Nextara', { remote: { status: 'failed', source: null, fetched_at: null, data: null } }),
@@ -248,6 +261,7 @@ describe('navigation panels', () => {
     live.topics['navigation.route'] = routeTopic({ next: null, following: [], source: 'current' });
     render(RouteStrip);
     expect(target.textContent).toContain(t('strip-no-route'));
+    expect(target.querySelector('[data-testid="card-label"]')?.textContent).toBe('Sistema actual');
     expect(target.querySelector('[data-testid="next-card"]')?.textContent).toContain('Currentia');
     expect(target.querySelectorAll('[data-testid="small-card"]').length).toBe(0);
   });

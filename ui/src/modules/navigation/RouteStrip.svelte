@@ -34,7 +34,11 @@
       <p class="empty">{t('strip-no-route')}</p>
     {/if}
     <div class="strip">
-      <SystemCard card={main} big remainingJumps={route.remaining_jumps} totalLy={route.total_ly} />
+      <SystemCard
+        card={main}
+        big
+        label={route.next ? t('strip-next-jump') : t('strip-current')}
+        remainingJumps={route.remaining_jumps} totalLy={route.total_ly} />
       <div class="following">
         {#each route.following.slice(0, 3) as c, i (`${i}-${c.name}`)}
           <SystemCard card={c} />

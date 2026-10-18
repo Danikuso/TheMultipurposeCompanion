@@ -9,11 +9,13 @@
     big = false,
     remainingJumps = null,
     totalLy = null,
+    label = null,
   }: {
     card: Card;
     big?: boolean;
     remainingJumps?: number | null;
     totalLy?: number | null;
+    label?: string | null;
   } = $props();
 
   const DANGER_STATES = ['war', 'civilwar', 'civilunrest', 'outbreak'];
@@ -75,6 +77,9 @@
 
 {#if big}
   <article class="card big" data-testid="system-card">
+    {#if label}
+      <h3 class="card-label" data-testid="card-label">{label}</h3>
+    {/if}
     <div data-testid="next-card" class="cols">
       <section class="col">
         <h3>{t('strip-col-jump')}</h3>
@@ -209,6 +214,14 @@
     flex-direction: column;
     gap: 0.3rem;
     min-width: 0;
+  }
+
+  .card-label {
+    margin: 0 0 0.5rem;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--hud-primary);
   }
 
   .col h3 {
