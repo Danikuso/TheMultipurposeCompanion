@@ -57,7 +57,7 @@
 | 19 | UI — panel del planificador | ✅ código hecho | 34d3b9c, a15b5ee | Formulario, autocompletado con id64, eficiencia por defecto de Ajustes, resultado y aceptar/borrar; 46 tests UI PASS. Revisión aprobada tras 1 ronda. Validación visual del propietario: ✅ aprobada (2026-10-18). |
 | 20 | `exploration` — valor de cuerpos y sondas | ✅ hecha | fe26c90, 123b335, 7cfb305 | Fórmulas propias (FSS, mapeo con eficiencia, primeros, Odyssey), gigantes gaseosos mapeables, nombres reales del diario, `probes.json` con `verified:false`; 18 exploration PASS. Revisión aprobada tras 1 ronda. |
 | 21 | `exploration` — cuerpos del sistema, FSS y consejo | ✅ hecha | 9940901, c25b238 | P2 de payload y Terraforming corregidos; marks compacto documentado para Task 23; 392 Rust/46 UI PASS, revisión aprobada. |
-| 22 | `exploration` — datos sin vender | ✅ hecha | (este commit) | Libro compartido, reconstrucción cronológica paginada y conciliación/retry; 413 Rust/46 UI PASS, revisión aprobada. |
+| 22 | `exploration` — datos sin vender | ✅ hecha | ffa3433 | Libro compartido, reconstrucción cronológica paginada y conciliación/retry; 413 Rust/46 UI PASS, revisión aprobada. |
 | 23 | UI — cuerpos del sistema | 🔄 en curso | — | Step 1: tests. |
 | 24–32 | Ver plan | ⬜ | — | |
 
