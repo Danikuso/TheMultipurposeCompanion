@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 18), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
+- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 19), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
 
 ## Fases
 
@@ -53,8 +53,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 15 | `combat` — zona de conflicto y AX | ✅ hecha | 4934f4f, 6b9f97a | Zona de conflicto (vista por zona) y AX (tipos tolerantes, objetivo pendiente que caduca, presencia thargoide), todo AX sin verificar. Revisión aprobada. |
 | 16 | `combat` — módulo, topics, relevancia, red y registro | ✅ hecha | a0c1c19, 8c74cae | Módulo Combat registrado: 5 topics, relevancia, IF más cercano (Ardent), reconciliación exacta del libro, render solo cuando cambia. Revisión aprobada tras 1 ronda. |
 | 17 | UI — paneles «Objetivo» y «Mi nave» | ✅ hecha | f8e0a72, 1171e5d | Paneles Objetivo (insignia BUSCADO/LIMPIO, subsistema destacado) y Mi nave (casco por escalones, calor de 3 estados con cronómetro, pips 3×4), accesibles; 103 tests UI. Revisión aprobada tras 1 ronda. |
-| 18 | UI — «Sesión de caza», «Zona de conflicto» y «AX» | 🔄 en curso | — |  |
-| 19 | `mining` — prospector | ⬜ | — | |
+| 18 | UI — «Sesión de caza», «Zona de conflicto» y «AX» | ✅ hecha | d42a6d9, 8a4567d | Paneles Sesión de caza, Zona de conflicto y AX (visibles solo cuando aplican), tipos AX localizados. Revisión aprobada tras 1 ronda. Nombres de rangos en es/de/pt por confirmar con el juego. |
+| 19 | `mining` — prospector | 🔄 en curso | — |  |
 | 20 | `mining` — sesión de minería | ⬜ | — | |
 | 21 | `mining` — `PriceBook` y «Dónde vender» | ⬜ | — | |
 | 22 | `mining` — módulo, topics, relevancia, red y registro | ⬜ | — | |
@@ -132,6 +132,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 18 | Presupuesto de consumo y cierre de F0 | ✅ hecha | fe99cd6 | `measure-footprint.ps1` (`max_mb=144.91` < 150, `avg_cpu_idle=0.09%` < 1% PASS), `README.md` y 9/9 criterios §15 verificados. |
 
 ## Bloqueos y pendientes del propietario
+
+- [ ] **F2 · Nombres de rangos de combate** en es/de/pt escritos por el agente; confírmalos con los del juego cuando puedas (no bloquea).
 
 - [ ] **F2 · Resultados de los spikes (para tu visto bueno; F2 sigue avanzando):**
   - **AX:** tus 7 diarios no tienen ningún dato AX. Los paneles AX se construyen con nombres de eventos y naves de fuentes secundarias, marcados como no verificados, y se prueban con datos sintéticos; se ajustarán cuando juegues una sesión AX.
