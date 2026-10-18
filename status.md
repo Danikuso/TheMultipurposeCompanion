@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-18 04:11 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-18 04:53 (Europe/Madrid) · Codex
 - **Fase actual:** F1 — Navegación, exploración y exobiología (spec y plan aprobados; en ejecución). F0 ✅ fusionada en `main` (2b953e6).
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md`](docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md) — ✅ aprobada (2026-10-17); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
 - **Plan activo:** [`docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md`](docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md) — ✅ aprobado (2026-10-17), 33 tareas, bloques 0–5. Ejecución con subagentes. Anterior: [`2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) ✅ 19/19
@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Task 24 (`exobiology` — tabla de especies y geodesia), geodesia verificada; tabla pendiente de decisión del propietario.
-- **Siguiente acción:** resolver el pendiente de nombres (aprobar `_Localised` + latino de respaldo y aplazar tabla por idioma, o completar tabla propia por idioma en F1); después escribir tests de SpeciesTable y completar Task 24. Geodesia revisada: 8 tests nuevos, 421 Rust globales y fmt/clippy PASS; UI sin cambios, 56 tests/check/build PASS. Task 25 no iniciada. Todos los cambios de esta sesión se guardan en commits locales; push pendiente de autorización explícita.
+- **Tarea:** F1 · Task 24 (`exobiology` — tabla de especies y geodesia), geodesia verificada; Step 1: tests de SpeciesTable.
+- **Siguiente acción:** escribir tests de SpeciesTable, observar RED y construir tabla propia con procedencia; completar Task 24. El propietario aprobó `_Localised` + latino de respaldo para F1 y el push a la rama privada (2026-10-18). Geodesia ya revisada en 458fc84; no rehacer. Últimos checks: 421 Rust y 56 UI, fmt/clippy/check/build PASS.
 
 ## Fases
 
@@ -59,7 +59,7 @@
 | 21 | `exploration` — cuerpos del sistema, FSS y consejo | ✅ hecha | 9940901, c25b238 | P2 de payload y Terraforming corregidos; marks compacto documentado para Task 23; 392 Rust/46 UI PASS, revisión aprobada. |
 | 22 | `exploration` — datos sin vender | ✅ hecha | ffa3433 | Libro compartido, reconstrucción cronológica paginada y conciliación/retry; 413 Rust/46 UI PASS, revisión aprobada. |
 | 23 | UI — cuerpos del sistema | ✅ hecha | b669a77 | Tabla virtualizada ≤30 filas, cinco idiomas, visual 2560/1366 px; 413 Rust/56 UI PASS, revisión aprobada. |
-| 24 | Exobiología — especies y geodesia | ⛔ bloqueada (parcial verificada) | 458fc84 (geodesia) | Geo RED 0/8 → GREEN; 421 Rust/56 UI PASS. Tabla pendiente de decisión sobre nombres; tarea incompleta. |
+| 24 | Exobiología — especies y geodesia | 🔄 en curso | 458fc84 (geodesia) | Geo verificada; aprobación de nombres recibida. Tabla: Step 1 tests. |
 | 25–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
@@ -91,10 +91,10 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 ## Bloqueos y pendientes del propietario
 
 
-- [ ] **Sincronización de F1:** la revisión automática rechazó git push origin HEAD al considerar necesaria autorización explícita actual del propietario, aunque el repositorio es privado (confirmado con gh repo view). Pregunta presentada: autorizar push de fase/f1-navegacion-exploracion a Danikuso/TheMultipurposeCompanion. Commits locales revisados disponibles; la implementación continúa localmente hasta respuesta.
+- [x] **Sincronización de F1:** propietario autoriza explícitamente push de `fase/f1-navegacion-exploracion` al repo privado Danikuso/TheMultipurposeCompanion (2026-10-18). Rechazo previo resuelto por esta autorización; sincronización pendiente de ejecutar.
 
 - [ ] **F1 · Canonn (capa 3 de exobiología)** — decidido 2026-10-17: queda **desactivada**; el propietario solicitará permiso a Canonn **sin enviar datos de usuarios**. Pendiente: respuesta de Canonn. Contexto: su README exige una **solicitud formal** para usar la API en software propio y pide **capturar/enviar datos de los usuarios**. Decisión del propietario: (a) solicitar permiso sin enviar datos de usuario, (b) aceptar enviar datos (requiere cambio de spec y opt-in), o (c) renunciar a Canonn. Mientras tanto, la capa 3 se implementa desactivada y F1 avanza con reglas propias + historial.
-- [ ] **F1 · Nombres de especies:** aprobar aplazar la tabla propia por idioma (se usa `_Localised` del diario y nombre latino de respaldo).
+- [x] **F1 · Nombres de especies:** propietario aprueba aplazar tabla propia por idioma; F1 usa `_Localised` del diario y nombre latino de respaldo (2026-10-18). Spec §8 y plan actualizados.
 
 - [x] **F1 — plan aprobado** (2026-10-17).
 - [x] **F1 — dónde vive `eval`:** resuelto → `tmc-headless eval`. Antes: (spec §10.1 dice `tmc-replay eval`): requiere que `tmc-replay` dependa de `tmc-journal` y `tmc-modules` (cambio de la tabla §3.1 de la spec de arquitectura) o, alternativa sin tocar la arquitectura, `tmc-headless eval`. Task 3 del plan.
@@ -110,6 +110,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
 
 ## Decisiones tomadas
+
+- 2026-10-18 · Propietario: aprobados nombres de especies desde diario con respaldo latino y aplazamiento de tabla por idioma para después de F1; autorizado push de la rama F1 al repositorio privado.
 
 - 2026-10-18 · Task 22: reconstrucción ordenada por timestamp UTC, diario y línea, manteniendo snapshot por ID; corrige la suposición de orden de inserción del plan. Checkpoints y reintento conservan equivalencia vivo/historial sin cambiar interfaces públicas.
 

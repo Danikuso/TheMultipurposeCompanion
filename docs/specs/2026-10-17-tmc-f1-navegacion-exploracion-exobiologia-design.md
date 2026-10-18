@@ -177,7 +177,7 @@ Tablas nuevas (migraciones con prefijo de módulo):
 
 - **Topics nuevos** (valor completo, pequeños): `navigation.route` (siguiente + 3, ficha), `navigation.plan` (estado del planificador), `navigation.jump` (alcance actual, combustible), `exploration.system` (cabecera + filas), `exploration.unsold`, `exobiology.body`, `exobiology.sampling`, `exobiology.unsold`.
 - **Acciones nuevas** (`POST /api/actions/{name}` y WS): `navigation.plan` (destino, modo, opciones), `navigation.accept-plan`, `navigation.clear-plan`, `navigation.recalculate`, `navigation.autocomplete` (vía REST paginado).
-- **i18n:** todas las cadenas en `locales/{es,en,fr,de,pt}/` (nuevos `navigation.ftl`, `exploration.ftl`, `exobiology.ftl`); nombres de especies/géneros desde los campos `_Localised` del diario y, si no existen, tabla propia por idioma.
+- **i18n:** todas las cadenas en `locales/{es,en,fr,de,pt}/` (nuevos `navigation.ftl`, `exploration.ftl`, `exobiology.ftl`); nombres de especies/géneros desde los campos `_Localised` del diario y, si no existen, nombre latino de la tabla propia de especies. La tabla propia de nombres en cinco idiomas queda aplazada para después de F1 (aprobación explícita del propietario, 2026-10-18).
 - **Ajustes nuevos:** servicios online on/off, copia automática on/off, umbral de «Mapear» (cr), eficiencia por defecto del planificador.
 
 ## 9. Rendimiento y robustez

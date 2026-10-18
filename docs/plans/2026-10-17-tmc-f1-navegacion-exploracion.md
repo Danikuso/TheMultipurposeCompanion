@@ -756,7 +756,7 @@ test('footer shows unsold total and unidentified count', ...)
 
 ### Task 24: `exobiology` — tabla de especies y geodesia
 
-**Avance parcial (2026-10-18):** geodesia implementada y revisada; RED 0/8 → GREEN 8/8 geo, 161 módulos y 421 Rust globales; fmt/clippy/diff PASS. UI sin cambios desde Task 23 (56 tests/check/build PASS). Registro en lib.rs y exobiology/{mod,geo}.rs. La tabla, sus tests y el cierre de Task 24 esperan decisión sobre nombres por idioma; no se ha aplicado la desviación pendiente ni empezado Task 25.
+**Avance parcial (2026-10-18):** geodesia implementada y revisada; RED 0/8 → GREEN 8/8 geo, 161 módulos y 421 Rust globales; fmt/clippy/diff PASS. UI sin cambios desde Task 23 (56 tests/check/build PASS). Registro en lib.rs y exobiology/{mod,geo}.rs. El propietario aprobó el respaldo de nombres el 2026-10-18; continúa la tabla y sus tests sin rehacer geodesia. Task 25 no iniciada.
 
 **Files:** Create `crates/tmc-modules/data/species.json`, `crates/tmc-modules/src/exobiology/{mod.rs, species.rs, geo.rs}`; Modify `THIRD_PARTY_NOTICES.md` si Task 1 lo exige.
 
@@ -1009,7 +1009,7 @@ Interfaces a confirmar al ejecutar (verificar en código al ejecutar): nombre de
 (Anotar aquí cualquier cambio respecto a este plan o a la spec, con fecha, motivo y tareas afectadas.)
 
 - 2026-10-17 · Propietario: `eval` (spec F1 §10.1) se implementa como `tmc-headless eval` en lugar de `tmc-replay eval`, para no cambiar las dependencias de §3.1. Afecta a Tasks 3, 20, 22, 29 y 32. Spec §10.1 actualizada.
-- 2026-10-17 · Task 24 (pendiente de aprobación del propietario): spec §8 pide tabla de nombres de especies por idioma; F1 usa `_Localised` del diario y el nombre latino como respaldo; la tabla propia por idioma queda aplazada. Afecta a Tasks 24, 25 y 28.
+- 2026-10-18 · Task 24 (aprobada explícitamente por el propietario): F1 usa `_Localised` del diario y el nombre latino como respaldo; la tabla propia por idioma queda aplazada. Spec §8 actualizada. Afecta a Tasks 24, 25 y 28.
 - 2026-10-17 · Spike 1 (Spansh): política y Powerplay vienen de Spansh (`/api/system/{id64}`); «descubierto» no está en Spansh → EDSM; `PlannedHop` gana `jumps: u32` y `refuel: Option<bool>`; el planificador de galaxia necesita `fuel_power`/`fuel_multiplier` de `fsd.json` (FSD sin tabla → modo Galaxia desactivado). Afecta a Tasks 6, 10, 13, 15, 16, 19.
 - 2026-10-17 · Spike 2 (licencias): `fsd.json`, `species.json`, `bio_rules.json` y `probes.json` se construyen desde hechos con procedencia por entrada y `verified`; ninguna fuente externa se incorpora. Afecta a Tasks 13, 20, 24, 25, 29.
 - 2026-10-17 · Spike 3 (Canonn) — **pendiente del propietario**: la API es viable (`getSystemPoi`, `codex/ref`), pero su README exige solicitud formal de uso y pide enviar datos de usuarios. La capa 3 se implementa **desactivada** (`NetOutcome::Disabled`) hasta que el propietario decida; desvía la spec §5.3 («activada por defecto»). Afecta a Tasks 10, 25, 27, 31.
