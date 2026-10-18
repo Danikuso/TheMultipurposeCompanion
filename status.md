@@ -67,7 +67,7 @@
 | 29 | `tmc-headless eval` (criterios 3, 4 y 6) | ✅ hecha | 98f93e9, cdc921e, d16ebb0, e734e5f | Eval local con solo agregados. Tus 7 diarios: C3 15/15 loadouts dentro de ±0,05 al pero INSUFICIENTE (sin ingeniería ni Guardian); C4 y C6 INSUFICIENTE (sin ventas cubiertas ni exobiología). Corrección de §5.1 (ver Bloqueos). |
 | 30 | Fixtures anonimizados y pruebas de extremo a extremo | ✅ hecha | 1ee4697 | `real_explo_01.log` (87 líneas, anonimizado y revisado); tira p95 310,8 ms con juego en marcha; exobiología e2e con fixture sintético (sin datos reales). Revisión aprobada. |
 | 31 | Disposición Exploración y ajustes F1 | ✅ hecha | 7878cdf | 515 Rust/81 UI, fmt/clippy/check/build y smoke real PASS; 3 P2 corregidos, revisión aprobada. |
-| 32 | Consumo y cierre F1 | ✅ hecha | HEAD | `measure-footprint.ps1 -ShowWindow` (`max_mb=108.01` < 150, `avg_cpu_idle=0.00%` < 1% PASS), instalador NSIS 5,79 MiB, 526 Rust / 89 UI / E2E PASS y 10/10 criterios documentados. |
+| 32 | Consumo y cierre F1 | ✅ hecha | a87c3a0 | `measure-footprint.ps1 -ShowWindow` (`max_mb=108.01` < 150, `avg_cpu_idle=0.00%` < 1% PASS), instalador NSIS 5,79 MiB, 526 Rust / 89 UI / E2E PASS y 10/10 criterios documentados. |
 
 ## Tareas de F0
 
