@@ -4,10 +4,15 @@
   import Panel from '../../shell/Panel.svelte';
   import SystemCard from './SystemCard.svelte';
   import type { RouteTopic } from './types';
+  import type { SystemTopic } from '../exploration/types';
 
   const route = $derived(topic<RouteTopic>('navigation.route'));
+  const expSystem = $derived(topic<SystemTopic>('exploration.system'));
   // Sin ruta activa la tira muestra el sistema actual con la misma ficha.
   const main = $derived(route ? (route.next ?? route.current) : null);
+  const currentStarClasses = $derived(
+    expSystem && expSystem.system === route?.current?.name ? expSystem.star_classes : null,
+  );
 
   async function recalculate() {
     try {
@@ -38,6 +43,7 @@
         card={main}
         big
         label={route.next ? t('strip-next-jump') : t('strip-current')}
+        starClasses={!route.next ? currentStarClasses : null}
         remainingJumps={route.remaining_jumps} totalLy={route.total_ly} />
       <div class="following">
         {#each route.following.slice(0, 3) as c, i (`${i}-${c.name}`)}

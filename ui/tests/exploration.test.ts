@@ -11,8 +11,8 @@ let mounted:ReturnType<typeof mount>|undefined;
 function body(id:number,extra:Record<string,unknown>={}) {
   return {body_id:id,short_name:`${id} a`,kind_key:'rocky-ice',distance_ls:100.5,scanned_value:500,mapped_value:2708,...extra};
 }
-function system(rows:Record<string,unknown>[]) {
-  return {system:'Synuefe Test',system_address:1,discovered:false,fss:{progress:0.5,body_count:600,scanned:rows.length,complete:false},value_now:1234567,value_if_mapped:2345678,unidentified:600-rows.length,rows};
+function system(rows:Record<string,unknown>[], extra:Record<string,unknown>={}) {
+  return {system:'Synuefe Test',system_address:1,discovered:false,fss:{progress:0.5,body_count:600,scanned:rows.length,complete:false},value_now:1234567,value_if_mapped:2345678,unidentified:600-rows.length,rows,...extra};
 }
 function render(rows:Record<string,unknown>[]) {
   live.topics['exploration.system']=system(rows);
@@ -20,6 +20,22 @@ function render(rows:Record<string,unknown>[]) {
 }
 beforeEach(()=>{disconnect();setLocale('es');target=document.createElement('div');document.body.appendChild(target);});
 afterEach(()=>{if(mounted)unmount(mounted);mounted=undefined;target.remove();});
+
+test('system summary renders all star types with scoopable styling',()=>{
+  live.topics['exploration.system']={...system([body(1)],{star_classes:['K','M','L']})};
+  mounted=mount(SystemBodiesPanel,{target});flushSync();
+  const starsContainer=target.querySelector('[data-testid="system-stars"]');
+  expect(starsContainer).not.toBeNull();
+  expect(starsContainer?.textContent).toContain(t('exploration-stars'));
+  const badges=target.querySelectorAll('[data-testid="system-star-badge"]');
+  expect(badges.length).toBe(3);
+  expect(badges[0].textContent?.trim()).toBe('K');
+  expect(badges[0].classList.contains('scoopable')).toBe(true);
+  expect(badges[1].textContent?.trim()).toBe('M');
+  expect(badges[1].classList.contains('scoopable')).toBe(true);
+  expect(badges[2].textContent?.trim()).toBe('L');
+  expect(badges[2].classList.contains('scoopable')).toBe(false);
+});
 
 test('body_table_renders_only_visible_rows',()=>{
   render(Array.from({length:300},(_,i)=>body(i+1)));

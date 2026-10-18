@@ -57,6 +57,14 @@ export function starClassLabel(cls: string | null | undefined): string {
   return base ? base : '—';
 }
 
+const SCOOPABLE_CLASSES = new Set(['O', 'B', 'A', 'F', 'G', 'K', 'M']);
+
+export function isScoopable(cls: string | null | undefined): boolean {
+  if (!cls) return false;
+  const base = cls.split('_')[0]?.trim().toUpperCase();
+  return base ? SCOOPABLE_CLASSES.has(base) : false;
+}
+
 export function meters(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
   return `${new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 0 }).format(n)} m`;

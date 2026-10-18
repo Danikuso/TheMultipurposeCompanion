@@ -60,3 +60,4 @@ exploration-scanned-count = { $scanned } / { $total } bodies scanned
 exploration-unsold = Unsold data
 exploration-unsold-systems = { $count } systems
 exploration-at-risk = Data at risk
+exploration-stars = Stars

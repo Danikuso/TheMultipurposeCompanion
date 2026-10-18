@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
-  import { credits, num1, pct } from '../../lib/format';
+  import { credits, isScoopable, num1, pct, starClassLabel } from '../../lib/format';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
   import VirtualList from '../../shell/VirtualList.svelte';
@@ -26,6 +26,23 @@
       <strong class="system" data-testid="system-name">{system.system}</strong>
       {#if system.discovered != null}
         <span class="badge">{t(system.discovered ? 'exploration-discovered' : 'exploration-undiscovered')}</span>
+      {/if}
+      {#if system.star_classes && system.star_classes.length > 0}
+        <div class="stars" data-testid="system-stars">
+          <span class="stars-label">{t('exploration-stars')}:</span>
+          <div class="star-list">
+            {#each system.star_classes as star}
+              <span
+                class="star-badge"
+                class:scoopable={isScoopable(star)}
+                data-testid="system-star-badge"
+                title="{starClassLabel(star)} · {t(isScoopable(star) ? 'strip-scoopable' : 'strip-not-scoopable')}"
+              >
+                {starClassLabel(star)}
+              </span>
+            {/each}
+          </div>
+        </div>
       {/if}
       <div class="fss">
         <label for="exploration-fss">{t('exploration-fss-progress')} {system.fss.complete ? pct(1) : pct(system.fss.progress)}</label>
@@ -76,6 +93,11 @@
   .summary { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: 1rem; }
   .system { font-size: var(--font-title-lg); color: var(--hud-primary); }
   .badge { border: 1px solid var(--hud-border); border-radius: 3px; padding: .2rem .5rem; }
+  .stars { display: flex; align-items: center; gap: .4rem; }
+  .stars-label { color: var(--hud-muted); }
+  .star-list { display: flex; align-items: center; gap: .3rem; }
+  .star-badge { border: 1px solid var(--hud-border); border-radius: 3px; padding: .15rem .45rem; font-family: var(--font-mono); font-size: .85em; font-weight: 700; }
+  .star-badge.scoopable { color: var(--hud-success); border-color: var(--hud-success); }
   .fss { display: grid; gap: .2rem; min-width: 12rem; }
   progress { width: 100%; accent-color: var(--hud-primary); }
   .value { display: grid; gap: .2rem; }
