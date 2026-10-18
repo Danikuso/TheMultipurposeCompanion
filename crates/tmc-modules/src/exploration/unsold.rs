@@ -143,6 +143,13 @@ impl UnsoldLedger {
     pub fn died(&mut self) {
         self.sell_all();
     }
+    /// Valor sin vender de los sistemas indicados (lo que cobraría su venta).
+    pub fn total_for(&self, systems: &[String]) -> u64 {
+        self.by_body
+            .iter()
+            .filter(|((system, _), _)| systems.contains(system))
+            .fold(0, |sum, (_, value)| sum.saturating_add(*value))
+    }
     pub fn total(&self) -> u64 {
         self.by_body
             .values()

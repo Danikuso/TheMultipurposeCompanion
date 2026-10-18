@@ -4992,7 +4992,13 @@ name = "tmc-headless"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "serde_json",
+ "tempfile",
  "tmc-app",
+ "tmc-journal",
+ "tmc-model",
+ "tmc-modules",
+ "tmc-store",
  "tokio",
  "tracing",
 ]

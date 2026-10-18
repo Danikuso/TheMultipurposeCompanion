@@ -1,0 +1,378 @@
+//! `tmc-headless eval`: métricas agregadas de los criterios 3, 4 y 6 de F1
+//! (spec §10.1) sobre una carpeta de diarios. No imprime nombres de
+//! comandante ni de sistemas: solo números y símbolos de datos del juego.
+
+use std::fmt::Write as _;
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::time::Instant;
+use tmc_model::events::{JournalEvent, parse_line};
+use tmc_modules::eval::{EvalReport, eval_events};
+use tmc_store::{ImportOptions, Store, import_history};
+
+/// Mínimo de casos para dar un veredicto en vez de `INSUFICIENTE`.
+const MIN_CASES: u32 = 5;
+const RANGE_TOLERANCE_LY: f64 = 0.05;
+const VALUE_TOLERANCE: f64 = 0.05;
+const PREDICTION_THRESHOLD: f64 = 0.70;
+/// Corte superior para la consulta de visitas (todo el historial).
+const FAR_FUTURE: &str = "9999-12-31T23:59:59.999999999Z";
+
+/// Duración (ms) de las consultas de historial de la spec §7.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Timings {
+    pub visits_ms: f64,
+    pub unsold_ms: f64,
+    pub bio_ms: f64,
+    pub events: u64,
+}
+
+pub struct Loaded {
+    pub events: Vec<JournalEvent>,
+    pub files: usize,
+    pub skipped_lines: u64,
+}
+
+/// Lee todos los diarios de la carpeta en orden cronológico.
+pub fn load_events(dir: &Path) -> std::io::Result<Loaded> {
+    let paths = tmc_journal::list_journals(dir)?;
+    let mut events = Vec::new();
+    let mut skipped_lines = 0;
+    for path in &paths {
+        let bytes = std::fs::read(path)?;
+        for line in String::from_utf8_lossy(&bytes).lines() {
+            if line.trim().is_empty() {
+                continue;
+            }
+            match parse_line(line) {
+                Ok(event) => events.push(event),
+                Err(_) => skipped_lines += 1,
+            }
+        }
+    }
+    Ok(Loaded {
+        events,
+        files: paths.len(),
+        skipped_lines,
+    })
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum Verdict {
+    Pass,
+    Fail,
+    Insufficient,
+}
+
+impl Verdict {
+    fn label(&self, cases: u32) -> String {
+        match self {
+            Self::Pass => "PASS".to_owned(),
+            Self::Fail => "FAIL".to_owned(),
+            Self::Insufficient => format!("INSUFICIENTE ({cases} casos)"),
+        }
+    }
+}
+
+fn range_verdict(r: &tmc_modules::eval::RangeReport) -> Verdict {
+    if r.cases < MIN_CASES || r.engineered_cases == 0 || r.guardian_cases == 0 {
+        Verdict::Insufficient
+    } else if r.within_tolerance == r.cases {
+        Verdict::Pass
+    } else {
+        Verdict::Fail
+    }
+}
+
+fn value_verdict(v: &tmc_modules::eval::ValueReport) -> Verdict {
+    if v.sales == 0 {
+        Verdict::Insufficient
+    } else if v.rel_error <= VALUE_TOLERANCE {
+        Verdict::Pass
+    } else {
+        Verdict::Fail
+    }
+}
+
+fn prediction_verdict(p: &tmc_modules::eval::PredictionReport) -> Verdict {
+    if p.bodies < MIN_CASES {
+        Verdict::Insufficient
+    } else if p.ratio >= PREDICTION_THRESHOLD {
+        Verdict::Pass
+    } else {
+        Verdict::Fail
+    }
+}
+
+/// Texto del informe; solo agregados y símbolos de datos del juego.
+pub fn render(
+    report: &EvalReport,
+    loaded: (usize, usize, u64),
+    timings: Option<&Timings>,
+) -> String {
+    let (files, events, skipped) = loaded;
+    let mut out = String::new();
+    let _ = writeln!(
+        out,
+        "TMC eval: {files} diarios, {events} eventos, {skipped} líneas descartadas"
+    );
+    let r = &report.range;
+    let _ = writeln!(
+        out,
+        "\nCriterio 3, alcance de salto (±{RANGE_TOLERANCE_LY} al): {}",
+        range_verdict(r).label(r.cases)
+    );
+    let _ = writeln!(
+        out,
+        "  casos={} dentro_de_tolerancia={} con_ingenieria={} con_guardian={}",
+        r.cases, r.within_tolerance, r.engineered_cases, r.guardian_cases
+    );
+    let _ = writeln!(
+        out,
+        "  error_max={:.4} al error_medio={:.4} al (fórmula con tope por salto)",
+        r.max_abs_error, r.mean_abs_error
+    );
+    let _ = writeln!(
+        out,
+        "  aciertos_combustible_maximo_por_salto={} aciertos_deposito_lleno={}",
+        r.max_fuel_hits, r.full_tank_hits
+    );
+    let _ = writeln!(
+        out,
+        "  aciertos_masa_vacio_mas_combustible_maximo_por_salto={}",
+        r.max_fuel_mass_hits
+    );
+    let _ = writeln!(out, "  fsd_fuera_de_tabla={}", join(&report.missing_fsd));
+
+    let v = &report.value;
+    let _ = writeln!(
+        out,
+        "\nCriterio 4, valores de exploración (±{:.0} %): {}",
+        VALUE_TOLERANCE * 100.0,
+        value_verdict(v).label(v.sales)
+    );
+    let _ = writeln!(
+        out,
+        "  ventas={} calculado={} cobrado={} error_relativo={:.2} % ventas_sin_cobertura={}",
+        v.sales,
+        v.computed,
+        v.paid,
+        v.rel_error * 100.0,
+        v.uncovered_sales
+    );
+    let _ = writeln!(
+        out,
+        "  bruto(base+bonus)={} error_relativo_bruto={:.2} %",
+        v.gross,
+        v.gross_rel_error * 100.0
+    );
+    let probes = &report.probes;
+    let _ = writeln!(
+        out,
+        "  sondas: casos={} error_medio={:.2}",
+        probes.cases, probes.mean_abs_error
+    );
+
+    let p = &report.prediction;
+    let _ = writeln!(
+        out,
+        "\nCriterio 6, predicción de especies (≥ {:.0} %): {}",
+        PREDICTION_THRESHOLD * 100.0,
+        prediction_verdict(p).label(p.bodies)
+    );
+    let _ = writeln!(
+        out,
+        "  cuerpos={} alta_o_media={} ratio={:.1} %",
+        p.bodies,
+        p.hit_high_or_medium,
+        p.ratio * 100.0
+    );
+    let count = |level| p.likelihoods.iter().filter(|l| **l == level).count();
+    use tmc_modules::exobiology::predict::Likelihood::{High, Low, Medium};
+    let _ = writeln!(
+        out,
+        "  alta={} media={} baja={} no_candidata={}",
+        count(Some(High)),
+        count(Some(Medium)),
+        count(Some(Low)),
+        count(None) + count(Some(tmc_modules::exobiology::predict::Likelihood::Unknown))
+    );
+    let _ = writeln!(
+        out,
+        "  bonus_x5_primer_registro: casos={} acierto={:.1} %",
+        p.first_logged_cases,
+        p.first_logged_accuracy * 100.0
+    );
+
+    let s = &report.species_values;
+    let _ = writeln!(
+        out,
+        "\nCalidad de datos de especies (valor de venta frente a species.json)"
+    );
+    let _ = writeln!(
+        out,
+        "  entradas={} coinciden={} difieren={} sin_tabla={}",
+        s.entries, s.matches, s.mismatches, s.unknown
+    );
+    let _ = writeln!(out, "  especies_que_difieren={}", join(&s.mismatch_symbols));
+    let _ = writeln!(out, "  especies_sin_tabla={}", join(&s.unknown_symbols));
+
+    if let Some(t) = timings {
+        let _ = writeln!(
+            out,
+            "\nTiempos de consultas de historial ({} eventos importados, SQLite en memoria)",
+            t.events
+        );
+        let _ = writeln!(out, "  visitas={:.1} ms", t.visits_ms);
+        let _ = writeln!(out, "  sin_vender={:.1} ms", t.unsold_ms);
+        let _ = writeln!(out, "  estadistica_bio={:.1} ms", t.bio_ms);
+    }
+    out
+}
+
+fn join(items: &[String]) -> String {
+    if items.is_empty() {
+        "ninguno".to_owned()
+    } else {
+        items.join(", ")
+    }
+}
+
+fn time_ms(
+    f: impl FnOnce() -> Result<serde_json::Value, tmc_store::StoreError>,
+) -> anyhow::Result<f64> {
+    let start = Instant::now();
+    f()?;
+    Ok(start.elapsed().as_secs_f64() * 1000.0)
+}
+
+/// Importa los diarios a una base en memoria y mide las tres consultas con el
+/// comandante con más eventos.
+pub fn measure_timings(dir: &Path) -> anyhow::Result<Option<Timings>> {
+    let store = Store::open_in_memory()?;
+    let opts = ImportOptions {
+        throttle: Arc::new(AtomicBool::new(false)),
+    };
+    import_history(&store, dir, &opts, &mut |_, _| {})?;
+    let rows = store.query_json(
+        "SELECT cmdr, COUNT(*) FROM event WHERE cmdr IS NOT NULL GROUP BY cmdr ORDER BY 2 DESC LIMIT 1",
+        &[],
+    )?;
+    let Some(row) = rows.first() else {
+        return Ok(None);
+    };
+    let cmdr = row[0].as_str().unwrap_or_default().to_owned();
+    let events = row[1].as_u64().unwrap_or_default();
+    let visits_ms = time_ms(|| {
+        store
+            .query_json(
+                tmc_modules::navigation::VISITS_SQL,
+                &[cmdr.clone().into(), FAR_FUTURE.into()],
+            )
+            .map(serde_json::Value::from)
+    })?;
+    let unsold_ms =
+        time_ms(|| tmc_modules::exploration::unsold::rebuild_from_history(cmdr.clone())(&store))?;
+    let bio_ms = time_ms(|| tmc_modules::exobiology::predict::load_history(cmdr.clone())(&store))?;
+    Ok(Some(Timings {
+        visits_ms,
+        unsold_ms,
+        bio_ms,
+        events,
+    }))
+}
+
+/// Punto de entrada del subcomando; `args` son los argumentos tras `eval`.
+pub fn run(args: impl Iterator<Item = String>) -> anyhow::Result<()> {
+    let mut dir = None;
+    let mut timings = false;
+    let mut args = args;
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--journal-dir" => dir = args.next().map(std::path::PathBuf::from),
+            "--timings" => timings = true,
+            other => anyhow::bail!("argumento desconocido: {other}"),
+        }
+    }
+    let dir = dir
+        .or_else(tmc_journal::default_journal_dir)
+        .ok_or_else(|| anyhow::anyhow!("falta --journal-dir"))?;
+    let loaded = load_events(&dir)?;
+    let counts = (loaded.files, loaded.events.len(), loaded.skipped_lines);
+    let report = eval_events(loaded.events.into_iter());
+    let timings = if timings {
+        measure_timings(&dir)?
+    } else {
+        None
+    };
+    print!("{}", render(&report, counts, timings.as_ref()));
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fixture_dir() -> std::path::PathBuf {
+        let dir = tempfile::tempdir().unwrap().keep();
+        let src = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/journal/exploration_session.log");
+        std::fs::copy(src, dir.join("Journal.2026-04-10T200000.01.log")).unwrap();
+        dir
+    }
+
+    #[test]
+    fn eval_report_contains_no_names() {
+        let dir = fixture_dir();
+        let loaded = load_events(&dir).unwrap();
+        assert_eq!(loaded.files, 1);
+        let counts = (loaded.files, loaded.events.len(), loaded.skipped_lines);
+        let report = eval_events(loaded.events.into_iter());
+        let timings = measure_timings(&dir).unwrap();
+        let text = render(&report, counts, timings.as_ref());
+        for forbidden in [
+            "CMDR TESTER",
+            "TESTER",
+            "Kappa Testis",
+            "Sol Testis",
+            "Sys A",
+            "Test Orbital",
+        ] {
+            assert!(!text.contains(forbidden), "{forbidden} in:\n{text}");
+        }
+        assert!(text.contains("Criterio 3"), "{text}");
+        assert!(text.contains("INSUFICIENTE (0 casos)"), "{text}");
+        assert!(text.contains("visitas="), "{text}");
+        std::fs::remove_dir_all(dir).ok();
+    }
+
+    #[test]
+    fn verdicts_use_thresholds_and_report_insufficient_data() {
+        use tmc_modules::eval::{PredictionReport, RangeReport, ValueReport};
+        let mut range = RangeReport {
+            cases: 5,
+            within_tolerance: 5,
+            engineered_cases: 1,
+            guardian_cases: 1,
+            ..Default::default()
+        };
+        assert_eq!(range_verdict(&range), Verdict::Pass);
+        range.within_tolerance = 4;
+        assert_eq!(range_verdict(&range), Verdict::Fail);
+        range.cases = 4;
+        assert_eq!(range_verdict(&range), Verdict::Insufficient);
+        let value = ValueReport {
+            sales: 2,
+            rel_error: 0.051,
+            ..Default::default()
+        };
+        assert_eq!(value_verdict(&value), Verdict::Fail);
+        let prediction = PredictionReport {
+            bodies: 10,
+            ratio: 0.7,
+            ..Default::default()
+        };
+        assert_eq!(prediction_verdict(&prediction), Verdict::Pass);
+    }
+}

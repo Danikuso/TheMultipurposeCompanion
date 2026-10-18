@@ -1,11 +1,19 @@
 //! Binario headless de TMC.
 #![forbid(unsafe_code)]
 
+mod eval;
+
 use std::path::PathBuf;
 use tmc_app::{Config, data_dir, init_logging, start};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let mut raw = std::env::args().skip(1).peekable();
+    if raw.peek().map(String::as_str) == Some("eval") {
+        raw.next();
+        return eval::run(raw);
+    }
+
     let mut config_file: Option<PathBuf> = None;
     let mut journal_dir: Option<PathBuf> = None;
     let mut ui_dir: Option<PathBuf> = None;
