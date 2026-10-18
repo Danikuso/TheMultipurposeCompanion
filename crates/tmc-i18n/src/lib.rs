@@ -253,6 +253,7 @@ mod tests {
                 ("done", FluentValue::from(3)),
                 ("total", FluentValue::from(9)),
                 ("age", FluentValue::from("2 min")),
+                ("value", FluentValue::from(60)),
                 ("count", FluentValue::from(5)),
                 ("destination", FluentValue::from("Colonia")),
                 ("current", FluentValue::from(2)),

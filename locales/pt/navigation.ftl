@@ -81,3 +81,7 @@ nav-plan-more = +{ $count } mais
 nav-plan-accept = Aceitar
 nav-plan-clear = Limpar plano
 nav-plan-active = Rota ativa para { $destination }: etapa { $current } de { $total }
+nav-plan-efficiency-default = Predefinição: { $value }
+nav-plan-efficiency-hint = Segundo as tuas definições
+nav-plan-efficiency-invalid = A eficiência tem de ser um inteiro entre 1 e 100.
+nav-plan-pick-destination = No modo Galáxia, escolhe a origem e o destino das sugestões.
