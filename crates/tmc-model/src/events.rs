@@ -539,6 +539,135 @@ pub struct JetConeBoost {
     pub boost_value: Option<f64>,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct ShipTargeted {
+    pub target_locked: bool,
+    pub ship: Option<String>,
+    #[serde(rename = "Ship_Localised")]
+    pub ship_localised: Option<String>,
+    pub scan_stage: Option<u8>,
+    pub pilot_name: Option<String>,
+    #[serde(rename = "PilotName_Localised")]
+    pub pilot_name_localised: Option<String>,
+    pub pilot_rank: Option<String>,
+    pub shield_health: Option<f64>,
+    pub hull_health: Option<f64>,
+    pub faction: Option<String>,
+    pub legal_status: Option<String>,
+    pub bounty: Option<u64>,
+    pub subsystem: Option<String>,
+    #[serde(rename = "Subsystem_Localised")]
+    pub subsystem_localised: Option<String>,
+    pub subsystem_health: Option<f64>,
+    pub power: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct BountyReward {
+    pub faction: String,
+    pub reward: u64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct Bounty {
+    pub rewards: Vec<BountyReward>,
+    pub total_reward: Option<u64>,
+    pub reward: Option<u64>,
+    pub faction: Option<String>,
+    pub victim_faction: Option<String>,
+    #[serde(rename = "VictimFaction_Localised")]
+    pub victim_faction_localised: Option<String>,
+    pub target: Option<String>,
+    #[serde(rename = "Target_Localised")]
+    pub target_localised: Option<String>,
+    pub shared_with_others: Option<u32>,
+}
+
+impl Bounty {
+    /// Unifica el formato con `Rewards` y el antiguo (`Reward` + `Faction`, patines).
+    pub fn normalized_rewards(&self) -> Vec<BountyReward> {
+        if !self.rewards.is_empty() {
+            return self.rewards.clone();
+        }
+        match (self.reward, &self.faction) {
+            (Some(reward), Some(faction)) => vec![BountyReward {
+                faction: faction.clone(),
+                reward,
+            }],
+            _ => Vec::new(),
+        }
+    }
+}
+
+/// Datos de `FactionKillBond` y `CapShipBond`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct FactionKillBond {
+    pub reward: u64,
+    pub awarding_faction: Option<String>,
+    #[serde(rename = "AwardingFaction_Localised")]
+    pub awarding_faction_localised: Option<String>,
+    pub victim_faction: Option<String>,
+    #[serde(rename = "VictimFaction_Localised")]
+    pub victim_faction_localised: Option<String>,
+}
+
+pub type CapShipBond = FactionKillBond;
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct VoucherFaction {
+    pub faction: String,
+    pub amount: u64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct RedeemVoucher {
+    #[serde(rename = "Type")]
+    pub type_: String,
+    pub amount: u64,
+    pub faction: Option<String>,
+    pub factions: Vec<VoucherFaction>,
+    pub broker_percentage: Option<f64>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct ShieldState {
+    pub shields_up: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct EscapeInterdiction {
+    pub interdictor: Option<String>,
+    pub is_player: Option<bool>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct PvpKill {
+    pub victim: Option<String>,
+    pub combat_rank: Option<u8>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct Promotion {
+    pub combat: Option<u8>,
+    pub trade: Option<u8>,
+    pub explore: Option<u8>,
+    pub cqc: Option<u8>,
+    pub soldier: Option<u8>,
+    pub exobiologist: Option<u8>,
+    pub federation: Option<u8>,
+    pub empire: Option<u8>,
+}
+
 /// Variante tipada de un evento. Lo desconocido o malformado cae en `Other`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum EventKind {
@@ -595,6 +724,18 @@ pub enum EventKind {
     MultiSellExplorationData(MultiSellExplorationData),
     CodexEntry(CodexEntry),
     JetConeBoost(JetConeBoost),
+    ShipTargeted(Box<ShipTargeted>),
+    Bounty(Box<Bounty>),
+    FactionKillBond(FactionKillBond),
+    CapShipBond(CapShipBond),
+    RedeemVoucher(RedeemVoucher),
+    ShieldState(ShieldState),
+    HeatWarning,
+    HeatDamage,
+    EscapeInterdiction(EscapeInterdiction),
+    PvpKill(PvpKill),
+    FighterDestroyed,
+    Promotion(Promotion),
     Other,
 }
 
@@ -663,6 +804,20 @@ fn classify(name: &str, raw: &RawValue) -> EventKind {
         "MultiSellExplorationData" => de(name, raw).map(EventKind::MultiSellExplorationData),
         "CodexEntry" => de(name, raw).map(EventKind::CodexEntry),
         "JetConeBoost" => de(name, raw).map(EventKind::JetConeBoost),
+        "ShipTargeted" | "ShipTargetted" => {
+            de::<ShipTargeted>(name, raw).map(|t| EventKind::ShipTargeted(Box::new(t)))
+        }
+        "Bounty" => de::<Bounty>(name, raw).map(|b| EventKind::Bounty(Box::new(b))),
+        "FactionKillBond" => de(name, raw).map(EventKind::FactionKillBond),
+        "CapShipBond" => de(name, raw).map(EventKind::CapShipBond),
+        "RedeemVoucher" => de(name, raw).map(EventKind::RedeemVoucher),
+        "ShieldState" => de(name, raw).map(EventKind::ShieldState),
+        "HeatWarning" => Some(EventKind::HeatWarning),
+        "HeatDamage" => Some(EventKind::HeatDamage),
+        "EscapeInterdiction" => de(name, raw).map(EventKind::EscapeInterdiction),
+        "PVPKill" => de(name, raw).map(EventKind::PvpKill),
+        "FighterDestroyed" => Some(EventKind::FighterDestroyed),
+        "Promotion" => de(name, raw).map(EventKind::Promotion),
         _ => None,
     };
     kind.unwrap_or(EventKind::Other)
@@ -1124,5 +1279,157 @@ mod tests {
         };
         assert_eq!(b.body_id, Some(4));
         assert_eq!(b.system_address, Some(12));
+    }
+
+    #[test]
+    fn ship_targeted_full_scan_parses() {
+        let EventKind::ShipTargeted(t) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"ShipTargeted","TargetLocked":true,"Ship":"viper_mkiv","Ship_Localised":"Viper Mk IV","ScanStage":3,"PilotName":"$cmdr;","PilotRank":"Dangerous","ShieldHealth":45.5,"HullHealth":80.0,"Faction":"F","LegalStatus":"Wanted","Bounty":125000,"Subsystem":"$int_powerplant_size3_class5_name;","SubsystemHealth":62.0}"#,
+        ) else {
+            panic!("ShipTargeted")
+        };
+        assert!(t.target_locked);
+        assert_eq!(t.ship.as_deref(), Some("viper_mkiv"));
+        assert_eq!(t.ship_localised.as_deref(), Some("Viper Mk IV"));
+        assert_eq!(t.scan_stage, Some(3));
+        assert_eq!(t.pilot_rank.as_deref(), Some("Dangerous"));
+        assert_eq!(t.shield_health, Some(45.5));
+        assert_eq!(t.hull_health, Some(80.0));
+        assert_eq!(t.legal_status.as_deref(), Some("Wanted"));
+        assert_eq!(t.bounty, Some(125000));
+        assert_eq!(
+            t.subsystem.as_deref(),
+            Some("$int_powerplant_size3_class5_name;")
+        );
+        assert_eq!(t.subsystem_health, Some(62.0));
+        let EventKind::ShipTargeted(h) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"ShipTargetted","TargetLocked":false}"#,
+        ) else {
+            panic!("ShipTargetted alias")
+        };
+        assert!(!h.target_locked);
+    }
+
+    #[test]
+    fn ship_targeted_lost_target_parses_minimal() {
+        let EventKind::ShipTargeted(t) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"ShipTargeted","TargetLocked":false}"#,
+        ) else {
+            panic!("ShipTargeted")
+        };
+        assert!(!t.target_locked);
+        assert_eq!(t.ship, None);
+        assert_eq!(t.scan_stage, None);
+        assert_eq!(t.bounty, None);
+    }
+
+    #[test]
+    fn bounty_rewards_and_legacy_skimmer_format_normalize() {
+        let EventKind::Bounty(b) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Bounty","Rewards":[{"Faction":"A","Reward":50000},{"Faction":"B","Reward":10000}],"TotalReward":60000,"VictimFaction":"V","Target":"viper"}"#,
+        ) else {
+            panic!("Bounty")
+        };
+        let n = b.normalized_rewards();
+        assert_eq!(n.len(), 2);
+        assert_eq!(n.iter().map(|r| r.reward).sum::<u64>(), 60000);
+        assert_eq!(n[0].faction, "A");
+        assert_eq!(b.total_reward, Some(60000));
+        assert_eq!(b.victim_faction.as_deref(), Some("V"));
+        let EventKind::Bounty(s) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Bounty","Reward":5000,"Faction":"C"}"#,
+        ) else {
+            panic!("Bounty legacy")
+        };
+        assert_eq!(
+            s.normalized_rewards(),
+            vec![BountyReward {
+                faction: "C".into(),
+                reward: 5000
+            }]
+        );
+    }
+
+    #[test]
+    fn redeem_voucher_with_factions_and_broker() {
+        let EventKind::RedeemVoucher(r) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"RedeemVoucher","Type":"bounty","Amount":37500,"Factions":[{"Faction":"A","Amount":50000}],"BrokerPercentage":25.0}"#,
+        ) else {
+            panic!("RedeemVoucher")
+        };
+        assert_eq!(r.type_, "bounty");
+        assert_eq!(r.amount, 37500);
+        assert_eq!(r.factions[0].faction, "A");
+        assert_eq!(r.factions[0].amount, 50000);
+        assert_eq!(r.broker_percentage, Some(25.0));
+    }
+
+    #[test]
+    fn faction_kill_bond_and_cap_ship_bond_parse() {
+        let body = r#""Reward":20000,"AwardingFaction":"A","VictimFaction":"B""#;
+        let EventKind::FactionKillBond(f) = ev(&format!(
+            r#"{{"timestamp":"2026-04-10T20:00:00Z","event":"FactionKillBond",{body}}}"#
+        )) else {
+            panic!("FactionKillBond")
+        };
+        assert_eq!(f.reward, 20000);
+        assert_eq!(f.awarding_faction.as_deref(), Some("A"));
+        assert_eq!(f.victim_faction.as_deref(), Some("B"));
+        let EventKind::CapShipBond(c) = ev(&format!(
+            r#"{{"timestamp":"2026-04-10T20:00:00Z","event":"CapShipBond",{body}}}"#
+        )) else {
+            panic!("CapShipBond")
+        };
+        assert_eq!(c.reward, 20000);
+    }
+
+    #[test]
+    fn heat_and_shield_events_parse() {
+        assert_eq!(
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"HeatWarning"}"#),
+            EventKind::HeatWarning
+        );
+        assert_eq!(
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"HeatDamage"}"#),
+            EventKind::HeatDamage
+        );
+        let EventKind::ShieldState(s) =
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"ShieldState","ShieldsUp":false}"#)
+        else {
+            panic!("ShieldState")
+        };
+        assert!(!s.shields_up);
+    }
+
+    #[test]
+    fn promotion_combat_rank_parses() {
+        let EventKind::Promotion(p) =
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Promotion","Combat":5}"#)
+        else {
+            panic!("Promotion")
+        };
+        assert_eq!(p.combat, Some(5));
+        assert_eq!(p.trade, None);
+    }
+
+    #[test]
+    fn misc_combat_events_parse() {
+        let EventKind::PvpKill(k) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"PVPKill","Victim":"X","CombatRank":4}"#,
+        ) else {
+            panic!("PVPKill")
+        };
+        assert_eq!(k.victim.as_deref(), Some("X"));
+        assert_eq!(k.combat_rank, Some(4));
+        let EventKind::EscapeInterdiction(e) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"EscapeInterdiction","Interdictor":"Y","IsPlayer":true}"#,
+        ) else {
+            panic!("EscapeInterdiction")
+        };
+        assert_eq!(e.is_player, Some(true));
+        assert_eq!(
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"FighterDestroyed"}"#),
+            EventKind::FighterDestroyed
+        );
     }
 }
