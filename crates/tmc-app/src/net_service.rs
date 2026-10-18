@@ -228,6 +228,11 @@ fn take_group(ctx: &Ctx, qkey: &str) -> Vec<Waiter> {
 }
 
 async fn lead(ctx: Arc<Ctx>, qkey: String, query: NetQuery) {
+    if let Some((outcome, at)) = read_ardent_cache(&ctx.store, &query).await {
+        let waiters = take_group(&ctx, &qkey);
+        send_all(&ctx, &waiters, NetSource::Cache, at, &outcome).await;
+        return;
+    }
     let cached = read_cache(&ctx.store, &query).await;
     if let Some(hit) = cached {
         let age_ok = |kind: CacheKind, at: DateTime<Utc>| age(at) < ttl_for(kind).fresh;
@@ -302,6 +307,7 @@ async fn finish(
     if let NetOutcome::System(system) = outcome {
         write_cache(&ctx.store, query, system, now).await;
     }
+    write_ardent_cache(&ctx.store, query, outcome, now).await;
     send_all(ctx, waiters, source, now, outcome).await;
 }
 
@@ -407,6 +413,61 @@ async fn write_cache(store: &Store, query: &NetQuery, system: &RemoteSystem, at:
         store.api_cache_put(&politics_key, &politics, at)
     })
     .await;
+    if let Ok(Err(error)) = result {
+        tracing::warn!(%error, "api_cache write failed");
+    }
+}
+
+/// Clave única de las consultas de Ardent (listas de mercados/estaciones).
+fn ardent_key(query: &NetQuery) -> Option<(CacheKind, String)> {
+    match query {
+        NetQuery::CommodityImportsNearby { .. } | NetQuery::NearestService { .. } => {
+            cache_keys(query).into_iter().next()
+        }
+        _ => None,
+    }
+}
+
+/// Respuesta de Ardent fresca en caché; sin `max_stale` útil (caducada = sin caché).
+async fn read_ardent_cache(store: &Store, query: &NetQuery) -> Option<(NetOutcome, DateTime<Utc>)> {
+    let (kind, key) = ardent_key(query)?;
+    let is_markets = kind == CacheKind::ArdentImports;
+    let store = store.clone();
+    let entry = tokio::task::spawn_blocking(move || store.api_cache_get(&key))
+        .await
+        .ok()?
+        .map_err(|error| tracing::warn!(%error, "api_cache read failed"))
+        .ok()??;
+    if age(entry.fetched_at) >= ttl_for(kind).fresh {
+        return None;
+    }
+    let outcome = if is_markets {
+        NetOutcome::Markets(serde_json::from_str(&entry.value).ok()?)
+    } else {
+        NetOutcome::Stations(serde_json::from_str(&entry.value).ok()?)
+    };
+    Some((outcome, entry.fetched_at))
+}
+
+async fn write_ardent_cache(
+    store: &Store,
+    query: &NetQuery,
+    outcome: &NetOutcome,
+    at: DateTime<Utc>,
+) {
+    let Some((_, key)) = ardent_key(query) else {
+        return;
+    };
+    let json = match outcome {
+        NetOutcome::Markets(items) => serde_json::to_string(items),
+        NetOutcome::Stations(items) => serde_json::to_string(items),
+        _ => return,
+    };
+    let Ok(json) = json else {
+        return;
+    };
+    let store = store.clone();
+    let result = tokio::task::spawn_blocking(move || store.api_cache_put(&key, &json, at)).await;
     if let Ok(Err(error)) = result {
         tracing::warn!(%error, "api_cache write failed");
     }
@@ -867,6 +928,106 @@ mod tests {
         ids.sort();
         assert_eq!(ids, vec![1, 2, 3]);
         assert_eq!(rig.fake.calls(), 1);
+    }
+
+    const ARDENT_PLATINUM: &str =
+        include_str!("../../../tests/fixtures/net/ardent_nearby_imports_platinum.json");
+
+    fn imports() -> NetQuery {
+        NetQuery::CommodityImportsNearby {
+            system_address: ID64,
+            commodity: "Platinum".into(),
+            max_distance_ly: 100,
+            min_pad: tmc_model::net::PadSize::Large,
+        }
+    }
+
+    fn imports_request(id: u64) -> NetRequest {
+        NetRequest {
+            id,
+            module: "mining".into(),
+            key: "sell:platinum".into(),
+            query: imports(),
+        }
+    }
+
+    #[tokio::test]
+    async fn fresh_ardent_imports_cache_hit_skips_transport() {
+        let mut rig = rig(vec![ok(200, ARDENT_PLATINUM)]);
+        let markets = vec![tmc_model::net::RemoteMarket {
+            station_name: "Cache Hub".into(),
+            system_name: "Sol".into(),
+            market_id: Some(5),
+            distance_ly: 12.5,
+            distance_to_arrival_ls: None,
+            sell_price: 299000,
+            demand: Some(100),
+            max_pad: Some(tmc_model::net::PadSize::Large),
+            station_type: None,
+            updated_at: None,
+        }];
+        rig.store
+            .api_cache_put(
+                &format!("ardent:imports:{ID64}:platinum:100:l"),
+                &serde_json::to_string(&markets).unwrap(),
+                Utc::now() - chrono::Duration::minutes(10),
+            )
+            .unwrap();
+        rig.handle.tx.send(imports_request(7)).await.unwrap();
+        let r = next_response(&mut rig).await;
+        assert_eq!(r.id, 7);
+        assert_eq!(r.source, NetSource::Cache);
+        assert_eq!(r.outcome, NetOutcome::Markets(markets));
+        assert_eq!(rig.fake.calls(), 0);
+    }
+
+    #[tokio::test]
+    async fn expired_ardent_cache_calls_network_and_stores_result() {
+        let mut rig = rig(vec![ok(200, ARDENT_PLATINUM)]);
+        rig.store
+            .api_cache_put(
+                &format!("ardent:imports:{ID64}:platinum:100:l"),
+                "[]",
+                Utc::now() - chrono::Duration::minutes(16),
+            )
+            .unwrap();
+        rig.handle.tx.send(imports_request(1)).await.unwrap();
+        let r = next_response(&mut rig).await;
+        assert_eq!(r.source, NetSource::Ardent);
+        assert!(matches!(&r.outcome, NetOutcome::Markets(_)));
+        assert_eq!(rig.fake.calls(), 1);
+        rig.handle.tx.send(imports_request(2)).await.unwrap();
+        let again = next_response(&mut rig).await;
+        assert_eq!(again.source, NetSource::Cache);
+        assert_eq!(rig.fake.calls(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn identical_ardent_requests_are_coalesced() {
+        let mut rig = rig(vec![ok(200, ARDENT_PLATINUM)]);
+        for id in 1..=3 {
+            rig.handle.tx.send(imports_request(id)).await.unwrap();
+        }
+        let mut ids = Vec::new();
+        for _ in 0..3 {
+            let r = next_response(&mut rig).await;
+            assert!(matches!(&r.outcome, NetOutcome::Markets(_)));
+            ids.push(r.id);
+        }
+        ids.sort();
+        assert_eq!(ids, vec![1, 2, 3]);
+        assert_eq!(rig.fake.calls(), 1);
+    }
+
+    #[tokio::test]
+    async fn ardent_request_with_online_off_is_disabled_without_transport() {
+        let mut rig = rig(vec![ok(200, ARDENT_PLATINUM)]);
+        rig.online.store(false, Ordering::Relaxed);
+        rig.handle.tx.send(imports_request(3)).await.unwrap();
+        let r = next_response(&mut rig).await;
+        assert_eq!(r.id, 3);
+        assert_eq!(r.outcome, NetOutcome::Disabled);
+        assert_eq!(rig.fake.calls(), 0);
     }
 
     #[tokio::test]
