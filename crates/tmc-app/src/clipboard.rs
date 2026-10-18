@@ -10,26 +10,41 @@ use tmc_model::source::SourceEvent;
 use tmc_server::{ActionError, ActionFut, ActionHost, ConfigHost};
 use tokio::sync::mpsc;
 
+/// Por dónde acabó la copia.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CopyMethod {
+    System,
+    MemoryFallback,
+}
+
 pub struct Clipboard {
     last: Mutex<Option<String>>,
+    warned: AtomicBool,
 }
 
 impl Clipboard {
     pub fn new() -> Self {
         Self {
             last: Mutex::new(None),
+            warned: AtomicBool::new(false),
         }
     }
 
-    pub fn set_text(&self, text: &str) -> Result<(), String> {
+    /// Copia `text`. Devuelve si se usó el portapapeles del sistema o el
+    /// respaldo en memoria; en ese caso avisa (`warn!`) una sola vez por
+    /// sesión. El aviso refleja la petición de copia: la alerta
+    /// `nav-auto-copied` no distingue si el sistema aceptó el texto.
+    pub fn set_text(&self, text: &str) -> Result<CopyMethod, String> {
         if let Ok(mut guard) = self.last.lock() {
             *guard = Some(text.to_owned());
         }
         match arboard::Clipboard::new().and_then(|mut cb| cb.set_text(text.to_owned())) {
-            Ok(()) => Ok(()),
+            Ok(()) => Ok(CopyMethod::System),
             Err(err) => {
-                tracing::warn!(%err, "system clipboard unavailable; stored in memory fallback");
-                Ok(())
+                if !self.warned.swap(true, Ordering::Relaxed) {
+                    tracing::warn!(%err, "system clipboard unavailable; stored in memory fallback");
+                }
+                Ok(CopyMethod::MemoryFallback)
             }
         }
     }
@@ -50,12 +65,10 @@ struct Runtime {
     events: mpsc::Sender<SourceEvent>,
     online: Arc<AtomicBool>,
     net: NetServiceHandle,
-    /// Interruptor vivo de la copia automática (lo lee la tarea de copia).
-    auto_copy: Option<Arc<AtomicBool>>,
 }
 
 pub struct AppActions {
-    clipboard: Clipboard,
+    clipboard: Arc<Clipboard>,
     config: Mutex<Config>,
     runtime: Option<Runtime>,
     save_path: Option<PathBuf>,
@@ -64,7 +77,7 @@ pub struct AppActions {
 impl AppActions {
     pub fn new() -> Self {
         Self {
-            clipboard: Clipboard::new(),
+            clipboard: Arc::new(Clipboard::new()),
             config: Mutex::new(Config::default()),
             runtime: None,
             save_path: None,
@@ -73,7 +86,7 @@ impl AppActions {
 
     pub fn with_config(cfg: Config) -> Self {
         Self {
-            clipboard: Clipboard::new(),
+            clipboard: Arc::new(Clipboard::new()),
             config: Mutex::new(cfg),
             runtime: None,
             save_path: None,
@@ -93,17 +106,14 @@ impl AppActions {
                 events,
                 online,
                 net,
-                auto_copy: None,
             }),
             ..Self::with_config(cfg)
         }
     }
 
-    /// Comparte el interruptor de la copia automática: `put_config` lo actualiza.
-    pub fn with_auto_copy_flag(mut self, flag: Arc<AtomicBool>) -> Self {
-        if let Some(runtime) = &mut self.runtime {
-            runtime.auto_copy = Some(flag);
-        }
+    /// Comparte el portapapeles con la tarea de copia automática.
+    pub fn with_clipboard(mut self, clipboard: Arc<Clipboard>) -> Self {
+        self.clipboard = clipboard;
         self
     }
 
@@ -174,9 +184,6 @@ impl ConfigHost for AppActions {
             runtime
                 .online
                 .store(updated.online_services, Ordering::Relaxed);
-            if let Some(flag) = &runtime.auto_copy {
-                flag.store(updated.auto_copy_next_system, Ordering::Relaxed);
-            }
             let event = SourceEvent::Settings(updated.module_settings());
             match runtime.events.try_send(event) {
                 Ok(()) => {}

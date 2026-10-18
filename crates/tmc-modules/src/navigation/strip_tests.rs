@@ -587,6 +587,30 @@ fn copy_seq_only_increases_on_live_jumps() {
     assert_eq!(r["copy_target"], "S4");
 }
 
+#[test]
+fn copy_seq_requires_auto_copy_setting_but_copy_target_always_updates() {
+    let mut h = Harness::new();
+    h.load_game();
+    h.location("S1", 1, 0.0);
+    h.nav
+        .set_plan(Some(plan_of(&[("S1", 1), ("S2", 2), ("S3", 3), ("S4", 4)])));
+    let off = ModuleSettings {
+        auto_copy_next_system: false,
+        ..ModuleSettings::default()
+    };
+    h.event(SourceEvent::Settings(off), false);
+    h.jump_to("S2", 2, 10.0);
+    assert_eq!(h.route()["copy_seq"], 0);
+    assert_eq!(h.route()["copy_target"], "S3");
+    h.event(SourceEvent::Settings(ModuleSettings::default()), false);
+    h.jump_to("S3", 3, 20.0);
+    assert_eq!(h.route()["copy_seq"], 1);
+    assert_eq!(h.route()["copy_target"], "S4");
+    // Último hop: sin siguiente no hay destino de copia.
+    h.jump_to("S4", 4, 30.0);
+    assert!(h.route()["copy_target"].is_null());
+}
+
 fn loadout_model() -> (jump::FsdSpec, f64) {
     let lo = tmc_model::events::Loadout {
         unladen_mass: Some(468.0),
