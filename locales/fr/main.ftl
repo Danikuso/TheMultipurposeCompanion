@@ -86,3 +86,5 @@ rank-exobiologist = Exobiologiste
 rank-cqc = CQC
 rank-federation = Fédération
 rank-empire = Empire
+layout-combat = Combat
+layout-mining = Minage
