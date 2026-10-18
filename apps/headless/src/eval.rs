@@ -126,11 +126,22 @@ pub fn render(
         "\nCriterio 3, alcance de salto (±{RANGE_TOLERANCE_LY} al): {}",
         range_verdict(r).label(r.cases)
     );
-    if range_verdict(r) == Verdict::Insufficient && r.cases >= MIN_CASES {
+    if range_verdict(r) == Verdict::Insufficient
+        && r.cases >= MIN_CASES
+        && r.within_tolerance == r.cases
+    {
+        let mut missing = Vec::new();
+        if r.engineered_cases == 0 {
+            missing.push("ingeniería");
+        }
+        if r.guardian_cases == 0 {
+            missing.push("Guardian");
+        }
         let _ = writeln!(
             out,
-            "  motivo: los {} casos disponibles coinciden, pero el historial no incluye ingeniería y Guardian",
-            r.cases
+            "  motivo: los {} casos disponibles coinciden, pero el historial no incluye {}",
+            r.cases,
+            missing.join(" ni ")
         );
     }
     let _ = writeln!(
@@ -145,14 +156,30 @@ pub fn render(
     );
     let _ = writeln!(
         out,
-        "  aciertos_combustible_maximo_por_salto={} aciertos_deposito_lleno={}",
-        r.max_fuel_hits, r.full_tank_hits
-    );
-    let _ = writeln!(
-        out,
-        "  aciertos_masa_vacio_mas_combustible_maximo_por_salto={}",
+        "  aciertos_modelo_de_produccion_con_masa_de_referencia={}",
         r.max_fuel_mass_hits
     );
+    let fitted = r.fsd_stats.iter().filter(|f| f.fitted).count();
+    let _ = writeln!(
+        out,
+        "  fsd_vistos={} ajustados_con_este_historial={} preexistentes={}",
+        r.fsd_stats.len(),
+        fitted,
+        r.fsd_stats.len() - fitted
+    );
+    for f in &r.fsd_stats {
+        let _ = writeln!(
+            out,
+            "    {}: loadouts={} masas_distintas={} ajustado={} verificado={}",
+            f.item, f.loadouts, f.distinct_masses, f.fitted, f.verified
+        );
+    }
+    if fitted > 0 {
+        let _ = writeln!(
+            out,
+            "  nota: las entradas ajustadas con este historial hacen el criterio parcialmente circular (consistencia, no prueba independiente)"
+        );
+    }
     let _ = writeln!(out, "  fsd_fuera_de_tabla={}", join(&report.missing_fsd));
 
     let v = &report.value;
@@ -194,7 +221,7 @@ pub fn render(
     );
     let _ = writeln!(
         out,
-        "  cuerpos={} alta_o_media={} ratio={:.1} %",
+        "  casos_cuerpo_especie={} alta_o_media={} ratio={:.1} %",
         p.bodies,
         p.hit_high_or_medium,
         p.ratio * 100.0

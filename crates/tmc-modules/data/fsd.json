@@ -200,7 +200,7 @@
    "fuel_mul": 0.011,
    "fuel_power": 2.45,
    "kind": "standard",
-   "provenance": "ajustado con un solo Loadout.MaxJumpRange del historial del propietario, 2026-10-18; valor dudoso, sin verificar",
+   "provenance": "ajustado con un solo Loadout.MaxJumpRange del historial del propietario, 2026-10-18; sin verificar (se exigen al menos 3 masas distintas)",
    "verified": false
   },
   {
@@ -510,7 +510,7 @@
    "fuel_mul": 0.013,
    "fuel_power": 2.45,
    "kind": "sco",
-   "provenance": "ajustado con Loadout.MaxJumpRange del historial del propietario, 2026-10-18",
+   "provenance": "ajustado con 7 Loadout.MaxJumpRange del historial del propietario (masas de referencia distintas y concordantes), 2026-10-18",
    "verified": true
   },
   {
@@ -530,8 +530,8 @@
    "fuel_mul": 0.012,
    "fuel_power": 2.45,
    "kind": "sco",
-   "provenance": "ajustado con Loadout.MaxJumpRange del historial del propietario, 2026-10-18",
-   "verified": true
+   "provenance": "ajustado con un solo Loadout.MaxJumpRange del historial del propietario, 2026-10-18; sin verificar (se exigen al menos 3 masas distintas)",
+   "verified": false
   },
   {
    "item_prefix": "int_hyperdrive_overcharge_size5_class2",
@@ -550,7 +550,7 @@
    "fuel_mul": 0.008,
    "fuel_power": 2.45,
    "kind": "sco",
-   "provenance": "ajustado con Loadout.MaxJumpRange del historial del propietario, 2026-10-18",
+   "provenance": "ajustado con 3 Loadout.MaxJumpRange del historial del propietario (masas de referencia distintas y concordantes), 2026-10-18",
    "verified": true
   },
   {

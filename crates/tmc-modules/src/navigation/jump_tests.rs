@@ -125,19 +125,12 @@ fn formula_validated_against_game_max_jump_range() {
 }
 
 #[test]
-fn unknown_fsd_item_falls_back_to_scaled_max_jump_range() {
+fn unknown_fsd_item_hides_range_because_reference_fuel_is_unknown() {
     let lo = loadout("int_hyperdrive_size9_class9_future", vec![], Some(40.0));
     let m = build_jump_model(&lo, fsd_table());
-    assert_eq!(m.source, RangeSource::Scaled);
+    assert_eq!(m.source, RangeSource::Unknown);
     assert!(m.fsd.is_none());
-    let empty = m.range_now(&mass(468.0, 32.0)).unwrap();
-    assert!((empty - 40.0).abs() < 1e-9);
-    let laden = ShipMass {
-        cargo: 100.0,
-        ..mass(468.0, 32.0)
-    };
-    let r = m.range_now(&laden).unwrap();
-    assert!((r - 40.0 * 500.0 / 600.0).abs() < 1e-9, "{r}");
+    assert_eq!(m.range_now(&mass(468.0, 32.0)), None);
 }
 
 #[test]
@@ -209,7 +202,7 @@ fn numeric_guards_reject_degenerate_inputs() {
 
 #[test]
 fn scaled_with_zero_mass_is_none_and_zero_ref_mass_is_unknown() {
-    let lo = loadout("int_hyperdrive_size9_class9_future", vec![], Some(40.0));
+    let lo = loadout("int_hyperdrive_size5_class5", vec![], Some(40.0));
     let m = build_jump_model(&lo, fsd_table());
     assert_eq!(m.source, RangeSource::Scaled);
     let z = ShipMass {

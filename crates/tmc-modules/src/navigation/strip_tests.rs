@@ -1110,7 +1110,7 @@ fn plan_without_known_range_fails_with_reason() {
 }
 
 #[test]
-fn galaxy_plan_without_fsd_fails_with_reason_and_neutron_still_works() {
+fn galaxy_plan_without_fsd_fails_with_reason_and_neutron_fails_without_range() {
     let mut h = Harness::new();
     h.load_game();
     h.loadout(
@@ -1126,16 +1126,13 @@ fn galaxy_plan_without_fsd_fails_with_reason_and_neutron_still_works() {
     assert_eq!(h.plan_topic()["status"], "failed");
     assert_eq!(h.plan_topic()["error_key"], "nav-plan-error-no-fsd");
     assert!(h.route_requests().is_empty());
+    // Sin FSD conocido tampoco hay alcance fiable: el modo neutrones también falla.
     h.act(
         "navigation.plan",
         json!({"to": "Colonia", "mode": "neutron"}),
     );
-    assert_eq!(h.route_requests().len(), 1);
-    let NetQuery::NeutronRoute(p) = &h.route_requests()[0].query else {
-        panic!("{:?}", h.route_requests()[0].query);
-    };
-    assert!((p.range_ly - 24.63).abs() < 0.01, "{}", p.range_ly);
-    assert_eq!(p.supercharge_multiplier, 4.0);
+    assert_eq!(h.plan_topic()["error_key"], "nav-plan-error-no-range");
+    assert!(h.route_requests().is_empty());
 }
 
 #[test]
