@@ -46,6 +46,16 @@ fn compatible(markets: &[RemoteMarket], ship_pad: Option<PadSize>) -> Vec<&Remot
     v
 }
 
+/// Mercados cuya plataforma admite la nave (con nave o plataforma desconocida no se
+/// excluye). Sin ordenar ni recortar.
+pub fn filter_compatible(markets: &[RemoteMarket], ship_pad: Option<PadSize>) -> Vec<RemoteMarket> {
+    markets
+        .iter()
+        .filter(|m| pad_ok(m, ship_pad) != Some(false))
+        .cloned()
+        .collect()
+}
+
 pub fn rank_markets(
     markets: &[RemoteMarket],
     ship_pad: Option<PadSize>,

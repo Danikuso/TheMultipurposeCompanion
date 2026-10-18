@@ -57,6 +57,8 @@ pub struct AsteroidView {
 pub struct ProspectorTracker {
     current: Option<AsteroidView>,
     history: VecDeque<AsteroidView>,
+    /// Último evento, para recalcular el veredicto sin añadir historial.
+    last_event: Option<ProspectedAsteroid>,
 }
 
 fn sum_opt(it: impl Iterator<Item = u64>) -> Option<u64> {
@@ -152,6 +154,24 @@ impl ProspectorTracker {
             self.history.pop_front();
         }
         self.current = Some(view);
+        self.last_event = Some(ev.clone());
+        true
+    }
+
+    /// Recalcula la vista actual (y su entrada del historial) con otros precios o
+    /// ajustes, sin añadir historial. Devuelve `true` si cambió.
+    pub fn recompute(&mut self, prices: PriceFn, s: &ModuleSettings) -> bool {
+        let Some(ev) = &self.last_event else {
+            return false;
+        };
+        let view = build_view(ev, prices, s);
+        if self.current.as_ref() == Some(&view) {
+            return false;
+        }
+        if let Some(last) = self.history.back_mut() {
+            *last = view.clone();
+        }
+        self.current = Some(view);
         true
     }
 
@@ -198,6 +218,23 @@ mod tests {
     }
     fn none(_: &str) -> Option<PriceInfo> {
         None
+    }
+
+    #[test]
+    fn recompute_updates_current_without_new_history_entry() {
+        let mut t = ProspectorTracker::default();
+        let e = ev("High", vec![mat("Platinum", 31.5)], None);
+        assert!(!t.recompute(&priced, &ModuleSettings::default()));
+        t.apply(&e, &priced, &ModuleSettings::default());
+        assert!(!t.recompute(&priced, &ModuleSettings::default()));
+        let strict = ModuleSettings {
+            mining_threshold_cr: 5_000_000,
+            ..ModuleSettings::default()
+        };
+        assert!(t.recompute(&priced, &strict));
+        assert_eq!(t.current().unwrap().verdict, Verdict::NotWorth);
+        assert_eq!(t.history().len(), 1);
+        assert_eq!(t.history().back().unwrap().verdict, Verdict::NotWorth);
     }
 
     #[test]

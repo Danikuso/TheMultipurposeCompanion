@@ -26,6 +26,11 @@ impl Inflight {
     pub fn finish(&mut self, key: &str) {
         self.sent.remove(key);
     }
+
+    /// Da por terminadas todas las peticiones cuya clave empieza por `prefix`.
+    pub fn finish_prefix(&mut self, prefix: &str) {
+        self.sent.retain(|k, _| !k.starts_with(prefix));
+    }
 }
 
 #[cfg(test)]
@@ -43,5 +48,9 @@ mod tests {
         f.finish("a");
         assert!(f.begin("a", t0 + Duration::seconds(62)));
         assert!(f.begin("b", t0));
+        assert!(f.begin("sell:1:x", t0));
+        f.finish_prefix("sell:");
+        assert!(f.begin("sell:1:x", t0));
+        assert!(!f.begin("b", t0));
     }
 }
