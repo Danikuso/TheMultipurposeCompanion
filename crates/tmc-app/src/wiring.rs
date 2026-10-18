@@ -15,6 +15,7 @@ use tmc_modules::all_modules;
 use tmc_net::{NetClient, ReqwestTransport};
 use tmc_server::{ServerConfig, ServerHandle, serve};
 use tmc_store::{EventWriter, ImportOptions, Store, import_history};
+use tokio::sync::broadcast::error::RecvError;
 
 pub struct Running {
     pub server: ServerHandle,
@@ -122,17 +123,23 @@ pub async fn start(mut config: Config) -> anyhow::Result<Running> {
         }
     });
 
-    // La copia automática respeta el ajuste en caliente (`put_config` lo cambia).
-    let auto_copy = Arc::new(AtomicBool::new(config.auto_copy_next_system));
+    // Navigation decide (sube `copy_seq` solo con el ajuste activo y en vivo);
+    // aquí se copia cada vez que `copy_seq` aumenta.
     let clipboard = Arc::new(Clipboard::new());
     {
         let task_clipboard = clipboard.clone();
-        let flag = auto_copy.clone();
         let throttle_flag = throttle.clone();
         tokio::spawn(async move {
             // El replay nunca incrementa `copy_seq`: arranca en 0 y solo suben los saltos en vivo.
             let mut last_seq: u64 = 0;
-            while let Ok(msg) = rx.recv().await {
+            loop {
+                // Si el canal se retrasa se descartan mensajes pero se sigue:
+                // `copy_seq` es acumulativo, la siguiente actualización lo recupera.
+                let msg = match rx.recv().await {
+                    Ok(msg) => msg,
+                    Err(RecvError::Lagged(_)) => continue,
+                    Err(RecvError::Closed) => break,
+                };
                 if let CoreMessage::Update { topics, .. } = msg {
                     if let Some(game) = topics.get("core.game")
                         && let Some(running) = game.get("running").and_then(|v| v.as_bool())
@@ -143,7 +150,6 @@ pub async fn start(mut config: Config) -> anyhow::Result<Running> {
                         && let Some(seq) = route.get("copy_seq").and_then(|v| v.as_u64())
                     {
                         if seq > last_seq
-                            && flag.load(Ordering::Relaxed)
                             && let Some(target) = route
                                 .get("copy_target")
                                 .and_then(|v| v.as_str())
@@ -171,7 +177,7 @@ pub async fn start(mut config: Config) -> anyhow::Result<Running> {
         store.clone(),
         Arc::new(
             AppActions::with_runtime(config, core.events.clone(), online, net)
-                .with_auto_copy_flag(auto_copy),
+                .with_clipboard(clipboard.clone()),
         ),
     )
     .await?;

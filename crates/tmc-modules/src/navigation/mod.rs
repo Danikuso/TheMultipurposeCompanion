@@ -221,12 +221,11 @@ impl Navigation {
                     plan.on_jump(&l.star_system, l.system_address);
                     self.plan_dirty = true;
                 }
-                if !ctx.replaying {
+                // Navigation decide: solo salto en vivo con la copia automática activa.
+                if !ctx.replaying && self.settings.auto_copy_next_system {
                     self.copy_seq += 1;
-                    // El plan ya avanzó: el destino de copia es el siguiente de la tira.
-                    if self.settings.auto_copy_next_system
-                        && let Some(next) = build_strip(self.plan.as_ref(), state).upcoming.first()
-                    {
+                    // El plan ya avanzó: el destino es el siguiente de la tira.
+                    if let Some(next) = build_strip(self.plan.as_ref(), state).upcoming.first() {
                         ctx.alert(
                             Alert::new(Severity::Info, "nav-auto-copied")
                                 .arg("system", next.name.clone()),

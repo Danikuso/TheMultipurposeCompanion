@@ -275,9 +275,13 @@ lan = false
         assert_eq!(actions.clipboard().last_copied().as_deref(), Some("Z"));
     }
 
-    #[tokio::test]
-    async fn auto_copy_follows_plan_after_each_jump() {
-        use std::io::Write;
+    /// Plan PA -> PB -> PC -> PD persistido, sesión en PA y app arrancada.
+    async fn plan_fixture() -> (
+        tempfile::TempDir,
+        tempfile::TempDir,
+        std::path::PathBuf,
+        Running,
+    ) {
         use tmc_model::net::PlannedHop;
         use tmc_modules::navigation::route::{ActivePlan, PlanMode};
 
@@ -345,7 +349,6 @@ lan = false
             ..Default::default()
         };
         let running = start(cfg).await.unwrap();
-        let mut rx = running.core.subscribe();
 
         // El plan se carga con el comandante y el replay no copia nada.
         tokio::time::timeout(Duration::from_secs(5), async {
@@ -362,38 +365,133 @@ lan = false
         .await
         .unwrap();
         assert_eq!(running.clipboard.last_copied(), None);
+        (jdir, ddir, journal, running)
+    }
 
+    fn append_jumps(journal: &std::path::Path, jumps: &[(&str, u64)], minute: u32) {
+        use std::io::Write;
         let mut file = std::fs::OpenOptions::new()
             .append(true)
-            .open(&journal)
+            .open(journal)
             .unwrap();
-        for (i, (name, id)) in [("PB", 102u64), ("PC", 103)].iter().enumerate() {
+        for (i, (name, id)) in jumps.iter().enumerate() {
             writeln!(
                 file,
-                r#"{{"timestamp":"2026-10-18T10:01:0{i}Z","event":"FSDJump","StarSystem":"{name}","SystemAddress":{id},"StarPos":[10,0,0],"JumpDist":10.0}}"#
+                r#"{{"timestamp":"2026-10-18T10:{minute:02}:0{i}Z","event":"FSDJump","StarSystem":"{name}","SystemAddress":{id},"StarPos":[10,0,0],"JumpDist":10.0}}"#
             )
             .unwrap();
         }
-        drop(file);
+    }
 
+    async fn route_topic(running: &Running) -> Value {
+        running.core.snapshot().await["navigation.route"].clone()
+    }
+
+    async fn wait_copied(running: &Running, expected: &str) {
         tokio::time::timeout(Duration::from_secs(5), async {
-            while running.clipboard.last_copied().as_deref() != Some("PD") {
+            while running.clipboard.last_copied().as_deref() != Some(expected) {
                 tokio::time::sleep(Duration::from_millis(25)).await;
             }
         })
         .await
-        .expect("el portapapeles debe acabar con PD");
+        .unwrap_or_else(|_| panic!("el portapapeles debe acabar con {expected}"));
+    }
 
-        // La alerta de copia automatica lleva el sistema copiado.
-        let mut alert_systems = Vec::new();
+    fn drain_auto_copy_alerts(
+        rx: &mut tokio::sync::broadcast::Receiver<tmc_core::CoreMessage>,
+    ) -> Vec<Value> {
+        let mut out = Vec::new();
         while let Ok(msg) = rx.try_recv() {
             if let tmc_core::CoreMessage::Alert(a) = msg
                 && a.key == "nav-auto-copied"
             {
-                alert_systems.push(a.args["system"].clone());
+                out.push(a.args["system"].clone());
             }
         }
-        assert_eq!(alert_systems.last(), Some(&json!("PD")));
+        out
+    }
+
+    async fn send_auto_copy(running: &Running, on: bool) {
+        let settings = tmc_model::settings::ModuleSettings {
+            online_services: false,
+            auto_copy_next_system: on,
+            ..Default::default()
+        };
+        running
+            .core
+            .events
+            .send(tmc_model::source::SourceEvent::Settings(settings))
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn auto_copy_follows_plan_after_each_jump() {
+        let (_j, _d, journal, running) = plan_fixture().await;
+        let mut rx = running.core.subscribe();
+        append_jumps(&journal, &[("PB", 102), ("PC", 103)], 1);
+        wait_copied(&running, "PD").await;
+        assert_eq!(drain_auto_copy_alerts(&mut rx).last(), Some(&json!("PD")));
+        running.server.shutdown();
+    }
+
+    #[tokio::test]
+    async fn auto_copy_setting_toggles_live_through_settings_events() {
+        let (_j, _d, journal, running) = plan_fixture().await;
+        let mut rx = running.core.subscribe();
+        send_auto_copy(&running, false).await;
+        // Con el ajuste apagado: ni copy_seq, ni alerta, ni copia; copy_target sigue.
+        append_jumps(&journal, &[("PB", 102)], 1);
+        tokio::time::timeout(Duration::from_secs(5), async {
+            while route_topic(&running).await["current"]["name"] != "PB" {
+                tokio::time::sleep(Duration::from_millis(25)).await;
+            }
+        })
+        .await
+        .unwrap();
+        let route = route_topic(&running).await;
+        assert_eq!(route["copy_seq"], 0);
+        assert_eq!(route["copy_target"], "PC");
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        assert_eq!(running.clipboard.last_copied(), None);
+        assert!(drain_auto_copy_alerts(&mut rx).is_empty());
+        // Encendido: el siguiente salto en vivo copia y avisa.
+        send_auto_copy(&running, true).await;
+        append_jumps(&journal, &[("PC", 103)], 2);
+        wait_copied(&running, "PD").await;
+        assert_eq!(route_topic(&running).await["copy_seq"], 1);
+        assert_eq!(drain_auto_copy_alerts(&mut rx), vec![json!("PD")]);
+        running.server.shutdown();
+    }
+
+    #[tokio::test]
+    async fn exhausted_plan_neither_copies_nor_alerts() {
+        let (_j, _d, journal, running) = plan_fixture().await;
+        let mut rx = running.core.subscribe();
+        // Se llega a PC sin copiar (ajuste apagado) y luego se salta al último hop.
+        send_auto_copy(&running, false).await;
+        append_jumps(&journal, &[("PB", 102), ("PC", 103)], 1);
+        tokio::time::timeout(Duration::from_secs(5), async {
+            while route_topic(&running).await["current"]["name"] != "PC" {
+                tokio::time::sleep(Duration::from_millis(25)).await;
+            }
+        })
+        .await
+        .unwrap();
+        send_auto_copy(&running, true).await;
+        append_jumps(&journal, &[("PD", 104)], 2);
+        tokio::time::timeout(Duration::from_secs(5), async {
+            while route_topic(&running).await["current"]["name"] != "PD" {
+                tokio::time::sleep(Duration::from_millis(25)).await;
+            }
+        })
+        .await
+        .unwrap();
+        let route = route_topic(&running).await;
+        assert!(route["copy_target"].is_null());
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        assert_eq!(running.clipboard.last_copied(), None);
+        assert!(drain_auto_copy_alerts(&mut rx).is_empty());
         running.server.shutdown();
     }
 
