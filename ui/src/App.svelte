@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { connect, topic } from './lib/ws.svelte';
   import { t } from './lib/i18n';
   import { modules } from './modules/registry';
@@ -9,9 +9,11 @@
   import Sidebar from './shell/Sidebar.svelte';
   import Toasts from './shell/Toasts.svelte';
   import TopBar from './shell/TopBar.svelte';
-  import { autoLayout, contextPanel, layouts } from './shell/layouts';
+  import { autoLayout, contextPanel, layouts, nextPin } from './shell/layouts';
 
-  let userTab = $state<string | null>(null);
+  let pin = $state<string | null>(null);
+  let view = $state<string | null>(null);
+  let lastAuto: string | null = null;
   let manual = $state<string | null>(null);
   let manualBody = $state<string | null>(null);
   const liveModules = $derived(topic<{ id: string; relevance: string }[]>('core.modules') ?? []);
@@ -23,13 +25,25 @@
     matchingExoBody?.body_id != null ? { id: matchingExoBody.body_id }
       : { name: location?.body ?? matchingExoBody?.body ?? null },
   ]));
-  const activeTab = $derived(userTab
-    ?? `layout:${autoLayout(liveModules, null) ?? 'exploration'}`);
+  const auto = $derived(autoLayout(liveModules, null));
+  const activeTab = $derived(view ?? pin ?? `layout:${auto ?? 'exploration'}`);
   const activeLayout = $derived(layouts.find((layout) => activeTab === `layout:${layout.id}`));
   const layoutContext = $derived({ modules: liveModules, manual: manualBody === bodyIdentity ? manual : null });
   const visibleSlots = $derived(activeLayout?.slots.filter((slot) => !slot.when || slot.when(layoutContext)) ?? []);
   const selectedContext = $derived(contextPanel(liveModules, layoutContext.manual));
   const activeModule = $derived(modules.find((m) => m.id === activeTab) ?? modules[0]);
+
+  $effect(() => {
+    const a = auto;
+    const current = untrack(() => pin);
+    const next = nextPin(lastAuto, a, current);
+    lastAuto = a;
+    if (next !== current) pin = next;
+  });
+
+  function selectTab(id: string) {
+    if (id.startsWith('layout:')) { pin = id; view = null; } else view = id;
+  }
 
   $effect(() => {
     if (manualBody !== bodyIdentity) {
@@ -52,7 +66,7 @@
   <TopBar />
   <ImportProgress />
   <div class="app-body">
-    <Sidebar {activeTab} onSelect={(id) => (userTab = id)} />
+    <Sidebar {activeTab} onSelect={selectTab} />
     <Grid>
       {#if activeTab === 'settings'}
         <Settings />

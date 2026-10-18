@@ -9,6 +9,10 @@
   const DEFAULT_MINERALS = ['platinum', 'painite', 'lowtemperaturediamond', 'opal', 'alexandrite',
     'grandidierite', 'monazite', 'musgravite', 'rhodplumsite', 'serendibite', 'benitoite'];
 
+  const MAX_KEYS = 30;
+  const MAX_KEY_LEN = 40;
+  const MAX_THRESHOLD = 1_000_000_000;
+
   interface ConfigDto {
     language?: string;
     auto_copy_next_system?: boolean;
@@ -40,6 +44,7 @@
   const knownMinerals = $derived([...DEFAULT_MINERALS, ...miningInterest.filter((k) => !DEFAULT_MINERALS.includes(k))]);
   let fullConfig = $state<ConfigDto>({});
   let saveError = $state(false);
+  let validationError = $state(false);
   let saveQueue = Promise.resolve();
   let saveRevision = 0;
 
@@ -115,6 +120,11 @@
     applySelectedTheme(themeMode);
   }
 
+  function mineralLabel(key: string): string {
+    const label = t(`mineral-${key}`);
+    return !label || label === `mineral-${key}` ? key : label;
+  }
+
   function toggleMineral(key: string, checked: boolean) {
     miningInterest = checked
       ? (miningInterest.includes(key) ? miningInterest : [...miningInterest, key])
@@ -126,15 +136,21 @@
     const key = extraMineral.toLowerCase().replace(/\s+/g, '');
     extraMineral = '';
     if (!key) return;
+    if (key.length > MAX_KEY_LEN || (!miningInterest.includes(key) && miningInterest.length >= MAX_KEYS)) {
+      validationError = true;
+      return;
+    }
     toggleMineral(key, true);
   }
 
   function saveConfig() {
+    validationError = false;
     if (mapThreshold === undefined || !Number.isSafeInteger(mapThreshold) || mapThreshold < 0
       || plannerEfficiency === undefined || !Number.isInteger(plannerEfficiency)
       || plannerEfficiency < 0 || plannerEfficiency > 100
-      || miningThreshold === undefined || !Number.isSafeInteger(miningThreshold) || miningThreshold < 0
-      || sellRadius === undefined || !Number.isInteger(sellRadius) || sellRadius < 10 || sellRadius > 500) return;
+      || miningThreshold === undefined || !Number.isSafeInteger(miningThreshold) || miningThreshold < 0 || miningThreshold > MAX_THRESHOLD
+      || miningInterest.length > MAX_KEYS || miningInterest.some((k) => k.length > MAX_KEY_LEN)
+      || sellRadius === undefined || !Number.isInteger(sellRadius) || sellRadius < 10 || sellRadius > 500) { validationError = true; return; }
     saveError = false;
     const revision = ++saveRevision;
     const updated: ConfigDto = {
@@ -174,6 +190,7 @@
 </script>
 
 <Panel titleKey="nav-settings">
+  {#if validationError}<p role="alert" data-testid="validation-error">{t('settings-mining-invalid')}</p>{/if}
   {#if saveError}<p role="alert">{t('settings-save-error')}</p>{/if}
   <div class="settings-form">
     <label class="field-row">
@@ -228,7 +245,7 @@
         <label class="mineral">
           <input type="checkbox" data-mineral={key} checked={miningInterest.includes(key)}
             onchange={(e) => toggleMineral(key, e.currentTarget.checked)} />
-          <span>{key}</span>
+          <span>{mineralLabel(key)}</span>
         </label>
       {/each}
       <div class="field-row">
@@ -239,7 +256,7 @@
     </fieldset>
     <label class="field-row">
       <span>{t('settings-mining-threshold')}</span>
-      <input type="number" min="0" step="1" bind:value={miningThreshold} onchange={saveConfig} data-testid="mining-threshold" />
+      <input type="number" min="0" max="1000000000" step="1" bind:value={miningThreshold} onchange={saveConfig} data-testid="mining-threshold" />
     </label>
     <label class="field-row">
       <span>{t('settings-sell-radius')}</span>
