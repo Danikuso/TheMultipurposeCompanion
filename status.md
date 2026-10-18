@@ -39,8 +39,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 1 | Spike Ardent | ✅ hecha | e9937cd | Rutas por address OK; filtro de plataforma local; nombres = Type del diario; fixtures sintéticos. |
 | 2 | Aprobaciones del propietario tras los spikes | ✅ hecha | (este commit) | Registradas en Bloqueos; no bloquean. |
 | 3 | `tmc-model` — eventos de combate | ✅ hecha | ecce185 | ShipTargeted (alias ShipTargetted), Bounty, bonos, RedeemVoucher, calor, escudos… Revisión aprobada. |
-| 4 | `tmc-model` — eventos de minería y mercado, `Cargo` con inventario, reparaciones | 🔄 en curso | — | |
-| 5 | `tmc-model` — bloque `ThargoidWar` y facciones en `LocationInfo` | ⬜ | — | |
+| 4 | `tmc-model` — eventos de minería y mercado, `Cargo` con inventario, reparaciones | ✅ hecha | ac3eacb | ProspectedAsteroid, MiningRefined, LaunchDrone, MarketSell, Cargo con inventario, reparaciones. Revisión aprobada. |
+| 5 | `tmc-model` — bloque `ThargoidWar` y facciones en `LocationInfo` | 🔄 en curso | — |  |
 | 6 | `tmc-model` — consultas de Ardent, `PadSize` y ajustes de minería | ⬜ | — | |
 | 7 | `tmc-net` — adaptador Ardent | ⬜ | — | |
 | 8 | configuración nueva en `config.toml` y `PUT /api/config` | ⬜ | — | |
