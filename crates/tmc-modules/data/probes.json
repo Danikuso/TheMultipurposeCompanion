@@ -1,0 +1,14 @@
+{
+ "source": "Hechos del juego transcritos por TMC",
+ "license": "Datos propios del proyecto (PolyForm NC); sin datos de terceros",
+ "version": "2026-10-18",
+ "bands": [
+  { "max_radius_km": 300.0, "probes": 2, "verified": false },
+  { "max_radius_km": 1000.0, "probes": 3, "verified": false },
+  { "max_radius_km": 2500.0, "probes": 4, "verified": false },
+  { "max_radius_km": 4500.0, "probes": 5, "verified": false },
+  { "max_radius_km": 7000.0, "probes": 6, "verified": false },
+  { "max_radius_km": 10000.0, "probes": 7, "verified": false },
+  { "max_radius_km": 1e12, "probes": 8, "verified": false }
+ ]
+}
