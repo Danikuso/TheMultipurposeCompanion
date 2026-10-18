@@ -44,7 +44,7 @@
       if (!res.ok) return;
       const cfg = (await res.json()) as { default_neutron_efficiency?: unknown };
       const v = cfg.default_neutron_efficiency;
-      if (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 100) defaultEfficiency = v;
+      if (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 100) defaultEfficiency = v;
     } catch {
       // sin ajustes: se usa el texto genérico
     }
@@ -61,7 +61,7 @@
     const raw: unknown = efficiency;
     if (raw === null || raw === undefined || raw === '') return null;
     const n = Number(raw);
-    return Number.isInteger(n) && n >= 1 && n <= 100 ? n : NaN;
+    return Number.isInteger(n) && n >= 0 && n <= 100 ? n : NaN;
   });
   const efficiencyInvalid = $derived(Number.isNaN(efficiencyValue));
   const toNeedsPick = $derived(mode === 'galaxy' && to.text.trim() !== '' && to.id64 == null);
@@ -235,7 +235,7 @@
         <input
           class="num"
           type="number"
-          min="1"
+          min="0"
           max="100"
           data-testid="plan-efficiency"
           placeholder={defaultEfficiency != null

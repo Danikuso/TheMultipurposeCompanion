@@ -312,9 +312,9 @@ describe('navigation panels', () => {
       el.dispatchEvent(new Event('input', { bubbles: true }));
       flushSync();
     }
-    function fetchRouter(calls: string[]) {
+    function fetchRouter(calls: string[], defaultEfficiency = 55) {
       return vi.fn(async (url: string, init?: RequestInit) => {
-        if (url === '/api/config') return { ok: true, json: async () => ({ default_neutron_efficiency: 55 }) };
+        if (url === '/api/config') return { ok: true, json: async () => ({ default_neutron_efficiency: defaultEfficiency }) };
         calls.push(`${url}|${init?.body ?? ''}`);
         if (url.startsWith('/api/navigation/autocomplete')) {
           return {
@@ -379,10 +379,10 @@ describe('navigation panels', () => {
       expect(body.from_id64).toBeUndefined();
     });
 
-    async function submitWith(eff: string | null, pick = true) {
+    async function submitWith(eff: string | null, pick = true, defaultEfficiency = 55) {
       vi.useFakeTimers();
       const calls: string[] = [];
-      vi.stubGlobal('fetch', fetchRouter(calls));
+      vi.stubGlobal('fetch', fetchRouter(calls, defaultEfficiency));
       live.topics['navigation.plan'] = planTopic();
       render(PlannerPanel);
       const input = target.querySelector('[data-testid="plan-to"]') as HTMLInputElement;
@@ -411,13 +411,18 @@ describe('navigation panels', () => {
       expect(body.efficiency).toBe(75);
     });
 
-    test('efficiency 0 is invalid and not submitted', async () => {
+    test('saved default efficiency zero is displayed and omitted from untouched request', async () => {
+      const body = await submitWith(null, true, 0);
+      expect(body).not.toBeNull();
+      expect('efficiency' in body).toBe(false);
+      const input = target.querySelector('[data-testid="plan-efficiency"]') as HTMLInputElement;
+      expect(input.placeholder).toBe(t('nav-plan-efficiency-default', { value: 0 }));
+    });
+
+    test('efficiency zero is accepted and submitted', async () => {
       const body = await submitWith('0');
-      expect(body).toBeNull();
-      expect(target.querySelector('[data-testid="plan-efficiency-error"]')?.textContent).toContain(
-        'entero entre 1 y 100',
-      );
-      expect((target.querySelector('[data-testid="plan-submit"]') as HTMLButtonElement).disabled).toBe(true);
+      expect(body?.efficiency).toBe(0);
+      expect(target.querySelector('[data-testid="plan-efficiency-error"]')).toBeNull();
     });
 
     test('galaxy mode without picked destination blocks submit with hint', async () => {
