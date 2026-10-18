@@ -289,6 +289,12 @@ mod tests {
                 ("target", FluentValue::from("scout")),
                 ("side", FluentValue::from("Federación")),
                 ("rank", FluentValue::from("Experto")),
+                ("level", FluentValue::from("alto")),
+                ("detail", FluentValue::from("prospector 9")),
+                ("used", FluentValue::from(38)),
+                ("capacity", FluentValue::from(256)),
+                ("source", FluentValue::from("Ardent")),
+                ("demand", FluentValue::from(1200)),
             ] {
                 args.set(name, value);
             }
