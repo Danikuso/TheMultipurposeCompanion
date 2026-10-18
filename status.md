@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** escribir el plan de F2 (`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`) y ejecutarlo con subagentes (autorizado por el propietario).
+- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») empezando por la Task 0, con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
 
 ## Fases
 
@@ -19,7 +19,7 @@
 |---|---|---|
 | F0 | Cimientos (lectura, estado, SQLite, servidor, UI base, panel general, instalador) | ✅ completada y fusionada (2b953e6) |
 | F1 | Navegación, exploración, exobiología | ✅ completada y fusionada (b96fecf) |
-| F2 | Cazarrecompensas/combate (incl. AX), minería | 🔄 spec aprobada · plan en redacción |
+| F2 | Cazarrecompensas/combate (incl. AX), minería | 🔄 en ejecución |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ⬜ |
 | F4 | Ingenieros y materiales | ⬜ |
 | F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | ⬜ |
