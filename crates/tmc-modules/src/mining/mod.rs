@@ -2,4 +2,5 @@
 
 pub mod prices;
 pub mod prospector;
+pub mod sell;
 pub mod session;

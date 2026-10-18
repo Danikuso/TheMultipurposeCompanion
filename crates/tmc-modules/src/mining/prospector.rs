@@ -192,7 +192,8 @@ mod tests {
     fn priced(key: &str) -> Option<PriceInfo> {
         (key == "platinum").then_some(PriceInfo {
             price: 220_000,
-            source: PriceSource::Market,
+            source: PriceSource::LocalMarket,
+            at: chrono::DateTime::UNIX_EPOCH,
         })
     }
     fn none(_: &str) -> Option<PriceInfo> {
