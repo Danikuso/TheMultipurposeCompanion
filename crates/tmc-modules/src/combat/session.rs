@@ -106,16 +106,23 @@ impl HuntingSession {
 }
 
 /// Reconstruye el libro de vales del comandante desde el último `Died`
-/// (resultado `Stored` con tag `combat.vouchers`: `{cmdr, ledger, cut, cut_ts}`).
+/// (resultado `Stored` con tag `combat.vouchers`: `{cmdr, ledger, cut, cut_pos}`).
 pub fn rebuild_task(cmdr: String) -> StoreTask {
     Box::new(move |store| {
         let rows = store.query_json("SELECT COALESCE(MAX(id), 0) FROM event", &[])?;
         let cut = rows[0][0].as_i64().unwrap_or_default();
-        // Instante del último evento cubierto: los posteriores aún no están en el almacén.
-        let cut_ts = store
-            .query_json("SELECT ts FROM event WHERE id = ?1", &[json!(cut)])?
+        // Última posición cronológica (ts, archivo, línea) cubierta por el corte: es el
+        // orden de `history`, no el de `id`, así que un import desordenado no la altera.
+        let cut_pos = store
+            .query_json(
+                "SELECT e.ts, j.name, e.line FROM event e
+                 JOIN journal_file j ON j.id = e.file_id
+                 WHERE e.cmdr = ?1 AND e.id <= ?2
+                 ORDER BY e.ts DESC, j.name DESC, e.line DESC LIMIT 1",
+                &[json!(cmdr), json!(cut)],
+            )?
             .first()
-            .map(|r| r[0].clone())
+            .map(|r| json!({"ts": r[0], "file": r[1], "line": r[2]}))
             .unwrap_or(serde_json::Value::Null);
         let reset = history::last_before(store, &cmdr, cut, &["Died"], None)?;
         let mut system = match &reset {
@@ -133,7 +140,7 @@ pub fn rebuild_task(cmdr: String) -> StoreTask {
         })?;
         let ledger =
             serde_json::to_value(&ledger).map_err(|e| StoreError::Unsupported(e.to_string()))?;
-        Ok(json!({"cmdr": cmdr, "ledger": ledger, "cut": cut, "cut_ts": cut_ts}))
+        Ok(json!({"cmdr": cmdr, "ledger": ledger, "cut": cut, "cut_pos": cut_pos}))
     })
 }
 
@@ -298,9 +305,33 @@ mod tests {
         assert_eq!(result["cmdr"], "TESTER");
         let rebuilt: VoucherLedger = serde_json::from_value(result["ledger"].clone()).unwrap();
         assert_eq!(rebuilt.unredeemed(), expected);
+        assert_eq!(result["cut_pos"]["file"], "combat.log");
+        assert_eq!(result["cut_pos"]["line"], 14);
         let other = rebuild_task("OTHER".into())(&store).unwrap();
         let empty: VoucherLedger = serde_json::from_value(other["ledger"].clone()).unwrap();
         assert!(empty.unredeemed().is_empty());
+    }
+
+    #[test]
+    fn cut_pos_is_chronological_even_with_out_of_order_import() {
+        let store = Store::open_in_memory().unwrap();
+        let writer = EventWriter::spawn(&store);
+        let mk = |file: &str, line: u64, secs: i64| StoredEvent {
+            file_name: file.into(),
+            line,
+            ts: t0() + Duration::seconds(secs),
+            name: "Bounty".into(),
+            cmdr: Some("TESTER".into()),
+            json: "{}".into(),
+        };
+        // El archivo más nuevo entra primero; el antiguo se importa después (id mayor).
+        writer.send(mk("Journal.2.log", 7, 100));
+        writer.send(mk("Journal.1.log", 9, 10));
+        writer.flush_blocking().unwrap();
+        let result = rebuild_task("TESTER".into())(&store).unwrap();
+        assert_eq!(result["cut_pos"]["file"], "Journal.2.log");
+        assert_eq!(result["cut_pos"]["line"], 7);
+        assert_eq!(result["cut_pos"]["ts"], "2026-10-18T10:01:40.000000000Z");
     }
 
     #[test]

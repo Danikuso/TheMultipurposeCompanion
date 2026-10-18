@@ -18,6 +18,7 @@ struct H {
     requests: Vec<NetRequest>,
     tags: Vec<String>,
     next_id: u64,
+    line_no: u64,
 }
 
 impl H {
@@ -29,6 +30,7 @@ impl H {
             requests: Vec::new(),
             tags: Vec::new(),
             next_id: 1,
+            line_no: 0,
         }
     }
 
@@ -52,10 +54,11 @@ impl H {
     }
 
     fn line(&mut self, line: &str) -> TopicSet {
+        self.line_no += 1;
         self.send(SourceEvent::Journal {
             ev: parse_line(line).unwrap(),
             file: "s.log".into(),
-            line: 1,
+            line: self.line_no,
             replaying: self.replaying,
         })
     }
@@ -121,6 +124,10 @@ impl H {
 
     fn val(&self, topic: &str) -> serde_json::Value {
         self.m.topic_value(topic).unwrap()
+    }
+
+    fn if_for(&self, key: &str) -> Vec<&NetRequest> {
+        self.requests.iter().filter(|r| r.key == key).collect()
     }
 
     fn if_requests(&self) -> Vec<&NetRequest> {
@@ -194,7 +201,7 @@ fn live_event_requests_ledger_rebuild_once_and_if_search() {
     h.bounty(10, "Navy", 5000);
     h.jump(20, "Beta", 2);
     assert_eq!(h.tags, vec!["combat.vouchers".to_string()]);
-    let reqs = h.if_requests();
+    let reqs = h.if_for("if:2");
     assert_eq!(reqs.len(), 1);
     assert_eq!(reqs[0].key, "if:2");
     assert_eq!(
@@ -214,7 +221,7 @@ fn unknown_ship_searches_with_large_pad() {
     h.bounty(10, "Navy", 5000);
     h.state.ship = None;
     h.jump(20, "Beta", 2);
-    let reqs = h.if_requests();
+    let reqs = h.if_for("if:2");
     assert_eq!(reqs.len(), 1);
     assert!(matches!(
         reqs[0].query,
@@ -229,19 +236,19 @@ fn unknown_ship_searches_with_large_pad() {
 fn no_requests_in_legacy_or_offline() {
     let mut h = H::new();
     h.start();
-    h.bounty(10, "Navy", 5000);
     h.state.galaxy = Galaxy::Legacy;
+    h.bounty(10, "Navy", 5000);
     h.jump(20, "Beta", 2);
     assert!(h.if_requests().is_empty());
 
     let mut h = H::new();
     h.start();
-    h.bounty(10, "Navy", 5000);
     let settings = ModuleSettings {
         online_services: false,
         ..ModuleSettings::default()
     };
     h.send(SourceEvent::Settings(settings));
+    h.bounty(10, "Navy", 5000);
     h.jump(20, "Beta", 2);
     assert!(h.if_requests().is_empty());
 }
@@ -254,32 +261,122 @@ fn stored_result_for_other_cmdr_is_ignored() {
     h.send(SourceEvent::Stored {
         module: "combat".into(),
         tag: "combat.vouchers".into(),
-        value: json!({"cmdr":"OTRO","ledger":{"entries":[]},"cut":9,"cut_ts":null}),
+        value: json!({"cmdr":"OTRO","ledger":{"entries":[]},"cut":9,"cut_pos":null}),
     });
     let rows = h.val("combat.session")["vouchers"].clone();
     assert_eq!(rows.as_array().unwrap().len(), 1);
     assert_eq!(rows[0]["amount"], 5000);
 }
 
-#[test]
-fn stored_result_replaces_ledger_and_reapplies_newer_events_only() {
-    let mut h = H::new();
-    h.start();
-    h.bounty(10, "Navy", 5000); // ts t(10): cubierto por el almacén
-    h.bounty(20, "Navy", 700); // ts t(20): posterior al corte
-    let entry = |amount: u64, at: i64| {
-        json!({"kind":"Bounty","faction":"Navy","amount":amount,"system":"Alpha Test",
-               "earned_at":t(at).to_rfc3339(),"ax":false})
-    };
+fn entry(amount: u64, at: i64) -> serde_json::Value {
+    json!({"kind":"Bounty","faction":"Navy","amount":amount,"system":"Alpha Test",
+           "earned_at":t(at).to_rfc3339(),"ax":false})
+}
+
+fn nanos(at: i64) -> String {
+    t(at).to_rfc3339_opts(chrono::SecondsFormat::Nanos, true)
+}
+
+fn stored(h: &mut H, pos: serde_json::Value, entries: Vec<serde_json::Value>) {
     h.send(SourceEvent::Stored {
         module: "combat".into(),
         tag: "combat.vouchers".into(),
-        value: json!({"cmdr":"TESTER","cut":9,"cut_ts":t(10).to_rfc3339(),
-            "ledger":{"entries":[entry(100_000, 5), entry(5000, 10)]}}),
+        value: json!({"cmdr":"TESTER","cut":9,"cut_pos":pos,"ledger":{"entries":entries}}),
     });
-    let rows = h.val("combat.session")["vouchers"].clone();
-    assert_eq!(rows.as_array().unwrap().len(), 1);
-    assert_eq!(rows[0]["amount"], 105_700);
+}
+
+fn first_row_amount(h: &H) -> u64 {
+    h.val("combat.session")["vouchers"][0]["amount"]
+        .as_u64()
+        .unwrap()
+}
+
+#[test]
+fn same_second_events_are_neither_lost_nor_double_counted() {
+    let mut h = H::new();
+    h.start();
+    h.bounty(10, "Navy", 5000);
+    let covered = h.line_no;
+    h.bounty(10, "Navy", 700); // mismo segundo, línea posterior al corte
+    let pos = json!({"ts": nanos(10), "file": "s.log", "line": covered});
+    stored(&mut h, pos, vec![entry(100_000, 5), entry(5000, 10)]);
+    assert_eq!(first_row_amount(&h), 105_700);
+}
+
+#[test]
+fn out_of_order_import_does_not_double_count() {
+    let mut h = H::new();
+    h.start();
+    h.bounty(10, "Navy", 5000);
+    h.bounty(11, "Navy", 700);
+    // El corte cubre un evento cronológicamente posterior de otro archivo ("z.log"
+    // ordena después de "s.log") aunque se importara antes: ambos quedan cubiertos.
+    let pos = json!({"ts": nanos(11), "file": "z.log", "line": 1});
+    stored(&mut h, pos, vec![entry(5000, 10), entry(700, 11)]);
+    assert_eq!(first_row_amount(&h), 5700);
+    // Un evento posterior al corte sí se aplica.
+    h.bounty(12, "Navy", 40);
+    assert_eq!(first_row_amount(&h), 5740);
+}
+
+#[test]
+fn ledger_task_is_retried_after_60s_without_result() {
+    let mut h = H::new();
+    h.start(); // pedido en t=0 (Commander)
+    h.bounty(10, "Navy", 5000);
+    assert_eq!(h.tags.len(), 1);
+    h.bounty(59, "Navy", 1);
+    assert_eq!(h.tags.len(), 1);
+    h.bounty(61, "Navy", 1);
+    assert_eq!(h.tags.len(), 2);
+}
+
+#[test]
+fn identical_status_burst_does_not_render_session() {
+    let mut h = H::new();
+    h.start();
+    h.status(5, Flags::SHIELDS_UP);
+    let before = h.m.session_renders;
+    for i in 0..50 {
+        assert!(h.status(6 + i, Flags::SHIELDS_UP).is_empty());
+    }
+    assert_eq!(h.m.session_renders, before);
+}
+
+#[test]
+fn first_voucher_triggers_if_search_without_jump() {
+    let mut h = H::new();
+    h.start();
+    assert!(h.if_requests().is_empty());
+    h.bounty(10, "Navy", 5000);
+    assert_eq!(h.if_requests().len(), 1);
+    h.bounty(11, "Navy", 5000);
+    assert_eq!(h.if_requests().len(), 1);
+}
+
+#[test]
+fn enabling_online_services_retriggers_if_search() {
+    let mut h = H::new();
+    h.start();
+    let off = ModuleSettings {
+        online_services: false,
+        ..ModuleSettings::default()
+    };
+    h.send(SourceEvent::Settings(off));
+    h.bounty(10, "Navy", 5000);
+    assert!(h.if_requests().is_empty());
+    h.send(SourceEvent::Settings(ModuleSettings::default()));
+    assert_eq!(h.if_requests().len(), 1);
+}
+
+#[test]
+fn first_status_sets_alert_baseline_without_alerting() {
+    let mut h = H::new();
+    h.start();
+    h.status(5, Flags::empty()); // sin SHIELDS_UP: no es una caída real
+    assert!(h.m.emitted.is_empty());
+    h.status(6, Flags::OVERHEATING);
+    assert_eq!(h.m.emitted, vec!["combat-alert-overheating"]);
 }
 
 #[test]
@@ -289,11 +386,11 @@ fn late_if_response_for_previous_system_not_applied() {
     h.bounty(10, "Navy", 5000);
     h.jump(20, "X", 10);
     h.jump(21, "Y", 20);
-    assert_eq!(h.if_requests().len(), 2);
-    let x_id = h.if_requests()[0].id;
+    assert_eq!(h.if_requests().len(), 3);
+    let x_id = h.if_for("if:10")[0].id;
     h.send(station_response(x_id, "if:10"));
     assert_eq!(h.val("combat.session")["nearest_if"], json!(null));
-    let y_id = h.if_requests()[1].id;
+    let y_id = h.if_for("if:20")[0].id;
     h.send(station_response(y_id, "if:20"));
     assert_eq!(h.val("combat.session")["nearest_if"]["station_name"], "Hub");
 }
@@ -304,11 +401,11 @@ fn inflight_if_request_expires_after_60s() {
     h.start();
     h.bounty(10, "Navy", 5000);
     h.jump(20, "X", 10);
-    assert_eq!(h.if_requests().len(), 1);
+    assert_eq!(h.if_for("if:10").len(), 1);
     h.jump(70, "X", 10);
-    assert_eq!(h.if_requests().len(), 1, "aún en vuelo a los 50 s");
+    assert_eq!(h.if_for("if:10").len(), 1, "aún en vuelo a los 50 s");
     h.jump(81, "X", 10);
-    assert_eq!(h.if_requests().len(), 2, "caducada tras 60 s");
+    assert_eq!(h.if_for("if:10").len(), 2, "caducada tras 60 s");
 }
 
 #[test]

@@ -11,9 +11,14 @@
 //! Sin reloj propio: «ahora» es el último instante visto (diario o `Status`).
 //!
 //! Vales: el libro se reconstruye desde el almacén una vez por comandante, en la
-//! primera ocasión en vivo (en replay no hay `StoreTask`). Los eventos que llegan antes
-//! del resultado se guardan y, al llegar, se reaplican solo los posteriores al corte
-//! (`cut_ts`), para no contar dos veces.
+//! primera ocasión en vivo (en replay no hay `StoreTask`; si no llega el resultado en
+//! 60 s se repite). Los eventos de vales que llegan antes del resultado se guardan con su
+//! posición `(ts, archivo, línea)` y, al llegar, se reaplican solo los estrictamente
+//! posteriores a `cut_pos` (última posición cronológica cubierta por el corte, mismo
+//! orden que `history`), sin perder ni duplicar eventos del mismo segundo.
+//!
+//! Render: Status solo recalcula `combat.ship` (y `target`/`ax` si hay una caducidad en
+//! curso); sesión, zona y AX se recalculan con eventos, respuestas o acciones.
 
 pub mod ax;
 pub mod cz;
@@ -25,7 +30,7 @@ pub mod vouchers;
 use crate::data::ship_pads;
 use crate::inflight::Inflight;
 use ax::AxTracker;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, SecondsFormat, Utc};
 use cz::CzTracker;
 use serde::Serialize;
 use serde_json::Value;
@@ -55,6 +60,7 @@ const TOPICS: [&str; 5] = [
 ];
 
 const TAG_VOUCHERS: &str = "combat.vouchers";
+const LEDGER_KEY: &str = "ledger";
 const ACTION_RESET: &str = "combat.reset_session";
 /// Filas de vales visibles; el resto se agrega en una fila «otras».
 const MAX_VOUCHER_ROWS: usize = 32;
@@ -65,6 +71,16 @@ pub const IF_FEE_PCT: u8 = 25;
 const FAILED_COOLDOWN_S: i64 = 300;
 /// Tope del búfer de eventos de vales pendientes de reconciliar con el almacén.
 const PENDING_CAP: usize = 4096;
+
+/// Posición cronológica de un evento: `(ts normalizado, archivo, línea)`.
+type Pos = (String, String, u64);
+
+struct Pending {
+    kind: EventKind,
+    system: String,
+    ts: DateTime<Utc>,
+    pos: Pos,
+}
 
 #[derive(Debug, Clone)]
 enum IfState {
@@ -114,14 +130,19 @@ pub struct Combat {
     ax: AxTracker,
     /// El libro ya viene del almacén.
     ledger_loaded: bool,
-    ledger_requested: bool,
     /// Eventos de vales vistos antes de recibir el libro del almacén.
-    pending: Vec<(EventKind, String, DateTime<Utc>)>,
+    pending: Vec<Pending>,
     inflight: Inflight,
     if_state: Option<(u64, IfState)>,
     prev_alerts: Vec<ShipAlert>,
-    /// Ya se vio un `Status`: el primero fija la línea base sin avisar.
+    /// Ya se vio un `Status`. Decisión: el primer `Status` fija la línea base de avisos
+    /// sin avisar, porque un `Status` suelto sin `SHIELDS_UP` (p. ej. al arrancar con la
+    /// nave sin escudos) no es una caída de escudos real; solo avisan las transiciones.
     status_seen: bool,
+    #[cfg(test)]
+    session_renders: u32,
+    #[cfg(test)]
+    emitted: Vec<&'static str>,
     values: HashMap<&'static str, Value>,
 }
 
@@ -139,12 +160,15 @@ impl Combat {
             cz: CzTracker::default(),
             ax: AxTracker::default(),
             ledger_loaded: false,
-            ledger_requested: false,
             pending: Vec::new(),
             inflight: Inflight::default(),
             if_state: None,
             prev_alerts: Vec::new(),
             status_seen: false,
+            #[cfg(test)]
+            session_renders: 0,
+            #[cfg(test)]
+            emitted: Vec::new(),
             values: HashMap::new(),
         }
     }
@@ -182,24 +206,27 @@ impl Combat {
         self.cmdr = Some(name);
         self.ledger = VoucherLedger::default();
         self.ledger_loaded = false;
-        self.ledger_requested = false;
+        self.inflight.finish(LEDGER_KEY);
         self.pending.clear();
         self.if_state = None;
     }
 
-    /// Pide una vez por comandante la reconstrucción del libro (solo en vivo).
+    /// Pide la reconstrucción del libro (solo en vivo). Una vez por comandante; si el
+    /// resultado no llega en `INFLIGHT_TTL_S` se repite.
     fn ensure_ledger_task(&mut self, ctx: &mut ModuleCtx) {
-        if ctx.replaying || self.ledger_requested {
+        if ctx.replaying || self.ledger_loaded {
             return;
         }
         let Some(cmdr) = self.cmdr.clone() else {
             return;
         };
-        self.ledger_requested = true;
+        if !self.inflight.begin(LEDGER_KEY, self.clock()) {
+            return;
+        }
         ctx.store_task(TAG_VOUCHERS, session::rebuild_task(cmdr));
     }
 
-    fn on_journal(&mut self, je: &JournalEvent, state: &GameState) {
+    fn on_journal(&mut self, je: &JournalEvent, file: &str, line: u64, state: &GameState) {
         let now = je.timestamp;
         self.check_cmdr(state);
         self.system = state.location.system.clone();
@@ -231,8 +258,16 @@ impl Combat {
                 if self.pending.len() >= PENDING_CAP {
                     self.pending.remove(0);
                 }
-                self.pending
-                    .push((je.kind.clone(), self.system.clone(), now));
+                self.pending.push(Pending {
+                    kind: je.kind.clone(),
+                    system: self.system.clone(),
+                    ts: now,
+                    pos: (
+                        now.to_rfc3339_opts(SecondsFormat::Nanos, true),
+                        file.to_owned(),
+                        line,
+                    ),
+                });
             }
         }
     }
@@ -248,16 +283,20 @@ impl Combat {
             tracing::warn!("libro de vales del almacén ilegible");
             return;
         };
-        let cut_ts = value
-            .get("cut_ts")
-            .and_then(Value::as_str)
-            .and_then(|s| s.parse::<DateTime<Utc>>().ok());
+        let cut_pos: Option<Pos> = value.get("cut_pos").and_then(|p| {
+            Some((
+                p.get("ts")?.as_str()?.to_owned(),
+                p.get("file")?.as_str()?.to_owned(),
+                p.get("line")?.as_u64()?,
+            ))
+        });
         self.ledger = ledger;
-        for (kind, system, ts) in std::mem::take(&mut self.pending) {
-            if cut_ts.is_none_or(|c| ts > c) {
-                self.ledger.apply_event(&kind, &system, ts);
+        for p in std::mem::take(&mut self.pending) {
+            if cut_pos.as_ref().is_none_or(|c| p.pos > *c) {
+                self.ledger.apply_event(&p.kind, &p.system, p.ts);
             }
         }
+        self.inflight.finish(LEDGER_KEY);
         self.ledger_loaded = true;
     }
 
@@ -383,8 +422,9 @@ impl Combat {
         })
     }
 
-    fn emit_alerts(&mut self, ctx: &mut ModuleCtx, now: DateTime<Utc>, baseline: bool) {
-        let view = self.ship.view(now);
+    /// Avisos nuevos (transiciones). Con `baseline` (primer `Status`) solo se fija la
+    /// línea base. Se actualiza también en replay: al pasar a vivo no se repiten avisos.
+    fn emit_alerts(&mut self, ctx: &mut ModuleCtx, view: &ship::ShipView, baseline: bool) {
         for a in &view.alerts {
             if baseline || self.prev_alerts.contains(a) || !self.settings.alerts_enabled {
                 continue;
@@ -400,10 +440,18 @@ impl Combat {
             if *a == ShipAlert::HullLow {
                 alert = alert.arg("pct", view.hull_pct.map_or(0, u32::from));
             }
+            #[cfg(test)]
+            if !ctx.replaying {
+                self.emitted.push(key);
+            }
             ctx.alert(alert);
         }
-        // Se actualiza también en replay: al pasar a vivo no se repiten avisos viejos.
-        self.prev_alerts = view.alerts;
+        self.prev_alerts = view.alerts.clone();
+    }
+
+    /// Valor cacheado de un campo de un topic (para decidir si una caducidad corre).
+    fn cached(&self, topic: &str, field: &str) -> Option<&Value> {
+        self.values.get(topic)?.get(field)
     }
 
     fn set(&mut self, topic: &'static str, v: Value, dirty: &mut TopicSet) {
@@ -426,31 +474,43 @@ impl Module for Combat {
     }
 
     fn on_event(&mut self, ev: &SourceEvent, state: &GameState, ctx: &mut ModuleCtx) -> TopicSet {
-        // La búsqueda de cobro se lanza al llegar a un sistema o al cargar el libro.
+        // La búsqueda de cobro se lanza al llegar a un sistema, al cargar el libro, al
+        // pasar el total de vales de 0 a >0 y al activar `online_services`.
         let mut search_if = false;
         let mut baseline = false;
+        // `false`: solo `Status` (ship y caducidades); `true`: todo.
+        let mut full = true;
         match ev {
-            SourceEvent::Settings(s) => self.settings = s.clone(),
+            SourceEvent::Settings(s) => {
+                search_if = s.online_services && !self.settings.online_services;
+                self.settings = s.clone();
+                if !search_if {
+                    return TopicSet::new();
+                }
+            }
             SourceEvent::Status(st) => {
                 self.tick(st.timestamp);
                 baseline = !self.status_seen;
                 self.status_seen = true;
                 self.ship.on_status(st, st.timestamp);
+                full = self.values.is_empty();
             }
-            SourceEvent::Journal { ev, .. } => {
+            SourceEvent::Journal { ev, file, line, .. } => {
                 self.tick(ev.timestamp);
-                self.on_journal(ev, state);
+                let before = self.unredeemed_total();
+                self.on_journal(ev, file, *line, state);
                 self.ensure_ledger_task(ctx);
                 search_if = matches!(
                     ev.kind,
                     EventKind::Location(_) | EventKind::FsdJump(_) | EventKind::CarrierJump(_)
-                );
+                ) || (before == 0 && self.unredeemed_total() > 0);
             }
             SourceEvent::Stored { module, tag, value } if module == "combat" => {
-                if tag == TAG_VOUCHERS {
-                    self.on_stored(value);
-                    search_if = true;
+                if tag != TAG_VOUCHERS {
+                    return TopicSet::new();
                 }
+                self.on_stored(value);
+                search_if = true;
             }
             SourceEvent::Net(r) => self.apply_response(r, state),
             SourceEvent::Action { name, .. } if name == ACTION_RESET => {
@@ -463,27 +523,49 @@ impl Module for Combat {
             self.maybe_request_if(state, ctx);
         }
         let now = self.clock();
-        self.emit_alerts(ctx, now, baseline);
+        let ship_view = self.ship.view(now);
+        self.emit_alerts(ctx, &ship_view, baseline);
 
         let mut dirty = TopicSet::new();
-        let target = self
-            .target
-            .view(now)
-            .and_then(|t| serde_json::to_value(t).ok())
-            .unwrap_or(Value::Null);
-        self.set(TOPIC_TARGET, target, &mut dirty);
-        let ship = serde_json::to_value(self.ship.view(now)).unwrap_or_default();
+        let ship = serde_json::to_value(&ship_view).unwrap_or_default();
         self.set(TOPIC_SHIP, ship, &mut dirty);
-        let session = self.render_session(state);
-        self.set(TOPIC_SESSION, session, &mut dirty);
-        let zone = self
-            .cz
-            .view()
-            .and_then(|z| serde_json::to_value(z).ok())
-            .unwrap_or(Value::Null);
-        self.set(TOPIC_ZONE, zone, &mut dirty);
-        let ax = self.render_ax(now);
-        self.set(TOPIC_AX, ax, &mut dirty);
+        // Un objetivo perdido caduca a los 10 s: solo entonces hay que mirar el reloj.
+        let target_expiring = self
+            .cached(TOPIC_TARGET, "lost_at")
+            .is_some_and(|v| !v.is_null());
+        if full || target_expiring {
+            let target = self
+                .target
+                .view(now)
+                .and_then(|t| serde_json::to_value(t).ok())
+                .unwrap_or(Value::Null);
+            self.set(TOPIC_TARGET, target, &mut dirty);
+        }
+        // AX depende del reloj solo mientras está activo o con objetivo pendiente (60 s).
+        let ax_timed = self
+            .cached(TOPIC_AX, "active")
+            .is_some_and(|v| v.as_bool() == Some(true))
+            || self
+                .cached(TOPIC_AX, "target")
+                .is_some_and(|v| !v.is_null());
+        if full || ax_timed {
+            let ax = self.render_ax(now);
+            self.set(TOPIC_AX, ax, &mut dirty);
+        }
+        if full {
+            #[cfg(test)]
+            {
+                self.session_renders += 1;
+            }
+            let session = self.render_session(state);
+            self.set(TOPIC_SESSION, session, &mut dirty);
+            let zone = self
+                .cz
+                .view()
+                .and_then(|z| serde_json::to_value(z).ok())
+                .unwrap_or(Value::Null);
+            self.set(TOPIC_ZONE, zone, &mut dirty);
+        }
         dirty
     }
 
