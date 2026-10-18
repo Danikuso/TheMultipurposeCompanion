@@ -1,5 +1,6 @@
 //! Persistencia SQLite y acceso al historial de diarios.
 
+use chrono::{DateTime, Utc};
 use rusqlite::{Connection, OptionalExtension};
 use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -24,6 +25,53 @@ pub enum StoreError {
     Poisoned,
     #[error("journal metadata exceeds SQLite integer range")]
     IntegerRange(#[from] std::num::TryFromIntError),
+    #[error("unsupported value: {0}")]
+    Unsupported(String),
+}
+
+/// Entrada de la caché de respuestas de API (`api_cache`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CachedEntry {
+    pub value: String,
+    pub fetched_at: DateTime<Utc>,
+}
+
+fn to_sql(value: &serde_json::Value) -> Result<rusqlite::types::Value, StoreError> {
+    use rusqlite::types::Value as Sql;
+    Ok(match value {
+        serde_json::Value::Null => Sql::Null,
+        serde_json::Value::Bool(b) => Sql::Integer(i64::from(*b)),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Sql::Integer(i)
+            } else if n.is_u64() {
+                return Err(StoreError::Unsupported(format!(
+                    "integer {n} exceeds SQLite range"
+                )));
+            } else if let Some(f) = n.as_f64() {
+                Sql::Real(f)
+            } else {
+                return Err(StoreError::Unsupported(format!("number {n}")));
+            }
+        }
+        serde_json::Value::String(s) => Sql::Text(s.clone()),
+        other => {
+            return Err(StoreError::Unsupported(format!(
+                "non-scalar parameter {other}"
+            )));
+        }
+    })
+}
+
+fn from_sql(value: rusqlite::types::ValueRef<'_>) -> Result<serde_json::Value, StoreError> {
+    use rusqlite::types::ValueRef as R;
+    Ok(match value {
+        R::Null => serde_json::Value::Null,
+        R::Integer(i) => i.into(),
+        R::Real(f) => serde_json::Number::from_f64(f).map_or(serde_json::Value::Null, Into::into),
+        R::Text(t) => String::from_utf8_lossy(t).into_owned().into(),
+        R::Blob(_) => return Err(StoreError::Unsupported("BLOB column".into())),
+    })
 }
 
 #[derive(Clone)]
@@ -53,6 +101,68 @@ impl Store {
     }
     pub(crate) fn lock(&self) -> Result<MutexGuard<'_, Connection>, StoreError> {
         self.connection.lock().map_err(|_| StoreError::Poisoned)
+    }
+    /// Ejecuta una consulta y devuelve cada fila como array JSON.
+    /// INTEGER/REAL -> número, TEXT -> cadena, NULL -> null; una columna BLOB es un error.
+    /// Los parámetros deben ser escalares JSON (bool se guarda como 0/1).
+    pub fn query_json(
+        &self,
+        sql: &str,
+        params: &[serde_json::Value],
+    ) -> Result<Vec<serde_json::Value>, StoreError> {
+        let params = params.iter().map(to_sql).collect::<Result<Vec<_>, _>>()?;
+        let conn = self.lock()?;
+        let mut stmt = conn.prepare(sql)?;
+        let columns = stmt.column_count();
+        let mut rows = stmt.query(rusqlite::params_from_iter(params))?;
+        let mut out = Vec::new();
+        while let Some(row) = rows.next()? {
+            let cells = (0..columns)
+                .map(|i| from_sql(row.get_ref(i)?))
+                .collect::<Result<Vec<_>, _>>()?;
+            out.push(serde_json::Value::Array(cells));
+        }
+        Ok(out)
+    }
+    /// Ejecuta una sentencia y devuelve las filas afectadas.
+    pub fn exec_json(&self, sql: &str, params: &[serde_json::Value]) -> Result<usize, StoreError> {
+        let params = params.iter().map(to_sql).collect::<Result<Vec<_>, _>>()?;
+        let conn = self.lock()?;
+        Ok(conn.execute(sql, rusqlite::params_from_iter(params))?)
+    }
+    pub fn api_cache_get(&self, key: &str) -> Result<Option<CachedEntry>, StoreError> {
+        let conn = self.lock()?;
+        let row = conn
+            .query_row(
+                "SELECT body, fetched_at FROM api_cache WHERE key=?1",
+                [key],
+                |r| Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, String>(1)?)),
+            )
+            .optional()?;
+        let Some((body, fetched_at)) = row else {
+            return Ok(None);
+        };
+        let fetched_at = DateTime::parse_from_rfc3339(&fetched_at)
+            .map_err(|e| StoreError::Unsupported(format!("bad fetched_at: {e}")))?
+            .with_timezone(&Utc);
+        Ok(Some(CachedEntry {
+            value: String::from_utf8_lossy(&body).into_owned(),
+            fetched_at,
+        }))
+    }
+    /// Guarda el cuerpo con `ttl_s = 0`; la política de frescura es de la capa de red.
+    pub fn api_cache_put(
+        &self,
+        key: &str,
+        value: &str,
+        fetched_at: DateTime<Utc>,
+    ) -> Result<(), StoreError> {
+        let conn = self.lock()?;
+        conn.execute(
+            "INSERT INTO api_cache(key,fetched_at,ttl_s,body) VALUES(?1,?2,0,?3) ON CONFLICT(key) DO UPDATE SET fetched_at=excluded.fetched_at, ttl_s=0, body=excluded.body",
+            rusqlite::params![key, fetched_at.to_rfc3339(), value.as_bytes()],
+        )?;
+        Ok(())
     }
     pub fn kv_get(&self, key: &str) -> Option<String> {
         let result = self.lock().and_then(|conn| {
@@ -119,6 +229,69 @@ mod tests {
             .unwrap()
             .query_row("SELECT COUNT(*) FROM event", [], |r| r.get(0))
             .unwrap()
+    }
+
+    #[test]
+    fn store_query_json_returns_rows() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .exec_json("CREATE TABLE t (id INTEGER, name TEXT)", &[])
+            .unwrap();
+        assert_eq!(
+            store
+                .exec_json("INSERT INTO t VALUES (1,'a'),(2,'b')", &[])
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            store
+                .query_json("SELECT id, name FROM t ORDER BY id", &[])
+                .unwrap(),
+            vec![serde_json::json!([1, "a"]), serde_json::json!([2, "b"])]
+        );
+        assert_eq!(
+            store
+                .query_json(
+                    "SELECT id, name FROM t WHERE id=?1",
+                    &[serde_json::json!(2)]
+                )
+                .unwrap(),
+            vec![serde_json::json!([2, "b"])]
+        );
+    }
+
+    #[test]
+    fn query_json_rejects_u64_beyond_i64() {
+        let store = Store::open_in_memory().unwrap();
+        let big = serde_json::json!(u64::MAX);
+        assert!(matches!(
+            store.query_json("SELECT ?1", &[big]),
+            Err(StoreError::Unsupported(_))
+        ));
+        assert_eq!(
+            store
+                .query_json("SELECT ?1", &[serde_json::json!(i64::MAX)])
+                .unwrap(),
+            vec![serde_json::json!([i64::MAX])]
+        );
+    }
+
+    #[test]
+    fn api_cache_put_then_get_roundtrips() {
+        let store = Store::open_in_memory().unwrap();
+        let t = Utc.with_ymd_and_hms(2026, 10, 17, 18, 0, 0).unwrap();
+        store.api_cache_put("k", "{\"a\":1}", t).unwrap();
+        assert_eq!(
+            store.api_cache_get("k").unwrap(),
+            Some(CachedEntry {
+                value: "{\"a\":1}".into(),
+                fetched_at: t
+            })
+        );
+        assert_eq!(store.api_cache_get("zz").unwrap(), None);
+        let t2 = Utc.with_ymd_and_hms(2026, 10, 18, 0, 0, 0).unwrap();
+        store.api_cache_put("k", "2", t2).unwrap();
+        assert_eq!(store.api_cache_get("k").unwrap().unwrap().value, "2");
     }
 
     #[test]

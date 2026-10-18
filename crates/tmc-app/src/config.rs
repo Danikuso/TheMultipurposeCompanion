@@ -3,6 +3,7 @@
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
+use tmc_model::settings::ModuleSettings;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -30,6 +31,10 @@ pub struct Config {
     pub server: ServerSection,
     pub auto_copy_next_system: bool,
     pub alerts_enabled: bool,
+    /// Consultas a servicios en línea (Spansh, EDSM, Canonn). Desactivarlo no envía nada.
+    pub online_services: bool,
+    pub map_value_threshold: u64,
+    pub default_neutron_efficiency: u8,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub theme_mode: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -46,6 +51,9 @@ impl Default for Config {
             server: ServerSection::default(),
             auto_copy_next_system: true,
             alerts_enabled: true,
+            online_services: true,
+            map_value_threshold: 500_000,
+            default_neutron_efficiency: 60,
             theme_mode: None,
             data_dir: None,
             ui_dir: None,
@@ -102,6 +110,17 @@ impl Config {
         let content = toml::to_string_pretty(self)?;
         std::fs::write(path, content)?;
         Ok(())
+    }
+
+    /// Ajustes que se propagan en caliente a los módulos.
+    pub fn module_settings(&self) -> ModuleSettings {
+        ModuleSettings {
+            alerts_enabled: self.alerts_enabled,
+            online_services: self.online_services,
+            auto_copy_next_system: self.auto_copy_next_system,
+            map_value_threshold: self.map_value_threshold,
+            default_neutron_efficiency: self.default_neutron_efficiency,
+        }
     }
 
     pub fn ensure_lan_token(&mut self) -> String {

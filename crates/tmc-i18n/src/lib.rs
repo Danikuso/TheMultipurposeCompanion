@@ -20,8 +20,8 @@ impl I18n {
     pub fn new(lang: &str) -> Self {
         let lang = supported_language(lang);
         Self {
-            primary: bundle(lang, resource(lang)),
-            fallback: bundle("es", resource("es")),
+            primary: bundle(lang, resources(lang)),
+            fallback: bundle("es", resources("es")),
         }
     }
     pub fn t(&self, key: &str, args: &[(&str, FluentValue<'_>)]) -> String {
@@ -45,15 +45,9 @@ impl I18n {
 }
 
 pub fn keys(lang: &str) -> BTreeSet<String> {
-    let Some(resource) = resource(supported_language(lang)) else {
-        return BTreeSet::new();
-    };
-    resource
-        .entries()
-        .filter_map(|entry| match entry {
-            Entry::Message(message) => Some(message.id.name.to_owned()),
-            _ => None,
-        })
+    resources(supported_language(lang))
+        .iter()
+        .flat_map(message_ids)
         .collect()
 }
 
@@ -65,16 +59,127 @@ fn supported_language(lang: &str) -> &str {
     }
 }
 
-fn resource(lang: &str) -> Option<FluentResource> {
-    let file = Resources::get(&format!("{lang}/main.ftl"))?;
-    let text = std::str::from_utf8(file.data.as_ref()).ok()?;
-    FluentResource::try_new(text.to_owned()).ok()
+fn message_ids(resource: &FluentResource) -> Vec<String> {
+    resource
+        .entries()
+        .filter_map(|entry| match entry {
+            Entry::Message(message) => Some(message.id.name.to_owned()),
+            _ => None,
+        })
+        .collect()
 }
 
-fn bundle(lang: &str, resource: Option<FluentResource>) -> FluentBundle<FluentResource> {
+type Sources = Vec<(String, Result<String, String>)>;
+
+/// Recursos del idioma en ejecución: degrada por archivo (omite y avisa del defectuoso).
+fn resources(lang: &str) -> Vec<FluentResource> {
+    let (resources, problems) = parse_sources(embedded_sources(lang));
+    for problem in problems {
+        tracing::warn!("{problem}");
+    }
+    resources
+}
+
+/// Carga estricta de todos los `*.ftl` embebidos de un idioma, en orden alfabético.
+#[cfg(test)]
+fn load_embedded(lang: &str) -> Result<Vec<FluentResource>, String> {
+    strict(parse_sources(embedded_sources(lang)))
+}
+
+fn embedded_sources(lang: &str) -> Sources {
+    let prefix = format!("{lang}/");
+    let mut sources: Sources = Resources::iter()
+        .filter(|path| path.starts_with(&prefix) && path.ends_with(".ftl"))
+        .map(|path| {
+            let text = match Resources::get(&path) {
+                Some(file) => std::str::from_utf8(file.data.as_ref())
+                    .map(str::to_owned)
+                    .map_err(|e| format!("{path}: invalid UTF-8: {e}")),
+                None => Err(format!("{path}: not readable")),
+            };
+            (path.to_string(), text)
+        })
+        .collect();
+    sources.sort_by(|a, b| a.0.cmp(&b.0));
+    sources
+}
+
+#[cfg(test)]
+fn strict(
+    (resources, problems): (Vec<FluentResource>, Vec<String>),
+) -> Result<Vec<FluentResource>, String> {
+    match problems.into_iter().next() {
+        Some(problem) => Err(problem),
+        None => Ok(resources),
+    }
+}
+
+#[cfg(test)]
+fn dir_sources(dir: &std::path::Path) -> Sources {
+    let mut sources: Sources = std::fs::read_dir(dir)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.extension().is_some_and(|ext| ext == "ftl"))
+        .map(|path| {
+            let name = path.display().to_string();
+            let text = std::fs::read(&path)
+                .map_err(|e| format!("{name}: {e}"))
+                .and_then(|bytes| {
+                    String::from_utf8(bytes).map_err(|e| format!("{name}: invalid UTF-8: {e}"))
+                });
+            (name, text)
+        })
+        .collect();
+    sources.sort_by(|a, b| a.0.cmp(&b.0));
+    sources
+}
+
+/// Carga estricta de todos los `*.ftl` de una carpeta.
+#[cfg(test)]
+fn load_dir(dir: &std::path::Path) -> Result<Vec<FluentResource>, String> {
+    strict(parse_sources(dir_sources(dir)))
+}
+
+/// Devuelve los recursos válidos y la lista de problemas; los archivos defectuosos
+/// o con claves ya definidas en otro archivo se omiten completos.
+fn parse_sources(sources: Sources) -> (Vec<FluentResource>, Vec<String>) {
+    let mut seen: std::collections::BTreeMap<String, String> = Default::default();
+    let mut resources = Vec::new();
+    let mut problems = Vec::new();
+    'files: for (name, text) in sources {
+        let text = match text {
+            Ok(text) => text,
+            Err(problem) => {
+                problems.push(problem);
+                continue;
+            }
+        };
+        let resource = match FluentResource::try_new(text) {
+            Ok(resource) => resource,
+            Err((_, errors)) => {
+                problems.push(format!("{name}: invalid Fluent syntax: {errors:?}"));
+                continue;
+            }
+        };
+        let ids = message_ids(&resource);
+        for id in &ids {
+            if let Some(first) = seen.get(id) {
+                problems.push(format!("duplicate key `{id}` in {first} and {name}"));
+                continue 'files;
+            }
+        }
+        for id in ids {
+            seen.insert(id, name.clone());
+        }
+        resources.push(resource);
+    }
+    (resources, problems)
+}
+
+fn bundle(lang: &str, resources: Vec<FluentResource>) -> FluentBundle<FluentResource> {
     let locale: LanguageIdentifier = lang.parse().unwrap_or_default();
     let mut bundle = FluentBundle::new_concurrent(vec![locale]);
-    if let Some(resource) = resource {
+    for resource in resources {
         let _ = bundle.add_resource(resource);
     }
     bundle
@@ -123,11 +228,11 @@ mod tests {
         let i18n = I18n {
             primary: bundle(
                 "en",
-                Some(FluentResource::try_new("other = Other".into()).unwrap()),
+                vec![FluentResource::try_new("other = Other".into()).unwrap()],
             ),
             fallback: bundle(
                 "es",
-                Some(FluentResource::try_new("missing = Traducción española".into()).unwrap()),
+                vec![FluentResource::try_new("missing = Traducción española".into()).unwrap()],
             ),
         };
         assert_eq!(i18n.t("missing", &[]), "Traducción española");
@@ -136,18 +241,34 @@ mod tests {
     #[test]
     fn embedded_resources_parse_and_format_all_messages_without_errors() {
         for lang in LANGUAGES {
-            let file = Resources::get(&format!("{lang}/main.ftl")).unwrap();
-            let text = std::str::from_utf8(file.data.as_ref()).unwrap();
-            let resource = FluentResource::try_new(text.to_owned()).unwrap();
             let mut bundle = FluentBundle::new_concurrent(vec![lang.parse().unwrap()]);
-            bundle.add_resource(resource).unwrap();
+            for resource in load_embedded(lang).unwrap() {
+                bundle.add_resource(resource).unwrap();
+            }
             let mut args = FluentArgs::new();
             for (name, value) in [
                 ("pct", FluentValue::from(25)),
                 ("module", FluentValue::from("dashboard")),
                 ("system", FluentValue::from("Sol")),
                 ("done", FluentValue::from(3)),
+                ("scanned", FluentValue::from(3)),
                 ("total", FluentValue::from(9)),
+                ("age", FluentValue::from("2 min")),
+                ("value", FluentValue::from(60)),
+                ("count", FluentValue::from(5)),
+                ("destination", FluentValue::from("Colonia")),
+                ("current", FluentValue::from(2)),
+                ("completed", FluentValue::from(1)),
+                ("signals", FluentValue::from(3)),
+                ("genus", FluentValue::from("Bacterium")),
+                ("genera", FluentValue::from("Bacterium, Stratum")),
+                ("n", FluentValue::from(2)),
+                ("meters", FluentValue::from("160 m")),
+                ("dir", FluentValue::from("a tu espalda")),
+                ("compass", FluentValue::from("SO")),
+                ("name", FluentValue::from("Bacterium Aurasus")),
+                ("after", FluentValue::from("5 CR")),
+                ("species", FluentValue::from("Bacterium Aurasus")),
             ] {
                 args.set(name, value);
             }
@@ -173,6 +294,94 @@ mod tests {
                 ["settings-language", "field-fuel"].map(|key| I18n::new(language).t(key, &[]));
             assert_ne!(translated, spanish, "{language}");
         }
+    }
+
+    #[test]
+    fn keys_include_all_ftl_files() {
+        assert!(keys("es").contains("panel-route-strip"));
+        assert!(keys("de").contains("panel-system-bodies"));
+        assert!(keys("pt").contains("panel-exobiology"));
+        assert_eq!(
+            I18n::new("fr").t("panel-system-bodies", &[]),
+            "Corps du système"
+        );
+    }
+
+    #[test]
+    fn no_key_is_defined_in_two_files() {
+        let dir = std::env::temp_dir().join(format!("tmc-i18n-dup-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("a.ftl"),
+            "foo = 1
+",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("b.ftl"),
+            "foo = 2
+",
+        )
+        .unwrap();
+        let error = load_dir(&dir).unwrap_err();
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert!(error.contains("foo"), "{error}");
+        for lang in LANGUAGES {
+            assert!(load_embedded(lang).is_ok(), "{lang}");
+        }
+    }
+
+    fn temp_dir(tag: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("tmc-i18n-{tag}-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn invalid_utf8_file_is_an_error_naming_the_file() {
+        let dir = temp_dir("utf8");
+        std::fs::write(
+            dir.join("good.ftl"),
+            "ok = 1
+",
+        )
+        .unwrap();
+        std::fs::write(dir.join("broken.ftl"), [0x66u8, 0xff, 0xfe, 0x3d]).unwrap();
+        let error = load_dir(&dir).unwrap_err();
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert!(error.contains("broken.ftl"), "{error}");
+    }
+
+    #[test]
+    fn runtime_loading_skips_broken_file_and_keeps_good_ones() {
+        let dir = temp_dir("lenient");
+        std::fs::write(
+            dir.join("a.ftl"),
+            "good = 1
+",
+        )
+        .unwrap();
+        std::fs::write(dir.join("b.ftl"), [0xffu8, 0xfe]).unwrap();
+        std::fs::write(
+            dir.join("c.ftl"),
+            "good = 2
+other = 3
+",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("d.ftl"),
+            "last = 4
+",
+        )
+        .unwrap();
+        let (resources, problems) = parse_sources(dir_sources(&dir));
+        std::fs::remove_dir_all(&dir).unwrap();
+        let ids: Vec<String> = resources.iter().flat_map(message_ids).collect();
+        assert_eq!(ids, ["good", "last"]);
+        assert_eq!(problems.len(), 2, "{problems:?}");
+        assert!(problems[0].contains("b.ftl"));
+        assert!(problems[1].contains("good"));
     }
 
     #[test]

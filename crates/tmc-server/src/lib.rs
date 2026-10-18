@@ -10,7 +10,9 @@ pub mod ws;
 use axum::Router;
 use serde_json::Value;
 use std::collections::BTreeMap;
+use std::future::Future;
 use std::path::PathBuf;
+use std::pin::Pin;
 use std::sync::Arc;
 use tmc_core::{CoreHandle, Store};
 use tokio::sync::oneshot;
@@ -23,6 +25,9 @@ pub enum ActionError {
     Failed(String),
 }
 
+/// Futuro de una consulta asíncrona del anfitrión (autocompletado).
+pub type ActionFut = Pin<Box<dyn Future<Output = Result<Value, ActionError>> + Send + 'static>>;
+
 pub trait ConfigHost: Send + Sync + 'static {
     fn get_config(&self) -> Value;
     fn put_config(&self, v: Value) -> Result<Value, ActionError>;
@@ -34,6 +39,22 @@ pub trait ActionHost: Send + Sync + 'static {
         name: &str,
         snapshot: &BTreeMap<String, Value>,
     ) -> Result<Value, ActionError>;
+
+    /// Acción con argumentos JSON (`null` si no hay cuerpo).
+    fn run_action_with(
+        &self,
+        name: &str,
+        args: &Value,
+        snapshot: &BTreeMap<String, Value>,
+    ) -> Result<Value, ActionError> {
+        let _ = args;
+        self.run_action(name, snapshot)
+    }
+
+    /// Sugerencias de sistemas: `{ "items": [...] }` o un array. El servidor pagina.
+    fn autocomplete(&self, _q: String, _snapshot: &BTreeMap<String, Value>) -> ActionFut {
+        Box::pin(async { Err(ActionError::NotFound) })
+    }
 
     fn get_config(&self) -> Value {
         Value::Null
@@ -136,6 +157,10 @@ pub fn build_router(
         .route(
             "/api/actions/{name}",
             axum::routing::post(rest::post_action),
+        )
+        .route(
+            "/api/navigation/autocomplete",
+            axum::routing::get(rest::get_autocomplete),
         )
         .route("/api/pairing", axum::routing::get(pairing::get_pairing))
         .fallback(axum::routing::get(assets::serve_asset))
@@ -609,6 +634,353 @@ mod tests {
         );
         let resp_missing = app.oneshot(req_missing).await.unwrap();
         assert_eq!(resp_missing.status(), StatusCode::NOT_FOUND);
+    }
+
+    /// Host que registra las acciones recibidas y sirve nombres de autocompletado.
+    struct RecHost {
+        actions: std::sync::Mutex<Vec<(String, Value)>>,
+        names: Vec<String>,
+        online: bool,
+        transport_calls: std::sync::atomic::AtomicUsize,
+    }
+
+    impl RecHost {
+        fn new(count: usize, online: bool) -> Arc<Self> {
+            Arc::new(Self {
+                actions: std::sync::Mutex::new(Vec::new()),
+                names: (0..count).map(|i| format!("Sys {i:02}")).collect(),
+                online,
+                transport_calls: std::sync::atomic::AtomicUsize::new(0),
+            })
+        }
+    }
+
+    impl ActionHost for RecHost {
+        fn run_action(
+            &self,
+            _name: &str,
+            _snapshot: &BTreeMap<String, Value>,
+        ) -> Result<Value, ActionError> {
+            Err(ActionError::NotFound)
+        }
+
+        fn run_action_with(
+            &self,
+            name: &str,
+            args: &Value,
+            _snapshot: &BTreeMap<String, Value>,
+        ) -> Result<Value, ActionError> {
+            self.actions
+                .lock()
+                .unwrap()
+                .push((name.to_owned(), args.clone()));
+            Ok(serde_json::json!({ "accepted": true }))
+        }
+
+        fn autocomplete(&self, _q: String, snapshot: &BTreeMap<String, Value>) -> ActionFut {
+            let legacy = snapshot
+                .get("core.game")
+                .and_then(|g| g.get("galaxy"))
+                .and_then(Value::as_str)
+                == Some("Legacy");
+            if legacy || !self.online {
+                return Box::pin(async { Ok(serde_json::json!({ "items": [] })) });
+            }
+            self.transport_calls
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            let items: Vec<Value> = self
+                .names
+                .iter()
+                .enumerate()
+                .map(|(i, n)| serde_json::json!({ "name": n, "id64": i as u64 }))
+                .collect();
+            Box::pin(async move { Ok(serde_json::json!({ "items": items })) })
+        }
+    }
+
+    fn router_with_host(host: Arc<dyn ActionHost>, lan: bool, token: &str) -> (Router, CoreHandle) {
+        let store = Store::open_in_memory().unwrap();
+        let core = spawn_core(vec![], None, Duration::from_millis(100));
+        let router = build_router(
+            ServerConfig {
+                port: 47320,
+                lan,
+                token: token.into(),
+                ui_dir: None,
+            },
+            "192.168.1.50".into(),
+            core.clone(),
+            store,
+            host,
+        );
+        (router, core)
+    }
+
+    async fn get_json(app: Router, uri: &str) -> (StatusCode, Value) {
+        let req = with_peer(
+            Request::builder()
+                .uri(uri)
+                .header(header::HOST, "127.0.0.1:47320")
+                .body(Body::empty())
+                .unwrap(),
+            "127.0.0.1:55000",
+        );
+        let resp = app.oneshot(req).await.unwrap();
+        let status = resp.status();
+        let bytes = axum::body::to_bytes(resp.into_body(), 1024 * 64)
+            .await
+            .unwrap();
+        (
+            status,
+            serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+        )
+    }
+
+    #[tokio::test]
+    async fn action_body_args_reach_host() {
+        let host = RecHost::new(0, true);
+        let (app, _core) = router_with_host(host.clone(), false, "");
+        let req = with_peer(
+            Request::builder()
+                .method("POST")
+                .uri("/api/actions/navigation.plan")
+                .header(header::HOST, "127.0.0.1:47320")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(r#"{"to":"Colonia"}"#))
+                .unwrap(),
+            "127.0.0.1:55000",
+        );
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        // Sin cuerpo: args es null.
+        let req2 = with_peer(
+            Request::builder()
+                .method("POST")
+                .uri("/api/actions/navigation.clear")
+                .header(header::HOST, "127.0.0.1:47320")
+                .body(Body::empty())
+                .unwrap(),
+            "127.0.0.1:55000",
+        );
+        assert_eq!(app.oneshot(req2).await.unwrap().status(), StatusCode::OK);
+        let got = host.actions.lock().unwrap().clone();
+        assert_eq!(got.len(), 2);
+        assert_eq!(got[0].0, "navigation.plan");
+        assert_eq!(got[0].1["to"], "Colonia");
+        assert_eq!(got[1].0, "navigation.clear");
+        assert_eq!(got[1].1, Value::Null);
+    }
+
+    #[tokio::test]
+    async fn ws_action_with_args_reaches_host() {
+        let host = RecHost::new(0, true);
+        let store = Store::open_in_memory().unwrap();
+        let core = spawn_core(vec![], None, Duration::from_millis(100));
+        let cfg = ServerConfig {
+            port: 0,
+            lan: false,
+            token: String::new(),
+            ui_dir: None,
+        };
+        let srv = serve(cfg.clone(), core.clone(), store.clone(), host.clone())
+            .await
+            .unwrap();
+        let fallback = build_router(
+            ServerConfig {
+                port: srv.port,
+                ..cfg
+            },
+            "127.0.0.1".into(),
+            core,
+            store,
+            host.clone(),
+        );
+        let mut ws = connect_ws_or_duplex(format!("ws://127.0.0.1:{}/ws", srv.port), fallback)
+            .await
+            .unwrap();
+        let _hello = ws.next_text().await;
+        let _snap = ws.next_text().await;
+        ws.send_text(r#"{"type":"action","name":"navigation.plan","args":{"to":"Colonia"}}"#)
+            .await;
+        for _ in 0..40 {
+            if !host.actions.lock().unwrap().is_empty() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+        let got = host.actions.lock().unwrap().clone();
+        assert_eq!(got.len(), 1);
+        assert_eq!(got[0].0, "navigation.plan");
+        assert_eq!(got[0].1["to"], "Colonia");
+        srv.shutdown();
+    }
+
+    #[tokio::test]
+    async fn autocomplete_route_paginates() {
+        let host = RecHost::new(45, true);
+        let (app, _core) = router_with_host(host, false, "");
+        let (st, p0) = get_json(app.clone(), "/api/navigation/autocomplete?q=Sys&page=0").await;
+        assert_eq!(st, StatusCode::OK);
+        assert_eq!(p0["items"].as_array().unwrap().len(), 20);
+        assert_eq!(p0["items"][0]["name"], "Sys 00");
+        assert_eq!(p0["page"], 0);
+        assert_eq!(p0["more"], true);
+        let (_, p2) = get_json(app.clone(), "/api/navigation/autocomplete?q=Sys&page=2").await;
+        assert_eq!(p2["items"].as_array().unwrap().len(), 5);
+        assert_eq!(p2["items"][0]["name"], "Sys 40");
+        assert_eq!(p2["items"][0]["id64"], 40);
+        assert_eq!(p2["page"], 2);
+        assert_eq!(p2["more"], false);
+        let (_, p9) = get_json(app, "/api/navigation/autocomplete?q=Sys&page=9").await;
+        assert_eq!(p9["items"].as_array().unwrap().len(), 0);
+        assert_eq!(p9["more"], false);
+    }
+
+    #[tokio::test]
+    async fn autocomplete_returns_empty_for_legacy_or_offline() {
+        let offline = RecHost::new(45, false);
+        let (app, _core) = router_with_host(offline.clone(), false, "");
+        let (_, out) = get_json(app, "/api/navigation/autocomplete?q=Sys").await;
+        assert_eq!(
+            out,
+            serde_json::json!({ "items": [], "page": 0, "more": false })
+        );
+        assert_eq!(
+            offline
+                .transport_calls
+                .load(std::sync::atomic::Ordering::SeqCst),
+            0
+        );
+
+        let online = RecHost::new(45, true);
+        let (app2, core2) = router_with_host(online.clone(), false, "");
+        core2
+            .events
+            .send(SourceEvent::Journal {
+                ev: parse_line(
+                    r#"{"timestamp":"2026-10-17T18:00:00Z","event":"Fileheader","part":1,"language":"English","gameversion":"3.8.0.407","build":"r1"}"#,
+                )
+                .unwrap(),
+                file: "Journal.test.log".into(),
+                line: 1,
+                replaying: false,
+            })
+            .await
+            .unwrap();
+        for _ in 0..40 {
+            if core2.snapshot().await["core.game"]["galaxy"] == "Legacy" {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+        assert_eq!(core2.snapshot().await["core.game"]["galaxy"], "Legacy");
+        let (_, out2) = get_json(app2, "/api/navigation/autocomplete?q=Sys").await;
+        assert_eq!(
+            out2,
+            serde_json::json!({ "items": [], "page": 0, "more": false })
+        );
+        assert_eq!(
+            online
+                .transport_calls
+                .load(std::sync::atomic::Ordering::SeqCst),
+            0
+        );
+    }
+
+    async fn send_req(
+        app: &Router,
+        method: &str,
+        uri: &str,
+        extra: &[(&str, &str)],
+        body: &str,
+    ) -> StatusCode {
+        let mut b = Request::builder()
+            .method(method)
+            .uri(uri)
+            .header(header::HOST, "127.0.0.1:47320");
+        for (k, v) in extra {
+            b = b.header(*k, *v);
+        }
+        if !body.is_empty() {
+            b = b.header(header::CONTENT_LENGTH, body.len());
+        }
+        let req = with_peer(
+            b.body(Body::from(body.to_owned())).unwrap(),
+            "127.0.0.1:55000",
+        );
+        app.clone().oneshot(req).await.unwrap().status()
+    }
+
+    #[tokio::test]
+    async fn state_changes_are_protected_against_csrf() {
+        let host = RecHost::new(0, true);
+        let (app, _core) = router_with_host(host.clone(), false, "");
+        let a = "/api/actions/navigation.plan";
+        let json = ("content-type", "application/json");
+        // Origin ajeno
+        let evil = [("origin", "https://evil.example"), json];
+        assert_eq!(
+            send_req(&app, "POST", a, &evil, "{}").await,
+            StatusCode::FORBIDDEN
+        );
+        // Sin Origin, Sec-Fetch-Site cross-site
+        let cross = [("sec-fetch-site", "cross-site"), json];
+        assert_eq!(
+            send_req(&app, "POST", a, &cross, "{}").await,
+            StatusCode::FORBIDDEN
+        );
+        // Config PUT cross-origin
+        assert_eq!(
+            send_req(&app, "PUT", "/api/config", &evil, "{}").await,
+            StatusCode::FORBIDDEN
+        );
+        assert!(host.actions.lock().unwrap().is_empty());
+        // Origin coincidente
+        let same = [("origin", "http://127.0.0.1:47320"), json];
+        assert_eq!(send_req(&app, "POST", a, &same, "{}").await, StatusCode::OK);
+        // Sec-Fetch-Site same-origin sin Origin
+        let sfs = [("sec-fetch-site", "same-origin"), json];
+        assert_eq!(send_req(&app, "POST", a, &sfs, "{}").await, StatusCode::OK);
+        // Cliente no navegador (sin cabeceras)
+        assert_eq!(send_req(&app, "POST", a, &[], "").await, StatusCode::OK);
+        assert_eq!(
+            send_req(&app, "POST", a, &[json], r#"{"to":"X"}"#).await,
+            StatusCode::OK
+        );
+        // Cuerpo no JSON
+        let text = [("content-type", "text/plain")];
+        assert_eq!(
+            send_req(&app, "POST", a, &text, "{}").await,
+            StatusCode::UNSUPPORTED_MEDIA_TYPE
+        );
+        assert_eq!(host.actions.lock().unwrap().len(), 4);
+        // GET de solo lectura con Origin ajeno: permitido (no cambia estado)
+        assert_eq!(
+            send_req(
+                &app,
+                "GET",
+                "/api/health",
+                &[("origin", "https://evil.example")],
+                ""
+            )
+            .await,
+            StatusCode::OK
+        );
+    }
+
+    #[tokio::test]
+    async fn autocomplete_lan_without_token_is_rejected() {
+        let (app, _core) = router_with_host(RecHost::new(3, true), true, "secret-token-123456");
+        let req = with_peer(
+            Request::builder()
+                .uri("/api/navigation/autocomplete?q=Sys")
+                .header(header::HOST, "192.168.1.50:47320")
+                .body(Body::empty())
+                .unwrap(),
+            "192.168.1.99:55000",
+        );
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
     }
 
     #[tokio::test]

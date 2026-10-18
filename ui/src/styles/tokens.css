@@ -11,6 +11,19 @@
   --hud-muted: #9ca3af;
   --hud-warning: #f59e0b;
   --hud-success: #22c55e;
+  --hud-ok: #7fd16b;
   --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace;
+}
+
+:root {
+  --font-body-lg: 15px;
+  --font-title-lg: 20px;
+}
+
+@media (min-width: 2400px) {
+  :root {
+    --font-body-lg: 17px;
+    --font-title-lg: 24px;
+  }
 }

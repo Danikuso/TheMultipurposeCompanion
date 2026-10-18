@@ -66,6 +66,45 @@ fn origin_matches_host(headers: &HeaderMap, host: &str, require_present: bool) -
     authority.eq_ignore_ascii_case(host)
 }
 
+/// Defensa CSRF para peticiones que cambian estado (no GET/HEAD/OPTIONS).
+/// `Err` lleva el código HTTP de rechazo.
+fn guard_state_change(req: &Request, host: &str) -> Result<(), StatusCode> {
+    use axum::http::Method;
+    if matches!(*req.method(), Method::GET | Method::HEAD | Method::OPTIONS) {
+        return Ok(());
+    }
+    let headers = req.headers();
+    if headers.contains_key(header::ORIGIN) {
+        if !origin_matches_host(headers, host, true) {
+            return Err(StatusCode::FORBIDDEN);
+        }
+    } else if let Some(site) = headers.get("sec-fetch-site") {
+        match site.to_str() {
+            Ok("same-origin") | Ok("none") => {}
+            _ => return Err(StatusCode::FORBIDDEN),
+        }
+    }
+    let has_body = headers.contains_key(header::TRANSFER_ENCODING)
+        || headers
+            .get(header::CONTENT_LENGTH)
+            .and_then(|v| v.to_str().ok())
+            .is_some_and(|v| v.trim() != "0");
+    if has_body {
+        let is_json = headers
+            .get(header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .is_some_and(|v| {
+                v.split(';')
+                    .next()
+                    .is_some_and(|m| m.trim().eq_ignore_ascii_case("application/json"))
+            });
+        if !is_json {
+            return Err(StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        }
+    }
+    Ok(())
+}
+
 fn extract_query_token(query: Option<&str>) -> Option<String> {
     let query = query?;
     for pair in query.split('&') {
@@ -121,6 +160,7 @@ pub async fn enforce_security(
         if is_ws && !origin_matches_host(req.headers(), host, false) {
             return Err(StatusCode::FORBIDDEN);
         }
+        guard_state_change(&req, host)?;
         req.extensions_mut()
             .insert(ClientTrust { is_loopback: true });
         return Ok(next.run(req).await);
@@ -136,6 +176,8 @@ pub async fn enforce_security(
     if is_ws && !origin_matches_host(req.headers(), host, true) {
         return Err(StatusCode::FORBIDDEN);
     }
+
+    guard_state_change(&req, host)?;
 
     let expected = state.cfg.token.as_bytes();
     let query_tok = extract_query_token(req.uri().query());

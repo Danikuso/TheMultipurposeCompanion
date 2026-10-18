@@ -186,10 +186,13 @@ export function onAlert(cb: (a: Alert) => void): () => void {
   };
 }
 
-export async function action(name: string): Promise<unknown> {
-  const res = await fetch(`/api/actions/${encodeURIComponent(name)}`, {
-    method: 'POST',
-  });
+export async function action(name: string, args?: unknown): Promise<unknown> {
+  const init: RequestInit = { method: 'POST' };
+  if (args !== undefined) {
+    init.headers = { 'content-type': 'application/json' };
+    init.body = JSON.stringify(args);
+  }
+  const res = await fetch(`/api/actions/${encodeURIComponent(name)}`, init);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error((body as { error?: string }).error ?? `action ${name} failed`);

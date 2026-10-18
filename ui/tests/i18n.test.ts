@@ -9,6 +9,16 @@ describe('i18n', () => {
     expect(msg).not.toBe('alert-hull-damage');
   });
 
+  test('loads keys from every ftl file', () => {
+    setLocale('en');
+    expect(t('panel-system-bodies')).toBe('System bodies');
+    expect(t('panel-route-strip')).toBe('Route');
+    expect(t('panel-exobiology')).toBe('Exobiology');
+    setLocale('de');
+    expect(t('panel-system-bodies')).toBe('Systemkörper');
+    setLocale('es');
+  });
+
   test('all locales define the same keys', () => {
     const keysByLang = localeKeys();
     const langs = Object.keys(keysByLang).sort();

@@ -11,3 +11,4 @@ fluent-bundle.workspace = true
 unic-langid.workspace = true
 rust-embed.workspace = true
 fluent-syntax = "0.12.0"
+tracing.workspace = true

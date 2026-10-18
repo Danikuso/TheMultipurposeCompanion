@@ -1,0 +1,148 @@
+{
+  "record": {
+    "allegiance": "Federation",
+    "bodies": [
+      {
+        "distance_to_arrival": 0.0,
+        "estimated_mapping_value": 4614,
+        "estimated_scan_value": 1218,
+        "id": 10477373803,
+        "id64": 10477373803,
+        "is_main_star": true,
+        "name": "Sol",
+        "subtype": "G (White-Yellow) Star",
+        "type": "Star"
+      },
+      {
+        "distance_to_arrival": 223.735203,
+        "estimated_mapping_value": 104250,
+        "estimated_scan_value": 28693,
+        "id": 36028807496337771,
+        "id64": 36028807496337771,
+        "is_main_star": null,
+        "landmark_value": 0,
+        "landmarks": [
+          {
+            "count": 1,
+            "subtype": "Tourist Beacon",
+            "type": "Tourist Beacon",
+            "value": 0
+          },
+          {
+            "count": 1,
+            "subtype": "Crater Port",
+            "type": "Surface Station",
+            "value": 0
+          },
+          {
+            "count": 2,
+            "subtype": "Crater Outpost",
+            "type": "Surface Station",
+            "value": 0
+          },
+          {
+            "count": 2,
+            "subtype": "Wrecked Ship",
+            "type": "Wrecked Ship",
+            "value": 0
+          }
+        ],
+        "name": "Mercury",
+        "subtype": "Metal-rich body",
+        "terraforming_state": "Not terraformable",
+        "type": "Planet"
+      },
+      {
+        "distance_to_arrival": 363.243694,
+        "estimated_mapping_value": 54128,
+        "estimated_scan_value": 14898,
+        "id": 72057604515301739,
+        "id64": 72057604515301739,
+        "is_main_star": null,
+        "name": "Venus",
+        "subtype": "High metal content world",
+        "terraforming_state": "Not terraformable",
+        "type": "Planet"
+      }
+    ],
+    "body_count": 40,
+    "controlling_minor_faction": "Mother Gaia",
+    "controlling_minor_faction_state": "Expansion",
+    "controlling_power": "Jerome Archer",
+    "estimated_mapping_value": 2213988,
+    "estimated_scan_value": 605861,
+    "government": "Democracy",
+    "id64": 10477373803,
+    "is_being_colonised": false,
+    "is_colonised": false,
+    "known_permit": true,
+    "landmark_value": 0,
+    "minor_faction_presences": [
+      {
+        "allegiance": "Independent",
+        "government": "Cooperative",
+        "influence": 0.00999,
+        "name": "Aegis Core",
+        "state": "None"
+      },
+      {
+        "allegiance": "Federation",
+        "government": "Democracy",
+        "influence": 0.16983,
+        "name": "Federal Congress",
+        "state": "None"
+      }
+    ],
+    "name": "Sol",
+    "needs_permit": true,
+    "population": 18320926115,
+    "power": [
+      "Aisling Duval",
+      "Edmund Mahon",
+      "Li Yong-Rui",
+      "Yuri Grom",
+      "Zemina Torval",
+      "Jerome Archer"
+    ],
+    "power_state": "Stronghold",
+    "power_state_control_progress": 0.404972,
+    "power_state_reinforcement": 64700,
+    "power_state_undermining": 85128,
+    "primary_economy": "Refinery",
+    "region": "Inner Orion Spur",
+    "secondary_economy": "Service",
+    "security": "High",
+    "stations": [
+      {
+        "controlling_minor_faction": "Mother Gaia",
+        "controlling_minor_faction_state": "Expansion",
+        "distance_to_arrival": 223.710103,
+        "has_large_pad": true,
+        "has_market": true,
+        "has_outfitting": true,
+        "has_shipyard": true,
+        "large_pads": 6,
+        "market_id": 128016384,
+        "medium_pads": 13,
+        "name": "Daedalus",
+        "services": [
+          "Dock",
+          "Autodock",
+          "Market",
+          "Contacts",
+          "Universal Cartographics",
+          "Missions"
+        ],
+        "small_pads": 10,
+        "type": "Orbis Starport"
+      }
+    ],
+    "thargoid_war_failure_state": "None",
+    "thargoid_war_state": "None",
+    "thargoid_war_success_state": "None",
+    "updated_at": "2026-10-17T20:46:19Z",
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0
+  }
+}
