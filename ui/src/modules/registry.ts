@@ -1,5 +1,6 @@
 import type { Component } from 'svelte';
 import { dashboardPanels } from './dashboard';
+import { navigationPanels } from './navigation';
 
 export interface UiModuleDef {
   id: string;
@@ -14,5 +15,11 @@ export const modules: UiModuleDef[] = [
     icon: 'gauge',
     titleKey: 'nav-dashboard',
     panels: dashboardPanels,
+  },
+  {
+    id: 'navigation',
+    icon: 'route',
+    titleKey: 'nav-navigation',
+    panels: navigationPanels,
   },
 ];

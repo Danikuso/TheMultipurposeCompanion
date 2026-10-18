@@ -252,6 +252,7 @@ mod tests {
                 ("system", FluentValue::from("Sol")),
                 ("done", FluentValue::from(3)),
                 ("total", FluentValue::from(9)),
+                ("age", FluentValue::from("2 min")),
             ] {
                 args.set(name, value);
             }

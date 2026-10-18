@@ -32,3 +32,23 @@ export function duration(ms: number | null | undefined): string {
   }
   return `${minutes}m`;
 }
+
+export function ageShort(seconds: number | null | undefined): string {
+  if (seconds == null || Number.isNaN(seconds) || seconds < 0) return '0 s';
+  const s = Math.floor(seconds);
+  if (s < 60) return `${s} s`;
+  if (s < 3600) return `${Math.floor(s / 60)} min`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h`;
+  return `${Math.floor(s / 86400)} d`;
+}
+
+export function starClassLabel(cls: string | null | undefined): string {
+  if (!cls) return '—';
+  const base = cls.split('_')[0]?.trim().toUpperCase();
+  return base ? base : '—';
+}
+
+export function num1(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return '—';
+  return n.toFixed(1);
+}
