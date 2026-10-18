@@ -58,7 +58,7 @@
 | 20 | `exploration` — valor de cuerpos y sondas | ✅ hecha | fe26c90, 123b335, 7cfb305 | Fórmulas propias (FSS, mapeo con eficiencia, primeros, Odyssey), gigantes gaseosos mapeables, nombres reales del diario, `probes.json` con `verified:false`; 18 exploration PASS. Revisión aprobada tras 1 ronda. |
 | 21 | `exploration` — cuerpos del sistema, FSS y consejo | ✅ hecha | 9940901, c25b238 | P2 de payload y Terraforming corregidos; marks compacto documentado para Task 23; 392 Rust/46 UI PASS, revisión aprobada. |
 | 22 | `exploration` — datos sin vender | ✅ hecha | ffa3433 | Libro compartido, reconstrucción cronológica paginada y conciliación/retry; 413 Rust/46 UI PASS, revisión aprobada. |
-| 23 | UI — cuerpos del sistema | ✅ hecha | (este commit) | Tabla virtualizada ≤30 filas, cinco idiomas, visual 2560/1366 px; 413 Rust/56 UI PASS, revisión aprobada. |
+| 23 | UI — cuerpos del sistema | ✅ hecha | b669a77 | Tabla virtualizada ≤30 filas, cinco idiomas, visual 2560/1366 px; 413 Rust/56 UI PASS, revisión aprobada. |
 | 24 | Exobiología — especies y geodesia | 🔄 en curso | — | Step 1: tests; geodesia independiente de aprobación de nombres. |
 | 25–32 | Ver plan | ⬜ | — | |
 
@@ -137,6 +137,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-18 04:08 (Europe/Madrid) · Codex · Task 23 cerrada b669a77, revisión y visual local aprobadas, 413 Rust/56 UI con fmt/clippy/check/build PASS. Task 24 avanza solo geodesia; la tabla/nombres espera aprobación de la desviación registrada.
 
 - 2026-10-18 04:02 (Europe/Madrid) · Codex · Task 22 cerrada (ffa3433; status9bd4ba8), revisión aprobada y 413 Rust/46 UI con fmt/clippy/check/build PASS. Task 23 en curso: virtualización y panel de cuerpos, tests pendientes. Push y nombres de especies siguen pendientes de respuesta del propietario.
 
