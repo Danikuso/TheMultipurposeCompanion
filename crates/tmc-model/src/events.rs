@@ -55,8 +55,79 @@ pub struct LocationInfo {
     pub powers: Vec<String>,
     pub powerplay_state: Option<String>,
     pub boost_used: Option<f64>,
+    #[serde(deserialize_with = "lenient_war")]
     pub thargoid_war: Option<ThargoidWar>,
+    #[serde(deserialize_with = "lenient_factions")]
     pub factions: Vec<FactionInfo>,
+}
+
+type Json = serde_json::Value;
+
+fn l_str(v: Option<&Json>) -> Option<String> {
+    v.and_then(Json::as_str).map(str::to_string)
+}
+fn l_f64(v: Option<&Json>) -> Option<f64> {
+    match v? {
+        Json::Number(n) => n.as_f64(),
+        Json::String(s) => s.trim().parse().ok(),
+        _ => None,
+    }
+}
+fn l_u32(v: Option<&Json>) -> Option<u32> {
+    match v? {
+        Json::Number(n) => n.as_u64().and_then(|x| u32::try_from(x).ok()),
+        Json::String(s) => s.trim().parse().ok(),
+        _ => None,
+    }
+}
+fn l_bool(v: Option<&Json>) -> Option<bool> {
+    match v? {
+        Json::Bool(b) => Some(*b),
+        Json::String(s) => s.trim().parse().ok(),
+        _ => None,
+    }
+}
+
+/// Bloque `ThargoidWar` tolerante: un tipo inesperado nunca rompe el evento.
+fn lenient_war<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<ThargoidWar>, D::Error> {
+    let v = Json::deserialize(d).unwrap_or(Json::Null);
+    let Some(o) = v.as_object() else {
+        return Ok(None);
+    };
+    Ok(Some(ThargoidWar {
+        current_state: l_str(o.get("CurrentState")),
+        next_state_success: l_str(o.get("NextStateSuccess")),
+        next_state_failure: l_str(o.get("NextStateFailure")),
+        success_state_reached: l_bool(o.get("SuccessStateReached")),
+        war_progress: l_f64(o.get("WarProgress")),
+        remaining_ports: l_u32(o.get("RemainingPorts")),
+        estimated_remaining_time: l_str(o.get("EstimatedRemainingTime")),
+    }))
+}
+
+/// `Factions` tolerante: no-array → vacío; elementos mal formados se omiten.
+fn lenient_factions<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<FactionInfo>, D::Error> {
+    let v = Json::deserialize(d).unwrap_or(Json::Null);
+    let Some(a) = v.as_array() else {
+        return Ok(Vec::new());
+    };
+    Ok(a.iter()
+        .filter_map(Json::as_object)
+        .map(|o| FactionInfo {
+            name: l_str(o.get("Name")).unwrap_or_default(),
+            faction_state: l_str(o.get("FactionState")),
+            active_states: o
+                .get("ActiveStates")
+                .and_then(Json::as_array)
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|s| l_str(s.get("State")))
+                        .map(|state| StateRef { state })
+                        .collect()
+                })
+                .unwrap_or_default(),
+        })
+        .collect())
 }
 
 impl LocationInfo {
@@ -1453,6 +1524,33 @@ mod tests {
         assert_eq!(l.factions[0].active_states[0].state, "Boom");
         assert!(l.thargoid_war.is_none());
         assert!(l.thargoid_presence());
+    }
+
+    #[test]
+    fn thargoid_war_with_unexpected_types_is_coerced_and_event_survives() {
+        let EventKind::FsdJump(l) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"FSDJump","StarSystem":"Kappa","SystemAddress":1,"ThargoidWar":{"WarProgress":"0.5","RemainingPorts":"x","CurrentState":7},"Factions":"junk"}"#,
+        ) else {
+            panic!("FSDJump")
+        };
+        assert_eq!(l.star_system, "Kappa");
+        let w = l.thargoid_war.as_ref().unwrap();
+        assert_eq!(w.war_progress, Some(0.5));
+        assert_eq!(w.remaining_ports, None);
+        assert_eq!(w.current_state, None);
+        assert!(l.factions.is_empty());
+        assert!(!l.thargoid_presence());
+    }
+
+    #[test]
+    fn thargoid_war_non_object_is_none() {
+        let EventKind::FsdJump(l) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"FSDJump","StarSystem":"Kappa","ThargoidWar":"garbage"}"#,
+        ) else {
+            panic!("FSDJump")
+        };
+        assert_eq!(l.star_system, "Kappa");
+        assert!(l.thargoid_war.is_none());
     }
 
     #[test]
