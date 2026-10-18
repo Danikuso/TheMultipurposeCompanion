@@ -17,9 +17,11 @@ export interface BodyTopic {
   body_id: number;
   system_address: number;
   kind: string | null;
+  kind_key?: string | null;
   gravity_g: number | null;
   temperature_k: number | null;
   atmosphere: string | null;
+  atmosphere_key?: string | null;
   bio_signals: number;
   first_logged: boolean | null;
   dss: boolean;

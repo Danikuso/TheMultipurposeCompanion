@@ -25,6 +25,15 @@
     if (c.status === 'in-progress') return `▶ ${c.progress ?? 0}/3`;
     return '—';
   }
+  function label(prefix: string, key: string | null | undefined, raw: string | null | undefined): string {
+    if (key) {
+      const full = `${prefix}${key}`;
+      const text = t(full);
+      if (text !== full) return text;
+    }
+    return raw ?? '—';
+  }
+  const barNow = $derived(sampling?.distance_m == null ? undefined : Math.max(0, Math.min(sampling.min_m, sampling.distance_m)));
   const genera = $derived((body?.confirmed_genera ?? []).map(g => g.name ?? '—').join(', '));
 </script>
 
@@ -33,7 +42,7 @@
     <div class="header" data-testid="body-header">
       <div>
         <strong class="title">{body.body ?? '—'}</strong>
-        <span class="dim"> · {body.kind ?? '—'} · {gravity(body.gravity_g)} · {kelvin(body.temperature_k)} · {body.atmosphere ?? '—'}</span>
+        <span class="dim"> · {label('exploration-kind-', body.kind_key, body.kind)} · {gravity(body.gravity_g)} · {kelvin(body.temperature_k)} · {label('exobiology-atmosphere-', body.atmosphere_key, body.atmosphere)}</span>
       </div>
       <div class="badges">
         <span class="badge">{t('exobiology-signals', { count: body.bio_signals })}</span>
@@ -91,12 +100,12 @@
             <div>
               {t('exobiology-distance')}:
               {#if sampling.distance_m != null}
-                <strong class="warn number">{meters(sampling.distance_m)} / {meters(sampling.min_m)}</strong>
+                <strong class={sampling.remaining_m === 0 ? 'ok number' : 'warn number'} data-testid="distance-value">{meters(sampling.distance_m)} / {meters(sampling.min_m)}</strong>
               {:else}
                 <strong class="dim">{t('exobiology-no-data')}</strong>
               {/if}
             </div>
-            <div class="bar"><i data-testid="distance-bar" style:width={barWidth}></i></div>
+            <div class="bar" role="progressbar" aria-label={t('exobiology-distance-progress')} aria-valuemin="0" aria-valuemax={sampling.min_m} aria-valuenow={barNow}><i data-testid="distance-bar" style:width={barWidth}></i></div>
             <div class="dim">
               {#if sampling.remaining_m != null}{t('exobiology-remaining', { meters: meters(sampling.remaining_m) })}{/if}
               {#if sampling.direction}
@@ -104,8 +113,8 @@
               {/if}
             </div>
           {/if}
-          {#if sampling.discarded_name}
-            <div class="notice" data-testid="discarded">{t('exobiology-discarded', { name: sampling.discarded_name })}</div>
+          {#if sampling.discarded_name || sampling.discarded_species}
+            <div class="notice" data-testid="discarded">{sampling.discarded_name ? t('exobiology-discarded', { name: sampling.discarded_name }) : t('exobiology-discarded-unknown')}</div>
           {/if}
         {:else}
           <p class="dim">{t('exobiology-waiting')}</p>
@@ -131,7 +140,7 @@
   .title { font-size: var(--font-title-lg); color: var(--hud-primary); }
   .dim { color: var(--hud-muted); }
   .badge { display: inline-block; border: 1px solid var(--hud-border); padding: 0 .4rem; margin-left: .4rem; }
-  .badge.warn, .warn { color: var(--hud-warning, var(--hud-primary)); }
+  .badge.warn, .warn { color: var(--hud-warning); }
   .columns { display: flex; flex-wrap: wrap; gap: 1rem; align-items: stretch; }
   .box { border: 1px solid var(--hud-border); padding: .6rem; min-width: 0; }
   .candidates { flex: 1.6 1 32rem; }
@@ -143,8 +152,9 @@
   th { color: var(--hud-muted); font-weight: normal; border-bottom: 1px solid var(--hud-border); }
   .number { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
   tr.active td { color: var(--hud-primary); font-weight: 700; }
-  .done { color: var(--hud-ok, var(--hud-primary)); }
-  .likelihood.high { color: var(--hud-ok, var(--hud-primary)); }
+  .ok { color: var(--hud-ok); }
+  .done { color: var(--hud-ok); }
+  .likelihood.high { color: var(--hud-ok); }
   .likelihood.unknown { font-style: italic; }
   .origin { margin-left: .3rem; font-size: .85em; }
   .species { font-size: 1.25em; }

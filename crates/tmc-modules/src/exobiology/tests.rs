@@ -185,6 +185,33 @@ fn touchdown_on_bio_body_sets_active_relevance() {
 }
 
 #[test]
+fn body_topic_has_kind_and_atmosphere_keys() {
+    let mut h = H::new();
+    h.start();
+    h.scan_body("Rocky ice body", "CarbonDioxideRich", false);
+    h.bio_signals(3);
+    h.touchdown();
+    let body = h.topic(TOPIC_BODY);
+    assert_eq!(body["kind"], "Rocky ice body");
+    assert_eq!(body["kind_key"], "rocky-ice");
+    assert_eq!(body["atmosphere"], "CarbonDioxideRich");
+    assert_eq!(body["atmosphere_key"], "carbon-dioxide-rich");
+}
+
+#[test]
+fn atmosphere_key_is_kebab_case_and_none_when_empty() {
+    assert_eq!(
+        super::atmosphere_key(Some("CarbonDioxide")),
+        "carbon-dioxide"
+    );
+    assert_eq!(super::atmosphere_key(Some("EarthLike")), "earth-like");
+    assert_eq!(super::atmosphere_key(Some("Neon")), "neon");
+    assert_eq!(super::atmosphere_key(Some("")), "none");
+    assert_eq!(super::atmosphere_key(Some("None")), "none");
+    assert_eq!(super::atmosphere_key(None), "none");
+}
+
+#[test]
 fn touchdown_without_signals_stays_normal_until_scan_organic() {
     let mut h = H::new();
     h.start();
