@@ -497,19 +497,25 @@ lan = false
 
     #[test]
     fn config_host_roundtrips_and_validates_language() {
-        let actions = AppActions::with_config(Config::default());
+        let directory = tempdir().unwrap();
+        let save_path = directory.path().join("config.toml");
+        let actions = AppActions::with_config(Config::default()).with_save_path(save_path.clone());
         let current = actions.get_config();
         assert_eq!(current["language"], "es");
 
         let mut invalid = current.clone();
         invalid["language"] = json!("xx");
         assert!(actions.put_config(invalid).is_err());
+        assert!(!save_path.exists());
 
         let mut valid = current;
         valid["language"] = json!("en");
         let saved = actions.put_config(valid).unwrap();
         assert_eq!(saved["language"], "en");
         assert_eq!(actions.get_config()["language"], "en");
+        let persisted: Config =
+            toml::from_str(&std::fs::read_to_string(&save_path).unwrap()).unwrap();
+        assert_eq!(persisted.language, "en");
     }
 
     #[tokio::test]
