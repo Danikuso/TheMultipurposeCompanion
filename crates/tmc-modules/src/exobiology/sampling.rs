@@ -56,12 +56,27 @@ pub enum SamplingChange {
 pub struct SamplingTracker {
     current: Option<Sampling>,
     completed: Vec<(u64, u32, String)>,
-    /// Posiciones guardadas por `ts` normalizado, para el replay (sin Status).
-    stored: HashMap<String, (f64, f64)>,
+    /// Posiciones guardadas por (ts, sistema, cuerpo, especie, fase) para el
+    /// replay (que no reproduce Status).
+    stored: HashMap<StoredKey, (f64, f64)>,
 }
 
-fn ts_key(ts: DateTime<Utc>) -> String {
-    ts.to_rfc3339_opts(SecondsFormat::Nanos, true)
+type StoredKey = (String, u64, u32, String, String);
+
+fn stored_key(
+    ts: DateTime<Utc>,
+    system_address: u64,
+    body_id: u32,
+    species: &str,
+    scan_type: &str,
+) -> StoredKey {
+    (
+        ts.to_rfc3339_opts(SecondsFormat::Nanos, true),
+        system_address,
+        body_id,
+        species.to_owned(),
+        scan_type.to_owned(),
+    )
 }
 
 fn genus_of(species: &str) -> String {
@@ -156,7 +171,7 @@ impl SamplingTracker {
         ctx: &mut ModuleCtx,
     ) -> SamplingChange {
         let pos = if ctx.replaying {
-            self.stored.get(&ts_key(ts)).copied()
+            self.stored_position(ev, ts)
         } else {
             status_pos
         };
@@ -166,10 +181,12 @@ impl SamplingTracker {
             && let (Some(system_address), Some(body_id), Some(species)) =
                 (ev.system_address, ev.body, ev.species.clone())
         {
+            // A third Sample completes the sampling in memory, so it is stored as
+            // Analyse to keep restart and sale consistent with the memory state.
             let scan_type = match ev.scan_type {
                 OrganicScanType::Log => "Log",
-                OrganicScanType::Sample => "Sample",
-                _ => "Analyse",
+                _ if change == SamplingChange::Completed => "Analyse",
+                _ => "Sample",
             };
             let row = ExoSampleRow {
                 cmdr: cmdr.to_owned(),
@@ -186,15 +203,42 @@ impl SamplingTracker {
         change
     }
 
+    fn stored_position(&self, ev: &ScanOrganic, ts: DateTime<Utc>) -> Option<(f64, f64)> {
+        let (system_address, body_id, species) =
+            (ev.system_address?, ev.body?, ev.species.as_deref()?);
+        let get = |kind: &str| {
+            self.stored
+                .get(&stored_key(ts, system_address, body_id, species, kind))
+                .copied()
+        };
+        match ev.scan_type {
+            OrganicScanType::Log => get("Log"),
+            // A third Sample may have been stored as Analyse.
+            OrganicScanType::Sample => get("Sample").or_else(|| get("Analyse")),
+            OrganicScanType::Analyse => get("Analyse"),
+            OrganicScanType::Unknown => None,
+        }
+    }
+
     /// SellOrganicData: vacía lo completado y borra sus filas (el muestreo
-    /// incompleto se conserva).
+    /// incompleto se conserva). En replay solo toca la memoria: las filas
+    /// las limpió ya la ejecución en vivo.
     pub fn handle_sold(&mut self, cmdr: &str, ctx: &mut ModuleCtx) {
         self.on_sold();
+        if ctx.replaying {
+            return;
+        }
         ctx.store_task("clear_completed", persist::clear_completed(cmdr.to_owned()));
     }
 
-    /// Died: vacía el rastreador y borra todas las filas del comandante.
+    /// Died: vacía el rastreador y borra todas las filas del comandante. En
+    /// replay solo reinicia el estado en memoria y conserva las posiciones
+    /// guardadas (son de los muestreos posteriores a la muerte).
     pub fn handle_died(&mut self, cmdr: &str, ctx: &mut ModuleCtx) {
+        if ctx.replaying {
+            self.reset_for_replay();
+            return;
+        }
         self.died();
         ctx.store_task("clear_samples", persist::clear_samples(cmdr.to_owned()));
     }
@@ -219,18 +263,27 @@ impl SamplingTracker {
         self.completed.clear();
     }
 
-    /// Recupera de `exo_sample` el muestreo abierto más reciente. No pisa un
-    /// muestreo ya reconstruido por el replay del diario.
+    /// Recupera de `exo_sample` el muestreo abierto más reciente. Es
+    /// idempotente respecto al replay: si el replay ya reconstruyó ese mismo
+    /// muestreo (incompleto), le reasigna las posiciones de las filas; si es
+    /// otro, no lo pisa. Orden para Task 27: `load_open_samples` -> `restore`
+    /// -> replay, o replay -> `restore`; ambos órdenes dan el mismo resultado.
     pub fn restore(&mut self, rows: Vec<ExoSampleRow>) {
         for row in &rows {
             if let (Some(lat), Some(lon)) = (row.lat, row.lon) {
-                self.stored.insert(ts_key(row.ts), (lat, lon));
+                self.stored.insert(
+                    stored_key(
+                        row.ts,
+                        row.system_address,
+                        row.body_id,
+                        &row.species,
+                        &row.scan_type,
+                    ),
+                    (lat, lon),
+                );
             }
         }
         let Some(last) = rows.last() else { return };
-        if self.current.is_some() {
-            return;
-        }
         let group: Vec<&ExoSampleRow> = rows
             .iter()
             .filter(|row| {
@@ -240,7 +293,7 @@ impl SamplingTracker {
             })
             .collect();
         let scans = u8::try_from(group.len()).unwrap_or(u8::MAX);
-        let points = group
+        let points: Vec<SamplePoint> = group
             .iter()
             .filter_map(|row| {
                 Some(SamplePoint {
@@ -250,6 +303,17 @@ impl SamplingTracker {
                 })
             })
             .collect();
+        if let Some(cur) = self.current.as_mut() {
+            if !cur.complete
+                && cur.system_address == last.system_address
+                && cur.body_id == last.body_id
+                && cur.species == last.species
+            {
+                cur.scans = cur.scans.max(scans);
+                cur.points = points;
+            }
+            return;
+        }
         self.current = Some(Sampling {
             system_address: last.system_address,
             body_id: last.body_id,
@@ -261,23 +325,31 @@ impl SamplingTracker {
         });
     }
 
-    fn previous(&self) -> Option<&SamplePoint> {
-        self.current.as_ref()?.points.last()
+    fn nearest(&self, now: (f64, f64)) -> Option<&SamplePoint> {
+        let angular = |p: &&SamplePoint| haversine_m(now.0, now.1, p.lat, p.lon, 1.0);
+        self.current
+            .as_ref()?
+            .points
+            .iter()
+            .min_by(|a, b| angular(a).total_cmp(&angular(b)))
     }
 
-    /// Distancia en metros al último punto muestreado; `None` sin punto previo.
+    /// Distancia en metros al punto previo MÁS CERCANO de la especie actual
+    /// (el juego exige la distancia mínima respecto a todas las muestras
+    /// anteriores); `None` sin puntos.
     pub fn distance_to_previous(&self, now: (f64, f64), radius_m: f64) -> Option<f64> {
-        let prev = self.previous()?;
+        let prev = self.nearest(now)?;
         Some(haversine_m(now.0, now.1, prev.lat, prev.lon, radius_m))
     }
 
-    /// Dirección relativa al rumbo y punto cardinal hacia el último punto.
+    /// Dirección relativa al rumbo y punto cardinal hacia el punto previo más
+    /// cercano.
     pub fn direction_to_previous(
         &self,
         now: (f64, f64),
         heading: f64,
     ) -> Option<(RelDir, &'static str)> {
-        let prev = self.previous()?;
+        let prev = self.nearest(now)?;
         let bearing = bearing_deg(now.0, now.1, prev.lat, prev.lon);
         Some((
             rel_dir(relative_bearing(bearing, heading)),
@@ -616,5 +688,158 @@ mod tests {
         );
         assert!(sold && t.completed().is_empty());
         assert_eq!(t.sampling().unwrap().species, B);
+    }
+
+    #[test]
+    fn nearest_previous_point_is_used_for_distance_and_direction() {
+        let mut t = SamplingTracker::default();
+        t.on_scan_organic(&scan(OrganicScanType::Log, A, 5), Some((0.0, 0.1)), at(0));
+        t.on_scan_organic(
+            &scan(OrganicScanType::Sample, A, 5),
+            Some((0.0, -0.5)),
+            at(5),
+        );
+        // The first point (east, 0.1 deg) is nearer than the last one (west, 0.5 deg).
+        let d = t.distance_to_previous((0.0, 0.0), 1_000_000.0).unwrap();
+        close(d, 1745.33, 1.0);
+        assert_eq!(
+            t.direction_to_previous((0.0, 0.0), 270.0).unwrap(),
+            (RelDir::Behind, "E")
+        );
+    }
+
+    fn scan_rows(
+        t: &mut SamplingTracker,
+        ctx: &mut ModuleCtx,
+        list: &[(OrganicScanType, u32, u32)],
+    ) -> Vec<SamplingChange> {
+        list.iter()
+            .map(|(kind, body, sec)| {
+                t.handle_scan(&scan(*kind, A, *body), "CMDR TESTER", at(*sec), None, ctx)
+            })
+            .collect()
+    }
+
+    #[test]
+    fn replayed_died_keeps_stored_positions_and_emits_no_task() {
+        let mut t = SamplingTracker::default();
+        t.restore(vec![
+            row("Log", 30, 10.0, 20.0),
+            row("Sample", 40, 10.0, 20.5),
+        ]);
+        let mut ctx = ModuleCtx::new("exobiology", true, 1);
+        scan_rows(&mut t, &mut ctx, &[(OrganicScanType::Log, 5, 1)]);
+        t.handle_died("CMDR TESTER", &mut ctx);
+        t.handle_sold("CMDR TESTER", &mut ctx);
+        assert!(t.sampling().is_none());
+        let changes = scan_rows(
+            &mut t,
+            &mut ctx,
+            &[
+                (OrganicScanType::Log, 5, 30),
+                (OrganicScanType::Sample, 5, 40),
+            ],
+        );
+        assert_eq!(
+            changes,
+            vec![SamplingChange::Started, SamplingChange::Progressed(2)]
+        );
+        let s = t.sampling().unwrap();
+        assert_eq!((s.scans, s.points.len()), (2, 2));
+        assert_eq!((s.points[1].lat, s.points[1].lon), (10.0, 20.5));
+        assert!(ctx.take_outputs().1.is_empty());
+        // A live Died does emit the clear task.
+        let mut live = ModuleCtx::new("exobiology", false, 1);
+        t.handle_died("CMDR TESTER", &mut live);
+        let (_, tasks, _) = live.take_outputs();
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].0, "clear_samples");
+    }
+
+    #[test]
+    fn stored_positions_are_keyed_by_body_species_and_phase() {
+        let mut t = SamplingTracker::default();
+        let mut other = row("Log", 0, 1.0, 1.0);
+        other.body_id = 9;
+        other.lat = Some(-5.0);
+        t.restore(vec![row("Log", 0, 10.0, 20.0), other]);
+        let mut ctx = ModuleCtx::new("exobiology", true, 1);
+        scan_rows(&mut t, &mut ctx, &[(OrganicScanType::Log, 9, 0)]);
+        let p = t.sampling().unwrap().points[0];
+        assert_eq!((p.lat, p.lon), (-5.0, 1.0));
+        scan_rows(&mut t, &mut ctx, &[(OrganicScanType::Log, 5, 0)]);
+        let p = t.sampling().unwrap().points[0];
+        assert_eq!((p.lat, p.lon), (10.0, 20.0));
+    }
+
+    #[test]
+    fn third_sample_is_persisted_as_analyse_and_consistent_after_restart() {
+        let store = open_store();
+        let mut t = SamplingTracker::default();
+        let mut ctx = ModuleCtx::new("exobiology", false, 1);
+        let kinds = [
+            OrganicScanType::Log,
+            OrganicScanType::Sample,
+            OrganicScanType::Sample,
+        ];
+        for (i, kind) in kinds.iter().enumerate() {
+            let lon = 20.0 + i as f64;
+            let sec = u32::try_from(i).unwrap();
+            let change = t.handle_scan(
+                &scan(*kind, A, 5),
+                "CMDR TESTER",
+                at(sec),
+                Some((10.0, lon)),
+                &mut ctx,
+            );
+            if i == 2 {
+                assert_eq!(change, SamplingChange::Completed);
+            }
+        }
+        for (_, task) in ctx.take_outputs().1 {
+            task(&store).unwrap();
+        }
+        let kinds_db = store
+            .query_json("SELECT scan_type FROM exo_sample ORDER BY ts", &[])
+            .unwrap();
+        assert_eq!(
+            kinds_db,
+            vec![
+                serde_json::json!(["Log"]),
+                serde_json::json!(["Sample"]),
+                serde_json::json!(["Analyse"])
+            ]
+        );
+        assert!(restored(&store).sampling().is_none());
+        persist::clear_completed("CMDR TESTER".into())(&store).unwrap();
+        assert!(
+            store
+                .query_json("SELECT 1 FROM exo_sample", &[])
+                .unwrap()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn restore_after_replay_reattaches_positions() {
+        let rows = || vec![row("Log", 0, 10.0, 20.0), row("Sample", 10, 10.0, 20.5)];
+        let list = [
+            (OrganicScanType::Log, 5, 0),
+            (OrganicScanType::Sample, 5, 10),
+        ];
+        let mut ctx = ModuleCtx::new("exobiology", true, 1);
+        let mut t = SamplingTracker::default();
+        scan_rows(&mut t, &mut ctx, &list);
+        assert_eq!(t.sampling().unwrap().points.len(), 0);
+        t.restore(rows());
+        let s = t.sampling().unwrap();
+        assert_eq!((s.scans, s.points.len()), (2, 2));
+        assert_eq!(s.points[1].lon, 20.5);
+        // Restoring before the replay yields the same final state.
+        let mut u = SamplingTracker::default();
+        u.restore(rows());
+        u.reset_for_replay();
+        scan_rows(&mut u, &mut ctx, &list);
+        assert_eq!(u.sampling(), t.sampling());
     }
 }
