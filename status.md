@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-18 18:49 (Europe/Madrid) · Gemini 4 Argon (Medium)
+- **Última actualización:** 2026-10-18 19:20 (Europe/Madrid) · Claude Opus 5.5
 - **Fase actual:** F1 — Navegación, exploración y exobiología (✅ completada y fusionada en `main` en `b96fecf`). F0 ✅ fusionada en `main` (2b953e6).
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md`](docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md) — ✅ aprobada (2026-10-17); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
 - **Plan activo:** [`docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md`](docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md) — ✅ completado (33/33 tareas, bloques 0–5). Anterior: [`2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) ✅ 19/19
@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** Fase F1 completada y fusionada en `main` (`b96fecf`).
-- **Siguiente acción:** redactar la spec de **F2 — Cazarrecompensas/combate y minería** en `docs/specs/`.
+- **Tarea:** F2 — spec en borrador: [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
+- **Siguiente acción:** aprobación de la spec por el propietario → escribir el plan de F2.
 
 ## Fases
 
@@ -19,7 +19,7 @@
 |---|---|---|
 | F0 | Cimientos (lectura, estado, SQLite, servidor, UI base, panel general, instalador) | ✅ completada y fusionada (2b953e6) |
 | F1 | Navegación, exploración, exobiología | ✅ completada y fusionada (b96fecf) |
-| F2 | Cazarrecompensas/combate, minería | ⬜ |
+| F2 | Cazarrecompensas/combate (incl. AX), minería | 🔄 spec en borrador |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ⬜ |
 | F4 | Ingenieros y materiales | ⬜ |
 | F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | ⬜ |
@@ -113,6 +113,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
 
 ## Decisiones tomadas
+
+- 2026-10-18 · Propietario: F2 sin Rhino ni Law & Disorder, con AX; maquetas de combate y minería v2 aprobadas; calor como indicador de 3 estados y casco por escalones (el juego no expone calor % ni casco en vivo).
 
 - 2026-10-18 · Task 32 (cierre de F1): se añaden `--disable-gpu --disable-gpu-compositing --num-raster-threads=1 --js-flags=--max-old-space-size=32`, `StorageServiceOutOfProcess` desactivado y `COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW` por defecto en `apps/desktop/src/window.rs` para mantener el consumo total con los 3 módulos de F1 en **108,01 MB** (< 150 MB) y **0,00 % CPU** en reposo (< 1 %). Por instrucción del propietario («Revisa el estado del proyecto y finaliza F1»), se cierra F1 dejando documentada la cobertura parcial del historial local de 7 diarios.
 - 2026-10-18 · Propietario: aprueba corrección §5.1 de validación MaxJumpRange con masa en vacío y combustible máximo por salto; spec sincronizada.
