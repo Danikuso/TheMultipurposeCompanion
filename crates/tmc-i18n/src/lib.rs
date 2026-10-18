@@ -282,6 +282,7 @@ mod tests {
                 ("distance", FluentValue::from("12 ly")),
                 ("days", FluentValue::from(3)),
                 ("time", FluentValue::from("00:45")),
+                ("station", FluentValue::from("Jameson Memorial")),
             ] {
                 args.set(name, value);
             }
@@ -346,6 +347,23 @@ mod tests {
         for language in LANGUAGES {
             assert_eq!(keys(language), reference, "{language}");
         }
+    }
+
+    #[test]
+    fn french_and_portuguese_plurals_use_the_number_for_zero() {
+        for (lang, key, var) in [
+            ("fr", "combat-kills", "count"),
+            ("pt", "combat-kills", "count"),
+            ("fr", "mining-limpets-left", "count"),
+            ("pt", "mining-limpets-left", "count"),
+            ("fr", "mining-price-age", "days"),
+            ("pt", "mining-price-age", "days"),
+        ] {
+            let text = I18n::new(lang).t(key, &[(var, FluentValue::from(0))]);
+            assert!(text.contains('0'), "{lang} {key}: {text}");
+        }
+        let fr = I18n::new("fr").t("combat-kills", &[("count", FluentValue::from(0))]);
+        assert!(fr.ends_with("destruction") && !fr.ends_with("destructions"), "{fr}");
     }
 
     #[test]

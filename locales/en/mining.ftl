@@ -19,7 +19,7 @@ mining-limpets-left = { $count ->
    *[other] { $count } limpets left
 }
 mining-where-to-sell = Where to sell
-mining-sell-at = { $price } per t · { $distance }
+mining-sell-at = { $station }: { $price }/t · { $distance }
 mining-price-age = { $days ->
     [one] price from 1 day ago
    *[other] price from { $days } days ago

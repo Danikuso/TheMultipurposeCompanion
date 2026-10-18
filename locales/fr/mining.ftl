@@ -15,13 +15,13 @@ mining-refinery-tons = Raffiné : { $tons } t
 mining-rate = Rythme : { $rate }
 mining-limpets = Limpets
 mining-limpets-left = { $count ->
-    [one] il reste 1 limpet
+    [one] il reste { $count } limpet
    *[other] il reste { $count } limpets
 }
 mining-where-to-sell = Où vendre
-mining-sell-at = { $price } la t · { $distance }
+mining-sell-at = { $station } : { $price }/t · { $distance }
 mining-price-age = { $days ->
-    [one] prix d'il y a 1 jour
+    [one] prix d'il y a { $days } jour
    *[other] prix d'il y a { $days } jours
 }
 mining-ship = Vaisseau : { $ship }

@@ -27,7 +27,7 @@ combat-pips-sys = SIS
 combat-pips-eng = MOT
 combat-pips-wep = ARM
 combat-bounties-unclaimed = { $count ->
-    [one] 1 recompensa por cobrar · { $credits }
+    [one] { $count } recompensa por cobrar · { $credits }
    *[other] { $count } recompensas por cobrar · { $credits }
 }
 combat-bounties-none = Sem recompensas pendentes
@@ -37,7 +37,7 @@ combat-zone-conflict = zona de conflito
 combat-zone-ax = AX
 combat-thargoid-presence = presença thargoide
 combat-kills = { $count ->
-    [one] 1 abate
+    [one] { $count } abate
    *[other] { $count } abates
 }
 combat-session-credits = Ganho na sessão: { $credits }
