@@ -1110,12 +1110,12 @@ fn plan_without_known_range_fails_with_reason() {
 }
 
 #[test]
-fn galaxy_plan_without_fsd_fails_with_reason_and_neutron_fails_without_range() {
+fn galaxy_plan_without_fsd_fails_with_reason_and_neutron_uses_game_max_jump_range() {
     let mut h = Harness::new();
     h.load_game();
     h.loadout(
         "int_hyperdrive_size9_class9_future",
-        r#","MaxJumpRange":24.63"#,
+        r#","MaxJumpRange":31.5"#,
     );
     h.location("Sol", 10, 0.0);
     assert!(h.nav.model.as_ref().unwrap().fsd.is_none());
@@ -1126,7 +1126,25 @@ fn galaxy_plan_without_fsd_fails_with_reason_and_neutron_fails_without_range() {
     assert_eq!(h.plan_topic()["status"], "failed");
     assert_eq!(h.plan_topic()["error_key"], "nav-plan-error-no-fsd");
     assert!(h.route_requests().is_empty());
-    // Sin FSD conocido tampoco hay alcance fiable: el modo neutrones también falla.
+    // FSD desconocido: el planificador usa el MaxJumpRange del juego tal cual.
+    h.act(
+        "navigation.plan",
+        json!({"to": "Colonia", "mode": "neutron"}),
+    );
+    assert_eq!(h.route_requests().len(), 1);
+    let NetQuery::NeutronRoute(p) = &h.route_requests()[0].query else {
+        panic!("{:?}", h.route_requests()[0].query);
+    };
+    assert_eq!(p.range_ly, 31.5);
+    assert_eq!(p.supercharge_multiplier, 4.0);
+}
+
+#[test]
+fn neutron_plan_with_unknown_fsd_and_no_max_jump_range_has_no_range() {
+    let mut h = Harness::new();
+    h.load_game();
+    h.loadout("int_hyperdrive_size9_class9_future", "");
+    h.location("Sol", 10, 0.0);
     h.act(
         "navigation.plan",
         json!({"to": "Colonia", "mode": "neutron"}),
