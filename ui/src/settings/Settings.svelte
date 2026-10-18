@@ -6,6 +6,9 @@
   import Panel from '../shell/Panel.svelte';
   import Pairing from './Pairing.svelte';
 
+  const DEFAULT_MINERALS = ['platinum', 'painite', 'lowtemperaturediamond', 'opal', 'alexandrite',
+    'grandidierite', 'monazite', 'musgravite', 'rhodplumsite', 'serendibite', 'benitoite'];
+
   interface ConfigDto {
     language?: string;
     auto_copy_next_system?: boolean;
@@ -14,6 +17,9 @@
     map_value_threshold?: number;
     default_neutron_efficiency?: number;
     theme_mode?: string;
+    mining_interest?: string[];
+    mining_threshold_cr?: number;
+    sell_search_radius_ly?: number;
     server?: {
       port?: number;
       lan?: boolean;
@@ -27,6 +33,11 @@
   let mapThreshold = $state<number | undefined>(500000);
   let plannerEfficiency = $state<number | undefined>(60);
   let lanEnabled = $state(false);
+  let miningInterest = $state<string[]>([...DEFAULT_MINERALS]);
+  let miningThreshold = $state<number | undefined>(1000000);
+  let sellRadius = $state<number | undefined>(100);
+  let extraMineral = $state('');
+  const knownMinerals = $derived([...DEFAULT_MINERALS, ...miningInterest.filter((k) => !DEFAULT_MINERALS.includes(k))]);
   let fullConfig = $state<ConfigDto>({});
   let saveError = $state(false);
   let saveQueue = Promise.resolve();
@@ -66,6 +77,9 @@
         onlineServices = cfg.online_services ?? true;
         mapThreshold = cfg.map_value_threshold ?? 500000;
         plannerEfficiency = cfg.default_neutron_efficiency ?? 60;
+        miningInterest = cfg.mining_interest ?? [...DEFAULT_MINERALS];
+        miningThreshold = cfg.mining_threshold_cr ?? 1000000;
+        sellRadius = cfg.sell_search_radius_ly ?? 100;
         if (cfg.language) {
           language = cfg.language;
           setLocale(cfg.language);
@@ -93,15 +107,34 @@
     mapThreshold = fullConfig.map_value_threshold ?? 500000;
     plannerEfficiency = fullConfig.default_neutron_efficiency ?? 60;
     lanEnabled = fullConfig.server?.lan ?? false;
+    miningInterest = fullConfig.mining_interest ?? [...DEFAULT_MINERALS];
+    miningThreshold = fullConfig.mining_threshold_cr ?? 1000000;
+    sellRadius = fullConfig.sell_search_radius_ly ?? 100;
     themeMode = fullConfig.theme_mode === 'classic' || fullConfig.theme_mode === 'contrast' ? fullConfig.theme_mode : 'hud';
     setLocale(language);
     applySelectedTheme(themeMode);
   }
 
+  function toggleMineral(key: string, checked: boolean) {
+    miningInterest = checked
+      ? (miningInterest.includes(key) ? miningInterest : [...miningInterest, key])
+      : miningInterest.filter((k) => k !== key);
+    saveConfig();
+  }
+
+  function addMineral() {
+    const key = extraMineral.toLowerCase().replace(/\s+/g, '');
+    extraMineral = '';
+    if (!key) return;
+    toggleMineral(key, true);
+  }
+
   function saveConfig() {
     if (mapThreshold === undefined || !Number.isSafeInteger(mapThreshold) || mapThreshold < 0
       || plannerEfficiency === undefined || !Number.isInteger(plannerEfficiency)
-      || plannerEfficiency < 0 || plannerEfficiency > 100) return;
+      || plannerEfficiency < 0 || plannerEfficiency > 100
+      || miningThreshold === undefined || !Number.isSafeInteger(miningThreshold) || miningThreshold < 0
+      || sellRadius === undefined || !Number.isInteger(sellRadius) || sellRadius < 10 || sellRadius > 500) return;
     saveError = false;
     const revision = ++saveRevision;
     const updated: ConfigDto = {
@@ -112,6 +145,9 @@
       map_value_threshold: mapThreshold,
       default_neutron_efficiency: plannerEfficiency,
       theme_mode: themeMode,
+      mining_interest: miningInterest,
+      mining_threshold_cr: miningThreshold,
+      sell_search_radius_ly: sellRadius,
       server: {
         ...(fullConfig.server ?? {}),
         lan: lanEnabled,
@@ -186,6 +222,30 @@
       <input type="number" min="0" max="100" step="1" bind:value={plannerEfficiency} onchange={saveConfig} data-testid="planner-efficiency" />
     </label>
 
+    <fieldset class="minerals" data-testid="mining-interest">
+      <legend>{t('settings-mining-interest')}</legend>
+      {#each knownMinerals as key (key)}
+        <label class="mineral">
+          <input type="checkbox" data-mineral={key} checked={miningInterest.includes(key)}
+            onchange={(e) => toggleMineral(key, e.currentTarget.checked)} />
+          <span>{key}</span>
+        </label>
+      {/each}
+      <div class="field-row">
+        <input type="text" bind:value={extraMineral} data-testid="mining-extra" aria-label={t('settings-mining-add')}
+          onkeydown={(e) => { if (e.key === 'Enter') addMineral(); }} />
+        <button type="button" data-testid="mining-add" onclick={addMineral}>{t("settings-mining-add-button")}</button>
+      </div>
+    </fieldset>
+    <label class="field-row">
+      <span>{t('settings-mining-threshold')}</span>
+      <input type="number" min="0" step="1" bind:value={miningThreshold} onchange={saveConfig} data-testid="mining-threshold" />
+    </label>
+    <label class="field-row">
+      <span>{t('settings-sell-radius')}</span>
+      <input type="number" min="10" max="500" step="1" bind:value={sellRadius} onchange={saveConfig} data-testid="sell-radius" />
+    </label>
+
     <Pairing />
   </div>
 </Panel>
@@ -211,6 +271,9 @@
     padding: 0.3rem 0.5rem;
     border-radius: 3px;
   }
+
+  .minerals { border: 1px solid var(--hud-border); display: flex; flex-direction: column; gap: 0.3rem; }
+  .mineral { display: flex; gap: 0.5rem; align-items: center; }
 
   .help-text {
     margin: 0;

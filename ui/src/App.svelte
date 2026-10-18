@@ -9,9 +9,9 @@
   import Sidebar from './shell/Sidebar.svelte';
   import Toasts from './shell/Toasts.svelte';
   import TopBar from './shell/TopBar.svelte';
-  import { contextPanel, layouts } from './shell/layouts';
+  import { autoLayout, contextPanel, layouts } from './shell/layouts';
 
-  let activeTab = $state('layout:exploration');
+  let userTab = $state<string | null>(null);
   let manual = $state<string | null>(null);
   let manualBody = $state<string | null>(null);
   const liveModules = $derived(topic<{ id: string; relevance: string }[]>('core.modules') ?? []);
@@ -23,6 +23,8 @@
     matchingExoBody?.body_id != null ? { id: matchingExoBody.body_id }
       : { name: location?.body ?? matchingExoBody?.body ?? null },
   ]));
+  const activeTab = $derived(userTab
+    ?? `layout:${autoLayout(liveModules, null) ?? 'exploration'}`);
   const activeLayout = $derived(layouts.find((layout) => activeTab === `layout:${layout.id}`));
   const layoutContext = $derived({ modules: liveModules, manual: manualBody === bodyIdentity ? manual : null });
   const visibleSlots = $derived(activeLayout?.slots.filter((slot) => !slot.when || slot.when(layoutContext)) ?? []);
@@ -50,7 +52,7 @@
   <TopBar />
   <ImportProgress />
   <div class="app-body">
-    <Sidebar {activeTab} onSelect={(id) => (activeTab = id)} />
+    <Sidebar {activeTab} onSelect={(id) => (userTab = id)} />
     <Grid>
       {#if activeTab === 'settings'}
         <Settings />
@@ -58,7 +60,7 @@
         {#each visibleSlots as slot (slot.id)}
           <div class="layout-slot" class:full={slot.span === 'full'}
             style:--slot-span={slot.span === 'full' ? 1 : slot.span} data-layout-slot={slot.id}>
-            {#if slot.span === 2}
+            {#if activeLayout.id === 'exploration' && slot.span === 2}
               <div class="context-controls" role="group" aria-label={t('layout-context')}>
                 <button type="button" data-testid="context-bodies" aria-pressed={selectedContext === 'exploration'}
                   onclick={() => selectContext('exploration')}>{t('layout-context-bodies')}</button>
