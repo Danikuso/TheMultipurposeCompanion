@@ -1,0 +1,153 @@
+<script lang="ts">
+  import { t } from '../../lib/i18n';
+  import { credits, cssPct, decimal } from '../../lib/format';
+  import { topic } from '../../lib/ws.svelte';
+  import Panel from '../../shell/Panel.svelte';
+  import { materialName, type ProspectorTopic } from './types';
+
+  const p = $derived(topic<ProspectorTopic>('mining.prospector'));
+  const a = $derived(p?.current ?? null);
+
+  const names = $derived.by(() => {
+    const m = new Map<string, string>();
+    for (const row of a?.materials ?? []) if (row.name) m.set(row.key, row.name);
+    return m;
+  });
+  const restPct = $derived(
+    Math.max(0, 100 - (a?.materials ?? []).reduce((n, m) => n + m.proportion, 0)),
+  );
+  const maxValue = $derived(Math.max(0, ...(a?.materials ?? []).map((m) => m.est_value ?? 0)));
+  // Del más antiguo (izquierda) al más reciente (derecha).
+  const history = $derived([...(p?.history ?? [])].reverse());
+  const maxHist = $derived(Math.max(0, ...history.map((h) => h.est_total ?? 0)));
+
+  function approx(v: number | null): string {
+    return v == null ? '—' : t('mining-approx', { value: credits(v) });
+  }
+  function contentLabel(c: string): string {
+    return c === 'low' || c === 'medium' || c === 'high' ? t(`mining-content-${c}`) : t('mining-content-unknown');
+  }
+  function barWidth(i: number): string {
+    const m = a!.materials[i];
+    if (maxValue > 0) return cssPct(((m.est_value ?? 0) / maxValue) * 100);
+    return cssPct(m.proportion);
+  }
+  function histLabel(i: number, total: number | null): string {
+    return t('mining-history-item', { n: i + 1, value: total == null ? t('mining-no-data') : approx(total) });
+  }
+</script>
+
+<Panel titleKey="panel-mining-prospector" span={2}>
+  {#if !a}
+    <p class="muted" data-testid="prospector-empty">{t('mining-no-data')}</p>
+  {:else}
+    <div class="badges">
+      <span class="badge" data-testid="content" data-content={a.content}>{t('mining-content-level', { level: contentLabel(a.content) })}</span>
+      {#if a.motherlode}
+        <span class="core" data-testid="core">{t('mining-core-named', { material: a.motherlode })}</span>
+      {/if}
+    </div>
+
+    <div class="stack" role="img" aria-label={t('mining-composition-aria')}>
+      {#each a.materials as m, i (m.key + i)}
+        <span
+          data-testid="stack-segment"
+          class="seg c{Math.min(i, 3)}"
+          style:width={cssPct(m.proportion)}
+          title="{materialName(m.key, names)} {decimal(m.proportion)} %"
+        ></span>
+      {/each}
+      <span data-testid="stack-segment" class="seg rest" style:width={cssPct(restPct)} title={t('mining-rest-no-value')}>
+        <span data-testid="stack-rest" class="sr">{t('mining-rest-no-value')}</span>
+      </span>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>{t('mining-col-material')}</th><th>{t('mining-col-share')}</th><th>{t('mining-col-value')}</th><th></th></tr>
+      </thead>
+      <tbody>
+        {#each a.materials as m, i (m.key + i)}
+          <tr data-testid="material-row" data-interest={m.interest}>
+            <td>
+              {#if m.interest}<b class="star">{materialName(m.key, names)} <span role="img" aria-label={t('mining-interest-aria')}>★</span></b>{:else}{materialName(m.key, names)}{/if}
+            </td>
+            <td class="mono">{decimal(m.proportion)} %</td>
+            <td class="mono">{approx(m.est_value)}</td>
+            <td class="barcell">
+              <div class="bar" aria-hidden="true"><i class="c{Math.min(i, 3)}" style:width={barWidth(i)}></i></div>
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+
+    <div class="verdict" data-testid="verdict" data-kind={a.verdict.kind} role="status">
+      {#if a.verdict.kind === 'worth'}
+        {a.verdict.est_value == null ? t('mining-verdict-worth-unpriced') : t('mining-verdict-worth', { credits: credits(a.verdict.est_value) })}
+      {:else if a.verdict.kind === 'not_worth'}
+        {t('mining-verdict-not-worth')}
+      {:else}
+        {t('mining-no-data')}
+      {/if}
+    </div>
+
+    {#if a.remaining != null}
+      <div data-testid="remaining">{t('mining-remaining', { remaining: `${decimal(a.remaining, 0)} %` })}</div>
+      <div
+        class="bar remaining"
+        role="progressbar"
+        data-testid="remaining-bar"
+        aria-label={t('mining-remaining-aria')}
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow={Math.round(a.remaining)}
+      ><i style:width={cssPct(a.remaining)}></i></div>
+    {/if}
+
+    <p class="muted foot">{t('mining-footnote')}</p>
+
+    <div class="muted">{t('mining-history')}</div>
+    <ol class="hist">
+      {#each history as h, i (i)}
+        <li data-testid="history-item" title={histLabel(i, h.est_total)} aria-label={histLabel(i, h.est_total)}>
+          <i class:top={maxHist > 0 && h.est_total === maxHist} style:height={maxHist > 0 ? cssPct(((h.est_total ?? 0) / maxHist) * 100) : '0%'}></i>
+        </li>
+      {/each}
+    </ol>
+  {/if}
+</Panel>
+
+<style>
+  .muted { color: var(--hud-muted); margin: 0; }
+  .foot { font-size: 0.8em; margin: 0.4rem 0; }
+  .mono { font-family: var(--font-mono); }
+  .badges { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.4rem; }
+  .badge { border: 1px solid var(--hud-ok); color: var(--hud-ok); padding: 0 0.4rem; }
+  .badge[data-content='low'] { border-color: var(--hud-muted); color: var(--hud-muted); }
+  .badge[data-content='medium'] { border-color: var(--hud-warning); color: var(--hud-warning); }
+  .core { border: 2px solid var(--hud-warning); color: var(--hud-warning); font-weight: 700; padding: 0 0.5rem; }
+  .stack { display: flex; height: 1.6rem; border: 1px solid var(--hud-border); margin: 0.4rem 0; overflow: hidden; position: relative; }
+  .seg { display: block; height: 100%; overflow: hidden; }
+  .seg.rest { background: var(--hud-surface-alt); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .c0 { background: var(--hud-warning); }
+  .c1 { background: var(--hud-primary); }
+  .c2 { background: var(--hud-muted); }
+  .c3 { background: var(--hud-border); }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 0.15rem 0.5rem 0.15rem 0; white-space: nowrap; }
+  th { color: var(--hud-muted); font-weight: normal; border-bottom: 1px solid var(--hud-border); }
+  .star { color: var(--hud-warning); }
+  .barcell { width: 7rem; }
+  .bar { height: 0.9rem; background: var(--hud-surface-alt); border: 1px solid var(--hud-border); position: relative; }
+  .bar i { position: absolute; left: 0; top: 0; bottom: 0; }
+  .remaining i { background: var(--hud-ok); }
+  .verdict { border: 2px solid var(--hud-muted); color: var(--hud-muted); font-weight: 700; font-size: 1.25em; padding: 0.3rem 0.6rem; text-align: center; margin: 0.6rem 0; }
+  .verdict[data-kind='worth'] { border-color: var(--hud-ok); color: var(--hud-ok); }
+  .verdict[data-kind='not_worth'] { border-color: var(--hud-danger); color: var(--hud-danger); }
+  .hist { list-style: none; display: flex; gap: 0.25rem; margin: 0.25rem 0 0; padding: 0; }
+  .hist li { flex: 1; height: 2.2rem; border: 1px solid var(--hud-border); display: flex; align-items: flex-end; }
+  .hist i { display: block; width: 100%; background: var(--hud-muted); }
+  .hist i.top { background: var(--hud-warning); }
+</style>
