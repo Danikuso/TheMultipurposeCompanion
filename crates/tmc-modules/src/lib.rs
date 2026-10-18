@@ -7,6 +7,7 @@ pub mod data;
 pub mod eval;
 pub mod exobiology;
 pub mod exploration;
+pub mod history;
 pub mod navigation;
 pub mod registry;
 pub use dashboard::Dashboard;
