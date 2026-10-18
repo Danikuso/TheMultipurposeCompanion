@@ -124,12 +124,19 @@ fn mapped_of(scan_extra: &str) -> u64 {
 }
 
 fn advice(r: &Value) -> Vec<String> {
-    r["advice"]
+    let Some(value) = r.get("advice") else {
+        return vec!["not_worth".to_owned()];
+    };
+    value
         .as_array()
         .unwrap()
         .iter()
         .map(|a| a.as_str().unwrap().to_owned())
         .collect()
+}
+
+fn marked(row: &Value, bit: u8) -> bool {
+    row.get("marks").and_then(Value::as_u64).unwrap_or(0) & u64::from(bit) != 0
 }
 
 const BIO2: &str = r#","Signals":[{"Type":"$SAA_SignalType_Biological;","Count":2},{"Type":"$SAA_SignalType_Human;","Count":9}]"#;
@@ -246,7 +253,7 @@ fn saa_complete_replaces_estimated_probes() {
     let before = h.row(5);
     assert_eq!(before["probes"]["estimated"], true);
     assert_eq!(before["probes"]["n"], 5);
-    assert!(before.get("mapped_by_you").is_none());
+    assert!(!marked(&before, 32));
     let est = before["mapped_value"].as_u64().unwrap();
 
     h.journal(
@@ -254,8 +261,8 @@ fn saa_complete_replaces_estimated_probes() {
         r#","BodyName":"Sys 5","BodyID":5,"ProbesUsed":6,"EfficiencyTarget":6"#,
     );
     let r = h.row(5);
-    assert_eq!(r["probes"], json!({"n": 6, "estimated": false}));
-    assert_eq!(r["mapped_by_you"], true);
+    assert_eq!(r["probes"], json!({"n": 6}));
+    assert!(marked(&r, 32));
     assert_eq!(r["mapped_value"], est); // dentro del objetivo: eficiencia conservada
     assert_eq!(advice(&r), vec!["not_worth"]); // ya mapeado por ti: no se aconseja mapear
 
@@ -269,7 +276,7 @@ fn saa_complete_replaces_estimated_probes() {
         (worse as f64 - est as f64 / 1.25).abs() <= 2.0,
         "{worse} {est}"
     );
-    assert_eq!(h.row(5)["probes"], json!({"n": 6, "estimated": false}));
+    assert_eq!(h.row(5)["probes"], json!({"n": 6}));
 }
 
 #[test]
@@ -327,8 +334,8 @@ fn body_row_scoopable_uses_shared_star_flags() {
     };
     h.scan(&star(1, "K"));
     h.scan(&star(2, "N"));
-    assert_eq!(h.row(1)["scoopable"], true);
-    assert!(h.row(2).get("scoopable").is_none());
+    assert!(marked(&h.row(1), 4));
+    assert!(!marked(&h.row(2), 4));
     assert_eq!(h.row(1)["kind_key"], "star-main");
     assert_eq!(h.row(2)["kind_key"], "star-neutron");
 }
@@ -361,13 +368,13 @@ fn discovered_badge_and_first_discovery_from_was_discovered() {
         r#","BodyName":"Sys","BodyID":0,"DistanceFromArrivalLS":0.0,"StarType":"G","StellarMass":1.0,"WasDiscovered":false"#,
     );
     assert_eq!(h.topic()["discovered"], false);
-    assert_eq!(h.row(0)["first_discovery"], true);
+    assert!(marked(&h.row(0), 8));
     assert_eq!(h.row(0)["short_name"], "Sys");
     // Estrella principal con valor x2,6.
     assert_eq!(h.row(0)["scanned_value"], 3_167);
     h.scan(&elw(2));
-    assert!(h.row(2).get("first_discovery").is_none());
-    assert_eq!(h.row(2)["already_mapped"], true);
+    assert!(!marked(&h.row(2), 8));
+    assert!(marked(&h.row(2), 16));
     assert_eq!(h.row(2)["short_name"], "2");
 }
 
@@ -426,6 +433,10 @@ fn values_now_and_if_mapped_follow_definitions() {
 
 #[test]
 fn system_with_300_bodies_keeps_topic_under_64_kib() {
+    assert_crowded_system_size(&crowded_system(false, false));
+}
+
+fn crowded_system(mapped: bool, previously_mapped: bool) -> H {
     let mut h = H::new();
     h.jump("Synuefe XR-H", 1);
     h.journal("FSSDiscoveryScan", r#","BodyCount":320,"SystemAddress":1"#);
@@ -450,28 +461,199 @@ fn system_with_300_bodies_keeps_topic_under_64_kib() {
         let dist = next() * 90_000.0;
         let radius = 1_000_000.0 + next() * 9_000_000.0;
         h.scan(&format!(
-            r#","BodyName":"Synuefe XR-H {} {} {}","BodyID":{id},"DistanceFromArrivalLS":{dist},"PlanetClass":"{class}","MassEM":{mass},"Radius":{radius},"Landable":{},"WasDiscovered":{},"WasMapped":false,"TerraformState":"{}""#,
+            r#","BodyName":"Synuefe XR-H {} {} {}","BodyID":{id},"DistanceFromArrivalLS":{dist},"PlanetClass":"{class}","MassEM":{mass},"Radius":{radius},"Landable":{},"WasDiscovered":{},"WasMapped":{previously_mapped},"TerraformState":"{}""#,
             id % 40,
             (b'a' + (id % 26) as u8) as char,
             id % 5,
             id % 2 == 0,
-            id % 4 != 0,
+            previously_mapped || id % 4 != 0,
             if id % 3 == 0 { "Terraformable" } else { "" },
         ));
+        if mapped {
+            h.journal(
+                "SAAScanComplete",
+                &format!(r#", "BodyID":{id},"ProbesUsed":6,"EfficiencyTarget":6"#),
+            );
+            if id % 2 == 0
+                && matches!(
+                    class,
+                    "Rocky body" | "Rocky ice body" | "Icy body" | "High metal content body"
+                )
+            {
+                h.journal("SAASignalsFound",&format!(r#", "BodyID":{id},"Signals":[{{"Type":"$SAA_SignalType_Biological;","Count":4}},{{"Type":"$SAA_SignalType_Geological;","Count":3}}]"#));
+            }
+        }
     }
+    h
+}
+
+#[test]
+fn system_with_300_mapped_bodies_and_signals_keeps_topic_under_64_kib() {
+    let h = crowded_system(true, false);
+    let rows = h.rows();
+    assert!(rows.iter().all(|r| marked(r, 32)));
+    assert!(rows.iter().any(|r| r["bio"] == 4 && r["geo"] == 3));
+    assert!(rows.iter().any(|r| marked(r, 1)));
+    assert_crowded_system_size(&h);
+}
+
+#[test]
+fn system_with_300_previously_mapped_bodies_preserves_all_marks_under_64_kib() {
+    let h = crowded_system(true, true);
+    let rows = h.rows();
+    assert!(rows.iter().all(|r| marked(r, 16) && marked(r, 32)));
+    assert!(rows.iter().all(|r| !marked(r, 8)));
+    assert!(rows.iter().any(|r| r["bio"] == 4 && r["geo"] == 3));
+    assert_crowded_system_size(&h);
+}
+
+#[test]
+fn system_with_300_landable_bodies_all_mapped_and_signalled_stays_under_64_kib() {
+    let mut h = H::new();
+    h.jump("Sys", 1);
+    h.journal("FSSDiscoveryScan", r#", "BodyCount":300,"SystemAddress":1"#);
+    for id in 1..=300 {
+        h.scan(&planet(
+            id,
+            &format!("{id} a"),
+            "Rocky ice body",
+            1.0,
+            r#", "Landable":true"#,
+        ));
+        h.journal(
+            "SAAScanComplete",
+            &format!(r#", "BodyID":{id},"ProbesUsed":6,"EfficiencyTarget":6"#),
+        );
+        h.journal("SAASignalsFound",&format!(r#", "BodyID":{id},"Signals":[{{"Type":"$SAA_SignalType_Biological;","Count":4}},{{"Type":"$SAA_SignalType_Geological;","Count":3}}]"#));
+    }
+    let rows = h.rows();
+    assert!(
+        rows.iter()
+            .all(|r| marked(r, 2) && marked(r, 16) && marked(r, 32))
+    );
+    assert!(rows.iter().all(|r| r["bio"] == 4 && r["geo"] == 3));
+    assert!(rows.iter().all(|r| advice(r) == ["land"]));
+    assert_crowded_system_size(&h);
+}
+
+fn assert_crowded_system_size(h: &H) {
     let topic = h.topic();
     let bytes = serde_json::to_vec(&topic).unwrap().len();
     println!("topic 300 bodies: {bytes} bytes; row: {}", rows_dbg(&topic));
     assert!(bytes < 65_536, "{bytes}");
     let rows = topic["rows"].as_array().unwrap();
     assert_eq!(rows.len(), 300);
+    assert_eq!(
+        rows.iter()
+            .map(|r| r["body_id"].as_u64().unwrap())
+            .collect::<std::collections::BTreeSet<_>>(),
+        (1..=300).collect()
+    );
     assert_eq!(topic["fss"]["scanned"], 300);
-    assert_eq!(topic["unidentified"], 20);
+    assert_eq!(
+        topic["unidentified"],
+        topic["fss"]["body_count"]
+            .as_u64()
+            .unwrap()
+            .saturating_sub(300)
+    );
     let mapped: Vec<u64> = rows
         .iter()
         .map(|r| r["mapped_value"].as_u64().unwrap())
         .collect();
     assert!(mapped.windows(2).all(|w| w[0] >= w[1]));
+}
+
+#[test]
+fn body_row_wire_marks_preserve_all_64_combinations_and_other_fields() {
+    use super::system::{Advice, BodyRow, ProbeHint};
+    for marks in 0..64u8 {
+        let row = BodyRow {
+            body_id: 7,
+            short_name: "7 a".into(),
+            kind_key: "rocky-ice".into(),
+            star_class: None,
+            distance_ls: Some(100.5),
+            scanned_value: 500,
+            mapped_value: Some(2708),
+            bio: 4,
+            geo: 3,
+            terraformable: marks & 1 != 0,
+            landable: marks & 2 != 0,
+            scoopable: marks & 4 != 0,
+            first_discovery: marks & 8 != 0,
+            already_mapped: marks & 16 != 0,
+            mapped_by_you: marks & 32 != 0,
+            probes: Some(ProbeHint {
+                n: 6,
+                estimated: false,
+            }),
+            advice: vec![Advice::Map, Advice::Land],
+        };
+        let wire = serde_json::to_value(&row).unwrap();
+        assert_eq!(
+            wire.get("marks").and_then(Value::as_u64).unwrap_or(0),
+            u64::from(marks)
+        );
+        if marks == 0 {
+            assert!(wire.get("marks").is_none());
+        }
+        for (bit, expected) in [
+            (1, row.terraformable),
+            (2, row.landable),
+            (4, row.scoopable),
+            (8, row.first_discovery),
+            (16, row.already_mapped),
+            (32, row.mapped_by_you),
+        ] {
+            assert_eq!(marked(&wire, bit), expected);
+        }
+        for key in [
+            "terraformable",
+            "landable",
+            "scoopable",
+            "first_discovery",
+            "already_mapped",
+            "mapped_by_you",
+        ] {
+            assert!(wire.get(key).is_none());
+        }
+        assert_eq!(wire["short_name"], "7 a");
+        assert_eq!(wire["kind_key"], "rocky-ice");
+        assert_eq!(wire["distance_ls"], 100.5);
+        assert_eq!(wire["scanned_value"], 500);
+        assert_eq!(wire["mapped_value"], 2708);
+        assert_eq!(wire["bio"], 4);
+        assert_eq!(wire["geo"], 3);
+        assert_eq!(wire["probes"], json!({"n":6}));
+        assert_eq!(advice(&wire), ["map", "land"]);
+    }
+}
+
+#[test]
+fn terraforming_marker_matches_terraformable_bonus_but_not_terraformed() {
+    let mut h = H::new();
+    h.jump("Sys", 1);
+    for (id, state) in [
+        (1, "Terraformable"),
+        (2, "Terraforming"),
+        (3, "Terraformed"),
+    ] {
+        h.scan(&planet(
+            id,
+            &id.to_string(),
+            "High metal content body",
+            1.0,
+            &format!(r#", "TerraformState":"{state}""#),
+        ));
+    }
+    assert!(marked(&h.row(1), 1));
+    assert!(marked(&h.row(2), 1));
+    assert!(!marked(&h.row(3), 1));
+    assert_eq!(h.row(1)["scanned_value"], h.row(2)["scanned_value"]);
+    assert!(
+        h.row(1)["scanned_value"].as_u64().unwrap() > h.row(3)["scanned_value"].as_u64().unwrap()
+    );
 }
 
 fn rows_dbg(topic: &Value) -> String {

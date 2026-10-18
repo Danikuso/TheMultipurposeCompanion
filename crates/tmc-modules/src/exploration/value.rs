@@ -67,10 +67,7 @@ fn planet_k(class: &str, terraformable: bool) -> f64 {
 pub fn body_kind(scan: &Scan) -> Option<BodyKind> {
     if let Some(class) = scan.planet_class.as_deref().filter(|c| !c.is_empty()) {
         // «Terraformed» (ya terraformado) NO cuenta como terraformable.
-        let terraformable = matches!(
-            scan.terraform_state.as_deref(),
-            Some("Terraformable") | Some("Terraforming")
-        );
+        let terraformable = is_terraformable(scan);
         return Some(BodyKind::Planet {
             k: planet_k(class, terraformable),
         });
@@ -79,6 +76,13 @@ pub fn body_kind(scan: &Scan) -> Option<BodyKind> {
         .as_deref()
         .filter(|s| !s.is_empty())
         .map(|s| BodyKind::Star { k: star_k(s) })
+}
+
+pub(super) fn is_terraformable(scan: &Scan) -> bool {
+    matches!(
+        scan.terraform_state.as_deref(),
+        Some("Terraformable") | Some("Terraforming")
+    )
 }
 
 fn round(v: f64) -> u64 {

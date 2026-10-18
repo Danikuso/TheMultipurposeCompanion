@@ -678,10 +678,11 @@ test('disabled planner explains why', ...)
   - `pub struct Exploration` (`impl Module`, id `"exploration"`), registrada en `all_modules()`.
   - `BodyRow { body_id: u32, short_name, kind_key: String, distance_ls: Option<f64>, scanned_value: u64, mapped_value: Option<u64>, bio: u32, geo: u32, terraformable, landable, scoopable /* vía data::star_flags */, first_discovery, already_mapped, mapped_by_you, probes: Option<ProbeHint { n: u8, estimated: bool }>, advice: Vec<Advice> }`; `enum Advice { Map, Land, NotWorth }` (Map si `mapped_value ≥ umbral`; Land si bio > 0 y aterrizable; combinables; si ninguno, NotWorth).
   - Topic `exploration.system` = `{ system, system_address, discovered: Option<bool>, fss: { progress, body_count, scanned, complete }, value_now: u64, value_if_mapped: u64, unidentified: Option<u32>, rows: Vec<BodyRow> /*ordenadas por mapped_value desc, luego scanned*/ }` en forma compacta (campos `Option` omitidos con `skip_serializing_if`).
+  - Serialización compacta (2026-10-18): las seis marcas booleanas de `BodyRow` se envían en `marks: u8` (ausente = 0): 1 terraformable, 2 landable, 4 scoopable, 8 first_discovery, 16 already_mapped, 32 mapped_by_you. Los campos Rust conservan sus nombres/tipos; los seis campos booleanos no se repiten en JSON. `probes.estimated` omitido equivale a `false`; `advice` omitido equivale a `['not_worth']`; `Map`/`Land` siempre explícitos. La UI de Task 23 debe decodificar ese contrato.
   - Se reinicia en `FSDJump`/`CarrierJump`/`Location` de otro sistema. `Scan` repetido del mismo `BodyID` actualiza la fila (sin duplicar).
   - Relevancia: `Active` con `GuiFocus::Fss` o con `body_count > scanned`; si no, `Normal`.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn fss_progress_counts_scanned_vs_body_count() { /* FSSDiscoveryScan{BodyCount:10} + 4 Scan de BodyID distintos → fss.body_count==10, fss.scanned==4, complete==false */ }
@@ -697,8 +698,8 @@ test('disabled planner explains why', ...)
 #[test] fn system_with_300_bodies_keeps_topic_under_64_kib() { /* 300 Scan → serde_json::to_vec(topic).len() < 65_536 y orden correcto */ }
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** PASS; Checks.
-- [ ] **Step 5: Commit** `feat(modules): cuerpos del sistema con progreso FSS, valores y consejo`
+- [x] **Step 2:** FAIL de regresiones observado durante revisión; ciclo inicial de 9940901 no reconstruido. **Step 3:** implementar. **Step 4:** PASS; Checks.
+- [x] **Step 5: Commit** `feat(modules): cuerpos del sistema con progreso FSS, valores y consejo`
 
 ### Task 22: `exploration` — datos sin vender
 
@@ -732,6 +733,7 @@ test('disabled planner explains why', ...)
 - Produces:
   - `VirtualList.svelte`: props `items: T[]`, `rowHeight: number`, `height: number`, snippet `row`; renderiza solo las filas visibles + 5 de margen; recalcula **solo** en `scroll`/cambio de `items` (sin rAF continuo).
   - `SystemBodiesPanel.svelte` (size `large`): cabecera (sistema, descubierto, barra FSS, valor actual y si se mapea), tabla (columnas de spec §3.3; «—» en mapeo de estrellas; «≈» en sondas estimadas; filas `Map` resaltadas), pie (sin identificar + datos sin vender de `exploration.unsold`).
+  - Contrato JSON de Task 21: en cada fila, `advice ?? ['not_worth']`, `probes.estimated ?? false`, marcas desde `marks ?? 0` (bits 1 terraformable, 2 landable, 4 scoopable, 8 first_discovery, 16 already_mapped, 32 mapped_by_you), `bio`/`geo` ausentes = 0; `kind_key` se traduce con `exploration-kind-<id>` y el consejo `not_worth` usa `exploration-advice-not-worth`.
   - `registry.ts`: entrada `exploration`.
 
 - [ ] **Step 1: Tests:**
@@ -1004,3 +1006,14 @@ Interfaces a confirmar al ejecutar (verificar en código al ejecutar): nombre de
 - 2026-10-17 · Spike 2 (licencias): `fsd.json`, `species.json`, `bio_rules.json` y `probes.json` se construyen desde hechos con procedencia por entrada y `verified`; ninguna fuente externa se incorpora. Afecta a Tasks 13, 20, 24, 25, 29.
 - 2026-10-17 · Spike 3 (Canonn) — **pendiente del propietario**: la API es viable (`getSystemPoi`, `codex/ref`), pero su README exige solicitud formal de uso y pide enviar datos de usuarios. La capa 3 se implementa **desactivada** (`NetOutcome::Disabled`) hasta que el propietario decida; desvía la spec §5.3 («activada por defecto»). Afecta a Tasks 10, 25, 27, 31.
 - 2026-10-17 · Preflight: aplicadas las resoluciones C1–C31 de la revisión previa (ver ledger de ejecución).
+
+
+### Retoma y revisión de Task 21 (2026-10-18)
+
+- Implementación existente: 9940901; no se repite su TDD original. La revisión detectó dos P2: payload de 300 cuerpos tras mapeo/señales/marcas (68.696 bytes en regresión RED) y marca Terraforming incoherente con fórmula Task 20. Correcciones TDD en curso.
+- Verificación inicial: cargo fmt --all --check y cargo clippy --workspace --all-targets --offline -- -D warnings PASS; UI npm.cmd run check/test/build PASS (46 tests). Dos tests de rename fallan dentro del sandbox y pasan sin cambios con ejecución escalada: invalid_config_is_backed_up_and_defaulted y corrupt_database_is_renamed_and_rebuilt.
+- Subpaso de verificación segura: el test preexistente config_host_roundtrips_and_validates_language se aísla con tempdir y AppActions::with_save_path para no modificar la configuración real al verificar fuera del sandbox; solo cambia el test, sin cambios de producción.
+
+- Desviación de serialización Task 21 (2026-10-18): se compactan las seis marcas en marks y se omiten defaults estimated=false/advice=[not_worth], conservando filas e información. Interfaces Tasks 21/23 sincronizadas; la spec no fija claves JSON. Corpus finales medidos: base 53.172 bytes; mapeados mixtos 48.873; previamente mapeados mixtos 48.759; homogéneo con señales en 300 cuerpos 54.560 (RED anterior 68.960). Un test de 64 combinaciones verifica la decodificación completa de las marcas. Terraforming y Terraformable comparten el mismo predicado de marca/valor; Terraformed queda excluido.
+
+- Cierre Task 21 (2026-10-18): revisión final aprobada; regresiones de payload y Terraforming RED→GREEN. cargo fmt --all --check, cargo clippy --workspace --all-targets --offline -- -D warnings, cargo test --workspace --offline --quiet y git diff --check: código 0, 392 tests Rust PASS (132 modules). UI npm.cmd --prefix ui run check/test/build: código 0, 46 tests PASS. Los tests de rename requieren ejecución escalada en este entorno; no son regresiones. Aislamiento del test de configuración registrado en 4e01e51. Topic máximo medido 54.560 bytes (<65.536), 300 filas intactas y 64 combinaciones de marks verificadas.

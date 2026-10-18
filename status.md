@@ -2,16 +2,16 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-17 22:20 (Europe/Madrid) · Claude Opus 5.5
-- **Fase actual:** F1 — Navegación, exploración y exobiología (spec aprobada; plan en redacción). F0 ✅ fusionada en `main` (2b953e6).
+- **Última actualización:** 2026-10-18 03:47 (Europe/Madrid) · Codex
+- **Fase actual:** F1 — Navegación, exploración y exobiología (spec y plan aprobados; en ejecución). F0 ✅ fusionada en `main` (2b953e6).
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md`](docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md) — ✅ aprobada (2026-10-17); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
 - **Plan activo:** [`docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md`](docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md) — ✅ aprobado (2026-10-17), 33 tareas, bloques 0–5. Ejecución con subagentes. Anterior: [`2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) ✅ 19/19
 - **Rama de trabajo:** `fase/f1-navegacion-exploracion` (desde `main` tras fusionar F0)
 
 ## Puntero actual
 
-- **Tarea:** F1 · Bloque 0 (spikes) completado; Task 21 (`exploration` — cuerpos del sistema, FSS y consejo) 🔄 en curso (Bloque 3).
-- **Siguiente acción:** completar la Task 21 del plan de F1 (ejecución con subagentes; ledger en `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`, no versionado).
+- **Tarea:** F1 · Task 22 (`exploration` — datos sin vender), Step 1: tests.
+- **Siguiente acción:** escribir tests de Task 22 y observar RED antes de implementar el libro de datos sin vender y su reconstrucción. Task 21 revisada y verificada: 392 tests Rust, 46 UI, fmt/clippy/check/build PASS. Ledger local: `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`.
 
 ## Fases
 
@@ -56,7 +56,9 @@
 | 18b | Ajuste de la tira (cabecera «Siguiente salto») | ✅ hecha | 9815cce | Verificado en una demo en vivo con datos reales de Spansh. |
 | 19 | UI — panel del planificador | ✅ código hecho | 34d3b9c, a15b5ee | Formulario, autocompletado con id64, eficiencia por defecto de Ajustes, resultado y aceptar/borrar; 46 tests UI PASS. Revisión aprobada tras 1 ronda. Validación visual del propietario: ✅ aprobada (2026-10-18). |
 | 20 | `exploration` — valor de cuerpos y sondas | ✅ hecha | fe26c90, 123b335, 7cfb305 | Fórmulas propias (FSS, mapeo con eficiencia, primeros, Odyssey), gigantes gaseosos mapeables, nombres reales del diario, `probes.json` con `verified:false`; 18 exploration PASS. Revisión aprobada tras 1 ronda. |
-| 21–32 | Ver plan | ⬜ | — | |
+| 21 | `exploration` — cuerpos del sistema, FSS y consejo | ✅ hecha | 9940901; cierre en este commit | P2 de payload y Terraforming corregidos; marks compacto documentado para Task 23; 392 Rust/46 UI PASS, revisión aprobada. |
+| 22 | `exploration` — datos sin vender | 🔄 en curso | — | Step 1: tests. |
+| 23–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
@@ -128,6 +130,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-18 03:37 (Europe/Madrid) · Codex · Retoma F1 Task 21 desde implementación 9940901; árbol inicialmente limpio. Revisión contra spec/plan y verificación global en curso; no se repite implementación ni Tasks 0–20.
 
 - 2026-10-18 01:00 (Europe/Madrid) · Claude Opus 5.5 · F1 Bloques 0 y 1 completados (Tasks 0–12) con subagentes, revisión por tarea y rondas de corrección; workspace en verde. Decisión del propietario: Canonn desactivado hasta su permiso. Siguiente: Task 13. Ledger local (no versionado): `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`.
 

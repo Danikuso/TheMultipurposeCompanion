@@ -2,16 +2,20 @@
 //! `exploration.system` (progreso del FSS, valores, señales y consejo).
 
 use super::value::planet_mapped_value;
-use super::value::{BodyKind, ValueFlags, body_kind, body_values, estimate_probes, planet_base};
+use super::value::{
+    BodyKind, ValueFlags, body_kind, body_values, estimate_probes, is_terraformable, planet_base,
+};
 use crate::data::{StarSpecial, star_flags};
-use serde::Serialize;
+use serde::{Serialize, Serializer, ser::SerializeMap};
 use std::collections::{BTreeMap, HashMap};
 use tmc_model::events::{Scan, Signal};
 
-/// Sondas DSS: `estimated` es `true` mientras sea una aproximación por radio.
+/// Sondas DSS: `estimated` es `true` mientras sea una aproximación por radio;
+/// si se omite en el tópico, equivale a `false` (objetivo conocido).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct ProbeHint {
     pub n: u8,
+    #[serde(skip_serializing_if = "is_false")]
     pub estimated: bool,
 }
 
@@ -24,49 +28,81 @@ pub enum Advice {
     NotWorth,
 }
 
+fn is_default_advice(advice: &[Advice]) -> bool {
+    advice == [Advice::NotWorth]
+}
+
 fn is_false(b: &bool) -> bool {
     !*b
 }
 
-fn is_zero(n: &u32) -> bool {
-    *n == 0
-}
-
-/// Fila del panel. Los booleanos a `false`, las señales a 0 y los `Option` a
-/// `None` se omiten para mantener el tópico compacto (300 cuerpos < 64 KiB).
-#[derive(Debug, Clone, PartialEq, Serialize)]
+/// Fila del panel. Las seis marcas conservan sus campos Rust y se serializan
+/// en `marks`: 1 terraformable, 2 landable, 4 scoopable, 8 first_discovery,
+/// 16 already_mapped, 32 mapped_by_you. `marks` ausente equivale a 0.
+/// Las señales a 0 y los `Option` a `None` se omiten.
+/// `advice` ausente equivale a `[NotWorth]`; Map y Land siempre son explícitos.
+#[derive(Debug, Clone, PartialEq)]
 pub struct BodyRow {
     pub body_id: u32,
     pub short_name: String,
     /// Tipo de cuerpo; etiqueta en la clave Fluent `exploration-kind-<kind_key>`.
     pub kind_key: String,
     /// Clase espectral de las estrellas (para mostrar «Estrella K»).
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub star_class: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub distance_ls: Option<f64>,
     pub scanned_value: u64,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub mapped_value: Option<u64>,
-    #[serde(skip_serializing_if = "is_zero")]
     pub bio: u32,
-    #[serde(skip_serializing_if = "is_zero")]
     pub geo: u32,
-    #[serde(skip_serializing_if = "is_false")]
     pub terraformable: bool,
-    #[serde(skip_serializing_if = "is_false")]
     pub landable: bool,
-    #[serde(skip_serializing_if = "is_false")]
     pub scoopable: bool,
-    #[serde(skip_serializing_if = "is_false")]
     pub first_discovery: bool,
-    #[serde(skip_serializing_if = "is_false")]
     pub already_mapped: bool,
-    #[serde(skip_serializing_if = "is_false")]
     pub mapped_by_you: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub probes: Option<ProbeHint>,
     pub advice: Vec<Advice>,
+}
+
+impl Serialize for BodyRow {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut row = serializer.serialize_map(None)?;
+        row.serialize_entry("body_id", &self.body_id)?;
+        row.serialize_entry("short_name", &self.short_name)?;
+        row.serialize_entry("kind_key", &self.kind_key)?;
+        if let Some(class) = &self.star_class {
+            row.serialize_entry("star_class", class)?;
+        }
+        if let Some(distance) = self.distance_ls {
+            row.serialize_entry("distance_ls", &distance)?;
+        }
+        row.serialize_entry("scanned_value", &self.scanned_value)?;
+        if let Some(mapped) = self.mapped_value {
+            row.serialize_entry("mapped_value", &mapped)?;
+        }
+        if self.bio != 0 {
+            row.serialize_entry("bio", &self.bio)?;
+        }
+        if self.geo != 0 {
+            row.serialize_entry("geo", &self.geo)?;
+        }
+        let marks = u8::from(self.terraformable)
+            | (u8::from(self.landable) << 1)
+            | (u8::from(self.scoopable) << 2)
+            | (u8::from(self.first_discovery) << 3)
+            | (u8::from(self.already_mapped) << 4)
+            | (u8::from(self.mapped_by_you) << 5);
+        if marks != 0 {
+            row.serialize_entry("marks", &marks)?;
+        }
+        if let Some(probes) = &self.probes {
+            row.serialize_entry("probes", probes)?;
+        }
+        if !is_default_advice(&self.advice) {
+            row.serialize_entry("advice", &self.advice)?;
+        }
+        row.end()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -326,7 +362,7 @@ impl SystemBodies {
             mapped_value,
             bio: sig.bio,
             geo: sig.geo,
-            terraformable: scan.terraform_state.as_deref() == Some("Terraformable"),
+            terraformable: is_terraformable(scan),
             landable,
             first_discovery,
             already_mapped: scan.was_mapped == Some(true),
