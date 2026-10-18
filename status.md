@@ -59,7 +59,7 @@
 | 21 | `exploration` — cuerpos del sistema, FSS y consejo | ✅ hecha | 9940901, c25b238 | P2 de payload y Terraforming corregidos; marks compacto documentado para Task 23; 392 Rust/46 UI PASS, revisión aprobada. |
 | 22 | `exploration` — datos sin vender | ✅ hecha | ffa3433 | Libro compartido, reconstrucción cronológica paginada y conciliación/retry; 413 Rust/46 UI PASS, revisión aprobada. |
 | 23 | UI — cuerpos del sistema | ✅ hecha | b669a77 | Tabla virtualizada ≤30 filas, cinco idiomas, visual 2560/1366 px; 413 Rust/56 UI PASS, revisión aprobada. |
-| 24 | Exobiología — especies y geodesia | ⛔ bloqueada (parcial verificada) | (este commit: geodesia) | Geo RED 0/8 → GREEN; 421 Rust/56 UI PASS. Tabla pendiente de decisión sobre nombres; tarea incompleta. |
+| 24 | Exobiología — especies y geodesia | ⛔ bloqueada (parcial verificada) | 458fc84 (geodesia) | Geo RED 0/8 → GREEN; 421 Rust/56 UI PASS. Tabla pendiente de decisión sobre nombres; tarea incompleta. |
 | 25–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
