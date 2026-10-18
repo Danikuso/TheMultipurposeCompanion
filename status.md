@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-18 03:47 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-18 04:01 (Europe/Madrid) · Codex
 - **Fase actual:** F1 — Navegación, exploración y exobiología (spec y plan aprobados; en ejecución). F0 ✅ fusionada en `main` (2b953e6).
 - **Spec activa:** [`docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md`](docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md) — ✅ aprobada (2026-10-17); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
 - **Plan activo:** [`docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md`](docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md) — ✅ aprobado (2026-10-17), 33 tareas, bloques 0–5. Ejecución con subagentes. Anterior: [`2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) ✅ 19/19
@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F1 · Task 22 (`exploration` — datos sin vender), Step 1: tests.
-- **Siguiente acción:** escribir tests de Task 22 y observar RED antes de implementar el libro de datos sin vender y su reconstrucción. Task 21 revisada y verificada: 392 tests Rust, 46 UI, fmt/clippy/check/build PASS. Ledger local: `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`.
+- **Tarea:** F1 · Task 23 (UI — cuerpos del sistema), Step 1: tests.
+- **Siguiente acción:** escribir tests de virtualización y presentación del panel de cuerpos. Task 22 terminada: revisión aprobada, 413 tests Rust/46 UI, fmt/clippy/check/build PASS. Ledger local: `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`.
 
 ## Fases
 
@@ -57,8 +57,9 @@
 | 19 | UI — panel del planificador | ✅ código hecho | 34d3b9c, a15b5ee | Formulario, autocompletado con id64, eficiencia por defecto de Ajustes, resultado y aceptar/borrar; 46 tests UI PASS. Revisión aprobada tras 1 ronda. Validación visual del propietario: ✅ aprobada (2026-10-18). |
 | 20 | `exploration` — valor de cuerpos y sondas | ✅ hecha | fe26c90, 123b335, 7cfb305 | Fórmulas propias (FSS, mapeo con eficiencia, primeros, Odyssey), gigantes gaseosos mapeables, nombres reales del diario, `probes.json` con `verified:false`; 18 exploration PASS. Revisión aprobada tras 1 ronda. |
 | 21 | `exploration` — cuerpos del sistema, FSS y consejo | ✅ hecha | 9940901, c25b238 | P2 de payload y Terraforming corregidos; marks compacto documentado para Task 23; 392 Rust/46 UI PASS, revisión aprobada. |
-| 22 | `exploration` — datos sin vender | 🔄 en curso | — | Step 1: tests. |
-| 23–32 | Ver plan | ⬜ | — | |
+| 22 | `exploration` — datos sin vender | ✅ hecha | (este commit) | Libro compartido, reconstrucción cronológica paginada y conciliación/retry; 413 Rust/46 UI PASS, revisión aprobada. |
+| 23 | UI — cuerpos del sistema | 🔄 en curso | — | Step 1: tests. |
+| 24–32 | Ver plan | ⬜ | — | |
 
 ## Tareas de F0
 
@@ -87,6 +88,9 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 18 | Presupuesto de consumo y cierre de F0 | ✅ hecha | fe99cd6 | `measure-footprint.ps1` (`max_mb=144.91` < 150, `avg_cpu_idle=0.09%` < 1% PASS), `README.md` y 9/9 criterios §15 verificados. |
 
 ## Bloqueos y pendientes del propietario
+
+
+- [ ] **Sincronización de F1:** la revisión automática rechazó git push origin HEAD al considerar necesaria autorización explícita actual del propietario, aunque el repositorio es privado (confirmado con gh repo view). Pregunta presentada: autorizar push de fase/f1-navegacion-exploracion a Danikuso/TheMultipurposeCompanion. Commits locales revisados disponibles; la implementación continúa localmente hasta respuesta.
 
 - [ ] **F1 · Canonn (capa 3 de exobiología)** — decidido 2026-10-17: queda **desactivada**; el propietario solicitará permiso a Canonn **sin enviar datos de usuarios**. Pendiente: respuesta de Canonn. Contexto: su README exige una **solicitud formal** para usar la API en software propio y pide **capturar/enviar datos de los usuarios**. Decisión del propietario: (a) solicitar permiso sin enviar datos de usuario, (b) aceptar enviar datos (requiere cambio de spec y opt-in), o (c) renunciar a Canonn. Mientras tanto, la capa 3 se implementa desactivada y F1 avanza con reglas propias + historial.
 - [ ] **F1 · Nombres de especies:** aprobar aplazar la tabla propia por idioma (se usa `_Localised` del diario y nombre latino de respaldo).
@@ -131,7 +135,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
-- 2026-10-18 03:37 (Europe/Madrid) · Codex · Retoma F1 Task 21 desde implementación 9940901; árbol inicialmente limpio. Revisión contra spec/plan y verificación global en curso; no se repite implementación ni Tasks 0–20.
+- 2026-10-18 03:48 (Europe/Madrid) · Codex · Task 21 revisada y cerrada (c25b238; status96dc926), con marca Terraforming y payload300cuerpos corregidos (máximo54.560bytes). Test de configuración aislado en4e01e51. 392 Rust/46 UI yfmt/clippy/check/build PASS. Task22 en curso; push retenido por revisión automática hasta autorización explícita.
 
 - 2026-10-18 01:00 (Europe/Madrid) · Claude Opus 5.5 · F1 Bloques 0 y 1 completados (Tasks 0–12) con subagentes, revisión por tarea y rondas de corrección; workspace en verde. Decisión del propietario: Canonn desactivado hasta su permiso. Siguiente: Task 13. Ledger local (no versionado): `.superpowers/sdd/2026-10-17-tmc-f1-navegacion-exploracion/progress.md`.
 

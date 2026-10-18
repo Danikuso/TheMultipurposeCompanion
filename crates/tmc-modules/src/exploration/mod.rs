@@ -1,6 +1,7 @@
 //! Módulo `exploration`: cuerpos del sistema, progreso del FSS, valores y consejo.
 
 pub mod system;
+pub mod unsold;
 pub mod value;
 
 use serde_json::Value;
@@ -13,6 +14,7 @@ use tmc_model::state::GameState;
 use tmc_model::status::GuiFocus;
 
 const TOPIC_SYSTEM: &str = "exploration.system";
+const TOPIC_UNSOLD: &str = "exploration.unsold";
 
 pub struct Exploration {
     threshold: u64,
@@ -20,6 +22,8 @@ pub struct Exploration {
     odyssey: bool,
     system: SystemBodies,
     system_value: Value,
+    unsold: unsold::UnsoldState,
+    unsold_value: Value,
 }
 
 impl Exploration {
@@ -29,6 +33,8 @@ impl Exploration {
             odyssey: true,
             system: SystemBodies::default(),
             system_value: Value::Null,
+            unsold: unsold::UnsoldState::default(),
+            unsold_value: serde_json::json!({"total":0,"systems":0,"at_risk":false}),
         }
     }
 
@@ -69,7 +75,8 @@ impl Module for Exploration {
         "exploration"
     }
 
-    fn on_event(&mut self, ev: &SourceEvent, _state: &GameState, _ctx: &mut ModuleCtx) -> TopicSet {
+    fn on_event(&mut self, ev: &SourceEvent, state: &GameState, ctx: &mut ModuleCtx) -> TopicSet {
+        let unsold_changed = self.unsold.on_event(ev, state, ctx);
         let changed = match ev {
             SourceEvent::Settings(s) => {
                 std::mem::replace(&mut self.threshold, s.map_value_threshold)
@@ -79,6 +86,13 @@ impl Module for Exploration {
             _ => false,
         };
         let mut dirty = TopicSet::new();
+        if unsold_changed {
+            let unsold = self.unsold.topic();
+            if self.unsold_value != unsold {
+                self.unsold_value = unsold;
+                dirty.insert(TOPIC_UNSOLD.to_owned());
+            }
+        }
         if changed && self.system.has_data() {
             let value = serde_json::to_value(self.system.render(self.threshold, self.odyssey))
                 .unwrap_or_default();
@@ -91,11 +105,14 @@ impl Module for Exploration {
     }
 
     fn topic_value(&self, topic: &str) -> Option<Value> {
+        if topic == TOPIC_UNSOLD {
+            return Some(self.unsold_value.clone());
+        }
         (topic == TOPIC_SYSTEM && !self.system_value.is_null()).then(|| self.system_value.clone())
     }
 
     fn topics(&self) -> Vec<String> {
-        vec![TOPIC_SYSTEM.to_owned()]
+        vec![TOPIC_SYSTEM.to_owned(), TOPIC_UNSOLD.to_owned()]
     }
 
     /// `Active` con el FSS abierto (`GuiFocus::Fss`) o con cuerpos del FSS sin escanear.

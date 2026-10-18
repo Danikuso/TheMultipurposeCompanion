@@ -703,15 +703,15 @@ test('disabled planner explains why', ...)
 
 ### Task 22: `exploration` — datos sin vender
 
-**Files:** Create `crates/tmc-modules/src/exploration/unsold.rs`; Modify `exploration/mod.rs`.
+**Files:** Create `crates/tmc-modules/src/exploration/unsold.rs`, `exploration/unsold/history.rs`; Modify `exploration/mod.rs`.
 
 **Interfaces:**
 - Produces:
   - `pub struct UnsoldLedger { by_body: BTreeMap<(String, u32), u64> /* clave (sistema, body_id) */, mapped_pending: BTreeMap<(String, u32), u64> }` con `fn set(&mut self, system: &str, body_id: u32, value: u64)` (idempotente: sobrescribe, así un `Scan` repetido no duplica y el mapeo sube el valor), `fn apply_event(&mut self, current_system: &str, ev: &EventKind, odyssey: bool)` (**única vía de actualización**, en vivo, en `rebuild_from_history` y en `eval`: `Scan` → `set` con el valor de escaneo y guarda el de mapeo pendiente; `SaaScanComplete` → `set` con el valor de mapeo, con eficiencia si `probes_used <= efficiency_target`; `SellExplorationData` → `sell(systems)`; `MultiSellExplorationData` → `sell(discovered)` o todo si la lista está vacía; `Died` → `died()`), `fn sell(&mut self, systems: &[String])`, `fn sell_all(&mut self)`, `fn died(&mut self)`, `fn total(&self) -> u64`, `fn system_count(&self) -> u32`.
-  - `pub fn rebuild_from_history(cmdr: String) -> StoreTask`: lee desde el último `Died`/venta total los eventos del comandante (consulta por `name IN (...)` y `id` creciente, sin cargar todo el historial en memoria), los pasa por `UnsoldLedger::apply_event` y devuelve el libro serializado (sin lógica duplicada).
+  - `pub fn rebuild_from_history(cmdr: String) -> StoreTask`: lee desde el último `Died`/venta total los eventos del comandante (consulta por `name IN (...)`, snapshot `id <= cut` y orden cronológico `(ts, journal_file.name, line, id)` con páginas de 256, sin cargar todo el historial en memoria), los pasa por `UnsoldLedger::apply_event` y devuelve el libro serializado (sin lógica duplicada).
   - Topic `exploration.unsold` = `{ total: u64, systems: u32, at_risk: bool }`.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn partial_sale_removes_only_listed_systems() { /* A: cuerpos 100 y 200; B: 300 → sell(["A"]) → total()==300, system_count()==1 */ }
@@ -722,8 +722,9 @@ test('disabled planner explains why', ...)
 #[test] fn rebuild_from_history_matches_live_accumulation() { /* Store en memoria con exploration_session.log importado → total de rebuild_from_history == total tras aplicar apply_event en vivo (valor numérico idéntico) */ }
 ```
 
-- [ ] **Step 2:** FAIL. **Step 3:** implementar. **Step 4:** PASS; Checks. La medición de 50 ms con el historial del propietario (`tmc-headless eval --timings`) **se hace en Task 29 Step 5** (esta tarea no depende de `eval`): si > 50 ms, anotar en «Desviaciones» la tabla de resumen (spec §7).
-- [ ] **Step 5: Commit** `feat(modules): datos de exploración sin vender reconstruidos del historial`
+- [x] **Step 2:** RED observado: `cargo test -p tmc-modules --offline exploration::unsold` → 0/14 PASS con stubs (2026-10-18). Incluye casos del plan, paginación, contexto tras reinicio, ventas parciales, aislamiento por comandante y eventos en vuelo.
+- [x] **Step 3:** implementar. **Step 4:** PASS; revisión independiente aprobada (2026-10-18). `cargo fmt --all --check`, `cargo clippy --workspace --all-targets --offline -- -D warnings`, `cargo test --workspace --offline --quiet` → 413 tests PASS (153 módulos); `git diff --check` PASS. UI: `npm.cmd --prefix ui run check` → 0 errores/avisos; `test` → 46 PASS; `build` PASS. Regresiones RED/GREEN adicionales: orden histórico, retry tras fallo SQL, checkpoints de 600 Scan, importación tardía y contexto Odyssey ausente. La medición de 50 ms con el historial del propietario (`tmc-headless eval --timings`) **se hace en Task 29 Step 5** (esta tarea no depende de `eval`): si > 50 ms, anotar en «Desviaciones» la tabla de resumen (spec §7).
+- [x] **Step 5: Commit** `feat(modules): datos de exploración sin vender reconstruidos del historial`
 
 ### Task 23: UI — panel «Cuerpos del sistema»
 
@@ -997,6 +998,10 @@ Interfaces a confirmar al ejecutar (verificar en código al ejecutar): nombre de
 (Se rellena en las Tasks 29 y 32.)
 
 ## Desviaciones
+
+- 2026-10-18 · Task 22: conciliación interna por comandante/generación y archivo/línea; checkpoints a 256 eventos/60 s y retry a 60 s para tareas SQLite sin respuesta. El libro JSON interno representa claves tupla como filas. Si SQLite falla persistentemente se conserva la cola para evitar perder saldo; la poda de eventos confirmados se verifica con DB operativa. API pública y topic de tres campos intactos; sin dependencias nuevas.
+
+- 2026-10-18 · Task 22: el plan asumía que id de SQLite representaba cronología; watcher e importación pueden insertar fuera de orden. Para cumplir spec §5.2 se usa (ts, nombre de diario, línea, id) con paginación de 256 y corte estable id <= cut. 	s ya se guarda normalizado a UTC con nanosegundos por writer/import. Regresión observada RED (5 PASS/2 FAIL) → GREEN 7/7 history: muerte antigua insertada después del Scan y empates de segundo insertados en orden inverso. Sin cambio de API pública ni alcance.
 
 (Anotar aquí cualquier cambio respecto a este plan o a la spec, con fecha, motivo y tareas afectadas.)
 
