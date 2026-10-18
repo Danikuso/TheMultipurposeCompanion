@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F1 · Task 32 (consumo, criterios de aceptación y revisión de cierre), Step 1: construir instalador y medir consumo.
-- **Siguiente acción:** construir Tauri y ejecutar medición de 120 s con la disposición Exploración y fixture real_explo_01; después auditar licencias y criterios. Task 31 cerrada: 515 Rust/81 UI, fmt/clippy/check/build y smoke PASS, revisión aprobada. §5.1 aprobada y spec actualizada. Los criterios 3/4/6 siguen sin historial suficiente, por lo que F1 no puede marcarse completada. No detener la instancia de TMC del usuario sin autorización.
+- **Siguiente acción:** construir Tauri y ejecutar medición de 120 s con la disposición Exploración y fixture real_explo_01; después auditar licencias y criterios. Task 31 cerrada: 515 Rust/81 UI, fmt/clippy/check/build y smoke PASS, revisión aprobada. §5.1 aprobada y spec actualizada. Los criterios 3/4/6 siguen sin historial suficiente, por lo que F1 no puede marcarse completada. No detener la instancia de TMC del usuario sin autorización. Cambios ajenos de rangos en CmdrPanel.svelte, main.ftl (5 idiomas) y su test dashboard se conservan sin commit y no forman parte de Task 31; verificación aislada del índice completada antes de 7878cdf (81 UI y smoke 7,6 s).
 
 ## Fases
 
@@ -66,7 +66,7 @@
 | 28 | UI — panel de exobiología | ✅ hecha | 9578414, 1b824dd | Candidatos con probabilidad y origen, muestreo con barra/dirección/sin vender, tipo y atmósfera localizados; 69 tests UI PASS. Revisión aprobada tras 1 ronda. |
 | 29 | `tmc-headless eval` (criterios 3, 4 y 6) | ✅ hecha | 98f93e9, cdc921e, d16ebb0, e734e5f | Eval local con solo agregados. Tus 7 diarios: C3 15/15 loadouts dentro de ±0,05 al pero INSUFICIENTE (sin ingeniería ni Guardian); C4 y C6 INSUFICIENTE (sin ventas cubiertas ni exobiología). Corrección de §5.1 (ver Bloqueos). |
 | 30 | Fixtures anonimizados y pruebas de extremo a extremo | ✅ hecha | 1ee4697 | `real_explo_01.log` (87 líneas, anonimizado y revisado); tira p95 310,8 ms con juego en marcha; exobiología e2e con fixture sintético (sin datos reales). Revisión aprobada. |
-| 31 | Disposición Exploración y ajustes F1 | ✅ hecha | (este commit) | 515 Rust/81 UI, fmt/clippy/check/build y smoke real PASS; 3 P2 corregidos, revisión aprobada. |
+| 31 | Disposición Exploración y ajustes F1 | ✅ hecha | 7878cdf | 515 Rust/81 UI, fmt/clippy/check/build y smoke real PASS; 3 P2 corregidos, revisión aprobada. |
 | 32 | Consumo y cierre F1 | 🔄 en curso | — | Step 1: build/medición. Criterios 3/4/6 aún sin datos suficientes; cierre pendiente. |
 
 ## Tareas de F0
