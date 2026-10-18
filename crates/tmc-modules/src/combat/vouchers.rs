@@ -49,9 +49,13 @@ pub fn nominal(amount: u64, pct: f64, is_net: bool) -> u64 {
 /// Clave de comparación tolerante a símbolos de localización.
 fn faction_key(f: &str) -> String {
     let lower = f.trim().to_lowercase();
-    let t = lower.strip_suffix(';').unwrap_or(&lower);
-    let t = t.strip_prefix("$faction_").unwrap_or(t);
-    t.chars().filter(|c| c.is_alphanumeric()).collect()
+    match lower
+        .strip_prefix("$faction_")
+        .and_then(|t| t.strip_suffix(';'))
+    {
+        Some(inner) => inner.trim().to_string(),
+        None => lower,
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -65,8 +69,9 @@ impl VoucherLedger {
         self.entries.insert(idx, e);
     }
 
-    /// Resta `amount` del tipo (y facción si se da), de más antiguo a más nuevo.
-    fn subtract(&mut self, kind: VoucherKind, faction: Option<&str>, mut amount: u64) {
+    /// Resta `amount` del tipo (y facción si se da), de más antiguo a más
+    /// nuevo. Devuelve el importe que no se pudo restar.
+    fn subtract(&mut self, kind: VoucherKind, faction: Option<&str>, mut amount: u64) -> u64 {
         let key = faction.map(faction_key);
         for e in self.entries.iter_mut() {
             if amount == 0 {
@@ -80,6 +85,15 @@ impl VoucherLedger {
             amount -= take;
         }
         self.entries.retain(|e| e.amount > 0);
+        amount
+    }
+
+    /// Resta por facción; el sobrante se aplica a vales del tipo sin facción.
+    fn subtract_faction(&mut self, kind: VoucherKind, faction: &str, amount: u64) {
+        let left = self.subtract(kind, Some(faction), amount);
+        if left > 0 {
+            self.subtract(kind, Some(""), left);
+        }
     }
 
     fn redeem(&mut self, r: &RedeemVoucher) -> bool {
@@ -90,7 +104,7 @@ impl VoucherLedger {
         };
         if !r.factions.is_empty() {
             for f in &r.factions {
-                self.subtract(kind, Some(&f.faction), f.amount);
+                self.subtract_faction(kind, &f.faction, f.amount);
             }
         } else {
             let amount = nominal(
@@ -99,7 +113,12 @@ impl VoucherLedger {
                 BROKER_AMOUNT_IS_NET,
             );
             let faction = r.faction.as_deref().filter(|f| !f.is_empty());
-            self.subtract(kind, faction, amount);
+            match faction {
+                Some(f) => self.subtract_faction(kind, f, amount),
+                None => {
+                    self.subtract(kind, None, amount);
+                }
+            }
         }
         true
     }
@@ -159,7 +178,7 @@ impl VoucherLedger {
                 .find(|(k, t)| *k == key && t.kind == e.kind && t.ax == e.ax);
             match found {
                 Some((_, t)) => {
-                    t.amount += e.amount;
+                    t.amount = t.amount.saturating_add(e.amount);
                     if !t.systems.contains(&e.system) {
                         t.systems.push(e.system.clone());
                     }
@@ -183,8 +202,7 @@ impl VoucherLedger {
         self.entries
             .iter()
             .filter(|e| e.kind == kind)
-            .map(|e| e.amount)
-            .sum()
+            .fold(0u64, |acc, e| acc.saturating_add(e.amount))
     }
 
     pub fn reset(&mut self) {
@@ -384,5 +402,86 @@ mod tests {
         assert_eq!(u.len(), 2);
         assert_eq!((u[0].amount, u[0].ax), (100, false));
         assert_eq!((u[1].amount, u[1].ax), (5000, true));
+    }
+
+    fn bond_ev(ty: &str, faction: Option<&str>, reward: u64) -> EventKind {
+        let k = FactionKillBond {
+            reward,
+            awarding_faction: faction.map(String::from),
+            ..Default::default()
+        };
+        if ty == "cap" {
+            EventKind::CapShipBond(k)
+        } else {
+            EventKind::FactionKillBond(k)
+        }
+    }
+
+    #[test]
+    fn faction_key_keeps_inner_characters() {
+        assert_eq!(faction_key(" $Faction_Alpha-1; "), "alpha-1");
+        assert_ne!(faction_key("Alpha-1"), faction_key("Alpha 1"));
+        assert_eq!(faction_key("$faction_A;"), faction_key("a"));
+        let mut l = VoucherLedger::default();
+        l.apply_event(&bounty(&[("Alpha-1", 100), ("Alpha 1", 200)]), "S", t(0));
+        l.apply_event(&redeem("bounty", 0, &[("alpha 1", 200)]), "S", t(1));
+        assert_eq!(amount_of(&l, VoucherKind::Bounty, "Alpha-1"), 100);
+        assert_eq!(l.total(VoucherKind::Bounty), 100);
+    }
+
+    #[test]
+    fn unmatched_faction_leftover_hits_factionless_bonds_only() {
+        let mut l = VoucherLedger::default();
+        l.apply_event(&bond_ev("f", None, 300), "S", t(0));
+        l.apply_event(&bond_ev("f", Some("Z"), 500), "S", t(1));
+        l.apply_event(&bounty(&[("", 50)]), "S", t(2));
+        let ev = EventKind::RedeemVoucher(RedeemVoucher {
+            type_: "CombatBond".into(),
+            amount: 200,
+            faction: Some("Q".into()),
+            ..Default::default()
+        });
+        l.apply_event(&ev, "S", t(3));
+        assert_eq!(amount_of(&l, VoucherKind::CombatBond, ""), 100);
+        assert_eq!(amount_of(&l, VoucherKind::CombatBond, "Z"), 500);
+        assert_eq!(l.total(VoucherKind::Bounty), 50);
+        // Factions[] con sobrante mayor que lo disponible: nunca negativo
+        l.apply_event(&redeem("CombatBond", 0, &[("Q", 999)]), "S", t(4));
+        assert_eq!(amount_of(&l, VoucherKind::CombatBond, ""), 0);
+        assert_eq!(l.total(VoucherKind::CombatBond), 500);
+    }
+
+    #[test]
+    fn partial_and_unknown_faction_redemptions() {
+        let mut l = sample();
+        l.apply_event(&redeem("bounty", 20000, &[("A", 20000)]), "S", t(5));
+        assert_eq!(amount_of(&l, VoucherKind::Bounty, "A"), 30000);
+        l.apply_event(&redeem("bounty", 5000, &[("Nope", 5000)]), "S", t(6));
+        assert_eq!(amount_of(&l, VoucherKind::Bounty, "A"), 30000);
+        assert_eq!(amount_of(&l, VoucherKind::Bounty, "B"), 10000);
+        assert_eq!(amount_of(&l, VoucherKind::CombatBond, "A"), 20000);
+    }
+
+    #[test]
+    fn per_faction_amounts_win_over_total_amount() {
+        let mut l = sample();
+        l.apply_event(&redeem("bounty", 999999, &[("B", 10000)]), "S", t(5));
+        assert_eq!(amount_of(&l, VoucherKind::Bounty, "A"), 50000);
+        assert_eq!(amount_of(&l, VoucherKind::Bounty, "B"), 0);
+    }
+
+    #[test]
+    fn capship_bond_and_kind_separation() {
+        let mut l = VoucherLedger::default();
+        assert!(l.apply_event(&bond_ev("cap", Some("A"), 7000), "S", t(0)));
+        l.apply_event(&bounty(&[("A", 3000)]), "S", t(1));
+        assert_eq!(l.total(VoucherKind::CombatBond), 7000);
+        l.apply_event(&redeem("CombatBond", 7000, &[("A", 7000)]), "S", t(2));
+        assert_eq!(l.total(VoucherKind::CombatBond), 0);
+        assert_eq!(l.total(VoucherKind::Bounty), 3000);
+        l.apply_event(&bond_ev("f", Some("A"), 100), "S", t(3));
+        l.apply_event(&redeem("bounty", 3000, &[]), "S", t(4));
+        assert_eq!(l.total(VoucherKind::Bounty), 0);
+        assert_eq!(l.total(VoucherKind::CombatBond), 100);
     }
 }
