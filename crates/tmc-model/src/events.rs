@@ -55,6 +55,57 @@ pub struct LocationInfo {
     pub powers: Vec<String>,
     pub powerplay_state: Option<String>,
     pub boost_used: Option<f64>,
+    pub thargoid_war: Option<ThargoidWar>,
+    pub factions: Vec<FactionInfo>,
+}
+
+impl LocationInfo {
+    /// Hay presencia thargoide: estado de guerra no vacío o algún estado `Thargoid_*`.
+    pub fn thargoid_presence(&self) -> bool {
+        let war = self
+            .thargoid_war
+            .as_ref()
+            .and_then(|w| w.current_state.as_deref())
+            .is_some_and(|s| !s.is_empty());
+        let is_tg = |s: &str| s.starts_with("Thargoid_");
+        war || self
+            .system_faction
+            .as_ref()
+            .and_then(|f| f.faction_state.as_deref())
+            .is_some_and(is_tg)
+            || self.factions.iter().any(|f| {
+                f.faction_state.as_deref().is_some_and(is_tg)
+                    || f.active_states.iter().any(|s| is_tg(&s.state))
+            })
+    }
+}
+
+/// Bloque `ThargoidWar` (campos de fuentes secundarias, sin verificar: todos opcionales).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct ThargoidWar {
+    pub current_state: Option<String>,
+    pub next_state_success: Option<String>,
+    pub next_state_failure: Option<String>,
+    pub success_state_reached: Option<bool>,
+    pub war_progress: Option<f64>,
+    pub remaining_ports: Option<u32>,
+    pub estimated_remaining_time: Option<String>,
+}
+
+/// Facción presente en el sistema (`Factions` de `FSDJump`/`Location`).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct FactionInfo {
+    pub name: String,
+    pub faction_state: Option<String>,
+    pub active_states: Vec<StateRef>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct StateRef {
+    pub state: String,
 }
 
 /// Facción controladora del sistema (`SystemFaction` de `FSDJump`/`Location`).
@@ -1371,6 +1422,48 @@ mod tests {
         assert_eq!(l.powers, vec!["Zachary Hudson".to_string()]);
         assert_eq!(l.powerplay_state.as_deref(), Some("Fortified"));
         assert_eq!(l.boost_used, Some(1.5));
+    }
+
+    #[test]
+    fn fsdjump_with_thargoid_war_block_parses() {
+        let EventKind::FsdJump(l) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"FSDJump","StarSystem":"Kappa","SystemAddress":1,"StarPos":[1,2,3],"ThargoidWar":{"CurrentState":"Thargoid_Controlled","NextStateSuccess":"Thargoid_Recovery","NextStateFailure":"","SuccessStateReached":false,"WarProgress":0.25,"RemainingPorts":2,"EstimatedRemainingTime":"12 Days"}}"#,
+        ) else {
+            panic!("FSDJump")
+        };
+        let w = l.thargoid_war.as_ref().unwrap();
+        assert_eq!(w.current_state.as_deref(), Some("Thargoid_Controlled"));
+        assert_eq!(w.next_state_success.as_deref(), Some("Thargoid_Recovery"));
+        assert_eq!(w.success_state_reached, Some(false));
+        assert_eq!(w.war_progress, Some(0.25));
+        assert_eq!(w.remaining_ports, Some(2));
+        assert_eq!(w.estimated_remaining_time.as_deref(), Some("12 Days"));
+        assert!(l.thargoid_presence());
+    }
+
+    #[test]
+    fn faction_state_thargoid_marks_presence() {
+        let EventKind::Location(l) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Location","StarSystem":"Kappa","Factions":[{"Name":"X","FactionState":"Thargoid_Probing","ActiveStates":[{"State":"Boom"}]}]}"#,
+        ) else {
+            panic!("Location")
+        };
+        assert_eq!(l.factions.len(), 1);
+        assert_eq!(l.factions[0].name, "X");
+        assert_eq!(l.factions[0].active_states[0].state, "Boom");
+        assert!(l.thargoid_war.is_none());
+        assert!(l.thargoid_presence());
+    }
+
+    #[test]
+    fn empty_thargoid_war_state_is_no_presence() {
+        let EventKind::FsdJump(l) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"FSDJump","StarSystem":"Kappa","ThargoidWar":{"CurrentState":""},"Factions":[{"Name":"X","FactionState":"War"}]}"#,
+        ) else {
+            panic!("FSDJump")
+        };
+        assert!(l.thargoid_war.is_some());
+        assert!(!l.thargoid_presence());
     }
 
     #[test]
