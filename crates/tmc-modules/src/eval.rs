@@ -146,8 +146,9 @@ struct Run<'a> {
     probes: ProbeReport,
     species_values: SpeciesValueReport,
     missing_fsd: BTreeSet<String>,
-    /// Cuerpos escaneados (estrellas/planetas) y `BodyCount` del FSS por sistema.
+    /// Por FSD: loadouts, masas de referencia (x10), ajustado, verificado.
     fsd_stats: BTreeMap<String, (u32, BTreeSet<i64>, bool, bool)>,
+    /// Cuerpos escaneados (estrellas/planetas) y `BodyCount` del FSS por sistema.
     coverage: HashMap<String, (Option<u32>, HashSet<u32>)>,
     at_carrier: bool,
 }

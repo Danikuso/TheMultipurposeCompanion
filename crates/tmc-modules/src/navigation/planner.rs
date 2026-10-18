@@ -1,7 +1,7 @@
 //! Planificador de rutas Spansh (neutrones / galaxia) y ruta activa.
 
 use super::Navigation;
-use super::jump::{ShipMass, supercharge_multiplier};
+use super::jump::{RangeSource, ShipMass, supercharge_multiplier};
 use super::persist;
 use super::route::{ActivePlan, PlanMode};
 use crate::data::StarSpecial;
@@ -175,6 +175,11 @@ fn parse_request(
 impl Navigation {
     /// Alcance con el depósito principal lleno y la carga actual.
     fn planning_range(&self, state: &GameState) -> Option<f64> {
+        let model = self.model.as_ref()?;
+        if model.source == RangeSource::Unknown {
+            // FSD desconocido: la cifra del propio juego es la única fuente (nunca bloquea el planificador).
+            return model.game_max_range.filter(|r| r.is_finite() && *r > 0.0);
+        }
         let ship = state.ship.as_ref()?;
         let mass = ShipMass {
             unladen: self.unladen_mass?,
@@ -182,10 +187,7 @@ impl Navigation {
             fuel_reserve: 0.0,
             cargo: f64::from(ship.cargo_count.unwrap_or(0)),
         };
-        self.model
-            .as_ref()?
-            .range_now(&mass)
-            .filter(|r| r.is_finite() && *r > 0.0)
+        model.range_now(&mass).filter(|r| r.is_finite() && *r > 0.0)
     }
 
     fn build_query(&self, req: &Request, state: &GameState) -> Result<NetQuery, &'static str> {
