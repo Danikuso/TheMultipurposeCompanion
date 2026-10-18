@@ -22,6 +22,7 @@ struct H {
     replaying: bool,
     requests: Vec<NetRequest>,
     tasks: Vec<String>,
+    store_tasks: Vec<(String, tmc_core::StoreTask)>,
     next_id: u64,
 }
 
@@ -34,6 +35,7 @@ impl H {
             replaying: false,
             requests: Vec::new(),
             tasks: Vec::new(),
+            store_tasks: Vec::new(),
             next_id: 1,
         }
     }
@@ -53,7 +55,8 @@ impl H {
         let (requests, tasks, next) = ctx.take_outputs();
         self.next_id = next;
         self.requests.extend(requests);
-        self.tasks.extend(tasks.into_iter().map(|(tag, _)| tag));
+        self.tasks.extend(tasks.iter().map(|(tag, _)| tag.clone()));
+        self.store_tasks.extend(tasks);
         dirty
     }
 
@@ -763,4 +766,227 @@ fn registry_includes_exobiology_with_its_three_topics() {
     assert_eq!(exo.topics(), [TOPIC_BODY, TOPIC_SAMPLING, TOPIC_UNSOLD]);
     assert_eq!(exo.migrations().len(), 1);
     assert_eq!(exo.migrations()[0].id, "exobiology-001");
+}
+
+fn history_store() -> tmc_core::Store {
+    let store = tmc_core::Store::open_in_memory().unwrap();
+    store.apply_migrations(persist::MIGRATIONS).unwrap();
+    store
+        .exec_json(
+            "INSERT INTO journal_file(id,name,size,offset) VALUES(1,'history.log',0,0)",
+            &[],
+        )
+        .unwrap();
+    store
+}
+
+fn stored_outputs(h: &mut H, store: &tmc_core::Store) -> Vec<(String, Value)> {
+    std::mem::take(&mut h.store_tasks)
+        .into_iter()
+        .map(|(tag, task)| (tag, task(store).unwrap()))
+        .collect()
+}
+
+fn deliver_outputs(h: &mut H, outputs: Vec<(String, Value)>) {
+    for (tag, value) in outputs {
+        h.send(SourceEvent::Stored {
+            module: "exobiology".into(),
+            tag,
+            value,
+        });
+    }
+}
+
+fn import_analysis(store: &tmc_core::Store, scan: &Scan) {
+    let scan = serde_json::to_string(scan).unwrap();
+    let organic =
+        json!({"ScanType":"Analyse", "Species":AURASUS,"SystemAddress":SYSTEM,"Body":BODY})
+            .to_string();
+    for (line, name, json) in [(1, "Scan", scan), (2, "ScanOrganic", organic)] {
+        store.exec_json("INSERT INTO event(file_id,line,ts,name,cmdr,json) VALUES(1,?1,?2,?3,'CMDR TESTER',?4)",
+            &[json!(line),json!(t(line).to_rfc3339()),json!(name),json!(json)]).unwrap();
+    }
+}
+
+#[test]
+fn import_completion_refreshes_initial_empty_history_and_unsold_without_restart() {
+    let store = history_store();
+    let mut h = H::new();
+    h.start();
+    let initial = stored_outputs(&mut h, &store);
+    deliver_outputs(&mut h, initial);
+    h.scan_body("Rocky body", "CarbonDioxide", false);
+    h.touchdown();
+    let scan = h.m.scans[&(SYSTEM, BODY)].clone();
+    let key = predict::BodyProfileKey::from(&body_profile(&scan, None));
+    assert_eq!(h.m.history.count(&key, AURASUS), 0);
+    import_analysis(&store, &scan);
+    h.send(SourceEvent::ImportProgress { done: 1, total: 2 });
+    assert!(h.store_tasks.is_empty());
+    h.send(SourceEvent::ImportProgress { done: 2, total: 2 });
+    let loaded = stored_outputs(&mut h, &store);
+    assert_eq!(loaded.len(), 2);
+    // The same completion is also seen live before the refreshed response.
+    h.complete(AURASUS);
+    deliver_outputs(&mut h, loaded);
+    assert_eq!(h.m.history.count(&key, AURASUS), 1);
+    assert_eq!(
+        h.topic(TOPIC_UNSOLD),
+        json!({"total":5_000_000,"species":1})
+    );
+}
+
+#[test]
+fn older_store_generation_cannot_replace_post_import_history() {
+    let store = history_store();
+    let mut h = H::new();
+    h.start();
+    let old = stored_outputs(&mut h, &store);
+    h.scan_body("Rocky body", "CarbonDioxide", false);
+    let scan = h.m.scans[&(SYSTEM, BODY)].clone();
+    let key = predict::BodyProfileKey::from(&body_profile(&scan, None));
+    import_analysis(&store, &scan);
+    h.send(SourceEvent::ImportProgress { done: 2, total: 2 });
+    let fresh = stored_outputs(&mut h, &store);
+    deliver_outputs(&mut h, fresh);
+    assert_eq!(h.m.history.count(&key, AURASUS), 1);
+    deliver_outputs(&mut h, old);
+    assert_eq!(h.m.history.count(&key, AURASUS), 1);
+    assert_eq!(h.topic(TOPIC_UNSOLD)["species"], 1);
+}
+
+#[test]
+fn sampling_coordinates_are_scoped_to_the_current_system_and_body() {
+    for (other_system, other_body) in [(SYSTEM, BODY + 1), (SYSTEM + 1, BODY)] {
+        let mut h = H::new();
+        h.start();
+        h.journal(
+            "Location",
+            &format!(
+                r#", "StarSystem":"Kappa Testis", "SystemAddress":{SYSTEM}, "StarPos":[0,0,0]"#
+            ),
+        );
+        h.scan_body("Rocky body", "CarbonDioxide", false);
+        h.touchdown();
+        h.status(1);
+        h.organic("Log", AURASUS);
+        h.status(2);
+        h.organic("Sample", AURASUS);
+        assert!(h.topic(TOPIC_SAMPLING)["distance_m"].is_number());
+        h.journal(
+            "FSDJump",
+            &format!(
+                r#", "StarSystem":"Other", "SystemAddress":{other_system}, "StarPos":[1,0,0]"#
+            ),
+        );
+        h.journal("Touchdown", &format!(r#", "PlayerControlled":true,"Body":"Other B", "SystemAddress":{other_system},"BodyID":{other_body},"OnPlanet":true"#));
+        h.send(SourceEvent::Status(Status::parse(r#"{"timestamp":"2026-04-12T22:00:00Z","event":"Status","Flags":0,"BodyName":"Other B","Latitude":-40,"Longitude":100,"PlanetRadius":1000000,"Heading":0}"#).unwrap()));
+        for field in ["distance_m", "remaining_m", "direction"] {
+            assert!(
+                h.topic(TOPIC_SAMPLING)[field].is_null(),
+                "{field}: {}",
+                h.topic(TOPIC_SAMPLING)
+            );
+        }
+        assert_eq!(h.topic(TOPIC_SAMPLING)["points"], 2);
+        h.journal(
+            "FSDJump",
+            &format!(
+                r#", "StarSystem":"Kappa Testis", "SystemAddress":{SYSTEM}, "StarPos":[0,0,0]"#
+            ),
+        );
+        h.touchdown();
+        // The previous Status still belongs to B until A sends a fresh one.
+        assert!(h.topic(TOPIC_SAMPLING)["distance_m"].is_null());
+        h.status(3);
+        assert_eq!(h.topic(TOPIC_SAMPLING)["distance_m"], 12_891.0);
+    }
+}
+
+#[test]
+fn imported_sale_or_death_replaces_balance_and_preserves_live_overlay_and_open_samples() {
+    for reset_name in ["SellOrganicData", "Died"] {
+        let store = history_store();
+        let mut h = H::new();
+        h.start();
+        let initial = stored_outputs(&mut h, &store);
+        deliver_outputs(&mut h, initial);
+        h.scan_body("Rocky body", "CarbonDioxide", false);
+        h.touchdown();
+        h.complete(AURASUS);
+        import_analysis(&store, &h.m.scans[&(SYSTEM, BODY)]);
+        h.send(SourceEvent::ImportProgress { done: 2, total: 2 });
+        let old_snapshot = stored_outputs(&mut h, &store);
+        deliver_outputs(&mut h, old_snapshot.clone());
+        assert_eq!(h.topic(TOPIC_UNSOLD)["species"], 1);
+        store.exec_json("INSERT INTO event(file_id,line,ts,name,cmdr,json) VALUES(1,3,?1,?2,'CMDR TESTER','{}')",
+            &[json!(t(50).to_rfc3339()), json!(reset_name)]).unwrap();
+        h.send(SourceEvent::ImportProgress { done: 3, total: 3 });
+        let reset_snapshot = stored_outputs(&mut h, &store);
+        // Neither the in-flight snapshot nor its imported reset includes this live completion.
+        h.clock = 100;
+        h.complete(NEBULUS);
+        h.organic("Log", AURASUS);
+        deliver_outputs(&mut h, reset_snapshot);
+        assert_eq!(
+            h.topic(TOPIC_UNSOLD),
+            json!({
+                "total":species_table().species(NEBULUS).unwrap().value * 5,"species":1
+            }),
+            "{reset_name}"
+        );
+        assert_eq!(h.topic(TOPIC_SAMPLING)["species"], AURASUS);
+        assert_eq!(h.topic(TOPIC_SAMPLING)["points"], 1);
+        assert_eq!(h.topic(TOPIC_SAMPLING)["complete"], false);
+        let balance = h.topic(TOPIC_UNSOLD);
+        deliver_outputs(&mut h, old_snapshot);
+        assert_eq!(h.topic(TOPIC_UNSOLD), balance);
+    }
+}
+
+#[test]
+fn confirmed_completion_prunes_live_overlay_and_remains_idempotent() {
+    let store = history_store();
+    let mut h = H::new();
+    h.start();
+    let initial = stored_outputs(&mut h, &store);
+    deliver_outputs(&mut h, initial);
+    h.scan_body("Rocky body", "CarbonDioxide", false);
+    h.complete(AURASUS);
+    assert_eq!(h.m.live_completed.len(), 1);
+    import_analysis(&store, &h.m.scans[&(SYSTEM, BODY)]);
+    store
+        .exec_json(
+            "UPDATE event SET ts=?1 WHERE name='ScanOrganic'",
+            &[json!(t(h.clock).to_rfc3339())],
+        )
+        .unwrap();
+    h.send(SourceEvent::ImportProgress { done: 2, total: 2 });
+    let loaded = stored_outputs(&mut h, &store);
+    deliver_outputs(&mut h, loaded.clone());
+    assert!(h.m.live_completed.is_empty());
+    let balance = h.topic(TOPIC_UNSOLD);
+    deliver_outputs(&mut h, loaded);
+    assert_eq!(h.topic(TOPIC_UNSOLD), balance);
+    assert_eq!(balance["species"], 1);
+}
+
+#[test]
+fn history_generation_rejects_old_response_after_switching_away_and_back_to_commander() {
+    let store = history_store();
+    let mut h = H::new();
+    h.start();
+    h.scan_body("Rocky body", "CarbonDioxide", false);
+    let scan = h.m.scans[&(SYSTEM, BODY)].clone();
+    let key = predict::BodyProfileKey::from(&body_profile(&scan, None));
+    import_analysis(&store, &scan);
+    let old = stored_outputs(&mut h, &store);
+    store.exec_json("DELETE FROM event", &[]).unwrap();
+    h.journal("LoadGame", r#", "Commander":"CMDR OTHER","Odyssey":true"#);
+    h.journal("LoadGame", r#", "Commander":"CMDR TESTER","Odyssey":true"#);
+    let fresh = stored_outputs(&mut h, &store);
+    deliver_outputs(&mut h, fresh);
+    deliver_outputs(&mut h, old);
+    assert_eq!(h.m.history.count(&key, AURASUS), 0);
+    assert_eq!(h.topic(TOPIC_UNSOLD)["species"], 0);
 }

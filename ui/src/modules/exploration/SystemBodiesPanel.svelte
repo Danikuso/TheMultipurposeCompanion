@@ -35,6 +35,9 @@
       <div class="value"><span>{t('exploration-value-now')}</span><strong>{credits(system.value_now)}</strong></div>
       <div class="value"><span>{t('exploration-value-if-mapped')}</span><strong>{credits(system.value_if_mapped)}</strong></div>
     </div>
+    {#if (system.truncated ?? 0) > 0}
+      <p data-testid="exploration-truncated">{t('exploration-truncated', { count: system.truncated ?? 0 })}</p>
+    {/if}
     <div class="table-scroll">
       <div role="table" aria-label={t('panel-system-bodies')} aria-rowcount={system.rows.length + 1} class="body-table">
         <div class="body-grid headings" role="row">

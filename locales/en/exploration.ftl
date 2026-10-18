@@ -35,6 +35,7 @@ exploration-fss-progress = FSS scan
 exploration-value-now = System value
 exploration-value-if-mapped = If you map the recommended ones
 exploration-unidentified = Bodies not yet identified in the FSS
+exploration-truncated = Bodies omitted from the table due to the display limit: { $count }. Totals include all bodies.
 exploration-signals-bio = Bio
 exploration-signals-geo = Geo
 exploration-mark-terraformable = Terraformable
