@@ -539,7 +539,6 @@ fn system_with_300_landable_bodies_all_mapped_and_signalled_stays_under_64_kib()
 fn assert_crowded_system_size(h: &H) {
     let topic = h.topic();
     let bytes = serde_json::to_vec(&topic).unwrap().len();
-    println!("topic 300 bodies: {bytes} bytes; row: {}", rows_dbg(&topic));
     assert!(bytes < 65_536, "{bytes}");
     let rows = topic["rows"].as_array().unwrap();
     assert_eq!(rows.len(), 300);
@@ -656,6 +655,106 @@ fn terraforming_marker_matches_terraformable_bonus_but_not_terraformed() {
     );
 }
 
-fn rows_dbg(topic: &Value) -> String {
-    topic["rows"][0].to_string()
+#[test]
+fn system_with_1000_bodies_truncates_rows_but_totals_count_all() {
+    let mut h = H::new();
+    h.jump("Sys", 1);
+    h.journal("FSSDiscoveryScan", r#","BodyCount":1010,"SystemAddress":1"#);
+    for id in 1..=1000u32 {
+        h.scan(&planet(
+            id,
+            &format!("{id} a"),
+            "Earthlike body",
+            1.0,
+            r#","Landable":true"#,
+        ));
+    }
+    let topic = h.topic();
+    let bytes = serde_json::to_vec(&topic).unwrap().len();
+    assert!(bytes < 65_536, "{bytes}");
+    let rows = topic["rows"].as_array().unwrap();
+    assert!(!rows.is_empty() && rows.len() < 1000, "{}", rows.len());
+    assert_eq!(topic["truncated"], 1000 - rows.len());
+    assert_eq!(topic["value_now"], 1000 * 283_629u64);
+    assert_eq!(topic["fss"]["scanned"], 1000);
+    assert_eq!(topic["unidentified"], 10);
+    // Las filas conservadas son las de mayor valor (mismo valor: por BodyID).
+    assert_eq!(rows[0]["body_id"], 1);
+    let mapped = rows[0]["mapped_value"].as_u64().unwrap();
+    assert_eq!(
+        topic["value_if_mapped"].as_u64().unwrap(),
+        1000 * (283_629 + mapped - 283_629)
+    );
+}
+
+#[test]
+fn small_system_has_no_truncated_field() {
+    let mut h = H::new();
+    h.jump("Sys", 1);
+    h.scan(&elw(1));
+    assert!(h.topic().get("truncated").is_none());
+}
+
+#[test]
+fn saa_complete_before_scan_is_applied_when_scan_arrives() {
+    let mut h = H::new();
+    h.jump("Sys", 1);
+    let dirty = h.journal(
+        "SAAScanComplete",
+        r#","BodyName":"Sys 5","BodyID":5,"ProbesUsed":9,"EfficiencyTarget":6"#,
+    );
+    assert!(dirty.is_empty());
+    h.scan(&elw(5));
+    let r = h.row(5);
+    assert!(marked(&r, 32));
+    assert_eq!(r["probes"], json!({"n": 6}));
+    // 9 sondas > 6: sin bonus de eficiencia.
+    let est = mapped_of(&elw(5));
+    let got = r["mapped_value"].as_u64().unwrap();
+    assert!((got as f64 - est as f64 / 1.25).abs() <= 2.0, "{got} {est}");
+}
+
+#[test]
+fn carrier_jump_to_same_system_keeps_rows_scanned_before_location() {
+    let mut h = H::new();
+    h.scan(&elw(1));
+    h.scan(&elw(2));
+    assert_eq!(h.rows().len(), 2);
+    h.journal(
+        "CarrierJump",
+        r#","StarSystem":"Sys","SystemAddress":1,"StarPos":[0,0,0]"#,
+    );
+    assert_eq!(h.rows().len(), 2);
+    assert_eq!(h.topic()["system"], "Sys");
+    assert_eq!(h.topic()["system_address"], 1);
+    // Y un salto posterior a otro sistema sí reinicia.
+    h.jump("Other", 2);
+    assert!(h.rows().is_empty());
+}
+
+#[test]
+fn repeated_fss_discovery_is_not_dirty_and_non_body_count_is_ignored() {
+    let mut h = H::new();
+    h.jump("Sys", 1);
+    let honk = r#","BodyCount":10,"NonBodyCount":3,"SystemAddress":1"#;
+    assert!(h.journal("FSSDiscoveryScan", honk).contains(TOPIC));
+    for id in 1..=4 {
+        h.scan(&planet(id, &id.to_string(), "Icy body", 0.01, ""));
+    }
+    assert!(h.journal("FSSDiscoveryScan", honk).is_empty());
+    assert_eq!(h.topic()["fss"]["body_count"], 10);
+    assert_eq!(h.topic()["unidentified"], 6);
+}
+
+#[test]
+fn repeated_fss_body_signals_with_same_counts_are_not_dirty() {
+    let mut h = H::new();
+    h.jump("Sys", 1);
+    h.scan(&metal_rich(2, ",\"Landable\":true"));
+    let sig = r#","BodyName":"Sys 2","BodyID":2,"Signals":[{"Type":"$SAA_SignalType_Biological;","Count":2}]"#;
+    assert!(h.journal("FSSBodySignals", sig).contains(TOPIC));
+    assert!(h.journal("FSSBodySignals", sig).is_empty());
+    let more = sig.replace("\"Count\":2", "\"Count\":3");
+    assert!(h.journal("FSSBodySignals", &more).contains(TOPIC));
+    assert_eq!(h.row(2)["bio"], 3);
 }

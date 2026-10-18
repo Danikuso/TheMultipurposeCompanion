@@ -133,7 +133,18 @@ pub struct SystemTopic {
     /// Cuerpos del FSS aún sin escanear (`body_count` − escaneados).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub unidentified: Option<u32>,
+    /// Filas omitidas por el tope de tamaño del tópico (las de menor valor);
+    /// ausente si es 0. Los totales y el FSS cuentan siempre todos los cuerpos.
+    #[serde(skip_serializing_if = "is_zero")]
+    pub truncated: u32,
     pub rows: Vec<BodyRow>,
+}
+
+/// Presupuesto de bytes JSON para las filas (el tópico completo no debe pasar de 64 KiB).
+pub const ROWS_BUDGET_BYTES: usize = 56 * 1024;
+
+fn is_zero(n: &u32) -> bool {
+    *n == 0
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -166,6 +177,8 @@ pub struct SystemBodies {
     complete: bool,
     bodies: BTreeMap<u32, Body>,
     signals: HashMap<u32, Signals>,
+    /// `SAAScanComplete` recibidos antes del `Scan` de su cuerpo.
+    pending_mapping: HashMap<u32, Mapping>,
 }
 
 fn count(signals: &[Signal], pick: fn(&Signal) -> bool) -> u32 {
@@ -194,6 +207,14 @@ impl SystemBodies {
 
     /// Entra en un sistema. Devuelve `true` si cambió algo (otro sistema o primera vez).
     pub fn enter(&mut self, name: &str, address: u64) -> bool {
+        if !self.known {
+            // Primer sistema conocido: adopta lo ya recibido (p. ej. escaneos
+            // anteriores al primer Location/jump) en vez de borrarlo.
+            self.known = true;
+            self.name = name.to_owned();
+            self.address = address;
+            return true;
+        }
         let same = self.known
             && if address != 0 {
                 self.address == address
@@ -225,7 +246,11 @@ impl SystemBodies {
         {
             self.discovered = scan.was_discovered;
         }
-        let mapping = self.bodies.get(&id).and_then(|b| b.mapping);
+        let mapping = self
+            .bodies
+            .get(&id)
+            .and_then(|b| b.mapping)
+            .or_else(|| self.pending_mapping.remove(&id));
         self.bodies.insert(
             id,
             Body {
@@ -266,9 +291,14 @@ impl SystemBodies {
         if entry.from_saa {
             return false; // el DSS manda sobre el FSS
         }
-        entry.bio = count(signals, Signal::is_biological);
-        entry.geo = count(signals, Signal::is_geological);
-        true
+        let (bio, geo) = (
+            count(signals, Signal::is_biological),
+            count(signals, Signal::is_geological),
+        );
+        let changed = (entry.bio, entry.geo) != (bio, geo);
+        entry.bio = bio;
+        entry.geo = geo;
+        changed
     }
 
     pub fn on_saa_signals(&mut self, body_id: Option<u32>, signals: &[Signal]) -> bool {
@@ -290,14 +320,22 @@ impl SystemBodies {
         probes_used: Option<u32>,
         target: Option<u32>,
     ) -> bool {
-        let Some(body) = body_id.and_then(|id| self.bodies.get_mut(&id)) else {
-            return false;
-        };
-        body.mapping = Some(Mapping {
+        let Some(id) = body_id else { return false };
+        let mapping = Mapping {
             probes_used,
             target,
-        });
-        true
+        };
+        match self.bodies.get_mut(&id) {
+            Some(body) => {
+                body.mapping = Some(mapping);
+                true
+            }
+            None => {
+                // El `Scan` aún no ha llegado: se aplica cuando llegue.
+                self.pending_mapping.insert(id, mapping);
+                false
+            }
+        }
     }
 
     fn short_name(&self, full: &str) -> String {
@@ -378,6 +416,7 @@ impl SystemBodies {
             .iter()
             .map(|(id, b)| self.row(*id, b, threshold, odyssey))
             .collect();
+        // Totales y FSS sobre TODOS los cuerpos; el tope solo recorta filas.
         rows.sort_by(|a, b| {
             let key = |r: &BodyRow| (r.mapped_value.unwrap_or(0), r.scanned_value);
             key(b).cmp(&key(a)).then(a.body_id.cmp(&b.body_id))
@@ -402,7 +441,18 @@ impl SystemBodies {
                 .filter(|n| *n > 0)
                 .map(|n| (f64::from(scanned.min(n)) / f64::from(n) * 1000.0).round() / 1000.0)
         };
+        let mut used = 0usize;
+        let keep = rows
+            .iter()
+            .take_while(|r| {
+                used += serde_json::to_vec(r).map_or(0, |v| v.len()) + 1;
+                used <= ROWS_BUDGET_BYTES
+            })
+            .count();
+        let truncated = u32::try_from(rows.len() - keep).unwrap_or(u32::MAX);
+        rows.truncate(keep);
         SystemTopic {
+            truncated,
             system: self.name.clone(),
             system_address: self.address,
             discovered: self.discovered,
