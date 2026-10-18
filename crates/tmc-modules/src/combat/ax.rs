@@ -119,6 +119,13 @@ impl AxTracker {
         changed
     }
 
+    /// Objetivo thargoide fijado cuya atribución sigue pendiente (≤ 60 s).
+    pub fn pending_target(&self, now: DateTime<Utc>) -> Option<&str> {
+        let at = self.last_target_at?;
+        let fresh = now - at <= Duration::seconds(TARGET_TTL_SECS);
+        self.last_target_ship.as_deref().filter(|_| fresh)
+    }
+
     /// Presencia o actividad en los últimos 5 minutos.
     pub fn active(&self, now: DateTime<Utc>) -> bool {
         self.presence
