@@ -1,0 +1,1282 @@
+{
+  "source": "Reglas escritas por TMC a partir de hechos públicos (condiciones del códex del juego y mecánica conocida). No derivadas de SrvSurvey bio-criteria ni copiadas de tablas de wikis.",
+  "license": "Datos propios del proyecto (PolyForm Noncommercial 1.0.0); sin datos de terceros",
+  "version": "2026-10-18",
+  "notes": "Cláusulas omitidas = sin restricción; AND entre cláusulas; varias reglas por especie = OR. Géneros sin reglas (Anemone, Brain Tree, Bark Mound, Amphora Plant, Crystalline Shards, Sinuous Tubers) se predicen como desconocidos.",
+  "rules": [
+    {
+      "species": "$Codex_Ent_Aleoids_01_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 175,
+      "temp_max": 180,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Aleoids_02_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 180,
+      "temp_max": 190,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Aleoids_03_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "Ammonia"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 170,
+      "temp_max": 177,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Aleoids_04_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "Ammonia"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 152,
+      "temp_max": 177,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Aleoids_05_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 190,
+      "temp_max": 197,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Bacterial_01_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body",
+        "Rocky ice body",
+        "Icy body",
+        "Metal rich body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "temp_min": 145,
+      "temp_max": 400,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Bacterial_02_Name;",
+      "body_class": [
+        "Icy body",
+        "Rocky ice body"
+      ],
+      "atmosphere_type": [
+        "Helium"
+      ],
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Bacterial_03_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body",
+        "Rocky ice body",
+        "Icy body",
+        "Metal rich body"
+      ],
+      "atmosphere_type": [
+        "Argon",
+        "ArgonRich",
+        "Methane",
+        "MethaneRich",
+        "Helium",
+        "Neon",
+        "NeonRich",
+        "Nitrogen",
+        "Oxygen"
+      ],
+      "volcanism": [
+        "carbon dioxide",
+        "methane"
+      ],
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval; requiere vulcanismo de carbono/metano"
+    },
+    {
+      "species": "$Codex_Ent_Bacterial_04_Name;",
+      "body_class": [
+        "Icy body",
+        "Rocky ice body"
+      ],
+      "atmosphere_type": [
+        "Neon",
+        "NeonRich"
+      ],
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Bacterial_05_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body",
+        "Rocky ice body",
+        "Icy body",
+        "Metal rich body"
+      ],
+      "atmosphere_type": [
+        "Argon",
+        "ArgonRich"
+      ],
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Bacterial_06_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body",
+        "Rocky ice body",
+        "Icy body",
+        "Metal rich body"
+      ],
+      "atmosphere_type": [
+        "Ammonia"
+      ],
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Bacterial_07_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body",
+        "Rocky ice body",
+        "Icy body",
+        "Metal rich body"
+      ],
+      "volcanism": "any",
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval; cualquier atmósfera fina con vulcanismo"
+    },
+    {
+      "species": "$Codex_Ent_Bacterial_08_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body",
+        "Rocky ice body",
+        "Icy body",
+        "Metal rich body"
+      ],
+      "atmosphere_type": [
+        "Nitrogen"
+      ],
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Bacterial_09_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body",
+        "Rocky ice body",
+        "Icy body",
+        "Metal rich body"
+      ],
+      "atmosphere_type": [
+        "Oxygen"
+      ],
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Bacterial_10_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body",
+        "Rocky ice body",
+        "Icy body",
+        "Metal rich body"
+      ],
+      "atmosphere_type": [
+        "Methane",
+        "MethaneRich"
+      ],
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Bacterial_11_Name;",
+      "body_class": [
+        "Icy body",
+        "Rocky ice body"
+      ],
+      "atmosphere_type": [
+        "Neon",
+        "NeonRich"
+      ],
+      "volcanism": [
+        "nitrogen",
+        "ammonia"
+      ],
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Bacterial_12_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body",
+        "Rocky ice body",
+        "Icy body",
+        "Metal rich body"
+      ],
+      "atmosphere_type": [
+        "SulphurDioxide",
+        "Water",
+        "WaterRich"
+      ],
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Bacterial_13_Name;",
+      "body_class": [
+        "Icy body",
+        "Rocky ice body"
+      ],
+      "atmosphere_type": [
+        "Neon",
+        "NeonRich"
+      ],
+      "volcanism": [
+        "water"
+      ],
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Cactoid_01_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 180,
+      "temp_max": 197,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Cactoid_02_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "Ammonia"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 160,
+      "temp_max": 225,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Cactoid_03_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "Water",
+        "WaterRich",
+        "SulphurDioxide"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Cactoid_04_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 180,
+      "temp_max": 197,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Cactoid_05_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "Ammonia"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Clypeus_01_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich",
+        "Water",
+        "WaterRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 190,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Clypeus_02_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich",
+        "Water",
+        "WaterRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 190,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Clypeus_03_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich",
+        "Water",
+        "WaterRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 190,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval; la distancia a la estrella (> 2500 ls) no se modela"
+    },
+    {
+      "species": "$Codex_Ent_Conchas_01_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich",
+        "Water",
+        "WaterRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 180,
+      "temp_max": 195,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Conchas_02_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "Ammonia"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Conchas_03_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_max": 190,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Conchas_04_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "Nitrogen"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Electricae_01_Name;",
+      "body_class": [
+        "Icy body",
+        "Rocky ice body"
+      ],
+      "atmosphere_type": [
+        "Helium",
+        "Neon",
+        "NeonRich",
+        "Argon",
+        "ArgonRich"
+      ],
+      "gravity_max": 0.27,
+      "star_class": [
+        "A",
+        "N",
+        "D*"
+      ],
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval; estrella principal A, de neutrones o enana blanca"
+    },
+    {
+      "species": "$Codex_Ent_Electricae_02_Name;",
+      "body_class": [
+        "Icy body",
+        "Rocky ice body"
+      ],
+      "atmosphere_type": [
+        "Helium",
+        "Neon",
+        "NeonRich",
+        "Argon",
+        "ArgonRich"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval; la cercanía a nebulosas no se modela"
+    },
+    {
+      "species": "$Codex_Ent_Fonticulus_01_Name;",
+      "body_class": [
+        "Icy body",
+        "Rocky ice body"
+      ],
+      "atmosphere_type": [
+        "Neon",
+        "NeonRich"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Fonticulus_02_Name;",
+      "body_class": [
+        "Icy body",
+        "Rocky ice body"
+      ],
+      "atmosphere_type": [
+        "Argon"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Fonticulus_03_Name;",
+      "body_class": [
+        "Icy body",
+        "Rocky ice body"
+      ],
+      "atmosphere_type": [
+        "ArgonRich"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Fonticulus_04_Name;",
+      "body_class": [
+        "Icy body",
+        "Rocky ice body"
+      ],
+      "atmosphere_type": [
+        "Nitrogen"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Fonticulus_05_Name;",
+      "body_class": [
+        "Icy body",
+        "Rocky ice body"
+      ],
+      "atmosphere_type": [
+        "Oxygen"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Fonticulus_06_Name;",
+      "body_class": [
+        "Icy body",
+        "Rocky ice body"
+      ],
+      "atmosphere_type": [
+        "Methane",
+        "MethaneRich"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Shrubs_01_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "Ammonia"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Shrubs_02_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_max": 195,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Shrubs_03_Name;",
+      "body_class": [
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "Ammonia",
+        "CarbonDioxide",
+        "CarbonDioxideRich",
+        "Water",
+        "WaterRich"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Shrubs_04_Name;",
+      "body_class": [
+        "Rocky body"
+      ],
+      "atmosphere_type": [
+        "Ammonia"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Shrubs_05_Name;",
+      "body_class": [
+        "Rocky body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_max": 195,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Shrubs_06_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "Water",
+        "WaterRich"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Shrubs_07_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "SulphurDioxide"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Fumerolas_01_Name;",
+      "body_class": [
+        "Icy body",
+        "Rocky ice body"
+      ],
+      "gravity_max": 0.27,
+      "volcanism": [
+        "carbon dioxide",
+        "methane"
+      ],
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Fumerolas_02_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body",
+        "Rocky ice body"
+      ],
+      "gravity_max": 0.27,
+      "volcanism": [
+        "silicate",
+        "iron",
+        "rock"
+      ],
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Fumerolas_03_Name;",
+      "body_class": [
+        "Icy body",
+        "Rocky ice body"
+      ],
+      "gravity_max": 0.27,
+      "volcanism": [
+        "nitrogen",
+        "ammonia"
+      ],
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Fumerolas_04_Name;",
+      "body_class": [
+        "Icy body",
+        "Rocky ice body",
+        "Rocky body"
+      ],
+      "gravity_max": 0.27,
+      "volcanism": [
+        "water"
+      ],
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Fungoids_01_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body",
+        "Rocky ice body"
+      ],
+      "atmosphere_type": [
+        "Ammonia",
+        "Methane",
+        "MethaneRich"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Fungoids_02_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich",
+        "Water",
+        "WaterRich"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Fungoids_03_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body",
+        "Rocky ice body",
+        "Icy body"
+      ],
+      "atmosphere_type": [
+        "Argon",
+        "ArgonRich",
+        "Nitrogen"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Fungoids_04_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich",
+        "Water",
+        "WaterRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 180,
+      "temp_max": 195,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Osseus_01_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 180,
+      "temp_max": 190,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Osseus_02_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body",
+        "Rocky ice body"
+      ],
+      "atmosphere_type": [
+        "Water",
+        "WaterRich",
+        "Ammonia"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Osseus_03_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "Ammonia"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Osseus_04_Name;",
+      "body_class": [
+        "Icy body",
+        "Rocky ice body"
+      ],
+      "atmosphere_type": [
+        "Argon",
+        "ArgonRich",
+        "Methane",
+        "MethaneRich",
+        "Nitrogen"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Osseus_05_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 180,
+      "temp_max": 195,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Osseus_06_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 190,
+      "temp_max": 197,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Recepta_01_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body",
+        "Rocky ice body",
+        "Icy body",
+        "Metal rich body"
+      ],
+      "atmosphere_type": [
+        "SulphurDioxide"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Recepta_02_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "SulphurDioxide"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Recepta_03_Name;",
+      "body_class": [
+        "Icy body",
+        "Rocky ice body"
+      ],
+      "atmosphere_type": [
+        "SulphurDioxide"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Stratum_01_Name;",
+      "body_class": [
+        "Rocky body"
+      ],
+      "atmosphere_type": [
+        "SulphurDioxide",
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "temp_min": 165,
+      "temp_max": 190,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Stratum_02_Name;",
+      "body_class": [
+        "Rocky body"
+      ],
+      "atmosphere_type": [
+        "Ammonia",
+        "Water",
+        "WaterRich",
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "temp_min": 165,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Stratum_03_Name;",
+      "body_class": [
+        "Rocky body"
+      ],
+      "atmosphere_type": [
+        "Ammonia"
+      ],
+      "temp_min": 165,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Stratum_04_Name;",
+      "body_class": [
+        "Rocky body"
+      ],
+      "atmosphere_type": [
+        "SulphurDioxide"
+      ],
+      "temp_min": 165,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Stratum_05_Name;",
+      "body_class": [
+        "Rocky body"
+      ],
+      "atmosphere_type": [
+        "SulphurDioxide",
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "temp_min": 165,
+      "temp_max": 190,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Stratum_06_Name;",
+      "body_class": [
+        "Rocky body"
+      ],
+      "atmosphere_type": [
+        "SulphurDioxide",
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "temp_min": 190,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Stratum_07_Name;",
+      "body_class": [
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich",
+        "Ammonia",
+        "Water",
+        "WaterRich",
+        "SulphurDioxide",
+        "Argon",
+        "ArgonRich",
+        "Oxygen"
+      ],
+      "temp_min": 165,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Stratum_08_Name;",
+      "body_class": [
+        "Rocky body"
+      ],
+      "atmosphere_type": [
+        "SulphurDioxide",
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "temp_min": 190,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tubus_01_Name;",
+      "body_class": [
+        "Rocky body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.15,
+      "temp_min": 160,
+      "temp_max": 197,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tubus_02_Name;",
+      "body_class": [
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich",
+        "Ammonia"
+      ],
+      "gravity_max": 0.15,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tubus_03_Name;",
+      "body_class": [
+        "Rocky body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.15,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tubus_04_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "Ammonia"
+      ],
+      "gravity_max": 0.15,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tubus_05_Name;",
+      "body_class": [
+        "Rocky body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.15,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tussocks_01_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 145,
+      "temp_max": 155,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tussocks_02_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 155,
+      "temp_max": 160,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tussocks_03_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 160,
+      "temp_max": 170,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tussocks_04_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "Ammonia"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tussocks_05_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "Methane",
+        "MethaneRich"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tussocks_06_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 147,
+      "temp_max": 197,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tussocks_07_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 171,
+      "temp_max": 175,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tussocks_08_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 175,
+      "temp_max": 180,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tussocks_09_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 145,
+      "temp_max": 197,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tussocks_10_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "Ammonia"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tussocks_11_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 181,
+      "temp_max": 190,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tussocks_12_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "CarbonDioxide",
+        "CarbonDioxideRich"
+      ],
+      "gravity_max": 0.27,
+      "temp_min": 191,
+      "temp_max": 197,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tussocks_13_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "SulphurDioxide"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tussocks_14_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body"
+      ],
+      "atmosphere_type": [
+        "Water",
+        "WaterRich"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    },
+    {
+      "species": "$Codex_Ent_Tussocks_15_Name;",
+      "body_class": [
+        "Rocky body",
+        "High metal content body",
+        "Rocky ice body"
+      ],
+      "atmosphere_type": [
+        "Argon",
+        "ArgonRich",
+        "Methane",
+        "MethaneRich"
+      ],
+      "gravity_max": 0.27,
+      "source": "heurística TMC 2026-10-18 (condiciones del códex del juego y mecánica conocida); ajustable con eval"
+    }
+  ]
+}

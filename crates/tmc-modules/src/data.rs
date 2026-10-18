@@ -1,5 +1,6 @@
 //! Datos estáticos del juego: tabla de FSD y clases de estrella.
 
+use crate::exobiology::predict::BioRules;
 use crate::exobiology::species::SpeciesTable;
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
@@ -11,6 +12,17 @@ pub fn species_table() -> &'static SpeciesTable {
         SpeciesTable::from_json(include_str!("../data/species.json")).unwrap_or_else(|error| {
             tracing::error!(%error, "invalid embedded species.json; using empty table");
             SpeciesTable::default()
+        })
+    })
+}
+
+/// Prediction rules written by TMC, embedded once.
+pub fn bio_rules() -> &'static BioRules {
+    static RULES: OnceLock<BioRules> = OnceLock::new();
+    RULES.get_or_init(|| {
+        BioRules::from_json(include_str!("../data/bio_rules.json")).unwrap_or_else(|error| {
+            tracing::error!(%error, "invalid embedded bio_rules.json; using no rules");
+            BioRules::default()
         })
     })
 }
