@@ -178,7 +178,7 @@ fn prospector_topic_shows_composition_and_verdict() {
     // El primer asteroide tiene platino de interés sin precio: una consulta.
     let reqs = h.sell_requests();
     assert_eq!(reqs.len(), 1);
-    assert_eq!(reqs[0].key, "sell:2:platinum");
+    assert_eq!(reqs[0].key, "sell:2:platinum:s");
 }
 
 #[test]
@@ -242,13 +242,13 @@ fn late_markets_for_previous_system_not_applied() {
     let mut h = H::new();
     h.start();
     h.cargo(3, &[("platinum", 5)]);
-    assert_eq!(h.sell_requests()[0].key, "sell:1:platinum");
+    assert_eq!(h.sell_requests()[0].key, "sell:1:platinum:m");
     h.jump(10, "Beta Test", 2);
-    assert_eq!(h.sell_requests().last().unwrap().key, "sell:2:platinum");
+    assert_eq!(h.sell_requests().last().unwrap().key, "sell:2:platinum:m");
     assert_eq!(h.val("mining.sell")["status"], json!("loading"));
 
     h.send(markets_response(
-        "sell:1:platinum",
+        "sell:1:platinum:m",
         vec![market("X", 230_000)],
     ));
     let sell = h.val("mining.sell");
@@ -264,7 +264,7 @@ fn late_markets_for_previous_system_not_applied() {
     );
 
     h.send(markets_response(
-        "sell:2:platinum",
+        "sell:2:platinum:m",
         vec![market("Y", 250_000)],
     ));
     let sell = h.val("mining.sell");
@@ -344,7 +344,7 @@ fn ship_pad_change_clears_remote_prices_and_requests_again() {
     h.start();
     h.cargo(3, &[("platinum", 5)]);
     h.send(markets_response(
-        "sell:1:platinum",
+        "sell:1:platinum:m",
         vec![market("X", 230_000)],
     ));
     assert!(h.m.prices.best_price("platinum", t(20)).is_some());
@@ -356,4 +356,122 @@ fn ship_pad_change_clears_remote_prices_and_requests_again() {
     );
     assert!(h.m.prices.best_price("platinum", t(40)).is_none());
     assert_eq!(h.sell_requests().len(), before + 1);
+}
+
+#[test]
+fn response_for_previous_pad_is_dropped() {
+    let mut h = H::new();
+    h.start();
+    h.cargo(3, &[("platinum", 5)]);
+    assert_eq!(h.sell_requests()[0].key, "sell:1:platinum:m");
+    h.journal(
+        30,
+        "LoadGame",
+        r#","FID":"F1","Commander":"TESTER","Odyssey":true,"Ship":"anaconda""#,
+    );
+    assert_eq!(h.sell_requests().last().unwrap().key, "sell:1:platinum:l");
+    h.send(markets_response(
+        "sell:1:platinum:m",
+        vec![market("X", 230_000)],
+    ));
+    assert!(h.m.prices.best_price("platinum", t(40)).is_none());
+    assert_eq!(h.val("mining.sell")["status"], json!("loading"));
+}
+
+#[test]
+fn commander_change_resets_everything_but_load_game_keeps_prices() {
+    let mut h = H::new();
+    h.start();
+    h.journal(
+        3,
+        "MarketSell",
+        r#","Type":"platinum","Count":1,"SellPrice":220000,"TotalSale":220000"#,
+    );
+    h.cargo(4, &[("platinum", 5)]);
+    h.journal(5, "MiningRefined", REFINED);
+    h.send(markets_response(
+        "sell:1:platinum:m",
+        vec![market("X", 230_000)],
+    ));
+    // Misma partida recargada: sesión nueva y resultados borrados; precios se conservan.
+    let n = h.sell_requests().len();
+    h.journal(
+        20,
+        "LoadGame",
+        r#","FID":"F1","Commander":"TESTER","Odyssey":true,"Ship":"python""#,
+    );
+    assert_eq!(h.val("mining.session")["refined"], json!({}));
+    assert_eq!(h.sell_requests().len(), n + 1);
+    assert!(h.m.prices.best_price("platinum", t(25)).is_some());
+    h.journal(21, "MiningRefined", REFINED);
+    // Otro comandante: todo limpio, incluidos los precios.
+    h.journal(30, "Commander", r#","FID":"F2","Name":"OTRO""#);
+    h.journal(
+        31,
+        "LoadGame",
+        r#","FID":"F2","Commander":"OTRO","Odyssey":true,"Ship":"python""#,
+    );
+    assert_eq!(h.val("mining.session")["refined"], json!({}));
+    assert!(h.m.prices.best_price("platinum", t(35)).is_none());
+    assert!(h.m.inventory.is_empty());
+    assert!(h.m.prospector.current().is_none());
+}
+
+#[test]
+fn reset_session_action_clears_counters() {
+    let mut h = H::new();
+    h.start();
+    h.journal(5, "MiningRefined", REFINED);
+    assert_eq!(h.val("mining.session")["refined"], json!({"platinum": 1}));
+    let dirty = h.send(SourceEvent::Action {
+        name: "mining.reset_session".into(),
+        args: json!({}),
+    });
+    assert!(dirty.contains("mining.session"));
+    assert_eq!(h.val("mining.session")["refined"], json!({}));
+}
+
+#[test]
+fn failed_is_retried_only_after_300_s() {
+    use tmc_model::net::NetFailure;
+    let mut h = H::new();
+    h.start();
+    h.cargo(3, &[("platinum", 5)]);
+    let n = h.sell_requests().len();
+    h.send(SourceEvent::Net(NetResponse {
+        id: 0,
+        module: "mining".into(),
+        key: "sell:1:platinum:m".into(),
+        source: NetSource::Ardent,
+        fetched_at: t(4),
+        outcome: NetOutcome::Failed(NetFailure::Timeout),
+    }));
+    h.cargo(100, &[("platinum", 6)]);
+    assert_eq!(h.sell_requests().len(), n);
+    h.cargo(3 + 301, &[("platinum", 7)]);
+    assert_eq!(h.sell_requests().len(), n + 1);
+}
+
+#[test]
+fn radius_change_requests_again() {
+    let mut h = H::new();
+    h.start();
+    h.cargo(3, &[("platinum", 5)]);
+    let n = h.sell_requests().len();
+    h.send(SourceEvent::Settings(ModuleSettings {
+        sell_search_radius_ly: 50,
+        ..ModuleSettings::default()
+    }));
+    assert_eq!(h.sell_requests().len(), n + 1);
+}
+
+#[test]
+fn session_topic_not_dirty_on_unrelated_events_until_30_s() {
+    let mut h = H::new();
+    h.start();
+    h.journal(5, "MiningRefined", REFINED);
+    let d = h.journal(10, "Music", r#","MusicTrack":"Exploration""#);
+    assert!(!d.contains("mining.session"));
+    let d = h.journal(100, "Music", r#","MusicTrack":"Exploration""#);
+    assert!(d.contains("mining.session"));
 }
