@@ -43,7 +43,7 @@ async fn main() -> anyhow::Result<()> {
     let _guard = init_logging(&log_dir);
 
     #[cfg(debug_assertions)]
-    let running = match e2e_transport() {
+    let running = match e2e_transport()? {
         Some(t) => tmc_app::start_with_transport(config, t).await?,
         None => start(config).await?,
     };
@@ -63,7 +63,7 @@ async fn main() -> anyhow::Result<()> {
 /// `TMC_E2E_ARDENT_BASE=http://127.0.0.1:<puerto>` las peticiones a Ardent van a ese
 /// servidor falso local y cualquier otra petición de red se rechaza.
 #[cfg(debug_assertions)]
-fn e2e_transport() -> Option<std::sync::Arc<dyn tmc_net::Transport>> {
+fn e2e_transport() -> anyhow::Result<Option<std::sync::Arc<dyn tmc_net::Transport>>> {
     use tmc_net::{BoxFut, HttpReply, ReqwestTransport, Transport, TransportError};
     const ARDENT: &str = "https://api.ardent-insight.com";
     struct Redirect {
@@ -85,10 +85,24 @@ fn e2e_transport() -> Option<std::sync::Arc<dyn tmc_net::Transport>> {
             Box::pin(async { Err(TransportError::Connect("blocked in e2e".into())) })
         }
     }
-    let base = std::env::var("TMC_E2E_ARDENT_BASE").ok()?;
-    if !base.starts_with("http://127.0.0.1:") {
-        return None;
-    }
-    let inner = ReqwestTransport::new().ok()?;
-    Some(std::sync::Arc::new(Redirect { base, inner }))
+    let base = match std::env::var("TMC_E2E_ARDENT_BASE") {
+        Ok(b) => b,
+        Err(std::env::VarError::NotPresent) => return Ok(None),
+        Err(e) => anyhow::bail!("TMC_E2E_ARDENT_BASE inválida: {e}"),
+    };
+    // Estricto: http://127.0.0.1:<puerto> y nada más (sin usuario, ruta, consulta ni barra).
+    let port = base
+        .strip_prefix("http://127.0.0.1:")
+        .filter(|p| !p.is_empty() && p.len() <= 5 && p.bytes().all(|b| b.is_ascii_digit()))
+        .and_then(|p| p.parse::<u16>().ok())
+        .filter(|p| *p > 0);
+    let Some(port) = port else {
+        anyhow::bail!("TMC_E2E_ARDENT_BASE debe ser http://127.0.0.1:<puerto>, no {base:?}");
+    };
+    let inner = ReqwestTransport::new()
+        .map_err(|e| anyhow::anyhow!("no se pudo crear el transporte e2e: {e:?}"))?;
+    Ok(Some(std::sync::Arc::new(Redirect {
+        base: format!("http://127.0.0.1:{port}"),
+        inner,
+    })))
 }

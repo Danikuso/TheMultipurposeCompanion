@@ -183,24 +183,42 @@ fn combat_session_fixture_produces_expected_topics() {
 fn combat_fixture_vouchers_match_redeemed_sum() {
     // Criterio 4: lo ganado antes del canje (3 Bounty = 500 000 + bono 50 000) coincide con
     // la suma de los tres RedeemVoucher (300 000 + 200 000 + 50 000), sin diferencia.
-    let (mut earned, mut redeemed) = (0u64, 0u64);
+    let vouchers = |h: &H| -> u64 {
+        h.val("combat.session")["vouchers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|r| r["amount"].as_u64().unwrap())
+            .sum()
+    };
+    let amount = |l: &str, key: &str| {
+        serde_json::from_str::<serde_json::Value>(l).unwrap()[key]
+            .as_u64()
+            .unwrap()
+    };
+    let lines: Vec<&str> = FIXTURE.lines().collect();
     let mut h = H::new();
-    for l in FIXTURE.lines() {
-        let v: serde_json::Value = serde_json::from_str(l).unwrap();
-        match v["event"].as_str().unwrap() {
-            "Died" => break,
-            "Bounty" => earned += v["TotalReward"].as_u64().unwrap(),
-            "FactionKillBond" => earned += v["Reward"].as_u64().unwrap(),
-            "RedeemVoucher" => redeemed += v["Amount"].as_u64().unwrap(),
-            _ => {}
+    // Líneas 1-9: todo lo ganado antes del primer canje (3 Bounty y 1 bono).
+    let mut earned = 0;
+    for l in &lines[..9] {
+        h.line(l);
+        if l.contains(r#""event":"Bounty""#) || l.contains(r#""event":"Bounty","#) {
+            earned += amount(l, "TotalReward");
+        } else if l.contains("FactionKillBond") {
+            earned += amount(l, "Reward");
         }
-        if v["event"] == "Bounty" && v["TotalReward"] == 70000 {
-            // Bounty posterior al canje, anterior a Died: no entra en la comparación.
-            earned -= 70000;
-        }
+    }
+    assert_eq!(earned, 550_000);
+    assert_eq!(vouchers(&h), earned);
+    // Líneas 10-12: los tres RedeemVoucher; el libro queda a cero, sin diferencia.
+    let mut redeemed = 0;
+    for l in &lines[9..12] {
+        assert!(l.contains("RedeemVoucher"), "{l}");
+        redeemed += amount(l, "Amount");
         h.line(l);
     }
-    assert_eq!((earned, redeemed), (550_000, 550_000));
+    assert_eq!(redeemed, earned);
+    assert_eq!(vouchers(&h), 0);
     // Tras Died, el libro conserva solo lo posterior: 150 000 (bounty) + 40 000 (bono).
     let mut h = H::new();
     for l in FIXTURE.lines() {
