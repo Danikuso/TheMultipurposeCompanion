@@ -49,6 +49,11 @@ pub fn parse_codex_ref(body: &str) -> Result<HashMap<u64, (String, String)>, Net
             map.insert(entry, (genus.trim().to_string(), species));
         }
     }
+    // Sin una sola fila válida el formato ha cambiado o la respuesta es basura:
+    // no debe cachearse ni persistirse.
+    if map.is_empty() {
+        return Err(NetFailure::Malformed);
+    }
     Ok(map)
 }
 
@@ -114,12 +119,20 @@ pub fn parse_body(
     let mut seen: HashSet<(u64, String, String)> = HashSet::new();
     let mut per_entry: BTreeMap<u64, u32> = BTreeMap::new();
     for row in rows {
-        let row = jsonx::as_obj(row)?;
-        if jsonx::opt_str(row, "hud_category")?.as_deref() != Some("Biology") {
+        // Una fila corrupta se omite: no invalida el resto del sistema.
+        let Ok(row) = jsonx::as_obj(row) else {
+            continue;
+        };
+        if !matches!(jsonx::opt_str(row, "hud_category"), Ok(Some(c)) if c == "Biology") {
             continue;
         }
-        let entry = jsonx::req_u64(row, "entryid")?;
-        let row_body = jsonx::opt_str(row, "body")?.unwrap_or_default();
+        let Ok(entry) = jsonx::req_u64(row, "entryid") else {
+            continue;
+        };
+        let row_body = jsonx::opt_str(row, "body")
+            .ok()
+            .flatten()
+            .unwrap_or_default();
         if row_body.trim().to_lowercase() != target {
             continue;
         }
@@ -279,14 +292,30 @@ mod tests {
     }
 
     #[test]
+    fn corrupt_rows_are_skipped_not_fatal() {
+        let body = r#"{"codex":[
+          7,
+          {"body":"B","entryid":"x","hud_category":"Biology"},
+          {"body":"B","hud_category":"Biology"},
+          {"body":"B","entryid":9900001,"hud_category":"Biology","latitude":"1","longitude":"2"}
+        ]}"#;
+        let bio = parse_body(body, "S", "S B", &resolve).unwrap();
+        assert_eq!(bio.hints.len(), 1);
+        assert_eq!(bio.hints[0].species, "EspecieAlfa");
+    }
+
+    #[test]
+    fn empty_codex_ref_is_malformed() {
+        assert_eq!(parse_codex_ref("{}"), Err(NetFailure::Malformed));
+        assert_eq!(
+            parse_codex_ref(r#"{"1": {"entryid": 1}, "2": 5}"#),
+            Err(NetFailure::Malformed)
+        );
+    }
+
+    #[test]
     fn malformed_bodies_fail_cleanly() {
-        for bad in [
-            "",
-            "{",
-            "null",
-            r#"{"codex":"x"}"#,
-            r#"{"codex":[{"entryid":"x","hud_category":"Biology"}]}"#,
-        ] {
+        for bad in ["", "{", "null", r#"{"codex":"x"}"#] {
             assert_eq!(
                 parse_body(bad, "S", "S A", &resolve),
                 Err(NetFailure::Malformed),

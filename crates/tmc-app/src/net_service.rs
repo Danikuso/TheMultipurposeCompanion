@@ -99,6 +99,8 @@ struct Ctx {
     online: Arc<AtomicBool>,
     shared: Mutex<Shared>,
     permits: Semaphore,
+    /// Canonn es lento y limitado a 1/s: no acapara los permisos globales.
+    canonn_permits: Semaphore,
 }
 
 /// Contrato: la defensa de la galaxia Legacy es de los módulos (no emiten
@@ -117,6 +119,7 @@ pub fn spawn_net_service(
         online: online.clone(),
         shared: Mutex::new(Shared::default()),
         permits: Semaphore::new(MAX_CONCURRENT),
+        canonn_permits: Semaphore::new(1),
     });
     tokio::spawn(async move {
         while let Some(request) = rx.recv().await {
@@ -194,7 +197,11 @@ fn group(ctx: &Ctx, qkey: &str) -> Vec<Waiter> {
 /// Llamada al cliente con turno de concurrencia; `None` si el opt-out está
 /// activo justo antes de llamar.
 async fn run(ctx: &Ctx, query: &NetQuery) -> Option<(NetSource, NetOutcome)> {
-    let _permit = ctx.permits.acquire().await.ok()?;
+    let permits = match query {
+        NetQuery::BodyBio { .. } => &ctx.canonn_permits,
+        _ => &ctx.permits,
+    };
+    let _permit = permits.acquire().await.ok()?;
     if !ctx.online.load(Ordering::Relaxed) {
         return None;
     }
@@ -228,7 +235,7 @@ fn take_group(ctx: &Ctx, qkey: &str) -> Vec<Waiter> {
 }
 
 async fn lead(ctx: Arc<Ctx>, qkey: String, query: NetQuery) {
-    if let Some((outcome, at)) = read_ardent_cache(&ctx.store, &query).await {
+    if let Some((outcome, at)) = read_api_cache(&ctx.store, &query).await {
         let waiters = take_group(&ctx, &qkey);
         send_all(&ctx, &waiters, NetSource::Cache, at, &outcome).await;
         return;
@@ -307,7 +314,7 @@ async fn finish(
     if let NetOutcome::System(system) = outcome {
         write_cache(&ctx.store, query, system, now).await;
     }
-    write_ardent_cache(&ctx.store, query, outcome, now).await;
+    write_api_cache(&ctx.store, query, outcome, now).await;
     send_all(ctx, waiters, source, now, outcome).await;
 }
 
@@ -419,7 +426,7 @@ async fn write_cache(store: &Store, query: &NetQuery, system: &RemoteSystem, at:
 }
 
 /// Clave única de las consultas de Ardent (listas de mercados/estaciones).
-fn ardent_key(query: &NetQuery) -> Option<(CacheKind, String)> {
+fn api_cache_key(query: &NetQuery) -> Option<(CacheKind, String)> {
     match query {
         NetQuery::CommodityImportsNearby { .. }
         | NetQuery::NearestService { .. }
@@ -429,8 +436,8 @@ fn ardent_key(query: &NetQuery) -> Option<(CacheKind, String)> {
 }
 
 /// Respuesta de Ardent fresca en caché; sin `max_stale` útil (caducada = sin caché).
-async fn read_ardent_cache(store: &Store, query: &NetQuery) -> Option<(NetOutcome, DateTime<Utc>)> {
-    let (kind, key) = ardent_key(query)?;
+async fn read_api_cache(store: &Store, query: &NetQuery) -> Option<(NetOutcome, DateTime<Utc>)> {
+    let (kind, key) = api_cache_key(query)?;
     let store = store.clone();
     let entry = tokio::task::spawn_blocking(move || store.api_cache_get(&key))
         .await
@@ -448,13 +455,8 @@ async fn read_ardent_cache(store: &Store, query: &NetQuery) -> Option<(NetOutcom
     Some((outcome, entry.fetched_at))
 }
 
-async fn write_ardent_cache(
-    store: &Store,
-    query: &NetQuery,
-    outcome: &NetOutcome,
-    at: DateTime<Utc>,
-) {
-    let Some((_, key)) = ardent_key(query) else {
+async fn write_api_cache(store: &Store, query: &NetQuery, outcome: &NetOutcome, at: DateTime<Utc>) {
+    let Some((_, key)) = api_cache_key(query) else {
         return;
     };
     let json = match outcome {
@@ -675,6 +677,7 @@ mod tests {
             online: rig.online.clone(),
             shared: Mutex::new(Shared::default()),
             permits: Semaphore::new(MAX_CONCURRENT),
+            canonn_permits: Semaphore::new(1),
         });
         let pending = tokio::spawn(async move { run(&ctx, &sol()).await });
         tokio::task::yield_now().await;
@@ -1045,6 +1048,111 @@ mod tests {
         assert_eq!(r.source, NetSource::Cache);
         assert_eq!(r.outcome, NetOutcome::BodyBio(bio));
         assert_eq!(rig.fake.calls(), 0);
+    }
+
+    const CANONN_BODY: &str = include_str!("../../../tests/fixtures/net/canonn_body_ok.json");
+    const CANONN_REF: &str = r#"{
+      "9900001": {"entryid": 9900001, "english_name": "EspecieAlfa - Roja", "sub_class": "GeneroA"},
+      "9900002": {"entryid": 9900002, "english_name": "EspecieBeta - Azul", "sub_class": "GeneroB"}
+    }"#;
+
+    fn bio_query(id: u32, body: &str) -> NetQuery {
+        NetQuery::BodyBio {
+            system_address: 1,
+            star_system: "Sistema Sintetico de Prueba".into(),
+            body_id: id,
+            body_name: format!("Sistema Sintetico de Prueba {body}"),
+            profile: tmc_model::net::BodyProfile {
+                planet_class: None,
+                atmosphere_type: None,
+                gravity_g: None,
+                temperature_k: None,
+                pressure_atm: None,
+                volcanism: None,
+                star_class: None,
+            },
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn body_bio_network_result_is_cached_and_served_next_time() {
+        let mut rig = rig(vec![ok(200, CANONN_REF), ok(200, CANONN_BODY)]);
+        let send = |id: u64, q: NetQuery| NetRequest {
+            id,
+            module: "exobiology".into(),
+            key: format!("bio:{id}"),
+            query: q,
+        };
+        rig.handle
+            .tx
+            .send(send(1, bio_query(2, "A 1 a")))
+            .await
+            .unwrap();
+        let first = next_response(&mut rig).await;
+        assert_eq!(first.source, NetSource::Canonn);
+        assert!(matches!(first.outcome, NetOutcome::BodyBio(_)));
+        assert_eq!(rig.fake.calls(), 2);
+        let stored = rig.store.api_cache_get("canonn:body:1:2").unwrap();
+        assert!(stored.is_some());
+        rig.handle
+            .tx
+            .send(send(2, bio_query(2, "A 1 a")))
+            .await
+            .unwrap();
+        let again = next_response(&mut rig).await;
+        assert_eq!(again.source, NetSource::Cache);
+        assert_eq!(again.outcome, first.outcome);
+        assert_eq!(rig.fake.calls(), 2);
+    }
+
+    struct CanonnSlow;
+
+    impl Transport for CanonnSlow {
+        fn get(&self, url: &str) -> BoxFut<'_, Reply> {
+            let slow = url.contains("canonn");
+            Box::pin(async move {
+                if slow {
+                    tokio::time::sleep(Duration::from_secs(30)).await;
+                    return ok(200, "{}");
+                }
+                ok(200, SYSTEM)
+            })
+        }
+        fn post_form(&self, _url: &str, _form: &[(String, String)]) -> BoxFut<'_, Reply> {
+            self.get("")
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn slow_canonn_requests_do_not_block_other_services() {
+        let (tx, mut events) = mpsc::channel(64);
+        let handle = spawn_net_service(
+            Arc::new(NetClient::new(Arc::new(CanonnSlow))),
+            Store::open_in_memory().unwrap(),
+            tx,
+            Arc::new(AtomicBool::new(true)),
+        );
+        for id in 1..=4u32 {
+            handle
+                .tx
+                .send(NetRequest {
+                    id: u64::from(id),
+                    module: "exobiology".into(),
+                    key: format!("bio:{id}"),
+                    query: bio_query(id, &format!("A {id}")),
+                })
+                .await
+                .unwrap();
+        }
+        handle.tx.send(request(99)).await.unwrap();
+        let first = tokio::time::timeout(Duration::from_secs(5), events.recv())
+            .await
+            .expect("la consulta de Spansh quedó bloqueada")
+            .unwrap();
+        let SourceEvent::Net(r) = first else {
+            panic!("evento inesperado")
+        };
+        assert_eq!(r.id, 99);
     }
 
     #[tokio::test(start_paused = true)]

@@ -98,6 +98,9 @@ pub struct NetClient {
     /// Última respuesta de `getSystemPoi`: (sistema en minúsculas, cuándo, cuerpo).
     poi: Mutex<Option<(String, std::time::Instant, Arc<String>)>>,
     persist: Option<Arc<dyn RefPersist>>,
+    /// Una sola descarga a la vez de `codex/ref` y de `getSystemPoi`.
+    ref_lock: tokio::sync::Mutex<()>,
+    poi_lock: tokio::sync::Mutex<()>,
 }
 
 fn now() -> std::time::Instant {
@@ -156,6 +159,8 @@ impl NetClient {
             codex_ref: Mutex::new(None),
             poi: Mutex::new(None),
             persist: None,
+            ref_lock: tokio::sync::Mutex::new(()),
+            poi_lock: tokio::sync::Mutex::new(()),
         }
     }
 
@@ -287,19 +292,33 @@ impl NetClient {
             Err(miss) => return miss.into(),
         };
         let system_key = star_system.trim().to_lowercase();
-        let cached = {
+        let cached = |key: &str| {
             let poi = self.poi.lock().unwrap();
             poi.as_ref()
-                .filter(|(k, at, _)| *k == system_key && at.elapsed() < POI_TTL)
+                .filter(|(k, at, _)| k == key && at.elapsed() < POI_TTL)
                 .map(|(_, _, body)| body.clone())
         };
-        let body = match cached {
+        let body = match cached(&system_key) {
             Some(body) => body,
             None => {
-                let req = Req::Get(canonn::body_url(star_system));
-                match self.call(service, req, online).await {
-                    Ok(body) => Arc::new(body),
-                    Err(miss) => return miss.into(),
+                let _one_download = self.poi_lock.lock().await;
+                match cached(&system_key) {
+                    Some(body) => body,
+                    None => {
+                        let req = Req::Get(canonn::body_url(star_system));
+                        match self.call(service, req, online).await {
+                            Ok(body) => {
+                                let body = Arc::new(body);
+                                *self.poi.lock().unwrap() = Some((
+                                    system_key.clone(),
+                                    std::time::Instant::now(),
+                                    body.clone(),
+                                ));
+                                body
+                            }
+                            Err(miss) => return miss.into(),
+                        }
+                    }
                 }
             }
         };
@@ -307,7 +326,6 @@ impl NetClient {
         match canonn::parse_body(&body, star_system, body_name, &resolve) {
             Ok(bio) => {
                 self.succeed(service);
-                *self.poi.lock().unwrap() = Some((system_key, std::time::Instant::now(), body));
                 if bio.hints.is_empty() {
                     NetOutcome::NoData
                 } else {
@@ -315,35 +333,48 @@ impl NetClient {
                 }
             }
             Err(e) => {
+                // Una respuesta corrupta no se reutiliza.
+                *self.poi.lock().unwrap() = None;
                 self.fail(service);
                 NetOutcome::Failed(e)
             }
         }
     }
 
+    fn memory_ref(&self) -> Option<Arc<CodexRef>> {
+        let cache = self.codex_ref.lock().unwrap();
+        cache
+            .as_ref()
+            .filter(|(at, _)| at.elapsed() < CODEX_REF_TTL)
+            .map(|(_, r)| r.clone())
+    }
+
     async fn codex_ref(&self, online: Option<&AtomicBool>) -> Result<Arc<CodexRef>, Miss> {
-        let fresh = {
-            let cache = self.codex_ref.lock().unwrap();
-            cache
-                .as_ref()
-                .filter(|(at, _)| at.elapsed() < CODEX_REF_TTL)
-                .map(|(_, r)| r.clone())
-        };
-        if let Some(r) = fresh {
+        if let Some(r) = self.memory_ref() {
             return Ok(r);
         }
-        if let Some((at, text)) = self.persist.as_ref().and_then(|p| p.load()) {
-            let age = (self.utc_now)() - at;
-            if let (Ok(age), Some(map)) = (age.to_std(), canonn::deserialize_codex_ref(&text))
-                && age < CODEX_REF_TTL
-                && !map.is_empty()
-            {
-                let r = Arc::new(map);
-                let seen = std::time::Instant::now()
-                    .checked_sub(age)
-                    .unwrap_or_else(std::time::Instant::now);
-                *self.codex_ref.lock().unwrap() = Some((seen, r.clone()));
-                return Ok(r);
+        let _one_download = self.ref_lock.lock().await;
+        if let Some(r) = self.memory_ref() {
+            return Ok(r);
+        }
+        if let Some(persist) = self.persist.clone() {
+            let stored = tokio::task::spawn_blocking(move || persist.load())
+                .await
+                .ok()
+                .flatten();
+            if let Some((at, text)) = stored {
+                let age = (self.utc_now)() - at;
+                if let (Ok(age), Some(map)) = (age.to_std(), canonn::deserialize_codex_ref(&text))
+                    && age < CODEX_REF_TTL
+                    && !map.is_empty()
+                {
+                    let r = Arc::new(map);
+                    let seen = std::time::Instant::now()
+                        .checked_sub(age)
+                        .unwrap_or_else(std::time::Instant::now);
+                    *self.codex_ref.lock().unwrap() = Some((seen, r.clone()));
+                    return Ok(r);
+                }
             }
         }
         let req = Req::Get(canonn::codex_ref_url());
@@ -351,8 +382,11 @@ impl NetClient {
         match canonn::parse_codex_ref(&body) {
             Ok(map) => {
                 self.succeed(Service::Canonn);
-                if let Some(p) = &self.persist {
-                    p.save(&canonn::serialize_codex_ref(&map), (self.utc_now)());
+                if let Some(persist) = self.persist.clone() {
+                    let text = canonn::serialize_codex_ref(&map);
+                    let at = (self.utc_now)();
+                    // Fallos de escritura los registra quien implementa `save`.
+                    let _ = tokio::task::spawn_blocking(move || persist.save(&text, at)).await;
                 }
                 let r = Arc::new(map);
                 *self.codex_ref.lock().unwrap() = Some((std::time::Instant::now(), r.clone()));
@@ -1268,6 +1302,45 @@ mod tests {
         let third = NetClient::new(t3.clone()).with_codex_persist(persist);
         third.execute(&bio_query("A 1 a")).await;
         assert_eq!(t3.count("/codex/ref"), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn parallel_body_bio_downloads_once() {
+        let t = canonn_transport(vec![ok(200, CANONN_BODY)]);
+        let c = Arc::new(client(&t));
+        let (q1, q2, q3, q4) = (
+            bio_query("A 1 a"),
+            bio_query("A 1"),
+            bio_query("A 1 a"),
+            bio_query("A 2"),
+        );
+        let (a, b, d, e) = tokio::join!(
+            c.execute(&q1),
+            c.execute(&q2),
+            c.execute(&q3),
+            c.execute(&q4)
+        );
+        assert!(matches!(a.1, NetOutcome::BodyBio(_)));
+        assert!(matches!(b.1, NetOutcome::BodyBio(_)));
+        assert!(matches!(d.1, NetOutcome::BodyBio(_)));
+        assert_eq!(e.1, NetOutcome::NoData);
+        assert_eq!(t.count("/codex/ref"), 1);
+        assert_eq!(t.count("/getSystemPoi"), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn empty_codex_ref_fails_and_is_not_persisted() {
+        let persist = Arc::new(MemPersist::default());
+        let t = FakeTransport::new();
+        t.script("/codex/ref", vec![ok(200, "{}")]);
+        t.script("/getSystemPoi", vec![ok(200, CANONN_BODY)]);
+        let c = NetClient::new(t.clone()).with_codex_persist(persist.clone());
+        assert_eq!(
+            c.execute(&bio_query("A 1")).await.1,
+            NetOutcome::Failed(NetFailure::Malformed)
+        );
+        assert!(persist.load().is_none());
+        assert_eq!(t.count("/getSystemPoi"), 0);
     }
 
     #[tokio::test(start_paused = true)]
