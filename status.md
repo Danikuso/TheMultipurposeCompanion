@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F3 · Task 15 ✅ verificada; siguiente Task 16 (mercado actual y mejores ventas).
-- **Siguiente acción:** guardar cierre de Task 15 y empezar Task 16 con TDD, revisiones y checks. Task 15: 893 Rust PASS (2 ignorados), fmt/clippy OK; UI sin cambios desde 144 PASS/check/build de Task 14. El propietario prueba `main@9154d41`: no reconstruir release ni usar puerto/base reales. `.claude/` ajeno; `.tmp/` logs locales. Ledger: `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Tarea:** F3 · Task 16 🔄 en curso, paso 1: tests de mercado, mezcla de fuentes, plataformas y fixture Market.json.
+- **Siguiente acción:** ejecutar Task 16 con TDD: CurrentMarket, snapshots locales y merge_sources neutral compartido con minería; luego revisiones y checks. Task 15: 893 Rust PASS (2 ignorados), fmt/clippy OK; UI sin cambios desde 144 PASS/check/build de Task 14. El propietario prueba `main@9154d41`: no reconstruir release ni usar puerto/base reales. `.claude/` ajeno; `.tmp/` logs locales. Ledger: `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Fases
 
@@ -48,8 +48,8 @@
 | 12 | `tmc-app` — servicio EDDN, `SourceEvent::Eddn`, limpieza y configuración | ✅ hecha | c7840f5, 3334f69 | Replay explícito; recuperación tras lag; coords tras importar y offline sin congelación; spec/calidad aprobadas; 874 Rust y 144 UI PASS |
 | 13 | datos estáticos `rare_goods.json` y `cabins.json` | ✅ hecha | 440c5d9 | OnceLock, parser tolerante con avisos y recuperación por fila; catálogo inicial 1 rara/4 cabinas; spec/calidad aprobadas; 878 Rust PASS |
 | 14 | i18n — `trade.ftl` y `missions.ftl` | ✅ hecha | 7f6a9a9 | 125 claves de paneles por idioma y ajustes/disposiciones; rangos ingleses; spec/calidad aprobadas; 880 Rust y 144 UI PASS |
-| 15 | `trade` — coste pagado y «Mi carga» | ✅ hecha | este commit | Media ponderada, coste parcial, exclusión misión/robada, SRV protegido y reconstrucción paginada; spec/calidad aprobadas; 893 Rust PASS |
-| 16 | `trade` — «Mercado actual» y mejor venta en 48 h | ⬜ pendiente | — |  |
+| 15 | `trade` — coste pagado y «Mi carga» | ✅ hecha | 28e205b | Media ponderada, coste parcial, exclusión misión/robada, SRV protegido y reconstrucción paginada; spec/calidad aprobadas; 893 Rust PASS |
+| 16 | `trade` — «Mercado actual» y mejor venta en 48 h | 🔄 en curso | — | Paso 1: tests y fixture sintético de mercado |
 | 17 | `trade` — ruta comercial con avance automático | ⬜ pendiente | — |  |
 | 18 | `trade` — sesión de comercio y buscar mercancía | ⬜ pendiente | — |  |
 | 19 | `trade` — módulo, topics, relevancia, red, almacén y registro | ⬜ pendiente | — |  |
