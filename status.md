@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 27), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
+- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 28), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
 
 ## Fases
 
@@ -62,8 +62,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 24 | UI — «Sesión de minería» y «Dónde vender» | ✅ hecha | 928ad55, 650bfc6 | Sesión y Dónde vender; hora del diario (as_of), nombres localizados |
 | 25 | UI — disposiciones «Combate» y «Minería», relevancia y ajustes | ✅ hecha | f0c843a, 38568cf | Disposiciones Combate/Minería, vuelta a auto, ajustes de minería |
 | 26 | fixtures sintéticos y pruebas de extremo a extremo | ✅ hecha | 05663ac, b50630b | Fixtures sintéticos + e2e (Playwright 5/5); ráfaga p95 ~311 ms |
-| 27 | `tmc-headless eval` — vales y rendimiento de asteroides | 🔄 en curso | — |  |
-| 28 | avisos, consumo, verificación de los 10 criterios y cierre | ⬜ | — | |
+| 27 | `tmc-headless eval` — vales y rendimiento de asteroides | ✅ hecha | 996fae3, 81352c0, 606fcc1 | Eval vales/rendimiento; historial propietario: vales INSUFICIENTE (canje incluye vales previos al primer diario), minería sin datos |
+| 28 | avisos, consumo, verificación de los 10 criterios y cierre | 🔄 en curso | — |  |
 
 ## Tareas de F1
 
