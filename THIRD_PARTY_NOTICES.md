@@ -321,3 +321,8 @@ Versión 1, licencia de datos propios del proyecto **PolyForm Noncommercial 1.0.
 | `crates/tmc-modules/data/mining_yield.json` | Estimación propia de toneladas por asteroide según contenido (Low/Medium/High). | Estimación de TMC, no datos de terceros; contraste en `eval` (sin casos en el historial del propietario: INSUFICIENTE). |
 
 La constante de naves thargoides de `tmc-model` (AX) es una lista pequeña **no verificada** escrita por TMC (ver «Desviaciones» del plan de F2).
+
+### flate2
+- Versión: 1.1.9
+- Licencia: MIT OR Apache-2.0
+- Usada por: tmc-eddn
