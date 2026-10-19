@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F3 · Task 16 ✅ verificada; siguiente Task 17 (ruta comercial con avance automático).
-- **Siguiente acción:** guardar cierre de Task 16 y empezar Task 17 con TDD/revisiones. Task 16: 924 Rust PASS (2 ignorados), fmt/clippy OK; UI sin cambios desde 144 PASS/check/build de Task 14. El propietario prueba `main@9154d41`: no reconstruir release ni usar puerto/base reales. `.claude/` ajeno; `.tmp/` logs locales. Ledger: `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Tarea:** F3 · Task 17 🔄 en curso, paso 1: tests de parámetros reales y avance de ruta al atracar.
+- **Siguiente acción:** ejecutar Task 17 con TDD: route_params, TradeRouteState, avance y copia del siguiente sistema; luego revisiones/checks. Task 16: 924 Rust PASS (2 ignorados), fmt/clippy OK; UI sin cambios desde 144 PASS/check/build de Task 14. El propietario prueba `main@9154d41`: no reconstruir release ni usar puerto/base reales. `.claude/` ajeno; `.tmp/` logs locales. Ledger: `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Fases
 
@@ -50,7 +50,7 @@
 | 14 | i18n — `trade.ftl` y `missions.ftl` | ✅ hecha | 7f6a9a9 | 125 claves de paneles por idioma y ajustes/disposiciones; rangos ingleses; spec/calidad aprobadas; 880 Rust y 144 UI PASS |
 | 15 | `trade` — coste pagado y «Mi carga» | ✅ hecha | 28e205b | Media ponderada, coste parcial, exclusión misión/robada, SRV protegido y reconstrucción paginada; spec/calidad aprobadas; 893 Rust PASS |
 | 16 | `trade` — «Mercado actual» y mejor venta en 48 h | 🔄 en curso | — | 17 tests GREEN iniciales; calidad P2: preservar cierres al reconciliar precios. Cierres, ausencias y pad antes del límite GREEN; spec aprobada; 924 Rust PASS, revisión final de calidad pendiente |
-| 17 | `trade` — ruta comercial con avance automático | ⬜ pendiente | — |  |
+| 17 | `trade` — ruta comercial con avance automático | 🔄 en curso | — | Paso 1: tests de parámetros, avance y saltos |
 | 18 | `trade` — sesión de comercio y buscar mercancía | ⬜ pendiente | — |  |
 | 19 | `trade` — módulo, topics, relevancia, red, almacén y registro | ⬜ pendiente | — |  |
 | 20 | `mining` — «Dónde vender» con la tabla de precios | ⬜ pendiente | — |  |
