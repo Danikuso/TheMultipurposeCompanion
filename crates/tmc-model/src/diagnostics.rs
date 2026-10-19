@@ -1,0 +1,817 @@
+//! Debug-only structured diagnostics. Never pass raw errors or user-indexed object keys.
+use serde::Serialize;
+use serde_json::Value;
+
+/// The schema that gives otherwise ambiguous field names their meaning.
+/// Context names describe schemas, not arbitrary log messages.
+#[derive(Clone, Copy, Debug)]
+pub enum DiagnosticContext<'a> {
+    Journal { event: &'a str },
+    State,
+    Topic { name: &'a str },
+    NetQuery,
+    NetOutcome,
+    Action { name: &'a str },
+    Http,
+    Auth,
+    Ui,
+    Sql,
+}
+
+impl DiagnosticContext<'_> {
+    fn schema(self) -> &'static str {
+        match self {
+            Self::Journal { event } => registered(event, EVENTS),
+            Self::Topic { name } => registered(name, TOPICS),
+            Self::Action { name } => registered(name, ACTIONS),
+            _ => self.label(),
+        }
+    }
+    fn label(self) -> &'static str {
+        match self {
+            Self::Journal { .. } => "journal",
+            Self::State => "state",
+            Self::Topic { .. } => "topic",
+            Self::NetQuery => "net_query",
+            Self::NetOutcome => "net_outcome",
+            Self::Action { .. } => "action",
+            Self::Http => "http",
+            Self::Auth => "auth",
+            Self::Ui => "ui",
+            Self::Sql => "sql",
+        }
+    }
+}
+
+const REDACTED: &str = "[redacted]";
+const TOPICS: &[&str] = &[
+    "core.cmdr",
+    "core.ship",
+    "core.location",
+    "core.status",
+    "core.route",
+    "core.session",
+    "core.game",
+    "core.clock",
+    "core.modules",
+    "core.theme",
+    "dashboard.alerts",
+    "navigation.route",
+    "navigation.jump",
+    "navigation.plan",
+    "exploration.system",
+    "exploration.unsold",
+    "exobiology.body",
+    "exobiology.sampling",
+    "exobiology.unsold",
+    "combat.target",
+    "combat.ship",
+    "combat.session",
+    "combat.conflict_zone",
+    "combat.ax",
+    "mining.prospector",
+    "mining.session",
+    "mining.sell",
+];
+const MODULES: &[&str] = &[
+    "dashboard",
+    "navigation",
+    "exploration",
+    "exobiology",
+    "combat",
+    "mining",
+];
+const ACTIONS: &[&str] = &[
+    "clipboard.copy-next-system",
+    "navigation.plan",
+    "navigation.recalculate",
+    "navigation.accept-plan",
+    "navigation.clear-plan",
+    "combat.reset_session",
+    "mining.reset_session",
+];
+const EVENTS: &[&str] = &[
+    "Fileheader",
+    "Commander",
+    "LoadGame",
+    "Rank",
+    "Progress",
+    "Location",
+    "FSDJump",
+    "CarrierJump",
+    "Docked",
+    "Undocked",
+    "SupercruiseEntry",
+    "SupercruiseExit",
+    "ApproachBody",
+    "LeaveBody",
+    "Touchdown",
+    "Liftoff",
+    "Embark",
+    "Disembark",
+    "StartJump",
+    "FSDTarget",
+    "NavRoute",
+    "NavRouteClear",
+    "Loadout",
+    "Cargo",
+    "HullDamage",
+    "UnderAttack",
+    "Interdicted",
+    "FuelScoop",
+    "RefuelAll",
+    "RefuelPartial",
+    "ShipyardSwap",
+    "Died",
+    "Resurrect",
+    "Shutdown",
+    "Market",
+    "Outfitting",
+    "Shipyard",
+    "ModuleInfo",
+    "Backpack",
+    "ShipLocker",
+    "FCMaterials",
+    "Scan",
+    "FSSDiscoveryScan",
+    "FSSAllBodiesFound",
+    "FSSBodySignals",
+    "SAAScanComplete",
+    "SAASignalsFound",
+    "ScanOrganic",
+    "SellOrganicData",
+    "SellExplorationData",
+    "MultiSellExplorationData",
+    "CodexEntry",
+    "JetConeBoost",
+    "ShipTargeted",
+    "ShipTargetted",
+    "Bounty",
+    "FactionKillBond",
+    "CapShipBond",
+    "RedeemVoucher",
+    "ShieldState",
+    "HeatWarning",
+    "HeatDamage",
+    "EscapeInterdiction",
+    "PVPKill",
+    "FighterDestroyed",
+    "Promotion",
+    "ProspectedAsteroid",
+    "AsteroidCracked",
+    "MiningRefined",
+    "LaunchDrone",
+    "EjectCargo",
+    "MarketSell",
+    "RepairAll",
+    "Repair",
+    "ScanBody",
+];
+fn registered(value: &str, registry: &[&'static str]) -> &'static str {
+    registry
+        .iter()
+        .copied()
+        .find(|known| *known == value)
+        .unwrap_or(REDACTED)
+}
+
+/// Redact scalar data while retaining object/array shape and useful public game facts.
+/// Object keys must be schema names, never names supplied by the player.
+pub fn redact_diagnostic(value: &Value, context: DiagnosticContext<'_>) -> Value {
+    redact(value, context, "", "", "", false)
+}
+
+fn normalized(key: &str) -> String {
+    key.chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
+}
+
+fn secret_field(key: &str) -> bool {
+    [
+        "token",
+        "password",
+        "passwd",
+        "secret",
+        "apikey",
+        "authorization",
+        "cookie",
+        "credential",
+        "clientid",
+        "pairing",
+        "qrsvg",
+        "chat",
+        "message",
+        "content",
+        "error",
+        "exception",
+        "backtrace",
+        "filepath",
+        "directory",
+        "journalpath",
+        "dbpath",
+        "url",
+        "uri",
+    ]
+    .iter()
+    .any(|part| key.contains(part))
+        || matches!(
+            key,
+            "fid"
+                | "commanderid"
+                | "commandername"
+                | "cmdrname"
+                | "shipname"
+                | "shipident"
+                | "shipidentifier"
+                | "path"
+                | "key"
+                | "keys"
+                | "headers"
+                | "text"
+                | "clipboard"
+                | "auth"
+                | "uri"
+                | "requestbody"
+                | "responsebody"
+        )
+}
+
+fn public_text(key: &str, parent: &str, path: &str, context: DiagnosticContext<'_>) -> bool {
+    if matches!(context, DiagnosticContext::Auth) {
+        return false;
+    }
+    if key == "body" {
+        return matches!(context, DiagnosticContext::State) && parent == "location"
+            || matches!(
+                context,
+                DiagnosticContext::Topic {
+                    name: "core.location"
+                }
+            );
+    }
+    if key == "name" {
+        return match context {
+            DiagnosticContext::Journal {
+                event: "Scan" | "ScanBody",
+            } => parent.is_empty(),
+            DiagnosticContext::Topic {
+                name: "navigation.route",
+            } => matches!(
+                path,
+                "current.name"
+                    | "next.name"
+                    | "following.name"
+                    | "remote.data.name"
+                    | "current.remote.data.name"
+                    | "next.remote.data.name"
+                    | "following.remote.data.name"
+            ),
+            DiagnosticContext::NetQuery => parent == "system",
+            DiagnosticContext::NetOutcome => matches!(parent, "system" | "autocomplete" | "hops"),
+            _ => false,
+        };
+    }
+    if matches!(context, DiagnosticContext::NetQuery) {
+        if key == "prefix" && parent == "autocomplete" {
+            return true;
+        }
+        if matches!(key, "from" | "to") && matches!(parent, "neutronroute" | "galaxyroute") {
+            return true;
+        }
+    }
+    matches!(
+        key,
+        "system"
+            | "starsystem"
+            | "systemname"
+            | "nextsystem"
+            | "bodyname"
+            | "stationname"
+            | "station"
+            | "faction"
+            | "factionname"
+            | "controllingfaction"
+            | "allegiance"
+            | "government"
+            | "economy"
+            | "secondeconomy"
+            | "security"
+            | "starclass"
+            | "starclasses"
+            | "startype"
+            | "planetclass"
+            | "atmosphere"
+            | "atmospheretype"
+            | "terraformstate"
+            | "volcanism"
+            | "luminosity"
+            | "scantype"
+            | "commodity"
+            | "commodityname"
+            | "material"
+            | "materialname"
+            | "genus"
+            | "species"
+            | "variant"
+            | "shiptype"
+            | "shiptypelocalised"
+            | "shipmodel"
+            | "bodytype"
+            | "stationtype"
+            | "primary_star"
+            | "primarystar"
+            | "powers"
+    )
+}
+
+fn route_template(text: &str) -> bool {
+    matches!(
+        text,
+        "/ws"
+            | "/api/health"
+            | "/api/config"
+            | "/api/history/events"
+            | "/api/actions/{name}"
+            | "/api/navigation/autocomplete"
+            | "/api/pairing"
+            | "<asset>"
+            | "<unmatched>"
+    )
+}
+
+fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_>) -> bool {
+    if matches!(context, DiagnosticContext::Auth) {
+        return false;
+    }
+    if matches!(context, DiagnosticContext::NetOutcome)
+        && ((matches!(path, "" | "outcome") && matches!(text, "NoData" | "Disabled"))
+            || (matches!(path, "failed" | "outcome.failed")
+                && matches!(text, "Timeout" | "Malformed" | "Down" | "RateLimited")))
+    {
+        return true;
+    }
+    if matches!(
+        context,
+        DiagnosticContext::Topic {
+            name: "navigation.route"
+        }
+    ) && matches!(
+        path,
+        "remote.status"
+            | "current.remote.status"
+            | "next.remote.status"
+            | "following.remote.status"
+    ) && matches!(text, "ok" | "pending" | "no-data" | "disabled" | "failed")
+    {
+        return true;
+    }
+    match key {
+        "galaxy" => matches!(text, "Live" | "Legacy" | "Unknown"),
+        "mode" => matches!(
+            text,
+            "Unknown"
+                | "Docked"
+                | "Landed"
+                | "NormalSpace"
+                | "Supercruise"
+                | "Hyperspace"
+                | "OnFoot"
+                | "InSrv"
+                | "InFighter"
+                | "InTaxi"
+                | "Multicrew"
+        ),
+        "method" => {
+            matches!(context, DiagnosticContext::Http)
+                && matches!(
+                    text,
+                    "GET" | "PUT" | "POST" | "DELETE" | "OPTIONS" | "HEAD" | "PATCH"
+                )
+        }
+        "route" => matches!(context, DiagnosticContext::Http) && route_template(text),
+        "topic" => registered(text, TOPICS) != REDACTED,
+        "module" => registered(text, MODULES) != REDACTED,
+        "action" => registered(text, ACTIONS) != REDACTED,
+        "event" => registered(text, EVENTS) != REDACTED,
+        "source" | "provider" => matches!(text, "Spansh" | "Edsm" | "Canonn" | "Ardent" | "Cache"),
+        _ => false,
+    }
+}
+fn unsafe_text(value: &str) -> bool {
+    // Public text is still not an escape hatch for URLs, query strings or local paths.
+    value.contains("://")
+        || value.contains('\\')
+        || value.contains('/')
+        || value.contains('?')
+        || value.contains('@')
+        || value.contains(":\\")
+}
+
+fn redact(
+    value: &Value,
+    context: DiagnosticContext<'_>,
+    key: &str,
+    parent: &str,
+    path: &str,
+    private: bool,
+) -> Value {
+    let private = private
+        || secret_field(key)
+        || matches!(
+            key,
+            "shipid" | "otp" | "pin" | "pincode" | "authcode" | "passcode"
+        )
+        || (matches!(context, DiagnosticContext::Auth) && key == "code")
+        || (parent == "ship" && matches!(key, "ident" | "identifier"))
+        || (matches!(parent, "commander" | "commanders" | "cmdr" | "pilot")
+            && matches!(key, "id" | "name"))
+        || (matches!(key, "commander" | "commanders" | "cmdr")
+            && !value.is_object()
+            && !value.is_array())
+        || (key == "body" && !public_text(key, parent, path, context));
+    match value {
+        Value::Object(map) => Value::Object(
+            map.iter()
+                .map(|(child_key, child)| {
+                    let normalized_key = normalized(child_key);
+                    (
+                        child_key.clone(),
+                        redact(
+                            child,
+                            context,
+                            &normalized_key,
+                            key,
+                            &if path.is_empty() {
+                                normalized_key.clone()
+                            } else {
+                                format!("{path}.{normalized_key}")
+                            },
+                            private,
+                        ),
+                    )
+                })
+                .collect(),
+        ),
+        Value::Array(items) => Value::Array(
+            items
+                .iter()
+                .map(|item| redact(item, context, key, parent, path, private))
+                .collect(),
+        ),
+        Value::String(text) => {
+            if !private
+                && (schema_label(key, path, text, context)
+                    || (public_text(key, parent, path, context) && !unsafe_text(text)))
+            {
+                Value::String(text.clone())
+            } else {
+                Value::String(REDACTED.into())
+            }
+        }
+        Value::Number(number) if private => {
+            if number.is_f64() {
+                serde_json::json!(0.0)
+            } else {
+                serde_json::json!(0)
+            }
+        }
+        Value::Bool(_) if private => Value::Bool(false),
+        other => other.clone(),
+    }
+}
+
+fn serialize_diagnostic<T: Serialize + ?Sized>(
+    payload: &T,
+    context: DiagnosticContext<'_>,
+) -> Value {
+    match serde_json::to_value(payload) {
+        Ok(value) => redact_diagnostic(&value, context),
+        Err(_) => serde_json::json!({"serialization_failed": true}),
+    }
+}
+
+/// Emit sanitized TRACE JSON. Sequence/session/time belong exclusively to the writer.
+pub fn emit<T: Serialize + ?Sized>(
+    context: DiagnosticContext<'_>,
+    code: &'static str,
+    payload: &T,
+) {
+    let payload = serialize_diagnostic(payload, context);
+    tracing::trace!(target: "tmc::diagnostics", context = context.label(), schema = context.schema(), code, payload = %payload);
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn nested_private_containers_override_public_fields() {
+        let raw = json!({"StarSystem":"Sol", "credits":42, "ok":true,
+            "Commander":{"Name":"CANARY-Ω", "credits":900,"id":42},
+            "nested":[{"FID":"CANARY-FID","ship_name":"CANARY-SHIP",
+                "ship_ident":"CANARY-ID","chat":{"BodyName":"CANARY-CHAT"}}]});
+        let safe = redact_diagnostic(&raw, DiagnosticContext::State);
+        assert_eq!(safe["StarSystem"], "Sol");
+        assert_eq!(safe["credits"], 42);
+        assert_eq!(safe["ok"], true);
+        assert_eq!(safe["Commander"]["id"], 0);
+        assert_eq!(safe["Commander"]["credits"], 900);
+        assert_eq!(safe["nested"].as_array().unwrap().len(), 1);
+        assert!(!safe.to_string().contains("CANARY"));
+    }
+
+    #[test]
+    fn scan_body_name_is_public_but_commander_name_is_not() {
+        for event in ["Scan", "ScanBody"] {
+            let safe = redact_diagnostic(
+                &json!({"Name":"Sol A 1","BodyName":"Sol A 1",
+                "StarSystem":"Sol", "StationName":"Galileo", "MassEM":1.3}),
+                DiagnosticContext::Journal { event },
+            );
+            assert_eq!(safe["Name"], "Sol A 1");
+            assert_eq!(safe["BodyName"], "Sol A 1");
+            assert_eq!(safe["StationName"], "Galileo");
+        }
+        let safe = redact_diagnostic(
+            &json!({"Name":"CANARY", "BodyName":"Sol A 1"}),
+            DiagnosticContext::Journal { event: "Commander" },
+        );
+        assert!(!safe.to_string().contains("CANARY"));
+    }
+
+    #[test]
+    fn unknown_context_and_free_text_are_safe_without_losing_shape() {
+        let raw = json!({"Name":"CANARY", "error":"CANARY", "message":"CANARY",
+            "content":"CANARY", "value":"CANARY", "path":"C:/Users/CANARY",
+            "url":"https://host/CANARY?token=CANARY",
+            "headers":{"Authorization":"CANARY","cookie":"CANARY"},
+            "nested":[null, false, 7, {"unknown":"CANARY", "system":"Sol"}]});
+        for context in [
+            DiagnosticContext::Ui,
+            DiagnosticContext::Auth,
+            DiagnosticContext::Journal { event: "Unknown" },
+        ] {
+            let safe = redact_diagnostic(&raw, context);
+            assert!(!safe.to_string().contains("CANARY"));
+            assert_eq!(safe["nested"][0], Value::Null);
+            assert_eq!(safe["nested"][1], false);
+            assert_eq!(safe["nested"][2], 7);
+            assert_eq!(
+                safe["nested"][3]["system"],
+                if matches!(context, DiagnosticContext::Auth) {
+                    "[redacted]"
+                } else {
+                    "Sol"
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn secret_aliases_and_private_numeric_ids_are_redacted() {
+        let safe = redact_diagnostic(
+            &json!({"access_token":"CANARY",
+            "apiKey":"CANARY", "password":"CANARY", "lan_token":"CANARY",
+            "client_secret":"CANARY", "commander_id":123, "ShipIdent":"CANARY",
+            "ShipName":"CANARY", "api_keys":["CANARY"], "system_address":123}),
+            DiagnosticContext::Topic { name: "core.state" },
+        );
+        assert!(!safe.to_string().contains("CANARY"));
+        assert_eq!(safe["commander_id"], 0);
+        assert_eq!(safe["system_address"], 123);
+    }
+
+    #[test]
+    fn actual_state_retains_counters_and_public_location() {
+        let mut state = crate::state::GameState::default();
+        state.cmdr = Some(crate::state::CommanderState {
+            name: "CANARY-CMDR".into(),
+            fid: "CANARY-FID".into(),
+            credits: Some(900),
+            ..Default::default()
+        });
+        state.cmdr.as_mut().unwrap().ranks.combat = Some(7);
+        state.location.system = "Sol".into();
+        state.location.body = Some("Earth".into());
+        let safe = redact_diagnostic(
+            &serde_json::to_value(state).unwrap(),
+            DiagnosticContext::State,
+        );
+        assert_eq!(safe["cmdr"]["credits"], 900);
+        assert_eq!(safe["cmdr"]["ranks"]["combat"], 7);
+        assert_eq!(safe["location"]["body"], "Earth");
+        assert!(!safe.to_string().contains("CANARY"));
+        let topic = redact_diagnostic(
+            &json!({"body":"Earth"}),
+            DiagnosticContext::Topic {
+                name: "core.location",
+            },
+        );
+        assert_eq!(topic["body"], "Earth");
+    }
+
+    #[test]
+    fn actual_network_types_retain_public_system_names() {
+        let query = crate::net::NetQuery::System {
+            id64: 42,
+            name: "Sol".into(),
+        };
+        let safe = redact_diagnostic(
+            &serde_json::to_value(query).unwrap(),
+            DiagnosticContext::NetQuery,
+        );
+        assert_eq!(safe["System"]["name"], "Sol");
+        let system: crate::net::RemoteSystem = serde_json::from_value(json!({
+            "id64":42,"name":"Sol","powers":[]
+        }))
+        .unwrap();
+        let outcome = crate::net::NetOutcome::System(system);
+        let safe = redact_diagnostic(
+            &serde_json::to_value(outcome).unwrap(),
+            DiagnosticContext::NetOutcome,
+        );
+        assert_eq!(safe["System"]["name"], "Sol");
+        let query = crate::net::NetQuery::Autocomplete {
+            prefix: "So".into(),
+        };
+        let safe = redact_diagnostic(
+            &serde_json::to_value(query).unwrap(),
+            DiagnosticContext::NetQuery,
+        );
+        assert_eq!(safe["Autocomplete"]["prefix"], "So");
+        let outcome = crate::net::NetOutcome::Autocomplete(vec![crate::net::SystemSuggestion {
+            name: "Sol".into(),
+            id64: Some(42),
+        }]);
+        let safe = redact_diagnostic(
+            &serde_json::to_value(outcome).unwrap(),
+            DiagnosticContext::NetOutcome,
+        );
+        assert_eq!(safe["Autocomplete"][0]["name"], "Sol");
+        let route = redact_diagnostic(
+            &json!({"Route":{"hops":[{"name":"Sol","distance_ly":3}]}}),
+            DiagnosticContext::NetOutcome,
+        );
+        assert_eq!(route["Route"]["hops"][0]["name"], "Sol");
+    }
+
+    #[test]
+    fn credential_containers_and_unknown_journal_free_text_never_leak() {
+        let raw = json!({"auth":{"code":"CANARY","system":"CANARY"},
+            "credentials":{"station":"CANARY"}, "reason":"CANARY error privado"});
+        for context in [
+            DiagnosticContext::Auth,
+            DiagnosticContext::Journal { event: "Unknown" },
+        ] {
+            assert!(
+                !redact_diagnostic(&raw, context)
+                    .to_string()
+                    .contains("CANARY")
+            );
+        }
+        let safe = redact_diagnostic(
+            &json!({"route":"/api/config","url":"/api/config?token=CANARY"}),
+            DiagnosticContext::Http,
+        );
+        assert_eq!(safe["route"], "/api/config");
+        assert!(!safe.to_string().contains("CANARY"));
+    }
+    #[test]
+    fn auth_numeric_credentials_are_private() {
+        let safe = redact_diagnostic(
+            &json!({"code":123456,"pin":1234,"otp":98765,
+            "pin_code":4444,"auth_code":5555,"attempts":2}),
+            DiagnosticContext::Auth,
+        );
+        for field in ["code", "pin", "otp", "pin_code", "auth_code"] {
+            assert_eq!(safe[field], 0);
+        }
+        assert_eq!(safe["attempts"], 2);
+    }
+
+    #[test]
+    fn known_navigation_route_paths_retain_only_public_names() {
+        let safe = redact_diagnostic(
+            &json!({
+                "current":{"name":"Sol"},"next":{"name":"Alpha Centauri"},
+                "following":[{"name":"Sirius"}],"remote":{"data":{"name":"Sol"}},
+                "commander":{"name":"CANARY"},"unknown":{"name":"CANARY"}
+            }),
+            DiagnosticContext::Topic {
+                name: "navigation.route",
+            },
+        );
+        assert_eq!(safe["current"]["name"], "Sol");
+        assert_eq!(safe["next"]["name"], "Alpha Centauri");
+        assert_eq!(safe["following"][0]["name"], "Sirius");
+        assert_eq!(safe["remote"]["data"]["name"], "Sol");
+        assert!(!safe.to_string().contains("CANARY"));
+    }
+    #[test]
+    fn ship_identifiers_and_known_schema_names_have_explicit_policy() {
+        let safe = redact_diagnostic(
+            &json!({"ship_id":9,"ship":{"ident":123,"name":"CANARY"},
+            "topic":"navigation.route","module":"navigation","action":"navigation.plan","event":"FSDJump",
+            "unknown":{"topic":"CANARY","module":"CANARY","action":"CANARY","event":"CANARY"}}),
+            DiagnosticContext::State,
+        );
+        assert_eq!(safe["ship_id"], 0);
+        assert_eq!(safe["ship"]["ident"], 0);
+        assert_eq!(safe["topic"], "navigation.route");
+        assert_eq!(safe["module"], "navigation");
+        assert_eq!(safe["action"], "navigation.plan");
+        assert_eq!(safe["event"], "FSDJump");
+        assert!(!safe.to_string().contains("CANARY"));
+        assert_eq!(
+            DiagnosticContext::Topic {
+                name: "navigation.route"
+            }
+            .schema(),
+            "navigation.route"
+        );
+        assert_eq!(
+            DiagnosticContext::Action { name: "CANARY" }.schema(),
+            "[redacted]"
+        );
+        assert_eq!(
+            DiagnosticContext::Journal { event: "Scan" }.schema(),
+            "Scan"
+        );
+    }
+    #[test]
+    fn network_outcomes_keep_finite_statuses_and_cache_source() {
+        use crate::net::{NetFailure, NetOutcome, NetSource};
+        for failure in [
+            NetFailure::Timeout,
+            NetFailure::Malformed,
+            NetFailure::Down,
+            NetFailure::RateLimited,
+        ] {
+            let raw = serde_json::to_value(NetOutcome::Failed(failure)).unwrap();
+            assert_eq!(redact_diagnostic(&raw, DiagnosticContext::NetOutcome), raw);
+        }
+        for outcome in [NetOutcome::NoData, NetOutcome::Disabled] {
+            let raw = serde_json::to_value(outcome).unwrap();
+            assert_eq!(redact_diagnostic(&raw, DiagnosticContext::NetOutcome), raw);
+            let wrapped = json!({"outcome":raw});
+            assert_eq!(
+                redact_diagnostic(&wrapped, DiagnosticContext::NetOutcome),
+                wrapped
+            );
+        }
+        let raw = json!({"source":NetSource::Cache});
+        assert_eq!(redact_diagnostic(&raw, DiagnosticContext::NetOutcome), raw);
+        let arbitrary = json!({"unknown":"Timeout", "Failed":"CANARY"});
+        let safe = redact_diagnostic(&arbitrary, DiagnosticContext::NetOutcome);
+        assert_eq!(safe["unknown"], "[redacted]");
+        assert!(!safe.to_string().contains("CANARY"));
+    }
+
+    #[test]
+    fn navigation_remote_status_is_public_only_at_known_schema_paths() {
+        for status in ["ok", "pending", "no-data", "disabled", "failed"] {
+            let raw = json!({"current":{"remote":{"status":status}},
+                "next":{"remote":{"status":status}}, "following":[{"remote":{"status":status}}],
+                "remote":{"status":status}});
+            assert_eq!(
+                redact_diagnostic(
+                    &raw,
+                    DiagnosticContext::Topic {
+                        name: "navigation.route"
+                    }
+                ),
+                raw
+            );
+        }
+        let raw = json!({"current":{"remote":{"status":"CANARY"}},
+            "unrelated":{"status":"ok"}});
+        let safe = redact_diagnostic(
+            &raw,
+            DiagnosticContext::Topic {
+                name: "navigation.route",
+            },
+        );
+        assert!(!safe.to_string().contains("CANARY"));
+        assert_eq!(safe["unrelated"]["status"], "[redacted]");
+        let wrong_schema = redact_diagnostic(
+            &json!({"remote":{"status":"ok"}}),
+            DiagnosticContext::Topic { name: "unknown" },
+        );
+        assert_eq!(wrong_schema["remote"]["status"], "[redacted]");
+    }
+    struct Fails;
+    impl Serialize for Fails {
+        fn serialize<S: serde::Serializer>(&self, _: S) -> Result<S::Ok, S::Error> {
+            Err(serde::ser::Error::custom("CANARY-serialization-error"))
+        }
+    }
+
+    #[test]
+    fn serialization_failure_has_only_a_fixed_marker() {
+        let safe = serialize_diagnostic(&Fails, DiagnosticContext::Sql);
+        assert_eq!(safe, json!({"serialization_failed":true}));
+        assert!(!safe.to_string().contains("CANARY"));
+    }
+}

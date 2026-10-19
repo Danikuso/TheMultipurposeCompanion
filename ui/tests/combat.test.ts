@@ -219,7 +219,7 @@ test('vouchers grouped by faction and kind with IF fee', () => {
   expect(target.querySelector('[data-testid="if-station"]')!.textContent).toContain('Hutton Orbital');
   expect(target.querySelector('[data-testid="if-age"]')!.textContent).toContain('2h');
   expect(target.querySelector('[data-testid="session-credits"]')!.textContent).toContain('120.000');
-  expect(target.querySelector('[data-testid="rank-progress"]')!.textContent).toBe('Maestro · 40 %');
+  expect(target.querySelector('[data-testid="rank-progress"]')!.textContent).toBe('Master · 40 %');
 });
 
 test('credits per hour is computed locally from started_at', () => {
@@ -279,7 +279,7 @@ test('conflict zone panel shows side, kills and bonds by faction', () => {
 
 test('rank progress 1 is shown as 1 %', () => {
   mountWith(HuntingPanel, 'combat.session', sessionTopic({ combat_progress: 1 }));
-  expect(target.querySelector('[data-testid="rank-progress"]')!.textContent).toBe('Maestro · 1 %');
+  expect(target.querySelector('[data-testid="rank-progress"]')!.textContent).toBe('Master · 1 %');
 });
 
 test('other voucher row counts vouchers, not factions', () => {
