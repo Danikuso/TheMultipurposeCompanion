@@ -1,0 +1,16 @@
+{
+  "source": "Redacción propia de TMC: selección inicial de hechos del juego, sin importar tablas de terceros",
+  "license": "Datos propios del proyecto (PolyForm NC)",
+  "version": 1,
+  "entries": [
+    {
+      "key": "lavianbrandy",
+      "origin_system": "Lave",
+      "origin_station": "Lave Station",
+      "sell_distance_ly": 150,
+      "source": "Ficha propia de TMC, 2026-10-19: origen conocido de Lavian Brandy; recomendación inicial de venta a 150 al conforme al plan F3 Task 13. Pendiente de comprobación en el juego.",
+      "verified": false
+    }
+  ],
+  "note": "Selección inicial incompleta; no es un catálogo de todas las mercancías raras. La distancia es una recomendación del proyecto, no una garantía de beneficio ni de disponibilidad. Sin verificación en el juego."
+}

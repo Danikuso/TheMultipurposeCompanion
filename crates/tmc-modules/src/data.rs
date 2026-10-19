@@ -3,6 +3,7 @@
 use crate::exobiology::predict::BioRules;
 use crate::exobiology::species::SpeciesTable;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::OnceLock;
 use tmc_model::events::AsteroidContent;
 use tmc_model::net::PadSize;
@@ -249,6 +250,105 @@ pub fn mining_yield() -> &'static MiningYield {
     })
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct RareGood {
+    pub key: String,
+    pub origin_system: String,
+    pub origin_station: String,
+    pub sell_distance_ly: u32,
+    pub source: String,
+    pub verified: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum CabinClass {
+    Economy,
+    Business,
+    First,
+    Luxury,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CabinSpec {
+    pub symbol: String,
+    pub class: CabinClass,
+    pub seats: u32,
+    pub source: String,
+    pub verified: bool,
+}
+
+fn parse_static_table<T: serde::de::DeserializeOwned>(
+    json: &str,
+    file: &str,
+    key: fn(&T) -> &str,
+    valid: fn(&T) -> bool,
+) -> HashMap<String, T> {
+    let value = match serde_json::from_str::<serde_json::Value>(json) {
+        Ok(value) => value,
+        Err(error) => {
+            tracing::warn!(file, %error, "invalid embedded static data; using empty table");
+            return HashMap::new();
+        }
+    };
+    let Some(entries) = value.get("entries").and_then(serde_json::Value::as_array) else {
+        tracing::warn!(file, "missing static data entries array; using empty table");
+        return HashMap::new();
+    };
+    let mut table = HashMap::new();
+    for (index, value) in entries.iter().enumerate() {
+        match serde_json::from_value::<T>(value.clone()) {
+            Ok(entry) if valid(&entry) => {
+                table.insert(key(&entry).to_owned(), entry);
+            }
+            Ok(_) => tracing::warn!(file, index, "invalid static data entry; skipping row"),
+            Err(error) => {
+                tracing::warn!(file, index, %error, "invalid static data entry; skipping row")
+            }
+        }
+    }
+    table
+}
+
+fn parse_rare_goods(json: &str) -> HashMap<String, RareGood> {
+    parse_static_table(
+        json,
+        "rare_goods.json",
+        |entry| &entry.key,
+        |entry| {
+            !entry.key.trim().is_empty()
+                && !entry.origin_system.trim().is_empty()
+                && !entry.origin_station.trim().is_empty()
+                && entry.sell_distance_ly > 0
+                && !entry.source.trim().is_empty()
+        },
+    )
+}
+
+fn parse_cabins(json: &str) -> HashMap<String, CabinSpec> {
+    parse_static_table(
+        json,
+        "cabins.json",
+        |entry| &entry.symbol,
+        |entry| {
+            !entry.symbol.trim().is_empty() && entry.seats > 0 && !entry.source.trim().is_empty()
+        },
+    )
+}
+
+/// Project-authored rare goods, embedded once without runtime file access.
+pub fn rare_goods() -> &'static HashMap<String, RareGood> {
+    static TABLE: OnceLock<HashMap<String, RareGood>> = OnceLock::new();
+    TABLE.get_or_init(|| parse_rare_goods(include_str!("../data/rare_goods.json")))
+}
+
+/// Passenger cabin facts indexed by the lowercase journal module symbol.
+pub fn cabin_spec(symbol: &str) -> Option<&'static CabinSpec> {
+    static TABLE: OnceLock<HashMap<String, CabinSpec>> = OnceLock::new();
+    TABLE
+        .get_or_init(|| parse_cabins(include_str!("../data/cabins.json")))
+        .get(symbol)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum StarSpecial {
@@ -285,6 +385,130 @@ pub fn star_flags(class: &str) -> StarFlags {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rare_goods_load_and_have_provenance() {
+        let table = rare_goods();
+        assert!(!table.is_empty());
+        for (key, entry) in table {
+            assert_eq!(key, &entry.key);
+            assert!(!entry.source.trim().is_empty());
+            assert!(!entry.origin_station.trim().is_empty());
+            assert!(!entry.verified);
+        }
+        let brandy = &table["lavianbrandy"];
+        assert_eq!(brandy.origin_system, "Lave");
+        assert!(brandy.sell_distance_ly >= 150);
+    }
+
+    #[test]
+    fn cabin_specs_known_sizes() {
+        for (symbol, class, seats) in [
+            ("int_passengercabin_size2_class1", CabinClass::Economy, 2),
+            ("int_passengercabin_size4_class1", CabinClass::Economy, 8),
+            ("int_passengercabin_size5_class4", CabinClass::Luxury, 4),
+            ("int_passengercabin_size6_class3", CabinClass::First, 12),
+        ] {
+            let entry = cabin_spec(symbol).unwrap();
+            assert_eq!(entry.symbol, symbol);
+            assert_eq!((entry.class, entry.seats), (class, seats));
+            assert!(!entry.source.trim().is_empty());
+            assert!(!entry.verified);
+        }
+        assert!(cabin_spec("unknown_cabin").is_none());
+        assert!(CabinClass::Economy < CabinClass::Business);
+        assert!(CabinClass::Business < CabinClass::First);
+        assert!(CabinClass::First < CabinClass::Luxury);
+    }
+
+    struct WarningCounter(std::sync::Arc<std::sync::atomic::AtomicUsize>);
+
+    impl tracing::Subscriber for WarningCounter {
+        fn enabled(&self, _: &tracing::Metadata<'_>) -> bool {
+            true
+        }
+        fn new_span(&self, _: &tracing::span::Attributes<'_>) -> tracing::span::Id {
+            tracing::span::Id::from_u64(1)
+        }
+        fn record(&self, _: &tracing::span::Id, _: &tracing::span::Record<'_>) {}
+        fn record_follows_from(&self, _: &tracing::span::Id, _: &tracing::span::Id) {}
+        fn event(&self, event: &tracing::Event<'_>) {
+            if *event.metadata().level() == tracing::Level::WARN {
+                self.0.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            }
+        }
+        fn enter(&self, _: &tracing::span::Id) {}
+        fn exit(&self, _: &tracing::span::Id) {}
+    }
+
+    #[test]
+    fn corrupt_static_data_is_ignored_with_warning() {
+        let warnings = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        tracing::subscriber::with_default(WarningCounter(warnings.clone()), || {
+            for json in ["{oops", "null", r#"{"entries":{}}"#] {
+                assert!(parse_rare_goods(json).is_empty());
+                assert!(parse_cabins(json).is_empty());
+            }
+        });
+        assert_eq!(warnings.load(std::sync::atomic::Ordering::Relaxed), 6);
+    }
+
+    #[test]
+    fn invalid_static_rows_are_skipped_between_valid_rows() {
+        let rare = serde_json::json!({"key":"lavianbrandy", "origin_system":"Lave",
+            "origin_station":"Lave Station", "sell_distance_ly":150, "source":"test", "verified":false});
+        let cabin = serde_json::json!({"symbol":"int_passengercabin_size2_class1", "class":"Economy",
+            "seats":2, "source":"test", "verified":false});
+        let mut rare2 = rare.clone();
+        rare2["key"] = "other".into();
+        let mut cabin2 = cabin.clone();
+        cabin2["symbol"] = "int_passengercabin_size4_class1".into();
+        for bad in [
+            serde_json::Value::Null,
+            serde_json::json!({}),
+            {
+                let mut entry = rare.clone();
+                entry["source"] = " ".into();
+                entry
+            },
+            {
+                let mut entry = rare.clone();
+                entry["sell_distance_ly"] = 0.into();
+                entry
+            },
+        ] {
+            assert_eq!(
+                parse_rare_goods(&serde_json::json!({"entries":[rare, bad, rare2]}).to_string())
+                    .len(),
+                2
+            );
+        }
+        for bad in [
+            serde_json::Value::Null,
+            serde_json::json!({}),
+            {
+                let mut entry = cabin.clone();
+                entry["source"] = " ".into();
+                entry
+            },
+            {
+                let mut entry = cabin.clone();
+                entry["seats"] = 0.into();
+                entry
+            },
+            {
+                let mut entry = cabin.clone();
+                entry["class"] = "Unknown".into();
+                entry
+            },
+        ] {
+            assert_eq!(
+                parse_cabins(&serde_json::json!({"entries":[cabin, bad, cabin2]}).to_string())
+                    .len(),
+                2
+            );
+        }
+    }
 
     #[test]
     fn star_flags_classes() {
