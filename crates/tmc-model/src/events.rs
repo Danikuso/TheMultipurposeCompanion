@@ -254,6 +254,7 @@ pub struct Docked {
     pub market_id: Option<u64>,
     pub star_system: Option<String>,
     pub system_address: Option<u64>,
+    #[serde(deserialize_with = "lv")]
     pub station_services: Vec<String>,
     #[serde(deserialize_with = "lenient_pads")]
     pub landing_pads: Option<LandingPads>,
@@ -458,7 +459,7 @@ pub struct CargoItem {
     pub name_localised: Option<String>,
     pub count: u32,
     pub stolen: Option<u32>,
-    #[serde(rename = "MissionID")]
+    #[serde(rename = "MissionID", deserialize_with = "lo")]
     pub mission_id: Option<u64>,
 }
 
@@ -963,14 +964,17 @@ pub struct MarketSell {
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "PascalCase")]
 pub struct MarketBuy {
-    #[serde(rename = "MarketID")]
+    #[serde(rename = "MarketID", deserialize_with = "lo")]
     pub market_id: Option<u64>,
-    #[serde(rename = "Type")]
+    #[serde(rename = "Type", deserialize_with = "ld")]
     pub type_: String,
-    #[serde(rename = "Type_Localised")]
+    #[serde(rename = "Type_Localised", deserialize_with = "lo")]
     pub type_localised: Option<String>,
+    #[serde(deserialize_with = "ld")]
     pub count: u32,
+    #[serde(deserialize_with = "ld")]
     pub buy_price: u64,
+    #[serde(deserialize_with = "ld")]
     pub total_cost: u64,
 }
 
@@ -1282,9 +1286,10 @@ pub fn split_multi_destination(raw: &str) -> Vec<String> {
     let raw = raw.trim();
     let mut out = Vec::new();
     let mut rest = raw;
-    while let Some(i) = rest.find(PREFIX) {
+    // El mayúsculas ASCII conserva las posiciones de byte.
+    while let Some(i) = rest.to_ascii_uppercase().find(PREFIX) {
         let after = &rest[i + PREFIX.len()..];
-        let tail = after.trim_start_matches(|c: char| c.is_ascii_uppercase() || c == '_');
+        let tail = after.trim_start_matches(|c: char| c.is_ascii_alphabetic() || c == '_');
         if tail.len() == after.len() || !tail.starts_with(';') {
             break; // marcador incompleto: el resto es texto normal
         }
@@ -2559,5 +2564,79 @@ mod tests {
         assert_eq!(split_multi_destination("Sol"), vec!["Sol"]);
         assert_eq!(split_multi_destination("New Yembo"), vec!["New Yembo"]);
         assert!(split_multi_destination("").is_empty());
+    }
+
+    #[test]
+    fn split_multi_destination_edge_cases() {
+        assert_eq!(
+            split_multi_destination(
+                "New Yembo$MISSIONUTIL_MULTIPLE_FINAL_SEPARATOR;Alpha Centauri"
+            ),
+            vec!["New Yembo", "Alpha Centauri"]
+        );
+        assert_eq!(
+            split_multi_destination("$MISSIONUTIL_MULTIPLE_FINAL_SEPARATOR;Sol"),
+            vec!["Sol"]
+        );
+        assert_eq!(
+            split_multi_destination("Sol$MISSIONUTIL_MULTIPLE_FINAL_SEPARATOR;"),
+            vec!["Sol"]
+        );
+        assert_eq!(
+            split_multi_destination("Sol$missionutil_multiple_inner_separator;Lave"),
+            vec!["Sol", "Lave"]
+        );
+        assert_eq!(
+            split_multi_destination("Sol$MISSIONUTIL_MULTIPLE_INNER"),
+            vec!["Sol$MISSIONUTIL_MULTIPLE_INNER"]
+        );
+    }
+
+    #[test]
+    fn docked_tolerates_bad_pads_and_services() {
+        for extra in [
+            r#""LandingPads":null"#,
+            r#""LandingPads":"big""#,
+            r#""LandingPads":null,"StationServices":"dock""#,
+            r#""StationServices":[1,"commodities"]"#,
+        ] {
+            let line = format!(
+                r#"{{"timestamp":"2026-04-10T20:00:00Z","event":"Docked","StationName":"X",{extra}}}"#
+            );
+            let EventKind::Docked(d) = ev(&line) else {
+                panic!("Docked {extra}")
+            };
+            assert_eq!(d.max_pad(), None, "{extra}");
+            assert_eq!(d.station_name.as_deref(), Some("X"));
+        }
+    }
+
+    #[test]
+    fn missions_with_one_corrupt_active_element_keeps_the_rest() {
+        let EventKind::Missions(m) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Missions","Active":[{"MissionID":1,"Name":"A"},"basura",{"MissionID":3,"Name":"C"}],"Failed":[],"Complete":[]}"#,
+        ) else {
+            panic!("Missions")
+        };
+        assert_eq!(m.active.len(), 2);
+        assert_eq!(m.active[1].mission_id, 3);
+    }
+
+    #[test]
+    fn market_buy_and_cargo_tolerate_bad_fields() {
+        let EventKind::MarketBuy(b) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MarketBuy","MarketID":"x","Type":"gold","Count":"many","BuyPrice":5,"TotalCost":50}"#,
+        ) else {
+            panic!("MarketBuy")
+        };
+        assert_eq!(b.market_id, None);
+        assert_eq!(b.type_, "gold");
+        assert_eq!(b.total_cost, 50);
+        let EventKind::Cargo(c) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Cargo","Inventory":[{"Name":"gold","Count":1,"MissionID":"zz"}]}"#,
+        ) else {
+            panic!("Cargo")
+        };
+        assert!(!c.inventory.unwrap()[0].is_mission());
     }
 }
