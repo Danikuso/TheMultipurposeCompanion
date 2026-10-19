@@ -21,6 +21,15 @@ pub enum TransportError {
 
 pub trait Transport: Send + Sync {
     fn get(&self, url: &str) -> BoxFut<'_, Result<HttpReply, TransportError>>;
+    /// GET con tiempo máximo propio (servicios lentos como Canonn). Por defecto
+    /// ignora el tiempo y usa el del transporte.
+    fn get_with_timeout(
+        &self,
+        url: &str,
+        _timeout: Duration,
+    ) -> BoxFut<'_, Result<HttpReply, TransportError>> {
+        self.get(url)
+    }
     fn post_form(
         &self,
         url: &str,
@@ -64,6 +73,15 @@ async fn finish(req: reqwest::RequestBuilder) -> Result<HttpReply, TransportErro
 impl Transport for ReqwestTransport {
     fn get(&self, url: &str) -> BoxFut<'_, Result<HttpReply, TransportError>> {
         let req = self.client.get(url);
+        Box::pin(finish(req))
+    }
+
+    fn get_with_timeout(
+        &self,
+        url: &str,
+        timeout: Duration,
+    ) -> BoxFut<'_, Result<HttpReply, TransportError>> {
+        let req = self.client.get(url).timeout(timeout);
         Box::pin(finish(req))
     }
 

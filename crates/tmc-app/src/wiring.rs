@@ -41,6 +41,23 @@ fn open_or_rebuild_store(db_dir: &Path) -> anyhow::Result<Store> {
     }
 }
 
+/// `codex/ref` compacto de Canonn en `api_cache` (7 días, lo aplica el cliente).
+struct CodexRefStore(tmc_core::Store);
+
+const CODEX_REF_KEY: &str = "canonn:codex_ref:biology";
+
+impl tmc_net::client::RefPersist for CodexRefStore {
+    fn load(&self) -> Option<(chrono::DateTime<chrono::Utc>, String)> {
+        let entry = self.0.api_cache_get(CODEX_REF_KEY).ok()??;
+        Some((entry.fetched_at, entry.value))
+    }
+    fn save(&self, value: &str, at: chrono::DateTime<chrono::Utc>) {
+        if let Err(error) = self.0.api_cache_put(CODEX_REF_KEY, value, at) {
+            tracing::warn!(%error, "api_cache write failed");
+        }
+    }
+}
+
 pub async fn start(config: Config) -> anyhow::Result<Running> {
     let transport = ReqwestTransport::new()
         .map_err(|err| anyhow::anyhow!("could not build HTTP transport: {err:?}"))?;
@@ -80,7 +97,9 @@ pub async fn start_custom(
     // necesita el emisor de peticiones: se enlazan con un canal intermedio.
     let (net_events, mut net_events_rx) = tokio::sync::mpsc::channel::<SourceEvent>(64);
     let net = spawn_net_service(
-        Arc::new(NetClient::new(transport)),
+        Arc::new(
+            NetClient::new(transport).with_codex_persist(Arc::new(CodexRefStore(store.clone()))),
+        ),
         store.clone(),
         net_events,
         online.clone(),
