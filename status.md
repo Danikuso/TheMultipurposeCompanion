@@ -5,12 +5,12 @@
 - **Última actualización:** 2026-10-20 00:37 (Europe/Madrid) · Codex
 - **Fase actual:** extensión autorizada de diagnóstico debug; F3 se retoma después. Historial F0/F1/F2 conservado.
 - **Spec activa:** [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md) — autorizada por el propietario.
-- **Plan activo:** [diagnóstico debug](docs/plans/2026-10-20-diagnostico-debug.md) — D1–D2 ✅; D3 🔄 en curso.
+- **Plan activo:** [diagnóstico debug](docs/plans/2026-10-20-diagnostico-debug.md) — D1–D3 ✅; D4 siguiente.
 - **Rama de trabajo:** codex/diagnostico-logs (checkout aislado; principal conserva F3 parcial).
 
 ## Puntero actual
 
-- **Tarea:** D3 🔄 en curso — fuentes locales y persistencia; paso 1: tests de eventos/offsets y SQL sin datos privados usando el writer real.
+- **Tarea:** D4 ⬜ siguiente — actor y módulos; D3 cerrada.
 - **Último paso completado:** D2 ed0611e con ambas revisiones, 14 tests de writer/795 Rust PASS (1 ignorado), fmt/clippy workspace y clippy release tmc-app PASS; UI sin cambios desde D1 (144/check/build PASS). Release de prueba intacto.
 - **Siguiente acción:** instrumentar Journal/Status/companion/config y fronteras de SQLite; después D4 actor/módulos, D5 red/HTTP/auth/acciones, D6 UI, D7 validación/build e integración. Retomar F3 Task17 preservada al terminar logs.
 
@@ -20,8 +20,8 @@
 |---|---|---|---|---|
 | D1 | Contrato y redacción | ✅ hecha | e6c5d09 | 13 diagnósticos TDD; ambas revisiones; 781 Rust, 144 UI, release noeval, fmt/clippy/check/build PASS |
 | D2 | Writer circular y lifecycle | ✅ hecha | ed0611e | 14 pruebas; ambas revisiones; 795 Rust, fmt/clippy y clippy release PASS |
-| D3 | Fuentes y persistencia | 🔄 en curso | — | Paso 1: pruebas de frontera; offsets reales y datos sanitizados |
-| D4 | Actor y módulos | ⬜ pendiente | — | Tras D3 |
+| D3 | Fuentes y persistencia | ✅ hecha | 44e8a9e | 804 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS |
+| D4 | Actor y módulos | ⬜ siguiente | — | D3 cerrada |
 | D5 | Red, HTTP, WS, auth y acciones | ⬜ pendiente | — | Tras D4 |
 | D6 | UI | ⬜ pendiente | — | Tras D5 |
 | D7 | Checks, consumo, build e integración | ⬜ pendiente | — | Retomar F3 después |
@@ -200,6 +200,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
+- 2026-10-20 · Claude Sonnet 5.5 · D3 44e8a9e cerrada: fuentes locales y persistencia instrumentadas; 804 Rust PASS/1 ignorado, fmt/clippy/clippy release PASS. Siguiente: D4.
 - 2026-10-20 00:37 (Europe/Madrid) · Codex · D2 ed0611e cerrada con writer DEBUG acotado y 14 pruebas. Correcciones de escape JSON, limpieza bajo bloqueo Windows y orden de cierre revisadas. 795 Rust PASS/1 ignorado, fmt/clippy y clippy release PASS; empieza D3.
 
 - 2026-10-20 00:21 (Europe/Madrid) · Codex · D1 e6c5d09 revisada y verificada: 781 Rust/144 UI PASS, release sin evaluación, fmt/clippy/check/build correctos. Inicia D2. Se reconcilia solo el resumen de fases con merges reales; tablas históricas completas intactas.
