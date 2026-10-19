@@ -28,9 +28,11 @@ CREATE TABLE market_station (
   market_id INTEGER PRIMARY KEY, station_name TEXT NOT NULL, system_name TEXT NOT NULL, system_address INTEGER,
   x REAL, y REAL, z REAL, max_pad INTEGER, station_type TEXT, dist_ls REAL, updated_at TEXT NOT NULL
 );
+CREATE INDEX market_station_updated ON market_station(updated_at);
 CREATE TABLE system_coords (
   name_key TEXT PRIMARY KEY, system_address INTEGER, x REAL NOT NULL, y REAL NOT NULL, z REAL NOT NULL, seen_at TEXT NOT NULL
 );
+CREATE INDEX system_coords_seen ON system_coords(seen_at);
 ";
 
 pub struct Migration {

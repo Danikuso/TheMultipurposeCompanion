@@ -48,6 +48,23 @@ fn pad_from(n: Option<i64>) -> Option<PadSize> {
         .and_then(PadSize::from_ardent)
 }
 
+/// Días de retención de precios y estaciones.
+pub const PRICE_RETENTION_DAYS: i64 = 7;
+/// Días de retención de coordenadas de sistemas.
+pub const COORDS_RETENTION_DAYS: i64 = 30;
+
+/// Filas borradas por `purge_prices_older_than`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct PurgeCounts {
+    pub prices: usize,
+    pub stations: usize,
+    pub coords: usize,
+}
+
+fn unsigned(v: i64) -> u64 {
+    u64::try_from(v).unwrap_or(0)
+}
+
 fn id(v: u64) -> Result<i64, StoreError> {
     Ok(i64::try_from(v)?)
 }
@@ -75,7 +92,8 @@ fn upsert_station(
         "INSERT INTO market_station(market_id,station_name,system_name,system_address,x,y,z,max_pad,station_type,dist_ls,updated_at)
          VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)
          ON CONFLICT(market_id) DO UPDATE SET
-           station_name=excluded.station_name, system_name=excluded.system_name,
+           station_name=CASE WHEN excluded.updated_at>updated_at THEN excluded.station_name ELSE station_name END,
+           system_name=CASE WHEN excluded.updated_at>updated_at THEN excluded.system_name ELSE system_name END,
            system_address=COALESCE(excluded.system_address, system_address),
            x=COALESCE(excluded.x, x), y=COALESCE(excluded.y, y), z=COALESCE(excluded.z, z),
            max_pad=COALESCE(excluded.max_pad, max_pad),
@@ -130,7 +148,7 @@ impl Store {
             let mid = id(s.market_id)?;
             let stored: Option<String> = tx
                 .query_row(
-                    "SELECT MAX(updated_at) FROM market_price WHERE market_id=?1",
+                    "SELECT MAX(updated_at) FROM market_price WHERE market_id=?1 AND origin IN ('local','eddn')",
                     [mid],
                     |r| r.get(0),
                 )
@@ -141,14 +159,16 @@ impl Store {
             {
                 continue;
             }
-            tx.execute("DELETE FROM market_price WHERE market_id=?1", [mid])?;
+            // Solo se borran filas no más nuevas que el snapshot: los parciales posteriores sobreviven.
+            tx.execute(
+                "DELETE FROM market_price WHERE market_id=?1 AND updated_at<=?2",
+                params![mid, ts(s.updated_at)],
+            )?;
             for p in &s.prices {
                 tx.execute(
                     "INSERT INTO market_price(market_id,commodity,name_localised,buy_price,sell_price,stock,demand,updated_at,origin)
                      VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9)
-                     ON CONFLICT(market_id,commodity) DO UPDATE SET name_localised=excluded.name_localised,
-                       buy_price=excluded.buy_price, sell_price=excluded.sell_price, stock=excluded.stock,
-                       demand=excluded.demand, updated_at=excluded.updated_at, origin=excluded.origin",
+                     ON CONFLICT(market_id,commodity) DO NOTHING",
                     params![
                         mid,
                         key(&p.commodity),
@@ -229,10 +249,13 @@ impl Store {
         Ok(changed)
     }
 
-    pub fn upsert_stations(&self, st: &[StationInfo]) -> Result<usize, StoreError> {
+    pub fn upsert_stations(
+        &self,
+        st: &[StationInfo],
+        at: DateTime<Utc>,
+    ) -> Result<usize, StoreError> {
         let mut conn = self.lock()?;
         let tx = conn.transaction()?;
-        let now = Utc::now();
         for s in st {
             upsert_station(
                 &tx,
@@ -244,7 +267,7 @@ impl Store {
                 s.max_pad,
                 s.station_type.as_deref(),
                 s.dist_ls,
-                now,
+                at,
             )?;
         }
         tx.commit()?;
@@ -381,13 +404,13 @@ impl Store {
                 continue;
             }
             out.push(PricedMarket {
-                market_id: mid as u64,
+                market_id: unsigned(mid),
                 station_name,
                 system_name,
                 distance_ly: Some(d),
                 max_pad: pad_from(pad),
-                price: price as u64,
-                volume: volume as u64,
+                price: unsigned(price),
+                volume: unsigned(volume),
                 updated_at: parse_ts(&at)?,
                 origin: parse_origin(&origin),
             });
@@ -407,10 +430,10 @@ impl Store {
             Ok(CommodityPrice {
                 commodity: r.get(0)?,
                 name_localised: r.get(1)?,
-                buy_price: r.get::<_, i64>(2)? as u64,
-                sell_price: r.get::<_, i64>(3)? as u64,
-                stock: r.get::<_, i64>(4)? as u64,
-                demand: r.get::<_, i64>(5)? as u64,
+                buy_price: unsigned(r.get::<_, i64>(2)?),
+                sell_price: unsigned(r.get::<_, i64>(3)?),
+                stock: unsigned(r.get::<_, i64>(4)?),
+                demand: unsigned(r.get::<_, i64>(5)?),
             })
         })?;
         Ok(rows.collect::<Result<_, _>>()?)
@@ -433,22 +456,33 @@ impl Store {
         Ok(rows.collect::<Result<_, _>>()?)
     }
 
-    /// Borra precios y estaciones anteriores a `cutoff` y coordenadas con 23 días más de
-    /// antigüedad (30 días si `cutoff` es now − 7 d). Devuelve las filas de precio borradas.
-    pub fn purge_prices_older_than(&self, cutoff: DateTime<Utc>) -> Result<usize, StoreError> {
+    /// Borra precios y estaciones anteriores a `price_cutoff` y coordenadas anteriores a
+    /// `coords_cutoff` (ver `PRICE_RETENTION_DAYS` y `COORDS_RETENTION_DAYS`).
+    pub fn purge_prices_older_than(
+        &self,
+        price_cutoff: DateTime<Utc>,
+        coords_cutoff: DateTime<Utc>,
+    ) -> Result<PurgeCounts, StoreError> {
         let mut conn = self.lock()?;
         let tx = conn.transaction()?;
-        let prices = tx.execute("DELETE FROM market_price WHERE updated_at<?1", [ts(cutoff)])?;
-        tx.execute(
-            "DELETE FROM market_station WHERE updated_at<?1",
-            [ts(cutoff)],
+        let prices = tx.execute(
+            "DELETE FROM market_price WHERE updated_at<?1",
+            [ts(price_cutoff)],
         )?;
-        tx.execute(
+        let stations = tx.execute(
+            "DELETE FROM market_station WHERE updated_at<?1",
+            [ts(price_cutoff)],
+        )?;
+        let coords = tx.execute(
             "DELETE FROM system_coords WHERE seen_at<?1",
-            [ts(cutoff - chrono::Duration::days(23))],
+            [ts(coords_cutoff)],
         )?;
         tx.commit()?;
-        Ok(prices)
+        Ok(PurgeCounts {
+            prices,
+            stations,
+            coords,
+        })
     }
 }
 
@@ -606,9 +640,29 @@ mod tests {
             ),
         ])
         .unwrap();
+        s.upsert_coords(
+            &[
+                ("old".into(), None, [0.0; 3]),
+                ("new".into(), None, [1.0; 3]),
+            ],
+            now - Duration::days(31),
+        )
+        .unwrap();
+        s.upsert_coords(&[("new".into(), None, [1.0; 3])], now)
+            .unwrap();
+        let c = s
+            .purge_prices_older_than(
+                now - Duration::days(PRICE_RETENTION_DAYS),
+                now - Duration::days(COORDS_RETENTION_DAYS),
+            )
+            .unwrap();
         assert_eq!(
-            s.purge_prices_older_than(now - Duration::days(7)).unwrap(),
-            1
+            c,
+            PurgeCounts {
+                prices: 1,
+                stations: 1,
+                coords: 1
+            }
         );
         assert!(s.market_prices(1).unwrap().is_empty());
         assert_eq!(s.market_prices(2).unwrap().len(), 1);
@@ -657,5 +711,110 @@ mod tests {
         assert_eq!(s.market_prices(7).unwrap()[0].sell_price, 100);
         let r = near(&s, Side::Sell, t(0));
         assert_eq!(r[0].origin, PriceOrigin::Ardent);
+    }
+
+    #[test]
+    fn same_time_snapshot_is_not_applied() {
+        let s = Store::open_in_memory().unwrap();
+        let a = snap(1, 0.0, t(12), vec![price("gold", None, 1, 1)]);
+        assert_eq!(s.replace_markets(std::slice::from_ref(&a)).unwrap(), 1);
+        assert_eq!(s.replace_markets(&[a]).unwrap(), 0);
+    }
+
+    #[test]
+    fn exclude_market_and_limit_after_distance_filter() {
+        let s = Store::open_in_memory().unwrap();
+        // El mercado 3 cae en la caja pero fuera de la esfera.
+        let mut corner = snap(3, 0.0, t(12), vec![price("gold", None, 99999, 5)]);
+        corner.star_pos = Some([90.0, 90.0, 90.0]);
+        s.replace_markets(&[
+            corner,
+            snap(1, 10.0, t(12), vec![price("gold", None, 300, 5)]),
+            snap(2, 20.0, t(12), vec![price("gold", None, 200, 5)]),
+        ])
+        .unwrap();
+        let r = s
+            .best_prices("gold", Side::Sell, [0.0; 3], 100.0, t(0), None, 2)
+            .unwrap();
+        assert_eq!(r.iter().map(|m| m.market_id).collect::<Vec<_>>(), [1, 2]);
+        let r = s
+            .best_prices("gold", Side::Sell, [0.0; 3], 100.0, t(0), Some(1), 5)
+            .unwrap();
+        assert_eq!(r.iter().map(|m| m.market_id).collect::<Vec<_>>(), [2]);
+    }
+
+    #[test]
+    fn buy_ascending_and_sell_descending() {
+        let s = Store::open_in_memory().unwrap();
+        let mk = |id, x, v| {
+            let mut p = price("gold", None, v, 5);
+            p.buy_price = v;
+            p.stock = 5;
+            snap(id, x, t(12), vec![p])
+        };
+        s.replace_markets(&[mk(1, 1.0, 200), mk(2, 2.0, 100), mk(3, 3.0, 300)])
+            .unwrap();
+        let ids = |side| {
+            near(&s, side, t(0))
+                .iter()
+                .map(|m| m.market_id)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(ids(Side::Buy), [2, 1, 3]);
+        assert_eq!(ids(Side::Sell), [3, 1, 2]);
+    }
+
+    #[test]
+    fn newer_partial_survives_replace_and_does_not_block_it() {
+        let s = Store::open_in_memory().unwrap();
+        s.replace_markets(&[snap(
+            1,
+            0.0,
+            t(10),
+            vec![price("gold", None, 1, 1), price("silver", None, 1, 1)],
+        )])
+        .unwrap();
+        let st = StationInfo {
+            market_id: 1,
+            station_name: "Port 1".into(),
+            system_name: "Sys 1".into(),
+            star_pos: None,
+            max_pad: None,
+            station_type: None,
+            dist_ls: None,
+        };
+        s.upsert_partial_prices(&[(st, price("gold", None, 777, 9), t(12), PriceOrigin::Ardent)])
+            .unwrap();
+        // Un snapshot completo intermedio se aplica: el parcial no cuenta para la frescura.
+        let n = s
+            .replace_markets(&[snap(1, 0.0, t(11), vec![price("copper", None, 5, 5)])])
+            .unwrap();
+        assert_eq!(n, 1);
+        let m = s.market_prices(1).unwrap();
+        let keys: Vec<_> = m.iter().map(|p| p.commodity.as_str()).collect();
+        assert_eq!(keys, ["copper", "gold"]);
+        assert_eq!(m[1].sell_price, 777);
+    }
+
+    #[test]
+    fn older_station_info_does_not_rename() {
+        let s = Store::open_in_memory().unwrap();
+        let st = |name: &str| StationInfo {
+            market_id: 1,
+            station_name: name.into(),
+            system_name: "S".into(),
+            star_pos: None,
+            max_pad: None,
+            station_type: None,
+            dist_ls: None,
+        };
+        s.upsert_stations(&[st("New")], t(12)).unwrap();
+        s.upsert_stations(&[st("Old")], t(10)).unwrap();
+        let name: String = s
+            .lock()
+            .unwrap()
+            .query_row("SELECT station_name FROM market_station", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(name, "New");
     }
 }
