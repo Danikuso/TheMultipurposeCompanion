@@ -7,8 +7,8 @@ pub mod filter;
 
 pub use coords::{COORD_INDEX_CAP, CoordIndex};
 pub use decode::{
-    COMMODITY_SCHEMA, CarrierSet, Decoded, DropReason, JOURNAL_SCHEMA, MAX_INFLATED_BYTES, decode,
-    decode_with,
+    CARRIER_SET_CAP, COMMODITY_SCHEMA, CarrierSet, Decoded, DropReason, JOURNAL_SCHEMA,
+    MAX_INFLATED_BYTES, decode, decode_with,
 };
 pub use filter::{EddnFilter, EddnStats, accept};
 

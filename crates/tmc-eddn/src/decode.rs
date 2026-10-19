@@ -3,7 +3,7 @@
 use chrono::{DateTime, Duration, Utc};
 use flate2::read::ZlibDecoder;
 use serde::Deserialize;
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::io::Read;
 use tmc_model::events::commodity_key;
 use tmc_model::market::{
@@ -40,19 +40,45 @@ pub enum Decoded {
     Ignored(DropReason),
 }
 
-/// MarketID de carriers vistos en `Docked`.
+/// Máximo de carriers recordados; al llenarse se descarta el más antiguo.
+pub const CARRIER_SET_CAP: usize = 20_000;
+/// Límite de coordenadas válidas (años luz, por eje).
+pub const MAX_COORD_LY: f64 = 200_000.0;
+
+/// MarketID de carriers vistos en `Docked`, acotado.
+///
+/// Contrato: `decode_with` añade aquí todo `Docked` de carrier; el llamador debe
+/// conservar el mismo conjunto entre llamadas para que `commodity/3` (sin
+/// `StationType`) se descarte por MarketID.
 #[derive(Debug, Default, Clone)]
-pub struct CarrierSet(HashSet<u64>);
+pub struct CarrierSet {
+    set: HashSet<u64>,
+    order: VecDeque<u64>,
+}
 
 impl CarrierSet {
     pub fn new() -> Self {
         Self::default()
     }
     pub fn remember(&mut self, market_id: u64) {
-        self.0.insert(market_id);
+        if !self.set.insert(market_id) {
+            return;
+        }
+        self.order.push_back(market_id);
+        if self.order.len() > CARRIER_SET_CAP
+            && let Some(old) = self.order.pop_front()
+        {
+            self.set.remove(&old);
+        }
     }
     pub fn contains(&self, market_id: u64) -> bool {
-        self.0.contains(&market_id)
+        self.set.contains(&market_id)
+    }
+    pub fn len(&self) -> usize {
+        self.set.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.set.is_empty()
     }
 }
 
@@ -89,12 +115,13 @@ struct RawCommodity {
 
 #[derive(Deserialize)]
 struct JournalHead {
-    timestamp: DateTime<Utc>,
     event: String,
 }
 
 #[derive(Deserialize)]
 struct JournalBody {
+    timestamp: DateTime<Utc>,
+    event: String,
     #[serde(rename = "StarSystem")]
     star_system: Option<String>,
     #[serde(rename = "SystemAddress")]
@@ -147,10 +174,10 @@ fn check_time(ts: DateTime<Utc>, now: DateTime<Utc>) -> Result<(), DropReason> {
 
 /// Decodifica un fotograma sin carriers recordados.
 pub fn decode(frame: &[u8], now: DateTime<Utc>) -> Decoded {
-    decode_with(frame, now, &CarrierSet::default())
+    decode_with(frame, now, &mut CarrierSet::default())
 }
 
-pub fn decode_with(frame: &[u8], now: DateTime<Utc>, carriers: &CarrierSet) -> Decoded {
+pub fn decode_with(frame: &[u8], now: DateTime<Utc>, carriers: &mut CarrierSet) -> Decoded {
     match try_decode(frame, now, carriers) {
         Ok(d) => d,
         Err(r) => Decoded::Ignored(r),
@@ -160,14 +187,14 @@ pub fn decode_with(frame: &[u8], now: DateTime<Utc>, carriers: &CarrierSet) -> D
 fn try_decode(
     frame: &[u8],
     now: DateTime<Utc>,
-    carriers: &CarrierSet,
+    carriers: &mut CarrierSet,
 ) -> Result<Decoded, DropReason> {
     let bytes = inflate(frame)?;
     // Prefiltro: solo se lee `$schemaRef`; el resto se salta sin construir valores.
     let head: SchemaOnly = serde_json::from_slice(&bytes).map_err(|_| DropReason::Corrupt)?;
     match head.schema.as_str() {
         COMMODITY_SCHEMA => decode_commodity(&bytes, now, carriers),
-        JOURNAL_SCHEMA => decode_journal(&bytes, now),
+        JOURNAL_SCHEMA => decode_journal(&bytes, now, carriers),
         s if s.ends_with("/test") => Err(DropReason::TestSchema),
         _ => Err(DropReason::Schema),
     }
@@ -212,28 +239,53 @@ fn decode_commodity(
     }))
 }
 
-fn decode_journal(bytes: &[u8], now: DateTime<Utc>) -> Result<Decoded, DropReason> {
-    let env: Envelope<serde_json::Value> =
-        serde_json::from_slice(bytes).map_err(|_| DropReason::Corrupt)?;
-    let head: JournalHead =
-        serde_json::from_value(env.message.clone()).map_err(|_| DropReason::Corrupt)?;
+fn valid_pos(p: [f64; 3]) -> bool {
+    p.iter().all(|v| v.is_finite() && v.abs() <= MAX_COORD_LY)
+}
+
+fn decode_journal(
+    bytes: &[u8],
+    now: DateTime<Utc>,
+    carriers: &mut CarrierSet,
+) -> Result<Decoded, DropReason> {
+    let head = serde_json::from_slice::<Envelope<JournalHead>>(bytes)
+        .map_err(|_| DropReason::Corrupt)?
+        .message;
     if !matches!(
         head.event.as_str(),
         "Docked" | "FSDJump" | "Location" | "CarrierJump"
     ) {
         return Err(DropReason::Schema);
     }
-    check_time(head.timestamp, now)?;
-    let b: JournalBody = serde_json::from_value(env.message).map_err(|_| DropReason::Corrupt)?;
+    let b = serde_json::from_slice::<Envelope<JournalBody>>(bytes)
+        .map_err(|_| DropReason::Corrupt)?
+        .message;
+    let docked = b.event == "Docked";
+    // Las coordenadas no caducan; solo se exige frescura a las estaciones.
+    if b.timestamp > now + Duration::minutes(FUTURE_TOLERANCE_MIN) {
+        return Err(DropReason::Future);
+    }
+    if docked {
+        check_time(b.timestamp, now)?;
+    }
+    if b.star_pos.is_some_and(|p| !valid_pos(p)) {
+        return Err(DropReason::Corrupt);
+    }
     let system = b.star_system.ok_or(DropReason::Corrupt)?;
     let coords = b
         .star_pos
         .map(|p| (system.to_lowercase(), b.system_address, p));
-    if head.event != "Docked" {
+    if !docked {
         return match coords {
             Some((k, id, p)) => Ok(Decoded::Coords(k, id, p)),
             None => Err(DropReason::Corrupt),
         };
+    }
+    let market_id = b.market_id.ok_or(DropReason::Corrupt)?;
+    let station_name = b.station_name.ok_or(DropReason::Corrupt)?;
+    if is_fleet_carrier(market_id, b.station_type.as_deref(), Some(&station_name)) {
+        carriers.remember(market_id);
+        return Err(DropReason::Carrier);
     }
     let max_pad = b.landing_pads.and_then(|p| {
         if p.large > 0 {
@@ -247,8 +299,8 @@ fn decode_journal(bytes: &[u8], now: DateTime<Utc>) -> Result<Decoded, DropReaso
         }
     });
     let info = StationInfo {
-        market_id: b.market_id.ok_or(DropReason::Corrupt)?,
-        station_name: b.station_name.ok_or(DropReason::Corrupt)?,
+        market_id,
+        station_name,
         system_name: system,
         star_pos: b.star_pos,
         max_pad,

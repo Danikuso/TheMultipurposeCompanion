@@ -132,7 +132,7 @@ fn carrier_market_dropped() {
     let mut set = CarrierSet::new();
     set.remember(3_700_000_123);
     assert_eq!(
-        decode_with(&z(&m), now(), &set),
+        decode_with(&z(&m), now(), &mut set),
         Decoded::Ignored(DropReason::Carrier)
     );
 }
@@ -200,4 +200,126 @@ fn coord_index_is_bounded() {
     assert!(idx.get("ultima").is_some());
     // Se descartó la más lejana.
     assert!(idx.get(&format!("s{}", COORD_INDEX_CAP - 1)).is_none());
+}
+
+fn journal(event: &str, ts: &str, extra: &str) -> Vec<u8> {
+    z(&format!(
+        r#"{{"$schemaRef":"{JOURNAL_SCHEMA}","header":{{}},"message":{{"timestamp":"{ts}","event":"{event}",{extra}}}}}"#
+    ))
+}
+
+#[test]
+fn docked_carrier_is_dropped_and_remembered() {
+    let d = DOCKED
+        .replace("Coriolis", "FleetCarrier")
+        .replace("128000001", "3700000999");
+    let mut set = CarrierSet::new();
+    assert_eq!(
+        decode_with(&z(&d), now(), &mut set),
+        Decoded::Ignored(DropReason::Carrier)
+    );
+    assert!(set.contains(3_700_000_999));
+}
+
+#[test]
+fn carrier_set_is_bounded() {
+    let mut s = CarrierSet::new();
+    for i in 0..20_001u64 {
+        s.remember(i);
+    }
+    assert_eq!(s.len(), 20_000);
+    assert!(!s.contains(0));
+    assert!(s.contains(20_000));
+}
+
+#[test]
+fn scan_is_schema_and_coords_do_not_go_stale() {
+    assert_eq!(
+        decode(&journal("Scan", "garbage", r#""StarSystem":"X""#), now()),
+        Decoded::Ignored(DropReason::Schema)
+    );
+    let old = (now() - Duration::days(60)).to_rfc3339();
+    let j = journal("FSDJump", &old, r#""StarSystem":"Lave","StarPos":[1,2,3]"#);
+    assert!(matches!(decode(&j, now()), Decoded::Coords(..)));
+}
+
+#[test]
+fn invalid_coords_are_corrupt() {
+    for pos in ["[1e9,0,0]", "[0,-300000,0]"] {
+        let j = journal(
+            "FSDJump",
+            "2026-01-01T12:00:00Z",
+            &format!(r#""StarSystem":"L","StarPos":{pos}"#),
+        );
+        assert_eq!(decode(&j, now()), Decoded::Ignored(DropReason::Corrupt));
+    }
+    let j = journal(
+        "FSDJump",
+        "2026-01-01T12:00:00Z",
+        r#""StarSystem":"L","StarPos":[-5.5,0,7]"#,
+    );
+    assert!(matches!(decode(&j, now()), Decoded::Coords(..)));
+}
+
+#[test]
+fn time_boundaries_are_inclusive() {
+    let n = now();
+    let ok_old = (n - Duration::days(7)).to_rfc3339();
+    let ok_fut = (n + Duration::minutes(5)).to_rfc3339();
+    assert!(matches!(
+        decode(&z(&commodity_at(&ok_old, 128000001, "P")), n),
+        Decoded::Market(_)
+    ));
+    assert!(matches!(
+        decode(&z(&commodity_at(&ok_fut, 128000001, "P")), n),
+        Decoded::Market(_)
+    ));
+}
+
+#[test]
+fn wrong_structure_is_corrupt() {
+    let bad = format!(r#"{{"$schemaRef":"{COMMODITY_SCHEMA}","message":[]}}"#);
+    assert_eq!(
+        decode(&z(&bad), now()),
+        Decoded::Ignored(DropReason::Corrupt)
+    );
+    let neg = COMMODITY.replace(r#""buyPrice":203"#, r#""buyPrice":-3"#);
+    assert_eq!(
+        decode(&z(&neg), now()),
+        Decoded::Ignored(DropReason::Corrupt)
+    );
+}
+
+#[test]
+fn filter_boundaries_and_fail_closed() {
+    let mut idx = CoordIndex::new();
+    idx.insert("borde".into(), None, [200.0, 0.0, 0.0], None);
+    let mk = |radius_ly, center| EddnFilter {
+        enabled: true,
+        center,
+        radius_ly,
+    };
+    let mut s = snap("Borde");
+    assert_eq!(accept(&mut s, &idx, &mk(200.0, Some([0.0; 3]))), Ok(()));
+    assert_eq!(
+        accept(&mut s, &idx, &mk(f64::NAN, Some([0.0; 3]))),
+        Err(DropReason::Far)
+    );
+    assert_eq!(
+        accept(&mut s, &idx, &mk(-1.0, Some([0.0; 3]))),
+        Err(DropReason::Far)
+    );
+    assert_eq!(accept(&mut s, &idx, &mk(10.0, None)), Ok(()));
+}
+
+#[test]
+fn full_index_rejects_farther_entry() {
+    let mut idx = CoordIndex::new();
+    let c = Some([0.0; 3]);
+    for i in 0..COORD_INDEX_CAP {
+        idx.insert(format!("s{i}"), None, [1.0 + i as f64, 0.0, 0.0], c);
+    }
+    idx.insert("muylejos".into(), None, [9e9, 0.0, 0.0], c);
+    assert_eq!(idx.len(), COORD_INDEX_CAP);
+    assert!(idx.get("muylejos").is_none());
 }

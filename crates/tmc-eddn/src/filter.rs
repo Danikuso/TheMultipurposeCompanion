@@ -29,8 +29,14 @@ pub fn accept(
         .get(&snap.system_name.to_lowercase())
         .ok_or(DropReason::UnknownCoords)?;
     snap.star_pos = Some(pos);
-    if f.enabled && f.center.is_some_and(|c| dist(pos, c) > f.radius_ly) {
-        return Err(DropReason::Far);
+    if f.enabled {
+        // Radio NaN o negativo: se rechaza todo (falla cerrado).
+        if f.radius_ly.is_nan() || f.radius_ly < 0.0 {
+            return Err(DropReason::Far);
+        }
+        if f.center.is_some_and(|c| dist(pos, c) > f.radius_ly) {
+            return Err(DropReason::Far);
+        }
     }
     Ok(())
 }
