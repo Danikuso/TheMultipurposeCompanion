@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F3 · Task 12 ✅ verificada; siguiente Task 13 (datos estáticos de mercancías raras y cabinas).
-- **Siguiente acción:** guardar cierre de Task 12 y empezar Task 13 con TDD y revisiones spec/calidad. Task 12: fmt/clippy correctos, 874 tests Rust PASS (2 ignorados), 144 UI PASS, check/build OK. Desarrollo reanudado por el propietario mientras prueba main; no reconstruir release ni usar puerto/base reales. `.claude/` ajeno; logs locales en `.tmp/`. Ledger: `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Tarea:** F3 · Task 13 🔄 en curso, paso 1: tests de carga, procedencia y JSON corrupto para raras/cabinas.
+- **Siguiente acción:** ejecutar Task 13 con TDD, parser tolerante sin pánico y revisiones spec/calidad. Task 12: fmt/clippy correctos, 874 tests Rust PASS (2 ignorados), 144 UI PASS, check/build OK. Desarrollo reanudado por el propietario mientras prueba main; no reconstruir release ni usar puerto/base reales. `.claude/` ajeno; logs locales en `.tmp/`. Ledger: `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Fases
 
@@ -45,8 +45,8 @@
 | 9 | `tmc-net` — exportaciones cercanas de Ardent | ✅ hecha | 84131b6, 5580336 | Ardent exports; regla de carriers común (también en F2) |
 | 10 | `tmc-eddn` — decodificación y filtro | ✅ hecha | 9d058d5, 63feee3 | tmc-eddn: decodificación acotada (1 MiB), prefiltro, carriers en decode, índice de coords |
 | 11 | `tmc-eddn` — suscriptor, reconexión y lotes | ✅ hecha | 273f12b, ea0616f | Suscriptor EDDN: OnDemand, retroceso, vigilancia 60 s, tope 256 KiB, lotes sin bloqueo; PUB/SUB probado en Windows |
-| 12 | `tmc-app` — servicio EDDN, `SourceEvent::Eddn`, limpieza y configuración | ✅ hecha | c7840f5 + este commit | Replay explícito; recuperación tras lag; coords tras importar y offline sin congelación; spec/calidad aprobadas; 874 Rust y 144 UI PASS |
-| 13 | datos estáticos `rare_goods.json` y `cabins.json` | ⬜ pendiente | — |  |
+| 12 | `tmc-app` — servicio EDDN, `SourceEvent::Eddn`, limpieza y configuración | ✅ hecha | c7840f5, 3334f69 | Replay explícito; recuperación tras lag; coords tras importar y offline sin congelación; spec/calidad aprobadas; 874 Rust y 144 UI PASS |
+| 13 | datos estáticos `rare_goods.json` y `cabins.json` | 🔄 en curso | — | Paso 1: tests; datos propios con source y verified:false |
 | 14 | i18n — `trade.ftl` y `missions.ftl` | ⬜ pendiente | — |  |
 | 15 | `trade` — coste pagado y «Mi carga» | ⬜ pendiente | — |  |
 | 16 | `trade` — «Mercado actual» y mejor venta en 48 h | ⬜ pendiente | — |  |
