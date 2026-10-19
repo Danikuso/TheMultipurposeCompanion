@@ -72,15 +72,26 @@ pub struct AppActions {
     config: Mutex<Config>,
     runtime: Option<Runtime>,
     save_path: Option<PathBuf>,
+    settings_watch: Option<tokio::sync::watch::Sender<tmc_model::settings::ModuleSettings>>,
 }
 
 impl AppActions {
+    /// Publica los ajustes tras cada `put_config` (el cableado de EDDN los observa).
+    pub fn with_settings_watch(
+        mut self,
+        tx: tokio::sync::watch::Sender<tmc_model::settings::ModuleSettings>,
+    ) -> Self {
+        self.settings_watch = Some(tx);
+        self
+    }
+
     pub fn new() -> Self {
         Self {
             clipboard: Arc::new(Clipboard::new()),
             config: Mutex::new(Config::default()),
             runtime: None,
             save_path: None,
+            settings_watch: None,
         }
     }
 
@@ -90,6 +101,7 @@ impl AppActions {
             config: Mutex::new(cfg),
             runtime: None,
             save_path: None,
+            settings_watch: None,
         }
     }
 
@@ -176,6 +188,9 @@ impl ConfigHost for AppActions {
         updated
             .validate_f2()
             .map_err(|e| ActionError::Failed(e.into()))?;
+        updated
+            .validate_f3()
+            .map_err(|e| ActionError::Failed(e.into()))?;
         if updated.server.lan {
             updated.ensure_lan_token();
         }
@@ -183,6 +198,9 @@ impl ConfigHost for AppActions {
             Some(path) => updated.save_to(path),
             None => updated.save(),
         };
+        if let Some(tx) = &self.settings_watch {
+            tx.send_replace(updated.module_settings());
+        }
         if let Some(runtime) = &self.runtime {
             runtime
                 .online

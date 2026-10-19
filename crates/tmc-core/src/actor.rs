@@ -380,6 +380,7 @@ impl Actor {
             SourceEvent::Net(_)
             | SourceEvent::Action { .. }
             | SourceEvent::Settings(_)
+            | SourceEvent::Eddn(_)
             | SourceEvent::Stored { .. } => Changes::empty(),
         };
         self.update_core(changes);

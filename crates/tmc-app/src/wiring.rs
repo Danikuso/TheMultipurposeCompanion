@@ -1,5 +1,6 @@
 //! Arranque y cableado de todos los subsistemas.
 
+use crate::eddn_wiring::spawn_eddn_wiring;
 use crate::{AppActions, Clipboard, Config, data_dir, spawn_net_service};
 use chrono::Utc;
 use std::path::Path;
@@ -9,6 +10,7 @@ use std::sync::{
 };
 use std::time::Duration;
 use tmc_core::{CoreHandle, CoreMessage, CoreOptions, spawn_core_with};
+use tmc_eddn::RELAY_URL;
 use tmc_journal::{WatchOptions, is_game_running, resolve_journal_dir, spawn_watcher};
 use tmc_model::source::SourceEvent;
 use tmc_modules::all_modules;
@@ -75,9 +77,19 @@ pub async fn start_with_transport(
 /// Como [`start_with_transport`], y con `poll_idle` del vigilante del diario
 /// sustituible (los tests emulan «juego en marcha», que sondea cada 250 ms).
 pub async fn start_custom(
+    config: Config,
+    transport: Arc<dyn Transport>,
+    poll_idle: Option<Duration>,
+) -> anyhow::Result<Running> {
+    start_full(config, transport, poll_idle, None).await
+}
+
+/// Como [`start_custom`], con la URL del relay EDDN sustituible (solo e2e en depuración).
+pub async fn start_full(
     mut config: Config,
     transport: Arc<dyn Transport>,
     poll_idle: Option<Duration>,
+    eddn_url: Option<String>,
 ) -> anyhow::Result<Running> {
     let journal_dir = resolve_journal_dir(config.journal_dir.as_deref())?;
     let db_dir = config.data_dir.clone().unwrap_or_else(data_dir);
@@ -123,6 +135,14 @@ pub async fn start_custom(
     });
     // Suscripción previa al watcher para no perder la primera actualización.
     let mut rx = core.subscribe();
+    let (settings_tx, settings_rx) = tokio::sync::watch::channel(config.module_settings());
+    spawn_eddn_wiring(
+        store.clone(),
+        core.events.clone(),
+        core.subscribe(),
+        settings_rx,
+        eddn_url.unwrap_or_else(|| RELAY_URL.to_owned()),
+    );
     let _ = core
         .events
         .send(SourceEvent::Settings(config.module_settings()))
@@ -215,7 +235,8 @@ pub async fn start_custom(
         store.clone(),
         Arc::new(
             AppActions::with_runtime(config, core.events.clone(), online, net)
-                .with_clipboard(clipboard.clone()),
+                .with_clipboard(clipboard.clone())
+                .with_settings_watch(settings_tx),
         ),
     )
     .await?;
