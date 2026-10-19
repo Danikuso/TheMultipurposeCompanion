@@ -62,7 +62,7 @@ pub struct ProspectorTracker {
 }
 
 fn sum_opt(it: impl Iterator<Item = u64>) -> Option<u64> {
-    it.reduce(|a, b| a + b)
+    it.reduce(u64::saturating_add)
 }
 
 fn build_view(ev: &ProspectedAsteroid, prices: PriceFn, s: &ModuleSettings) -> AsteroidView {
@@ -76,9 +76,11 @@ fn build_view(ev: &ProspectedAsteroid, prices: PriceFn, s: &ModuleSettings) -> A
         .map(|m| {
             let key = commodity_key(&m.name);
             let est_value = match (tons, prices(&key)) {
-                (Some(t), Some(p)) => {
-                    Some((m.proportion / 100.0 * t * p.price as f64).round() as u64)
-                }
+                (Some(t), Some(p)) => Some(
+                    (m.proportion / 100.0 * t * p.price as f64)
+                        .round()
+                        .clamp(0.0, u64::MAX as f64) as u64,
+                ),
                 _ => None,
             };
             MaterialRow {
@@ -235,6 +237,18 @@ mod tests {
         assert_eq!(t.current().unwrap().verdict, Verdict::NotWorth);
         assert_eq!(t.history().len(), 1);
         assert_eq!(t.history().back().unwrap().verdict, Verdict::NotWorth);
+    }
+
+    #[test]
+    fn absurd_proportion_does_not_overflow() {
+        let mut t = ProspectorTracker::default();
+        let e = ev(
+            "High",
+            vec![mat("Platinum", 1e30), mat("Platinum", 1e30)],
+            None,
+        );
+        t.apply(&e, &priced, &ModuleSettings::default());
+        assert_eq!(t.current().unwrap().est_total, Some(u64::MAX));
     }
 
     #[test]
