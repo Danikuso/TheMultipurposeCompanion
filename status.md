@@ -2,16 +2,16 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-19 14:35 (Europe/Madrid) · Claude Opus 5.5
-- **Fase actual:** F2 — Combate y minería (✅ 29/29 tareas y 10/10 criterios; pendiente de fusionar en `main`). F1 ✅ fusionada en `main` (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Última actualización:** 2026-10-19 17:25 (Europe/Madrid) · Claude Opus 5.5
+- **Fase actual:** F2 — Combate y minería (✅ completada y fusionada en `main` en `e069a14`). F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) — ✅ aprobada (2026-10-18); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
 - **Plan activo:** [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) — ✅ 29/29 tareas. Anteriores: F1 ✅ 33/33, F0 ✅ 19/19
-- **Rama de trabajo:** `fase/f2-combate-mineria` (subida a GitHub privado; CI desactivado por orden del propietario)
+- **Rama de trabajo:** `main` (F2 fusionada; la siguiente fase abrirá `fase/f3-…`)
 
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** fusionar `fase/f2-combate-mineria` en `main` cuando el propietario lo autorice (revisión final aprobada, criterios verificados con evidencias en «Verificación F2» del plan); después, spec de F3 según la hoja de ruta (spec de arquitectura §13).
+- **Siguiente acción:** preparar la spec de F3 según la hoja de ruta (spec de arquitectura §13) con el propietario. Pendientes del propietario en «Bloqueos» (rangos de combate es/de/pt, Canonn, CAPI/Inara/EDSM).
 
 ## Fases
 
@@ -187,6 +187,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
+- 2026-10-19 17:25 (Europe/Madrid) · Claude Opus 5.5 · Propietario autoriza la fusión: `fase/f2-combate-mineria` fusionada en `main` (`e069a14`, --no-ff). Sobre `main`: fmt/clippy limpios, 755 tests Rust PASS, svelte-check 0 errores, 144 vitest PASS, build OK. `main` subida a GitHub privado.
 - 2026-10-19 14:35 (Europe/Madrid) · Claude Opus 5.5 · F2 ejecutada con subagentes (Tasks 19–28) y cerrada: 10/10 criterios PASS con evidencias en el plan; footprint con ventana 112,7 MB / 0 % CPU; revisión final de rama (Opus) con 1 crítico corregido (acciones reset de combate/minería no llegaban al núcleo, `c54a541`) y robustez (`cb484d8`); `core.clock` para la hora del diario en paneles. Rama `fase/f2-combate-mineria` subida; falta fusionar en `main` con autorización del propietario.
 - 2026-10-18 20:56 (Europe/Madrid) · Antigravity · Solicitud del propietario completada: añadida visualización de todos los tipos de estrellas del sistema actual en la vista de exploración (commit `6e4276e`). Incluye `star_classes` ordenadas y desduplicadas en `SystemTopic`, insignias por tipo con marcado repostable en `SystemBodiesPanel`, reflejo en la tarjeta de `RouteStrip` y textos en los 5 idiomas. 527 tests Rust PASS, 91 tests Vitest PASS, svelte-check y build en verde.
 - 2026-10-18 18:43 (Europe/Madrid) · Gemini 4 Argon (Medium) · Task 32 y cierre de F1 completados: `cargo tauri build` (`TMC_0.1.0_x64-setup.exe` 5,79 MiB), `measure-footprint.ps1 -ShowWindow -Seconds 120` (`max_mb=108.01` < 150 MB, `avg_cpu_idle=0.00%` < 1 % PASS), Criterio 7 verificado en vivo contra Spansh + portapapeles, 526 tests Rust PASS, 89 tests Vitest PASS, Playwright E2E PASS y 10/10 criterios documentados en el plan. Fase F1 cerrada.
