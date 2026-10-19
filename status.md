@@ -5,7 +5,7 @@
 - **Última actualización:** 2026-10-20 00:37 (Europe/Madrid) · Codex
 - **Fase actual:** extensión autorizada de diagnóstico debug; F3 se retoma después. Historial F0/F1/F2 conservado.
 - **Spec activa:** [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md) — autorizada por el propietario.
-- **Plan activo:** [diagnóstico debug](docs/plans/2026-10-20-diagnostico-debug.md) — D1–D4 ✅; D5 siguiente.
+- **Plan activo:** [diagnóstico debug](docs/plans/2026-10-20-diagnostico-debug.md) — D1–D4 y D2b ✅; D5 siguiente.
 - **Rama de trabajo:** codex/diagnostico-logs (checkout aislado; principal conserva F3 parcial).
 
 ## Puntero actual
@@ -22,6 +22,7 @@
 | D2 | Writer circular y lifecycle | ✅ hecha | ed0611e | 14 pruebas; ambas revisiones; 795 Rust, fmt/clippy y clippy release PASS |
 | D3 | Fuentes y persistencia | ✅ hecha | 44e8a9e + 91cc1dc (fix volumen) | 804 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS |
 | D4 | Actor y módulos | ✅ hecha | 42c1ccc | 811 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS |
+| D2b | Escritor SQLite por apartados | ✅ hecha | 58696b7 | Sustituye JSONL (decisión propietario 2026-10-20); 75 tests tmc-app, 815 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS |
 | D5 | Red, HTTP, WS, auth y acciones | ⬜ siguiente | — | D4 cerrada |
 | D6 | UI | ⬜ pendiente | — | Tras D5 |
 | D7 | Checks, consumo, build e integración | ⬜ pendiente | — | Retomar F3 después |
@@ -200,6 +201,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
+- 2026-10-20 · Claude Sonnet 5.5 · D2b 58696b7: escritor SQLite separado `debug_logs/diagnostics.sqlite` por apartados (spec/plan/desviación en b325a2e); fmt/clippy/clippy release PASS. Siguiente: D5.
 - 2026-10-20 · Claude Sonnet 5.5 · D4 42c1ccc cerrada: actor (evento, transición de estado, topics redactados, efectos) y decisiones de los seis módulos; 811 Rust PASS/1 ignorado, fmt/clippy/clippy release PASS. Siguiente: D5.
 - 2026-10-20 · Claude Sonnet 5.5 · D3 44e8a9e cerrada: fuentes locales y persistencia instrumentadas; 804 Rust PASS/1 ignorado, fmt/clippy/clippy release PASS. Siguiente: D4.
 - 2026-10-20 00:37 (Europe/Madrid) · Codex · D2 ed0611e cerrada con writer DEBUG acotado y 14 pruebas. Correcciones de escape JSON, limpieza bajo bloqueo Windows y orden de cierre revisadas. 795 Rust PASS/1 ignorado, fmt/clippy y clippy release PASS; empieza D3.
