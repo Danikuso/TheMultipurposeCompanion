@@ -269,6 +269,12 @@ impl Mining {
                 let f = |k: &str| book.best_price(k, now);
                 self.prospector.apply(p, &f, &self.settings);
                 self.last_prospect = Some(at);
+                decide!("mining.prospector.verdict", {"materials": p.materials.len(),
+                "verdict": self.prospector.current().map_or(-1, |v| match v.verdict {
+                    prospector::Verdict::Worth { .. } => 1,
+                    prospector::Verdict::NotWorth => 0,
+                    prospector::Verdict::NoData => 2,
+                })});
             }
             EventKind::LaunchDrone(d) => {
                 if d.type_.eq_ignore_ascii_case("Prospector")
@@ -285,6 +291,7 @@ impl Mining {
                 self.learn(&m.type_, m.type_localised.as_deref());
                 self.prices.on_market_sell(m, now);
                 self.take_from_inventory(&commodity_key(&m.type_), m.count);
+                decide!("mining.market_sell.recorded", {"count": m.count});
             }
             EventKind::EjectCargo(e) => {
                 self.take_from_inventory(&commodity_key(&e.type_), e.count);
@@ -292,6 +299,7 @@ impl Mining {
             EventKind::MiningRefined(r) => {
                 self.learn(&r.type_, r.type_localised.as_deref());
                 *self.inventory.entry(commodity_key(&r.type_)).or_default() += 1;
+                decide!("mining.refined.counted", {"kinds": self.inventory.len()});
             }
             EventKind::Cargo(c) => {
                 let ship = c.vessel.as_deref().is_none_or(|v| v == "Ship");
@@ -302,6 +310,7 @@ impl Mining {
                 }
                 if ship && let Some(inv) = &c.inventory {
                     self.inventory = inventory_of(inv.iter().map(|i| (i.name.as_str(), i.count)));
+                    decide!("mining.cargo.collected", {"kinds": self.inventory.len()});
                 }
             }
             _ => {}
@@ -386,6 +395,7 @@ impl Mining {
                 .get(&key)
                 .is_some_and(|at| now - *at < Duration::minutes(RESULT_MAX_AGE_MIN))
             {
+                decide!("mining.sell.request.skipped_fresh", {});
                 continue;
             }
             if self
@@ -393,10 +403,12 @@ impl Mining {
                 .get(&key)
                 .is_some_and(|retry_at| now < *retry_at)
             {
+                decide!("mining.sell.request.skipped_cooldown", {});
                 continue;
             }
             let rk = format!("sell:{addr}:{key}:{}", pad_tag(min_pad));
             if !self.inflight.begin(&rk, now) {
+                decide!("mining.sell.request.inflight_dedup", {});
                 continue;
             }
             let query = NetQuery::CommodityImportsNearby {
@@ -434,6 +446,7 @@ impl Mining {
         // Pedida para otra plataforma (la nave cambió): no vale.
         let cur = self.cur_pad(state).unwrap_or(PadSize::Small);
         if pad != pad_tag(cur) {
+            decide!("mining.sell.response.stale_pad", {});
             return false;
         }
         let current = addr == state.location.system_address && addr == self.addr;
@@ -442,6 +455,7 @@ impl Mining {
         match &r.outcome {
             NetOutcome::Markets(ms) => {
                 let ms = filter_compatible(ms, self.cur_pad(state));
+                decide!("mining.sell.response.applied", {"candidates": ms.len(), "current": current});
                 self.prices.on_remote(&key, &ms, r.fetched_at);
                 if current {
                     self.results.insert(key.clone(), ms);
@@ -451,6 +465,7 @@ impl Mining {
                 true
             }
             NetOutcome::NoData => {
+                decide!("mining.sell.response.no_data", {"current": current});
                 // Sin mercados: se olvida un precio remoto antiguo.
                 self.prices.on_remote(&key, &[], r.fetched_at);
                 if current {
@@ -460,6 +475,7 @@ impl Mining {
                 true
             }
             NetOutcome::Failed(_) => {
+                decide!("mining.sell.response.failed", {"current": current, "cooldown_s": FAILED_COOLDOWN_S});
                 if current {
                     self.failed
                         .insert(key, now + Duration::seconds(FAILED_COOLDOWN_S));
@@ -476,8 +492,10 @@ impl Mining {
             || value.get("cmdr").and_then(Value::as_str) != self.cmdr.as_deref()
             || self.prices_loaded
         {
+            decide!("mining.prices.stored.discarded", {"loaded": self.prices_loaded});
             return false;
         }
+        decide!("mining.prices.stored.applied", {});
         self.prices.restore_local_sells(value);
         self.prices_loaded = true;
         self.inflight.finish(PRICES_KEY);
@@ -551,6 +569,8 @@ impl Mining {
         };
         let plan =
             any.then(|| SellPlan::build(&self.inventory, &results, self.pad, self.fetched_at));
+        decide!("mining.sell.plan.built", {"status": status, "candidates": results.values().map(Vec::len).sum::<usize>(),
+            "best_station": plan.as_ref().is_some_and(|p| p.best_station_total.is_some())});
         serde_json::to_value(SellTopic {
             status,
             as_of: self.now,

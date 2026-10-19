@@ -33,9 +33,12 @@ impl Dashboard {
     }
 
     fn expire_event_alerts(&mut self, now: DateTime<Utc>) {
+        let before = self.active_alerts.len();
         self.active_alerts.retain(|alert| {
             alert.source != AlertSource::JournalEvent || now < alert.since + EVENT_ALERT_TTL
         });
+        decide_if!(self.active_alerts.len() != before, "dashboard.alerts.expired",
+            {"removed": before - self.active_alerts.len()});
     }
 
     fn can_notify(&self, key: &str, now: DateTime<Utc>) -> bool {
@@ -60,7 +63,9 @@ impl Dashboard {
             return Vec::new();
         }
         let mut emitted = Vec::new();
-        for (key, severity, is_active) in status_flag_rules(status) {
+        #[allow(unused_variables)]
+        for (flag, (key, severity, is_active)) in status_flag_rules(status).into_iter().enumerate()
+        {
             if is_active {
                 let was_active = !self.active_flags.insert(key);
                 if !was_active {
@@ -70,6 +75,7 @@ impl Dashboard {
                         now,
                         AlertSource::StatusFlag,
                     ));
+                    decide!("dashboard.status_flag.activated", {"flag": flag});
                     if self.can_notify(key, now) {
                         self.last_notified.insert(key.to_owned(), now);
                         emitted.push(alert);
@@ -85,6 +91,7 @@ impl Dashboard {
                     }
                 }
             } else if self.active_flags.remove(key) {
+                decide!("dashboard.status_flag.cleared", {"flag": flag});
                 self.active_alerts.retain(|a| a.key != key);
             }
         }
@@ -119,6 +126,11 @@ impl Dashboard {
                     return Vec::new();
                 }
                 let Some(alert) = journal_event_alert(ev) else {
+                    decide_if!(
+                        matches!(ev.kind, tmc_model::events::EventKind::HullDamage(_)),
+                        "dashboard.journal_alert.discarded_by_type",
+                        {}
+                    );
                     return Vec::new();
                 };
                 self.push_active(ActiveAlert::from_alert(

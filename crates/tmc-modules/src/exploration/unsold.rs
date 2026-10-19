@@ -301,9 +301,11 @@ impl UnsoldState {
                         ..Default::default()
                     };
                     self.request(ctx);
+                    decide!("exploration.unsold.cmdr_changed", {});
                     changed = true;
                 }
                 if self.seen.get(file).is_some_and(|seen| line <= seen) {
+                    decide!("exploration.unsold.line_already_seen", {});
                     return changed;
                 }
                 self.seen.insert(file.clone(), *line);
@@ -312,6 +314,16 @@ impl UnsoldState {
                     self.request(ctx);
                 }
                 if let Some(kind) = compact(&ev.kind) {
+                    decide_if!(
+                        matches!(
+                            kind,
+                            EventKind::SellExplorationData(_)
+                                | EventKind::MultiSellExplorationData(_)
+                                | EventKind::Died
+                        ),
+                        "exploration.unsold.sale_or_death_recorded",
+                        {"unconfirmed": self.unconfirmed.len()}
+                    );
                     self.context.apply(&mut self.ledger, &kind);
                     self.push(LedgerRecord {
                         file: file.clone(),
@@ -327,6 +339,7 @@ impl UnsoldState {
                 if module == "exploration" && self.pending.as_deref() == Some(tag.as_str()) =>
             {
                 if value.get("cmdr").and_then(serde_json::Value::as_str) != self.cmdr.as_deref() {
+                    decide!("exploration.unsold.rebuild.discarded_cmdr", {});
                     return false;
                 }
                 let Some(cut) = value
@@ -334,6 +347,7 @@ impl UnsoldState {
                     .and_then(serde_json::Value::as_i64)
                     .filter(|cut| *cut >= self.cut)
                 else {
+                    decide!("exploration.unsold.rebuild.discarded_stale_cut", {"cut": self.cut});
                     return false;
                 };
                 let Ok(mut ledger) =
@@ -370,6 +384,8 @@ impl UnsoldState {
                 self.cut = cut;
                 self.pending = None;
                 self.since_checkpoint = self.unconfirmed.len();
+                decide!("exploration.unsold.rebuild.applied", {"cut": self.cut,
+                    "unconfirmed": self.unconfirmed.len(), "refresh_after": self.refresh_after_pending});
                 if self.refresh_after_pending {
                     self.request(ctx);
                 }
@@ -378,6 +394,7 @@ impl UnsoldState {
             SourceEvent::ImportProgress { done, total } if done == total && self.cmdr.is_some() => {
                 if self.pending.is_some() {
                     self.refresh_after_pending = true;
+                    decide!("exploration.unsold.refresh_after_pending.set", {});
                 } else {
                     self.request(ctx);
                 }
@@ -392,6 +409,8 @@ impl UnsoldState {
         if self.cmdr.is_some()
             && (overdue || (self.pending.is_none() && self.since_checkpoint >= 256))
         {
+            decide!("exploration.unsold.checkpoint_or_retry", {"overdue": overdue,
+                "since_checkpoint": self.since_checkpoint});
             self.request(ctx);
         }
         changed

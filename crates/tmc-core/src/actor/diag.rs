@@ -14,7 +14,10 @@ const TOPIC_CAP: u32 = 8;
 
 #[derive(Default)]
 pub(super) struct ActorDiag {
+    /// Total acumulado de eventos de replay (base del muestreo, no se reinicia).
     replay_events: u64,
+    /// Eventos del tramo de replay en curso.
+    replay_segment: u64,
     in_replay: bool,
     full: bool,
     topic_budget: u32,
@@ -61,12 +64,14 @@ impl Actor {
             SourceEvent::Journal { replaying, .. } => Some(*replaying),
             _ => None,
         };
-        if journal_replaying == Some(false) && self.diag.in_replay {
+        // El primer evento que no es de replay (de cualquier tipo) cierra el tramo.
+        if journal_replaying != Some(true) && self.diag.in_replay {
             self.diag_replay_finished();
         }
         let full = if journal_replaying == Some(true) {
             self.diag.in_replay = true;
             self.diag.replay_events += 1;
+            self.diag.replay_segment += 1;
             let n = self.diag.replay_events;
             n <= FULL_FIRST || n.is_multiple_of(FULL_EVERY)
         } else {
@@ -128,7 +133,7 @@ impl Actor {
             return;
         }
         self.diag.in_replay = false;
-        let events = std::mem::take(&mut self.diag.replay_events);
+        let events = std::mem::take(&mut self.diag.replay_segment);
         tmc_model::diagnostic!(
             Ctx::State,
             "actor.replay.finished",
@@ -192,8 +197,10 @@ impl Actor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{Alert, Module, Severity, TopicSet};
     use tmc_model::diagnostics::capture::{Record, capture};
     use tmc_model::events::parse_line;
+    use tmc_model::state::GameState;
 
     fn journal(name: &str, extra: &str, replaying: bool) -> SourceEvent {
         SourceEvent::Journal {
@@ -259,14 +266,125 @@ mod tests {
         );
     }
 
+    struct Fake {
+        active: bool,
+    }
+    impl Module for Fake {
+        fn id(&self) -> &'static str {
+            "dashboard"
+        }
+        fn on_event(
+            &mut self,
+            ev: &SourceEvent,
+            _state: &GameState,
+            ctx: &mut ModuleCtx,
+        ) -> TopicSet {
+            if matches!(ev, SourceEvent::Journal { .. }) {
+                self.active = true;
+                ctx.request(
+                    "k",
+                    tmc_model::net::NetQuery::System {
+                        id64: 1,
+                        name: "Sol".into(),
+                    },
+                );
+                ctx.store_task("t", Box::new(|_| Ok(Value::Null)));
+                ctx.alert(Alert::new(Severity::Info, "fake-alert"));
+            }
+            ["dashboard.alerts".to_owned()].into()
+        }
+        fn topic_value(&self, _: &str) -> Option<Value> {
+            Some(json!({"active": self.active}))
+        }
+        fn topics(&self) -> Vec<String> {
+            vec!["dashboard.alerts".into()]
+        }
+        fn relevance(&self, _: &GameState) -> Relevance {
+            if self.active {
+                Relevance::Urgent
+            } else {
+                Relevance::Normal
+            }
+        }
+    }
+
+    fn run_fake(events: Vec<SourceEvent>) -> Vec<Record> {
+        capture(|| {
+            let mut actor = Actor::new(
+                vec![Box::new(Fake { active: false })],
+                None,
+                broadcast::channel(16).0,
+            );
+            for event in events {
+                actor.apply(event);
+            }
+        })
+        .1
+    }
+
+    #[test]
+    fn module_effects_and_relevance_are_counted() {
+        let records = run_fake(vec![
+            journal("Shutdown", "", true),
+            journal("Shutdown", "", false),
+        ]);
+        let payload = |code: &str, i: usize| -> Value {
+            let r = records.iter().filter(|r| r.code == code).nth(i).unwrap();
+            serde_json::from_str(&r.payload).unwrap()
+        };
+        // Replay: la petición se descarta en ModuleCtx y la alerta no se emite.
+        let replay = payload("actor.event.processed", 0);
+        assert_eq!(replay["requests"], 0);
+        assert_eq!(replay["alerts"], 0);
+        assert_eq!(replay["store_tasks"], 1);
+        assert_eq!(replay["relevance_changes"], 1);
+        assert_eq!(replay["modules"], 1);
+        // En vivo: una petición, una tarea y una alerta; sin red ni store se descartan.
+        let live = payload("actor.event.processed", 1);
+        assert_eq!(live["requests"], 1);
+        assert_eq!(live["store_tasks"], 1);
+        assert_eq!(live["alerts"], 1);
+        let module = payload("actor.module.processed", 1);
+        assert_eq!(module["module"], "dashboard");
+        assert_eq!(module["relevance_next"], 3);
+        let codes: Vec<_> = records.iter().map(|r| r.code.as_str()).collect();
+        for expected in [
+            "actor.request.dropped_no_channel",
+            "actor.store_task.dropped_no_store",
+            "actor.replay.finished",
+        ] {
+            assert!(codes.contains(&expected), "{expected}");
+        }
+    }
+
+    #[test]
+    fn non_journal_event_closes_replay_segment() {
+        let records = run_fake(vec![
+            journal("Shutdown", "", true),
+            SourceEvent::GameProcess { running: true },
+        ]);
+        let finished = records
+            .iter()
+            .position(|r| r.code == "actor.replay.finished")
+            .unwrap();
+        let second = records
+            .iter()
+            .enumerate()
+            .filter(|(_, r)| r.code == "actor.event.processed")
+            .nth(1)
+            .unwrap()
+            .0;
+        assert!(finished < second);
+    }
+
     #[test]
     fn same_input_gives_same_decisions_and_topics() {
         let events = || {
-            vec![
-                journal("LoadGame", LOAD, true),
-                journal("Shutdown", "", true),
-                journal("LoadGame", LOAD, false),
-            ]
+            let mut events = vec![journal("LoadGame", LOAD, true)];
+            events.extend((0..9).map(|_| journal("Shutdown", "", true)));
+            events.push(journal("LoadGame", LOAD, false));
+            events.push(journal("Shutdown", "", false));
+            events
         };
         let shape = |records: Vec<Record>| {
             records
@@ -274,19 +392,16 @@ mod tests {
                 .map(|r| {
                     let payload: Value = serde_json::from_str(&r.payload).unwrap();
                     // La duración es la única magnitud no determinista.
-                    let stable = if r.code == "actor.event.processed" {
-                        let mut p = payload;
-                        p["duration_us"] = Value::Null;
-                        p
-                    } else if r.code == "actor.module.processed" {
-                        Value::Null
-                    } else {
-                        payload
-                    };
+                    let mut stable = payload;
+                    if stable.get("duration_us").is_some() {
+                        stable["duration_us"] = Value::Null;
+                    }
                     (r.context, r.schema, r.code, stable)
                 })
                 .collect::<Vec<_>>()
         };
+        let run_fake_events = || run_fake(events());
+        assert_eq!(shape(run_fake_events()), shape(run_fake_events()));
         assert_eq!(shape(run(events())), shape(run(events())));
     }
 }
