@@ -23,7 +23,23 @@ pub enum EddnError {
     NotConnected,
 }
 
+/// Tope de un mensaje comprimido recibido (los de EDDN miden unos pocos KB).
+pub const MAX_COMPRESSED_BYTES: usize = 256 * 1024;
+/// Partes máximas aceptadas por mensaje.
+pub const MAX_PARTS: usize = 2;
+
+/// Une las partes de un mensaje. Si excede los topes devuelve un fotograma vacío
+/// (que el decodificador cuenta como corrupto) sin reservar la concatenación.
+pub fn frame_from_parts(parts: &[&[u8]]) -> Vec<u8> {
+    let total: usize = parts.iter().map(|p| p.len()).sum();
+    if parts.len() > MAX_PARTS || total > MAX_COMPRESSED_BYTES {
+        return Vec::new();
+    }
+    parts.concat()
+}
+
 pub trait FrameSource: Send {
+    /// Puede bloquear hasta 5 s (tope de conexión de `ZmqSource`).
     fn connect(&mut self, url: &str) -> Result<(), EddnError>;
     /// `Ok(None)` si vence `timeout` sin mensaje.
     fn recv(&mut self, timeout: Duration) -> Result<Option<Vec<u8>>, EddnError>;
@@ -76,7 +92,10 @@ impl FrameSource for ZmqSource {
         {
             Err(_) => Ok(None),
             Ok(Err(e)) => Err(terr(e)),
-            Ok(Ok(msg)) => Ok(Some(msg.into_vec().into_iter().flatten().collect())),
+            Ok(Ok(msg)) => {
+                let parts: Vec<&[u8]> = msg.iter().map(|b| b.as_ref()).collect();
+                Ok(Some(frame_from_parts(&parts)))
+            }
         }
     }
 
@@ -97,6 +116,20 @@ impl Drop for ZmqSource {
 mod tests {
     use super::*;
     use zeromq::{PubSocket, SocketSend, ZmqMessage};
+
+    #[test]
+    fn oversized_or_multipart_messages_are_rejected_without_concat() {
+        let big = vec![1u8; MAX_COMPRESSED_BYTES + 1];
+        assert!(frame_from_parts(&[&big]).is_empty());
+        assert!(frame_from_parts(&[&big[..10], &big[..10], &big[..10]]).is_empty());
+        let ok = vec![1u8; MAX_COMPRESSED_BYTES];
+        assert_eq!(frame_from_parts(&[&ok]).len(), MAX_COMPRESSED_BYTES);
+        assert_eq!(frame_from_parts(&[b"ab", b"cd"]), b"abcd");
+        assert_eq!(
+            crate::decode(&frame_from_parts(&[&big]), chrono::Utc::now()),
+            crate::Decoded::Ignored(crate::DropReason::Corrupt)
+        );
+    }
 
     #[test]
     fn zmq_loopback_roundtrip() {

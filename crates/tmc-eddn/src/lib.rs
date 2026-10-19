@@ -17,7 +17,10 @@ pub use subscriber::{
     BATCH_MAX_AGE, BATCH_MAX_MARKETS, Clock, CoordEntry, EddnOutput, EddnStatus, FakeClock,
     PENDING_CAP, SystemClock, spawn_subscriber,
 };
-pub use transport::{EddnError, EddnMode, FrameSource, RELAY_URL, ZmqSource};
+pub use transport::{
+    EddnError, EddnMode, FrameSource, MAX_COMPRESSED_BYTES, MAX_PARTS, RELAY_URL, ZmqSource,
+    frame_from_parts,
+};
 
 #[cfg(test)]
 mod tests;
