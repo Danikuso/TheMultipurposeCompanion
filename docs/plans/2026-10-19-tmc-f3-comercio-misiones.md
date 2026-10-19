@@ -405,7 +405,7 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 
 **Interfaces:** `RareGood { key: String /* commodity_key */, origin_system: String, origin_station: String, sell_distance_ly: u32, source: String, verified: bool }`, `fn rare_goods() -> &'static HashMap<String, RareGood>`; `#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)] CabinClass { Economy, Business, First, Luxury }`, `CabinSpec { symbol: String, class: CabinClass, seats: u32, source, verified }`, `fn cabin_spec(symbol: &str) -> Option<&'static CabinSpec>` (símbolo en minúsculas, p. ej. `int_passengercabin_size4_class1`). Hechos del juego redactados por el proyecto (no copiados de listas con licencia incompatible), `verified: false` salvo comprobación en el juego.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn rare_goods_load_and_have_provenance() { /* len > 0, todas con source no vacío; "lavianbrandy" → origin_system "Lave", sell_distance_ly >= 150 */ }
@@ -413,7 +413,7 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 #[test] fn corrupt_static_data_is_ignored_with_warning() { /* JSON inválido → mapa vacío, sin pánico */ }
 ```
 
-- [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(modules): datos propios de mercancías raras y cabinas con procedencia`
+- [x] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(modules): datos propios de mercancías raras y cabinas con procedencia`
 
 ### Task 14: i18n — `trade.ftl` y `missions.ftl`
 
@@ -878,6 +878,8 @@ test('settings put eddn radius and reverts on 400', /* 600 → 400 → valor ant
 | 11 | 5 idiomas; avisos y procedencia; nada GPL/AGPL incorporado | tests de `tmc-i18n`, Task 13, Task 34 Step 3 | ⬜ |
 
 ## Desviaciones
+
+- 2026-10-19 · Task 13: catálogo inicial explícitamente parcial: Lavian Brandy y las cuatro cabinas de referencia del plan, con source propia y verified:false; símbolos desconocidos devuelven None. No se extrapolan datos sin comprobar ni se importan tablas incompatibles. Parser por fila conserva entradas válidas y avisa de las defectuosas. TDD: 4 fallos de comportamiento → 12 tests de datos PASS; workspace 878 PASS (2 ignorados), fmt/clippy OK; revisiones spec/calidad aprobadas.
 
 - 2026-10-19 · Task 12: el escritor de coordenadas propias no espera `ImportProgress` final; fallo de importación o pérdida de ese mensaje no impiden guardar saltos posteriores. Tests de ambas rutas con SQLite real y servicios desactivados; revisiones spec/calidad aprobadas. Verificación: fmt/clippy y 874 tests Rust PASS (2 ignorados), 144 UI PASS, Svelte check/build OK.
 
