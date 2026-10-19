@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F3 — spec ✅ aprobada (2026-10-19), diseñada con el propietario con maquetas (`f3-comercio.html`, `f3-misiones.html`) y revisada por builder. Turismo: opción B (cálculo automático al aceptar).
-- **Siguiente acción:** ejecutar el plan de F3 con subagentes (en curso: Task 7); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Siguiente acción:** ejecutar el plan de F3 con subagentes (en curso: Task 10); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Fases
 
@@ -40,10 +40,10 @@
 | 4 | `tmc-model` — eventos de comercio | ✅ hecha | 299fc8c, ad46673 | Eventos de comercio tolerantes; max_pad, has_market |
 | 5 | `tmc-model` — eventos de misiones, pasajeros y objetivos comunitarios | ✅ hecha | 0463c11, ad46673 | Eventos de misiones/pasajeros/CG tolerantes; destinos múltiples |
 | 6 | `tmc-model::market` y `tmc-store` — tabla de precios, estaciones y coordenadas | ✅ hecha | b510911, c1214e2 | Tablas de precios/estaciones/coords; marcas de tiempo explícitas; retención 7/30 d |
-| 7 | `tmc-model` — consultas de red nuevas y ajustes de F3 | 🔄 en curso | — |  |
-| 8 | `tmc-net` — ruta comercial de Spansh y coordenadas por nombre | ⬜ pendiente | — |  |
-| 9 | `tmc-net` — exportaciones cercanas de Ardent | ⬜ pendiente | — |  |
-| 10 | `tmc-eddn` — decodificación y filtro | ⬜ pendiente | — |  |
+| 7 | `tmc-model` — consultas de red nuevas y ajustes de F3 | ✅ hecha | b89c415 | NetQuery/NetOutcome nuevas y ajustes eddn_radius_ly/tourism_reference_cr_ly |
+| 8 | `tmc-net` — ruta comercial de Spansh y coordenadas por nombre | ✅ hecha | 84131b6, 5580336 | Spansh trade (requires_large_pad), coords Ardent→EDSM, filas parciales |
+| 9 | `tmc-net` — exportaciones cercanas de Ardent | ✅ hecha | 84131b6, 5580336 | Ardent exports; regla de carriers común (también en F2) |
+| 10 | `tmc-eddn` — decodificación y filtro | 🔄 en curso | — |  |
 | 11 | `tmc-eddn` — suscriptor, reconexión y lotes | ⬜ pendiente | — |  |
 | 12 | `tmc-app` — servicio EDDN, `SourceEvent::Eddn`, limpieza y configuración | ⬜ pendiente | — |  |
 | 13 | datos estáticos `rare_goods.json` y `cabins.json` | ⬜ pendiente | — |  |
