@@ -48,6 +48,14 @@ const MAX_TRANSIENT_POLL_FAILURES: u32 = 2;
 const POLL_LIMIT: Duration = Duration::from_secs(120);
 const CODEX_REF_TTL: Duration = Duration::from_secs(7 * 24 * 3600);
 const POI_TTL: Duration = Duration::from_secs(5 * 60);
+/// Canonn tarda 2-4 s por respuesta: tiempo máximo propio (el resto, el del transporte).
+pub const CANONN_TIMEOUT: Duration = Duration::from_secs(15);
+
+/// Almacén persistente del `codex/ref` compacto (lo implementa la app sobre `api_cache`).
+pub trait RefPersist: Send + Sync {
+    fn load(&self) -> Option<(DateTime<Utc>, String)>;
+    fn save(&self, value: &str, at: DateTime<Utc>);
+}
 
 type CodexRef = HashMap<u64, (String, String)>;
 
@@ -89,6 +97,7 @@ pub struct NetClient {
     codex_ref: Mutex<Option<(std::time::Instant, Arc<CodexRef>)>>,
     /// Última respuesta de `getSystemPoi`: (sistema en minúsculas, cuándo, cuerpo).
     poi: Mutex<Option<(String, std::time::Instant, Arc<String>)>>,
+    persist: Option<Arc<dyn RefPersist>>,
 }
 
 fn now() -> std::time::Instant {
@@ -146,7 +155,14 @@ impl NetClient {
             utc_now,
             codex_ref: Mutex::new(None),
             poi: Mutex::new(None),
+            persist: None,
         }
+    }
+
+    /// Guarda y recupera el `codex/ref` compacto (7 días) para no bajarlo en cada arranque.
+    pub fn with_codex_persist(mut self, persist: Arc<dyn RefPersist>) -> NetClient {
+        self.persist = Some(persist);
+        self
     }
 
     pub async fn execute(&self, q: &NetQuery) -> (NetSource, NetOutcome) {
@@ -316,11 +332,28 @@ impl NetClient {
         if let Some(r) = fresh {
             return Ok(r);
         }
+        if let Some((at, text)) = self.persist.as_ref().and_then(|p| p.load()) {
+            let age = (self.utc_now)() - at;
+            if let (Ok(age), Some(map)) = (age.to_std(), canonn::deserialize_codex_ref(&text))
+                && age < CODEX_REF_TTL
+                && !map.is_empty()
+            {
+                let r = Arc::new(map);
+                let seen = std::time::Instant::now()
+                    .checked_sub(age)
+                    .unwrap_or_else(std::time::Instant::now);
+                *self.codex_ref.lock().unwrap() = Some((seen, r.clone()));
+                return Ok(r);
+            }
+        }
         let req = Req::Get(canonn::codex_ref_url());
         let body = self.call(Service::Canonn, req, online).await?;
         match canonn::parse_codex_ref(&body) {
             Ok(map) => {
                 self.succeed(Service::Canonn);
+                if let Some(p) = &self.persist {
+                    p.save(&canonn::serialize_codex_ref(&map), (self.utc_now)());
+                }
                 let r = Arc::new(map);
                 *self.codex_ref.lock().unwrap() = Some((std::time::Instant::now(), r.clone()));
                 Ok(r)
@@ -455,6 +488,9 @@ impl NetClient {
             return Err(Miss::Disabled);
         }
         let reply = match &req {
+            Req::Get(url) if service == Service::Canonn => {
+                self.transport.get_with_timeout(url, CANONN_TIMEOUT).await
+            }
             Req::Get(url) => self.transport.get(url).await,
             Req::Post(url, form) => self.transport.post_form(url, form).await,
         };
@@ -604,6 +640,7 @@ mod tests {
     struct FakeTransport {
         routes: Mutex<Vec<(String, VecDeque<Reply>)>>,
         calls: Mutex<Vec<String>>,
+        timeouts: Mutex<Vec<(String, Duration)>>,
         forms: Mutex<Vec<Vec<(String, String)>>>,
     }
 
@@ -651,6 +688,13 @@ mod tests {
         fn get(&self, url: &str) -> BoxFut<'_, Reply> {
             let r = self.serve(format!("GET {url}"), url);
             Box::pin(async move { r })
+        }
+        fn get_with_timeout(&self, url: &str, timeout: Duration) -> BoxFut<'_, Reply> {
+            self.timeouts
+                .lock()
+                .unwrap()
+                .push((url.to_string(), timeout));
+            self.get(url)
         }
         fn post_form(&self, url: &str, form: &[(String, String)]) -> BoxFut<'_, Reply> {
             self.forms.lock().unwrap().push(form.to_vec());
@@ -1175,10 +1219,55 @@ mod tests {
             ]
         );
         assert!(t.forms.lock().unwrap().is_empty());
+        // Canonn usa su propio tiempo máximo; Spansh no.
+        let timeouts = t.timeouts.lock().unwrap().clone();
+        assert_eq!(timeouts.len(), 2);
+        assert!(timeouts.iter().all(|(_, d)| *d == Duration::from_secs(15)));
         // Otro cuerpo del mismo sistema reutiliza la referencia y la consulta.
         let (_, out) = c.execute(&bio_query("A 1")).await;
         assert!(matches!(out, NetOutcome::BodyBio(_)));
         assert_eq!(t.total(), 2);
+    }
+
+    #[derive(Default)]
+    struct MemPersist(Mutex<Option<(DateTime<Utc>, String)>>);
+
+    impl RefPersist for MemPersist {
+        fn load(&self) -> Option<(DateTime<Utc>, String)> {
+            self.0.lock().unwrap().clone()
+        }
+        fn save(&self, value: &str, at: DateTime<Utc>) {
+            *self.0.lock().unwrap() = Some((at, value.to_string()));
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn persisted_codex_ref_avoids_download_until_it_expires() {
+        let persist = Arc::new(MemPersist::default());
+        let t = canonn_transport(vec![ok(200, CANONN_BODY)]);
+        let first = NetClient::new(t.clone()).with_codex_persist(persist.clone());
+        assert!(matches!(
+            first.execute(&bio_query("A 1 a")).await.1,
+            NetOutcome::BodyBio(_)
+        ));
+        assert_eq!(t.count("/codex/ref"), 1);
+        let saved = persist.load().unwrap().1;
+        assert!(saved.contains("GeneroA") && !saved.contains("english_name"));
+        // Nuevo cliente (otro arranque): la referencia sale de la caché persistente.
+        let t2 = canonn_transport(vec![ok(200, CANONN_BODY)]);
+        let second = NetClient::new(t2.clone()).with_codex_persist(persist.clone());
+        assert!(matches!(
+            second.execute(&bio_query("A 1 a")).await.1,
+            NetOutcome::BodyBio(_)
+        ));
+        assert_eq!(t2.count("/codex/ref"), 0);
+        // Caducada (8 días): se vuelve a bajar.
+        let old = Utc::now() - chrono::Duration::days(8);
+        persist.save(&saved, old);
+        let t3 = canonn_transport(vec![ok(200, CANONN_BODY)]);
+        let third = NetClient::new(t3.clone()).with_codex_persist(persist);
+        third.execute(&bio_query("A 1 a")).await;
+        assert_eq!(t3.count("/codex/ref"), 1);
     }
 
     #[tokio::test(start_paused = true)]

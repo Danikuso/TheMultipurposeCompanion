@@ -52,6 +52,23 @@ pub fn parse_codex_ref(body: &str) -> Result<HashMap<u64, (String, String)>, Net
     Ok(map)
 }
 
+/// Forma compacta para `api_cache`: `[[entryid, género, especie], ...]`.
+pub fn serialize_codex_ref(map: &HashMap<u64, (String, String)>) -> String {
+    let mut rows: Vec<_> = map.iter().collect();
+    rows.sort_by_key(|(id, _)| **id);
+    let rows: Vec<Value> = rows
+        .into_iter()
+        .map(|(id, (g, s))| serde_json::json!([id, g, s]))
+        .collect();
+    Value::Array(rows).to_string()
+}
+
+/// Inversa de [`serialize_codex_ref`]; `None` si el texto no es válido.
+pub fn deserialize_codex_ref(text: &str) -> Option<HashMap<u64, (String, String)>> {
+    let rows: Vec<(u64, String, String)> = serde_json::from_str(text).ok()?;
+    Some(rows.into_iter().map(|(i, g, s)| (i, (g, s))).collect())
+}
+
 /// Nombre del cuerpo sin el prefijo `<sistema> ` (sin distinguir mayúsculas).
 /// La estrella principal (`body == sistema`) normaliza a `""`.
 pub fn normalize_body_name(star_system: &str, body_name: &str) -> String {
