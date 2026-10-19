@@ -291,3 +291,25 @@ La procedencia declarada en los archivos y la decisión de construcción están 
 | `crates/tmc-modules/data/probes.json` | 7 bandas de radio con estimación de sondas; hechos transcritos por TMC. | Entradas `verified: false`; la UI identifica la estimación. |
 
 Las menciones de SrvSurvey en `bio_rules.json` explican su exclusión como fuente; no son código ni datos importados. Las búsquedas en `crates/`, `ui/src/` y `locales/` solo encuentran esas declaraciones de procedencia. No se incorporan tablas de wikis, Coriolis, EDSY ni datos de Canonn. El adaptador Canonn permanece desactivado hasta confirmar el permiso formal de uso por red ([spike_canonn_f1.md](docs/research/notes/spike_canonn_f1.md)); sus fixtures son sintéticos.
+
+## Servicios de red y datos de F2 (combate y minería)
+
+### Ardent API (servicio de red AGPL, no incorporado)
+- Uso: consultas HTTP de solo lectura desde `tmc-net` (mercados que compran un mineral, estaciones más cercanas con servicios) para «Dónde vender» e instalación de interés más cercana.
+- Licencia del servicio: AGPL. TMC lo utiliza **únicamente por red** como cliente; **no se copia ni se enlaza ni se distribuye** su código ni se incorporan sus datos al repositorio. Las respuestas solo se guardan en la caché local de TMC con caducidad, y los fixtures de pruebas son sintéticos.
+- Opt-out: el servicio puede desactivarse en los ajustes de minería/servicios; desactivado, TMC muestra «sin datos» sin realizar peticiones. No se envían datos de la galaxia Legacy.
+- En compilaciones de depuración existe un transporte de pruebas que redirige Ardent a `http://127.0.0.1:` para los tests e2e (nunca activo en release).
+
+### Dependencias nuevas en F2
+- No se añaden dependencias de terceros nuevas (`Cargo.lock` y `ui/package.json` sin cambios de paquetes respecto a `main`). Solo se declaran dependencias internas o ya registradas: `chrono` (MIT OR Apache-2.0) ahora también en `tmc-core` y `tmc-net`, y `tmc-net` (crate propio) en `apps/headless`, solo para el transporte e2e de depuración.
+
+### Datos estáticos propios de F2
+
+Versión 1, licencia de datos propios del proyecto **PolyForm Noncommercial 1.0.0**; sin datasets de terceros (ni GPL/AGPL).
+
+| Archivo | Contenido y procedencia declarada | Verificación |
+|---|---|---|
+| `crates/tmc-modules/data/ship_pads.json` | 47 naves con tamaño de plataforma mínimo; hechos del juego transcritos por TMC (pantalla de astillero) con procedencia por entrada. | Todas `verified: false`; con tamaño dudoso se toma la plataforma mayor (más conservador). Contraste con los `Loadout` del propietario mediante `eval`. |
+| `crates/tmc-modules/data/mining_yield.json` | Estimación propia de toneladas por asteroide según contenido (Low/Medium/High). | Estimación de TMC, no datos de terceros; contraste en `eval` (sin casos en el historial del propietario: INSUFICIENTE). |
+
+La constante de naves thargoides de `tmc-model` (AX) es una lista pequeña **no verificada** escrita por TMC (ver «Desviaciones» del plan de F2).
