@@ -1,6 +1,9 @@
 import { defineConfig } from '@playwright/test';
 
 const port = Number(process.env.TMC_E2E_PORT ?? 47320);
+// Puertos: TMC_E2E_PORT (47320 por defecto) +0 exploración, +1 combate, +2 minería online,
+// +3 minería offline, +4 Ardent falso (solo 127.0.0.1). Si 47320 está ocupado (p. ej. TMC.exe),
+// usar otro: TMC_E2E_PORT=47420 npx playwright test.
 // Servidores extra por escenario (cada uno con su fixture de diario).
 const combatPort = port + 1;
 const miningOnPort = port + 2;

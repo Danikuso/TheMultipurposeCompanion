@@ -8,6 +8,8 @@ test('mining_sell_lists_fake_markets_with_pad_and_age', async ({ page }) => {
   // Mayor precio primero; la plataforma pequeña queda fuera para la nave (python, M).
   await expect(options.nth(0)).toContainText('Ficticia Hub');
   await expect(options.nth(1)).toContainText('Prueba Outpost');
+  await expect(options.nth(0)).toContainText(/299\D?000/);
+  await expect(options.nth(1)).toContainText(/288\D?000/);
   const cells0 = options.nth(0).locator('td');
   await expect(cells0.nth(4)).toContainText('L');
   await expect(cells0.nth(5)).not.toHaveText('—');
