@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-19 23:52 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-20 00:03 (Europe/Madrid) · Codex
 - **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (🔄 en ejecución). F2 ✅ fusionada en `main` (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
 - **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 17/35 hechas (aprobado al ordenar «escribe el plan y ejecútalo»). Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
@@ -10,8 +10,8 @@
 
 ## Puntero actual
 
-- **Tarea:** F3 · Task 17 🔄 en curso, paso 1: tests de parámetros reales y avance de ruta al atracar.
-- **Siguiente acción:** ejecutar Task 17 con TDD: route_params, TradeRouteState, avance y copia del siguiente sistema; luego revisiones/checks. Task 16: 924 Rust PASS (2 ignorados), fmt/clippy OK; UI sin cambios desde 144 PASS/check/build de Task 14. El propietario prueba `main@9154d41`: no reconstruir release ni usar puerto/base reales. `.claude/` ajeno; `.tmp/` logs locales. Ledger: `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Tarea:** PRIORIDAD DEL PROPIETARIO: ampliar los logs de TODA la aplicación para diagnosticar pruebas y cuerpos ausentes en exploración. F3 Task 17 pausada con tests/stubs sin commit.
+- **Siguiente acción:** concretar diseño/plan de instrumentación general sobre el subsistema `tracing` existente (arquitectura F0 §9) y la petición expresa «Añádelo ahora», e implementarlo sobre main estable para pruebas; después integrar el cambio en F3 y retomar Task 17. Checkout main reutilizable: `C:/Users/danik/.codex/worktrees/prueba-main/EDPyCompanion`, HEAD 9154d41, limpio. F3 HEAD 7b6671c; sin commit `trade/{route.rs,mod.rs}` y este status. `.claude/` y `.tmp/` locales ajenos. No incluir payloads privados, tokens ni chats ni enviar logs fuera del equipo.
 
 ## Fases
 
@@ -49,8 +49,8 @@
 | 13 | datos estáticos `rare_goods.json` y `cabins.json` | ✅ hecha | 440c5d9 | OnceLock, parser tolerante con avisos y recuperación por fila; catálogo inicial 1 rara/4 cabinas; spec/calidad aprobadas; 878 Rust PASS |
 | 14 | i18n — `trade.ftl` y `missions.ftl` | ✅ hecha | 7f6a9a9 | 125 claves de paneles por idioma y ajustes/disposiciones; rangos ingleses; spec/calidad aprobadas; 880 Rust y 144 UI PASS |
 | 15 | `trade` — coste pagado y «Mi carga» | ✅ hecha | 28e205b | Media ponderada, coste parcial, exclusión misión/robada, SRV protegido y reconstrucción paginada; spec/calidad aprobadas; 893 Rust PASS |
-| 16 | `trade` — «Mercado actual» y mejor venta en 48 h | 🔄 en curso | — | 17 tests GREEN iniciales; calidad P2: preservar cierres al reconciliar precios. Cierres, ausencias y pad antes del límite GREEN; spec aprobada; 924 Rust PASS, revisión final de calidad pendiente |
-| 17 | `trade` — ruta comercial con avance automático | 🔄 en curso | — | Paso 1: tests de parámetros, avance y saltos |
+| 16 | `trade` — «Mercado actual» y mejor venta en 48 h | ✅ hecha | 3a33097 | Top5, mezcla fresca, consultas acotadas compatibles y marcador de catálogo completo; spec/calidad aprobadas, 924 Rust PASS |
+| 17 | `trade` — ruta comercial con avance automático | 🔄 en curso | — | PAUSADA por prioridad de logs del propietario; route.rs con tests/stubs y mod.rs sin commit; RED aún sin confirmar |
 | 18 | `trade` — sesión de comercio y buscar mercancía | ⬜ pendiente | — |  |
 | 19 | `trade` — módulo, topics, relevancia, red, almacén y registro | ⬜ pendiente | — |  |
 | 20 | `mining` — «Dónde vender» con la tabla de precios | ⬜ pendiente | — |  |
@@ -204,6 +204,10 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Decisiones tomadas
 
+- 2026-10-20 00:03 · Corregidas las tablas históricas F0/F1/F2: una sustitución sin acotar a F3 había sobrescrito sus tareas 16 y 17. Restauradas sus secciones completas desde HEAD y verificadas por igualdad exacta normalizando saltos de línea. Los logs serán VERBOSE de toda la app, exclusivamente debug_assertions y en debug_logs junto al ejecutable, por instrucción del propietario.
+
+- 2026-10-19 23:58 · Propietario prioriza logs exhaustivos de TODA la app para reportes de pruebas; exploración añade contexto específico, pero el alcance es general. F3 Task17 se pausa; se preserva TDD parcial. Se corrige tabla16 que seguía en curso pese a cierre real 3a33097 (spec/calidad y 924 Rust PASS ya verificados).
+
 - 2026-10-18 · Propietario: spec de F2 aprobada; plan y ejecución con subagentes autorizados.
 
 - 2026-10-18 · Propietario: F2 sin Rhino ni Law & Disorder, con AX; maquetas de combate y minería v2 aprobadas; calor como indicador de 3 estados y casco por escalones (el juego no expone calor % ni casco en vivo).
@@ -230,6 +234,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-19 23:58 (Europe/Madrid) · Codex · Propietario pide instrumentación diagnóstica de toda la app tras detectar cuerpos ausentes en exploración. Pausado implementadorTask17; código parcial preservado. Análisis con deep-plan/architect-opus dentro del logging aprobado F0§9, antes de implementar.
 
 - 2026-10-19 23:52 (Europe/Madrid) · Codex · Task 16 cerrada con top5, snapshots locales, mezcla por frescura y origen; revisión detectó y corrigió resurrección de ofertas, ausencia de mercancías y límite antes de pad. Migración aditiva f3_market_full_snapshots y consultas bounded; spec/calidad aprobadas, 924 Rust PASS (2 ignorados), fmt/clippy OK.
 
