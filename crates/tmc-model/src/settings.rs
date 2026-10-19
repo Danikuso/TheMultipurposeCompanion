@@ -14,6 +14,10 @@ pub struct ModuleSettings {
     pub mining_interest: Vec<String>,
     pub mining_threshold_cr: u64,
     pub sell_search_radius_ly: u32,
+    /// Radio (al. luz) de mercados EDDN que se guardan alrededor del jugador.
+    pub eddn_radius_ly: u32,
+    /// Referencia de turismo en cr por ano luz.
+    pub tourism_reference_cr_ly: u64,
 }
 
 pub const DEFAULT_MINING_INTEREST: [&str; 11] = [
@@ -44,6 +48,8 @@ impl Default for ModuleSettings {
                 .collect(),
             mining_threshold_cr: 1_000_000,
             sell_search_radius_ly: 100,
+            eddn_radius_ly: 200,
+            tourism_reference_cr_ly: 100_000,
         }
     }
 }
@@ -69,5 +75,13 @@ mod tests {
         assert!(s.mining_interest.contains(&"platinum".to_string()));
         assert_eq!(s.map_value_threshold, 500_000);
         assert_eq!(s.default_neutron_efficiency, 60);
+    }
+
+    #[test]
+    fn module_settings_f3_defaults() {
+        let s = ModuleSettings::default();
+        assert_eq!(s.eddn_radius_ly, 200);
+        assert_eq!(s.tourism_reference_cr_ly, 100_000);
+        assert_eq!(s.sell_search_radius_ly, 100);
     }
 }

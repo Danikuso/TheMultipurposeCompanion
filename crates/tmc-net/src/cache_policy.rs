@@ -76,9 +76,12 @@ pub fn cache_keys(q: &NetQuery) -> Vec<(CacheKind, String)> {
             CacheKind::BodyBio,
             format!("canonn:body:{system_address}:{body_id}"),
         )],
-        NetQuery::NeutronRoute(_) | NetQuery::GalaxyRoute(_) | NetQuery::Autocomplete { .. } => {
-            Vec::new()
-        }
+        NetQuery::NeutronRoute(_)
+        | NetQuery::GalaxyRoute(_)
+        | NetQuery::Autocomplete { .. }
+        | NetQuery::TradeRoute(_)
+        | NetQuery::CommodityExportsNearby { .. }
+        | NetQuery::SystemCoordsByName { .. } => Vec::new(),
         NetQuery::CommodityImportsNearby {
             system_address,
             commodity,

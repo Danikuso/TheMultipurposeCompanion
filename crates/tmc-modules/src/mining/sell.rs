@@ -149,6 +149,7 @@ mod tests {
             max_pad: pad,
             station_type: None,
             updated_at: None,
+            origin: None,
         }
     }
 

@@ -15,6 +15,7 @@ use crate::jsonx;
 use crate::transport::url_encode;
 use chrono::{DateTime, Duration, Utc};
 use serde_json::Value;
+use tmc_model::market::PriceOrigin;
 use tmc_model::net::{NearbyService, NetFailure, PadSize, RemoteMarket, RemoteStation};
 
 pub const BASE: &str = "https://api.ardent-insight.com/v2";
@@ -147,6 +148,7 @@ pub fn parse_markets(
             updated_at: opt_time(&o)?,
             station_name: name,
             station_type,
+            origin: Some(PriceOrigin::Ardent),
         };
         let fresh = market.updated_at.is_some_and(|t| t >= cutoff);
         let fits = market.max_pad.is_some_and(|p| p.fits(min_pad));
@@ -210,6 +212,16 @@ mod tests {
 
     fn ts(s: &str) -> String {
         format!("\"{s}\"")
+    }
+
+    #[test]
+    fn ardent_markets_carry_ardent_origin() {
+        let m = parse_markets(PLATINUM, now(), PadSize::Small).unwrap();
+        assert!(!m.is_empty());
+        assert!(
+            m.iter()
+                .all(|x| x.origin == Some(tmc_model::market::PriceOrigin::Ardent))
+        );
     }
 
     #[test]

@@ -40,6 +40,8 @@ pub struct Config {
     pub mining_interest: Vec<String>,
     pub mining_threshold_cr: u64,
     pub sell_search_radius_ly: u32,
+    pub eddn_radius_ly: u32,
+    pub tourism_reference_cr_ly: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub theme_mode: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -65,6 +67,8 @@ impl Default for Config {
                 .collect(),
             mining_threshold_cr: 1_000_000,
             sell_search_radius_ly: 100,
+            eddn_radius_ly: 200,
+            tourism_reference_cr_ly: 100_000,
             theme_mode: None,
             data_dir: None,
             ui_dir: None,
@@ -176,6 +180,8 @@ impl Config {
             mining_interest: self.mining_interest.clone(),
             mining_threshold_cr: self.mining_threshold_cr,
             sell_search_radius_ly: self.sell_search_radius_ly,
+            eddn_radius_ly: self.eddn_radius_ly,
+            tourism_reference_cr_ly: self.tourism_reference_cr_ly,
         }
     }
 
