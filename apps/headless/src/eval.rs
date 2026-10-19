@@ -272,14 +272,23 @@ pub fn render(
     out
 }
 
-fn render_vouchers(out: &mut String, v: &tmc_modules::eval::VoucherReport) {
-    let verdict = if v.redeem_events == 0 {
-        Verdict::Insufficient
-    } else if v.bounty.difference == 0 && v.combat_bond.difference == 0 {
-        Verdict::Pass
-    } else {
+/// Un exceso de canje (diferencia negativa) no es un fallo demostrable: el
+/// historial no ve los vales ganados antes del primer diario, así que es
+/// `INSUFICIENTE`. Solo una diferencia positiva (el libro perdió importe que
+/// nadie canjeó ni se perdió al morir) es una inconsistencia real.
+fn voucher_verdict(v: &tmc_modules::eval::VoucherReport) -> Verdict {
+    let diffs = [v.bounty.difference, v.combat_bond.difference];
+    if diffs.iter().any(|d| *d > 0) {
         Verdict::Fail
-    };
+    } else if v.redeem_events == 0 || diffs.iter().any(|d| *d < 0) {
+        Verdict::Insufficient
+    } else {
+        Verdict::Pass
+    }
+}
+
+fn render_vouchers(out: &mut String, v: &tmc_modules::eval::VoucherReport) {
+    let verdict = voucher_verdict(v);
     let _ = writeln!(
         out,
         "\nF2, conciliación de vales (ganado frente a canjeado): {}",
@@ -507,6 +516,26 @@ mod tests {
         assert_eq!(m.unattributed_tons, 0);
         let text = render(&report, (1, 0, 0), None);
         assert!(text.contains("INSUFICIENTE (3 casos)"), "{text}");
+    }
+
+    #[test]
+    fn voucher_excess_redeem_is_insufficient_not_fail() {
+        use tmc_modules::eval::{VoucherKindReport, VoucherReport};
+        let mut v = VoucherReport {
+            redeem_events: 1,
+            bounty: VoucherKindReport {
+                earned: 100,
+                redeemed: 150,
+                difference: -50,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert_eq!(voucher_verdict(&v), Verdict::Insufficient);
+        v.bounty.difference = 0;
+        assert_eq!(voucher_verdict(&v), Verdict::Pass);
+        v.bounty.difference = 10;
+        assert_eq!(voucher_verdict(&v), Verdict::Fail);
     }
 
     #[test]
