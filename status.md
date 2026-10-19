@@ -2,16 +2,16 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-19 19:45 (Europe/Madrid) · Claude Opus 5.5
-- **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (🔄 spec aprobada, plan en redacción). F2 ✅ fusionada en `main` (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Última actualización:** 2026-10-19 21:54 (Europe/Madrid) · Codex
+- **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (🔄 en ejecución). F2 ✅ fusionada en `main` (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
-- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 0/35 (aprobado al ordenar «escribe el plan y ejecútalo»). Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
+- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 13/35 hechas (aprobado al ordenar «escribe el plan y ejecútalo»). Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
 - **Rama de trabajo:** `fase/f3-comercio-misiones`
 
 ## Puntero actual
 
-- **Tarea:** F3 — spec ✅ aprobada (2026-10-19), diseñada con el propietario con maquetas (`f3-comercio.html`, `f3-misiones.html`) y revisada por builder. Turismo: opción B (cálculo automático al aceptar).
-- **Siguiente acción:** ejecutar el plan de F3 con subagentes (en curso: Task 12); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Tarea:** F3 · Task 12 ✅ verificada; siguiente Task 13 (datos estáticos de mercancías raras y cabinas).
+- **Siguiente acción:** guardar cierre de Task 12 y empezar Task 13 con TDD y revisiones spec/calidad. Task 12: fmt/clippy correctos, 874 tests Rust PASS (2 ignorados), 144 UI PASS, check/build OK. Desarrollo reanudado por el propietario mientras prueba main; no reconstruir release ni usar puerto/base reales. `.claude/` ajeno; logs locales en `.tmp/`. Ledger: `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Fases
 
@@ -45,7 +45,7 @@
 | 9 | `tmc-net` — exportaciones cercanas de Ardent | ✅ hecha | 84131b6, 5580336 | Ardent exports; regla de carriers común (también en F2) |
 | 10 | `tmc-eddn` — decodificación y filtro | ✅ hecha | 9d058d5, 63feee3 | tmc-eddn: decodificación acotada (1 MiB), prefiltro, carriers en decode, índice de coords |
 | 11 | `tmc-eddn` — suscriptor, reconexión y lotes | ✅ hecha | 273f12b, ea0616f | Suscriptor EDDN: OnDemand, retroceso, vigilancia 60 s, tope 256 KiB, lotes sin bloqueo; PUB/SUB probado en Windows |
-| 12 | `tmc-app` — servicio EDDN, `SourceEvent::Eddn`, limpieza y configuración | 🔄 en curso | — |  |
+| 12 | `tmc-app` — servicio EDDN, `SourceEvent::Eddn`, limpieza y configuración | ✅ hecha | c7840f5 + este commit | Replay explícito; recuperación tras lag; coords tras importar y offline sin congelación; spec/calidad aprobadas; 874 Rust y 144 UI PASS |
 | 13 | datos estáticos `rare_goods.json` y `cabins.json` | ⬜ pendiente | — |  |
 | 14 | i18n — `trade.ftl` y `missions.ftl` | ⬜ pendiente | — |  |
 | 15 | `trade` — coste pagado y «Mi carga» | ⬜ pendiente | — |  |
@@ -172,6 +172,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 18 | Presupuesto de consumo y cierre de F0 | ✅ hecha | fe99cd6 | `measure-footprint.ps1` (`max_mb=144.91` < 150, `avg_cpu_idle=0.09%` < 1% PASS), `README.md` y 9/9 criterios §15 verificados. |
 
 ## Bloqueos y pendientes del propietario
+
+- [x] **F3 · Task 12:** corregidos helper de siembra tras importación, guardia replay explícita, recuperación tras lag y bloqueo de coordenadas por importación incompleta. Dos expectativas UI heredadas alineadas con rangos ingleses aprobados. Revisiones spec/calidad aprobadas y checks completos correctos (874 Rust/144 UI).
 - [x] **F2 · Criterio 9 (consumo con ventana):** ✅ medido 2026-10-19 (112,7 MB / 0 % CPU). Antes: cierra tu TMC.exe (PID 3808 ocupa 47320 y la instancia única impide otra) y ejecuta `pwsh scripts/measure-footprint.ps1 -Exe target-f2/release/TMC.exe -JournalDir .tmp/footprint-f2 -FixturePath tests/fixtures/journal/combat_session.log -ShowWindow -Seconds 120` y lo mismo con `mining_session.log`; o autoriza al agente a cerrarlo y medir. Límite < 150 MB y < 1 % CPU.
 - [ ] **F2 · Eval sobre tu historial:** vales INSUFICIENTE (el único canje incluye vales ganados antes del primer diario) y minería sin datos (n=0). `tmc-headless eval` queda listo para validar con futuras sesiones de caza/minería.
 
@@ -226,6 +228,14 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-19 21:54 (Europe/Madrid) · Codex · Task 12 cerrada con TDD y dos revisiones: guardia replay explícita, siembra tras importación y coords sin dependencia del progreso. fmt/clippy OK, 874 Rust PASS (2 ignorados), 144 UI PASS, Svelte check/build OK; binario main de prueba intacto.
+
+- 2026-10-19 21:47 (Europe/Madrid) · Codex · Propietario reanuda F3 mientras prueba main. Retomadas correcciones Task 12 con subagente; checks en debug y datos temporales, binario de prueba target/release preservado.
+
+- 2026-10-19 21:46 (Europe/Madrid) · Codex · Propietario pide PAUSAR desarrollo y compilar main para juego real. Compilado checkout aislado `main@9154d41`: UI build OK; `cargo tauri build -- --offline` release e instalador NSIS OK (6,02 MiB). Copias estables en `target/prueba-main-9154d41/{TMC.exe,TMC_0.1.0_x64-setup.exe}`. F3 permanece sin commit con correcciones parciales de Task 12.
+
+- 2026-10-19 21:43 (Europe/Madrid) · Codex · Retomada Task 12 desde c7840f5 y correcciones pendientes. RED de compilación E0425 por helper incompleto; revisión detecta guardia replay insuficiente. Correcciones con subagente y revisiones secuenciales en curso; sin push.
 
 - 2026-10-19 19:45 (Europe/Madrid) · Claude Opus 5.5 · Spec de F3 diseñada con el propietario (propuesta, maquetas, turismo opción B), revisada por builder y aprobada; rama `fase/f3-comercio-misiones`.
 - 2026-10-19 17:45 (Europe/Madrid) · Claude Opus 5.5 · Respuestas del propietario: rangos de combate en inglés (`4e75386`); permiso de Canonn obtenido → capa 3 activada y revisada (`4f33956`, `7c35289`, `0ff96f1`; 768 tests Rust PASS); cuentas CAPI/Inara/EDSM en aprobación.

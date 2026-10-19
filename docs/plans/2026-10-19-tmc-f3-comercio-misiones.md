@@ -384,7 +384,7 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
   - `wiring`: alimenta `watch<EddnFilter>` desde ajustes, galaxia, posición y relevancias del núcleo (verificar en código al ejecutar cómo `wiring` observa topics/estado). En depuración, `TMC_E2E_EDDN_RELAY` (solo `tcp://127.0.0.1:<puerto>`) sustituye `RELAY_URL`, como `TMC_E2E_ARDENT_BASE` en F2.
   - Validación en el `PUT` de los campos añadidos en Task 7: `eddn_radius_ly` 20–500, `tourism_reference_cr_ly` 1 000–10 000 000 (`Config::validate_f3` en `config.rs`, invocada junto a `validate_f2` desde `clipboard.rs`).
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn eddn_disabled_in_legacy_or_offline() { /* Legacy → false; online_services=false → false; Live+online+Always → true */ }
@@ -397,7 +397,7 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 #[test] fn e2e_relay_override_only_loopback() { /* "tcp://10.0.0.1:1" → rechazado; "tcp://127.0.0.1:5555" → aceptado (solo debug) */ }
 ```
 
-- [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(app): servicio EDDN con escritura por lotes, limpieza y ajustes de F3`
+- [x] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(app): servicio EDDN con escritura por lotes, limpieza y ajustes de F3`
 
 ### Task 13: datos estáticos `rare_goods.json` y `cabins.json`
 
@@ -878,6 +878,10 @@ test('settings put eddn radius and reverts on 400', /* 600 → 400 → valor ant
 | 11 | 5 idiomas; avisos y procedencia; nada GPL/AGPL incorporado | tests de `tmc-i18n`, Task 13, Task 34 Step 3 | ⬜ |
 
 ## Desviaciones
+
+- 2026-10-19 · Task 12: el escritor de coordenadas propias no espera `ImportProgress` final; fallo de importación o pérdida de ese mensaje no impiden guardar saltos posteriores. Tests de ambas rutas con SQLite real y servicios desactivados; revisiones spec/calidad aprobadas. Verificación: fmt/clippy y 874 tests Rust PASS (2 ignorados), 144 UI PASS, Svelte check/build OK.
+
+- 2026-10-19 · Task 12 (revisión): `core.game` expone `replaying` persistente y el filtro EDDN exige `false` explícito. `game_running` no sirve como guardia de replay: `Fileheader`/`LoadGame` reproducidos también lo activan. La señal solo cambia con eventos de diario; el valor inicial bloquea conexiones. La siembra de coordenadas propias se repite al terminar la importación histórica porque puede finalizar después del arranque del servicio; el índice EDDN se siembra una sola vez según el contrato y depende después de `journal/1` para sistemas no conocidos.
 
 (Cambios respecto a este plan o a la spec, con fecha, motivo y tareas afectadas.)
 
