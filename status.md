@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-20 00:22 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-20 00:39 (Europe/Madrid) · Codex
 - **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (🔄 en ejecución). F2 ✅ fusionada en `main` (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
 - **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 17/35 hechas (aprobado al ordenar «escribe el plan y ejecútalo»). Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
@@ -10,8 +10,9 @@
 
 ## Puntero actual
 
-- **Tarea:** prioridad del propietario: diagnóstico VERBOSE de TODA la aplicación, solo debug. D1 contrato/redacción cerrada (e6c5d09); D2 writer circular en implementación; F3 Task 17 pausada con tests/stubs sin commit.
-- **Siguiente acción:** ejecutar D2 con TDD y sus dos revisiones, después cobertura completa según `docs/plans/2026-10-20-diagnostico-debug.md` del checkout `C:/Users/danik/.codex/worktrees/prueba-main/EDPyCompanion` (rama `codex/diagnostico-logs`). Diagnóstico exclusivamente `debug_assertions`, en `current_exe().parent()/debug_logs`, sin telemetría. Conservar release de prueba y datos reales. Tablas históricas restauradas y verificadas en 88bd448. Después integrar en F3 y retomar exactamente Task17; código parcial `trade/{route.rs,mod.rs}` intacto. `.claude/` y `.tmp/` locales no incluir.
+- **Tarea:** prioridad del propietario: diagnóstico VERBOSE de TODA la aplicación, solo debug. D1–D2 cerradas (e6c5d09, ed0611e); D3 fuentes y persistencia en implementación; F3 Task 17 pausada con tests/stubs sin commit.
+- **Siguiente acción:** ejecutar D3 con TDD y sus dos revisiones, después actor/módulos, red/auth/acciones y UI según `docs/plans/2026-10-20-diagnostico-debug.md` del checkout `C:/Users/danik/.codex/worktrees/prueba-main/EDPyCompanion` (rama `codex/diagnostico-logs`). Diagnóstico exclusivamente `debug_assertions`, en `current_exe().parent()/debug_logs`, sin telemetría. Conservar release de prueba y datos reales. Tablas históricas restauradas y verificadas en 88bd448. Después integrar en F3 y retomar exactamente Task17; código parcial `trade/{route.rs,mod.rs}` intacto. `.claude/` y `.tmp/` locales no incluir.
+
 ## Fases
 
 | Fase | Contenido | Estado |
