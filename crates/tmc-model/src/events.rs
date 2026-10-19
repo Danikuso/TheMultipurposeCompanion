@@ -1,6 +1,7 @@
 //! Eventos tipados del diario de Elite Dangerous.
 
 use crate::ParseError;
+use crate::net::PadSize;
 use chrono::{DateTime, Utc};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -253,6 +254,54 @@ pub struct Docked {
     pub market_id: Option<u64>,
     pub star_system: Option<String>,
     pub system_address: Option<u64>,
+    pub station_services: Vec<String>,
+    #[serde(deserialize_with = "lenient_pads")]
+    pub landing_pads: Option<LandingPads>,
+    #[serde(rename = "DistFromStarLS", deserialize_with = "lenient_f64")]
+    pub dist_from_star_ls: Option<f64>,
+}
+
+/// Plataformas de aterrizaje de una estación (`Docked.LandingPads`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct LandingPads {
+    pub small: u32,
+    pub medium: u32,
+    pub large: u32,
+}
+
+/// `LandingPads` tolerante: un tipo inesperado da `None` sin romper el evento.
+fn lenient_pads<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<LandingPads>, D::Error> {
+    let v = Json::deserialize(d)?;
+    let Json::Object(_) = &v else {
+        return Ok(None);
+    };
+    Ok(Some(LandingPads {
+        small: l_u32(v.get("Small")).unwrap_or(0),
+        medium: l_u32(v.get("Medium")).unwrap_or(0),
+        large: l_u32(v.get("Large")).unwrap_or(0),
+    }))
+}
+
+impl Docked {
+    /// `true` si la estación ofrece mercado de mercancías.
+    pub fn has_market(&self) -> bool {
+        self.station_services.iter().any(|s| s == "commodities")
+    }
+
+    /// Mayor plataforma disponible (`Large` si hay alguna grande, etc.).
+    pub fn max_pad(&self) -> Option<PadSize> {
+        let p = self.landing_pads?;
+        if p.large > 0 {
+            Some(PadSize::Large)
+        } else if p.medium > 0 {
+            Some(PadSize::Medium)
+        } else if p.small > 0 {
+            Some(PadSize::Small)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -409,6 +458,20 @@ pub struct CargoItem {
     pub name_localised: Option<String>,
     pub count: u32,
     pub stolen: Option<u32>,
+    #[serde(rename = "MissionID")]
+    pub mission_id: Option<u64>,
+}
+
+impl CargoItem {
+    /// `true` si la carga pertenece a una misión.
+    pub fn is_mission(&self) -> bool {
+        self.mission_id.is_some()
+    }
+
+    /// Unidades robadas (0 si el campo no existe).
+    pub fn stolen_count(&self) -> u32 {
+        self.stolen.unwrap_or(0)
+    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -899,6 +962,20 @@ pub struct MarketSell {
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "PascalCase")]
+pub struct MarketBuy {
+    #[serde(rename = "MarketID")]
+    pub market_id: Option<u64>,
+    #[serde(rename = "Type")]
+    pub type_: String,
+    #[serde(rename = "Type_Localised")]
+    pub type_localised: Option<String>,
+    pub count: u32,
+    pub buy_price: u64,
+    pub total_cost: u64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
 pub struct RepairAll {
     pub cost: Option<u64>,
 }
@@ -994,6 +1071,7 @@ pub enum EventKind {
     LaunchDrone(LaunchDrone),
     EjectCargo(EjectCargo),
     MarketSell(MarketSell),
+    MarketBuy(MarketBuy),
     RepairAll(RepairAll),
     Repair(Repair),
     Other,
@@ -1086,6 +1164,7 @@ fn classify(name: &str, raw: &RawValue) -> EventKind {
         "LaunchDrone" => de(name, raw).map(EventKind::LaunchDrone),
         "EjectCargo" => de(name, raw).map(EventKind::EjectCargo),
         "MarketSell" => de(name, raw).map(EventKind::MarketSell),
+        "MarketBuy" => de(name, raw).map(EventKind::MarketBuy),
         "RepairAll" => de(name, raw).map(EventKind::RepairAll),
         "Repair" => de(name, raw).map(EventKind::Repair),
         _ => None,
@@ -1965,5 +2044,62 @@ mod tests {
             commodity_key("Low Temperature Diamond"),
             "lowtemperaturediamond"
         );
+    }
+
+    #[test]
+    fn market_buy_parses() {
+        let EventKind::MarketBuy(m) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MarketBuy","MarketID":128000000,"Type":"gold","Count":100,"BuyPrice":9400,"TotalCost":940000}"#,
+        ) else {
+            panic!("MarketBuy")
+        };
+        assert_eq!(m.market_id, Some(128000000));
+        assert_eq!(m.type_, "gold");
+        assert_eq!(m.count, 100);
+        assert_eq!(m.buy_price, 9400);
+        assert_eq!(m.total_cost, 940000);
+    }
+
+    #[test]
+    fn docked_with_pads_and_services() {
+        let EventKind::Docked(d) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Docked","StationName":"Test Port","StationType":"Coriolis","MarketID":1,"StationServices":["dock","commodities"],"LandingPads":{"Small":4,"Medium":8,"Large":2},"DistFromStarLS":512.5}"#,
+        ) else {
+            panic!("Docked")
+        };
+        assert_eq!(d.max_pad(), Some(crate::net::PadSize::Large));
+        assert!(d.has_market());
+        assert_eq!(d.dist_from_star_ls, Some(512.5));
+    }
+
+    #[test]
+    fn docked_outpost_without_large_pads() {
+        let EventKind::Docked(d) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Docked","StationName":"Test Outpost","LandingPads":{"Small":2,"Medium":1,"Large":0}}"#,
+        ) else {
+            panic!("Docked")
+        };
+        assert_eq!(d.max_pad(), Some(crate::net::PadSize::Medium));
+        assert!(!d.has_market());
+        let EventKind::Docked(n) =
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Docked","StationName":"X"}"#)
+        else {
+            panic!("Docked")
+        };
+        assert_eq!(n.max_pad(), None);
+    }
+
+    #[test]
+    fn cargo_item_with_mission_id_is_mission() {
+        let EventKind::Cargo(c) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Cargo","Vessel":"Ship","Count":13,"Inventory":[{"Name":"gold","Count":10,"MissionID":65000001},{"Name":"gold","Count":3,"Stolen":3}]}"#,
+        ) else {
+            panic!("Cargo")
+        };
+        let inv = c.inventory.unwrap();
+        assert!(inv[0].is_mission());
+        assert_eq!(inv[0].stolen_count(), 0);
+        assert!(!inv[1].is_mission());
+        assert_eq!(inv[1].stolen_count(), 3);
     }
 }
