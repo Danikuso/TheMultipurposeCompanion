@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F3 — spec ✅ aprobada (2026-10-19), diseñada con el propietario con maquetas (`f3-comercio.html`, `f3-misiones.html`) y revisada por builder. Turismo: opción B (cálculo automático al aceptar).
-- **Siguiente acción:** ejecutar el plan de F3 con subagentes (en curso: Task 11); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Siguiente acción:** ejecutar el plan de F3 con subagentes (en curso: Task 12); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Fases
 
@@ -44,8 +44,8 @@
 | 8 | `tmc-net` — ruta comercial de Spansh y coordenadas por nombre | ✅ hecha | 84131b6, 5580336 | Spansh trade (requires_large_pad), coords Ardent→EDSM, filas parciales |
 | 9 | `tmc-net` — exportaciones cercanas de Ardent | ✅ hecha | 84131b6, 5580336 | Ardent exports; regla de carriers común (también en F2) |
 | 10 | `tmc-eddn` — decodificación y filtro | ✅ hecha | 9d058d5, 63feee3 | tmc-eddn: decodificación acotada (1 MiB), prefiltro, carriers en decode, índice de coords |
-| 11 | `tmc-eddn` — suscriptor, reconexión y lotes | 🔄 en curso | — |  |
-| 12 | `tmc-app` — servicio EDDN, `SourceEvent::Eddn`, limpieza y configuración | ⬜ pendiente | — |  |
+| 11 | `tmc-eddn` — suscriptor, reconexión y lotes | ✅ hecha | 273f12b, ea0616f | Suscriptor EDDN: OnDemand, retroceso, vigilancia 60 s, tope 256 KiB, lotes sin bloqueo; PUB/SUB probado en Windows |
+| 12 | `tmc-app` — servicio EDDN, `SourceEvent::Eddn`, limpieza y configuración | 🔄 en curso | — |  |
 | 13 | datos estáticos `rare_goods.json` y `cabins.json` | ⬜ pendiente | — |  |
 | 14 | i18n — `trade.ftl` y `missions.ftl` | ⬜ pendiente | — |  |
 | 15 | `trade` — coste pagado y «Mi carga» | ⬜ pendiente | — |  |
