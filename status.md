@@ -2,16 +2,28 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-19 17:45 (Europe/Madrid) · Claude Opus 5.5
-- **Fase actual:** F2 — Combate y minería (✅ completada y fusionada en `main` en `e069a14`). F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
-- **Spec activa:** [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) — ✅ aprobada (2026-10-18); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
-- **Plan activo:** [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) — ✅ 29/29 tareas. Anteriores: F1 ✅ 33/33, F0 ✅ 19/19
-- **Rama de trabajo:** `main` (F2 fusionada; la siguiente fase abrirá `fase/f3-…`)
+- **Última actualización:** 2026-10-20 00:21 (Europe/Madrid) · Codex
+- **Fase actual:** extensión autorizada de diagnóstico debug; F3 se retoma después. Historial F0/F1/F2 conservado.
+- **Spec activa:** [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md) — autorizada por el propietario.
+- **Plan activo:** [diagnóstico debug](docs/plans/2026-10-20-diagnostico-debug.md) — D1 ✅; D2 🔄 en curso.
+- **Rama de trabajo:** codex/diagnostico-logs (checkout aislado; principal conserva F3 parcial).
 
 ## Puntero actual
 
-- **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** preparar la spec de F3 según la hoja de ruta (spec de arquitectura §13) con el propietario. Cuentas de CAPI/Inara/EDSM en proceso de aprobación (necesarias en F6).
+- **Tarea:** D2 🔄 en curso — writer circular DEBUG y ciclo de vida; paso 1: pruebas de directorio, rotación, límites y captura real de emit.
+- **Último paso completado:** D1 e6c5d09 con ambas revisiones aprobadas, fmt/clippy workspace PASS, 781 tests Rust PASS (1 ignorado); release noeval PASS; 144 UI PASS/check/build. Tablas históricas verificadas intactas.
+- **Siguiente acción:** implementar D2 con TDD, revisar y verificar; seguir D3–D7, integrar y retomar F3 Task17 preservada en D:/Proyectos/EDPyCompanion. No sobrescribir target/release del propietario.
+## Tareas de diagnóstico debug
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| D1 | Contrato y redacción | ✅ hecha | e6c5d09 | 13 diagnósticos TDD; ambas revisiones; 781 Rust, 144 UI, release noeval, fmt/clippy/check/build PASS |
+| D2 | Writer circular y lifecycle | 🔄 en curso | — | Paso 1: pruebas de writer, captura emit y directorio exe/debug_logs |
+| D3 | Fuentes y persistencia | ⬜ pendiente | — | Tras D2 |
+| D4 | Actor y módulos | ⬜ pendiente | — | Tras D3 |
+| D5 | Red, HTTP, WS, auth y acciones | ⬜ pendiente | — | Tras D4 |
+| D6 | UI | ⬜ pendiente | — | Tras D5 |
+| D7 | Checks, consumo, build e integración | ⬜ pendiente | — | Retomar F3 después |
 
 ## Fases
 
@@ -19,8 +31,8 @@
 |---|---|---|
 | F0 | Cimientos (lectura, estado, SQLite, servidor, UI base, panel general, instalador) | ✅ completada y fusionada (2b953e6) |
 | F1 | Navegación, exploración, exobiología | ✅ completada y fusionada (b96fecf) |
-| F2 | Cazarrecompensas/combate (incl. AX), minería | 🔄 en ejecución |
-| F3 | Comercio, misiones y pasajeros, recepción EDDN | ⬜ |
+| F2 | Cazarrecompensas/combate (incl. AX), minería | ✅ completada y fusionada (e069a14) |
+| F3 | Comercio, misiones y pasajeros, recepción EDDN | 🔄 en rama fase/f3-comercio-misiones; Task17 pausada por diagnóstico |
 | F4 | Ingenieros y materiales | ⬜ |
 | F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | ⬜ |
 | F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | ⬜ |
@@ -186,6 +198,10 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-20 00:21 (Europe/Madrid) · Codex · D1 e6c5d09 revisada y verificada: 781 Rust/144 UI PASS, release sin evaluación, fmt/clippy/check/build correctos. Inicia D2. Se reconcilia solo el resumen de fases con merges reales; tablas históricas completas intactas.
+
+- 2026-10-20 · Codex · D1 diagnóstico debug iniciado en checkout aislado; spec y plan autorizados por instrucción expresa del propietario. Sin tocar tablas históricas F0/F1/F2. Contrato/redacción y docs sin commit; GREEN 91 tmc-model + release noeval. Revisión y checks globales pendientes. Dos expectativas UI de rango Maestro→Master sincronizadas con decisión del propietario de 2026-10-19 (baseline RED 142 PASS/2 FAIL).
 
 - 2026-10-19 17:45 (Europe/Madrid) · Claude Opus 5.5 · Respuestas del propietario: rangos de combate en inglés (`4e75386`); permiso de Canonn obtenido → capa 3 activada y revisada (`4f33956`, `7c35289`, `0ff96f1`; 768 tests Rust PASS); cuentas CAPI/Inara/EDSM en aprobación.
 - 2026-10-19 17:25 (Europe/Madrid) · Claude Opus 5.5 · Propietario autoriza la fusión: `fase/f2-combate-mineria` fusionada en `main` (`e069a14`, --no-ff). Sobre `main`: fmt/clippy limpios, 755 tests Rust PASS, svelte-check 0 errores, 144 vitest PASS, build OK. `main` subida a GitHub privado.
