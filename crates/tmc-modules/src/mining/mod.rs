@@ -662,7 +662,7 @@ impl Module for Mining {
                 }
                 recompute = true;
             }
-            SourceEvent::Net(r) => {
+            SourceEvent::Net(r) if r.module == "mining" => {
                 recompute |= self.apply_response(r, state);
             }
             SourceEvent::Action { name, .. } if name == ACTION_RESET => {
