@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 pub mod import;
 pub mod migrations;
+pub mod prices;
 pub mod query;
 pub mod writer;
 
@@ -93,10 +94,16 @@ impl Store {
         let store = Self {
             connection: Arc::new(Mutex::new(connection)),
         };
-        store.apply_migrations(&[Migration {
-            id: "core-f0-1",
-            sql: migrations::BASE_SCHEMA,
-        }])?;
+        store.apply_migrations(&[
+            Migration {
+                id: "core-f0-1",
+                sql: migrations::BASE_SCHEMA,
+            },
+            Migration {
+                id: "f3_prices",
+                sql: migrations::PRICES_SCHEMA,
+            },
+        ])?;
         Ok(store)
     }
     pub(crate) fn lock(&self) -> Result<MutexGuard<'_, Connection>, StoreError> {

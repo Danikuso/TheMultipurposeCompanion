@@ -16,6 +16,23 @@ CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE api_cache (key TEXT PRIMARY KEY, fetched_at TEXT NOT NULL, ttl_s INTEGER NOT NULL, body BLOB NOT NULL);
 ";
 
+pub(crate) const PRICES_SCHEMA: &str = "
+CREATE TABLE market_price (
+  market_id INTEGER NOT NULL, commodity TEXT NOT NULL, name_localised TEXT,
+  buy_price INTEGER NOT NULL, sell_price INTEGER NOT NULL, stock INTEGER NOT NULL, demand INTEGER NOT NULL,
+  updated_at TEXT NOT NULL, origin TEXT NOT NULL,
+  PRIMARY KEY (market_id, commodity)
+);
+CREATE INDEX market_price_commodity_updated ON market_price(commodity, updated_at);
+CREATE TABLE market_station (
+  market_id INTEGER PRIMARY KEY, station_name TEXT NOT NULL, system_name TEXT NOT NULL, system_address INTEGER,
+  x REAL, y REAL, z REAL, max_pad INTEGER, station_type TEXT, dist_ls REAL, updated_at TEXT NOT NULL
+);
+CREATE TABLE system_coords (
+  name_key TEXT PRIMARY KEY, system_address INTEGER, x REAL NOT NULL, y REAL NOT NULL, z REAL NOT NULL, seen_at TEXT NOT NULL
+);
+";
+
 pub struct Migration {
     pub id: &'static str,
     pub sql: &'static str,
