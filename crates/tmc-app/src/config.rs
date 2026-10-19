@@ -105,6 +105,7 @@ impl Config {
         {
             Some(mut cfg) => {
                 cfg.sanitize_f2();
+                cfg.sanitize_f3();
                 cfg
             }
             None => {
@@ -127,6 +128,17 @@ impl Config {
         }
         self.mining_interest =
             normalize_interest(&self.mining_interest).ok_or("invalid-mining-interest")?;
+        Ok(())
+    }
+
+    /// Valida los campos de F3 (radio EDDN y referencia de turismo).
+    pub fn validate_f3(&self) -> Result<(), &'static str> {
+        if !(20..=500).contains(&self.eddn_radius_ly) {
+            return Err("invalid-eddn-radius");
+        }
+        if !(1_000..=10_000_000).contains(&self.tourism_reference_cr_ly) {
+            return Err("invalid-tourism-reference");
+        }
         Ok(())
     }
 
@@ -153,6 +165,25 @@ impl Config {
                 tracing::warn!("mining_interest inválido; se usa la lista por defecto");
                 self.mining_interest = d.mining_interest;
             }
+        }
+    }
+
+    /// Al cargar: cada campo F3 inválido vuelve a su valor por defecto, sin fallar.
+    fn sanitize_f3(&mut self) {
+        let d = Self::default();
+        if !(20..=500).contains(&self.eddn_radius_ly) {
+            tracing::warn!(
+                value = self.eddn_radius_ly,
+                "eddn_radius_ly inválido; se usa el valor por defecto"
+            );
+            self.eddn_radius_ly = d.eddn_radius_ly;
+        }
+        if !(1_000..=10_000_000).contains(&self.tourism_reference_cr_ly) {
+            tracing::warn!(
+                value = self.tourism_reference_cr_ly,
+                "tourism_reference_cr_ly inválido; se usa el valor por defecto"
+            );
+            self.tourism_reference_cr_ly = d.tourism_reference_cr_ly;
         }
     }
 

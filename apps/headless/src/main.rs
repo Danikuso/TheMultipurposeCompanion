@@ -43,9 +43,21 @@ async fn main() -> anyhow::Result<()> {
     let _guard = init_logging(&log_dir);
 
     #[cfg(debug_assertions)]
-    let running = match e2e_transport()? {
-        Some(t) => tmc_app::start_with_transport(config, t).await?,
-        None => start(config).await?,
+    let running = {
+        let transport = e2e_transport()?;
+        let relay = e2e_eddn_relay()?;
+        if transport.is_none() && relay.is_none() {
+            start(config).await?
+        } else {
+            let transport = match transport {
+                Some(t) => t,
+                None => std::sync::Arc::new(
+                    tmc_net::ReqwestTransport::new()
+                        .map_err(|e| anyhow::anyhow!("no se pudo crear el transporte: {e:?}"))?,
+                ),
+            };
+            tmc_app::start_full(config, transport, None, relay).await?
+        }
     };
     #[cfg(not(debug_assertions))]
     let running = start(config).await?;
@@ -105,4 +117,54 @@ fn e2e_transport() -> anyhow::Result<Option<std::sync::Arc<dyn tmc_net::Transpor
         base: format!("http://127.0.0.1:{port}"),
         inner,
     })))
+}
+
+/// Solo en depuración: `TMC_E2E_EDDN_RELAY=tcp://127.0.0.1:<puerto>` sustituye el relay de EDDN.
+/// Si está definida pero no es válida, falla cerrado con un error.
+#[cfg(debug_assertions)]
+fn e2e_eddn_relay() -> anyhow::Result<Option<String>> {
+    match std::env::var("TMC_E2E_EDDN_RELAY") {
+        Ok(url) => parse_e2e_relay(&url).map(Some),
+        Err(std::env::VarError::NotPresent) => Ok(None),
+        Err(e) => anyhow::bail!("TMC_E2E_EDDN_RELAY inválida: {e}"),
+    }
+}
+
+/// Estricto: `tcp://127.0.0.1:<puerto>` y nada más.
+#[cfg(debug_assertions)]
+fn parse_e2e_relay(url: &str) -> anyhow::Result<String> {
+    let port = url
+        .strip_prefix("tcp://127.0.0.1:")
+        .filter(|p| !p.is_empty() && p.len() <= 5 && p.bytes().all(|b| b.is_ascii_digit()))
+        .and_then(|p| p.parse::<u16>().ok())
+        .filter(|p| *p > 0);
+    match port {
+        Some(port) => Ok(format!("tcp://127.0.0.1:{port}")),
+        None => anyhow::bail!("TMC_E2E_EDDN_RELAY debe ser tcp://127.0.0.1:<puerto>, no {url:?}"),
+    }
+}
+
+#[cfg(all(test, debug_assertions))]
+mod tests {
+    use super::parse_e2e_relay;
+
+    #[test]
+    fn e2e_relay_override_only_loopback() {
+        for bad in [
+            "tcp://10.0.0.1:1",
+            "tcp://127.0.0.1:",
+            "tcp://127.0.0.1:0",
+            "tcp://127.0.0.1:5555/x",
+            "tcp://127.0.0.1:70000",
+            "tcp://127.0.0.1.evil.com:5555",
+            "tcp://eddn.edcd.io:9500",
+            "",
+        ] {
+            assert!(parse_e2e_relay(bad).is_err(), "{bad}");
+        }
+        assert_eq!(
+            parse_e2e_relay("tcp://127.0.0.1:5555").unwrap(),
+            "tcp://127.0.0.1:5555"
+        );
+    }
 }

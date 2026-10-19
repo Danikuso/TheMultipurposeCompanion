@@ -3,6 +3,8 @@
 
 pub mod clipboard;
 pub mod config;
+pub mod eddn_service;
+mod eddn_wiring;
 pub mod logging;
 pub mod net_service;
 pub mod wiring;
@@ -11,7 +13,7 @@ pub use clipboard::{AppActions, Clipboard};
 pub use config::{Config, ServerSection, config_path, data_dir};
 pub use logging::init_logging;
 pub use net_service::{NetServiceHandle, spawn_net_service};
-pub use wiring::{Running, start, start_custom, start_with_transport};
+pub use wiring::{Running, start, start_custom, start_full, start_with_transport};
 
 #[cfg(test)]
 mod e2e_tests;
@@ -169,6 +171,48 @@ mining_interest = [{}]
             actions.put_config(ok).unwrap()["sell_search_radius_ly"],
             500
         );
+    }
+
+    #[test]
+    fn f2_config_without_f3_fields_loads_with_defaults() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(
+            &path,
+            "language = \"en\"
+sell_search_radius_ly = 120
+mining_threshold_cr = 2000000
+",
+        )
+        .unwrap();
+        let cfg = Config::load_from_or_default(&path);
+        assert_eq!(cfg.sell_search_radius_ly, 120);
+        assert_eq!(cfg.eddn_radius_ly, 200);
+        assert_eq!(cfg.tourism_reference_cr_ly, 100_000);
+    }
+
+    #[tokio::test]
+    async fn put_config_rejects_eddn_radius_out_of_range() {
+        let dir = tempdir().unwrap();
+        let (actions, _core, _online) = runtime_actions(dir.path());
+        let before = actions.get_config();
+        for (field, value) in [
+            ("eddn_radius_ly", json!(600)),
+            ("eddn_radius_ly", json!(19)),
+            ("tourism_reference_cr_ly", json!(999)),
+            ("tourism_reference_cr_ly", json!(10_000_001u64)),
+        ] {
+            let mut cfg = before.clone();
+            cfg[field] = value;
+            assert!(
+                matches!(actions.put_config(cfg), Err(ActionError::Failed(_))),
+                "{field}"
+            );
+        }
+        assert_eq!(actions.get_config(), before);
+        let mut ok = before.clone();
+        ok["eddn_radius_ly"] = json!(500);
+        assert_eq!(actions.put_config(ok).unwrap()["eddn_radius_ly"], 500);
     }
 
     #[tokio::test]
