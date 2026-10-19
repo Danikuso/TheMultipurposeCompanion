@@ -326,3 +326,8 @@ La constante de naves thargoides de `tmc-model` (AX) es una lista pequeña **no 
 - Versión: 1.1.9
 - Licencia: MIT OR Apache-2.0
 - Usada por: tmc-eddn
+
+### zeromq (zmq.rs)
+- Versión: 0.6.0
+- Licencia: MIT
+- Usada por: tmc-eddn (suscriptor SUB al relay EDDN y relay falso de pruebas; Rust puro, sin libzmq)
