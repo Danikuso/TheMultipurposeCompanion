@@ -105,3 +105,7 @@ mineral-musgravite = Musgravite
 mineral-rhodplumsite = Rhodplumsite
 mineral-serendibite = Serendibite
 mineral-benitoite = Benitoite
+layout-trade = Trade
+layout-missions = Missions
+eddn-radius = EDDN reception radius (ly)
+tourism-reference = Initial sightseeing reference (cr/ly)
