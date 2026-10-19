@@ -42,6 +42,12 @@ async fn main() -> anyhow::Result<()> {
     let log_dir = config.data_dir.clone().unwrap_or_else(data_dir);
     let _guard = init_logging(&log_dir);
 
+    #[cfg(debug_assertions)]
+    let running = match e2e_transport()? {
+        Some(t) => tmc_app::start_with_transport(config, t).await?,
+        None => start(config).await?,
+    };
+    #[cfg(not(debug_assertions))]
     let running = start(config).await?;
     println!("local_url: {}", running.server.local_url);
     if let Some(lan_url) = &running.server.lan_url {
@@ -51,4 +57,52 @@ async fn main() -> anyhow::Result<()> {
     tokio::signal::ctrl_c().await?;
     running.server.shutdown();
     Ok(())
+}
+
+/// Solo en compilaciones de depuración (pruebas e2e de la UI): con
+/// `TMC_E2E_ARDENT_BASE=http://127.0.0.1:<puerto>` las peticiones a Ardent van a ese
+/// servidor falso local y cualquier otra petición de red se rechaza.
+#[cfg(debug_assertions)]
+fn e2e_transport() -> anyhow::Result<Option<std::sync::Arc<dyn tmc_net::Transport>>> {
+    use tmc_net::{BoxFut, HttpReply, ReqwestTransport, Transport, TransportError};
+    const ARDENT: &str = "https://api.ardent-insight.com";
+    struct Redirect {
+        base: String,
+        inner: ReqwestTransport,
+    }
+    impl Transport for Redirect {
+        fn get(&self, url: &str) -> BoxFut<'_, Result<HttpReply, TransportError>> {
+            match url.strip_prefix(ARDENT) {
+                Some(rest) => self.inner.get(&format!("{}{rest}", self.base)),
+                None => Box::pin(async { Err(TransportError::Connect("blocked in e2e".into())) }),
+            }
+        }
+        fn post_form(
+            &self,
+            _url: &str,
+            _form: &[(String, String)],
+        ) -> BoxFut<'_, Result<HttpReply, TransportError>> {
+            Box::pin(async { Err(TransportError::Connect("blocked in e2e".into())) })
+        }
+    }
+    let base = match std::env::var("TMC_E2E_ARDENT_BASE") {
+        Ok(b) => b,
+        Err(std::env::VarError::NotPresent) => return Ok(None),
+        Err(e) => anyhow::bail!("TMC_E2E_ARDENT_BASE inválida: {e}"),
+    };
+    // Estricto: http://127.0.0.1:<puerto> y nada más (sin usuario, ruta, consulta ni barra).
+    let port = base
+        .strip_prefix("http://127.0.0.1:")
+        .filter(|p| !p.is_empty() && p.len() <= 5 && p.bytes().all(|b| b.is_ascii_digit()))
+        .and_then(|p| p.parse::<u16>().ok())
+        .filter(|p| *p > 0);
+    let Some(port) = port else {
+        anyhow::bail!("TMC_E2E_ARDENT_BASE debe ser http://127.0.0.1:<puerto>, no {base:?}");
+    };
+    let inner = ReqwestTransport::new()
+        .map_err(|e| anyhow::anyhow!("no se pudo crear el transporte e2e: {e:?}"))?;
+    Ok(Some(std::sync::Arc::new(Redirect {
+        base: format!("http://127.0.0.1:{port}"),
+        inner,
+    })))
 }

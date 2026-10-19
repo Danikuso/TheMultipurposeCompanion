@@ -149,6 +149,8 @@ struct Actor {
     // Los resultados vuelven por un canal propio, que no mantiene vivo al actor.
     task_tx: Option<std::sync::mpsc::Sender<StoreJob>>,
     next_request_id: u64,
+    // Último instante del diario publicado en `core.clock`.
+    clock_published: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 impl Actor {
@@ -169,6 +171,7 @@ impl Actor {
             net: None,
             task_tx: None,
             next_request_id: 1,
+            clock_published: None,
         };
         actor.update_core(Changes::all());
         actor.set_topic("core.theme", value(&actor.theme));
@@ -273,6 +276,20 @@ impl Actor {
         );
     }
 
+    /// Publica el reloj del diario como mucho una vez cada 10 s de tiempo del
+    /// diario (y en el primer evento o en `LoadGame`), para que un cliente que se
+    /// conecta después pueda calcular el desfase con el reloj local.
+    fn publish_clock(&mut self, ts: chrono::DateTime<chrono::Utc>, force: bool) {
+        let due = force
+            || self
+                .clock_published
+                .is_none_or(|last| ts < last || (ts - last).num_seconds() >= 10);
+        if due {
+            self.clock_published = Some(ts);
+            self.set_topic("core.clock", serde_json::json!({"as_of": ts}));
+        }
+    }
+
     fn update_modules(&mut self) {
         self.set_topic(
             "core.modules",
@@ -329,6 +346,7 @@ impl Actor {
         let changes = match &event {
             SourceEvent::Journal { ev, file, line, .. } => {
                 let changes = self.state.apply_event(ev);
+                self.publish_clock(ev.timestamp, ev.name == "LoadGame");
                 if let Some(writer) = &self.writer {
                     writer.send(StoredEvent {
                         file_name: file.clone(),
@@ -581,7 +599,8 @@ mod tests {
                 assert_eq!(seq, 1);
                 assert_eq!(topics["core.location"]["system"], "Example");
                 assert_eq!(topics["core.session"]["jumps"], 1);
-                assert_eq!(topics.len(), 2);
+                assert_eq!(topics["core.clock"]["as_of"], "2026-10-17T18:00:00Z");
+                assert_eq!(topics.len(), 3);
             }
             other => panic!("{other:?}"),
         }
@@ -638,6 +657,41 @@ mod tests {
         }
         assert_eq!(snapshot["core.theme"]["primary"], "#ff7100");
         assert_eq!(snapshot["core.modules"][0]["relevance"], "normal");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn core_clock_is_published_at_most_every_10_journal_seconds() {
+        let core = spawn_core(vec![], None, Duration::from_millis(100));
+        let at = |sec: u32, name: &str| SourceEvent::Journal {
+            ev: parse_line(&format!(
+                r#"{{"timestamp":"2026-10-17T18:00:{sec:02}Z","event":"{name}"}}"#
+            ))
+            .unwrap(),
+            file: "Journal.synthetic.log".into(),
+            line: 1,
+            replaying: false,
+        };
+        assert!(!core.snapshot().await.contains_key("core.clock"));
+        core.events.send(at(0, "Music")).await.unwrap();
+        assert_eq!(
+            core.snapshot().await["core.clock"]["as_of"],
+            "2026-10-17T18:00:00Z"
+        );
+        core.events.send(at(9, "Music")).await.unwrap();
+        assert_eq!(
+            core.snapshot().await["core.clock"]["as_of"],
+            "2026-10-17T18:00:00Z"
+        );
+        core.events.send(at(10, "Music")).await.unwrap();
+        assert_eq!(
+            core.snapshot().await["core.clock"]["as_of"],
+            "2026-10-17T18:00:10Z"
+        );
+        core.events.send(at(12, "LoadGame")).await.unwrap();
+        assert_eq!(
+            core.snapshot().await["core.clock"]["as_of"],
+            "2026-10-17T18:00:12Z"
+        );
     }
 
     #[tokio::test(start_paused = true)]

@@ -3,6 +3,8 @@ import { dashboardPanels } from './dashboard';
 import { navigationPanels } from './navigation';
 import { explorationPanels } from './exploration';
 import { exobiologyPanels } from './exobiology';
+import { combatPanels } from './combat';
+import { miningPanels } from './mining';
 
 export interface UiModuleDef {
   id: string;
@@ -35,5 +37,17 @@ export const modules: UiModuleDef[] = [
     icon: 'leaf',
     titleKey: 'nav-exobiology',
     panels: exobiologyPanels,
+  },
+  {
+    id: 'combat',
+    icon: 'crosshair',
+    titleKey: 'nav-combat',
+    panels: combatPanels,
+  },
+  {
+    id: 'mining',
+    icon: 'pickaxe',
+    titleKey: 'nav-mining',
+    panels: miningPanels,
   },
 ];

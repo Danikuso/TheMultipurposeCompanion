@@ -173,6 +173,9 @@ impl ConfigHost for AppActions {
         if !matches!(updated.language.as_str(), "es" | "en" | "fr" | "de" | "pt") {
             return Err(ActionError::Failed("invalid-language".into()));
         }
+        updated
+            .validate_f2()
+            .map_err(|e| ActionError::Failed(e.into()))?;
         if updated.server.lan {
             updated.ensure_lan_token();
         }
@@ -294,4 +297,10 @@ impl ActionHost for AppActions {
     }
 }
 
-const MODULE_PREFIXES: [&str; 3] = ["navigation.", "exploration.", "exobiology."];
+const MODULE_PREFIXES: [&str; 5] = [
+    "navigation.",
+    "exploration.",
+    "exobiology.",
+    "combat.",
+    "mining.",
+];

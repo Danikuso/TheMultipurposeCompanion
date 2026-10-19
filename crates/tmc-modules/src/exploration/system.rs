@@ -137,6 +137,7 @@ pub struct SystemTopic {
     /// ausente si es 0. Los totales y el FSS cuentan siempre todos los cuerpos.
     #[serde(skip_serializing_if = "is_zero")]
     pub truncated: u32,
+    pub star_classes: Vec<String>,
     pub rows: Vec<BodyRow>,
 }
 
@@ -451,6 +452,30 @@ impl SystemBodies {
             .count();
         let truncated = u32::try_from(rows.len() - keep).unwrap_or(u32::MAX);
         rows.truncate(keep);
+        let mut stars: Vec<(u32, f64, String)> = self
+            .bodies
+            .iter()
+            .filter_map(|(id, b)| {
+                let is_star =
+                    body_kind(&b.scan).is_some_and(|k| matches!(k, BodyKind::Star { .. }));
+                if is_star {
+                    b.scan.star_type.as_ref().map(|st| {
+                        let dist = b.scan.distance_from_arrival_ls.unwrap_or(f64::MAX);
+                        let base = st.split('_').next().unwrap_or(st).to_string();
+                        (*id, dist, base)
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect();
+        stars.sort_by(|a, b| a.1.total_cmp(&b.1).then_with(|| a.0.cmp(&b.0)));
+        let mut star_classes = Vec::new();
+        for (_, _, base) in stars {
+            if !star_classes.contains(&base) {
+                star_classes.push(base);
+            }
+        }
         SystemTopic {
             truncated,
             system: self.name.clone(),
@@ -465,6 +490,7 @@ impl SystemBodies {
             value_now,
             value_if_mapped: value_now.saturating_add(extra),
             unidentified: self.body_count.map(|n| n.saturating_sub(scanned)),
+            star_classes,
             rows,
         }
     }

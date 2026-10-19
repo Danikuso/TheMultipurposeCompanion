@@ -15,6 +15,10 @@
 //!   la variante más cercana de `NetFailure`.
 //! - Un trabajo de ruta que Spansh declara fallido se informa como `NoData`
 //!   (no hay ruta) y el motivo va al registro.
+//! - Ardent (mercados cercanos e Interstellar Factors) usa el mismo `fetch`; su
+//!   URL base la fija `ardent::BASE` y en e2e se simula con el `Transport`
+//!   inyectado (igual que Spansh). El «ahora» para filtrar `updatedAt` se
+//!   inyecta con `with_clock`. 404 = `NoData`, `[]` = lista vacía.
 //! - La capa 3 (Canonn) está desactivada en F1: `BodyBio` devuelve `Disabled`
 //!   sin tocar el transporte.
 
@@ -23,11 +27,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use crate::ardent;
 use crate::edsm;
 use crate::health::ServiceHealth;
 use crate::limiter::{RateLimiter, Service};
 use crate::spansh::{self, RoutePoll};
 use crate::transport::{HttpReply, Transport, TransportError};
+use chrono::{DateTime, Utc};
 use tmc_model::net::{NetFailure, NetOutcome, NetQuery, NetSource};
 
 const POLL_EVERY: Duration = Duration::from_secs(2);
@@ -66,6 +72,8 @@ pub struct NetClient {
     state: Mutex<State>,
     /// Una sola ruta a la vez (alta + sondeos).
     route_lock: tokio::sync::Mutex<()>,
+    /// Reloj de pared (inyectable) para la frescura de los datos de Ardent.
+    utc_now: fn() -> DateTime<Utc>,
 }
 
 fn now() -> std::time::Instant {
@@ -81,6 +89,7 @@ fn source_of(service: Service) -> NetSource {
         Service::Spansh => NetSource::Spansh,
         Service::Edsm => NetSource::Edsm,
         Service::Canonn => NetSource::Canonn,
+        Service::Ardent => NetSource::Ardent,
     }
 }
 
@@ -95,7 +104,17 @@ impl NetClient {
         self.execute_inner(q, Some(online)).await
     }
     pub fn new(transport: Arc<dyn Transport>) -> NetClient {
-        let services = [Service::Spansh, Service::Edsm, Service::Canonn];
+        Self::with_clock(transport, Utc::now)
+    }
+
+    /// Como [`NetClient::new`] con el reloj de pared inyectado (tests).
+    pub fn with_clock(transport: Arc<dyn Transport>, utc_now: fn() -> DateTime<Utc>) -> NetClient {
+        let services = [
+            Service::Spansh,
+            Service::Edsm,
+            Service::Canonn,
+            Service::Ardent,
+        ];
         NetClient {
             transport,
             state: Mutex::new(State {
@@ -109,6 +128,7 @@ impl NetClient {
                     .collect(),
             }),
             route_lock: tokio::sync::Mutex::new(()),
+            utc_now,
         }
     }
 
@@ -145,6 +165,40 @@ impl NetClient {
             }
             // Capa 3 desactivada en F1 (a la espera del permiso de Canonn).
             NetQuery::BodyBio { .. } => (NetSource::Canonn, NetOutcome::Disabled),
+            NetQuery::CommodityImportsNearby {
+                system_address,
+                commodity,
+                max_distance_ly,
+                min_pad,
+            } => {
+                let url = ardent::imports_nearby_url(
+                    *system_address,
+                    &ardent::ardent_commodity(commodity),
+                    *max_distance_ly,
+                    *min_pad,
+                );
+                let (pad, at) = (*min_pad, (self.utc_now)());
+                let out = self
+                    .fetch(Service::Ardent, Req::Get(url), online, |b| {
+                        ardent::parse_markets(b, at, pad).map(|m| Some(NetOutcome::Markets(m)))
+                    })
+                    .await;
+                (NetSource::Ardent, out)
+            }
+            NetQuery::NearestService {
+                system_address,
+                service,
+                min_pad,
+            } => {
+                let url = ardent::nearest_url(*system_address, *service, *min_pad);
+                let pad = *min_pad;
+                let out = self
+                    .fetch(Service::Ardent, Req::Get(url), online, |b| {
+                        ardent::parse_stations(b, pad).map(|s| Some(NetOutcome::Stations(s)))
+                    })
+                    .await;
+                (NetSource::Ardent, out)
+            }
         }
     }
 
@@ -360,6 +414,9 @@ impl NetClient {
         let down = |s: Service| st.health.get(&s).is_none_or(|h| h.is_down(t));
         let (service, fallback) = match q {
             NetQuery::BodyBio { .. } => return None,
+            NetQuery::CommodityImportsNearby { .. } | NetQuery::NearestService { .. } => {
+                (Service::Ardent, false)
+            }
             NetQuery::System { .. } if down(Service::Spansh) => (Service::Edsm, true),
             _ => (Service::Spansh, false),
         };
@@ -378,6 +435,9 @@ impl NetClient {
         match q {
             NetQuery::BodyBio { .. } => false,
             NetQuery::System { .. } => self.is_down(Service::Spansh) && self.is_down(Service::Edsm),
+            NetQuery::CommodityImportsNearby { .. } | NetQuery::NearestService { .. } => {
+                self.is_down(Service::Ardent)
+            }
             _ => self.is_down(Service::Spansh),
         }
     }
@@ -411,7 +471,8 @@ mod tests {
     use std::sync::Mutex;
     use std::time::Duration;
     use tmc_model::net::{
-        BodyProfile, GalaxyRouteParams, NetFailure, NeutronRouteParams, ShipParams,
+        BodyProfile, GalaxyRouteParams, NearbyService, NetFailure, NeutronRouteParams, PadSize,
+        ShipParams,
     };
 
     const SYSTEM: &str = include_str!("../../../tests/fixtures/net/spansh_system_ok.json");
@@ -1072,5 +1133,154 @@ mod tests {
         }
         assert!(c.is_down_for(&q));
         assert_eq!(c.retry_at(&q), None);
+    }
+
+    const ARDENT_PLATINUM: &str =
+        include_str!("../../../tests/fixtures/net/ardent_nearby_imports_platinum.json");
+    const ARDENT_NEAREST: &str = include_str!("../../../tests/fixtures/net/ardent_nearest_if.json");
+    const ARDENT_404: &str = include_str!("../../../tests/fixtures/net/ardent_system_404.json");
+
+    fn ardent_client(t: &Arc<FakeTransport>) -> NetClient {
+        NetClient::with_clock(t.clone(), || "2026-10-18T12:00:00Z".parse().unwrap())
+    }
+
+    fn imports_query(commodity: &str) -> NetQuery {
+        NetQuery::CommodityImportsNearby {
+            system_address: 10477373803,
+            commodity: commodity.into(),
+            max_distance_ly: 100,
+            min_pad: PadSize::Medium,
+        }
+    }
+
+    fn nearest_query() -> NetQuery {
+        NetQuery::NearestService {
+            system_address: 10477373803,
+            service: NearbyService::InterstellarFactors,
+            min_pad: PadSize::Large,
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn ardent_imports_parse_and_filter_with_injected_clock() {
+        let t = FakeTransport::new();
+        t.script(
+            "api.ardent-insight.com/v2/system/address/10477373803/commodity/name/platinum/nearby/imports",
+            vec![ok(200, ARDENT_PLATINUM)],
+        );
+        let (src, out) = ardent_client(&t).execute(&imports_query("Platinum")).await;
+        assert_eq!(src, NetSource::Ardent);
+        let NetOutcome::Markets(m) = out else {
+            panic!("{out:?}")
+        };
+        assert_eq!(m.len(), 2);
+        assert_eq!(m[0].sell_price, 299000);
+        assert_eq!(t.total(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn ardent_nearest_returns_stations_filtered_by_pad() {
+        let t = FakeTransport::new();
+        t.script(
+            "nearest/interstellar-factors?minLandingPadSize=3",
+            vec![ok(200, ARDENT_NEAREST)],
+        );
+        let (src, out) = ardent_client(&t).execute(&nearest_query()).await;
+        assert_eq!(src, NetSource::Ardent);
+        let NetOutcome::Stations(s) = out else {
+            panic!("{out:?}")
+        };
+        assert_eq!(s.len(), 1);
+        assert_eq!(s[0].station_name, "Factores Ficticios");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn ardent_404_is_no_data_empty_is_markets_and_garbage_is_malformed() {
+        let t = FakeTransport::new();
+        t.script(
+            "ardent-insight",
+            vec![ok(404, ARDENT_404), ok(200, "[]"), ok(200, "<html>")],
+        );
+        let c = ardent_client(&t);
+        let q = imports_query("platinum");
+        assert_eq!(c.execute(&q).await, (NetSource::Ardent, NetOutcome::NoData));
+        assert_eq!(
+            c.execute(&q).await,
+            (NetSource::Ardent, NetOutcome::Markets(vec![]))
+        );
+        assert_eq!(
+            c.execute(&q).await,
+            (NetSource::Ardent, NetOutcome::Failed(NetFailure::Malformed))
+        );
+        // El 404 no cuenta como fallo del servicio.
+        assert!(!c.is_down_for(&q));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn disabled_online_services_never_reach_ardent() {
+        let t = FakeTransport::new();
+        t.script("ardent-insight", vec![ok(200, "[]")]);
+        let c = ardent_client(&t);
+        let online = AtomicBool::new(false);
+        for q in [imports_query("platinum"), nearest_query()] {
+            assert_eq!(
+                c.execute_with_online(&q, &online).await,
+                (NetSource::Cache, NetOutcome::Disabled)
+            );
+        }
+        assert_eq!(t.total(), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn ardent_respects_one_request_per_second() {
+        let t = FakeTransport::new();
+        t.script("ardent-insight", vec![ok(200, "[]")]);
+        let c = ardent_client(&t);
+        let start = tokio::time::Instant::now();
+        c.execute(&imports_query("platinum")).await;
+        assert_eq!(start.elapsed(), Duration::ZERO);
+        c.execute(&imports_query("painite")).await;
+        assert_eq!(start.elapsed(), Duration::from_secs(1));
+        c.execute(&nearest_query()).await;
+        assert_eq!(start.elapsed(), Duration::from_secs(2));
+        assert_eq!(t.count("ardent-insight"), 3);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn three_ardent_failures_mark_down() {
+        let t = FakeTransport::new();
+        t.script("ardent-insight", vec![ok(503, "")]);
+        let c = ardent_client(&t);
+        let q = imports_query("platinum");
+        for _ in 0..3 {
+            assert_eq!(
+                c.execute(&q).await,
+                (NetSource::Ardent, NetOutcome::Failed(NetFailure::Http(503)))
+            );
+        }
+        assert!(c.is_down_for(&q));
+        assert!(c.is_down_for(&nearest_query()));
+        assert_eq!(c.retry_at(&q), None);
+        assert_eq!(
+            c.execute(&q).await,
+            (NetSource::Ardent, NetOutcome::Failed(NetFailure::Down))
+        );
+        assert_eq!(t.total(), 3);
+        // Spansh no se ve afectado.
+        assert!(!c.is_down_for(&sol_query()));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn ardent_failure_sets_backoff_retry() {
+        let t = FakeTransport::new();
+        t.script("ardent-insight", vec![ok(503, "")]);
+        let c = ardent_client(&t);
+        let q = nearest_query();
+        assert_eq!(c.retry_at(&q), None);
+        c.execute(&q).await;
+        assert_eq!(
+            c.retry_at(&q),
+            Some(tokio::time::Instant::now() + Duration::from_secs(30))
+        );
     }
 }

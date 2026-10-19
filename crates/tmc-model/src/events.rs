@@ -55,6 +55,128 @@ pub struct LocationInfo {
     pub powers: Vec<String>,
     pub powerplay_state: Option<String>,
     pub boost_used: Option<f64>,
+    #[serde(deserialize_with = "lenient_war")]
+    pub thargoid_war: Option<ThargoidWar>,
+    #[serde(deserialize_with = "lenient_factions")]
+    pub factions: Vec<FactionInfo>,
+}
+
+type Json = serde_json::Value;
+
+fn l_str(v: Option<&Json>) -> Option<String> {
+    v.and_then(Json::as_str).map(str::to_string)
+}
+fn l_f64(v: Option<&Json>) -> Option<f64> {
+    match v? {
+        Json::Number(n) => n.as_f64(),
+        Json::String(s) => s.trim().parse().ok(),
+        _ => None,
+    }
+}
+fn l_u32(v: Option<&Json>) -> Option<u32> {
+    match v? {
+        Json::Number(n) => n.as_u64().and_then(|x| u32::try_from(x).ok()),
+        Json::String(s) => s.trim().parse().ok(),
+        _ => None,
+    }
+}
+fn l_bool(v: Option<&Json>) -> Option<bool> {
+    match v? {
+        Json::Bool(b) => Some(*b),
+        Json::String(s) => s.trim().parse().ok(),
+        _ => None,
+    }
+}
+
+/// Bloque `ThargoidWar` tolerante: un tipo inesperado nunca rompe el evento.
+fn lenient_war<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<ThargoidWar>, D::Error> {
+    let v = Json::deserialize(d).unwrap_or(Json::Null);
+    let Some(o) = v.as_object() else {
+        return Ok(None);
+    };
+    Ok(Some(ThargoidWar {
+        current_state: l_str(o.get("CurrentState")),
+        next_state_success: l_str(o.get("NextStateSuccess")),
+        next_state_failure: l_str(o.get("NextStateFailure")),
+        success_state_reached: l_bool(o.get("SuccessStateReached")),
+        war_progress: l_f64(o.get("WarProgress")),
+        remaining_ports: l_u32(o.get("RemainingPorts")),
+        estimated_remaining_time: l_str(o.get("EstimatedRemainingTime")),
+    }))
+}
+
+/// `Factions` tolerante: no-array → vacío; elementos mal formados se omiten.
+fn lenient_factions<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<FactionInfo>, D::Error> {
+    let v = Json::deserialize(d).unwrap_or(Json::Null);
+    let Some(a) = v.as_array() else {
+        return Ok(Vec::new());
+    };
+    Ok(a.iter()
+        .filter_map(Json::as_object)
+        .map(|o| FactionInfo {
+            name: l_str(o.get("Name")).unwrap_or_default(),
+            faction_state: l_str(o.get("FactionState")),
+            active_states: o
+                .get("ActiveStates")
+                .and_then(Json::as_array)
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|s| l_str(s.get("State")))
+                        .map(|state| StateRef { state })
+                        .collect()
+                })
+                .unwrap_or_default(),
+        })
+        .collect())
+}
+
+impl LocationInfo {
+    /// Hay presencia thargoide: estado de guerra no vacío o algún estado `Thargoid_*`.
+    pub fn thargoid_presence(&self) -> bool {
+        let war = self
+            .thargoid_war
+            .as_ref()
+            .and_then(|w| w.current_state.as_deref())
+            .is_some_and(|s| !s.is_empty());
+        let is_tg = |s: &str| s.starts_with("Thargoid_");
+        war || self
+            .system_faction
+            .as_ref()
+            .and_then(|f| f.faction_state.as_deref())
+            .is_some_and(is_tg)
+            || self.factions.iter().any(|f| {
+                f.faction_state.as_deref().is_some_and(is_tg)
+                    || f.active_states.iter().any(|s| is_tg(&s.state))
+            })
+    }
+}
+
+/// Bloque `ThargoidWar` (campos de fuentes secundarias, sin verificar: todos opcionales).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct ThargoidWar {
+    pub current_state: Option<String>,
+    pub next_state_success: Option<String>,
+    pub next_state_failure: Option<String>,
+    pub success_state_reached: Option<bool>,
+    pub war_progress: Option<f64>,
+    pub remaining_ports: Option<u32>,
+    pub estimated_remaining_time: Option<String>,
+}
+
+/// Facción presente en el sistema (`Factions` de `FSDJump`/`Location`).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct FactionInfo {
+    pub name: String,
+    pub faction_state: Option<String>,
+    pub active_states: Vec<StateRef>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct StateRef {
+    pub state: String,
 }
 
 /// Facción controladora del sistema (`SystemFaction` de `FSDJump`/`Location`).
@@ -275,6 +397,18 @@ pub struct Loadout {
 pub struct Cargo {
     pub vessel: Option<String>,
     pub count: Option<u32>,
+    pub inventory: Option<Vec<CargoItem>>,
+}
+
+/// Entrada del inventario del evento `Cargo` (distinta de `companion::CargoItem`).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct CargoItem {
+    pub name: String,
+    #[serde(rename = "Name_Localised")]
+    pub name_localised: Option<String>,
+    pub count: u32,
+    pub stolen: Option<u32>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -539,6 +673,253 @@ pub struct JetConeBoost {
     pub boost_value: Option<f64>,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct ShipTargeted {
+    pub target_locked: bool,
+    pub ship: Option<String>,
+    #[serde(rename = "Ship_Localised")]
+    pub ship_localised: Option<String>,
+    pub scan_stage: Option<u8>,
+    pub pilot_name: Option<String>,
+    #[serde(rename = "PilotName_Localised")]
+    pub pilot_name_localised: Option<String>,
+    pub pilot_rank: Option<String>,
+    pub shield_health: Option<f64>,
+    pub hull_health: Option<f64>,
+    pub faction: Option<String>,
+    pub legal_status: Option<String>,
+    pub bounty: Option<u64>,
+    pub subsystem: Option<String>,
+    #[serde(rename = "Subsystem_Localised")]
+    pub subsystem_localised: Option<String>,
+    pub subsystem_health: Option<f64>,
+    pub power: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct BountyReward {
+    pub faction: String,
+    pub reward: u64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct Bounty {
+    pub rewards: Vec<BountyReward>,
+    pub total_reward: Option<u64>,
+    pub reward: Option<u64>,
+    pub faction: Option<String>,
+    pub victim_faction: Option<String>,
+    #[serde(rename = "VictimFaction_Localised")]
+    pub victim_faction_localised: Option<String>,
+    pub target: Option<String>,
+    #[serde(rename = "Target_Localised")]
+    pub target_localised: Option<String>,
+    pub shared_with_others: Option<u32>,
+}
+
+impl Bounty {
+    /// Unifica el formato con `Rewards` y el antiguo (`Reward` + `Faction`, patines).
+    pub fn normalized_rewards(&self) -> Vec<BountyReward> {
+        if !self.rewards.is_empty() {
+            return self.rewards.clone();
+        }
+        match (self.reward, &self.faction) {
+            (Some(reward), Some(faction)) => vec![BountyReward {
+                faction: faction.clone(),
+                reward,
+            }],
+            _ => Vec::new(),
+        }
+    }
+}
+
+/// Datos de `FactionKillBond` y `CapShipBond`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct FactionKillBond {
+    pub reward: u64,
+    pub awarding_faction: Option<String>,
+    #[serde(rename = "AwardingFaction_Localised")]
+    pub awarding_faction_localised: Option<String>,
+    pub victim_faction: Option<String>,
+    #[serde(rename = "VictimFaction_Localised")]
+    pub victim_faction_localised: Option<String>,
+}
+
+pub type CapShipBond = FactionKillBond;
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct VoucherFaction {
+    pub faction: String,
+    pub amount: u64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct RedeemVoucher {
+    #[serde(rename = "Type")]
+    pub type_: String,
+    pub amount: u64,
+    pub faction: Option<String>,
+    pub factions: Vec<VoucherFaction>,
+    pub broker_percentage: Option<f64>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct ShieldState {
+    pub shields_up: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct EscapeInterdiction {
+    pub interdictor: Option<String>,
+    pub is_player: Option<bool>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct PvpKill {
+    pub victim: Option<String>,
+    pub combat_rank: Option<u8>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct Promotion {
+    pub combat: Option<u8>,
+    pub trade: Option<u8>,
+    pub explore: Option<u8>,
+    pub cqc: Option<u8>,
+    pub soldier: Option<u8>,
+    pub exobiologist: Option<u8>,
+    pub federation: Option<u8>,
+    pub empire: Option<u8>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct ProspectedMaterial {
+    pub name: String,
+    #[serde(rename = "Name_Localised")]
+    pub name_localised: Option<String>,
+    pub proportion: f64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AsteroidContent {
+    Low,
+    Medium,
+    High,
+    Unknown,
+}
+
+impl AsteroidContent {
+    pub fn from_journal(s: &str) -> Self {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "$asteroidmaterialcontent_low;" => Self::Low,
+            "$asteroidmaterialcontent_medium;" => Self::Medium,
+            "$asteroidmaterialcontent_high;" => Self::High,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct ProspectedAsteroid {
+    pub materials: Vec<ProspectedMaterial>,
+    pub content: String,
+    #[serde(rename = "Content_Localised")]
+    pub content_localised: Option<String>,
+    pub motherlode_material: Option<String>,
+    #[serde(rename = "MotherlodeMaterial_Localised")]
+    pub motherlode_material_localised: Option<String>,
+    pub remaining: Option<f64>,
+}
+
+impl ProspectedAsteroid {
+    pub fn content_level(&self) -> AsteroidContent {
+        AsteroidContent::from_journal(&self.content)
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct AsteroidCracked {
+    pub body: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MiningRefined {
+    #[serde(rename = "Type")]
+    pub type_: String,
+    #[serde(rename = "Type_Localised")]
+    pub type_localised: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct LaunchDrone {
+    #[serde(rename = "Type")]
+    pub type_: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct EjectCargo {
+    #[serde(rename = "Type")]
+    pub type_: String,
+    #[serde(rename = "Type_Localised")]
+    pub type_localised: Option<String>,
+    pub count: u32,
+    pub abandoned: Option<bool>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MarketSell {
+    #[serde(rename = "MarketID")]
+    pub market_id: Option<u64>,
+    #[serde(rename = "Type")]
+    pub type_: String,
+    #[serde(rename = "Type_Localised")]
+    pub type_localised: Option<String>,
+    pub count: u32,
+    pub sell_price: u64,
+    pub total_sale: u64,
+    pub avg_price_paid: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct RepairAll {
+    pub cost: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct Repair {
+    pub items: Vec<String>,
+    pub item: Option<String>,
+    pub cost: Option<u64>,
+}
+
+/// Normaliza el nombre de una mercancía: minúsculas, sin `$`, `_name;` ni espacios.
+pub fn commodity_key(raw: &str) -> String {
+    let lower = raw.trim().to_lowercase();
+    let t = lower.strip_prefix('$').unwrap_or(&lower);
+    let t = t.strip_suffix(';').unwrap_or(t);
+    let t = t.strip_suffix("_name").unwrap_or(t);
+    t.chars().filter(|c| !c.is_whitespace()).collect()
+}
+
 /// Variante tipada de un evento. Lo desconocido o malformado cae en `Other`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum EventKind {
@@ -595,6 +976,26 @@ pub enum EventKind {
     MultiSellExplorationData(MultiSellExplorationData),
     CodexEntry(CodexEntry),
     JetConeBoost(JetConeBoost),
+    ShipTargeted(Box<ShipTargeted>),
+    Bounty(Box<Bounty>),
+    FactionKillBond(FactionKillBond),
+    CapShipBond(CapShipBond),
+    RedeemVoucher(RedeemVoucher),
+    ShieldState(ShieldState),
+    HeatWarning,
+    HeatDamage,
+    EscapeInterdiction(EscapeInterdiction),
+    PvpKill(PvpKill),
+    FighterDestroyed,
+    Promotion(Promotion),
+    ProspectedAsteroid(Box<ProspectedAsteroid>),
+    AsteroidCracked(AsteroidCracked),
+    MiningRefined(MiningRefined),
+    LaunchDrone(LaunchDrone),
+    EjectCargo(EjectCargo),
+    MarketSell(MarketSell),
+    RepairAll(RepairAll),
+    Repair(Repair),
     Other,
 }
 
@@ -663,6 +1064,30 @@ fn classify(name: &str, raw: &RawValue) -> EventKind {
         "MultiSellExplorationData" => de(name, raw).map(EventKind::MultiSellExplorationData),
         "CodexEntry" => de(name, raw).map(EventKind::CodexEntry),
         "JetConeBoost" => de(name, raw).map(EventKind::JetConeBoost),
+        "ShipTargeted" | "ShipTargetted" => {
+            de::<ShipTargeted>(name, raw).map(|t| EventKind::ShipTargeted(Box::new(t)))
+        }
+        "Bounty" => de::<Bounty>(name, raw).map(|b| EventKind::Bounty(Box::new(b))),
+        "FactionKillBond" => de(name, raw).map(EventKind::FactionKillBond),
+        "CapShipBond" => de(name, raw).map(EventKind::CapShipBond),
+        "RedeemVoucher" => de(name, raw).map(EventKind::RedeemVoucher),
+        "ShieldState" => de(name, raw).map(EventKind::ShieldState),
+        "HeatWarning" => Some(EventKind::HeatWarning),
+        "HeatDamage" => Some(EventKind::HeatDamage),
+        "EscapeInterdiction" => de(name, raw).map(EventKind::EscapeInterdiction),
+        "PVPKill" => de(name, raw).map(EventKind::PvpKill),
+        "FighterDestroyed" => Some(EventKind::FighterDestroyed),
+        "Promotion" => de(name, raw).map(EventKind::Promotion),
+        "ProspectedAsteroid" => {
+            de::<ProspectedAsteroid>(name, raw).map(|p| EventKind::ProspectedAsteroid(Box::new(p)))
+        }
+        "AsteroidCracked" => de(name, raw).map(EventKind::AsteroidCracked),
+        "MiningRefined" => de(name, raw).map(EventKind::MiningRefined),
+        "LaunchDrone" => de(name, raw).map(EventKind::LaunchDrone),
+        "EjectCargo" => de(name, raw).map(EventKind::EjectCargo),
+        "MarketSell" => de(name, raw).map(EventKind::MarketSell),
+        "RepairAll" => de(name, raw).map(EventKind::RepairAll),
+        "Repair" => de(name, raw).map(EventKind::Repair),
         _ => None,
     };
     kind.unwrap_or(EventKind::Other)
@@ -988,6 +1413,53 @@ mod tests {
         assert_eq!(others, expected);
     }
 
+    #[test]
+    fn every_line_of_f2_fixtures_is_typed() {
+        // Eventos que los fixtures de F2 contienen sin tipar a propósito: ninguno.
+        const EXPECTED_OTHER: [&str; 0] = [];
+        let fixtures = [
+            (
+                "combat",
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../../tests/fixtures/journal/combat_session.log"
+                )),
+                24,
+            ),
+            (
+                "mining",
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../../tests/fixtures/journal/mining_session.log"
+                )),
+                27,
+            ),
+            (
+                "ax",
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../../tests/fixtures/journal/ax_session.log"
+                )),
+                8,
+            ),
+        ];
+        let mut others = std::collections::BTreeSet::new();
+        for (name, text, expected_lines) in fixtures {
+            let mut n = 0;
+            for line in text.lines() {
+                let ev = parse_line(line).unwrap_or_else(|e| panic!("{name}: {line}: {e}"));
+                if ev.kind == EventKind::Other {
+                    others.insert(ev.name.clone());
+                }
+                n += 1;
+            }
+            assert_eq!(n, expected_lines, "líneas de {name}");
+        }
+        let expected: std::collections::BTreeSet<String> =
+            EXPECTED_OTHER.iter().map(|s| s.to_string()).collect();
+        assert_eq!(others, expected);
+    }
+
     fn loadout_with_modifier(modifier: &str) -> EventKind {
         ev(&format!(
             r#"{{"timestamp":"2026-04-10T20:00:00Z","event":"Loadout","Ship":"python","Modules":[{{"Slot":"FrameShiftDrive","Item":"int_hyperdrive_size5_class5","Health":1.0,"Engineering":{{"BlueprintName":"FSD_LongRange","Level":5,"Quality":0.9,"ExperimentalEffect":"special_fsd_fuelcapacity","Modifiers":[{modifier}]}}}}]}}"#
@@ -1071,6 +1543,75 @@ mod tests {
     }
 
     #[test]
+    fn fsdjump_with_thargoid_war_block_parses() {
+        let EventKind::FsdJump(l) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"FSDJump","StarSystem":"Kappa","SystemAddress":1,"StarPos":[1,2,3],"ThargoidWar":{"CurrentState":"Thargoid_Controlled","NextStateSuccess":"Thargoid_Recovery","NextStateFailure":"","SuccessStateReached":false,"WarProgress":0.25,"RemainingPorts":2,"EstimatedRemainingTime":"12 Days"}}"#,
+        ) else {
+            panic!("FSDJump")
+        };
+        let w = l.thargoid_war.as_ref().unwrap();
+        assert_eq!(w.current_state.as_deref(), Some("Thargoid_Controlled"));
+        assert_eq!(w.next_state_success.as_deref(), Some("Thargoid_Recovery"));
+        assert_eq!(w.success_state_reached, Some(false));
+        assert_eq!(w.war_progress, Some(0.25));
+        assert_eq!(w.remaining_ports, Some(2));
+        assert_eq!(w.estimated_remaining_time.as_deref(), Some("12 Days"));
+        assert!(l.thargoid_presence());
+    }
+
+    #[test]
+    fn faction_state_thargoid_marks_presence() {
+        let EventKind::Location(l) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Location","StarSystem":"Kappa","Factions":[{"Name":"X","FactionState":"Thargoid_Probing","ActiveStates":[{"State":"Boom"}]}]}"#,
+        ) else {
+            panic!("Location")
+        };
+        assert_eq!(l.factions.len(), 1);
+        assert_eq!(l.factions[0].name, "X");
+        assert_eq!(l.factions[0].active_states[0].state, "Boom");
+        assert!(l.thargoid_war.is_none());
+        assert!(l.thargoid_presence());
+    }
+
+    #[test]
+    fn thargoid_war_with_unexpected_types_is_coerced_and_event_survives() {
+        let EventKind::FsdJump(l) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"FSDJump","StarSystem":"Kappa","SystemAddress":1,"ThargoidWar":{"WarProgress":"0.5","RemainingPorts":"x","CurrentState":7},"Factions":"junk"}"#,
+        ) else {
+            panic!("FSDJump")
+        };
+        assert_eq!(l.star_system, "Kappa");
+        let w = l.thargoid_war.as_ref().unwrap();
+        assert_eq!(w.war_progress, Some(0.5));
+        assert_eq!(w.remaining_ports, None);
+        assert_eq!(w.current_state, None);
+        assert!(l.factions.is_empty());
+        assert!(!l.thargoid_presence());
+    }
+
+    #[test]
+    fn thargoid_war_non_object_is_none() {
+        let EventKind::FsdJump(l) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"FSDJump","StarSystem":"Kappa","ThargoidWar":"garbage"}"#,
+        ) else {
+            panic!("FSDJump")
+        };
+        assert_eq!(l.star_system, "Kappa");
+        assert!(l.thargoid_war.is_none());
+    }
+
+    #[test]
+    fn empty_thargoid_war_state_is_no_presence() {
+        let EventKind::FsdJump(l) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"FSDJump","StarSystem":"Kappa","ThargoidWar":{"CurrentState":""},"Factions":[{"Name":"X","FactionState":"War"}]}"#,
+        ) else {
+            panic!("FSDJump")
+        };
+        assert!(l.thargoid_war.is_some());
+        assert!(!l.thargoid_presence());
+    }
+
+    #[test]
     fn touchdown_carries_position_and_body_id() {
         let EventKind::Touchdown(t) = ev(
             r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Touchdown","Latitude":-12.5,"Longitude":33.1,"Body":"Planeta 1","BodyID":7,"SystemAddress":99,"OnPlanet":true,"PlayerControlled":true}"#,
@@ -1124,5 +1665,305 @@ mod tests {
         };
         assert_eq!(b.body_id, Some(4));
         assert_eq!(b.system_address, Some(12));
+    }
+
+    #[test]
+    fn ship_targeted_full_scan_parses() {
+        let EventKind::ShipTargeted(t) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"ShipTargeted","TargetLocked":true,"Ship":"viper_mkiv","Ship_Localised":"Viper Mk IV","ScanStage":3,"PilotName":"$cmdr;","PilotRank":"Dangerous","ShieldHealth":45.5,"HullHealth":80.0,"Faction":"F","LegalStatus":"Wanted","Bounty":125000,"Subsystem":"$int_powerplant_size3_class5_name;","SubsystemHealth":62.0}"#,
+        ) else {
+            panic!("ShipTargeted")
+        };
+        assert!(t.target_locked);
+        assert_eq!(t.ship.as_deref(), Some("viper_mkiv"));
+        assert_eq!(t.ship_localised.as_deref(), Some("Viper Mk IV"));
+        assert_eq!(t.scan_stage, Some(3));
+        assert_eq!(t.pilot_rank.as_deref(), Some("Dangerous"));
+        assert_eq!(t.shield_health, Some(45.5));
+        assert_eq!(t.hull_health, Some(80.0));
+        assert_eq!(t.legal_status.as_deref(), Some("Wanted"));
+        assert_eq!(t.bounty, Some(125000));
+        assert_eq!(
+            t.subsystem.as_deref(),
+            Some("$int_powerplant_size3_class5_name;")
+        );
+        assert_eq!(t.subsystem_health, Some(62.0));
+        let EventKind::ShipTargeted(h) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"ShipTargetted","TargetLocked":false}"#,
+        ) else {
+            panic!("ShipTargetted alias")
+        };
+        assert!(!h.target_locked);
+    }
+
+    #[test]
+    fn ship_targeted_lost_target_parses_minimal() {
+        let EventKind::ShipTargeted(t) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"ShipTargeted","TargetLocked":false}"#,
+        ) else {
+            panic!("ShipTargeted")
+        };
+        assert!(!t.target_locked);
+        assert_eq!(t.ship, None);
+        assert_eq!(t.scan_stage, None);
+        assert_eq!(t.bounty, None);
+    }
+
+    #[test]
+    fn bounty_rewards_and_legacy_skimmer_format_normalize() {
+        let EventKind::Bounty(b) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Bounty","Rewards":[{"Faction":"A","Reward":50000},{"Faction":"B","Reward":10000}],"TotalReward":60000,"VictimFaction":"V","Target":"viper"}"#,
+        ) else {
+            panic!("Bounty")
+        };
+        let n = b.normalized_rewards();
+        assert_eq!(n.len(), 2);
+        assert_eq!(n.iter().map(|r| r.reward).sum::<u64>(), 60000);
+        assert_eq!(n[0].faction, "A");
+        assert_eq!(b.total_reward, Some(60000));
+        assert_eq!(b.victim_faction.as_deref(), Some("V"));
+        let EventKind::Bounty(s) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Bounty","Reward":5000,"Faction":"C"}"#,
+        ) else {
+            panic!("Bounty legacy")
+        };
+        assert_eq!(
+            s.normalized_rewards(),
+            vec![BountyReward {
+                faction: "C".into(),
+                reward: 5000
+            }]
+        );
+    }
+
+    #[test]
+    fn redeem_voucher_with_factions_and_broker() {
+        let EventKind::RedeemVoucher(r) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"RedeemVoucher","Type":"bounty","Amount":37500,"Factions":[{"Faction":"A","Amount":50000}],"BrokerPercentage":25.0}"#,
+        ) else {
+            panic!("RedeemVoucher")
+        };
+        assert_eq!(r.type_, "bounty");
+        assert_eq!(r.amount, 37500);
+        assert_eq!(r.factions[0].faction, "A");
+        assert_eq!(r.factions[0].amount, 50000);
+        assert_eq!(r.broker_percentage, Some(25.0));
+    }
+
+    #[test]
+    fn faction_kill_bond_and_cap_ship_bond_parse() {
+        let body = r#""Reward":20000,"AwardingFaction":"A","VictimFaction":"B""#;
+        let EventKind::FactionKillBond(f) = ev(&format!(
+            r#"{{"timestamp":"2026-04-10T20:00:00Z","event":"FactionKillBond",{body}}}"#
+        )) else {
+            panic!("FactionKillBond")
+        };
+        assert_eq!(f.reward, 20000);
+        assert_eq!(f.awarding_faction.as_deref(), Some("A"));
+        assert_eq!(f.victim_faction.as_deref(), Some("B"));
+        let EventKind::CapShipBond(c) = ev(&format!(
+            r#"{{"timestamp":"2026-04-10T20:00:00Z","event":"CapShipBond",{body}}}"#
+        )) else {
+            panic!("CapShipBond")
+        };
+        assert_eq!(c.reward, 20000);
+    }
+
+    #[test]
+    fn heat_and_shield_events_parse() {
+        assert_eq!(
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"HeatWarning"}"#),
+            EventKind::HeatWarning
+        );
+        assert_eq!(
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"HeatDamage"}"#),
+            EventKind::HeatDamage
+        );
+        let EventKind::ShieldState(s) =
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"ShieldState","ShieldsUp":false}"#)
+        else {
+            panic!("ShieldState")
+        };
+        assert!(!s.shields_up);
+    }
+
+    #[test]
+    fn promotion_combat_rank_parses() {
+        let EventKind::Promotion(p) =
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Promotion","Combat":5}"#)
+        else {
+            panic!("Promotion")
+        };
+        assert_eq!(p.combat, Some(5));
+        assert_eq!(p.trade, None);
+    }
+
+    #[test]
+    fn misc_combat_events_parse() {
+        let EventKind::PvpKill(k) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"PVPKill","Victim":"X","CombatRank":4}"#,
+        ) else {
+            panic!("PVPKill")
+        };
+        assert_eq!(k.victim.as_deref(), Some("X"));
+        assert_eq!(k.combat_rank, Some(4));
+        let EventKind::EscapeInterdiction(e) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"EscapeInterdiction","Interdictor":"Y","IsPlayer":true}"#,
+        ) else {
+            panic!("EscapeInterdiction")
+        };
+        assert_eq!(e.is_player, Some(true));
+        assert_eq!(
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"FighterDestroyed"}"#),
+            EventKind::FighterDestroyed
+        );
+    }
+
+    #[test]
+    fn prospected_asteroid_parses_materials_content_and_motherlode() {
+        let EventKind::ProspectedAsteroid(p) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"ProspectedAsteroid","Materials":[{"Name":"Platinum","Name_Localised":"Platino","Proportion":31.5},{"Name":"Painite","Proportion":12.0}],"Content":"$AsteroidMaterialContent_High;","Content_Localised":"Alto","MotherlodeMaterial":"Monazite","Remaining":100.0}"#,
+        ) else {
+            panic!("ProspectedAsteroid")
+        };
+        assert_eq!(p.materials.len(), 2);
+        assert_eq!(p.materials[0].name, "Platinum");
+        assert_eq!(p.materials[0].name_localised.as_deref(), Some("Platino"));
+        assert_eq!(p.materials[0].proportion, 31.5);
+        assert_eq!(p.materials[1].proportion, 12.0);
+        assert_eq!(p.content_level(), AsteroidContent::High);
+        assert_eq!(p.motherlode_material.as_deref(), Some("Monazite"));
+        assert_eq!(p.remaining, Some(100.0));
+        // Sin campos opcionales sigue siendo ProspectedAsteroid.
+        let EventKind::ProspectedAsteroid(m) =
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"ProspectedAsteroid"}"#)
+        else {
+            panic!("minimal")
+        };
+        assert!(m.materials.is_empty());
+        assert_eq!(m.motherlode_material, None);
+        assert_eq!(m.content_level(), AsteroidContent::Unknown);
+    }
+
+    #[test]
+    fn unknown_asteroid_content_is_unknown() {
+        assert_eq!(
+            AsteroidContent::from_journal("$Foo;"),
+            AsteroidContent::Unknown
+        );
+        assert_eq!(
+            AsteroidContent::from_journal("$AsteroidMaterialContent_Low;"),
+            AsteroidContent::Low
+        );
+        assert_eq!(
+            AsteroidContent::from_journal("$AsteroidMaterialContent_Medium;"),
+            AsteroidContent::Medium
+        );
+    }
+
+    #[test]
+    fn mining_refined_and_launch_drone_parse() {
+        let EventKind::MiningRefined(r) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MiningRefined","Type":"$platinum_name;","Type_Localised":"Platino"}"#,
+        ) else {
+            panic!("MiningRefined")
+        };
+        assert_eq!(r.type_, "$platinum_name;");
+        assert_eq!(commodity_key(&r.type_), "platinum");
+        let EventKind::LaunchDrone(d) =
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"LaunchDrone","Type":"Prospector"}"#)
+        else {
+            panic!("LaunchDrone")
+        };
+        assert_eq!(d.type_, "Prospector");
+        let EventKind::AsteroidCracked(a) =
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"AsteroidCracked","Body":"Ring A"}"#)
+        else {
+            panic!("AsteroidCracked")
+        };
+        assert_eq!(a.body.as_deref(), Some("Ring A"));
+    }
+
+    #[test]
+    fn eject_cargo_and_repairs_parse() {
+        let EventKind::EjectCargo(e) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"EjectCargo","Type":"limpet","Count":3,"Abandoned":true}"#,
+        ) else {
+            panic!("EjectCargo")
+        };
+        assert_eq!(e.type_, "limpet");
+        assert_eq!(e.count, 3);
+        assert_eq!(e.abandoned, Some(true));
+        let EventKind::RepairAll(r) =
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"RepairAll","Cost":1200}"#)
+        else {
+            panic!("RepairAll")
+        };
+        assert_eq!(r.cost, Some(1200));
+        let EventKind::Repair(p) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Repair","Items":["Hull","Cockpit"],"Cost":300}"#,
+        ) else {
+            panic!("Repair")
+        };
+        assert_eq!(p.items, vec!["Hull".to_string(), "Cockpit".to_string()]);
+        assert_eq!(p.cost, Some(300));
+        let EventKind::Repair(q) =
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Repair","Item":"Hull"}"#)
+        else {
+            panic!("Repair single")
+        };
+        assert_eq!(q.item.as_deref(), Some("Hull"));
+        assert_eq!(q.cost, None);
+    }
+
+    #[test]
+    fn market_sell_parses_prices() {
+        let EventKind::MarketSell(m) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MarketSell","MarketID":3700000001,"Type":"platinum","Count":20,"SellPrice":220000,"TotalSale":4400000,"AvgPricePaid":0}"#,
+        ) else {
+            panic!("MarketSell")
+        };
+        assert_eq!(m.market_id, Some(3700000001));
+        assert_eq!(m.type_, "platinum");
+        assert_eq!(m.count, 20);
+        assert_eq!(m.sell_price, 220000);
+        assert_eq!(m.total_sale, 4400000);
+        assert_eq!(m.avg_price_paid, Some(0));
+    }
+
+    #[test]
+    fn cargo_event_with_inventory_parses_limpets() {
+        let EventKind::Cargo(c) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Cargo","Vessel":"Ship","Count":60,"Inventory":[{"Name":"drones","Name_Localised":"Limpet","Count":18},{"Name":"platinum","Count":42,"Stolen":0}]}"#,
+        ) else {
+            panic!("Cargo")
+        };
+        assert_eq!(c.count, Some(60));
+        assert_eq!(c.inventory.as_ref().unwrap().len(), 2);
+        assert_eq!(c.inventory.as_ref().unwrap()[0].name, "drones");
+        assert_eq!(c.inventory.as_ref().unwrap()[0].count, 18);
+        assert_eq!(c.inventory.as_ref().unwrap()[0].stolen, None);
+        assert_eq!(c.inventory.as_ref().unwrap()[1].name, "platinum");
+        assert_eq!(c.inventory.as_ref().unwrap()[1].count, 42);
+        assert_eq!(c.inventory.as_ref().unwrap()[1].stolen, Some(0));
+        let EventKind::Cargo(n) =
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Cargo","Vessel":"Ship","Count":7}"#)
+        else {
+            panic!("Cargo no inventory")
+        };
+        assert!(n.inventory.is_none());
+    }
+
+    #[test]
+    fn commodity_key_normalizes_variants() {
+        assert_eq!(
+            commodity_key("$lowtemperaturediamond_name;"),
+            "lowtemperaturediamond"
+        );
+        assert_eq!(commodity_key("Platinum"), "platinum");
+        assert_eq!(
+            commodity_key("Low Temperature Diamond"),
+            "lowtemperaturediamond"
+        );
     }
 }

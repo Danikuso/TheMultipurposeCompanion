@@ -1,4 +1,4 @@
-import { getLocale } from './i18n';
+import { getLocale, t } from './i18n';
 
 export function credits(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
@@ -57,6 +57,14 @@ export function starClassLabel(cls: string | null | undefined): string {
   return base ? base : '—';
 }
 
+const SCOOPABLE_CLASSES = new Set(['O', 'B', 'A', 'F', 'G', 'K', 'M']);
+
+export function isScoopable(cls: string | null | undefined): boolean {
+  if (!cls) return false;
+  const base = cls.split('_')[0]?.trim().toUpperCase();
+  return base ? SCOOPABLE_CLASSES.has(base) : false;
+}
+
 export function meters(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
   return `${new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 0 }).format(n)} m`;
@@ -75,4 +83,38 @@ export function kelvin(n: number | null | undefined): string {
 export function num1(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
   return new Intl.NumberFormat(getLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
+}
+
+/** Número con hasta `max` decimales (sin ceros sobrantes), según el idioma. */
+export function decimal(n: number | null | undefined, max = 1): string {
+  if (n == null || Number.isNaN(n)) return '—';
+  return new Intl.NumberFormat(getLocale(), { minimumFractionDigits: 0, maximumFractionDigits: max }).format(n);
+}
+
+/** Anchura CSS en porcentaje (siempre con punto decimal), acotada a 0-100. */
+export function cssPct(n: number | null | undefined): string {
+  const v = n == null || Number.isNaN(n) ? 0 : Math.min(100, Math.max(0, n));
+  return `${Math.round(v * 10) / 10}%`;
+}
+
+/**
+ * Desfase entre el reloj del diario (`as_of`) y el local, en ms. `null` si falta
+ * o es el instante cero (módulo sin eventos): entonces no hay base de tiempo.
+ */
+export function skewFrom(asOf: string | null | undefined, localMs: number = Date.now()): number | null {
+  const ts = asOf ? Date.parse(asOf) : NaN;
+  if (Number.isNaN(ts) || ts < Date.UTC(2000, 0, 1)) return null;
+  return ts - localMs;
+}
+
+/** Tiempo relativo ("hace 2 h", "ahora") a partir de una marca ISO; `—` si no hay. */
+export function relativeAge(iso: string | null | undefined, nowMs: number | null): string {
+  const ts = iso ? Date.parse(iso) : NaN;
+  if (Number.isNaN(ts) || nowMs == null || ts < Date.UTC(2000, 0, 1)) return '—';
+  const secs = Math.max(0, Math.round((nowMs - ts) / 1000));
+  if (secs < 60) return t('mining-age-now');
+  const rtf = new Intl.RelativeTimeFormat(getLocale(), { numeric: 'always', style: 'narrow' });
+  if (secs < 3600) return rtf.format(-Math.floor(secs / 60), 'minute');
+  if (secs < 86400) return rtf.format(-Math.floor(secs / 3600), 'hour');
+  return rtf.format(-Math.floor(secs / 86400), 'day');
 }

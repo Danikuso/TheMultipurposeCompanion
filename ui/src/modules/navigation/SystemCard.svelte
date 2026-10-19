@@ -10,12 +10,14 @@
     remainingJumps = null,
     totalLy = null,
     label = null,
+    starClasses = null,
   }: {
     card: Card;
     big?: boolean;
     remainingJumps?: number | null;
     totalLy?: number | null;
     label?: string | null;
+    starClasses?: string[] | null;
   } = $props();
 
   const DANGER_STATES = ['war', 'civilwar', 'civilunrest', 'outbreak'];
@@ -92,8 +94,12 @@
           <div><span class="label">{t('strip-total-ly')}</span> <span class="mono">{ly(totalLy)}</span></div>
         {/if}
         <div>
-          <span class="label">{t('strip-star-class')}</span>
-          <span class="mono">{starClassLabel(card.star_class)}</span>
+          <span class="label">{t(starClasses && starClasses.length > 1 ? 'strip-star-classes' : 'strip-star-class')}</span>
+          {#if starClasses && starClasses.length > 0}
+            <span class="mono" data-testid="star-classes">{starClasses.map((s) => starClassLabel(s)).join(', ')}</span>
+          {:else}
+            <span class="mono">{starClassLabel(card.star_class)}</span>
+          {/if}
           {@render scoopTag()}
         </div>
         {#if card.fuel_after_pct != null}
@@ -161,7 +167,11 @@
   <article class="card small" data-testid="small-card">
     <strong class="name">{card.name}</strong>
     <div>
-      <span class="mono">{starClassLabel(card.star_class)}</span>
+      {#if starClasses && starClasses.length > 0}
+        <span class="mono" data-testid="star-classes">{starClasses.map((s) => starClassLabel(s)).join(', ')}</span>
+      {:else}
+        <span class="mono">{starClassLabel(card.star_class)}</span>
+      {/if}
       {#if specialKey}
         {@render specialTag()}
       {:else}

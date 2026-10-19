@@ -1,0 +1,24 @@
+{ "timestamp":"2026-10-18T10:00:00Z", "event":"Commander", "FID":"F0000001", "Name":"TESTER" }
+{ "timestamp":"2026-10-18T10:00:01Z", "event":"LoadGame", "FID":"F0000001", "Commander":"TESTER", "Odyssey":true, "Ship":"python", "Credits":1000000, "gameversion":"4.1.0.0" }
+{ "timestamp":"2026-10-18T10:00:02Z", "event":"Loadout", "Ship":"python", "ShipID":3, "HullHealth":1.0, "Modules":[] }
+{ "timestamp":"2026-10-18T10:00:03Z", "event":"Location", "StarSystem":"Alpha Test", "SystemAddress":1, "StarPos":[0,0,0] }
+{ "timestamp":"2026-10-18T10:01:00Z", "event":"ShipTargeted", "TargetLocked":true, "Ship":"federation_dropship", "Ship_Localised":"Federal Dropship", "ScanStage":3, "PilotName":"$npc_name_decorate:#name=Ada Quill;", "PilotName_Localised":"Ada Quill", "PilotRank":"Competent", "ShieldHealth":100.0, "HullHealth":100.0, "Faction":"Alpha Test Navy", "LegalStatus":"Clean" }
+{ "timestamp":"2026-10-18T10:05:00Z", "event":"Bounty", "Rewards":[{"Faction":"Alpha Test Navy","Reward":100000}], "Target":"empire_eagle", "TotalReward":100000, "VictimFaction":"Pirates of Alpha" }
+{ "timestamp":"2026-10-18T10:06:00Z", "event":"Bounty", "Rewards":[{"Faction":"Alpha Test Navy","Reward":200000}], "Target":"python", "TotalReward":200000, "VictimFaction":"Pirates of Alpha" }
+{ "timestamp":"2026-10-18T10:07:00Z", "event":"Bounty", "Rewards":[{"Faction":"Alpha Test Navy","Reward":150000},{"Faction":"Beta Test Union","Reward":50000}], "Target":"federation_dropship", "TotalReward":200000, "VictimFaction":"Pirates of Alpha", "SharedWithOthers":2 }
+{ "timestamp":"2026-10-18T10:08:00Z", "event":"FactionKillBond", "Reward":50000, "AwardingFaction":"Alpha Test Navy", "VictimFaction":"Pirates of Alpha" }
+{ "timestamp":"2026-10-18T10:10:00Z", "event":"RedeemVoucher", "Type":"bounty", "Amount":300000, "Factions":[{"Faction":"Alpha Test Navy","Amount":250000},{"Faction":"Beta Test Union","Amount":50000}] }
+{ "timestamp":"2026-10-18T10:11:00Z", "event":"RedeemVoucher", "Type":"bounty", "Amount":200000 }
+{ "timestamp":"2026-10-18T10:12:00Z", "event":"RedeemVoucher", "Type":"CombatBond", "Amount":50000, "Faction":"Alpha Test Navy" }
+{ "timestamp":"2026-10-18T10:25:00Z", "event":"HullDamage", "Health":0.8, "PlayerPilot":true, "Fighter":false }
+{ "timestamp":"2026-10-18T10:26:00Z", "event":"HeatWarning" }
+{ "timestamp":"2026-10-18T10:27:00Z", "event":"HullDamage", "Health":0.6, "PlayerPilot":true, "Fighter":false }
+{ "timestamp":"2026-10-18T10:27:30Z", "event":"HeatDamage" }
+{ "timestamp":"2026-10-18T10:28:00Z", "event":"Bounty", "Rewards":[{"Faction":"Alpha Test Navy","Reward":70000}], "Target":"cobramkiii", "TotalReward":70000, "VictimFaction":"Pirates of Alpha" }
+{ "timestamp":"2026-10-18T10:30:00Z", "event":"Died", "KillerName":"Fictional Pirate" }
+{ "timestamp":"2026-10-18T10:32:00Z", "event":"Resurrect", "Option":"rebuy", "Cost":50000, "Bankrupt":false }
+{ "timestamp":"2026-10-18T10:33:00Z", "event":"Location", "StarSystem":"Alpha Test", "SystemAddress":1, "StarPos":[0,0,0] }
+{ "timestamp":"2026-10-18T10:40:00Z", "event":"Bounty", "Rewards":[{"Faction":"Beta Test Union","Reward":120000}], "Target":"asp", "TotalReward":120000, "VictimFaction":"Pirates of Beta" }
+{ "timestamp":"2026-10-18T10:41:00Z", "event":"Bounty", "Rewards":[{"Faction":"Beta Test Union","Reward":30000}], "Target":"cobramkiii", "TotalReward":30000, "VictimFaction":"Pirates of Beta" }
+{ "timestamp":"2026-10-18T10:42:00Z", "event":"FactionKillBond", "Reward":40000, "AwardingFaction":"Alpha Test Navy", "VictimFaction":"Pirates of Alpha" }
+{ "timestamp":"2026-10-18T10:45:00Z", "event":"ShipTargeted", "TargetLocked":true, "Ship":"anaconda", "Ship_Localised":"Anaconda", "ScanStage":3, "PilotName":"$npc_name_decorate:#name=Rex Vane;", "PilotName_Localised":"Rex Vane", "PilotRank":"Dangerous", "ShieldHealth":60.0, "HullHealth":85.0, "Faction":"Pirates of Alpha", "LegalStatus":"Wanted", "Bounty":42000, "Subsystem":"$int_powerplant_size8_class5_name;", "Subsystem_Localised":"Power Plant", "SubsystemHealth":72.0 }

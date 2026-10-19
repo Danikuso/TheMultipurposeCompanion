@@ -81,6 +81,113 @@ lan = false
         assert!(settings.alerts_enabled && settings.online_services);
     }
 
+    #[test]
+    fn f1_config_without_mining_fields_loads_with_defaults() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(
+            &path,
+            "language = \"en\"
+online_services = true
+map_value_threshold = 600000
+default_neutron_efficiency = 60
+",
+        )
+        .unwrap();
+        let cfg = Config::load_from_or_default(&path);
+        assert!(!dir.path().join("config.toml.bak").exists());
+        assert_eq!(cfg.map_value_threshold, 600_000);
+        assert_eq!(cfg.mining_threshold_cr, 1_000_000);
+        assert_eq!(cfg.sell_search_radius_ly, 100);
+        assert_eq!(cfg.mining_interest.len(), 11);
+        assert_eq!(cfg.module_settings().mining_interest[0], "platinum");
+    }
+
+    #[test]
+    fn invalid_f2_fields_in_file_fall_back_to_defaults() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(
+            &path,
+            format!(
+                "language = \"en\"
+sell_search_radius_ly = 9999
+mining_threshold_cr = 5000000000
+mining_interest = [{}]
+",
+                vec!["\"a\""; 31].join(",")
+            ),
+        )
+        .unwrap();
+        let cfg = Config::load_from_or_default(&path);
+        assert_eq!(cfg.language, "en");
+        assert_eq!(cfg.sell_search_radius_ly, 100);
+        assert_eq!(cfg.mining_threshold_cr, 1_000_000);
+        assert_eq!(cfg.mining_interest.len(), 11);
+    }
+
+    #[test]
+    fn module_settings_payload_without_mining_fields_deserializes() {
+        let s: tmc_model::settings::ModuleSettings = serde_json::from_value(json!({
+            "alerts_enabled": false,
+            "online_services": true,
+            "auto_copy_next_system": true,
+            "map_value_threshold": 1,
+            "default_neutron_efficiency": 70
+        }))
+        .unwrap();
+        assert!(!s.alerts_enabled);
+        assert_eq!(s.default_neutron_efficiency, 70);
+        assert_eq!(s.mining_threshold_cr, 1_000_000);
+        assert_eq!(s.sell_search_radius_ly, 100);
+        assert_eq!(s.mining_interest.len(), 11);
+    }
+
+    #[tokio::test]
+    async fn put_config_rejects_invalid_mining_values_and_keeps_config() {
+        let dir = tempdir().unwrap();
+        let (actions, _core, _online) = runtime_actions(dir.path());
+        let before = actions.get_config();
+        for (field, value) in [
+            ("sell_search_radius_ly", json!(600)),
+            ("sell_search_radius_ly", json!(9)),
+            ("mining_threshold_cr", json!(1_000_000_001u64)),
+            ("mining_interest", json!(vec!["a"; 31])),
+            ("mining_interest", json!(["x".repeat(41)])),
+        ] {
+            let mut cfg = before.clone();
+            cfg[field] = value;
+            assert!(
+                matches!(actions.put_config(cfg), Err(ActionError::Failed(_))),
+                "{field}"
+            );
+        }
+        assert_eq!(actions.get_config(), before);
+        let mut ok = before.clone();
+        ok["sell_search_radius_ly"] = json!(500);
+        assert_eq!(
+            actions.put_config(ok).unwrap()["sell_search_radius_ly"],
+            500
+        );
+    }
+
+    #[tokio::test]
+    async fn put_config_normalizes_interest_list() {
+        let dir = tempdir().unwrap();
+        let (actions, core, _online) = runtime_actions(dir.path());
+        let mut cfg = actions.get_config();
+        cfg["mining_interest"] = json!(["Platinum", "$painite_name;"]);
+        let saved = actions.put_config(cfg).unwrap();
+        assert_eq!(saved["mining_interest"], json!(["platinum", "painite"]));
+        let snap = core.snapshot().await;
+        assert_eq!(
+            snap["probe.settings"]["mining_interest"],
+            json!(["platinum", "painite"])
+        );
+        let reloaded = Config::load_from_or_default(&dir.path().join("config.toml"));
+        assert_eq!(reloaded.mining_interest, vec!["platinum", "painite"]);
+    }
+
     struct SettingsProbe(Option<tmc_model::settings::ModuleSettings>);
     impl tmc_core::Module for SettingsProbe {
         fn id(&self) -> &'static str {
@@ -152,6 +259,69 @@ lan = false
         assert_eq!(out, json!({ "items": [], "page": 0, "more": false }));
         let reloaded = Config::load_from_or_default(&dir.path().join("config.toml"));
         assert!(!reloaded.online_services);
+    }
+
+    struct ActionProbe(Vec<String>);
+    impl tmc_core::Module for ActionProbe {
+        fn id(&self) -> &'static str {
+            "actionprobe"
+        }
+        fn on_event(
+            &mut self,
+            ev: &tmc_model::source::SourceEvent,
+            _: &tmc_model::state::GameState,
+            _: &mut tmc_core::ModuleCtx,
+        ) -> tmc_core::TopicSet {
+            if let tmc_model::source::SourceEvent::Action { name, .. } = ev {
+                self.0.push(name.clone());
+            }
+            ["actionprobe.actions".into()].into()
+        }
+        fn topic_value(&self, _: &str) -> Option<Value> {
+            Some(json!(self.0))
+        }
+        fn topics(&self) -> Vec<String> {
+            vec!["actionprobe.actions".into()]
+        }
+    }
+
+    #[tokio::test]
+    async fn module_actions_for_combat_and_mining_reach_core() {
+        let dir = tempdir().unwrap();
+        let core = tmc_core::spawn_core(
+            vec![Box::new(ActionProbe(Vec::new()))],
+            None,
+            Duration::from_millis(100),
+        );
+        let online = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+        let (events, _rx) = tokio::sync::mpsc::channel(8);
+        let net = spawn_net_service(
+            std::sync::Arc::new(tmc_net::NetClient::new(std::sync::Arc::new(
+                tmc_net::ReqwestTransport::new().unwrap(),
+            ))),
+            tmc_core::Store::open_in_memory().unwrap(),
+            events,
+            online.clone(),
+        );
+        let actions = AppActions::with_runtime(Config::default(), core.events.clone(), online, net)
+            .with_save_path(dir.path().join("config.toml"));
+        let snap = BTreeMap::new();
+        for name in ["combat.reset_session", "mining.reset_session"] {
+            let out = actions.run_action_with(name, &json!({}), &snap);
+            assert!(out.is_ok(), "{name}: {out:?}");
+        }
+        let mut seen = Value::Null;
+        for _ in 0..50 {
+            seen = core.snapshot().await["actionprobe.actions"].clone();
+            if seen.as_array().is_some_and(|a| a.len() == 2) {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+        assert_eq!(
+            seen,
+            json!(["combat.reset_session", "mining.reset_session"])
+        );
     }
 
     #[tokio::test]

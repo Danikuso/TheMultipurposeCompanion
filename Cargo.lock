@@ -4961,6 +4961,7 @@ dependencies = [
 name = "tmc-core"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "serde",
  "serde_json",
  "tmc-model",
@@ -4998,6 +4999,7 @@ dependencies = [
  "tmc-journal",
  "tmc-model",
  "tmc-modules",
+ "tmc-net",
  "tmc-store",
  "tokio",
  "tracing",
@@ -5059,6 +5061,7 @@ dependencies = [
 name = "tmc-net"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "reqwest",
  "serde_json",
  "tmc-model",

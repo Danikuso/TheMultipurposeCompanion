@@ -1,0 +1,27 @@
+{"timestamp":"2026-10-18T12:59:58Z","event":"Commander","FID":"F0000001","Name":"TESTER"}
+{"timestamp":"2026-10-18T13:00:00Z","event":"LoadGame","FID":"F0000001","Commander":"TESTER","Odyssey":true,"Ship":"python","Ship_Localised":"Python","ShipID":3,"GameMode":"Solo","Credits":5000000,"gameversion":"4.1.0.0"}
+{"timestamp":"2026-10-18T13:00:01Z","event":"Loadout","Ship":"python","ShipID":3,"CargoCapacity":192,"Modules":[]}
+{"timestamp":"2026-10-18T13:00:02Z","event":"Cargo","Vessel":"Ship","Count":4,"Inventory":[{"Name":"drones","Name_Localised":"Limpet","Count":4,"Stolen":0}]}
+{"timestamp":"2026-10-18T13:00:03Z","event":"FSDJump","StarSystem":"Synthetic Ring","SystemAddress":2,"StarPos":[0,0,0]}
+{"timestamp":"2026-10-18T13:00:30Z","event":"LaunchDrone","Type":"Prospector"}
+{"timestamp":"2026-10-18T13:01:00Z","event":"ProspectedAsteroid","Materials":[{"Name":"platinum","Name_Localised":"Platinum","Proportion":31.5},{"Name":"bauxite","Name_Localised":"Bauxite","Proportion":12.0}],"Content":"$AsteroidMaterialContent_High;","Content_Localised":"Material Content: High","Remaining":100.0}
+{"timestamp":"2026-10-18T13:01:20Z","event":"LaunchDrone","Type":"Collection"}
+{"timestamp":"2026-10-18T13:02:00Z","event":"ProspectedAsteroid","Materials":[{"Name":"bauxite","Name_Localised":"Bauxite","Proportion":5.0}],"Content":"$AsteroidMaterialContent_Low;","Content_Localised":"Material Content: Low","Remaining":100.0}
+{"timestamp":"2026-10-18T13:03:00Z","event":"MiningRefined","Type":"$platinum_name;","Type_Localised":"Platinum"}
+{"timestamp":"2026-10-18T13:03:30Z","event":"ProspectedAsteroid","Materials":[{"Name":"painite","Name_Localised":"Painite","Proportion":18.0},{"Name":"bauxite","Name_Localised":"Bauxite","Proportion":9.0}],"Content":"$AsteroidMaterialContent_Medium;","Content_Localised":"Material Content: Medium","Remaining":100.0}
+{"timestamp":"2026-10-18T13:04:00Z","event":"MiningRefined","Type":"$platinum_name;","Type_Localised":"Platinum"}
+{"timestamp":"2026-10-18T13:04:30Z","event":"ProspectedAsteroid","Materials":[{"Name":"platinum","Name_Localised":"Platinum","Proportion":4.5}],"Content":"$AsteroidMaterialContent_Low;","Content_Localised":"Material Content: Low","Remaining":100.0}
+{"timestamp":"2026-10-18T13:05:00Z","event":"MiningRefined","Type":"$painite_name;","Type_Localised":"Painite"}
+{"timestamp":"2026-10-18T13:05:30Z","event":"ProspectedAsteroid","Materials":[{"Name":"platinum","Name_Localised":"Platinum","Proportion":28.0},{"Name":"painite","Name_Localised":"Painite","Proportion":11.0}],"Content":"$AsteroidMaterialContent_High;","Content_Localised":"Material Content: High","Remaining":100.0}
+{"timestamp":"2026-10-18T13:06:00Z","event":"MiningRefined","Type":"$platinum_name;","Type_Localised":"Platinum"}
+{"timestamp":"2026-10-18T13:06:30Z","event":"ProspectedAsteroid","Materials":[{"Name":"bauxite","Name_Localised":"Bauxite","Proportion":14.0}],"Content":"$AsteroidMaterialContent_Medium;","Content_Localised":"Material Content: Medium","Remaining":100.0}
+{"timestamp":"2026-10-18T13:07:00Z","event":"MiningRefined","Type":"$platinum_name;","Type_Localised":"Platinum"}
+{"timestamp":"2026-10-18T13:07:30Z","event":"ProspectedAsteroid","Materials":[{"Name":"bauxite","Name_Localised":"Bauxite","Proportion":3.0}],"Content":"$AsteroidMaterialContent_Low;","Content_Localised":"Material Content: Low","Remaining":100.0}
+{"timestamp":"2026-10-18T13:08:00Z","event":"MiningRefined","Type":"$painite_name;","Type_Localised":"Painite"}
+{"timestamp":"2026-10-18T13:08:30Z","event":"ProspectedAsteroid","Materials":[{"Name":"platinum","Name_Localised":"Platinum","Proportion":15.0},{"Name":"bauxite","Name_Localised":"Bauxite","Proportion":8.0}],"Content":"$AsteroidMaterialContent_Medium;","Content_Localised":"Material Content: Medium","Remaining":100.0}
+{"timestamp":"2026-10-18T13:09:00Z","event":"MiningRefined","Type":"$bauxite_name;","Type_Localised":"Bauxite"}
+{"timestamp":"2026-10-18T13:09:30Z","event":"ProspectedAsteroid","Materials":[{"Name":"painite","Name_Localised":"Painite","Proportion":22.0},{"Name":"platinum","Name_Localised":"Platinum","Proportion":9.0}],"Content":"$AsteroidMaterialContent_High;","Content_Localised":"Material Content: High","Remaining":100.0}
+{"timestamp":"2026-10-18T13:10:00Z","event":"Cargo","Vessel":"Ship","Count":9,"Inventory":[{"Name":"drones","Name_Localised":"Limpet","Count":2,"Stolen":0},{"Name":"platinum","Name_Localised":"Platinum","Count":4,"Stolen":0},{"Name":"painite","Name_Localised":"Painite","Count":2,"Stolen":0},{"Name":"bauxite","Name_Localised":"Bauxite","Count":1,"Stolen":0}]}
+{"timestamp":"2026-10-18T13:10:30Z","event":"MarketSell","MarketID":9100000099,"Type":"bauxite","Type_Localised":"Bauxite","Count":1,"SellPrice":450,"TotalSale":450,"AvgPricePaid":0}
+{"timestamp":"2026-10-18T13:11:00Z","event":"Cargo","Vessel":"Ship","Count":8,"Inventory":[{"Name":"drones","Name_Localised":"Limpet","Count":2,"Stolen":0},{"Name":"platinum","Name_Localised":"Platinum","Count":4,"Stolen":0},{"Name":"painite","Name_Localised":"Painite","Count":2,"Stolen":0}]}
+{"timestamp":"2026-10-18T13:12:00Z","event":"ProspectedAsteroid","Materials":[{"Name":"bauxite","Name_Localised":"Bauxite","Proportion":5.0}],"Content":"$AsteroidMaterialContent_Low;","Content_Localised":"Material Content: Low","MotherlodeMaterial":"Monazite","MotherlodeMaterial_Localised":"Monazite","Remaining":100.0}

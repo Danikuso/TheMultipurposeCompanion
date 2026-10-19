@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { connect, topic } from './lib/ws.svelte';
   import { t } from './lib/i18n';
   import { modules } from './modules/registry';
@@ -9,9 +9,11 @@
   import Sidebar from './shell/Sidebar.svelte';
   import Toasts from './shell/Toasts.svelte';
   import TopBar from './shell/TopBar.svelte';
-  import { contextPanel, layouts } from './shell/layouts';
+  import { autoLayout, contextPanel, layouts, nextPin } from './shell/layouts';
 
-  let activeTab = $state('layout:exploration');
+  let pin = $state<string | null>(null);
+  let view = $state<string | null>(null);
+  let lastAuto: string | null = null;
   let manual = $state<string | null>(null);
   let manualBody = $state<string | null>(null);
   const liveModules = $derived(topic<{ id: string; relevance: string }[]>('core.modules') ?? []);
@@ -23,11 +25,25 @@
     matchingExoBody?.body_id != null ? { id: matchingExoBody.body_id }
       : { name: location?.body ?? matchingExoBody?.body ?? null },
   ]));
+  const auto = $derived(autoLayout(liveModules, null));
+  const activeTab = $derived(view ?? pin ?? `layout:${auto ?? 'exploration'}`);
   const activeLayout = $derived(layouts.find((layout) => activeTab === `layout:${layout.id}`));
   const layoutContext = $derived({ modules: liveModules, manual: manualBody === bodyIdentity ? manual : null });
   const visibleSlots = $derived(activeLayout?.slots.filter((slot) => !slot.when || slot.when(layoutContext)) ?? []);
   const selectedContext = $derived(contextPanel(liveModules, layoutContext.manual));
   const activeModule = $derived(modules.find((m) => m.id === activeTab) ?? modules[0]);
+
+  $effect(() => {
+    const a = auto;
+    const current = untrack(() => pin);
+    const next = nextPin(lastAuto, a, current);
+    lastAuto = a;
+    if (next !== current) pin = next;
+  });
+
+  function selectTab(id: string) {
+    if (id.startsWith('layout:')) { pin = id; view = null; } else view = id;
+  }
 
   $effect(() => {
     if (manualBody !== bodyIdentity) {
@@ -50,7 +66,7 @@
   <TopBar />
   <ImportProgress />
   <div class="app-body">
-    <Sidebar {activeTab} onSelect={(id) => (activeTab = id)} />
+    <Sidebar {activeTab} onSelect={selectTab} />
     <Grid>
       {#if activeTab === 'settings'}
         <Settings />
@@ -58,7 +74,7 @@
         {#each visibleSlots as slot (slot.id)}
           <div class="layout-slot" class:full={slot.span === 'full'}
             style:--slot-span={slot.span === 'full' ? 1 : slot.span} data-layout-slot={slot.id}>
-            {#if slot.span === 2}
+            {#if activeLayout.id === 'exploration' && slot.span === 2}
               <div class="context-controls" role="group" aria-label={t('layout-context')}>
                 <button type="button" data-testid="context-bodies" aria-pressed={selectedContext === 'exploration'}
                   onclick={() => selectContext('exploration')}>{t('layout-context-bodies')}</button>
