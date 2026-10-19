@@ -988,6 +988,319 @@ pub struct Repair {
     pub cost: Option<u64>,
 }
 
+// ---------------------------------------------------------------------------
+// Misiones, pasajeros y objetivos comunitarios.
+// Muchos campos son solo de documentación: todo es tolerante (nunca se pierde
+// una línea entera por un campo opcional mal formado).
+// ---------------------------------------------------------------------------
+
+/// Valor opcional tolerante: un tipo inesperado da `None`.
+fn lo<'de, D, T>(d: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: DeserializeOwned,
+{
+    let v = Json::deserialize(d)?;
+    Ok(serde_json::from_value(v).ok())
+}
+
+/// Valor tolerante con `Default` si el tipo no es el esperado.
+fn ld<'de, D, T>(d: D) -> Result<T, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: DeserializeOwned + Default,
+{
+    Ok(lo::<D, T>(d)?.unwrap_or_default())
+}
+
+/// Lista tolerante: si no es un array es vacía; los elementos mal formados se omiten.
+fn lv<'de, D, T>(d: D) -> Result<Vec<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: DeserializeOwned,
+{
+    Ok(match Json::deserialize(d)? {
+        Json::Array(a) => a
+            .into_iter()
+            .filter_map(|x| serde_json::from_value(x).ok())
+            .collect(),
+        _ => Vec::new(),
+    })
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MissionRef {
+    #[serde(rename = "MissionID", deserialize_with = "ld")]
+    pub mission_id: u64,
+    #[serde(deserialize_with = "ld")]
+    pub name: String,
+    #[serde(deserialize_with = "ld")]
+    pub passenger_mission: bool,
+    /// Segundos restantes hasta que caduca.
+    #[serde(deserialize_with = "lo")]
+    pub expires: Option<i64>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MissionsList {
+    #[serde(deserialize_with = "lv")]
+    pub active: Vec<MissionRef>,
+    #[serde(deserialize_with = "lv")]
+    pub failed: Vec<MissionRef>,
+    #[serde(deserialize_with = "lv")]
+    pub complete: Vec<MissionRef>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MissionAccepted {
+    #[serde(rename = "MissionID", deserialize_with = "ld")]
+    pub mission_id: u64,
+    #[serde(deserialize_with = "ld")]
+    pub name: String,
+    #[serde(rename = "LocalisedName", deserialize_with = "lo")]
+    pub localised_name: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub faction: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub commodity: Option<String>,
+    #[serde(rename = "Commodity_Localised", deserialize_with = "lo")]
+    pub commodity_localised: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub count: Option<u32>,
+    #[serde(deserialize_with = "lo")]
+    pub target_faction: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub kill_count: Option<u32>,
+    #[serde(deserialize_with = "lo")]
+    pub target_type: Option<String>,
+    #[serde(rename = "TargetType_Localised", deserialize_with = "lo")]
+    pub target_type_localised: Option<String>,
+    /// Puede contener varios destinos; ver [`split_multi_destination`].
+    #[serde(deserialize_with = "lo")]
+    pub destination_system: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub destination_station: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub destination_settlement: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub expiry: Option<DateTime<Utc>>,
+    #[serde(deserialize_with = "lo")]
+    pub wing: Option<bool>,
+    /// Token (`"+"`, `"++"`...), no un número.
+    #[serde(deserialize_with = "lo")]
+    pub influence: Option<String>,
+    /// Token (`"+"`, `"++"`...), no un número.
+    #[serde(deserialize_with = "lo")]
+    pub reputation: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub reward: Option<u64>,
+    #[serde(deserialize_with = "lo")]
+    pub donation: Option<u64>,
+    #[serde(deserialize_with = "lo")]
+    pub passenger_count: Option<u32>,
+    #[serde(rename = "PassengerVIPs", deserialize_with = "lo")]
+    pub passenger_vips: Option<bool>,
+    #[serde(deserialize_with = "lo")]
+    pub passenger_wanted: Option<bool>,
+    #[serde(deserialize_with = "lo")]
+    pub passenger_type: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MaterialReward {
+    #[serde(deserialize_with = "ld")]
+    pub name: String,
+    #[serde(rename = "Name_Localised", deserialize_with = "lo")]
+    pub name_localised: Option<String>,
+    #[serde(deserialize_with = "ld")]
+    pub count: u32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct InfluenceEffect {
+    #[serde(deserialize_with = "lo")]
+    pub system_address: Option<u64>,
+    /// Token (`"+"`, `"UpGood"`...), no un número.
+    #[serde(deserialize_with = "ld")]
+    pub influence: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct FactionEffect {
+    #[serde(deserialize_with = "ld")]
+    pub faction: String,
+    #[serde(deserialize_with = "lv")]
+    pub influence: Vec<InfluenceEffect>,
+    #[serde(deserialize_with = "lo")]
+    pub reputation: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MissionCompleted {
+    #[serde(rename = "MissionID", deserialize_with = "ld")]
+    pub mission_id: u64,
+    /// Puede llevar el sufijo `_name`.
+    #[serde(deserialize_with = "ld")]
+    pub name: String,
+    #[serde(deserialize_with = "lo")]
+    pub faction: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub reward: Option<u64>,
+    #[serde(deserialize_with = "lo")]
+    pub donation: Option<u64>,
+    #[serde(deserialize_with = "lv")]
+    pub materials_reward: Vec<MaterialReward>,
+    #[serde(deserialize_with = "lv")]
+    pub faction_effects: Vec<FactionEffect>,
+}
+
+/// Forma común de `MissionFailed` y `MissionAbandoned`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MissionEnded {
+    #[serde(rename = "MissionID", deserialize_with = "ld")]
+    pub mission_id: u64,
+    #[serde(deserialize_with = "ld")]
+    pub name: String,
+    #[serde(deserialize_with = "lo")]
+    pub fine: Option<u64>,
+}
+
+pub type MissionFailed = MissionEnded;
+pub type MissionAbandoned = MissionEnded;
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MissionRedirected {
+    #[serde(rename = "MissionID", deserialize_with = "ld")]
+    pub mission_id: u64,
+    #[serde(deserialize_with = "ld")]
+    pub name: String,
+    #[serde(deserialize_with = "lo")]
+    pub new_destination_system: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub new_destination_station: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub old_destination_system: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub old_destination_station: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct CargoDepot {
+    #[serde(rename = "MissionID", deserialize_with = "ld")]
+    pub mission_id: u64,
+    #[serde(deserialize_with = "ld")]
+    pub update_type: String,
+    #[serde(deserialize_with = "lo")]
+    pub cargo_type: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub count: Option<u32>,
+    #[serde(deserialize_with = "ld")]
+    pub items_collected: u32,
+    #[serde(deserialize_with = "ld")]
+    pub items_delivered: u32,
+    #[serde(deserialize_with = "ld")]
+    pub total_items_to_deliver: u32,
+    #[serde(deserialize_with = "lo")]
+    pub progress: Option<f64>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct PassengerEntry {
+    #[serde(rename = "MissionID", deserialize_with = "ld")]
+    pub mission_id: u64,
+    #[serde(rename = "Type", deserialize_with = "ld")]
+    pub type_: String,
+    #[serde(rename = "VIP", deserialize_with = "ld")]
+    pub vip: bool,
+    #[serde(deserialize_with = "ld")]
+    pub wanted: bool,
+    #[serde(deserialize_with = "ld")]
+    pub count: u32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct Passengers {
+    #[serde(deserialize_with = "lv")]
+    pub manifest: Vec<PassengerEntry>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct CgEntry {
+    #[serde(rename = "CGID", deserialize_with = "ld")]
+    pub cgid: u64,
+    #[serde(deserialize_with = "ld")]
+    pub title: String,
+    #[serde(deserialize_with = "lo")]
+    pub system_name: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub market_name: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub expiry: Option<DateTime<Utc>>,
+    #[serde(deserialize_with = "ld")]
+    pub is_complete: bool,
+    #[serde(deserialize_with = "lo")]
+    pub current_total: Option<u64>,
+    #[serde(deserialize_with = "lo")]
+    pub player_contribution: Option<u64>,
+    #[serde(deserialize_with = "lo")]
+    pub num_contributors: Option<u64>,
+    #[serde(deserialize_with = "lo")]
+    pub player_percentile_band: Option<u32>,
+    #[serde(deserialize_with = "lo")]
+    pub tier_reached: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub bonus: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct CommunityGoal {
+    #[serde(deserialize_with = "lv")]
+    pub current_goals: Vec<CgEntry>,
+}
+
+/// Separa el `DestinationSystem` de una misión multidestino (turismo).
+///
+/// Los destinos van unidos por marcadores `$MISSIONUTIL_MULTIPLE_<X>;` (se
+/// reconocen por patrón, sin partir por espacios, porque los nombres los llevan).
+/// Sin marcadores devuelve `vec![raw]`; cadena vacía, `vec![]`.
+pub fn split_multi_destination(raw: &str) -> Vec<String> {
+    const PREFIX: &str = "$MISSIONUTIL_MULTIPLE_";
+    let raw = raw.trim();
+    let mut out = Vec::new();
+    let mut rest = raw;
+    while let Some(i) = rest.find(PREFIX) {
+        let after = &rest[i + PREFIX.len()..];
+        let tail = after.trim_start_matches(|c: char| c.is_ascii_uppercase() || c == '_');
+        if tail.len() == after.len() || !tail.starts_with(';') {
+            break; // marcador incompleto: el resto es texto normal
+        }
+        let seg = rest[..i].trim();
+        if !seg.is_empty() {
+            out.push(seg.to_string());
+        }
+        rest = &tail[1..];
+    }
+    let last = rest.trim();
+    if !last.is_empty() {
+        out.push(last.to_string());
+    }
+    out
+}
+
 /// Normaliza el nombre de una mercancía: minúsculas, sin `$`, `_name;` ni espacios.
 pub fn commodity_key(raw: &str) -> String {
     let lower = raw.trim().to_lowercase();
@@ -1072,6 +1385,15 @@ pub enum EventKind {
     EjectCargo(EjectCargo),
     MarketSell(MarketSell),
     MarketBuy(MarketBuy),
+    Missions(Box<MissionsList>),
+    MissionAccepted(Box<MissionAccepted>),
+    MissionCompleted(Box<MissionCompleted>),
+    MissionFailed(MissionFailed),
+    MissionAbandoned(MissionAbandoned),
+    MissionRedirected(MissionRedirected),
+    CargoDepot(CargoDepot),
+    Passengers(Passengers),
+    CommunityGoal(Box<CommunityGoal>),
     RepairAll(RepairAll),
     Repair(Repair),
     Other,
@@ -1165,6 +1487,21 @@ fn classify(name: &str, raw: &RawValue) -> EventKind {
         "EjectCargo" => de(name, raw).map(EventKind::EjectCargo),
         "MarketSell" => de(name, raw).map(EventKind::MarketSell),
         "MarketBuy" => de(name, raw).map(EventKind::MarketBuy),
+        "Missions" => de::<MissionsList>(name, raw).map(|m| EventKind::Missions(Box::new(m))),
+        "MissionAccepted" => {
+            de::<MissionAccepted>(name, raw).map(|m| EventKind::MissionAccepted(Box::new(m)))
+        }
+        "MissionCompleted" => {
+            de::<MissionCompleted>(name, raw).map(|m| EventKind::MissionCompleted(Box::new(m)))
+        }
+        "MissionFailed" => de(name, raw).map(EventKind::MissionFailed),
+        "MissionAbandoned" => de(name, raw).map(EventKind::MissionAbandoned),
+        "MissionRedirected" => de(name, raw).map(EventKind::MissionRedirected),
+        "CargoDepot" => de(name, raw).map(EventKind::CargoDepot),
+        "Passengers" => de(name, raw).map(EventKind::Passengers),
+        "CommunityGoal" => {
+            de::<CommunityGoal>(name, raw).map(|c| EventKind::CommunityGoal(Box::new(c)))
+        }
         "RepairAll" => de(name, raw).map(EventKind::RepairAll),
         "Repair" => de(name, raw).map(EventKind::Repair),
         _ => None,
@@ -2101,5 +2438,126 @@ mod tests {
         assert_eq!(inv[0].stolen_count(), 0);
         assert!(!inv[1].is_mission());
         assert_eq!(inv[1].stolen_count(), 3);
+    }
+
+    #[test]
+    fn missions_event_parses_active_with_expires() {
+        let EventKind::Missions(m) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Missions","Active":[{"MissionID":65000001,"Name":"Mission_Delivery_name","PassengerMission":false,"Expires":5400}],"Failed":[],"Complete":[]}"#,
+        ) else {
+            panic!("Missions")
+        };
+        assert_eq!(m.active[0].mission_id, 65000001);
+        assert_eq!(m.active[0].expires, Some(5400));
+        assert!(m.failed.is_empty());
+    }
+
+    #[test]
+    fn mission_accepted_massacre_parses() {
+        let EventKind::MissionAccepted(m) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MissionAccepted","MissionID":65000002,"Name":"Mission_Massacre","LocalisedName":"Kill Alpha pirates","Faction":"Beta Inc","TargetFaction":"Alpha Corp","KillCount":24,"TargetType":"$MissionUtil_FactionTag_Pirate;","TargetType_Localised":"Pirates","DestinationSystem":"Test System","Reward":4000000,"Wing":false,"Influence":"++","Reputation":"++","Expiry":"2026-10-20T12:00:00Z"}"#,
+        ) else {
+            panic!("MissionAccepted")
+        };
+        assert_eq!(m.kill_count, Some(24));
+        assert_eq!(m.reward, Some(4000000));
+        assert_eq!(m.target_faction.as_deref(), Some("Alpha Corp"));
+        assert_eq!(m.localised_name.as_deref(), Some("Kill Alpha pirates"));
+        assert_eq!(m.influence.as_deref(), Some("++"));
+        assert!(m.expiry.is_some());
+        assert_eq!(m.count, None);
+    }
+
+    #[test]
+    fn mission_accepted_tolerates_bad_optional_fields() {
+        let EventKind::MissionAccepted(m) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MissionAccepted","MissionID":1,"Name":"Mission_X","Reward":"oops","Expiry":"not a date","Count":-3}"#,
+        ) else {
+            panic!("MissionAccepted")
+        };
+        assert_eq!(m.mission_id, 1);
+        assert_eq!(m.reward, None);
+        assert_eq!(m.expiry, None);
+        assert_eq!(m.count, None);
+    }
+
+    #[test]
+    fn mission_completed_with_materials_and_effects() {
+        let EventKind::MissionCompleted(m) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MissionCompleted","MissionID":65000002,"Name":"Mission_Massacre_name","Faction":"Beta Inc","Reward":4000000,"MaterialsReward":[{"Name":"tellurium","Count":2}],"FactionEffects":[{"Faction":"A","Influence":[{"SystemAddress":1,"Influence":"+++"}],"Reputation":"++"}]}"#,
+        ) else {
+            panic!("MissionCompleted")
+        };
+        assert_eq!(m.materials_reward[0].count, 2);
+        assert_eq!(m.faction_effects[0].influence[0].influence, "+++");
+        assert_eq!(m.faction_effects[0].reputation.as_deref(), Some("++"));
+    }
+
+    #[test]
+    fn redirected_and_cargo_depot_parse() {
+        let EventKind::MissionRedirected(r) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MissionRedirected","MissionID":5,"Name":"Mission_X","NewDestinationSystem":"Sol","NewDestinationStation":"Test Port","OldDestinationSystem":"Lave","OldDestinationStation":"Old Port"}"#,
+        ) else {
+            panic!("MissionRedirected")
+        };
+        assert_eq!(r.new_destination_system.as_deref(), Some("Sol"));
+        let EventKind::CargoDepot(c) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"CargoDepot","MissionID":5,"UpdateType":"Deliver","CargoType":"Gold","Count":30,"ItemsCollected":0,"ItemsDelivered":30,"TotalItemsToDeliver":60,"Progress":0.5}"#,
+        ) else {
+            panic!("CargoDepot")
+        };
+        assert_eq!(c.update_type, "Deliver");
+        assert_eq!(c.items_delivered, 30);
+        assert_eq!(c.total_items_to_deliver, 60);
+        assert_eq!(c.progress, Some(0.5));
+        assert!(matches!(
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MissionFailed","MissionID":5,"Name":"Mission_X","Fine":1000}"#),
+            EventKind::MissionFailed(f) if f.fine == Some(1000)
+        ));
+        assert!(matches!(
+            ev(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MissionAbandoned","MissionID":5,"Name":"Mission_X"}"#),
+            EventKind::MissionAbandoned(f) if f.mission_id == 5 && f.fine.is_none()
+        ));
+    }
+
+    #[test]
+    fn passengers_manifest_parses_vip_wanted() {
+        let EventKind::Passengers(p) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Passengers","Manifest":[{"MissionID":1,"Type":"Tourist","VIP":true,"Wanted":false,"Count":4}]}"#,
+        ) else {
+            panic!("Passengers")
+        };
+        assert!(p.manifest[0].vip);
+        assert!(!p.manifest[0].wanted);
+        assert_eq!(p.manifest[0].count, 4);
+        assert_eq!(p.manifest[0].type_, "Tourist");
+    }
+
+    #[test]
+    fn community_goal_parses() {
+        let EventKind::CommunityGoal(c) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"CommunityGoal","CurrentGoals":[{"CGID":750,"Title":"Test Goal","SystemName":"Test System","MarketName":"Test Port","Expiry":"2026-10-25T00:00:00Z","IsComplete":false,"CurrentTotal":5000,"PlayerContribution":1200,"NumContributors":300,"PlayerPercentileBand":25,"TierReached":"Tier 2","Bonus":15000000}]}"#,
+        ) else {
+            panic!("CommunityGoal")
+        };
+        let g = &c.current_goals[0];
+        assert_eq!(g.cgid, 750);
+        assert_eq!(g.player_contribution, Some(1200));
+        assert_eq!(g.player_percentile_band, Some(25));
+        assert_eq!(g.bonus, Some(15000000));
+        assert!(!g.is_complete);
+    }
+
+    #[test]
+    fn split_multi_destination_three_stops() {
+        assert_eq!(
+            split_multi_destination(
+                "Sol$MISSIONUTIL_MULTIPLE_INNER_SEPARATOR;Lave$MISSIONUTIL_MULTIPLE_FINAL_SEPARATOR;Leesti"
+            ),
+            vec!["Sol", "Lave", "Leesti"]
+        );
+        assert_eq!(split_multi_destination("Sol"), vec!["Sol"]);
+        assert_eq!(split_multi_destination("New Yembo"), vec!["New Yembo"]);
+        assert!(split_multi_destination("").is_empty());
     }
 }
