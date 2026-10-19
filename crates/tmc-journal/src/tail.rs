@@ -11,82 +11,152 @@ pub struct LineTailer {
     line_no: u64,
     read_pos: u64,
     pending: Vec<u8>,
+    #[cfg(debug_assertions)]
+    unchanged_polls: u64,
 }
 
 impl LineTailer {
     pub fn open(path: &Path, offset: u64) -> io::Result<Self> {
-        let mut options = OpenOptions::new();
-        options.read(true);
-        #[cfg(windows)]
-        {
-            use std::os::windows::fs::OpenOptionsExt;
-            const FILE_SHARE_READ: u32 = 1;
-            const FILE_SHARE_WRITE: u32 = 2;
-            const FILE_SHARE_DELETE: u32 = 4;
-            options.share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE);
-        }
-        let mut file = options.open(path)?;
-        let offset = if offset <= file.metadata()?.len() {
-            offset
-        } else {
-            0
-        };
-        let mut line_no = 0;
-        let mut prefix = (&mut file).take(offset);
-        let mut buffer = [0; 8192];
-        loop {
-            let count = prefix.read(&mut buffer)?;
-            if count == 0 {
-                break;
+        let result: io::Result<Self> = (|| {
+            let mut options = OpenOptions::new();
+            options.read(true);
+            #[cfg(windows)]
+            {
+                use std::os::windows::fs::OpenOptionsExt;
+                const FILE_SHARE_READ: u32 = 1;
+                const FILE_SHARE_WRITE: u32 = 2;
+                const FILE_SHARE_DELETE: u32 = 4;
+                options.share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE);
             }
-            line_no += buffer[..count].iter().filter(|&&b| b == b'\n').count() as u64;
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "journal.tail.open",
+                tmc_model::diagnostics::json!({"file":tmc_model::diagnostics::source_file(path),"requested_offset":offset})
+            );
+            let mut file = options.open(path)?;
+            #[cfg(debug_assertions)]
+            let requested_offset = offset;
+            let offset = if offset <= file.metadata()?.len() {
+                offset
+            } else {
+                0
+            };
+            let mut line_no = 0;
+            let mut prefix = (&mut file).take(offset);
+            let mut buffer = [0; 8192];
+            loop {
+                let count = prefix.read(&mut buffer)?;
+                if count == 0 {
+                    break;
+                }
+                line_no += buffer[..count].iter().filter(|&&b| b == b'\n').count() as u64;
+            }
+            file.seek(SeekFrom::Start(offset))?;
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "journal.tail.opened",
+                tmc_model::diagnostics::json!({"file":tmc_model::diagnostics::source_file(path),"requested_offset":requested_offset,"accepted_offset":offset,"line":line_no})
+            );
+            Ok(Self {
+                path: path.to_path_buf(),
+                file,
+                offset,
+                line_no,
+                read_pos: offset,
+                pending: Vec::new(),
+                #[cfg(debug_assertions)]
+                unchanged_polls: 0,
+            })
+        })();
+        #[cfg(debug_assertions)]
+        if let Err(error) = &result {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "journal.tail.open_failed",
+                tmc_model::diagnostics::json!({"failure_class":tmc_model::diagnostics::io_class(error),"requested_offset":offset})
+            );
         }
-        file.seek(SeekFrom::Start(offset))?;
-        Ok(Self {
-            path: path.to_path_buf(),
-            file,
-            offset,
-            line_no,
-            read_pos: offset,
-            pending: Vec::new(),
-        })
+        result
     }
 
     pub fn read_new_lines(&mut self) -> io::Result<Vec<(u64, String)>> {
-        if self.file.metadata()?.len() < self.read_pos {
-            self.file.seek(SeekFrom::Start(0))?;
-            self.offset = 0;
-            self.line_no = 0;
-            self.read_pos = 0;
-            self.pending.clear();
-        }
-        let read = self.file.read_to_end(&mut self.pending);
-        // Incluso un error puede haber añadido bytes: conservamos buffer y cursor para reintentar.
-        self.read_pos = self.file.stream_position()?;
-        read?;
-        let mut lines = Vec::new();
-        let mut start = 0;
-        for (end, &byte) in self.pending.iter().enumerate() {
-            if byte != b'\n' {
-                continue;
+        let result: io::Result<Vec<(u64, String)>> = (|| {
+            if self.file.metadata()?.len() < self.read_pos {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::State,
+                    "journal.tail.truncated",
+                    tmc_model::diagnostics::json!({"file":tmc_model::diagnostics::source_file(&self.path),"read_pos":self.read_pos,"confirmed_offset":self.offset,"pending_bytes":self.pending.len()})
+                );
+                self.file.seek(SeekFrom::Start(0))?;
+                self.offset = 0;
+                self.line_no = 0;
+                self.read_pos = 0;
+                self.pending.clear();
             }
-            let mut line = &self.pending[start..end];
-            if self.offset == 0 && start == 0 {
-                let nuls = line.iter().take_while(|&&b| b == 0).count();
-                line = &line[nuls..];
+            #[cfg(debug_assertions)]
+            let previous_read_pos = self.read_pos;
+            let read = self.file.read_to_end(&mut self.pending);
+            // Incluso un error puede haber añadido bytes: conservamos buffer y cursor para reintentar.
+            self.read_pos = self.file.stream_position()?;
+            read?;
+            let mut lines = Vec::new();
+            let mut start = 0;
+            for (end, &byte) in self.pending.iter().enumerate() {
+                if byte != b'\n' {
+                    continue;
+                }
+                let mut line = &self.pending[start..end];
+                if self.offset == 0 && start == 0 {
+                    let nuls = line.iter().take_while(|&&b| b == 0).count();
+                    line = &line[nuls..];
+                }
+                if let Some(without_cr) = line.strip_suffix(b"\r") {
+                    line = without_cr;
+                }
+                self.line_no += 1;
+                lines.push((self.line_no, String::from_utf8_lossy(line).into_owned()));
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::State,
+                    "journal.tail.line",
+                    tmc_model::diagnostics::json!({"file":tmc_model::diagnostics::source_file(&self.path),"line":self.line_no,"start_offset":self.offset + start as u64,"end_offset":self.offset + end as u64 + 1,"bytes":end-start+1})
+                );
+                start = end + 1;
             }
-            if let Some(without_cr) = line.strip_suffix(b"\r") {
-                line = without_cr;
+            self.offset += start as u64;
+            if start > 0 {
+                self.pending = self.pending.split_off(start);
             }
-            self.line_no += 1;
-            lines.push((self.line_no, String::from_utf8_lossy(line).into_owned()));
-            start = end + 1;
+            #[cfg(debug_assertions)]
+            {
+                if start > 0 || self.read_pos != previous_read_pos {
+                    tmc_model::diagnostic!(
+                        tmc_model::diagnostics::DiagnosticContext::State,
+                        "journal.tail.read",
+                        tmc_model::diagnostics::json!({"file":tmc_model::diagnostics::source_file(&self.path),"read_pos":self.read_pos,"confirmed_offset":self.offset,"pending_bytes":self.pending.len(),"lines":lines.len(),"unchanged_polls":self.unchanged_polls})
+                    );
+                    self.unchanged_polls = 0;
+                } else {
+                    self.unchanged_polls = self.unchanged_polls.saturating_add(1);
+                    if self.unchanged_polls == 1 || self.unchanged_polls.is_multiple_of(1024) {
+                        tmc_model::diagnostic!(
+                            tmc_model::diagnostics::DiagnosticContext::State,
+                            "journal.tail.unchanged",
+                            tmc_model::diagnostics::json!({"unchanged_polls":self.unchanged_polls,"read_pos":self.read_pos,"confirmed_offset":self.offset,"pending_bytes":self.pending.len()})
+                        );
+                    }
+                }
+            }
+            Ok(lines)
+        })();
+        #[cfg(debug_assertions)]
+        if let Err(error) = &result {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "journal.tail.read_failed",
+                tmc_model::diagnostics::json!({"failure_class":tmc_model::diagnostics::io_class(error),"read_pos":self.read_pos,"confirmed_offset":self.offset,"pending_bytes":self.pending.len()})
+            );
         }
-        self.offset += start as u64;
-        if start > 0 {
-            self.pending = self.pending.split_off(start);
-        }
-        Ok(lines)
+        result
     }
 
     /// Offset de bytes tras el último LF entregado. Excluye la cola parcial para poder reabrir.
@@ -101,6 +171,17 @@ impl LineTailer {
 
     pub fn path(&self) -> &Path {
         &self.path
+    }
+}
+
+#[cfg(debug_assertions)]
+impl Drop for LineTailer {
+    fn drop(&mut self) {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "journal.tail.closed",
+            tmc_model::diagnostics::json!({"file":tmc_model::diagnostics::source_file(&self.path),"confirmed_offset":self.offset,"read_pos":self.read_pos,"pending_bytes":self.pending.len()})
+        );
     }
 }
 

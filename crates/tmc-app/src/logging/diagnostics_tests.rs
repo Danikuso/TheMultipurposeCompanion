@@ -429,3 +429,449 @@ fn producer_entry_racing_guard_close_never_loses_an_accepted_event() {
         assert_eq!(shared.incomplete.load(Ordering::Acquire), 0);
     }
 }
+
+fn capture_sources(f: impl FnOnce()) -> Vec<Value> {
+    let dir = tempfile::tempdir().unwrap();
+    let (layer, guard) = start_writer(dir.path().to_owned(), Limits::default()).unwrap();
+    let subscriber = tracing_subscriber::registry().with(layer.with_filter(
+        tracing_subscriber::filter::filter_fn(|m| m.target() == TARGET),
+    ));
+    tracing::subscriber::with_default(subscriber, f);
+    drop(guard);
+    read_records(dir.path())
+}
+
+fn payload_for<'a>(records: &'a [Value], code: &str) -> &'a Value {
+    &records
+        .iter()
+        .find(|r| r["code"] == code)
+        .unwrap_or_else(|| panic!("missing {code}"))["payload"]
+}
+
+#[test]
+fn d3_tail_reports_real_byte_offsets_partial_lossy_and_truncation() {
+    use std::io::Write;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("Journal.2026-10-20T010203.01.log");
+    // NUL prefix, UTF-8 BOM, CRLF and invalid UTF-8 must not be recomputed as String.len().
+    fs::write(&path, b"\0\xef\xbb\xbfX\xff\r\npar").unwrap();
+    let records = capture_sources(|| {
+        let mut tail = tmc_journal::LineTailer::open(&path, 99).unwrap();
+        assert_eq!(tail.read_new_lines().unwrap().len(), 1);
+        assert_eq!(tail.offset(), 8);
+        fs::OpenOptions::new()
+            .append(true)
+            .open(&path)
+            .unwrap()
+            .write_all(b"tial\n")
+            .unwrap();
+        assert_eq!(tail.read_new_lines().unwrap(), vec![(2, "partial".into())]);
+        fs::write(&path, b"n\n").unwrap();
+        assert_eq!(tail.read_new_lines().unwrap(), vec![(1, "n".into())]);
+    });
+    assert_eq!(
+        payload_for(&records, "journal.tail.opened")["requested_offset"],
+        99
+    );
+    let first = payload_for(&records, "journal.tail.read");
+    assert_eq!(first["read_pos"], 11);
+    assert_eq!(first["confirmed_offset"], 8);
+    assert_eq!(first["pending_bytes"], 3);
+    assert_eq!(payload_for(&records, "journal.tail.line")["end_offset"], 8);
+    assert_eq!(
+        payload_for(&records, "journal.tail.truncated")["read_pos"],
+        16
+    );
+    assert_eq!(
+        payload_for(&records, "journal.tail.opened")["file"],
+        "Journal.2026-10-20T010203.01.log"
+    );
+}
+
+#[test]
+fn d3_status_companion_paths_and_parse_text_stay_private() {
+    let dir = tempfile::tempdir().unwrap();
+    let private = dir.path().join("CANARY-PERSONAL-PATH");
+    fs::create_dir(&private).unwrap();
+    let path = private.join("Status.json");
+    let records = capture_sources(|| {
+        let mut poller = tmc_journal::StatusPoller::new(path.clone());
+        assert!(poller.poll().is_none());
+        fs::write(
+            &path,
+            r#"{"timestamp":"2026-10-20T01:00:00Z","event":"Status","Flags":1}"#,
+        )
+        .unwrap();
+        assert!(poller.poll().is_some());
+        assert!(poller.poll().is_none());
+        fs::write(
+            private.join("Cargo.json"),
+            r#"{"Count":"CANARY-PARSE-TEXT"}"#,
+        )
+        .unwrap();
+        assert!(
+            tmc_journal::read_companion(&private, tmc_model::companion::CompanionKind::Cargo)
+                .is_none()
+        );
+    });
+    assert_eq!(payload_for(&records, "source.status.accepted")["Flags"], 1);
+    payload_for(&records, "source.status.metadata_unchanged");
+    payload_for(&records, "source.status.metadata_failed");
+    assert_eq!(
+        payload_for(&records, "source.companion.exhausted")["attempts"],
+        10
+    );
+    assert!(!serde_json::to_string(&records).unwrap().contains("CANARY"));
+}
+
+#[test]
+fn d3_sql_reports_types_and_outcomes_without_positional_values_or_error_text() {
+    let records = capture_sources(|| {
+        let store = tmc_store::Store::open_in_memory().unwrap();
+        let result = store
+            .query_json(
+                "SELECT ?1 AS cmdr, ?2 AS json",
+                &[
+                    json!("CANARY-CMDR"),
+                    json!(r#"{"SystemName":"Sol","Message":"CANARY-CHAT"}"#),
+                ],
+            )
+            .unwrap();
+        assert_eq!(result[0][0], "CANARY-CMDR");
+        assert!(
+            store
+                .exec_json("SELECT ?1", &[json!({"secret":"CANARY-UNSUPPORTED"})])
+                .is_err()
+        );
+        assert!(
+            store
+                .query_json("SELECT 'CANARY-INTERPOLATED' FROM absent", &[])
+                .is_err()
+        );
+        store.kv_set("CANARY-KEY", "CANARY-VALUE");
+        assert_eq!(store.kv_get("CANARY-KEY").as_deref(), Some("CANARY-VALUE"));
+        store
+            .api_cache_put("CANARY-CACHE", r#"{"Message":"CANARY-BODY"}"#, Utc::now())
+            .unwrap();
+        assert!(store.api_cache_get("CANARY-CACHE").unwrap().is_some());
+    });
+    assert_eq!(payload_for(&records, "store.query.completed")["rows"], 1);
+    assert_eq!(
+        payload_for(&records, "store.exec.failed")["failure_class"],
+        "unsupported"
+    );
+    assert_eq!(
+        payload_for(&records, "store.query.failed")["failure_class"],
+        "sqlite"
+    );
+    payload_for(&records, "store.cache.hit");
+    payload_for(&records, "store.kv.get");
+    assert!(!serde_json::to_string(&records).unwrap().contains("CANARY"));
+}
+
+#[test]
+fn d3_import_checkpoints_deduplicate_and_redact_embedded_events() {
+    let dir = tempfile::tempdir().unwrap();
+    let name = "Journal.2026-10-20T010203.01.log";
+    fs::write(dir.path().join(name),concat!(
+        "{\"timestamp\":\"2026-10-20T01:00:00Z\",\"event\":\"Scan\",\"BodyName\":\"Sol A 1\",\"FID\":\"CANARY-FID\",\"MassEM\":42}\r\n",
+        "{\"event\":\"CANARY-BAD-EVENT\"}\n"
+    )).unwrap();
+    let records = capture_sources(|| {
+        let store = tmc_store::Store::open_in_memory().unwrap();
+        let opts = tmc_store::ImportOptions {
+            throttle: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+        };
+        assert_eq!(
+            tmc_store::import_history(&store, dir.path(), &opts, &mut |_, _| {})
+                .unwrap()
+                .events,
+            1
+        );
+        assert_eq!(
+            tmc_store::import_history(&store, dir.path(), &opts, &mut |_, _| {})
+                .unwrap()
+                .events,
+            0
+        );
+    });
+    assert_eq!(payload_for(&records, "store.event.inserted")["line"], 1);
+    assert_eq!(
+        payload_for(&records, "store.import.checkpoint")["offset"],
+        fs::metadata(dir.path().join(name)).unwrap().len()
+    );
+    assert_eq!(
+        payload_for(&records, "store.event.payload")["BodyName"],
+        "Sol A 1"
+    );
+    payload_for(&records, "store.import.invalid_line");
+    assert!(!serde_json::to_string(&records).unwrap().contains("CANARY"));
+}
+
+#[test]
+fn d3_config_bootstrap_is_retained_until_logger_and_consumed_once() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("config.toml");
+    fs::write(
+        &path,
+        "language = [\"CANARY-CONFIG\"]\nserver.lan_token = \"CANARY-TOKEN\"",
+    )
+    .unwrap();
+    let cfg = crate::Config::load_from_or_default(&path);
+    assert_eq!(cfg.language, "es");
+    let records = capture_sources(|| {
+        let guards = crate::logging::LoggingGuards {
+            general: None,
+            diagnostics: None,
+        };
+        guards.application_started();
+        guards.application_started();
+    });
+    assert_eq!(
+        records
+            .iter()
+            .filter(|r| r["code"] == "config.bootstrap")
+            .count(),
+        1
+    );
+    let report = payload_for(&records, "config.bootstrap");
+    assert_eq!(report["fallback"], true);
+    assert_eq!(report["parse_failed"], true);
+    assert_eq!(report["backup_succeeded"], true);
+    assert_eq!(report["language"], "es");
+    assert!(!serde_json::to_string(&records).unwrap().contains("CANARY"));
+}
+
+#[test]
+fn d3_migrations_query_filters_and_file_boundaries_are_observable_and_private() {
+    let dir = tempfile::tempdir().unwrap();
+    let records = capture_sources(|| {
+        let store = tmc_store::Store::open_in_memory().unwrap();
+        store
+            .apply_migrations(&[tmc_store::Migration {
+                id: "CANARY-MIGRATION-ID",
+                sql: "CREATE TABLE sample (value TEXT)",
+            }])
+            .unwrap();
+        store
+            .apply_migrations(&[tmc_store::Migration {
+                id: "CANARY-MIGRATION-ID",
+                sql: "SELECT 1",
+            }])
+            .unwrap();
+        assert!(
+            store
+                .apply_migrations(&[tmc_store::Migration {
+                    id: "CANARY-BAD-ID",
+                    sql: "INVALID CANARY-SQL"
+                }])
+                .is_err()
+        );
+        assert!(
+            store
+                .query_events(&tmc_store::EventQuery {
+                    cmdr: Some("CANARY-CMDR".into()),
+                    name: Some("Scan".into()),
+                    limit: 9999,
+                    ..Default::default()
+                })
+                .unwrap()
+                .is_empty()
+        );
+        assert!(tmc_journal::resolve_journal_dir(Some(&dir.path().join("CANARY-PATH"))).is_err());
+        assert!(tmc_journal::read_hud_theme(Some(&dir.path().join("CANARY-PATH"))).is_default);
+        fs::write(dir.path().join("Journal.2026-10-20T010203.01.log"), "").unwrap();
+        assert_eq!(tmc_journal::list_journals(dir.path()).unwrap().len(), 1);
+    });
+    payload_for(&records, "store.migration.applied");
+    payload_for(&records, "store.migration.skipped");
+    assert_eq!(
+        payload_for(&records, "store.migration.failed")["failure_class"],
+        "sqlite"
+    );
+    assert_eq!(
+        payload_for(&records, "store.events.query_started")["limit"],
+        1000
+    );
+    assert_eq!(
+        payload_for(&records, "store.events.query_completed")["rows"],
+        0
+    );
+    payload_for(&records, "source.locate.configured_invalid");
+    payload_for(&records, "source.hud.read_failed");
+    assert_eq!(payload_for(&records, "source.files.listed")["files"], 1);
+    assert!(!serde_json::to_string(&records).unwrap().contains("CANARY"));
+}
+
+#[test]
+fn d3_unknown_filename_and_typed_parse_errors_do_not_leak_canaries() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("CANARY-FILE-NAME.log");
+    fs::write(&path, "x\n").unwrap();
+    let records = capture_sources(|| {
+        tmc_journal::LineTailer::open(&path, 0)
+            .unwrap()
+            .read_new_lines()
+            .unwrap();
+        let parsed = tmc_model::events::parse_line(
+            r#"{"timestamp":"2026-10-20T01:00:00Z","event":"Rank","Combat":"CANARY-ERROR-TEXT"}"#,
+        )
+        .unwrap();
+        assert_eq!(parsed.kind, tmc_model::events::EventKind::Other);
+        assert!(
+            tmc_model::events::parse_line(r#"{"timestamp":"CANARY-PARSE-TEXT","event":"Scan"}"#)
+                .is_err()
+        );
+    });
+    assert_eq!(
+        payload_for(&records, "journal.tail.opened")["file"],
+        "local_source"
+    );
+    payload_for(&records, "journal.parse.typed_fallback");
+    payload_for(&records, "journal.parse.invalid_json");
+    assert!(!serde_json::to_string(&records).unwrap().contains("CANARY"));
+}
+
+#[test]
+fn d3_general_logs_also_classify_errors_without_paths_or_parse_values() {
+    #[derive(Clone)]
+    struct Sink(Arc<std::sync::Mutex<Vec<u8>>>);
+    impl Write for Sink {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            self.0.lock().unwrap().extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let private = dir.path().join("CANARY-PRIVATE-PATH");
+    fs::create_dir(&private).unwrap();
+    fs::write(
+        private.join("Journal.2026-10-20T010203.01.log"),
+        "{\"timestamp\":\"CANARY-INVALID-TIMESTAMP\",\"event\":\"Rank\"}\n",
+    )
+    .unwrap();
+    let output = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let sink = Sink(output.clone());
+    let (layer, guard) = start_writer(dir.path().join("logs"), Limits::default()).unwrap();
+    let subscriber = tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_ansi(false)
+                .with_writer(move || sink.clone())
+                .with_filter(tracing_subscriber::filter::filter_fn(|m| {
+                    m.target() != TARGET
+                })),
+        )
+        .with(
+            layer.with_filter(tracing_subscriber::filter::filter_fn(|m| {
+                m.target() == TARGET
+            })),
+        );
+    tracing::subscriber::with_default(subscriber, || {
+        assert!(tmc_journal::LineTailer::open(&private.join("CANARY-MISSING"), 0).is_err());
+        assert!(
+            tmc_journal::read_companion(&private, tmc_model::companion::CompanionKind::Cargo)
+                .is_none()
+        );
+        let store = tmc_store::Store::open_in_memory().unwrap();
+        tmc_store::import_history(
+            &store,
+            &private,
+            &tmc_store::ImportOptions {
+                throttle: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            },
+            &mut |_, _| {},
+        )
+        .unwrap();
+        store.exec_json("DROP TABLE kv", &[]).unwrap();
+        assert!(store.kv_get("CANARY-KEY").is_none());
+        store.kv_set("CANARY-KEY", "CANARY-VALUE");
+    });
+    drop(guard);
+    let text = String::from_utf8(output.lock().unwrap().clone()).unwrap();
+    assert!(text.contains("sqlite"));
+    assert!(text.contains("invalid history line skipped"));
+    assert!(!text.contains("CANARY"));
+    let records = read_records(&dir.path().join("logs"));
+    assert_eq!(
+        payload_for(&records, "journal.tail.open_failed")["failure_class"],
+        "not_found"
+    );
+    assert!(!serde_json::to_string(&records).unwrap().contains("CANARY"));
+}
+
+#[test]
+fn d3_writer_flush_and_import_rollback_keep_semantics_and_hide_trigger_text() {
+    let dir = tempfile::tempdir().unwrap();
+    let name = "Journal.2026-10-20T010203.01.log";
+    let raw = r#"{"timestamp":"2026-10-20T01:00:00Z","event":"Scan","BodyName":"Sol A 1","FID":"CANARY-FID"}"#;
+    fs::write(dir.path().join(name), format!("{raw}\n")).unwrap();
+    let records = capture_sources(|| {
+        let store = tmc_store::Store::open_in_memory().unwrap();
+        let event = tmc_store::StoredEvent {
+            file_name: name.into(),
+            line: 1,
+            ts: Utc::now(),
+            name: "Scan".into(),
+            cmdr: Some("CANARY-CMDR".into()),
+            json: raw.into(),
+        };
+        let writer = tmc_store::EventWriter::spawn(&store);
+        writer.send(event.clone());
+        writer.send(event);
+        writer.flush_blocking().unwrap();
+        assert_eq!(
+            store
+                .query_events(&tmc_store::EventQuery {
+                    limit: 10,
+                    ..Default::default()
+                })
+                .unwrap()
+                .len(),
+            1
+        );
+        drop(writer);
+        let broken = tmc_store::Store::open_in_memory().unwrap();
+        broken.exec_json("CREATE TRIGGER reject_event BEFORE INSERT ON event BEGIN SELECT RAISE(ABORT,'CANARY-TRIGGER-ERROR'); END",&[]).unwrap();
+        assert!(
+            tmc_store::import_history(
+                &broken,
+                dir.path(),
+                &tmc_store::ImportOptions {
+                    throttle: Arc::new(std::sync::atomic::AtomicBool::new(false))
+                },
+                &mut |_, _| {}
+            )
+            .is_err()
+        );
+        assert_eq!(
+            broken
+                .query_json("SELECT offset FROM journal_file", &[])
+                .unwrap(),
+            vec![json!([0])]
+        );
+        assert_eq!(
+            broken
+                .query_json("SELECT count(*) FROM event", &[])
+                .unwrap(),
+            vec![json!([0])]
+        );
+    });
+    payload_for(&records, "store.writer.enqueue");
+    assert_eq!(
+        payload_for(&records, "store.writer.flush_confirmed")["succeeded"],
+        true
+    );
+    assert_eq!(
+        payload_for(&records, "store.import.batch_rollback")["failure_class"],
+        "sqlite"
+    );
+    assert_eq!(
+        payload_for(&records, "store.import.failed")["failure_class"],
+        "sqlite"
+    );
+    assert!(!serde_json::to_string(&records).unwrap().contains("CANARY"));
+}

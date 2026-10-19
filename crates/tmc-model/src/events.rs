@@ -999,11 +999,15 @@ pub enum EventKind {
     Other,
 }
 
-fn de<T: DeserializeOwned>(name: &str, raw: &RawValue) -> Option<T> {
+fn de<T: DeserializeOwned>(_name: &str, raw: &RawValue) -> Option<T> {
     match serde_json::from_str(raw.get()) {
         Ok(v) => Some(v),
-        Err(e) => {
-            tracing::debug!(event = name, error = %e, "evento tipado no deserializable, se usa Other");
+        Err(_error) => {
+            crate::diagnostic!(
+                crate::diagnostics::DiagnosticContext::Journal { event: _name },
+                "journal.parse.typed_fallback",
+                crate::diagnostics::json!({"event": _name, "failure_class":"typed_json", "line": _error.line(), "column": _error.column()})
+            );
             None
         }
     }
@@ -1099,9 +1103,15 @@ pub fn parse_line(line: &str) -> Result<JournalEvent, ParseError> {
     if line.trim().is_empty() {
         return Err(ParseError::Empty);
     }
-    let env: Envelope = serde_json::from_str(line).map_err(|e| ParseError::Json(e.to_string()))?;
+    let env: Envelope = serde_json::from_str(line).map_err(|e| {
+        crate::diagnostic!(crate::diagnostics::DiagnosticContext::State,"journal.parse.invalid_json",crate::diagnostics::json!({"failure_class":"json","line":e.line(),"column":e.column(),"bytes":line.len()}));
+        ParseError::Json(e.to_string())
+    })?;
     let raw: Box<RawValue> =
-        serde_json::from_str(line).map_err(|e| ParseError::Json(e.to_string()))?;
+        serde_json::from_str(line).map_err(|e| {
+        crate::diagnostic!(crate::diagnostics::DiagnosticContext::State,"journal.parse.invalid_json",crate::diagnostics::json!({"failure_class":"json","line":e.line(),"column":e.column(),"bytes":line.len()}));
+        ParseError::Json(e.to_string())
+    })?;
     let timestamp = env.timestamp.ok_or(ParseError::MissingField("timestamp"))?;
     let name = env.event.ok_or(ParseError::MissingField("event"))?;
     let kind = classify(&name, &raw);
