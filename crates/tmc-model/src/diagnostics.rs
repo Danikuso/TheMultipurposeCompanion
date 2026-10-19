@@ -1,6 +1,111 @@
 //! Debug-only structured diagnostics. Never pass raw errors or user-indexed object keys.
 use serde::Serialize;
 use serde_json::Value;
+pub use serde_json::json;
+
+/// Types are safe for positional database values, whose field names are unavailable.
+pub fn value_types(values: &[Value]) -> Vec<&'static str> {
+    values
+        .iter()
+        .map(|v| match v {
+            Value::Null => "null",
+            Value::Bool(_) => "boolean",
+            Value::Number(_) => "number",
+            Value::String(_) => "string",
+            Value::Array(_) => "array",
+            Value::Object(_) => "object",
+        })
+        .collect()
+}
+
+/// Correlate generic SQL calls without exposing interpolated literals or identifiers.
+pub fn sql_fingerprint(sql: &str) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hash = std::collections::hash_map::DefaultHasher::new();
+    sql.hash(&mut hash);
+    hash.finish()
+}
+
+/// Logical payload size without serializing a private SQL value into a log.
+pub fn value_bytes(value: &Value) -> usize {
+    match value {
+        Value::Null | Value::Bool(_) => 1,
+        Value::Number(_) => 8,
+        Value::String(text) => text.len(),
+        Value::Array(values) => values.iter().map(value_bytes).sum(),
+        Value::Object(values) => values
+            .iter()
+            .map(|(key, value)| key.len() + value_bytes(value))
+            .sum(),
+    }
+}
+
+/// Decode embedded JSON before context redaction, never treat it as opaque public text.
+pub fn decoded_json(text: &str) -> Value {
+    serde_json::from_str(text)
+        .unwrap_or_else(|_| json!({"invalid_json": true, "bytes": text.len()}))
+}
+
+/// Only game-defined basenames can be used for source correlation.
+pub fn source_file(path: &std::path::Path) -> &str {
+    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    if safe_source_name(name) {
+        name
+    } else {
+        "local_source"
+    }
+}
+
+fn safe_source_name(name: &str) -> bool {
+    if matches!(
+        name,
+        "local_source"
+            | "Status.json"
+            | "Cargo.json"
+            | "NavRoute.json"
+            | "Market.json"
+            | "Outfitting.json"
+            | "Shipyard.json"
+            | "ModulesInfo.json"
+            | "Backpack.json"
+            | "ShipLocker.json"
+            | "FCMaterials.json"
+    ) {
+        return true;
+    }
+    let Some(body) = name
+        .strip_prefix("Journal.")
+        .and_then(|s| s.strip_suffix(".log"))
+    else {
+        return false;
+    };
+    let Some((date, part)) = body.rsplit_once('.') else {
+        return false;
+    };
+    part.len() == 2
+        && part.bytes().all(|b| b.is_ascii_digit())
+        && match date.len() {
+            12 => date.bytes().all(|b| b.is_ascii_digit()),
+            17 => date.bytes().enumerate().all(|(i, b)| match i {
+                4 | 7 => b == b'-',
+                10 => b == b'T',
+                _ => b.is_ascii_digit(),
+            }),
+            _ => false,
+        }
+}
+
+/// ErrorKind is stable metadata; the Display text may contain player paths.
+pub fn io_class(error: &std::io::Error) -> &'static str {
+    match error.kind() {
+        std::io::ErrorKind::NotFound => "not_found",
+        std::io::ErrorKind::PermissionDenied => "permission_denied",
+        std::io::ErrorKind::InvalidData => "invalid_data",
+        std::io::ErrorKind::UnexpectedEof => "unexpected_eof",
+        std::io::ErrorKind::BrokenPipe => "broken_pipe",
+        _ => "other_io",
+    }
+}
 
 /// The schema that gives otherwise ambiguous field names their meaning.
 /// Context names describe schemas, not arbitrary log messages.
@@ -368,6 +473,30 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
         return true;
     }
     match key {
+        "file" => safe_source_name(text),
+        "failureclass" => matches!(
+            text,
+            "not_found"
+                | "permission_denied"
+                | "invalid_data"
+                | "unexpected_eof"
+                | "broken_pipe"
+                | "other_io"
+                | "sqlite"
+                | "io"
+                | "poisoned"
+                | "integer_range"
+                | "unsupported"
+                | "json"
+                | "missing_field"
+                | "empty"
+                | "typed_json"
+        ),
+        "parametertypes" | "celltypes" => matches!(
+            text,
+            "null" | "boolean" | "number" | "string" | "array" | "object"
+        ),
+        "language" => matches!(text, "es" | "en" | "fr" | "de" | "pt"),
         "galaxy" => matches!(text, "Live" | "Legacy" | "Unknown"),
         "mode" => matches!(
             text,

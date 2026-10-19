@@ -25,18 +25,49 @@ pub struct Running {
 }
 
 fn open_or_rebuild_store(db_dir: &Path) -> anyhow::Result<Store> {
+    tmc_model::diagnostic!(
+        tmc_model::diagnostics::DiagnosticContext::Sql,
+        "app.store.open_requested",
+        serde_json::json!({"requested":true})
+    );
     std::fs::create_dir_all(db_dir)?;
     let db_path = db_dir.join("tmc.db");
     match Store::open(&db_path) {
-        Ok(store) => Ok(store),
+        Ok(store) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "app.store.opened",
+                serde_json::json!({"opened":true})
+            );
+            Ok(store)
+        }
         Err(err) => {
-            tracing::warn!(%err, path = %db_path.display(), "corrupt SQLite database; renaming and rebuilding");
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "app.store.rebuild_requested",
+                serde_json::json!({"failure_class":err.diagnostic_class()})
+            );
+            tracing::warn!(
+                failure_class = err.diagnostic_class(),
+                "corrupt SQLite database; renaming and rebuilding"
+            );
             let timestamp = Utc::now().format("%Y%m%d%H%M%S");
             let corrupt_path = db_dir.join(format!("tmc.db.corrupt-{timestamp}"));
-            let _ = std::fs::rename(&db_path, &corrupt_path);
-            let _ = std::fs::remove_file(db_dir.join("tmc.db-wal"));
-            let _ = std::fs::remove_file(db_dir.join("tmc.db-shm"));
-            Ok(Store::open(&db_path)?)
+            let _rename = std::fs::rename(&db_path, &corrupt_path);
+            let _wal = std::fs::remove_file(db_dir.join("tmc.db-wal"));
+            let _shm = std::fs::remove_file(db_dir.join("tmc.db-shm"));
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "app.store.rebuild_cleanup",
+                serde_json::json!({"renamed":_rename.is_ok(),"wal_removed":_wal.is_ok(),"shm_removed":_shm.is_ok()})
+            );
+            let result = Store::open(&db_path);
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "app.store.rebuild_result",
+                serde_json::json!({"succeeded":result.is_ok()})
+            );
+            Ok(result?)
         }
     }
 }
@@ -53,13 +84,28 @@ impl tmc_net::client::RefPersist for CodexRefStore {
     }
     fn save(&self, value: &str, at: chrono::DateTime<chrono::Utc>) {
         if let Err(error) = self.0.api_cache_put(CODEX_REF_KEY, value, at) {
-            tracing::warn!(%error, "api_cache write failed");
+            tracing::warn!(
+                failure_class = error.diagnostic_class(),
+                "api_cache write failed"
+            );
         }
     }
 }
 
 pub async fn start(config: Config) -> anyhow::Result<Running> {
+    tmc_model::diagnostic!(
+        tmc_model::diagnostics::DiagnosticContext::State,
+        "app.transport.starting",
+        serde_json::json!({"starting":true})
+    );
     let transport = ReqwestTransport::new()
+        .inspect_err(|_| {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "app.transport.failed",
+                serde_json::json!({"failed":true})
+            );
+        })
         .map_err(|err| anyhow::anyhow!("could not build HTTP transport: {err:?}"))?;
     start_custom(config, Arc::new(transport), None).await
 }
@@ -75,6 +121,39 @@ pub async fn start_with_transport(
 /// Como [`start_with_transport`], y con `poll_idle` del vigilante del diario
 /// sustituible (los tests emulan «juego en marcha», que sondea cada 250 ms).
 pub async fn start_custom(
+    config: Config,
+    transport: Arc<dyn Transport>,
+    poll_idle: Option<Duration>,
+) -> anyhow::Result<Running> {
+    #[cfg(debug_assertions)]
+    let diagnostic_started = std::time::Instant::now();
+    tmc_model::diagnostic!(
+        tmc_model::diagnostics::DiagnosticContext::State,
+        "app.runtime.starting",
+        config.diagnostic_snapshot()
+    );
+    let result = start_inner(config, transport, poll_idle).await;
+    #[cfg(debug_assertions)]
+    match &result {
+        Ok(_) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "app.runtime.started",
+                serde_json::json!({"elapsed_us":diagnostic_started.elapsed().as_micros()})
+            );
+        }
+        Err(_error) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "app.runtime.failed",
+                serde_json::json!({"store":{"failure_class":_error.downcast_ref::<tmc_store::StoreError>().map(tmc_store::StoreError::diagnostic_class)},"io":{"failure_class":_error.downcast_ref::<std::io::Error>().map(tmc_model::diagnostics::io_class)},"locate_failure":_error.is::<tmc_journal::LocateError>(),"elapsed_us":diagnostic_started.elapsed().as_micros()})
+            );
+        }
+    }
+    result
+}
+
+async fn start_inner(
     mut config: Config,
     transport: Arc<dyn Transport>,
     poll_idle: Option<Duration>,
@@ -85,6 +164,11 @@ pub async fn start_custom(
     store.kv_set("locale", &config.language);
 
     let writer = EventWriter::spawn(&store);
+    tmc_model::diagnostic!(
+        tmc_model::diagnostics::DiagnosticContext::State,
+        "app.writer.started",
+        serde_json::json!({"started":true})
+    );
     // Los módulos se registran siempre; cada uno respeta los ajustes que recibe
     // por `SourceEvent::Settings` (p. ej. `Dashboard` y `alerts_enabled`).
     let modules = all_modules();
@@ -113,6 +197,11 @@ pub async fn start_custom(
             net: Some(net.tx.clone()),
         },
     );
+    tmc_model::diagnostic!(
+        tmc_model::diagnostics::DiagnosticContext::State,
+        "app.core.started",
+        serde_json::json!({"started":true})
+    );
     let forward = core.events.clone();
     tokio::spawn(async move {
         while let Some(event) = net_events_rx.recv().await {
@@ -134,6 +223,11 @@ pub async fn start_custom(
         ..Default::default()
     };
     spawn_watcher(watch_opts, core.events.clone());
+    tmc_model::diagnostic!(
+        tmc_model::diagnostics::DiagnosticContext::State,
+        "app.watcher.started",
+        serde_json::json!({"started":true})
+    );
 
     let throttle = Arc::new(AtomicBool::new(is_game_running()));
     let import_throttle = throttle.clone();
@@ -144,10 +238,25 @@ pub async fn start_custom(
         let opts = ImportOptions {
             throttle: import_throttle,
         };
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::Sql,
+            "app.import.started",
+            serde_json::json!({"started":true})
+        );
         match import_history(&import_store, &import_dir, &opts, &mut |done, total| {
-            let _ = import_tx.blocking_send(SourceEvent::ImportProgress { done, total });
+            let _sent = import_tx.blocking_send(SourceEvent::ImportProgress { done, total });
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "app.import.progress",
+                serde_json::json!({"done":done,"total":total,"sent":_sent.is_ok()})
+            );
         }) {
             Ok(report) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "app.import.completed",
+                    serde_json::json!({"files":report.files,"events":report.events,"skipped_lines":report.skipped_lines})
+                );
                 tracing::info!(
                     files = report.files,
                     events = report.events,
@@ -156,7 +265,15 @@ pub async fn start_custom(
                 );
             }
             Err(err) => {
-                tracing::warn!(%err, "background history import failed");
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "app.import.failed",
+                    serde_json::json!({"failure_class":err.diagnostic_class()})
+                );
+                tracing::warn!(
+                    failure_class = err.diagnostic_class(),
+                    "background history import failed"
+                );
             }
         }
     });
@@ -175,8 +292,22 @@ pub async fn start_custom(
                 // `copy_seq` es acumulativo, la siguiente actualización lo recupera.
                 let msg = match rx.recv().await {
                     Ok(msg) => msg,
-                    Err(RecvError::Lagged(_)) => continue,
-                    Err(RecvError::Closed) => break,
+                    Err(RecvError::Lagged(_count)) => {
+                        tmc_model::diagnostic!(
+                            tmc_model::diagnostics::DiagnosticContext::State,
+                            "app.updates.lagged",
+                            serde_json::json!({"skipped":_count})
+                        );
+                        continue;
+                    }
+                    Err(RecvError::Closed) => {
+                        tmc_model::diagnostic!(
+                            tmc_model::diagnostics::DiagnosticContext::State,
+                            "app.updates.closed",
+                            serde_json::json!({"closed":true})
+                        );
+                        break;
+                    }
                 };
                 if let CoreMessage::Update { topics, .. } = msg {
                     if let Some(game) = topics.get("core.game")
@@ -220,6 +351,11 @@ pub async fn start_custom(
     )
     .await?;
 
+    tmc_model::diagnostic!(
+        tmc_model::diagnostics::DiagnosticContext::State,
+        "app.server.started",
+        serde_json::json!({"started":true})
+    );
     Ok(Running {
         server,
         core,

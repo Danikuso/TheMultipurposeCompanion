@@ -20,6 +20,8 @@ pub struct LoggingGuards {
 impl LoggingGuards {
     /// Record application startup without including configuration values.
     pub fn application_started(&self) {
+        #[cfg(debug_assertions)]
+        crate::config::emit_bootstrap_report();
         tmc_model::diagnostic!(
             tmc_model::diagnostics::DiagnosticContext::State,
             "app.start",

@@ -23,40 +23,79 @@ pub struct EventRow {
 
 impl Store {
     pub fn query_events(&self, q: &EventQuery) -> Result<Vec<EventRow>, StoreError> {
-        let conn = self.lock()?;
-        let mut statement = conn.prepare(
-            "SELECT id, ts, name, cmdr, json FROM event
+        #[cfg(debug_assertions)]
+        let diagnostic_started = std::time::Instant::now();
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::Sql,
+            "store.events.query_started",
+            serde_json::json!({"event":q.name,"from":q.from.is_some(),"to":q.to.is_some(),"commander_filter":q.cmdr.is_some(),"before_id":q.before_id,"limit":q.limit.min(1000)})
+        );
+        let result: Result<Vec<EventRow>, StoreError> = (|| {
+            let conn = self.lock()?;
+            let mut statement = conn.prepare(
+                "SELECT id, ts, name, cmdr, json FROM event
              WHERE (?1 IS NULL OR name = ?1)
                AND (?2 IS NULL OR ts >= ?2)
                AND (?3 IS NULL OR ts <= ?3)
                AND (?4 IS NULL OR cmdr = ?4)
                AND (?5 IS NULL OR id < ?5)
              ORDER BY id DESC LIMIT ?6",
-        )?;
-        let from = q
-            .from
-            .map(|time| time.to_rfc3339_opts(SecondsFormat::Nanos, true));
-        let to =
-            q.to.map(|time| time.to_rfc3339_opts(SecondsFormat::Nanos, true));
-        let rows = statement.query_map(
-            params![q.name, from, to, q.cmdr, q.before_id, q.limit.min(1000)],
-            |row| {
-                let timestamp: String = row.get(1)?;
-                let ts = DateTime::parse_from_rfc3339(&timestamp)
-                    .map_err(|error| {
-                        rusqlite::Error::FromSqlConversionFailure(1, Type::Text, Box::new(error))
-                    })?
-                    .with_timezone(&Utc);
-                Ok(EventRow {
-                    id: row.get(0)?,
-                    ts,
-                    name: row.get(2)?,
-                    cmdr: row.get(3)?,
-                    json: row.get(4)?,
-                })
-            },
-        )?;
-        Ok(rows.collect::<Result<Vec<_>, _>>()?)
+            )?;
+            let from = q
+                .from
+                .map(|time| time.to_rfc3339_opts(SecondsFormat::Nanos, true));
+            let to =
+                q.to.map(|time| time.to_rfc3339_opts(SecondsFormat::Nanos, true));
+            let rows = statement.query_map(
+                params![q.name, from, to, q.cmdr, q.before_id, q.limit.min(1000)],
+                |row| {
+                    let timestamp: String = row.get(1)?;
+                    let ts = DateTime::parse_from_rfc3339(&timestamp)
+                        .map_err(|error| {
+                            rusqlite::Error::FromSqlConversionFailure(
+                                1,
+                                Type::Text,
+                                Box::new(error),
+                            )
+                        })?
+                        .with_timezone(&Utc);
+                    Ok(EventRow {
+                        id: row.get(0)?,
+                        ts,
+                        name: row.get(2)?,
+                        cmdr: row.get(3)?,
+                        json: row.get(4)?,
+                    })
+                },
+            )?;
+            Ok(rows.collect::<Result<Vec<_>, _>>()?)
+        })();
+        #[cfg(debug_assertions)]
+        match &result {
+            Ok(_rows) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.events.query_completed",
+                    serde_json::json!({"rows":_rows.len(),"bytes":_rows.iter().map(|r|r.json.len()).sum::<usize>(),"elapsed_us":diagnostic_started.elapsed().as_micros()})
+                );
+                #[cfg(debug_assertions)]
+                for row in _rows {
+                    tmc_model::diagnostic!(
+                        tmc_model::diagnostics::DiagnosticContext::Journal { event: &row.name },
+                        "store.events.row_payload",
+                        tmc_model::diagnostics::decoded_json(&row.json)
+                    );
+                }
+            }
+            Err(_error) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.events.query_failed",
+                    serde_json::json!({"failure_class":_error.diagnostic_class(),"elapsed_us":diagnostic_started.elapsed().as_micros()})
+                );
+            }
+        }
+        result
     }
 }
 

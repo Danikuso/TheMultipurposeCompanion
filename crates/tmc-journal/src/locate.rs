@@ -42,12 +42,28 @@ pub fn default_journal_dir() -> Option<PathBuf> {
 pub fn resolve_journal_dir(configured: Option<&Path>) -> Result<PathBuf, LocateError> {
     if let Some(path) = configured {
         return if path.is_dir() {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "source.locate.configured",
+                tmc_model::diagnostics::json!({"configured":true,"found":true})
+            );
             Ok(path.to_path_buf())
         } else {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "source.locate.configured_invalid",
+                tmc_model::diagnostics::json!({"configured":true,"found":false})
+            );
             Err(LocateError::NotADirectory(path.to_path_buf()))
         };
     }
-    default_journal_dir().ok_or(LocateError::NotFound)
+    let result = default_journal_dir().ok_or(LocateError::NotFound);
+    tmc_model::diagnostic!(
+        tmc_model::diagnostics::DiagnosticContext::State,
+        "source.locate.default",
+        tmc_model::diagnostics::json!({"found":result.is_ok()})
+    );
+    result
 }
 
 pub fn graphics_override_path() -> Option<PathBuf> {
