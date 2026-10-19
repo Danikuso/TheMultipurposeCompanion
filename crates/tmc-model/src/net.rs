@@ -15,8 +15,11 @@ pub enum NetQuery {
     Autocomplete {
         prefix: String,
     },
+    /// Capa 3 de exobiología (Canonn). Solo identifica sistema y cuerpo: nunca
+    /// lleva datos del jugador.
     BodyBio {
         system_address: u64,
+        star_system: String,
         body_id: u32,
         body_name: String,
         profile: BodyProfile,

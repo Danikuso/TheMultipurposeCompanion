@@ -19,8 +19,14 @@
 //!   URL base la fija `ardent::BASE` y en e2e se simula con el `Transport`
 //!   inyectado (igual que Spansh). El «ahora» para filtrar `updatedAt` se
 //!   inyecta con `with_clock`. 404 = `NoData`, `[]` = lista vacía.
-//! - La capa 3 (Canonn) está desactivada en F1: `BodyBio` devuelve `Disabled`
-//!   sin tocar el transporte.
+//! - La capa 3 (Canonn, exobiología) está activa con permiso de Canonn:
+//!   `BodyBio` descarga `codex/ref` (una vez por sesión y 7 días, en memoria) y
+//!   `getSystemPoi` por nombre de sistema, ambos por el limitador de Canonn
+//!   (1/s), la salud del servicio y el opt-out. Solo salen el nombre del
+//!   sistema y la categoría `Biology`; ningún dato del jugador. Una consulta
+//!   de sistema se reutiliza 5 min para los demás cuerpos del mismo sistema.
+//!   Replay y Legacy no emiten la consulta (lo garantizan `ModuleCtx` y el
+//!   módulo).
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -28,6 +34,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use crate::ardent;
+use crate::canonn;
 use crate::edsm;
 use crate::health::ServiceHealth;
 use crate::limiter::{RateLimiter, Service};
@@ -39,6 +46,10 @@ use tmc_model::net::{NetFailure, NetOutcome, NetQuery, NetSource};
 const POLL_EVERY: Duration = Duration::from_secs(2);
 const MAX_TRANSIENT_POLL_FAILURES: u32 = 2;
 const POLL_LIMIT: Duration = Duration::from_secs(120);
+const CODEX_REF_TTL: Duration = Duration::from_secs(7 * 24 * 3600);
+const POI_TTL: Duration = Duration::from_secs(5 * 60);
+
+type CodexRef = HashMap<u64, (String, String)>;
 
 /// Resultado no exitoso de una llamada (más pequeño que `NetOutcome`).
 enum Miss {
@@ -74,6 +85,10 @@ pub struct NetClient {
     route_lock: tokio::sync::Mutex<()>,
     /// Reloj de pared (inyectable) para la frescura de los datos de Ardent.
     utc_now: fn() -> DateTime<Utc>,
+    /// `codex/ref` de Canonn (entryid -> género, especie), en memoria.
+    codex_ref: Mutex<Option<(std::time::Instant, Arc<CodexRef>)>>,
+    /// Última respuesta de `getSystemPoi`: (sistema en minúsculas, cuándo, cuerpo).
+    poi: Mutex<Option<(String, std::time::Instant, Arc<String>)>>,
 }
 
 fn now() -> std::time::Instant {
@@ -129,6 +144,8 @@ impl NetClient {
             }),
             route_lock: tokio::sync::Mutex::new(()),
             utc_now,
+            codex_ref: Mutex::new(None),
+            poi: Mutex::new(None),
         }
     }
 
@@ -163,8 +180,14 @@ impl NetClient {
                     .await;
                 (NetSource::Spansh, out)
             }
-            // Capa 3 desactivada en F1 (a la espera del permiso de Canonn).
-            NetQuery::BodyBio { .. } => (NetSource::Canonn, NetOutcome::Disabled),
+            NetQuery::BodyBio {
+                star_system,
+                body_name,
+                ..
+            } => {
+                let out = self.body_bio(star_system, body_name, online).await;
+                (NetSource::Canonn, out)
+            }
             NetQuery::CommodityImportsNearby {
                 system_address,
                 commodity,
@@ -227,6 +250,86 @@ impl NetClient {
             })
             .await;
         (NetSource::Edsm, out)
+    }
+
+    /// Capa 3 (Canonn): `codex/ref` (cacheado) + `getSystemPoi` del sistema.
+    async fn body_bio(
+        &self,
+        star_system: &str,
+        body_name: &str,
+        online: Option<&AtomicBool>,
+    ) -> NetOutcome {
+        let service = Service::Canonn;
+        if !online_allowed(online) {
+            return NetOutcome::Disabled;
+        }
+        if self.is_down(service) {
+            return NetOutcome::Failed(NetFailure::Down);
+        }
+        let reference = match self.codex_ref(online).await {
+            Ok(r) => r,
+            Err(miss) => return miss.into(),
+        };
+        let system_key = star_system.trim().to_lowercase();
+        let cached = {
+            let poi = self.poi.lock().unwrap();
+            poi.as_ref()
+                .filter(|(k, at, _)| *k == system_key && at.elapsed() < POI_TTL)
+                .map(|(_, _, body)| body.clone())
+        };
+        let body = match cached {
+            Some(body) => body,
+            None => {
+                let req = Req::Get(canonn::body_url(star_system));
+                match self.call(service, req, online).await {
+                    Ok(body) => Arc::new(body),
+                    Err(miss) => return miss.into(),
+                }
+            }
+        };
+        let resolve = |id: u64| reference.get(&id).cloned();
+        match canonn::parse_body(&body, star_system, body_name, &resolve) {
+            Ok(bio) => {
+                self.succeed(service);
+                *self.poi.lock().unwrap() = Some((system_key, std::time::Instant::now(), body));
+                if bio.hints.is_empty() {
+                    NetOutcome::NoData
+                } else {
+                    NetOutcome::BodyBio(bio)
+                }
+            }
+            Err(e) => {
+                self.fail(service);
+                NetOutcome::Failed(e)
+            }
+        }
+    }
+
+    async fn codex_ref(&self, online: Option<&AtomicBool>) -> Result<Arc<CodexRef>, Miss> {
+        let fresh = {
+            let cache = self.codex_ref.lock().unwrap();
+            cache
+                .as_ref()
+                .filter(|(at, _)| at.elapsed() < CODEX_REF_TTL)
+                .map(|(_, r)| r.clone())
+        };
+        if let Some(r) = fresh {
+            return Ok(r);
+        }
+        let req = Req::Get(canonn::codex_ref_url());
+        let body = self.call(Service::Canonn, req, online).await?;
+        match canonn::parse_codex_ref(&body) {
+            Ok(map) => {
+                self.succeed(Service::Canonn);
+                let r = Arc::new(map);
+                *self.codex_ref.lock().unwrap() = Some((std::time::Instant::now(), r.clone()));
+                Ok(r)
+            }
+            Err(e) => {
+                self.fail(Service::Canonn);
+                Err(Miss::Fail(e))
+            }
+        }
     }
 
     /// Petición simple: `parse` devuelve `Ok(None)` para «sin datos».
@@ -413,7 +516,7 @@ impl NetClient {
         let st = self.state.lock().unwrap();
         let down = |s: Service| st.health.get(&s).is_none_or(|h| h.is_down(t));
         let (service, fallback) = match q {
-            NetQuery::BodyBio { .. } => return None,
+            NetQuery::BodyBio { .. } => (Service::Canonn, false),
             NetQuery::CommodityImportsNearby { .. } | NetQuery::NearestService { .. } => {
                 (Service::Ardent, false)
             }
@@ -433,7 +536,7 @@ impl NetClient {
     /// `true` si ningún servicio puede atender la consulta ahora mismo.
     pub fn is_down_for(&self, q: &NetQuery) -> bool {
         match q {
-            NetQuery::BodyBio { .. } => false,
+            NetQuery::BodyBio { .. } => self.is_down(Service::Canonn),
             NetQuery::System { .. } => self.is_down(Service::Spansh) && self.is_down(Service::Edsm),
             NetQuery::CommodityImportsNearby { .. } | NetQuery::NearestService { .. } => {
                 self.is_down(Service::Ardent)
@@ -1016,13 +1119,21 @@ mod tests {
         assert_eq!(v[1].id64, Some(5059379007779));
     }
 
-    #[tokio::test(start_paused = true)]
-    async fn body_bio_is_disabled_and_never_touches_the_transport() {
-        let t = FakeTransport::new();
-        let q = NetQuery::BodyBio {
+    const CANONN_BODY: &str = include_str!("../../../tests/fixtures/net/canonn_body_ok.json");
+    const CANONN_EMPTY: &str = include_str!("../../../tests/fixtures/net/canonn_body_empty.json");
+    const CANONN_SYS: &str = "Sistema Sintetico de Prueba";
+    const CANONN_REF: &str = r#"{
+      "9900001": {"entryid": 9900001, "english_name": "EspecieAlfa - Roja", "sub_class": "GeneroA"},
+      "9900002": {"entryid": 9900002, "english_name": "EspecieBeta - Azul", "sub_class": "GeneroB"},
+      "9900004": {"entryid": 9900004, "english_name": "EspecieGamma - Verde", "sub_class": "GeneroC"}
+    }"#;
+
+    fn bio_query(body: &str) -> NetQuery {
+        NetQuery::BodyBio {
             system_address: 1,
+            star_system: CANONN_SYS.into(),
             body_id: 2,
-            body_name: "Sol A 1".into(),
+            body_name: format!("{CANONN_SYS} {body}"),
             profile: BodyProfile {
                 planet_class: None,
                 atmosphere_type: None,
@@ -1032,10 +1143,92 @@ mod tests {
                 volcanism: None,
                 star_class: None,
             },
+        }
+    }
+
+    fn canonn_transport(poi: Vec<Reply>) -> Arc<FakeTransport> {
+        let t = FakeTransport::new();
+        t.script("/codex/ref", vec![ok(200, CANONN_REF)]);
+        t.script("/getSystemPoi", poi);
+        t
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn body_bio_builds_requests_and_parses_hints() {
+        let t = canonn_transport(vec![ok(200, CANONN_BODY)]);
+        let c = client(&t);
+        let (src, out) = c.execute(&bio_query("A 1 a")).await;
+        assert_eq!(src, NetSource::Canonn);
+        let NetOutcome::BodyBio(bio) = out else {
+            panic!("{out:?}")
         };
+        assert_eq!(bio.hints.len(), 2);
+        assert_eq!(bio.hints[0].genus, "GeneroA");
+        assert_eq!(bio.hints[0].species, "EspecieAlfa");
+        assert!((bio.hints[0].weight - 0.75).abs() < 1e-12);
+        // Solo sistema y categoria salen a la red: nada del jugador.
         assert_eq!(
-            client(&t).execute(&q).await,
-            (NetSource::Canonn, NetOutcome::Disabled)
+            t.log(),
+            vec![
+                "GET https://us-central1-canonn-api-236217.cloudfunctions.net/query/codex/ref?category=Biology".to_string(),
+                "GET https://us-central1-canonn-api-236217.cloudfunctions.net/query/getSystemPoi?system=Sistema%20Sintetico%20de%20Prueba&odyssey=Y".to_string(),
+            ]
+        );
+        assert!(t.forms.lock().unwrap().is_empty());
+        // Otro cuerpo del mismo sistema reutiliza la referencia y la consulta.
+        let (_, out) = c.execute(&bio_query("A 1")).await;
+        assert!(matches!(out, NetOutcome::BodyBio(_)));
+        assert_eq!(t.total(), 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn body_bio_without_observations_is_no_data() {
+        let t = canonn_transport(vec![ok(200, CANONN_EMPTY)]);
+        let (_, out) = client(&t).execute(&bio_query("A 1")).await;
+        assert_eq!(out, NetOutcome::NoData);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn body_bio_errors_fail_with_backoff_and_then_down() {
+        let t = canonn_transport(vec![
+            ok(503, ""),
+            Err(TransportError::Timeout),
+            ok(200, "no es json"),
+        ]);
+        let c = client(&t);
+        let q = bio_query("A 1");
+        assert_eq!(c.retry_at(&q), None);
+        assert_eq!(
+            c.execute(&q).await,
+            (NetSource::Canonn, NetOutcome::Failed(NetFailure::Http(503)))
+        );
+        assert!(c.retry_at(&q).is_some());
+        assert!(!c.is_down_for(&q));
+        assert_eq!(
+            c.execute(&q).await.1,
+            NetOutcome::Failed(NetFailure::Timeout)
+        );
+        assert_eq!(
+            c.execute(&q).await.1,
+            NetOutcome::Failed(NetFailure::Malformed)
+        );
+        // Tres fallos seguidos: servicio caido, sin mas trafico.
+        assert!(c.is_down_for(&q));
+        let sent = t.total();
+        assert_eq!(c.execute(&q).await.1, NetOutcome::Failed(NetFailure::Down));
+        assert_eq!(t.total(), sent);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn body_bio_opt_out_is_disabled_without_network() {
+        use std::sync::atomic::AtomicBool;
+        let t = canonn_transport(vec![ok(200, CANONN_BODY)]);
+        let online = AtomicBool::new(false);
+        assert_eq!(
+            client(&t)
+                .execute_with_online(&bio_query("A 1"), &online)
+                .await,
+            (NetSource::Cache, NetOutcome::Disabled)
         );
         assert_eq!(t.total(), 0);
     }

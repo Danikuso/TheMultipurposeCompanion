@@ -647,8 +647,13 @@ impl Exobiology {
             let Some(scan) = self.scans.get(&key) else {
                 continue;
             };
+            // Canonn se consulta por nombre de sistema: solo el sistema actual.
+            if state.location.system_address != key.0 || state.location.system.is_empty() {
+                continue;
+            }
             let query = NetQuery::BodyBio {
                 system_address: key.0,
+                star_system: state.location.system.clone(),
                 body_id: key.1,
                 body_name: scan.body_name.clone(),
                 profile: body_profile(scan, self.star_class.as_deref()),

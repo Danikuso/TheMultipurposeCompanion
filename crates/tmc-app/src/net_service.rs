@@ -421,9 +421,9 @@ async fn write_cache(store: &Store, query: &NetQuery, system: &RemoteSystem, at:
 /// Clave única de las consultas de Ardent (listas de mercados/estaciones).
 fn ardent_key(query: &NetQuery) -> Option<(CacheKind, String)> {
     match query {
-        NetQuery::CommodityImportsNearby { .. } | NetQuery::NearestService { .. } => {
-            cache_keys(query).into_iter().next()
-        }
+        NetQuery::CommodityImportsNearby { .. }
+        | NetQuery::NearestService { .. }
+        | NetQuery::BodyBio { .. } => cache_keys(query).into_iter().next(),
         _ => None,
     }
 }
@@ -431,7 +431,6 @@ fn ardent_key(query: &NetQuery) -> Option<(CacheKind, String)> {
 /// Respuesta de Ardent fresca en caché; sin `max_stale` útil (caducada = sin caché).
 async fn read_ardent_cache(store: &Store, query: &NetQuery) -> Option<(NetOutcome, DateTime<Utc>)> {
     let (kind, key) = ardent_key(query)?;
-    let is_markets = kind == CacheKind::ArdentImports;
     let store = store.clone();
     let entry = tokio::task::spawn_blocking(move || store.api_cache_get(&key))
         .await
@@ -441,10 +440,10 @@ async fn read_ardent_cache(store: &Store, query: &NetQuery) -> Option<(NetOutcom
     if age(entry.fetched_at) >= ttl_for(kind).fresh {
         return None;
     }
-    let outcome = if is_markets {
-        NetOutcome::Markets(serde_json::from_str(&entry.value).ok()?)
-    } else {
-        NetOutcome::Stations(serde_json::from_str(&entry.value).ok()?)
+    let outcome = match kind {
+        CacheKind::ArdentImports => NetOutcome::Markets(serde_json::from_str(&entry.value).ok()?),
+        CacheKind::BodyBio => NetOutcome::BodyBio(serde_json::from_str(&entry.value).ok()?),
+        _ => NetOutcome::Stations(serde_json::from_str(&entry.value).ok()?),
     };
     Some((outcome, entry.fetched_at))
 }
@@ -461,6 +460,7 @@ async fn write_ardent_cache(
     let json = match outcome {
         NetOutcome::Markets(items) => serde_json::to_string(items),
         NetOutcome::Stations(items) => serde_json::to_string(items),
+        NetOutcome::BodyBio(bio) => serde_json::to_string(bio),
         _ => return,
     };
     let Ok(json) = json else {
@@ -1000,6 +1000,51 @@ mod tests {
         let again = next_response(&mut rig).await;
         assert_eq!(again.source, NetSource::Cache);
         assert_eq!(rig.fake.calls(), 1);
+    }
+
+    #[tokio::test]
+    async fn fresh_body_bio_cache_hit_skips_transport() {
+        let mut rig = rig(vec![ok(500, "")]);
+        let bio = tmc_model::net::RemoteBodyBio {
+            hints: vec![tmc_model::net::RemoteSpeciesHint {
+                genus: "GeneroA".into(),
+                species: "EspecieAlfa".into(),
+                weight: 1.0,
+            }],
+        };
+        rig.store
+            .api_cache_put(
+                "canonn:body:1:2",
+                &serde_json::to_string(&bio).unwrap(),
+                Utc::now() - chrono::Duration::days(1),
+            )
+            .unwrap();
+        let query = NetQuery::BodyBio {
+            system_address: 1,
+            star_system: "Sistema".into(),
+            body_id: 2,
+            body_name: "Sistema A 1".into(),
+            profile: tmc_model::net::BodyProfile {
+                planet_class: None,
+                atmosphere_type: None,
+                gravity_g: None,
+                temperature_k: None,
+                pressure_atm: None,
+                volcanism: None,
+                star_class: None,
+            },
+        };
+        let request = NetRequest {
+            id: 9,
+            module: "exobiology".into(),
+            key: "bio:1:2".into(),
+            query,
+        };
+        rig.handle.tx.send(request).await.unwrap();
+        let r = next_response(&mut rig).await;
+        assert_eq!(r.source, NetSource::Cache);
+        assert_eq!(r.outcome, NetOutcome::BodyBio(bio));
+        assert_eq!(rig.fake.calls(), 0);
     }
 
     #[tokio::test(start_paused = true)]

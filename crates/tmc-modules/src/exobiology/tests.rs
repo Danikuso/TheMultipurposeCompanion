@@ -81,6 +81,12 @@ impl H {
     fn start(&mut self) {
         self.journal("Commander", r#","FID":"F1","Name":"CMDR TESTER""#);
         self.journal("LoadGame", r#","Commander":"CMDR TESTER","Odyssey":true"#);
+        self.journal(
+            "Location",
+            &format!(
+                r#", "StarSystem":"Kappa Testis", "SystemAddress":{SYSTEM}, "StarPos":[0,0,0]"#
+            ),
+        );
     }
 
     fn scan_body(&mut self, class: &str, atmosphere: &str, footfalled: bool) {
@@ -410,6 +416,7 @@ fn canonn_request_on_bio_signals_only_when_online() {
     assert_eq!(sent[0].0, bio_key());
     let NetQuery::BodyBio {
         system_address,
+        star_system,
         body_id,
         body_name,
         profile,
@@ -418,6 +425,7 @@ fn canonn_request_on_bio_signals_only_when_online() {
         panic!("BodyBio expected")
     };
     assert_eq!((*system_address, *body_id), (SYSTEM, BODY));
+    assert_eq!(star_system, "Kappa Testis");
     assert_eq!(body_name, "Kappa Testis A 5 a");
     assert_eq!(profile.planet_class.as_deref(), Some("Rocky body"));
     // Landing on the same body does not repeat the request while in flight.
