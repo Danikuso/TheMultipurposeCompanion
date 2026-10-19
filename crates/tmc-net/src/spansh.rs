@@ -4,6 +4,7 @@ use crate::jsonx;
 use crate::transport::url_encode;
 use chrono::{DateTime, Utc};
 use serde_json::Value;
+use tmc_model::market::is_fleet_carrier;
 use tmc_model::net::{
     GalaxyRouteParams, NetFailure, NeutronRouteParams, PadSize, PlannedHop, PlannedRoute,
     RemoteSystem, SystemSuggestion, TradeCommodity, TradeRouteParams, TradeRoutePlan, TradeStop,
@@ -172,7 +173,13 @@ pub fn galaxy_form(p: &GalaxyRouteParams) -> Vec<(String, String)> {
     ]
 }
 
-/// Formulario de la ruta comercial. Spansh solo distingue plataforma grande
+/// Formulario de la ruta comercial.
+///
+/// Limitaciones conocidas: no se envía `max_system_distance` (`TradeRouteParams`
+/// no lo tiene; Spansh usa su valor por defecto, 1000 en las pruebas) y Spansh
+/// solo distingue plataforma grande: con `Medium`/`Small` se envía
+/// `requires_large_pad=0` y la respuesta no trae el tamaño, así que no hay filtro fino.
+/// Spansh solo distingue plataforma grande
 /// (`requires_large_pad`); `max_price_age` va en segundos; los portaaviones
 /// se excluyen siempre (`allow_player_owned=0`).
 pub fn trade_form(p: &TradeRouteParams) -> Vec<(String, String)> {
@@ -225,6 +232,84 @@ pub fn parse_route_result(body: &str) -> Result<RoutePoll, NetFailure> {
     }
 }
 
+fn endpoint_is_carrier(e: &jsonx::Obj) -> bool {
+    let name = e.get("station").and_then(Value::as_str);
+    let id = e.get("market_id").and_then(Value::as_u64);
+    // Sin `market_id` no se excluye por el nombre (se conservaría una estación real).
+    id.is_some() && is_fleet_carrier(id.unwrap_or(0), None, name)
+}
+
+fn hop_is_carrier(h: &Value) -> bool {
+    ["source", "destination"].iter().any(|k| {
+        h.get(k)
+            .and_then(Value::as_object)
+            .is_some_and(endpoint_is_carrier)
+    })
+}
+
+/// Un salto; `Ok(None)` si toca un portaaviones. Las mercancías corruptas se
+/// saltan y un salto sin ninguna válida se descarta (`Err`).
+fn parse_hop(h: &Value) -> Result<Option<TradeStop>, NetFailure> {
+    let h = jsonx::as_obj(h)?;
+    let (src, dst) = (
+        jsonx::as_obj(h.get("source").ok_or(NetFailure::Malformed)?)?,
+        jsonx::as_obj(h.get("destination").ok_or(NetFailure::Malformed)?)?,
+    );
+    if endpoint_is_carrier(src) || endpoint_is_carrier(dst) {
+        return Ok(None);
+    }
+    let from_station = jsonx::req_str(src, "station")?;
+    let to_station = jsonx::req_str(dst, "station")?;
+    let raw = jsonx::req_array(h, "commodities")?;
+    let commodities: Vec<TradeCommodity> =
+        raw.iter().filter_map(|c| parse_commodity(c).ok()).collect();
+    if !raw.is_empty() && commodities.is_empty() {
+        return Err(NetFailure::Malformed);
+    }
+    let updated = |o: &jsonx::Obj| -> Option<DateTime<Utc>> {
+        o.get("market_updated_at")
+            .and_then(Value::as_i64)
+            .and_then(|t| DateTime::from_timestamp(t, 0))
+    };
+    let data_updated_at = match (updated(src), updated(dst)) {
+        (Some(a), Some(b)) => Some(a.min(b)),
+        (a, b) => a.or(b),
+    };
+    Ok(Some(TradeStop {
+        from_system: jsonx::req_str(src, "system")?,
+        from_station,
+        to_system: jsonx::req_str(dst, "system")?,
+        to_station,
+        from_market_id: jsonx::opt_u64(src, "market_id")?,
+        to_market_id: jsonx::opt_u64(dst, "market_id")?,
+        commodities,
+        stop_profit: h
+            .get("total_profit")
+            .and_then(Value::as_i64)
+            .ok_or(NetFailure::Malformed)?,
+        distance_ly: jsonx::req_f64(h, "distance")?,
+        data_updated_at,
+    }))
+}
+
+fn parse_commodity(c: &Value) -> Result<TradeCommodity, NetFailure> {
+    let c = jsonx::as_obj(c)?;
+    let section = |k: &str| -> Result<&jsonx::Obj, NetFailure> {
+        jsonx::as_obj(c.get(k).ok_or(NetFailure::Malformed)?)
+    };
+    let buy_price = jsonx::req_u64(section("source_commodity")?, "buy_price")?;
+    let sell_price = jsonx::req_u64(section("destination_commodity")?, "sell_price")?;
+    Ok(TradeCommodity {
+        commodity: jsonx::req_str(c, "name")?,
+        name_localised: None,
+        amount: jsonx::opt_u32(c, "amount")?.ok_or(NetFailure::Malformed)?,
+        buy_price,
+        sell_price,
+        profit_per_ton: i64::try_from(sell_price).map_err(|_| NetFailure::Malformed)?
+            - i64::try_from(buy_price).map_err(|_| NetFailure::Malformed)?,
+    })
+}
+
 /// Interpreta el sondeo de una ruta comercial: `result` es un array de saltos.
 /// Se descartan los saltos con origen o destino en un portaaviones (por el
 /// nombre `XXX-NNN`; Spansh no da el tipo de estación).
@@ -245,62 +330,12 @@ pub fn parse_trade_result(body: &str) -> Result<TradePoll, NetFailure> {
     };
     let mut stops = Vec::new();
     for h in hops {
-        let h = jsonx::as_obj(h)?;
-        let (src, dst) = (
-            jsonx::as_obj(h.get("source").ok_or(NetFailure::Malformed)?)?,
-            jsonx::as_obj(h.get("destination").ok_or(NetFailure::Malformed)?)?,
-        );
-        let (from_station, to_station) = (
-            jsonx::req_str(src, "station")?,
-            jsonx::req_str(dst, "station")?,
-        );
-        if crate::ardent::is_carrier_name(&from_station)
-            || crate::ardent::is_carrier_name(&to_station)
-        {
-            continue;
+        if let Ok(Some(stop)) = parse_hop(h) {
+            stops.push(stop);
         }
-        let mut commodities = Vec::new();
-        for c in jsonx::req_array(h, "commodities")? {
-            let c = jsonx::as_obj(c)?;
-            let section = |k: &str| -> Result<&jsonx::Obj, NetFailure> {
-                jsonx::as_obj(c.get(k).ok_or(NetFailure::Malformed)?)
-            };
-            let buy_price = jsonx::req_u64(section("source_commodity")?, "buy_price")?;
-            let sell_price = jsonx::req_u64(section("destination_commodity")?, "sell_price")?;
-            commodities.push(TradeCommodity {
-                commodity: jsonx::req_str(c, "name")?,
-                name_localised: None,
-                amount: jsonx::opt_u32(c, "amount")?.ok_or(NetFailure::Malformed)?,
-                buy_price,
-                sell_price,
-                profit_per_ton: i64::try_from(sell_price).map_err(|_| NetFailure::Malformed)?
-                    - i64::try_from(buy_price).map_err(|_| NetFailure::Malformed)?,
-            });
-        }
-        let updated = |o: &jsonx::Obj| -> Result<Option<DateTime<Utc>>, NetFailure> {
-            Ok(jsonx::opt_u64(o, "market_updated_at")?
-                .and_then(|t| i64::try_from(t).ok())
-                .and_then(|t| DateTime::from_timestamp(t, 0)))
-        };
-        let data_updated_at = match (updated(src)?, updated(dst)?) {
-            (Some(a), Some(b)) => Some(a.min(b)),
-            (a, b) => a.or(b),
-        };
-        stops.push(TradeStop {
-            from_system: jsonx::req_str(src, "system")?,
-            from_station,
-            to_system: jsonx::req_str(dst, "system")?,
-            to_station,
-            from_market_id: jsonx::opt_u64(src, "market_id")?,
-            to_market_id: jsonx::opt_u64(dst, "market_id")?,
-            commodities,
-            stop_profit: h
-                .get("total_profit")
-                .and_then(Value::as_i64)
-                .ok_or(NetFailure::Malformed)?,
-            distance_ly: jsonx::req_f64(h, "distance")?,
-            data_updated_at,
-        });
+    }
+    if !hops.is_empty() && stops.is_empty() && !hops.iter().any(hop_is_carrier) {
+        return Err(NetFailure::Malformed);
     }
     let total_profit = stops.iter().map(|s| s.stop_profit).sum();
     Ok(TradePoll::Done(TradeRoutePlan {
@@ -726,11 +761,47 @@ mod tests {
 
     #[test]
     fn trade_result_drops_carrier_stops() {
-        let body = TRADE.replace("Fictional Dock", "ABC-123");
+        let body = TRADE
+            .replace("Fictional Dock", "ABC-123")
+            .replace("900000002", "3700000002");
         let TradePoll::Done(plan) = parse_trade_result(&body).unwrap() else {
             panic!("se esperaba Done");
         };
         assert!(plan.stops.is_empty());
         assert_eq!(plan.total_profit, 0);
+    }
+
+    #[test]
+    fn trade_result_carrier_rule_and_partial_rows() {
+        // Sin market_id alto el nombre tipo callsign no excluye.
+        let body = TRADE.replace("Fictional Dock", "ABC-123");
+        let TradePoll::Done(plan) = parse_trade_result(&body).unwrap() else {
+            panic!();
+        };
+        assert_eq!(plan.stops.len(), 2);
+        // Salto corrupto: se salta, el otro se conserva.
+        let mut v: serde_json::Value = serde_json::from_str(TRADE).unwrap();
+        v["result"][0]["commodities"][0] = serde_json::json!({"junk": 1});
+        let TradePoll::Done(plan) = parse_trade_result(&v.to_string()).unwrap() else {
+            panic!();
+        };
+        assert_eq!(plan.stops[0].commodities.len(), 1);
+        v["result"][0] = serde_json::json!({"junk": 1});
+        let TradePoll::Done(plan) = parse_trade_result(&v.to_string()).unwrap() else {
+            panic!();
+        };
+        assert_eq!(plan.stops.len(), 1);
+        v["result"][1] = serde_json::json!(5);
+        assert_eq!(
+            parse_trade_result(&v.to_string()),
+            Err(NetFailure::Malformed)
+        );
+        assert_eq!(
+            parse_trade_result(r#"{"status":"ok","result":[]}"#),
+            Ok(TradePoll::Done(TradeRoutePlan {
+                stops: vec![],
+                total_profit: 0
+            }))
+        );
     }
 }

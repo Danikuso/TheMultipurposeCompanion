@@ -292,6 +292,7 @@ impl NetClient {
 
     /// Coordenadas por nombre: Ardent y, solo si está caído, EDSM.
     async fn coords(&self, name: &str, online: Option<&AtomicBool>) -> (NetSource, NetOutcome) {
+        let mut first = None;
         if !self.is_down(Service::Ardent) {
             let req = Req::Get(ardent::system_name_url(name));
             let out = self
@@ -299,10 +300,19 @@ impl NetClient {
                     ardent::parse_coords(b).map(|c| c.map(NetOutcome::Coords))
                 })
                 .await;
-            return (NetSource::Ardent, out);
+            match out {
+                NetOutcome::Coords(_) | NetOutcome::Disabled => {
+                    return (NetSource::Ardent, out);
+                }
+                // 404, fallo o cuerpo corrupto: se prueba EDSM.
+                other => first = Some(other),
+            }
         }
         if self.is_down(Service::Edsm) {
-            return (NetSource::Edsm, NetOutcome::Failed(NetFailure::Down));
+            return match first {
+                Some(out) => (NetSource::Ardent, out),
+                None => (NetSource::Edsm, NetOutcome::Failed(NetFailure::Down)),
+            };
         }
         let req = Req::Get(edsm::coords_url(name));
         let out = self
@@ -310,7 +320,11 @@ impl NetClient {
                 edsm::parse_coords(b).map(|c| c.map(NetOutcome::Coords))
             })
             .await;
-        (NetSource::Edsm, out)
+        match (out, first) {
+            // EDSM sin datos: si Ardent falló, se informa su fallo.
+            (NetOutcome::NoData, Some(f @ NetOutcome::Failed(_))) => (NetSource::Ardent, f),
+            (out, _) => (NetSource::Edsm, out),
+        }
     }
 
     async fn system(
@@ -1865,7 +1879,22 @@ mod tests {
     async fn coords_unknown_is_no_data() {
         let t = FakeTransport::new();
         t.script("ardent-insight", vec![ok(404, "{}")]);
+        t.script("edsm.net", vec![ok(200, "{}")]);
         let c = client(&t);
         assert_eq!(c.execute(&coords_query("Zzz")).await.1, NetOutcome::NoData);
+        assert_eq!(t.count("edsm.net"), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn coords_ardent_404_or_failure_falls_back_to_edsm() {
+        for ardent_reply in [ok(404, "{}"), ok(500, ""), ok(200, "not json")] {
+            let t = FakeTransport::new();
+            t.script("ardent-insight", vec![ardent_reply]);
+            t.script("edsm.net", vec![ok(200, &coords_part("edsm"))]);
+            let c = client(&t);
+            let (src, out) = c.execute(&coords_query("Origin")).await;
+            assert_eq!(src, NetSource::Edsm);
+            assert!(matches!(out, NetOutcome::Coords(_)));
+        }
     }
 }
