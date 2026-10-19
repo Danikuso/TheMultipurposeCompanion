@@ -8,6 +8,9 @@ use tmc_journal::{LineTailer, list_journals};
 use tmc_model::events::{EventKind, parse_line};
 use tmc_model::state::Galaxy;
 
+/// Lineas por archivo con diagnostico completo en importacion; el resto se resume por lote.
+const IMPORT_FULL_DIAGNOSTIC_LINES: u64 = 32;
+
 pub struct ImportOptions {
     pub throttle: Arc<AtomicBool>,
 }
@@ -82,18 +85,29 @@ pub fn import_history(
                 version = None;
                 galaxy = None;
             }
+            tail.limit_line_diagnostics(IMPORT_FULL_DIAGNOSTIC_LINES);
+            #[cfg(debug_assertions)]
+            let mut invalid_logged = 0u64;
             let mut batch = Vec::with_capacity(5000);
             for (line, json) in tail.read_new_lines()? {
                 let event = match parse_line(&json) {
                     Ok(event) => event,
                     Err(_error) => {
                         report.skipped_lines += 1;
-                        tracing::warn!(line, "invalid history line skipped");
-                        tmc_model::diagnostic!(
-                            tmc_model::diagnostics::DiagnosticContext::Sql,
-                            "store.import.invalid_line",
-                            serde_json::json!({"file":tmc_model::diagnostics::source_file(path),"line":line,"bytes":json.len(),"failure_class":match _error {tmc_model::ParseError::Empty=>"empty",tmc_model::ParseError::Json(_)=>"json",tmc_model::ParseError::MissingField(_)=>"missing_field"}})
+                        tracing::warn!(
+                            file = file_label(path, &name),
+                            line,
+                            "invalid history line skipped"
                         );
+                        #[cfg(debug_assertions)]
+                        if invalid_logged < IMPORT_FULL_DIAGNOSTIC_LINES {
+                            invalid_logged += 1;
+                            tmc_model::diagnostic!(
+                                tmc_model::diagnostics::DiagnosticContext::Sql,
+                                "store.import.invalid_line",
+                                serde_json::json!({"file":tmc_model::diagnostics::source_file(path),"line":line,"bytes":json.len(),"failure_class":match _error {tmc_model::ParseError::Empty=>"empty",tmc_model::ParseError::Json(_)=>"json",tmc_model::ParseError::MissingField(_)=>"missing_field"}})
+                            );
+                        }
                         continue;
                     }
                 };
@@ -120,11 +134,14 @@ pub fn import_history(
                     }
                     _ => {}
                 }
-                tmc_model::diagnostic!(
-                    tmc_model::diagnostics::DiagnosticContext::Sql,
-                    "store.import.context",
-                    serde_json::json!({"line":line,"has_commander":cmdr.is_some(),"galaxy":galaxy})
-                );
+                #[cfg(debug_assertions)]
+                if line <= IMPORT_FULL_DIAGNOSTIC_LINES {
+                    tmc_model::diagnostic!(
+                        tmc_model::diagnostics::DiagnosticContext::Sql,
+                        "store.import.context",
+                        serde_json::json!({"line":line,"has_commander":cmdr.is_some(),"galaxy":galaxy})
+                    );
+                }
                 batch.push(StoredEvent {
                     file_name: name.clone(),
                     line,
@@ -203,7 +220,7 @@ fn write_batch(store: &Store, batch: &[StoredEvent]) -> Result<u64, StoreError> 
         let transaction = conn.transaction()?;
         let mut inserted = 0;
         for event in batch {
-            inserted += crate::writer::insert_event(&transaction, event)? as u64;
+            inserted += crate::writer::insert_event_quiet(&transaction, event)? as u64;
         }
         transaction.commit()?;
         tmc_model::diagnostic!(
@@ -229,5 +246,19 @@ fn galaxy_name(version: &str) -> &'static str {
         Galaxy::Live => "Live",
         Galaxy::Legacy => "Legacy",
         Galaxy::Unknown => "Unknown",
+    }
+}
+
+/// Nombre de diario seguro para logs generales (los nombres vienen de `list_journals`).
+fn file_label<'a>(path: &'a Path, name: &'a str) -> &'a str {
+    #[cfg(debug_assertions)]
+    {
+        let _ = name;
+        tmc_model::diagnostics::source_file(path)
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        let _ = path;
+        name
     }
 }

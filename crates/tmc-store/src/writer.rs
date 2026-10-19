@@ -108,59 +108,60 @@ impl Drop for EventWriter {
     }
 }
 
-pub(crate) fn insert_event(conn: &Connection, ev: &StoredEvent) -> Result<usize, StoreError> {
-    let result: Result<usize, StoreError> = (|| {
-        let line = i64::try_from(ev.line)
-            .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))?;
-        conn.execute(
-            "INSERT OR IGNORE INTO journal_file (name, size, offset) VALUES (?1, 0, 0)",
-            [&ev.file_name],
-        )?;
-        let file_id: i64 = conn.query_row(
-            "SELECT id FROM journal_file WHERE name = ?1",
-            [&ev.file_name],
-            |row| row.get(0),
-        )?;
-        let inserted = conn.execute(
-            "INSERT OR IGNORE INTO event (file_id, line, ts, name, cmdr, json)
+/// Inserta sin diagnostico por evento (importacion historica: se resume por lote).
+pub(crate) fn insert_event_quiet(conn: &Connection, ev: &StoredEvent) -> Result<usize, StoreError> {
+    let line = i64::try_from(ev.line)
+        .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))?;
+    conn.execute(
+        "INSERT OR IGNORE INTO journal_file (name, size, offset) VALUES (?1, 0, 0)",
+        [&ev.file_name],
+    )?;
+    let file_id: i64 = conn.query_row(
+        "SELECT id FROM journal_file WHERE name = ?1",
+        [&ev.file_name],
+        |row| row.get(0),
+    )?;
+    Ok(conn.execute(
+        "INSERT OR IGNORE INTO event (file_id, line, ts, name, cmdr, json)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            params![
-                file_id,
-                line,
-                ev.ts.to_rfc3339_opts(SecondsFormat::Nanos, true),
-                ev.name,
-                ev.cmdr,
-                ev.json
-            ],
-        )?;
-        #[cfg(debug_assertions)]
-        if inserted > 0 {
+        params![
+            file_id,
+            line,
+            ev.ts.to_rfc3339_opts(SecondsFormat::Nanos, true),
+            ev.name,
+            ev.cmdr,
+            ev.json
+        ],
+    )?)
+}
+
+/// Insercion en vivo: un registro compacto (insertado/deduplicado). El payload completo
+/// lo registra solo el lector (`journal.reader.payload`).
+pub(crate) fn insert_event(conn: &Connection, ev: &StoredEvent) -> Result<usize, StoreError> {
+    let result = insert_event_quiet(conn, ev);
+    #[cfg(debug_assertions)]
+    match &result {
+        Ok(inserted) if *inserted > 0 => {
             tmc_model::diagnostic!(
                 tmc_model::diagnostics::DiagnosticContext::Sql,
                 "store.event.inserted",
                 serde_json::json!({"line":ev.line,"event":ev.name,"file":tmc_model::diagnostics::source_file(std::path::Path::new(&ev.file_name)),"bytes":ev.json.len()})
             );
-        } else {
+        }
+        Ok(_) => {
             tmc_model::diagnostic!(
                 tmc_model::diagnostics::DiagnosticContext::Sql,
                 "store.event.deduplicated",
                 serde_json::json!({"line":ev.line,"event":ev.name,"file":tmc_model::diagnostics::source_file(std::path::Path::new(&ev.file_name))})
             );
         }
-        tmc_model::diagnostic!(
-            tmc_model::diagnostics::DiagnosticContext::Journal { event: &ev.name },
-            "store.event.payload",
-            tmc_model::diagnostics::decoded_json(&ev.json)
-        );
-        Ok(inserted)
-    })();
-    #[cfg(debug_assertions)]
-    if let Err(error) = &result {
-        tmc_model::diagnostic!(
-            tmc_model::diagnostics::DiagnosticContext::Sql,
-            "store.event.failed",
-            serde_json::json!({"line":ev.line,"failure_class":error.diagnostic_class()})
-        );
+        Err(error) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "store.event.failed",
+                serde_json::json!({"line":ev.line,"failure_class":error.diagnostic_class()})
+            );
+        }
     }
     result
 }

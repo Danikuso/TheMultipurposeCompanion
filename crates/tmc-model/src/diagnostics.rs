@@ -26,6 +26,40 @@ pub fn sql_fingerprint(sql: &str) -> u64 {
     hash.finish()
 }
 
+const SQL_TEMPLATE_LIMIT: usize = 512;
+
+fn sql_template_is_constant(sql: &str) -> bool {
+    if sql.contains('\'') || sql.contains('"') || sql.contains('`') || sql.contains("--") {
+        return false;
+    }
+    // A standalone digit run is a possible interpolated literal; identifiers like t1 are fine.
+    let bytes = sql.as_bytes();
+    let word = |b: u8| b.is_ascii_alphanumeric() || b == b'_';
+    for (index, byte) in bytes.iter().enumerate() {
+        if byte.is_ascii_digit() && (index == 0 || !word(bytes[index - 1])) {
+            // `?1` positional markers are placeholders, not literals.
+            if index > 0 && bytes[index - 1] == b'?' {
+                continue;
+            }
+            return false;
+        }
+    }
+    true
+}
+
+/// SQL text as a template (<= 512 bytes) only when it has no quoted or numeric literals
+/// that could have been interpolated; otherwise callers log just the fingerprint.
+pub fn sql_template(sql: &str) -> Option<&str> {
+    if !sql_template_is_constant(sql) {
+        return None;
+    }
+    let mut end = sql.len().min(SQL_TEMPLATE_LIMIT);
+    while !sql.is_char_boundary(end) {
+        end -= 1;
+    }
+    Some(&sql[..end])
+}
+
 /// Logical payload size without serializing a private SQL value into a log.
 pub fn value_bytes(value: &Value) -> usize {
     match value {
@@ -474,6 +508,11 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
     }
     match key {
         "file" => safe_source_name(text),
+        "sqltemplate" => {
+            matches!(context, DiagnosticContext::Sql)
+                && text.len() <= SQL_TEMPLATE_LIMIT
+                && sql_template_is_constant(text)
+        }
         "failureclass" => matches!(
             text,
             "not_found"
