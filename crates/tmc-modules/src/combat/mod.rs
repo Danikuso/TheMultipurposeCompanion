@@ -36,7 +36,7 @@ use serde::Serialize;
 use serde_json::Value;
 use session::HuntingSession;
 use ship::{ShipAlert, ShipTracker};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use target::TargetTracker;
 use tmc_core::{Alert, Module, ModuleCtx, Relevance, Severity, TopicSet};
 use tmc_model::events::{EventKind, JournalEvent};
@@ -131,7 +131,7 @@ pub struct Combat {
     /// El libro ya viene del almacén.
     ledger_loaded: bool,
     /// Eventos de vales vistos antes de recibir el libro del almacén.
-    pending: Vec<Pending>,
+    pending: VecDeque<Pending>,
     inflight: Inflight,
     if_state: Option<(u64, IfState)>,
     prev_alerts: Vec<ShipAlert>,
@@ -160,7 +160,7 @@ impl Combat {
             cz: CzTracker::default(),
             ax: AxTracker::default(),
             ledger_loaded: false,
-            pending: Vec::new(),
+            pending: VecDeque::new(),
             inflight: Inflight::default(),
             if_state: None,
             prev_alerts: Vec::new(),
@@ -203,7 +203,16 @@ impl Combat {
         if self.cmdr.as_deref() == Some(name.as_str()) {
             return;
         }
+        let switched = self.cmdr.is_some();
         self.cmdr = Some(name);
+        if switched {
+            // Otro comandante: sesión, rango, objetivo, avisos, CZ y AX no sirven.
+            self.session = HuntingSession::new(self.clock());
+            self.target = TargetTracker::default();
+            self.prev_alerts.clear();
+            self.cz = CzTracker::default();
+            self.ax = AxTracker::default();
+        }
         self.ledger = VoucherLedger::default();
         self.ledger_loaded = false;
         self.inflight.finish(LEDGER_KEY);
@@ -230,7 +239,8 @@ impl Combat {
         let now = je.timestamp;
         self.check_cmdr(state);
         self.system = state.location.system.clone();
-        if let EventKind::Location(l) | EventKind::FsdJump(l) = &je.kind {
+        if let EventKind::Location(l) | EventKind::FsdJump(l) | EventKind::CarrierJump(l) = &je.kind
+        {
             self.ax.on_location(l);
         }
         match &je.kind {
@@ -256,9 +266,9 @@ impl Combat {
             self.ledger.apply_event(&je.kind, &self.system, now);
             if !self.ledger_loaded {
                 if self.pending.len() >= PENDING_CAP {
-                    self.pending.remove(0);
+                    self.pending.pop_front();
                 }
-                self.pending.push(Pending {
+                self.pending.push_back(Pending {
                     kind: je.kind.clone(),
                     system: self.system.clone(),
                     ts: now,
@@ -523,7 +533,7 @@ impl Module for Combat {
                 self.on_stored(value);
                 search_if = true;
             }
-            SourceEvent::Net(r) => self.apply_response(r, state),
+            SourceEvent::Net(r) if r.module == "combat" => self.apply_response(r, state),
             SourceEvent::Action { name, .. } if name == ACTION_RESET => {
                 let now = self.clock();
                 self.session.reset(now);
