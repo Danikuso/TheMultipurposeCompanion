@@ -596,3 +596,32 @@ fn session_as_of_does_not_dirty_and_follows_journal_clock() {
     assert_eq!(h.m.session_renders, before);
     assert_eq!(h.val("combat.session")["as_of"], first);
 }
+
+#[test]
+fn commander_switch_resets_session_rank_target_and_ax() {
+    let mut h = H::new();
+    h.start();
+    h.journal(5, "Rank", r#","Combat":4"#);
+    h.bounty(10, "Navy", 5000);
+    h.lock(11, true);
+    assert_eq!(h.val("combat.session")["kills"], 1);
+    assert_eq!(h.val("combat.session")["combat_rank"], 4);
+    h.journal(20, "Commander", r#","FID":"F2","Name":"OTHER""#);
+    let session = h.val("combat.session");
+    assert_eq!(session["kills"], 0);
+    assert_eq!(session["credits"], 0);
+    assert!(session["combat_rank"].is_null());
+    assert!(h.val("combat.target").is_null());
+}
+
+#[test]
+fn carrier_jump_updates_ax_presence() {
+    let mut h = H::new();
+    h.start();
+    h.journal(
+        10,
+        "CarrierJump",
+        r#","StarSystem":"Synthetic AX","SystemAddress":9,"StarPos":[0,0,0],"ThargoidWar":{"CurrentState":"Thargoid_Probing"}"#,
+    );
+    assert_eq!(h.val("combat.ax")["presence"], true);
+}

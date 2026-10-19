@@ -6,7 +6,6 @@ use std::sync::{
     Arc, Mutex,
     atomic::{AtomicBool, Ordering},
 };
-use tmc_model::events::commodity_key;
 use tmc_model::source::SourceEvent;
 use tmc_server::{ActionError, ActionFut, ActionHost, ConfigHost};
 use tokio::sync::mpsc;
@@ -174,26 +173,9 @@ impl ConfigHost for AppActions {
         if !matches!(updated.language.as_str(), "es" | "en" | "fr" | "de" | "pt") {
             return Err(ActionError::Failed("invalid-language".into()));
         }
-        if !(10..=500).contains(&updated.sell_search_radius_ly) {
-            return Err(ActionError::Failed("invalid-sell-search-radius".into()));
-        }
-        if updated.mining_threshold_cr > 1_000_000_000 {
-            return Err(ActionError::Failed("invalid-mining-threshold".into()));
-        }
-        if updated.mining_interest.len() > 30 {
-            return Err(ActionError::Failed("invalid-mining-interest".into()));
-        }
-        let mut interest: Vec<String> = Vec::new();
-        for raw in &updated.mining_interest {
-            let key = commodity_key(raw);
-            if key.is_empty() || key.chars().count() > 40 {
-                return Err(ActionError::Failed("invalid-mining-interest".into()));
-            }
-            if !interest.contains(&key) {
-                interest.push(key);
-            }
-        }
-        updated.mining_interest = interest;
+        updated
+            .validate_f2()
+            .map_err(|e| ActionError::Failed(e.into()))?;
         if updated.server.lan {
             updated.ensure_lan_token();
         }
@@ -315,4 +297,10 @@ impl ActionHost for AppActions {
     }
 }
 
-const MODULE_PREFIXES: [&str; 3] = ["navigation.", "exploration.", "exobiology."];
+const MODULE_PREFIXES: [&str; 5] = [
+    "navigation.",
+    "exploration.",
+    "exobiology.",
+    "combat.",
+    "mining.",
+];
