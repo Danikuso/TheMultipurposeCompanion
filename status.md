@@ -2,24 +2,25 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-20 00:21 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-20 00:37 (Europe/Madrid) · Codex
 - **Fase actual:** extensión autorizada de diagnóstico debug; F3 se retoma después. Historial F0/F1/F2 conservado.
 - **Spec activa:** [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md) — autorizada por el propietario.
-- **Plan activo:** [diagnóstico debug](docs/plans/2026-10-20-diagnostico-debug.md) — D1 ✅; D2 🔄 en curso.
+- **Plan activo:** [diagnóstico debug](docs/plans/2026-10-20-diagnostico-debug.md) — D1–D2 ✅; D3 🔄 en curso.
 - **Rama de trabajo:** codex/diagnostico-logs (checkout aislado; principal conserva F3 parcial).
 
 ## Puntero actual
 
-- **Tarea:** D2 🔄 en curso — writer circular DEBUG y ciclo de vida; paso 1: pruebas de directorio, rotación, límites y captura real de emit.
-- **Último paso completado:** D1 e6c5d09 con ambas revisiones aprobadas, fmt/clippy workspace PASS, 781 tests Rust PASS (1 ignorado); release noeval PASS; 144 UI PASS/check/build. Tablas históricas verificadas intactas.
-- **Siguiente acción:** implementar D2 con TDD, revisar y verificar; seguir D3–D7, integrar y retomar F3 Task17 preservada en D:/Proyectos/EDPyCompanion. No sobrescribir target/release del propietario.
+- **Tarea:** D3 🔄 en curso — fuentes locales y persistencia; paso 1: tests de eventos/offsets y SQL sin datos privados usando el writer real.
+- **Último paso completado:** D2 ed0611e con ambas revisiones, 14 tests de writer/795 Rust PASS (1 ignorado), fmt/clippy workspace y clippy release tmc-app PASS; UI sin cambios desde D1 (144/check/build PASS). Release de prueba intacto.
+- **Siguiente acción:** instrumentar Journal/Status/companion/config y fronteras de SQLite; después D4 actor/módulos, D5 red/HTTP/auth/acciones, D6 UI, D7 validación/build e integración. Retomar F3 Task17 preservada al terminar logs.
+
 ## Tareas de diagnóstico debug
 
 | # | Tarea | Estado | Commit | Notas |
 |---|---|---|---|---|
 | D1 | Contrato y redacción | ✅ hecha | e6c5d09 | 13 diagnósticos TDD; ambas revisiones; 781 Rust, 144 UI, release noeval, fmt/clippy/check/build PASS |
-| D2 | Writer circular y lifecycle | 🔄 en curso | — | Paso 1: pruebas de writer, captura emit y directorio exe/debug_logs |
-| D3 | Fuentes y persistencia | ⬜ pendiente | — | Tras D2 |
+| D2 | Writer circular y lifecycle | ✅ hecha | ed0611e | 14 pruebas; ambas revisiones; 795 Rust, fmt/clippy y clippy release PASS |
+| D3 | Fuentes y persistencia | 🔄 en curso | — | Paso 1: pruebas de frontera; offsets reales y datos sanitizados |
 | D4 | Actor y módulos | ⬜ pendiente | — | Tras D3 |
 | D5 | Red, HTTP, WS, auth y acciones | ⬜ pendiente | — | Tras D4 |
 | D6 | UI | ⬜ pendiente | — | Tras D5 |
@@ -198,6 +199,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-20 00:37 (Europe/Madrid) · Codex · D2 ed0611e cerrada con writer DEBUG acotado y 14 pruebas. Correcciones de escape JSON, limpieza bajo bloqueo Windows y orden de cierre revisadas. 795 Rust PASS/1 ignorado, fmt/clippy y clippy release PASS; empieza D3.
 
 - 2026-10-20 00:21 (Europe/Madrid) · Codex · D1 e6c5d09 revisada y verificada: 781 Rust/144 UI PASS, release sin evaluación, fmt/clippy/check/build correctos. Inicia D2. Se reconcilia solo el resumen de fases con merges reales; tablas históricas completas intactas.
 
