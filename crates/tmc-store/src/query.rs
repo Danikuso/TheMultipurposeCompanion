@@ -21,6 +21,9 @@ pub struct EventRow {
     pub json: String,
 }
 
+#[cfg(debug_assertions)]
+const ROW_PAYLOAD_LIMIT: usize = 20;
+
 impl Store {
     pub fn query_events(&self, q: &EventQuery) -> Result<Vec<EventRow>, StoreError> {
         #[cfg(debug_assertions)]
@@ -78,12 +81,18 @@ impl Store {
                     "store.events.query_completed",
                     serde_json::json!({"rows":_rows.len(),"bytes":_rows.iter().map(|r|r.json.len()).sum::<usize>(),"elapsed_us":diagnostic_started.elapsed().as_micros()})
                 );
-                #[cfg(debug_assertions)]
-                for row in _rows {
+                for row in _rows.iter().take(ROW_PAYLOAD_LIMIT) {
                     tmc_model::diagnostic!(
                         tmc_model::diagnostics::DiagnosticContext::Journal { event: &row.name },
                         "store.events.row_payload",
                         tmc_model::diagnostics::decoded_json(&row.json)
+                    );
+                }
+                if _rows.len() > ROW_PAYLOAD_LIMIT {
+                    tmc_model::diagnostic!(
+                        tmc_model::diagnostics::DiagnosticContext::Sql,
+                        "store.events.row_payload_summary",
+                        serde_json::json!({"rows":_rows.len(),"logged":ROW_PAYLOAD_LIMIT,"omitted":_rows.len()-ROW_PAYLOAD_LIMIT})
                     );
                 }
             }

@@ -13,9 +13,22 @@ pub struct LineTailer {
     pending: Vec<u8>,
     #[cfg(debug_assertions)]
     unchanged_polls: u64,
+    #[cfg(debug_assertions)]
+    line_log_limit: Option<u64>,
 }
 
 impl LineTailer {
+    /// Bulk readers (historical import) keep per-line diagnostics only for the first `limit`
+    /// lines; the rest are summarized by their caller. No-op in release builds.
+    pub fn limit_line_diagnostics(&mut self, limit: u64) {
+        #[cfg(debug_assertions)]
+        {
+            self.line_log_limit = Some(limit);
+        }
+        #[cfg(not(debug_assertions))]
+        let _ = limit;
+    }
+
     pub fn open(path: &Path, offset: u64) -> io::Result<Self> {
         let result: io::Result<Self> = (|| {
             let mut options = OpenOptions::new();
@@ -66,6 +79,8 @@ impl LineTailer {
                 pending: Vec::new(),
                 #[cfg(debug_assertions)]
                 unchanged_polls: 0,
+                #[cfg(debug_assertions)]
+                line_log_limit: None,
             })
         })();
         #[cfg(debug_assertions)]
@@ -115,11 +130,17 @@ impl LineTailer {
                 }
                 self.line_no += 1;
                 lines.push((self.line_no, String::from_utf8_lossy(line).into_owned()));
-                tmc_model::diagnostic!(
-                    tmc_model::diagnostics::DiagnosticContext::State,
-                    "journal.tail.line",
-                    tmc_model::diagnostics::json!({"file":tmc_model::diagnostics::source_file(&self.path),"line":self.line_no,"start_offset":self.offset + start as u64,"end_offset":self.offset + end as u64 + 1,"bytes":end-start+1})
-                );
+                #[cfg(debug_assertions)]
+                if self
+                    .line_log_limit
+                    .is_none_or(|limit| self.line_no <= limit)
+                {
+                    tmc_model::diagnostic!(
+                        tmc_model::diagnostics::DiagnosticContext::State,
+                        "journal.tail.line",
+                        tmc_model::diagnostics::json!({"file":tmc_model::diagnostics::source_file(&self.path),"line":self.line_no,"start_offset":self.offset + start as u64,"end_offset":self.offset + end as u64 + 1,"bytes":end-start+1})
+                    );
+                }
                 start = end + 1;
             }
             self.offset += start as u64;

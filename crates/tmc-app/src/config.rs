@@ -85,22 +85,22 @@ pub fn data_dir() -> PathBuf {
 }
 
 #[cfg(debug_assertions)]
-thread_local! {
-    // One bootstrap load on the calling thread, consumed after logging initialization.
-    static BOOTSTRAP_REPORT: std::cell::RefCell<Option<serde_json::Value>> = const { std::cell::RefCell::new(None) };
-}
+// Primera carga de arranque (la primera gana), consumida tras iniciar el registro.
+static BOOTSTRAP_REPORT: std::sync::Mutex<Option<serde_json::Value>> = std::sync::Mutex::new(None);
 
 #[cfg(debug_assertions)]
 pub(crate) fn emit_bootstrap_report() {
-    BOOTSTRAP_REPORT.with(|slot| {
-        if let Some(report) = slot.borrow_mut().take() {
-            tmc_model::diagnostic!(
-                tmc_model::diagnostics::DiagnosticContext::State,
-                "config.bootstrap",
-                report
-            );
-        }
-    });
+    let report = BOOTSTRAP_REPORT
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .take();
+    if let Some(report) = report {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "config.bootstrap",
+            report
+        );
+    }
 }
 
 impl Config {
@@ -160,9 +160,10 @@ impl Config {
         if let (Some(snapshot), Some(flags)) = (report.as_object_mut(), flags.as_object()) {
             snapshot.extend(flags.clone());
         }
-        BOOTSTRAP_REPORT.with(|slot| {
-            *slot.borrow_mut() = Some(report);
-        });
+        BOOTSTRAP_REPORT
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .get_or_insert(report);
     }
 
     /// Valida y normaliza los campos de F2 (rango, umbral, lista de interés).

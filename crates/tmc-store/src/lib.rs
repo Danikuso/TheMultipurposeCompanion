@@ -174,7 +174,7 @@ impl Store {
         tmc_model::diagnostic!(
             tmc_model::diagnostics::DiagnosticContext::Sql,
             "store.query.started",
-            serde_json::json!({"sql_bytes":sql.len(),"sql_fingerprint":tmc_model::diagnostics::sql_fingerprint(sql),"parameter_types":tmc_model::diagnostics::value_types(params)})
+            serde_json::json!({"sql_bytes":sql.len(),"sql_fingerprint":tmc_model::diagnostics::sql_fingerprint(sql),"sql_template":tmc_model::diagnostics::sql_template(sql),"parameter_types":tmc_model::diagnostics::value_types(params)})
         );
         let result: Result<_, StoreError> = (|| {
             let params = params.iter().map(to_sql).collect::<Result<Vec<_>, _>>()?;
@@ -217,7 +217,7 @@ impl Store {
         tmc_model::diagnostic!(
             tmc_model::diagnostics::DiagnosticContext::Sql,
             "store.exec.started",
-            serde_json::json!({"sql_bytes":sql.len(),"sql_fingerprint":tmc_model::diagnostics::sql_fingerprint(sql),"parameter_types":tmc_model::diagnostics::value_types(params)})
+            serde_json::json!({"sql_bytes":sql.len(),"sql_fingerprint":tmc_model::diagnostics::sql_fingerprint(sql),"sql_template":tmc_model::diagnostics::sql_template(sql),"parameter_types":tmc_model::diagnostics::value_types(params)})
         );
         let result: Result<_, StoreError> = (|| {
             let params = params.iter().map(to_sql).collect::<Result<Vec<_>, _>>()?;

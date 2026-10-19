@@ -499,7 +499,7 @@ fn d3_status_companion_paths_and_parse_text_stay_private() {
         assert!(poller.poll().is_none());
         fs::write(
             &path,
-            r#"{"timestamp":"2026-10-20T01:00:00Z","event":"Status","Flags":1}"#,
+            r#"{"timestamp":"2026-10-20T01:00:00Z","event":"Status","Flags":1,"BodyName":"Sol A 1","Destination":{"System":1,"Body":2,"Name":"CANARY-DEST"}}"#,
         )
         .unwrap();
         assert!(poller.poll().is_some());
@@ -514,7 +514,10 @@ fn d3_status_companion_paths_and_parse_text_stay_private() {
                 .is_none()
         );
     });
-    assert_eq!(payload_for(&records, "source.status.accepted")["Flags"], 1);
+    let accepted = payload_for(&records, "source.status.accepted");
+    assert_eq!(accepted["Flags"], 1);
+    assert_eq!(accepted["BodyName"], "Sol A 1");
+    assert_eq!(accepted["Destination"]["Name"], "[redacted]");
     payload_for(&records, "source.status.metadata_unchanged");
     payload_for(&records, "source.status.metadata_failed");
     assert_eq!(
@@ -595,14 +598,15 @@ fn d3_import_checkpoints_deduplicate_and_redact_embedded_events() {
             0
         );
     });
-    assert_eq!(payload_for(&records, "store.event.inserted")["line"], 1);
+    assert_eq!(
+        payload_for(&records, "store.import.batch_committed")["inserted"],
+        1
+    );
+    assert!(records.iter().all(|r| r["code"] != "store.event.payload"));
+    assert!(records.iter().all(|r| r["code"] != "store.event.inserted"));
     assert_eq!(
         payload_for(&records, "store.import.checkpoint")["offset"],
         fs::metadata(dir.path().join(name)).unwrap().len()
-    );
-    assert_eq!(
-        payload_for(&records, "store.event.payload")["BodyName"],
-        "Sol A 1"
     );
     payload_for(&records, "store.import.invalid_line");
     assert!(!serde_json::to_string(&records).unwrap().contains("CANARY"));
@@ -873,5 +877,100 @@ fn d3_writer_flush_and_import_rollback_keep_semantics_and_hide_trigger_text() {
         payload_for(&records, "store.import.failed")["failure_class"],
         "sqlite"
     );
+    assert!(!serde_json::to_string(&records).unwrap().contains("CANARY"));
+}
+
+fn synthetic_journal(lines: usize) -> String {
+    let mut text = String::with_capacity(lines * 120);
+    for i in 0..lines {
+        text.push_str(&format!(
+            "{{\"timestamp\":\"2026-10-20T01:00:00Z\",\"event\":\"Music\",\"MusicTrack\":\"Track{i}\"}}
+"
+        ));
+    }
+    text
+}
+
+#[test]
+fn d3_bulk_import_emits_records_proportional_to_batches_not_lines() {
+    let dir = tempfile::tempdir().unwrap();
+    let name = "Journal.2026-10-20T010203.01.log";
+    fs::write(dir.path().join(name), synthetic_journal(20_000)).unwrap();
+    let started = std::time::Instant::now();
+    let records = capture_sources(|| {
+        let store = tmc_store::Store::open_in_memory().unwrap();
+        let opts = tmc_store::ImportOptions {
+            throttle: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+        };
+        assert_eq!(
+            tmc_store::import_history(&store, dir.path(), &opts, &mut |_, _| {})
+                .unwrap()
+                .events,
+            20_000
+        );
+    });
+    eprintln!("d3 debug import of 20k lines took {:?}", started.elapsed());
+    // 32 full lines (tail.line + context) + 4 batches + file/checkpoint/start/complete.
+    assert!(
+        records.len() < 200,
+        "import emitted {} diagnostic records for 20k lines",
+        records.len()
+    );
+    let batches = records
+        .iter()
+        .filter(|r| r["code"] == "store.import.batch_committed")
+        .count();
+    assert_eq!(batches, 4);
+}
+
+#[test]
+fn d3_live_event_has_single_payload_and_query_payloads_are_capped() {
+    let records = capture_sources(|| {
+        let store = tmc_store::Store::open_in_memory().unwrap();
+        let writer = tmc_store::EventWriter::spawn(&store);
+        for line in 1..=30u64 {
+            writer.send(tmc_store::StoredEvent {
+                file_name: "Journal.2026-10-20T010203.01.log".into(),
+                line,
+                ts: Utc::now(),
+                name: "Music".into(),
+                cmdr: None,
+                json: r#"{"event":"Music","MusicTrack":"Exploration"}"#.into(),
+            });
+        }
+        writer.flush_blocking().unwrap();
+        let rows = store
+            .query_events(&tmc_store::EventQuery {
+                limit: 100,
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(rows.len(), 30);
+        store
+            .query_json("SELECT name FROM event WHERE name = ?1", &[json!("x")])
+            .unwrap();
+        store
+            .query_json("SELECT 'CANARY-LITERAL' FROM event WHERE id = 987654", &[])
+            .unwrap();
+    });
+    assert!(records.iter().all(|r| r["code"] != "store.event.payload"));
+    assert_eq!(
+        records
+            .iter()
+            .filter(|r| r["code"] == "store.events.row_payload")
+            .count(),
+        20
+    );
+    assert_eq!(
+        payload_for(&records, "store.events.row_payload_summary")["omitted"],
+        10
+    );
+    let templates: Vec<_> = records
+        .iter()
+        .filter(|r| r["code"] == "store.query.started")
+        .map(|r| r["payload"]["sql_template"].clone())
+        .collect();
+    assert_eq!(templates[0], "SELECT name FROM event WHERE name = ?1");
+    assert_eq!(templates[1], Value::Null);
     assert!(!serde_json::to_string(&records).unwrap().contains("CANARY"));
 }
