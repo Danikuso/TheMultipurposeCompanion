@@ -1,6 +1,6 @@
 # TMC · Especificación de F3 — Comercio, misiones y pasajeros; recepción de EDDN
 
-- **Estado:** 📝 borrador para aprobación del propietario
+- **Estado:** ✅ aprobada por el propietario (2026-10-19)
 - **Fecha:** 2026-10-19
 - **Depende de:** [`2026-10-17-tmc-arquitectura-y-f0-design.md`](2026-10-17-tmc-arquitectura-y-f0-design.md), F1 ([`2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md`](2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md): rutas Spansh, alcance de salto, portapapeles, `api_cache`, opt-out) y F2 ([`2026-10-18-tmc-f2-combate-mineria-design.md`](2026-10-18-tmc-f2-combate-mineria-design.md): Ardent, `PriceBook`, `ship_pads.json`, `Bounty` tipado, `core.clock`, disposiciones por relevancia).
 - **Maquetas aprobadas (2026-10-19):** `f3-comercio.html` y `f3-misiones.html` (sesión de diseño en `.superpowers/brainstorm/`). La descripción escrita es la referencia.
