@@ -22,7 +22,7 @@
 | D2 | Writer circular y lifecycle | ✅ hecha | ed0611e | 14 pruebas; ambas revisiones; 795 Rust, fmt/clippy y clippy release PASS |
 | D3 | Fuentes y persistencia | ✅ hecha | 44e8a9e + 91cc1dc (fix volumen) | 804 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS |
 | D4 | Actor y módulos | ✅ hecha | 42c1ccc | 811 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS |
-| D2b | Escritor SQLite por apartados | ✅ hecha | 58696b7 | Sustituye JSONL (decisión propietario 2026-10-20); 75 tests tmc-app, 815 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS |
+| D2b | Escritor SQLite por apartados | ✅ hecha | 58696b7 + fix de revisión | Sustituye JSONL (decisión propietario 2026-10-20); 75 tests tmc-app, 815 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS |
 | D5 | Red, HTTP, WS, auth y acciones | ⬜ siguiente | — | D4 cerrada |
 | D6 | UI | ⬜ pendiente | — | Tras D5 |
 | D7 | Checks, consumo, build e integración | ⬜ pendiente | — | Retomar F3 después |

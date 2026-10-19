@@ -330,6 +330,142 @@ fn retention_by_size_prunes_oldest_batches_and_stays_under_threshold() {
 }
 
 #[test]
+#[allow(clippy::let_and_return)]
+fn age_pruning_probes_by_rowid_and_deletes_only_up_to_boundary() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut db = open_db(dir.path(), Limits::default());
+    // The "nothing expired" probe must be an index search, never a table scan.
+    let plan = |sql: &str| -> Vec<String> {
+        let mut stmt = db
+            .conn
+            .prepare(&format!(
+                "EXPLAIN QUERY PLAN {}",
+                sql.replace("{t}", "diag_journal")
+            ))
+            .unwrap();
+        let rows = if sql.contains("?1") {
+            stmt.query_map([1], |r| r.get::<_, String>(3))
+                .unwrap()
+                .map(Result::unwrap)
+                .collect()
+        } else {
+            stmt.query_map([], |r| r.get::<_, String>(3))
+                .unwrap()
+                .map(Result::unwrap)
+                .collect()
+        };
+        rows
+    };
+    let oldest = plan(OLDEST_TS_SQL);
+    assert!(oldest.iter().any(|d| d.contains("SEARCH")), "{oldest:?}");
+    assert!(oldest.iter().all(|d| !d.starts_with("SCAN")), "{oldest:?}");
+    let from = plan(ROW_FROM_SQL);
+    assert!(from.iter().any(|d| d.contains("SEARCH")), "{from:?}");
+    let old = ts_of(Utc::now() - chrono::Duration::days(9));
+    let mut batch: Vec<_> = (0..300)
+        .map(|_| record("journal.o", old.clone(), "{}"))
+        .collect();
+    batch.extend((0..700).map(|_| record("journal.n", now_ts(), "{}")));
+    db.write_batch(&batch).unwrap();
+    let cutoff = Utc::now() - chrono::Duration::days(7);
+    db.prune_by_age(cutoff).unwrap();
+    assert_eq!(count(&db, "diag_journal"), 700);
+    // Nothing expired any more: nothing deleted.
+    db.prune_by_age(cutoff).unwrap();
+    assert_eq!(count(&db, "diag_journal"), 700);
+}
+
+#[test]
+fn transient_busy_is_retried_without_losing_seq_contiguity() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut db = open_db(dir.path(), Limits::default());
+    db.conn.busy_timeout(Duration::ZERO).unwrap();
+    db.write_batch(&[record("journal.a", now_ts(), "{}")])
+        .unwrap();
+    let holder = Connection::open(dir.path().join(DB_FILE)).unwrap();
+    holder.execute_batch("BEGIN IMMEDIATE").unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(60));
+        holder.execute_batch("COMMIT").unwrap();
+    });
+    db.write_batch_retrying(&[
+        record("journal.b", now_ts(), "{}"),
+        record("journal.c", now_ts(), "{}"),
+    ])
+    .unwrap();
+    release.join().unwrap();
+    assert_eq!(db.seq, 3);
+    let seqs: Vec<i64> = db
+        .conn
+        .prepare("SELECT seq FROM diag_journal ORDER BY seq")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(seqs, vec![1, 2, 3]);
+    // A persistent lock exhausts the retries, rolls back and keeps seq unchanged.
+    let holder = Connection::open(dir.path().join(DB_FILE)).unwrap();
+    holder.execute_batch("BEGIN IMMEDIATE").unwrap();
+    assert!(
+        db.write_batch_retrying(&[record("journal.d", now_ts(), "{}")])
+            .is_err()
+    );
+    assert_eq!(db.seq, 3);
+}
+
+#[test]
+fn open_with_database_locked_by_a_viewer_returns_without_panicking() {
+    let dir = tempfile::tempdir().unwrap();
+    drop(open_db(dir.path(), Limits::default()));
+    let viewer = Connection::open(dir.path().join(DB_FILE)).unwrap();
+    viewer.execute_batch("BEGIN EXCLUSIVE").unwrap();
+    // Degrades or reports an error (logging.rs prints one warning); it must not panic.
+    let _ = Db::open(
+        dir.path(),
+        Limits::default(),
+        uuid::Uuid::new_v4().to_string(),
+    );
+}
+
+#[test]
+fn orphan_sessions_are_removed_with_per_table_exists() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut db = open_db(
+        dir.path(),
+        Limits {
+            max_bytes: 1,
+            ..Limits::default()
+        },
+    );
+    for id in ["orphan", "kept"] {
+        db.conn
+            .execute(
+                "INSERT INTO diag_session(session_id, started_ts, version, profile) VALUES(?1, ?2, 'x', 'debug')",
+                params![id, now_ts()],
+            )
+            .unwrap();
+    }
+    db.write_batch(&[record("journal.k", now_ts(), "{}")])
+        .unwrap();
+    db.conn
+        .execute("UPDATE diag_journal SET session_id='kept'", [])
+        .unwrap();
+    db.drop_orphan_sessions().unwrap();
+    let ids: Vec<String> = db
+        .conn
+        .prepare("SELECT session_id FROM diag_session")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert!(ids.contains(&"kept".to_string()));
+    assert!(!ids.contains(&"orphan".to_string()));
+    assert_eq!(ids.len(), 2, "current session is always kept");
+}
+
+#[test]
 fn write_failure_marks_once_drops_and_never_panics() {
     let dir = tempfile::tempdir().unwrap();
     let (layer, guard) = start_writer(dir.path().to_owned(), Limits::default()).unwrap();
