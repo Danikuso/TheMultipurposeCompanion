@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 28), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
+- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 28 — pendiente criterio 9 con ventana y revisión final), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
 
 ## Fases
 
@@ -63,7 +63,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 25 | UI — disposiciones «Combate» y «Minería», relevancia y ajustes | ✅ hecha | f0c843a, 38568cf | Disposiciones Combate/Minería, vuelta a auto, ajustes de minería |
 | 26 | fixtures sintéticos y pruebas de extremo a extremo | ✅ hecha | 05663ac, b50630b | Fixtures sintéticos + e2e (Playwright 5/5); ráfaga p95 ~311 ms |
 | 27 | `tmc-headless eval` — vales y rendimiento de asteroides | ✅ hecha | 996fae3, 81352c0, 606fcc1 | Eval vales/rendimiento; historial propietario: vales INSUFICIENTE (canje incluye vales previos al primer diario), minería sin datos |
-| 28 | avisos, consumo, verificación de los 10 criterios y cierre | 🔄 en curso | — |  |
+| 28 | avisos, consumo, verificación de los 10 criterios y cierre | 🔄 en curso | 9b2f5bf, fdcbfca | Criterios 1–8 y 10 PASS (750 tests Rust, 144 vitest, 5 e2e). Criterio 9 PARCIAL: núcleo 10 MB / CPU reposo < 0,25 %; falta medir con ventana (WebView2) — TMC.exe del propietario abierto lo impide. Pendiente revisión final de rama. |
 
 ## Tareas de F1
 
@@ -132,6 +132,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 18 | Presupuesto de consumo y cierre de F0 | ✅ hecha | fe99cd6 | `measure-footprint.ps1` (`max_mb=144.91` < 150, `avg_cpu_idle=0.09%` < 1% PASS), `README.md` y 9/9 criterios §15 verificados. |
 
 ## Bloqueos y pendientes del propietario
+- [ ] **F2 · Criterio 9 (consumo con ventana):** cierra tu TMC.exe (PID 3808 ocupa 47320 y la instancia única impide otra) y ejecuta `pwsh scripts/measure-footprint.ps1 -Exe target-f2/release/TMC.exe -JournalDir .tmp/footprint-f2 -FixturePath tests/fixtures/journal/combat_session.log -ShowWindow -Seconds 120` y lo mismo con `mining_session.log`; o autoriza al agente a cerrarlo y medir. Límite < 150 MB y < 1 % CPU.
+- [ ] **F2 · Eval sobre tu historial:** vales INSUFICIENTE (el único canje incluye vales ganados antes del primer diario) y minería sin datos (n=0). `tmc-headless eval` queda listo para validar con futuras sesiones de caza/minería.
 
 - [ ] **F2 · Nombres de rangos de combate** en es/de/pt escritos por el agente; confírmalos con los del juego cuando puedas (no bloquea).
 
