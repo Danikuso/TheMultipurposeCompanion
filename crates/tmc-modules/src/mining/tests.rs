@@ -126,6 +126,7 @@ fn market(name: &str, price: u64) -> RemoteMarket {
         max_pad: Some(PadSize::Large),
         station_type: None,
         updated_at: None,
+        origin: None,
     }
 }
 

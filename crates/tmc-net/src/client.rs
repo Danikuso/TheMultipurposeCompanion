@@ -243,6 +243,10 @@ impl NetClient {
                     .await;
                 (NetSource::Ardent, out)
             }
+            // Provisional hasta las Tasks 8-9 (adaptadores Spansh/Ardent/EDSM).
+            NetQuery::TradeRoute(_) => (NetSource::Spansh, NetOutcome::Disabled),
+            NetQuery::CommodityExportsNearby { .. } => (NetSource::Ardent, NetOutcome::Disabled),
+            NetQuery::SystemCoordsByName { .. } => (NetSource::Edsm, NetOutcome::Disabled),
         }
     }
 
@@ -587,9 +591,9 @@ impl NetClient {
         let down = |s: Service| st.health.get(&s).is_none_or(|h| h.is_down(t));
         let (service, fallback) = match q {
             NetQuery::BodyBio { .. } => (Service::Canonn, false),
-            NetQuery::CommodityImportsNearby { .. } | NetQuery::NearestService { .. } => {
-                (Service::Ardent, false)
-            }
+            NetQuery::CommodityImportsNearby { .. }
+            | NetQuery::NearestService { .. }
+            | NetQuery::CommodityExportsNearby { .. } => (Service::Ardent, false),
             NetQuery::System { .. } if down(Service::Spansh) => (Service::Edsm, true),
             _ => (Service::Spansh, false),
         };
@@ -608,9 +612,9 @@ impl NetClient {
         match q {
             NetQuery::BodyBio { .. } => self.is_down(Service::Canonn),
             NetQuery::System { .. } => self.is_down(Service::Spansh) && self.is_down(Service::Edsm),
-            NetQuery::CommodityImportsNearby { .. } | NetQuery::NearestService { .. } => {
-                self.is_down(Service::Ardent)
-            }
+            NetQuery::CommodityImportsNearby { .. }
+            | NetQuery::NearestService { .. }
+            | NetQuery::CommodityExportsNearby { .. } => self.is_down(Service::Ardent),
             _ => self.is_down(Service::Spansh),
         }
     }

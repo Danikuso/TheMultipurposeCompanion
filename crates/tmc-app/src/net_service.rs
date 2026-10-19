@@ -968,6 +968,7 @@ mod tests {
             max_pad: Some(tmc_model::net::PadSize::Large),
             station_type: None,
             updated_at: None,
+            origin: None,
         }];
         rig.store
             .api_cache_put(

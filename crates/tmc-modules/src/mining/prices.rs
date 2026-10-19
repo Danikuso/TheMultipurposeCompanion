@@ -193,6 +193,7 @@ mod tests {
             max_pad: Some(PadSize::Large),
             station_type: None,
             updated_at: None,
+            origin: None,
         }
     }
 
