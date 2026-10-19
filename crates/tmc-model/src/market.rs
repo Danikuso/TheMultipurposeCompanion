@@ -4,6 +4,14 @@ use crate::net::PadSize;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+/// Identidad de un mercado candidato para reconciliar observaciones locales.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MarketIdentity {
+    pub market_id: Option<u64>,
+    pub station_name: String,
+    pub system_name: String,
+}
+
 /// Procedencia de un precio.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PriceOrigin {

@@ -35,6 +35,22 @@ CREATE TABLE system_coords (
 CREATE INDEX system_coords_seen ON system_coords(seen_at);
 ";
 
+/// El esquema anterior solo deja evidencia de snapshots completos en precios
+/// Local/EDDN aún presentes. No permite reconstruir catálogos vacíos ni snapshots
+/// cuyas filas fueron sustituidas por parciales; el backfill es necesariamente parcial.
+pub(crate) const FULL_SNAPSHOTS_SCHEMA: &str = "
+CREATE TABLE market_full_snapshot (
+  market_id INTEGER PRIMARY KEY, updated_at TEXT NOT NULL, origin TEXT NOT NULL
+);
+CREATE INDEX market_full_snapshot_updated ON market_full_snapshot(updated_at);
+INSERT INTO market_full_snapshot(market_id,updated_at,origin)
+SELECT market_id,updated_at,origin FROM (
+  SELECT market_id,updated_at,origin,
+    ROW_NUMBER() OVER(PARTITION BY market_id ORDER BY updated_at DESC, CASE origin WHEN 'local' THEN 1 ELSE 0 END DESC) AS position
+  FROM market_price WHERE origin IN ('local','eddn')
+) WHERE position=1;
+";
+
 pub struct Migration {
     pub id: &'static str,
     pub sql: &'static str,
@@ -60,5 +76,58 @@ impl Store {
             transaction.commit()?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn full_snapshot_migration_is_registered_on_fresh_database_and_idempotent() {
+        let store = Store::open_in_memory().unwrap();
+        let versions = store
+            .query_json(
+                "SELECT id FROM schema_version WHERE id='f3_market_full_snapshots'",
+                &[],
+            )
+            .unwrap();
+        assert_eq!(versions.len(), 1);
+        store
+            .apply_migrations(&[Migration {
+                id: "f3_market_full_snapshots",
+                sql: "CREATE TABLE must_not_create(id INTEGER)",
+            }])
+            .unwrap();
+        assert!(
+            store
+                .query_json(
+                    "SELECT market_id,updated_at,origin FROM market_full_snapshot",
+                    &[]
+                )
+                .is_ok()
+        );
+        assert!(
+            store
+                .query_json("SELECT id FROM must_not_create", &[])
+                .is_err()
+        );
+    }
+    #[test]
+    fn existing_price_schema_backfills_local_and_eddn_evidence_only() {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch(BASE_SCHEMA).unwrap();
+        conn.execute_batch(PRICES_SCHEMA).unwrap();
+        conn.execute_batch("CREATE TABLE schema_version(id TEXT PRIMARY KEY,applied_at TEXT NOT NULL); INSERT INTO schema_version VALUES('core-f0-1','now'),('f3_prices','now'); INSERT INTO market_price VALUES(1,'gold',NULL,1,1,1,1,'2026-10-19T10:00:00.000Z','local'),(1,'silver',NULL,1,1,1,1,'2026-10-19T11:00:00.000Z','eddn'),(2,'gold',NULL,1,1,1,1,'2026-10-19T12:00:00.000Z','ardent');").unwrap();
+        let store = Store::initialize(conn).unwrap();
+        let rows = store
+            .query_json(
+                "SELECT market_id,updated_at,origin FROM market_full_snapshot ORDER BY market_id",
+                &[],
+            )
+            .unwrap();
+        assert_eq!(
+            rows,
+            vec![serde_json::json!([1, "2026-10-19T11:00:00.000Z", "eddn"])]
+        );
     }
 }

@@ -262,6 +262,7 @@ mod tests {
     }
     fn sell_option(price: u64) -> SellOption {
         SellOption {
+            origin: None,
             station_name: "Test Port".into(),
             system_name: "Test System".into(),
             distance_ly: 12.0,
