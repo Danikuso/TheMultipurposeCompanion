@@ -63,6 +63,31 @@ pub struct VoucherLedger {
     entries: Vec<VoucherEntry>,
 }
 
+/// Tipo de vale que canjea el evento; `None` si no es bounty ni bono.
+pub fn redeem_kind(r: &RedeemVoucher) -> Option<VoucherKind> {
+    match r.type_.as_str() {
+        "bounty" => Some(VoucherKind::Bounty),
+        "CombatBond" => Some(VoucherKind::CombatBond),
+        _ => None,
+    }
+}
+
+/// Importe nominal que resta el libro al canjear: suma de `Factions[]` si
+/// existe; si no, `Amount` (con la regla del corredor de `nominal`).
+pub fn declared_amount(r: &RedeemVoucher) -> u64 {
+    if r.factions.is_empty() {
+        nominal(
+            r.amount,
+            r.broker_percentage.unwrap_or(0.0),
+            BROKER_AMOUNT_IS_NET,
+        )
+    } else {
+        r.factions
+            .iter()
+            .fold(0u64, |acc, f| acc.saturating_add(f.amount))
+    }
+}
+
 impl VoucherLedger {
     fn push(&mut self, e: VoucherEntry) {
         let idx = self.entries.partition_point(|x| x.earned_at <= e.earned_at);
@@ -97,21 +122,15 @@ impl VoucherLedger {
     }
 
     fn redeem(&mut self, r: &RedeemVoucher) -> bool {
-        let kind = match r.type_.as_str() {
-            "bounty" => VoucherKind::Bounty,
-            "CombatBond" => VoucherKind::CombatBond,
-            _ => return false,
+        let Some(kind) = redeem_kind(r) else {
+            return false;
         };
         if !r.factions.is_empty() {
             for f in &r.factions {
                 self.subtract_faction(kind, &f.faction, f.amount);
             }
         } else {
-            let amount = nominal(
-                r.amount,
-                r.broker_percentage.unwrap_or(0.0),
-                BROKER_AMOUNT_IS_NET,
-            );
+            let amount = declared_amount(r);
             let faction = r.faction.as_deref().filter(|f| !f.is_empty());
             match faction {
                 Some(f) => self.subtract_faction(kind, f, amount),

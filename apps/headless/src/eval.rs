@@ -304,7 +304,7 @@ fn render_vouchers(out: &mut String, v: &tmc_modules::eval::VoucherReport) {
     }
     let _ = writeln!(
         out,
-        "  nota: diferencia = ganado - perdido - canjeado - pendiente; negativa si se canjearon vales anteriores al historial"
+        "  nota: diferencia = ganado - perdido - canjeado - pendiente; negativa si se canjearon vales anteriores al historial; la atribución de refinados solo se reinicia en LoadGame"
     );
 }
 

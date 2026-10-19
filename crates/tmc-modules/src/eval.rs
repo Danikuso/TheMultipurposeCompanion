@@ -2,7 +2,7 @@
 //! de especies sobre un historial de diarios (spec F1 §10.1). Solo produce
 //! métricas agregadas; reutiliza las funciones públicas de los módulos.
 
-use crate::combat::vouchers::{VoucherKind, VoucherLedger};
+use crate::combat::vouchers::{VoucherKind, VoucherLedger, declared_amount, redeem_kind};
 use crate::data::{FsdTable, bio_rules, fsd_table, species_table};
 use crate::exobiology::first_logged_estimate;
 use crate::exobiology::predict::{
@@ -333,15 +333,11 @@ impl<'a> Run<'a> {
         let after = kinds.map(|k| self.voucher_ledger.total(k));
         let redeem = match &ev.kind {
             EventKind::RedeemVoucher(r) => {
-                let kind = match r.type_.as_str() {
-                    "bounty" => Some(0),
-                    "CombatBond" => Some(1),
-                    _ => None,
-                };
+                let kind = redeem_kind(r).map(|k| usize::from(k == VoucherKind::CombatBond));
                 if kind.is_some() {
                     self.vouchers.redeem_events += 1;
                 }
-                kind.map(|i| (i, r.amount))
+                kind.map(|i| (i, declared_amount(r)))
             }
             _ => None,
         };
@@ -945,6 +941,26 @@ mod tests {
         assert_eq!(report.mining.high.asteroids, 1);
         assert_eq!(report.mining.high.tons, 2);
         assert_eq!(report.mining.unattributed_tons, 1);
+    }
+
+    #[test]
+    fn redeemed_uses_the_nominal_amount_of_the_ledger() {
+        let lines: Vec<String> = [
+            r#"{"timestamp":"2026-10-18T10:00:00Z","event":"Bounty","Rewards":[{"Faction":"A","Reward":1000}],"TotalReward":1000}"#,
+            r#"{"timestamp":"2026-10-18T10:01:00Z","event":"Bounty","Rewards":[{"Faction":"B","Reward":500}],"TotalReward":500}"#,
+            r#"{"timestamp":"2026-10-18T10:02:00Z","event":"RedeemVoucher","Type":"bounty","Amount":300,"BrokerPercentage":25.0,"Faction":"A"}"#,
+            r#"{"timestamp":"2026-10-18T10:03:00Z","event":"RedeemVoucher","Type":"bounty","Amount":999,"Factions":[{"Faction":"A","Amount":200},{"Faction":"B","Amount":100}]}"#,
+        ]
+        .iter()
+        .map(|l| (*l).to_owned())
+        .collect();
+        let b = eval_events(events(&lines).into_iter()).vouchers.bounty;
+        // El corredor no cambia el importe (Amount tal cual) y las facciones
+        // mandan sobre Amount: 300 + 300, no 300 + 999.
+        assert_eq!(
+            (b.earned, b.redeemed, b.pending, b.difference),
+            (1500, 600, 900, 0)
+        );
     }
 
     #[test]
