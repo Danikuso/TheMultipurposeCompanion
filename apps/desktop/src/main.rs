@@ -43,6 +43,7 @@ fn main() -> anyhow::Result<()> {
     let language = config.language.clone();
     let log_dir = config.data_dir.clone().unwrap_or_else(data_dir);
     let _log_guard = init_logging(&log_dir);
+    _log_guard.application_started();
 
     let running = tauri::async_runtime::block_on(start(config))?;
     let local_url: Url = running.server.local_url.parse()?;
