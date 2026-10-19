@@ -2,16 +2,16 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-19 21:58 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-19 22:02 (Europe/Madrid) · Codex
 - **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (🔄 en ejecución). F2 ✅ fusionada en `main` (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
-- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 14/35 hechas (aprobado al ordenar «escribe el plan y ejecútalo»). Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
+- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 15/35 hechas (aprobado al ordenar «escribe el plan y ejecútalo»). Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
 - **Rama de trabajo:** `fase/f3-comercio-misiones`
 
 ## Puntero actual
 
-- **Tarea:** F3 · Task 14 🔄 en curso, paso 1: test de rangos ingleses y cobertura de las nuevas claves.
-- **Siguiente acción:** ejecutar Task 14 con TDD: trade.ftl/missions.ftl y disposiciones/ajustes en cinco idiomas, ampliar argumentos de formato. Task 13: 878 Rust PASS (2 ignorados), fmt/clippy OK; UI sin cambios desde 144 PASS/check/build de Task 12. Task 12: fmt/clippy correctos, 874 tests Rust PASS (2 ignorados), 144 UI PASS, check/build OK. Desarrollo reanudado por el propietario mientras prueba main; no reconstruir release ni usar puerto/base reales. `.claude/` ajeno; logs locales en `.tmp/`. Ledger: `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Tarea:** F3 · Task 14 ✅ verificada; siguiente Task 15 (coste pagado y vista de carga).
+- **Siguiente acción:** guardar cierre de Task 14 y empezar Task 15 con TDD, revisiones y checks. Task 14: 880 Rust PASS (2 ignorados), 144 UI PASS, fmt/clippy/check/build OK. El propietario prueba `main@9154d41`: no reconstruir release ni usar puerto/base reales. `.claude/` ajeno; `.tmp/` logs locales. Ledger: `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Fases
 
@@ -47,7 +47,7 @@
 | 11 | `tmc-eddn` — suscriptor, reconexión y lotes | ✅ hecha | 273f12b, ea0616f | Suscriptor EDDN: OnDemand, retroceso, vigilancia 60 s, tope 256 KiB, lotes sin bloqueo; PUB/SUB probado en Windows |
 | 12 | `tmc-app` — servicio EDDN, `SourceEvent::Eddn`, limpieza y configuración | ✅ hecha | c7840f5, 3334f69 | Replay explícito; recuperación tras lag; coords tras importar y offline sin congelación; spec/calidad aprobadas; 874 Rust y 144 UI PASS |
 | 13 | datos estáticos `rare_goods.json` y `cabins.json` | ✅ hecha | 440c5d9 | OnceLock, parser tolerante con avisos y recuperación por fila; catálogo inicial 1 rara/4 cabinas; spec/calidad aprobadas; 878 Rust PASS |
-| 14 | i18n — `trade.ftl` y `missions.ftl` | 🔄 en curso | — | Paso 1: tests de claves/rangos y formato |
+| 14 | i18n — `trade.ftl` y `missions.ftl` | ✅ hecha | este commit | 125 claves de paneles por idioma y ajustes/disposiciones; rangos ingleses; spec/calidad aprobadas; 880 Rust y 144 UI PASS |
 | 15 | `trade` — coste pagado y «Mi carga» | ⬜ pendiente | — |  |
 | 16 | `trade` — «Mercado actual» y mejor venta en 48 h | ⬜ pendiente | — |  |
 | 17 | `trade` — ruta comercial con avance automático | ⬜ pendiente | — |  |
@@ -228,6 +228,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-19 22:02 (Europe/Madrid) · Codex · Task 14 cerrada: comercio/misiones en 5 idiomas, cobertura de rangos y argumentos de formato; RED→GREEN, spec/calidad aprobadas, 880 Rust y 144 UI PASS, fmt/clippy/check/build OK.
 
 - 2026-10-19 21:58 (Europe/Madrid) · Codex · Task 13: datos propios provisionales (1 rara/4 cabinas), carga embebida tolerante y tests RED→GREEN; spec/calidad aprobadas; fmt/clippy OK, 878 Rust PASS (2 ignorados); UI sin cambios.
 

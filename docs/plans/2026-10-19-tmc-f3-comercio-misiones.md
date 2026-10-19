@@ -421,8 +421,8 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 
 **Interfaces:** claves de todos los paneles (títulos, columnas, «RARA», «VENDER AQUÍ», «LLEVAR», «solo mercado negro», «sin datos», «atraca para calcular», «RENTABLE», «NO COMPENSA», «puedes abandonarla ahora», «paradas no disponibles en el diario», «BUSCADO», «VIP», avisos), `trade-rank-0..8` en inglés en los 5 idiomas, `nav-trade` (en `trade.ftl`) y `nav-missions` (en `missions.ftl`), como `nav-mining` en `mining.ftl`; `layout-trade`, `layout-missions`, ajustes `eddn-radius`, `tourism-reference` (en `main.ftl`). Es la base: las tareas de UI (21, 22, 29, 30, 31) pueden añadir las claves que les falten, siempre en los 5 idiomas y en el mismo commit.
 
-- [ ] **Step 1: Tests:** los existentes `all_languages_have_same_keys_as_es`, `keys_include_all_ftl_files` y el de formato con la lista de argumentos ampliada; nuevo `trade_rank_names_are_english_in_all_languages` (`trade-rank-8` = «Elite» en es/en/fr/de/pt).
-- [ ] **Step 2–4:** FAIL → añadir → PASS; Checks. **Step 5: Commit** `feat(i18n): textos de comercio y misiones en cinco idiomas`
+- [x] **Step 1: Tests:** los existentes `all_languages_have_same_keys_as_es`, `keys_include_all_ftl_files` y el de formato con la lista de argumentos ampliada; nuevo `trade_rank_names_are_english_in_all_languages` (`trade-rank-8` = «Elite» en es/en/fr/de/pt).
+- [x] **Step 2–4:** FAIL → añadir → PASS; Checks. **Step 5: Commit** `feat(i18n): textos de comercio y misiones en cinco idiomas`
 
 ---
 

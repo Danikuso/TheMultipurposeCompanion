@@ -295,6 +295,16 @@ mod tests {
                 ("capacity", FluentValue::from(256)),
                 ("source", FluentValue::from("Ardent")),
                 ("demand", FluentValue::from(1200)),
+                ("profit", FluentValue::from("135000 CR")),
+                ("paid", FluentValue::from("9500 CR")),
+                ("stops", FluentValue::from(4)),
+                ("jumps", FluentValue::from(6)),
+                ("kills", FluentValue::from(12)),
+                ("seats", FluentValue::from(8)),
+                ("crly", FluentValue::from(100000)),
+                ("contribution", FluentValue::from(500)),
+                ("tier", FluentValue::from(3)),
+                ("percentile", FluentValue::from(25)),
             ] {
                 args.set(name, value);
             }
@@ -379,6 +389,77 @@ mod tests {
             fr.ends_with("destruction") && !fr.ends_with("destructions"),
             "{fr}"
         );
+    }
+
+    #[test]
+    fn trade_rank_names_are_english_in_all_languages() {
+        let names = [
+            "Penniless",
+            "Mostly Penniless",
+            "Peddler",
+            "Dealer",
+            "Merchant",
+            "Broker",
+            "Entrepreneur",
+            "Tycoon",
+            "Elite",
+        ];
+        for lang in LANGUAGES {
+            let i18n = I18n::new(lang);
+            for (rank, expected) in names.iter().enumerate() {
+                assert_eq!(
+                    i18n.t(&format!("trade-rank-{rank}"), &[]),
+                    *expected,
+                    "{lang}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn trade_and_missions_base_resources_load_in_all_languages() {
+        let required = [
+            "nav-trade",
+            "nav-missions",
+            "layout-trade",
+            "layout-missions",
+            "eddn-radius",
+            "tourism-reference",
+            "panel-trade-market",
+            "panel-trade-cargo",
+            "panel-trade-route",
+            "panel-trade-session",
+            "panel-trade-search",
+            "panel-missions-active",
+            "panel-missions-massacre",
+            "panel-missions-alerts",
+            "panel-missions-rewards",
+            "panel-missions-passengers",
+            "panel-missions-tourism",
+            "panel-missions-community-goals",
+            "trade-rare",
+            "trade-sell-here",
+            "trade-carry",
+            "trade-black-market-only",
+            "trade-no-data",
+            "trade-dock-to-calculate",
+            "missions-tourism-profitable",
+            "missions-tourism-not-worth",
+            "missions-tourism-abandon-now",
+            "missions-tourism-no-stops",
+            "missions-passenger-wanted",
+            "missions-passenger-vip",
+            "missions-alert-expiring",
+            "missions-alert-redirected",
+            "missions-alert-failed",
+            "missions-alert-cargo-missing",
+        ];
+        for lang in LANGUAGES {
+            let available = keys(lang);
+            for key in required {
+                assert!(available.contains(key), "{lang}: {key}");
+            }
+        }
     }
 
     #[test]
