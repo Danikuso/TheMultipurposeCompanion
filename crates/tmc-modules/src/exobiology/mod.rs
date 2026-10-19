@@ -263,6 +263,7 @@ impl Exobiology {
         self.discarded = None;
         self.last_reset = None;
         self.accuracy = (0, 0);
+        decide!("exobiology.cmdr.changed", tmc_model::diagnostics::json!({}));
         ctx.store_task(TAG_OPEN, persist::load_open_samples(name.clone()));
         self.request_history(ctx);
     }
@@ -273,6 +274,10 @@ impl Exobiology {
         };
         self.history_generation = self.history_generation.wrapping_add(1);
         let generation = self.history_generation;
+        decide!(
+            "exobiology.history.requested",
+            tmc_model::diagnostics::json!({"generation": generation})
+        );
         for (tag, task) in [
             (TAG_HISTORY, predict::load_history(cmdr.clone())),
             (TAG_UNSOLD, persist::load_unsold(cmdr.clone())),
@@ -658,7 +663,12 @@ impl Exobiology {
                 body_name: scan.body_name.clone(),
                 profile: body_profile(scan, self.star_class.as_deref()),
             };
-            if let Some(id) = ctx.request(text.clone(), query) {
+            let requested = ctx.request(text.clone(), query);
+            decide!(
+                "exobiology.canonn.request.sent",
+                tmc_model::diagnostics::json!({"accepted": requested.is_some()})
+            );
+            if let Some(id) = requested {
                 self.inflight
                     .insert(text, (id, self.now.unwrap_or(DateTime::UNIX_EPOCH)));
             }

@@ -90,6 +90,10 @@ impl Module for Exploration {
             let unsold = self.unsold.topic();
             if self.unsold_value != unsold {
                 self.unsold_value = unsold;
+                decide!(
+                    "exploration.unsold.topic.dirty",
+                    tmc_model::diagnostics::json!({})
+                );
                 dirty.insert(TOPIC_UNSOLD.to_owned());
             }
         }
@@ -98,6 +102,10 @@ impl Module for Exploration {
                 .unwrap_or_default();
             if self.system_value != value {
                 self.system_value = value;
+                decide!(
+                    "exploration.system.topic.dirty",
+                    tmc_model::diagnostics::json!({"threshold": self.threshold})
+                );
                 dirty.insert(TOPIC_SYSTEM.to_owned());
             }
         }

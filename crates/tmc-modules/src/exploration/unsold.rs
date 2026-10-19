@@ -260,6 +260,10 @@ impl UnsoldState {
         self.requested_at = self.now;
         self.since_checkpoint = 0;
         self.refresh_after_pending = false;
+        decide!(
+            "exploration.unsold.rebuild.requested",
+            tmc_model::diagnostics::json!({"generation": self.generation})
+        );
         ctx.store_task(tag, rebuild_from_history(cmdr));
     }
 

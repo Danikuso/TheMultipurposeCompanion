@@ -285,6 +285,10 @@ impl Navigation {
         };
         match ctx.request(ROUTE_KEY, query) {
             Some(id) => {
+                decide!(
+                    "navigation.planner.request.accepted",
+                    tmc_model::diagnostics::json!({"request_id": id})
+                );
                 self.planner = Planner {
                     status: PlanStatus::Computing,
                     request: Some(req),
@@ -294,6 +298,10 @@ impl Navigation {
                 };
             }
             None => {
+                decide!(
+                    "navigation.planner.request.rejected",
+                    tmc_model::diagnostics::json!({})
+                );
                 self.planner.request = Some(req);
                 self.plan_fail(ERR_SERVICE);
             }
@@ -440,6 +448,10 @@ impl Navigation {
             Some(plan) => persist::save_plan(cmdr, plan),
             None => persist::delete_plan(cmdr),
         };
+        decide!(
+            "navigation.plan.sync.queued",
+            tmc_model::diagnostics::json!({"has_plan": self.plan.is_some()})
+        );
         ctx.store_task(PLAN_TAG_SYNC, task);
     }
 

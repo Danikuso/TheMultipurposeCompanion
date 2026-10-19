@@ -233,6 +233,10 @@ impl Combat {
             return;
         }
         ctx.store_task(TAG_VOUCHERS, session::rebuild_task(cmdr));
+        decide!(
+            "combat.ledger.rebuild.requested",
+            tmc_model::diagnostics::json!({})
+        );
     }
 
     fn on_journal(&mut self, je: &JournalEvent, file: &str, line: u64, state: &GameState) {
@@ -319,7 +323,14 @@ impl Combat {
     /// Busca el Interstellar Factors más cercano al sistema actual si hay vales.
     fn maybe_request_if(&mut self, state: &GameState, ctx: &mut ModuleCtx) {
         let addr = state.location.system_address;
-        if ctx.replaying || addr == 0 || !self.online(state) || self.unredeemed_total() == 0 {
+        if ctx.replaying || addr == 0 || self.unredeemed_total() == 0 {
+            return;
+        }
+        if !self.online(state) {
+            decide!(
+                "combat.if.request.skipped_offline",
+                tmc_model::diagnostics::json!({"unredeemed": self.unredeemed_total()})
+            );
             return;
         }
         match &self.if_state {
@@ -347,9 +358,14 @@ impl Combat {
             service: NearbyService::InterstellarFactors,
             min_pad,
         };
-        if ctx.request(key.clone(), query).is_none() {
+        let accepted = ctx.request(key.clone(), query).is_some();
+        if !accepted {
             self.inflight.finish(&key);
         }
+        decide!(
+            "combat.if.request.sent",
+            tmc_model::diagnostics::json!({"accepted": accepted})
+        );
     }
 
     fn apply_response(&mut self, r: &NetResponse, state: &GameState) {
@@ -454,6 +470,10 @@ impl Combat {
             if !ctx.replaying {
                 self.emitted.push(key);
             }
+            decide!(
+                "combat.alert.emitted",
+                tmc_model::diagnostics::json!({"replaying": ctx.replaying})
+            );
             ctx.alert(alert);
         }
         self.prev_alerts = view.alerts.clone();
@@ -537,6 +557,10 @@ impl Module for Combat {
             SourceEvent::Action { name, .. } if name == ACTION_RESET => {
                 let now = self.clock();
                 self.session.reset(now);
+                decide!(
+                    "combat.session.reset.applied",
+                    tmc_model::diagnostics::json!({})
+                );
             }
             _ => return TopicSet::new(),
         }

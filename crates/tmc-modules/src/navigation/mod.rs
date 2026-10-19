@@ -189,6 +189,10 @@ impl Navigation {
             return;
         }
         self.visits.reset(name.clone(), at);
+        decide!(
+            "navigation.visits.reset.requested",
+            tmc_model::diagnostics::json!({})
+        );
         let cut = at.to_rfc3339_opts(SecondsFormat::Nanos, true);
         ctx.store_task(
             VISITS_TAG,
@@ -226,6 +230,10 @@ impl Navigation {
                     self.copy_seq += 1;
                     // El plan ya avanzó: el destino es el siguiente de la tira.
                     if let Some(next) = build_strip(self.plan.as_ref(), state).upcoming.first() {
+                        decide!(
+                            "navigation.auto_copy.alert",
+                            tmc_model::diagnostics::json!({"copy_seq": self.copy_seq})
+                        );
                         ctx.alert(
                             Alert::new(Severity::Info, "nav-auto-copied")
                                 .arg("system", next.name.clone()),
@@ -303,6 +311,10 @@ impl Navigation {
                 .retain(|_, (_, sent)| (now - *sent).num_seconds() <= INFLIGHT_TTL_S);
         }
         if !self.online(state) {
+            decide!(
+                "navigation.remote.request.skipped_offline",
+                tmc_model::diagnostics::json!({})
+            );
             return;
         }
         for e in strip.visible() {
@@ -315,7 +327,12 @@ impl Navigation {
                 id64,
                 name: e.name.clone(),
             };
-            if let Some(id) = ctx.request(key.clone(), query) {
+            let requested = ctx.request(key.clone(), query);
+            decide!(
+                "navigation.remote.request.sent",
+                tmc_model::diagnostics::json!({"accepted": requested.is_some()})
+            );
+            if let Some(id) = requested {
                 self.inflight
                     .insert(key, (id, self.now.unwrap_or(DateTime::UNIX_EPOCH)));
             }
@@ -528,6 +545,10 @@ impl Module for Navigation {
                 self.apply_loaded_plan(value, state);
             }
             SourceEvent::Action { name, args } if name.starts_with("navigation.") => {
+                decide!(
+                    "navigation.plan.action.received",
+                    tmc_model::diagnostics::json!({"args": args.is_object()})
+                );
                 self.on_plan_action(name, args, state, ctx);
             }
             _ => {}

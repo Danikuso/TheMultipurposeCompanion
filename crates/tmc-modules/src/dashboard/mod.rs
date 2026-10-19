@@ -73,6 +73,15 @@ impl Dashboard {
                     if self.can_notify(key, now) {
                         self.last_notified.insert(key.to_owned(), now);
                         emitted.push(alert);
+                        decide!(
+                            "dashboard.status_flag.notified",
+                            tmc_model::diagnostics::json!({})
+                        );
+                    } else {
+                        decide!(
+                            "dashboard.status_flag.suppressed_cooldown",
+                            tmc_model::diagnostics::json!({})
+                        );
                     }
                 }
             } else if self.active_flags.remove(key) {
@@ -100,6 +109,7 @@ impl Dashboard {
                 ..
             } => {
                 if is_session_reset(ev) {
+                    decide!("dashboard.session.reset", tmc_model::diagnostics::json!({}));
                     self.reset();
                     return Vec::new();
                 }
@@ -117,8 +127,16 @@ impl Dashboard {
                     AlertSource::JournalEvent,
                 ));
                 if !self.can_notify(&alert.key, now) {
+                    decide!(
+                        "dashboard.journal_alert.suppressed_cooldown",
+                        tmc_model::diagnostics::json!({})
+                    );
                     return Vec::new();
                 }
+                decide!(
+                    "dashboard.journal_alert.notified",
+                    tmc_model::diagnostics::json!({})
+                );
                 self.last_notified.insert(alert.key.clone(), now);
                 vec![alert]
             }

@@ -198,6 +198,10 @@ impl SamplingTracker {
                 lon: pos.map(|p| p.1),
                 ts,
             };
+            decide!(
+                "exobiology.sample.persist.queued",
+                tmc_model::diagnostics::json!({"completed": change == SamplingChange::Completed})
+            );
             ctx.store_task("save_sample", persist::save_sample(cmdr.to_owned(), row));
         }
         change
@@ -226,6 +230,10 @@ impl SamplingTracker {
     pub fn handle_sold(&mut self, cmdr: &str, ctx: &mut ModuleCtx) {
         self.on_sold();
         if ctx.replaying {
+            decide!(
+                "exobiology.sold.persist.skipped_replay",
+                tmc_model::diagnostics::json!({})
+            );
             return;
         }
         ctx.store_task("clear_completed", persist::clear_completed(cmdr.to_owned()));
@@ -236,10 +244,18 @@ impl SamplingTracker {
     /// guardadas (son de los muestreos posteriores a la muerte).
     pub fn handle_died(&mut self, cmdr: &str, ctx: &mut ModuleCtx) {
         if ctx.replaying {
+            decide!(
+                "exobiology.died.reset_for_replay",
+                tmc_model::diagnostics::json!({})
+            );
             self.reset_for_replay();
             return;
         }
         self.died();
+        decide!(
+            "exobiology.died.persist.queued",
+            tmc_model::diagnostics::json!({})
+        );
         ctx.store_task("clear_samples", persist::clear_samples(cmdr.to_owned()));
     }
 
