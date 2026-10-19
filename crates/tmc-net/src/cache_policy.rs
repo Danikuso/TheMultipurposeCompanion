@@ -21,6 +21,9 @@ pub enum CacheKind {
     BodyBio,
     ArdentImports,
     ArdentNearest,
+    SpanshTrade,
+    ArdentExports,
+    SystemCoords,
 }
 
 pub fn ttl_for(kind: CacheKind) -> TtlPolicy {
@@ -47,6 +50,15 @@ pub fn ttl_for(kind: CacheKind) -> TtlPolicy {
             fresh: secs(1),
             max_stale: secs(1),
         },
+        CacheKind::SpanshTrade | CacheKind::ArdentExports => TtlPolicy {
+            fresh: Duration::from_secs(15 * 60),
+            max_stale: Duration::from_secs(15 * 60),
+        },
+        // Las coordenadas de un sistema no cambian.
+        CacheKind::SystemCoords => TtlPolicy {
+            fresh: secs(30 * 24),
+            max_stale: secs(30 * 24),
+        },
     }
 }
 
@@ -56,6 +68,13 @@ fn pad_tag(p: PadSize) -> &'static str {
         PadSize::Medium => "m",
         PadSize::Large => "l",
     }
+}
+
+/// Hash FNV-1a estable (la clave se guarda en disco: no sirve `DefaultHasher`).
+fn fnv1a(text: &str) -> u64 {
+    text.bytes().fold(0xcbf2_9ce4_8422_2325, |h, b| {
+        (h ^ u64::from(b)).wrapping_mul(0x100_0000_01b3)
+    })
 }
 
 /// Claves de caché de una consulta; vacío si no se cachea (rutas, autocompletado).
@@ -76,12 +95,30 @@ pub fn cache_keys(q: &NetQuery) -> Vec<(CacheKind, String)> {
             CacheKind::BodyBio,
             format!("canonn:body:{system_address}:{body_id}"),
         )],
-        NetQuery::NeutronRoute(_)
-        | NetQuery::GalaxyRoute(_)
-        | NetQuery::Autocomplete { .. }
-        | NetQuery::TradeRoute(_)
-        | NetQuery::CommodityExportsNearby { .. }
-        | NetQuery::SystemCoordsByName { .. } => Vec::new(),
+        NetQuery::NeutronRoute(_) | NetQuery::GalaxyRoute(_) | NetQuery::Autocomplete { .. } => {
+            Vec::new()
+        }
+        NetQuery::TradeRoute(p) => vec![(
+            CacheKind::SpanshTrade,
+            format!("spansh:trade:{:016x}", fnv1a(&format!("{p:?}"))),
+        )],
+        NetQuery::CommodityExportsNearby {
+            system_address,
+            commodity,
+            max_distance_ly,
+            min_pad,
+        } => vec![(
+            CacheKind::ArdentExports,
+            format!(
+                "ardent:exports:{system_address}:{}:{max_distance_ly}:{}",
+                ardent::ardent_commodity(commodity),
+                pad_tag(*min_pad)
+            ),
+        )],
+        NetQuery::SystemCoordsByName { name } => vec![(
+            CacheKind::SystemCoords,
+            format!("coords:{}", name.trim().to_lowercase()),
+        )],
         NetQuery::CommodityImportsNearby {
             system_address,
             commodity,
@@ -194,6 +231,52 @@ mod tests {
                     "spansh:system:5:politics".to_string()
                 ),
             ]
+        );
+    }
+
+    #[test]
+    fn trade_exports_and_coords_policies_and_keys() {
+        let q = |cap| {
+            NetQuery::TradeRoute(tmc_model::net::TradeRouteParams {
+                system: "Sol".into(),
+                station: "Abraham Lincoln".into(),
+                starting_capital: cap,
+                max_cargo: 256,
+                max_hops: 3,
+                max_hop_distance_ly: 30.0,
+                min_pad: PadSize::Large,
+                max_price_age_days: 1,
+                allow_planetary: false,
+            })
+        };
+        let quarter = Duration::from_secs(15 * 60);
+        assert_eq!(ttl_for(CacheKind::SpanshTrade).fresh, quarter);
+        assert_eq!(ttl_for(CacheKind::ArdentExports).max_stale, quarter);
+        assert_eq!(
+            ttl_for(CacheKind::SystemCoords).fresh,
+            Duration::from_secs(30 * 24 * H)
+        );
+        let (a, b) = (cache_keys(&q(1)), cache_keys(&q(2)));
+        assert_eq!(a, cache_keys(&q(1)));
+        assert_ne!(a, b);
+        assert!(a[0].1.starts_with("spansh:trade:"));
+        assert_eq!(
+            cache_keys(&NetQuery::CommodityExportsNearby {
+                system_address: 7,
+                commodity: "Gold".into(),
+                max_distance_ly: 100,
+                min_pad: PadSize::Large,
+            }),
+            vec![(
+                CacheKind::ArdentExports,
+                "ardent:exports:7:gold:100:l".to_string()
+            )]
+        );
+        assert_eq!(
+            cache_keys(&NetQuery::SystemCoordsByName {
+                name: " Hip 1 ".into()
+            }),
+            vec![(CacheKind::SystemCoords, "coords:hip 1".to_string())]
         );
     }
 }
