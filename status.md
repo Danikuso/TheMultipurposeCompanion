@@ -2,16 +2,16 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-18 19:20 (Europe/Madrid) · Claude Opus 5.5
-- **Fase actual:** F1 — Navegación, exploración y exobiología (✅ completada y fusionada en `main` en `b96fecf`). F0 ✅ fusionada en `main` (2b953e6).
-- **Spec activa:** [`docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md`](docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md) — ✅ aprobada (2026-10-17); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
-- **Plan activo:** [`docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md`](docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md) — ✅ completado (33/33 tareas, bloques 0–5). Anterior: [`2026-10-17-tmc-f0-cimientos.md`](docs/plans/2026-10-17-tmc-f0-cimientos.md) ✅ 19/19
-- **Rama de trabajo:** `main`
+- **Última actualización:** 2026-10-19 14:25 (Europe/Madrid) · Claude Opus 5.5
+- **Fase actual:** F2 — Combate y minería (🔄 Tasks 0–27 ✅; Task 28 de cierre pendiente solo del criterio 9 con ventana). F1 ✅ fusionada en `main` (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Spec activa:** [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) — ✅ aprobada (2026-10-18); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
+- **Plan activo:** [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) — 🔄 28/29 tareas. Anteriores: F1 ✅ 33/33, F0 ✅ 19/19
+- **Rama de trabajo:** `fase/f2-combate-mineria` (subida a GitHub privado; CI desactivado por orden del propietario)
 
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** ejecutar el plan de F2 [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) (29 tareas, aprobado al ordenar «escribe el plan y ejecútalo») (en curso: Task 28 — pendiente criterio 9 con ventana y revisión final), con subagentes; ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
+- **Siguiente acción:** el propietario mide el criterio 9 con ventana (ver «Bloqueos»); si < 150 MB y < 1 % CPU, marcar Task 28 ✅, anotar la medición en «Verificación F2» y fusionar la rama en `main`. Revisión final de rama hecha: hallazgos corregidos en `c54a541`, `cb484d8`. Ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
 
 ## Fases
 
