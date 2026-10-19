@@ -19,6 +19,17 @@ pub const BATCH_MAX_AGE: Duration = Duration::from_secs(5);
 pub const PENDING_CAP: usize = 2_000;
 const BACKOFF_MAX_S: u64 = 60;
 const POLL: Duration = Duration::from_secs(1);
+/// Espera mínima de `recv`: evita el bucle activo cuando hay un lote vencido sin poder salir.
+const MIN_POLL: Duration = Duration::from_millis(100);
+/// Reintento de envío tras encontrar `out` lleno.
+const FLUSH_RETRY: Duration = Duration::from_millis(500);
+/// Sin ningún fotograma durante este tiempo se considera caída la conexión.
+pub const IDLE_TIMEOUT: Duration = Duration::from_secs(60);
+
+/// Margen de coordenadas que se conservan y emiten alrededor del radio del filtro.
+fn coord_margin(radius: f64) -> f64 {
+    (radius * 1.5).max(radius + 100.0)
+}
 
 pub type CoordEntry = (String, Option<u64>, [f64; 3]);
 
@@ -180,6 +191,10 @@ struct Worker {
     pending: Pending,
     backoff_s: u64,
     connected: bool,
+    status_dirty: bool,
+    last_frame: Instant,
+    flush_retry: Option<Instant>,
+    last_area: Option<([f64; 3], f64)>,
 }
 
 /// Lanza el hilo suscriptor. Termina al cerrarse `out`.
@@ -197,6 +212,7 @@ pub fn spawn_subscriber(
         for (k, id, p) in seed {
             idx.insert(k, id, p, center);
         }
+        let last_frame = clock.now();
         let mut w = Worker {
             source,
             clock,
@@ -209,6 +225,10 @@ pub fn spawn_subscriber(
             pending: Pending::default(),
             backoff_s: 1,
             connected: false,
+            status_dirty: false,
+            last_frame,
+            flush_retry: None,
+            last_area: None,
         };
         w.run();
         w.source.disconnect();
@@ -216,11 +236,15 @@ pub fn spawn_subscriber(
 }
 
 impl Worker {
-    fn status(&self) {
-        let _ = self.out.try_send(EddnOutput::Status(EddnStatus {
-            connected: self.connected,
-            stats: self.stats.clone(),
-        }));
+    /// Envía el estado; si `out` está lleno lo reintenta en la vuelta siguiente.
+    fn status(&mut self) {
+        self.status_dirty = matches!(
+            self.out.try_send(EddnOutput::Status(EddnStatus {
+                connected: self.connected,
+                stats: self.stats.clone(),
+            })),
+            Err(mpsc::error::TrySendError::Full(_))
+        );
     }
 
     fn run(&mut self) {
@@ -228,12 +252,19 @@ impl Worker {
             if self.out.is_closed() {
                 return;
             }
+            if self.status_dirty {
+                self.status();
+            }
             let f = self.filter.borrow().clone();
             if !f.enabled {
+                if matches!(self.flush(), Flow::Stop) {
+                    return;
+                }
+                // Si `out` sigue lleno, lo pendiente se descarta: nadie lo pidió ya.
+                self.pending = Pending::default();
+                self.flush_retry = None;
+                self.backoff_s = 1;
                 if self.connected {
-                    if matches!(self.flush(), Flow::Stop) {
-                        return;
-                    }
                     self.source.disconnect();
                     self.connected = false;
                     self.status();
@@ -241,10 +272,15 @@ impl Worker {
                 self.clock.sleep(POLL);
                 continue;
             }
+            self.update_area(&f);
+            if matches!(self.flush_if_due(), Flow::Stop) {
+                return;
+            }
             if !self.connected {
                 match self.source.connect(&self.url) {
                     Ok(()) => {
                         self.connected = true;
+                        self.last_frame = self.clock.now();
                         self.status();
                     }
                     Err(_) => {
@@ -253,24 +289,30 @@ impl Worker {
                     }
                 }
             }
-            if matches!(self.flush_if_due(), Flow::Stop) {
-                return;
-            }
             let now = self.clock.now();
             let timeout = match self.pending.since {
                 Some(s) if !self.pending.is_empty() => BATCH_MAX_AGE
                     .saturating_sub(now.saturating_duration_since(s))
-                    .clamp(Duration::from_millis(1), POLL),
+                    .clamp(MIN_POLL, POLL),
                 _ => POLL,
             };
             match self.source.recv(timeout) {
                 Ok(Some(frame)) => {
+                    self.last_frame = self.clock.now();
                     self.handle(&frame, &f);
                     if matches!(self.flush_if_due(), Flow::Stop) {
                         return;
                     }
                 }
-                Ok(None) => {}
+                Ok(None) => {
+                    let idle = self.clock.now().saturating_duration_since(self.last_frame);
+                    if idle >= IDLE_TIMEOUT {
+                        self.source.disconnect();
+                        self.connected = false;
+                        self.status();
+                        self.wait_backoff();
+                    }
+                }
                 Err(_) => {
                     self.source.disconnect();
                     self.connected = false;
@@ -336,15 +378,36 @@ impl Worker {
         }
     }
 
+    /// Al cambiar centro o radio, descarta del índice lo que queda fuera del margen.
+    fn update_area(&mut self, f: &EddnFilter) {
+        let area = f.center.map(|c| (c, f.radius_ly));
+        if area != self.last_area {
+            if let Some((c, r)) = area
+                && r.is_finite()
+                && r >= 0.0
+            {
+                self.idx.recenter(c, coord_margin(r));
+            }
+            self.last_area = area;
+        }
+    }
+
     fn coord(&mut self, k: String, id: Option<u64>, p: [f64; 3], f: &EddnFilter, now: Instant) {
         self.idx.insert(k.clone(), id, p, f.center);
-        if f.center.is_none_or(|c| dist(p, c) <= f.radius_ly) {
+        // Sin centro no se emiten coordenadas (tabla sin cota).
+        if f.center
+            .is_some_and(|c| dist(p, c) <= coord_margin(f.radius_ly))
+        {
             self.pending.add_coords(k, id, p, now);
         }
     }
 
     fn flush_if_due(&mut self) -> Flow {
-        if self.pending.due(self.clock.now()) {
+        let now = self.clock.now();
+        if self.flush_retry.is_some_and(|t| now < t) {
+            return Flow::Continue;
+        }
+        if self.pending.due(now) {
             self.flush()
         } else {
             Flow::Continue
@@ -358,9 +421,13 @@ impl Worker {
         }
         let permit = match self.out.try_reserve() {
             Ok(p) => p,
-            Err(mpsc::error::TrySendError::Full(())) => return Flow::Continue,
+            Err(mpsc::error::TrySendError::Full(())) => {
+                self.flush_retry = Some(self.clock.now() + FLUSH_RETRY);
+                return Flow::Continue;
+            }
             Err(mpsc::error::TrySendError::Closed(())) => return Flow::Stop,
         };
+        self.flush_retry = None;
         let p = std::mem::take(&mut self.pending);
         permit.send(EddnOutput::Batch(
             p.markets.into_values().collect(),

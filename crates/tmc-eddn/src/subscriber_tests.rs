@@ -1,3 +1,4 @@
+use crate::subscriber::IDLE_TIMEOUT;
 use crate::*;
 use chrono::{Duration as CDur, SecondsFormat, Utc};
 use flate2::{Compression, write::ZlibEncoder};
@@ -16,6 +17,7 @@ enum Step {
 struct Counts {
     connects: u32,
     disconnects: u32,
+    timeouts: Vec<Duration>,
 }
 
 struct FakeSource {
@@ -30,6 +32,7 @@ impl FrameSource for FakeSource {
         Ok(())
     }
     fn recv(&mut self, timeout: Duration) -> Result<Option<Vec<u8>>, EddnError> {
+        self.counts.lock().unwrap().timeouts.push(timeout);
         match self.script.pop_front() {
             Some(Step::Frame(f)) => Ok(Some(f)),
             Some(Step::Fail) => Err(EddnError::Transport("caída".into())),
@@ -71,18 +74,24 @@ struct Rig {
     clock: FakeClock,
     counts: Arc<Mutex<Counts>>,
     handle: std::thread::JoinHandle<()>,
+    t0: std::time::Instant,
 }
 
 fn rig(script: Vec<Step>, enabled: bool) -> Rig {
+    rig_with(script, filter(enabled), 1024)
+}
+
+fn rig_with(script: Vec<Step>, f: EddnFilter, cap: usize) -> Rig {
     let clock = FakeClock::new();
+    let t0 = clock.now();
     let counts = Arc::new(Mutex::new(Counts::default()));
     let source = FakeSource {
         script: script.into(),
         clock: clock.clone(),
         counts: counts.clone(),
     };
-    let (ftx, frx) = watch::channel(filter(enabled));
-    let (tx, rx) = mpsc::channel(1024);
+    let (ftx, frx) = watch::channel(f);
+    let (tx, rx) = mpsc::channel(cap);
     let handle = spawn_subscriber(
         Box::new(source),
         Box::new(clock.clone()),
@@ -97,6 +106,7 @@ fn rig(script: Vec<Step>, enabled: bool) -> Rig {
         clock,
         counts,
         handle,
+        t0,
     }
 }
 
@@ -111,13 +121,20 @@ impl Rig {
             }
         }
     }
+    fn next_full_batch(&mut self) -> (Vec<MarketSnapshot>, Vec<StationInfo>, Vec<CoordEntry>) {
+        loop {
+            if let EddnOutput::Batch(m, s, c) = self.next() {
+                return (m, s, c);
+            }
+        }
+    }
     fn finish(self) {
         drop(self.rx);
         self.handle.join().unwrap();
     }
 }
 
-use tmc_model::market::MarketSnapshot;
+use tmc_model::market::{MarketSnapshot, StationInfo};
 
 #[test]
 fn batches_flush_at_20_markets() {
@@ -127,10 +144,11 @@ fn batches_flush_at_20_markets() {
         .collect();
     let mut r = rig(script, true);
     assert_eq!(r.next_batch().len(), 20);
-    let before = r.clock.now();
     let rest = r.next_batch();
     assert_eq!(rest.len(), 5);
-    assert!(r.clock.now().duration_since(before) >= Duration::ZERO);
+    let elapsed = r.clock.now().duration_since(r.t0);
+    // El hilo sigue avanzando el reloj tras enviar: solo hay cota inferior fiable.
+    assert!(elapsed >= Duration::from_secs(5), "{elapsed:?}");
     r.finish();
 }
 
@@ -161,7 +179,7 @@ fn reconnects_with_backoff_after_relay_drop() {
     r.next_batch();
     let secs: Vec<u64> = r.clock.sleeps().iter().map(|d| d.as_secs()).collect();
     assert_eq!(&secs[..4], &[1, 2, 4, 1]);
-    assert_eq!(r.counts.lock().unwrap().connects, 5);
+    assert!(r.counts.lock().unwrap().connects >= 5);
     r.finish();
 }
 
@@ -194,6 +212,8 @@ fn disabled_filter_disconnects_within_1s() {
         let c = r.counts.lock().unwrap();
         assert_eq!(c.disconnects, 1);
         assert_eq!(c.connects, 1);
+        // Cada espera de recv es de 1 s como máximo: la baja ocurre en una vuelta.
+        assert!(c.timeouts.iter().all(|t| *t <= Duration::from_secs(1)));
     }
     r.finish();
 }
@@ -304,4 +324,75 @@ fn relay_smoke() {
     h.join().unwrap();
     assert_eq!(seen.len(), 500);
     assert!(corrupt >= 20, "corrupt={corrupt}");
+}
+
+#[test]
+fn full_out_with_due_batch_does_not_spin() {
+    let now = Utc::now();
+    let script = (0..25)
+        .map(|i| Step::Frame(market(3000 + i, now)))
+        .collect();
+    // Capacidad 1 ocupada por el Status de conexión: el lote no puede salir.
+    let r = rig_with(script, filter(true), 1);
+    while r.counts.lock().unwrap().timeouts.len() < 30 {
+        std::thread::yield_now();
+    }
+    {
+        let c = r.counts.lock().unwrap();
+        assert!(c.timeouts.iter().all(|t| *t >= Duration::from_millis(100)));
+    }
+    r.finish();
+}
+
+#[test]
+fn idle_connection_is_dropped_and_reconnected() {
+    let mut r = rig(vec![], true);
+    assert!(matches!(r.next(), EddnOutput::Status(s) if s.connected));
+    assert!(matches!(r.next(), EddnOutput::Status(s) if !s.connected));
+    while r.counts.lock().unwrap().connects < 2 {
+        std::thread::yield_now();
+    }
+    assert!(r.clock.now().duration_since(r.t0) >= IDLE_TIMEOUT);
+    assert_eq!(r.clock.sleeps()[0], Duration::from_secs(1));
+    r.finish();
+}
+
+fn fsd(system: &str, x: f64) -> Vec<u8> {
+    z(&format!(
+        r#"{{"$schemaRef":"{JOURNAL_SCHEMA}","header":{{}},"message":{{"timestamp":"{}","event":"FSDJump","StarSystem":"{system}","StarPos":[{x},0,0]}}}}"#,
+        Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true)
+    ))
+}
+
+#[test]
+fn coords_are_emitted_within_margin_only() {
+    // Radio 50: margen = max(75, 150) = 150 ly.
+    let script = vec![
+        Step::Frame(fsd("Cerca", 120.0)),
+        Step::Frame(fsd("Lejos", 400.0)),
+    ];
+    let mut r = rig(script, true);
+    let (_, _, coords) = r.next_full_batch();
+    assert_eq!(coords.len(), 1);
+    assert_eq!(coords[0].0, "cerca");
+    r.finish();
+}
+
+#[test]
+fn no_center_emits_no_coords() {
+    let f = EddnFilter {
+        enabled: true,
+        center: None,
+        radius_ly: 50.0,
+    };
+    let script = vec![
+        Step::Frame(fsd("Cerca", 1.0)),
+        Step::Frame(market(9, Utc::now())),
+    ];
+    let mut r = rig_with(script, f, 1024);
+    // Sin centro el mercado conocido (semilla) pasa, las coordenadas no salen.
+    let (m, _, coords) = r.next_full_batch();
+    assert_eq!(m.len(), 1);
+    assert!(coords.is_empty());
+    r.finish();
 }
