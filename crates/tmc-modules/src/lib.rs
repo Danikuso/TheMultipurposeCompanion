@@ -15,7 +15,8 @@ macro_rules! decide {
     };
 }
 
-/// Como `decide!`, pero solo si `$cond` es cierta; en release evalúa la condición sin emitir.
+/// Como `decide!`, pero solo si `$cond` es cierta; en release la condición se sigue evaluando
+/// (barata y sin efectos secundarios) y no se emite nada.
 #[cfg(debug_assertions)]
 macro_rules! decide_if {
     ($cond:expr, $code:literal, $($payload:tt)*) => {

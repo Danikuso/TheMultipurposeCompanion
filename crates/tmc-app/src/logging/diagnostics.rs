@@ -26,6 +26,43 @@ const DB_FILE: &str = "diagnostics.sqlite";
 const PAYLOAD_MAX_BYTES: usize = 128 * 1024;
 const QUEUE_RECORDS: usize = 2048;
 const PRUNE_BATCH: usize = 5000;
+/// Backoff between retries of a batch that hit a transient SQLITE_BUSY/LOCKED.
+const BUSY_BACKOFF: [Duration; 3] = [
+    Duration::from_millis(20),
+    Duration::from_millis(50),
+    Duration::from_millis(100),
+];
+/// Probe: timestamp of the oldest row, found through the rowid index (no table scan).
+const OLDEST_TS_SQL: &str = "SELECT ts FROM {t} WHERE id = (SELECT MIN(id) FROM {t})";
+/// Probe: first row at or after an id, used for the binary search of the expiry boundary.
+const ROW_FROM_SQL: &str = "SELECT id, ts FROM {t} WHERE id >= ?1 ORDER BY id LIMIT 1";
+
+fn is_transient(error: &rusqlite::Error) -> bool {
+    matches!(
+        error,
+        rusqlite::Error::SqliteFailure(e, _)
+            if matches!(e.code, rusqlite::ErrorCode::DatabaseBusy | rusqlite::ErrorCode::DatabaseLocked)
+    )
+}
+fn retry_busy<T>(mut op: impl FnMut() -> rusqlite::Result<T>) -> rusqlite::Result<T> {
+    let mut attempt = 0;
+    loop {
+        match op() {
+            Err(e) if is_transient(&e) && attempt < 3 => {
+                attempt += 1;
+                thread::sleep(Duration::from_millis(100));
+            }
+            other => return other,
+        }
+    }
+}
+fn optional<T>(result: rusqlite::Result<T>) -> rusqlite::Result<Option<T>> {
+    match result {
+        Ok(v) => Ok(Some(v)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(e),
+    }
+}
 
 const FLAG_TRUNCATED: i64 = 1;
 const FLAG_DROPPED: i64 = 2;
@@ -62,6 +99,7 @@ pub(super) struct Limits {
     batch_records: usize,
     batch_interval: Duration,
     prune_interval: Duration,
+    age_interval: Duration,
 }
 impl Default for Limits {
     fn default() -> Self {
@@ -71,6 +109,7 @@ impl Default for Limits {
             batch_records: 200,
             batch_interval: Duration::from_millis(250),
             prune_interval: Duration::from_secs(30),
+            age_interval: Duration::from_secs(600),
         }
     }
 }
@@ -325,21 +364,26 @@ impl Db {
         }
         fs::create_dir_all(dir)?;
         remove_legacy_jsonl(dir);
-        let conn = Connection::open(dir.join(DB_FILE)).map_err(db_err)?;
+        let file = dir.join(DB_FILE);
+        if fs::symlink_metadata(&file).is_ok_and(|m| m.file_type().is_symlink()) {
+            return Err(io::ErrorKind::InvalidInput.into());
+        }
+        let conn = Connection::open(file).map_err(db_err)?;
         conn.busy_timeout(Duration::from_secs(2)).map_err(db_err)?;
         let auto: i64 = conn
             .pragma_query_value(None, "auto_vacuum", |r| r.get(0))
             .map_err(db_err)?;
         if auto != 2 {
             // Startup only: switching mode needs a VACUUM on an existing database.
-            conn.pragma_update(None, "auto_vacuum", 2).map_err(db_err)?;
-            conn.execute_batch("VACUUM").map_err(db_err)?;
+            // If another process (a viewer) keeps the file busy, degrade: no one-off VACUUM.
+            let _ = retry_busy(|| conn.pragma_update(None, "auto_vacuum", 2));
+            let _ = retry_busy(|| conn.execute_batch("VACUUM"));
         }
-        conn.execute_batch(
-            "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA journal_size_limit=16777216;",
-        )
-        .map_err(db_err)?;
-        conn.execute_batch(&schema_sql()).map_err(db_err)?;
+        // WAL is an optimisation: a busy database keeps its current journal mode.
+        let _ = retry_busy(|| conn.execute_batch("PRAGMA journal_mode=WAL;"));
+        conn.execute_batch("PRAGMA synchronous=NORMAL; PRAGMA journal_size_limit=16777216;")
+            .map_err(db_err)?;
+        retry_busy(|| conn.execute_batch(&schema_sql())).map_err(db_err)?;
         conn.execute(
             "INSERT INTO diag_session(session_id, started_ts, version, profile) VALUES(?1, ?2, ?3, 'debug')",
             params![session, now_ts(), env!("CARGO_PKG_VERSION")],
@@ -366,6 +410,20 @@ impl Db {
         tx.commit()?;
         self.seq = seq;
         Ok(())
+    }
+
+    /// Retry a batch on transient BUSY/LOCKED; the failed attempt rolled back, so `seq` stays contiguous.
+    fn write_batch_retrying(&mut self, batch: &[Record]) -> rusqlite::Result<()> {
+        let mut backoff = BUSY_BACKOFF.iter();
+        loop {
+            match self.write_batch(batch) {
+                Err(e) if is_transient(&e) => match backoff.next() {
+                    Some(pause) => thread::sleep(*pause),
+                    None => return Err(e),
+                },
+                other => return other,
+            }
+        }
     }
 
     fn end_session(&self, shared: &Shared) {
@@ -399,12 +457,22 @@ impl Db {
     fn prune_by_age(&mut self, cutoff: DateTime<Utc>) -> rusqlite::Result<()> {
         let cutoff = ts_of(cutoff);
         for table in TABLES {
+            let oldest: Option<String> = optional(self.conn.query_row(
+                &OLDEST_TS_SQL.replace("{t}", table),
+                [],
+                |r| r.get(0),
+            ))?;
+            // Nothing expired (or empty): no further reads of this table.
+            if oldest.is_none_or(|ts| ts >= cutoff) {
+                continue;
+            }
+            let boundary = self.expiry_boundary(table, &cutoff)?;
             loop {
                 let deleted = self.conn.execute(
                     &format!(
-                        "DELETE FROM {table} WHERE id IN (SELECT id FROM {table} WHERE ts < ?1 ORDER BY id LIMIT {PRUNE_BATCH})"
+                        "DELETE FROM {table} WHERE id IN (SELECT id FROM {table} WHERE id <= ?1 ORDER BY id LIMIT {PRUNE_BATCH})"
                     ),
-                    params![cutoff],
+                    params![boundary],
                 )?;
                 if deleted < PRUNE_BATCH {
                     break;
@@ -414,6 +482,47 @@ impl Db {
         self.conn.execute(
             "DELETE FROM diag_session WHERE session_id <> ?1 AND COALESCE(ended_ts, started_ts) < ?2",
             params![self.session, cutoff],
+        )?;
+        Ok(())
+    }
+
+    /// Largest id whose ts is older than the cutoff. ts grows with id, so binary search over ids.
+    fn expiry_boundary(&self, table: &str, cutoff: &str) -> rusqlite::Result<i64> {
+        let bound = |f: &str| -> rusqlite::Result<i64> {
+            self.conn
+                .query_row(&format!("SELECT {f}(id) FROM {table}"), [], |r| r.get(0))
+        };
+        let (mut lo, mut hi) = (bound("MIN")?, bound("MAX")? + 1);
+        let sql = ROW_FROM_SQL.replace("{t}", table);
+        while hi - lo > 1 {
+            let mid = lo + (hi - lo) / 2;
+            let row: Option<(i64, String)> = optional(
+                self.conn
+                    .query_row(&sql, [mid], |r| Ok((r.get(0)?, r.get(1)?))),
+            )?;
+            match row {
+                Some((id, ts)) if ts.as_str() < cutoff => lo = id,
+                _ => hi = mid,
+            }
+        }
+        Ok(lo)
+    }
+
+    fn drop_orphan_sessions(&self) -> rusqlite::Result<()> {
+        let absent: Vec<String> = TABLES
+            .iter()
+            .map(|t| {
+                format!(
+                    "NOT EXISTS (SELECT 1 FROM {t} WHERE {t}.session_id = diag_session.session_id)"
+                )
+            })
+            .collect();
+        self.conn.execute(
+            &format!(
+                "DELETE FROM diag_session WHERE session_id <> ?1 AND {}",
+                absent.join(" AND ")
+            ),
+            params![self.session],
         )?;
         Ok(())
     }
@@ -444,10 +553,7 @@ impl Db {
                 break;
             }
         }
-        self.conn.execute(
-            "DELETE FROM diag_session WHERE session_id <> ?1 AND NOT EXISTS (SELECT 1 FROM diag_timeline t WHERE t.session_id = diag_session.session_id)",
-            params![self.session],
-        )?;
+        self.drop_orphan_sessions()?;
         // incremental_vacuum frees one page per step: drain every row.
         {
             let mut stmt = self.conn.prepare("PRAGMA incremental_vacuum")?;
@@ -546,7 +652,7 @@ impl Output {
         if batch.is_empty() {
             return;
         }
-        if self.db.write_batch(batch).is_err() {
+        if self.db.write_batch_retrying(batch).is_err() {
             self.failed = true;
             self.shared.disk_errors.fetch_add(1, Ordering::Relaxed);
             self.shared
@@ -562,6 +668,7 @@ fn run_worker(db: Db, receiver: Receiver<Record>, shared: Arc<Shared>) {
     let interval = db.limits.batch_interval;
     let capacity = db.limits.batch_records;
     let prune_every = db.limits.prune_interval;
+    let age_every = db.limits.age_interval;
     let mut output = Output {
         db,
         shared,
@@ -576,6 +683,7 @@ fn run_worker(db: Db, receiver: Receiver<Record>, shared: Arc<Shared>) {
     ));
     let mut flushed = Instant::now();
     let mut pruned = Instant::now();
+    let mut aged = Instant::now();
     loop {
         if output.shared.closing.load(Ordering::SeqCst)
             && output.shared.active.load(Ordering::SeqCst) == 0
@@ -603,8 +711,14 @@ fn run_worker(db: Db, receiver: Receiver<Record>, shared: Arc<Shared>) {
             output.flush(&mut batch);
             flushed = Instant::now();
         }
+        if !output.failed && aged.elapsed() >= age_every {
+            let cutoff = Utc::now() - chrono::Duration::days(output.db.limits.retention_days);
+            let _ = output.db.prune_by_age(cutoff);
+            aged = Instant::now();
+        }
         if !output.failed && pruned.elapsed() >= prune_every {
-            let _ = output.db.prune(Utc::now());
+            // O(1) when under the limit: only page_count/freelist_count are read.
+            let _ = output.db.prune_by_size();
             pruned = Instant::now();
         }
     }
