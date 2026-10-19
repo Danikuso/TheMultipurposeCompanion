@@ -3,6 +3,7 @@
 
 pub mod companion;
 pub mod events;
+pub mod market;
 pub mod net;
 pub mod settings;
 pub mod source;
