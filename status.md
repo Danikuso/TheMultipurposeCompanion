@@ -5,13 +5,13 @@
 - **Última actualización:** 2026-10-19 19:45 (Europe/Madrid) · Claude Opus 5.5
 - **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (🔄 spec aprobada, plan en redacción). F2 ✅ fusionada en `main` (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
-- **Plan activo:** `docs/plans/2026-10-19-tmc-f3-comercio-misiones.md` — 📝 en redacción (aprobado por el propietario al ordenar «escribe el plan y ejecútalo»). Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
+- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 0/35 (aprobado al ordenar «escribe el plan y ejecútalo»). Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
 - **Rama de trabajo:** `fase/f3-comercio-misiones`
 
 ## Puntero actual
 
 - **Tarea:** F3 — spec ✅ aprobada (2026-10-19), diseñada con el propietario con maquetas (`f3-comercio.html`, `f3-misiones.html`) y revisada por builder. Turismo: opción B (cálculo automático al aceptar).
-- **Siguiente acción:** escribir el plan de F3 y ejecutarlo con subagentes (spikes EDDN, Spansh trade y misiones primero).
+- **Siguiente acción:** ejecutar el plan de F3 con subagentes (en curso: Task 0); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Fases
 
@@ -20,7 +20,7 @@
 | F0 | Cimientos (lectura, estado, SQLite, servidor, UI base, panel general, instalador) | ✅ completada y fusionada (2b953e6) |
 | F1 | Navegación, exploración, exobiología | ✅ completada y fusionada (b96fecf) |
 | F2 | Cazarrecompensas/combate (incl. AX), minería | ✅ completada y fusionada (e069a14) |
-| F3 | Comercio, misiones y pasajeros, recepción EDDN | 🔄 spec ✅ aprobada; plan en redacción |
+| F3 | Comercio, misiones y pasajeros, recepción EDDN | 🔄 en ejecución |
 | F4 | Ingenieros y materiales | ⬜ |
 | F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | ⬜ |
 | F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | ⬜ |
@@ -28,6 +28,46 @@
 | F8 | Overlay ligero e integrado | ⬜ |
 | F9 | Crimen y piratería (Law & Disorder, dic. 2026) | ⬜ |
 | F10 | Atajos, Stream Deck, VoiceAttack, build Linux | ⬜ |
+
+## Tareas de F3
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 0 | Spike EDDN | 🔄 en curso | — |  |
+| 1 | Spike red — Spansh trade, Ardent exports, coordenadas | ⬜ pendiente | — |  |
+| 2 | Spike misiones | ⬜ pendiente | — |  |
+| 3 | Aprobaciones del propietario tras los spikes | ⬜ pendiente | — |  |
+| 4 | `tmc-model` — eventos de comercio | ⬜ pendiente | — |  |
+| 5 | `tmc-model` — eventos de misiones, pasajeros y objetivos comunitarios | ⬜ pendiente | — |  |
+| 6 | `tmc-model::market` y `tmc-store` — tabla de precios, estaciones y coordenadas | ⬜ pendiente | — |  |
+| 7 | `tmc-model` — consultas de red nuevas y ajustes de F3 | ⬜ pendiente | — |  |
+| 8 | `tmc-net` — ruta comercial de Spansh y coordenadas por nombre | ⬜ pendiente | — |  |
+| 9 | `tmc-net` — exportaciones cercanas de Ardent | ⬜ pendiente | — |  |
+| 10 | `tmc-eddn` — decodificación y filtro | ⬜ pendiente | — |  |
+| 11 | `tmc-eddn` — suscriptor, reconexión y lotes | ⬜ pendiente | — |  |
+| 12 | `tmc-app` — servicio EDDN, `SourceEvent::Eddn`, limpieza y configuración | ⬜ pendiente | — |  |
+| 13 | datos estáticos `rare_goods.json` y `cabins.json` | ⬜ pendiente | — |  |
+| 14 | i18n — `trade.ftl` y `missions.ftl` | ⬜ pendiente | — |  |
+| 15 | `trade` — coste pagado y «Mi carga» | ⬜ pendiente | — |  |
+| 16 | `trade` — «Mercado actual» y mejor venta en 48 h | ⬜ pendiente | — |  |
+| 17 | `trade` — ruta comercial con avance automático | ⬜ pendiente | — |  |
+| 18 | `trade` — sesión de comercio y buscar mercancía | ⬜ pendiente | — |  |
+| 19 | `trade` — módulo, topics, relevancia, red, almacén y registro | ⬜ pendiente | — |  |
+| 20 | `mining` — «Dónde vender» con la tabla de precios | ⬜ pendiente | — |  |
+| 21 | UI — «Mercado actual» y «Mi carga» | ⬜ pendiente | — |  |
+| 22 | UI — «Ruta comercial», «Sesión» y «Buscar mercancía» | ⬜ pendiente | — |  |
+| 23 | `missions` — libro de misiones y reconstrucción | ⬜ pendiente | — |  |
+| 24 | `missions` — pila de masacre | ⬜ pendiente | — |  |
+| 25 | `missions` — avisos, recompensas de la sesión y objetivos comunitarios | ⬜ pendiente | — |  |
+| 26 | `missions` — pasajeros y cabinas | ⬜ pendiente | — |  |
+| 27 | `missions` — turismo: ruta óptima, cr/al y veredicto | ⬜ pendiente | — |  |
+| 28 | `missions` — módulo, coordenadas, topics, relevancia y registro | ⬜ pendiente | — |  |
+| 29 | UI — «Misiones activas», «Masacre» y «Avisos» | ⬜ pendiente | — |  |
+| 30 | UI — «Pasajeros», «Turismo», «Recompensas» y «Objetivos comunitarios» | ⬜ pendiente | — |  |
+| 31 | UI — disposiciones «Comercio» y «Misiones», prioridad y ajustes | ⬜ pendiente | — |  |
+| 32 | fixtures sintéticos y pruebas de extremo a extremo | ⬜ pendiente | — |  |
+| 33 | `tmc-headless eval` — conciliación de coste pagado y de masacre | ⬜ pendiente | — |  |
+| 34 | avisos, consumo con EDDN, verificación de los 11 criterios y cierre | ⬜ pendiente | — |  |
 
 ## Tareas de F2
 
