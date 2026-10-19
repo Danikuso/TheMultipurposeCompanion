@@ -139,7 +139,7 @@ pub async fn start_full(
     spawn_eddn_wiring(
         store.clone(),
         core.events.clone(),
-        core.subscribe(),
+        core.clone(),
         settings_rx,
         eddn_url.unwrap_or_else(|| RELAY_URL.to_owned()),
     );
@@ -168,6 +168,7 @@ pub async fn start_full(
             let _ = import_tx.blocking_send(SourceEvent::ImportProgress { done, total });
         }) {
             Ok(report) => {
+                crate::eddn_service::seed_own_jumps_blocking(&import_store);
                 tracing::info!(
                     files = report.files,
                     events = report.events,

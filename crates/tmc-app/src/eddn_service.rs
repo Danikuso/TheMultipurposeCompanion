@@ -95,11 +95,11 @@ async fn purge(store: &Store) {
     }
 }
 
-/// Copia a `system_coords` los sistemas del diario propio (una sola vez al arrancar).
-async fn seed_own_jumps(store: &Store) {
-    let st = store.clone();
-    let r = blocking(move || -> Result<usize, tmc_store::StoreError> {
-        let rows = st.query_json(
+/// Copia las coordenadas propias al arrancar y al terminar la importación histórica.
+/// Se llama desde un worker, nunca desde el bucle asíncrono.
+pub(crate) fn seed_own_jumps_blocking(store: &Store) {
+    let r = (|| -> Result<usize, tmc_store::StoreError> {
+        let rows = store.query_json(
             "SELECT json_extract(json,'$.StarSystem'), json_extract(json,'$.SystemAddress'), \
              json_extract(json,'$.StarPos[0]'), json_extract(json,'$.StarPos[1]'), \
              json_extract(json,'$.StarPos[2]') \
@@ -117,12 +117,16 @@ async fn seed_own_jumps(store: &Store) {
                 Some((name.to_owned(), row[1].as_u64(), pos))
             })
             .collect();
-        st.upsert_coords(&coords, Utc::now())
-    })
-    .await;
-    if let Some(Err(error)) = r {
+        store.upsert_coords(&coords, Utc::now())
+    })();
+    if let Err(error) = r {
         tracing::warn!(%error, "seeding system coords from own journal failed");
     }
+}
+
+async fn seed_own_jumps(store: &Store) {
+    let st = store.clone();
+    blocking(move || seed_own_jumps_blocking(&st)).await;
 }
 
 async fn run(
@@ -423,6 +427,43 @@ mod tests {
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
         h.abort();
+    }
+
+    #[tokio::test]
+    async fn own_coords_are_seeded_after_history_import_finishes() {
+        let store = Store::open_in_memory().unwrap();
+        // Startup can finish its first seed before the background import has any rows.
+        seed_own_jumps(&store).await;
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("Journal.2026-10-18T000000.01.log"),
+            concat!(
+                "{\"timestamp\":\"2026-10-18T10:00:00Z\",\"event\":\"FSDJump\",\"StarSystem\":\"Lave\",\"SystemAddress\":1,\"StarPos\":[75.75,48.75,70.75]}\n",
+                "{\"timestamp\":\"2026-10-18T10:01:00Z\",\"event\":\"Location\",\"StarSystem\":\"Sol\",\"SystemAddress\":2,\"StarPos\":[0,0,0]}\n",
+                "{\"timestamp\":\"2026-10-18T10:02:00Z\",\"event\":\"CarrierJump\",\"StarSystem\":\"Achenar\",\"SystemAddress\":3,\"StarPos\":[67.5,-119.5,24.8125]}\n",
+            ),
+        )
+        .unwrap();
+        let report = tmc_store::import::import_history(
+            &store,
+            dir.path(),
+            &tmc_store::import::ImportOptions {
+                throttle: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            },
+            &mut |_, _| {},
+        )
+        .unwrap();
+        assert_eq!(report.events, 3);
+        let names = ["lave".into(), "sol".into(), "achenar".into()];
+        assert!(store.coords_by_names(&names).unwrap().is_empty());
+
+        seed_own_jumps_blocking(&store);
+
+        let coords = store.coords_by_names(&names).unwrap();
+        assert_eq!(coords.len(), 3);
+        assert_eq!(coords["lave"], [75.75, 48.75, 70.75]);
+        assert_eq!(coords["sol"], [0.0, 0.0, 0.0]);
+        assert_eq!(coords["achenar"], [67.5, -119.5, 24.8125]);
     }
 
     #[tokio::test]

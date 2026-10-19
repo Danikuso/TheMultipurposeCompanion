@@ -137,6 +137,7 @@ struct ModuleSlot {
 
 struct Actor {
     state: GameState,
+    replaying: bool,
     theme: HudTheme,
     modules: Vec<ModuleSlot>,
     topics: BTreeMap<String, Value>,
@@ -161,6 +162,7 @@ impl Actor {
     ) -> Self {
         let mut actor = Self {
             state: GameState::default(),
+            replaying: true,
             theme: HudTheme::default(),
             modules: Vec::new(),
             topics: BTreeMap::new(),
@@ -272,7 +274,7 @@ impl Actor {
         }
         self.set_topic(
             "core.game",
-            serde_json::json!({"running":self.state.game_running,"galaxy":self.state.galaxy}),
+            serde_json::json!({"running":self.state.game_running,"galaxy":self.state.galaxy,"replaying":self.replaying}),
         );
     }
 
@@ -344,7 +346,13 @@ impl Actor {
             }
         );
         let changes = match &event {
-            SourceEvent::Journal { ev, file, line, .. } => {
+            SourceEvent::Journal {
+                ev,
+                file,
+                line,
+                replaying,
+            } => {
+                self.replaying = *replaying;
                 let changes = self.state.apply_event(ev);
                 self.publish_clock(ev.timestamp, ev.name == "LoadGame");
                 if let Some(writer) = &self.writer {
@@ -601,7 +609,8 @@ mod tests {
                 assert_eq!(topics["core.location"]["system"], "Example");
                 assert_eq!(topics["core.session"]["jumps"], 1);
                 assert_eq!(topics["core.clock"]["as_of"], "2026-10-17T18:00:00Z");
-                assert_eq!(topics.len(), 3);
+                assert_eq!(topics["core.game"]["replaying"], false);
+                assert_eq!(topics.len(), 4);
             }
             other => panic!("{other:?}"),
         }
@@ -809,6 +818,43 @@ mod tests {
             rx.try_recv(),
             Err(broadcast::error::TryRecvError::Empty)
         ));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn replay_signal_persists_until_an_explicit_live_journal() {
+        let core = core();
+        assert_eq!(core.snapshot().await["core.game"]["replaying"], true);
+        core.events
+            .send(journal("LoadGame", r#", "gameversion":"4.1.0.0""#, true))
+            .await
+            .unwrap();
+        let game = core.snapshot().await["core.game"].clone();
+        assert_eq!(game["running"], true);
+        assert_eq!(game["galaxy"], "Live");
+        assert_eq!(game["replaying"], true);
+        core.events
+            .send(SourceEvent::GameProcess { running: true })
+            .await
+            .unwrap();
+        core.events
+            .send(SourceEvent::Settings(Default::default()))
+            .await
+            .unwrap();
+        assert_eq!(core.snapshot().await["core.game"]["replaying"], true);
+        core.events
+            .send(journal("UnderAttack", "", false))
+            .await
+            .unwrap();
+        assert_eq!(core.snapshot().await["core.game"]["replaying"], false);
+        core.events
+            .send(journal("UnderAttack", "", true))
+            .await
+            .unwrap();
+        core.events
+            .send(SourceEvent::GameProcess { running: true })
+            .await
+            .unwrap();
+        assert_eq!(core.snapshot().await["core.game"]["replaying"], true);
     }
 
     #[tokio::test(start_paused = true)]
