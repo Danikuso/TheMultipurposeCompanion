@@ -207,6 +207,17 @@ test('session duration follows the journal clock', () => {
   expect(q('session-time')!.textContent).toContain('47m');
 });
 
+test('session duration uses core.clock over a stale topic as_of', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2031-06-01T00:00:00Z'));
+  // Cliente tardío: el as_of del topic es viejo (00:47) pero core.clock es actual (01:30).
+  mountWith(MiningSessionPanel, {
+    'core.clock': { as_of: '2030-01-01T01:30:00Z' },
+    'mining.session': sessionTopic(),
+  });
+  expect(q('session-time')!.textContent).toContain('1h 30m');
+});
+
 test('relativeAge: now, minutes and days', () => {
   const base = Date.parse('2030-01-10T00:00:00Z');
   expect(relativeAge('2030-01-09T23:59:30Z', base)).toBe('ahora');

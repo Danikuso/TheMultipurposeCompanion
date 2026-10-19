@@ -1,6 +1,7 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
-  import { ageShort, credits, ly, pct, skewFrom } from '../../lib/format';
+  import { ageShort, credits, ly, pct } from '../../lib/format';
+  import { journalSkew } from '../../lib/clock.svelte';
   import { action, topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
   import { cleanFaction, type SessionTopic } from './types';
@@ -15,7 +16,7 @@
   // Un único setInterval de 30 s (antigüedad del IF y créditos/hora); no corre sin sesión.
   $effect(() => {
     if (!s) return;
-    skew = skewFrom(s.as_of);
+    skew = journalSkew(s.as_of);
     tick = Date.now();
     const id = setInterval(() => {
       tick = Date.now();
