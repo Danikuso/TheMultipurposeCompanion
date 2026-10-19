@@ -37,6 +37,17 @@ impl CoordIndex {
         self.seq += 1;
         let seq = self.seq;
         if !self.map.contains_key(&name_key) && self.map.len() >= COORD_INDEX_CAP {
+            // Con centro, una entrada más lejana que la más lejana actual se rechaza.
+            if let Some(c) = center {
+                let farthest = self
+                    .map
+                    .values()
+                    .map(|e| dist(e.pos, c))
+                    .fold(f64::NEG_INFINITY, f64::max);
+                if dist(pos, c) > farthest {
+                    return;
+                }
+            }
             let victim = match center {
                 Some(c) => self
                     .map
