@@ -3,7 +3,7 @@
 use crate::jsonx;
 use crate::transport::url_encode;
 use serde_json::Value;
-use tmc_model::net::{NetFailure, RemoteSystem};
+use tmc_model::net::{NetFailure, RemoteSystem, SystemCoords};
 
 pub const BASE: &str = "https://www.edsm.net/api-v1";
 
@@ -12,6 +12,38 @@ pub fn system_url(name: &str) -> String {
         "{BASE}/system?systemName={}&showId=1&showInformation=1&showPrimaryStar=1",
         url_encode(name)
     )
+}
+
+pub fn coords_url(name: &str) -> String {
+    format!(
+        "{BASE}/system?systemName={}&showCoordinates=1&showId=1",
+        url_encode(name)
+    )
+}
+
+/// Coordenadas: `[]`, `{}` o sin `coords` = desconocido.
+pub fn parse_coords(body: &str) -> Result<Option<SystemCoords>, NetFailure> {
+    let v = jsonx::parse(body)?;
+    let o = match &v {
+        Value::Array(a) if a.is_empty() => return Ok(None),
+        Value::Object(o) if o.is_empty() => return Ok(None),
+        Value::Object(o) => o,
+        _ => return Err(NetFailure::Malformed),
+    };
+    let c = match o.get("coords") {
+        None | Some(Value::Null) => return Ok(None),
+        Some(Value::Object(c)) => c,
+        Some(_) => return Err(NetFailure::Malformed),
+    };
+    Ok(Some(SystemCoords {
+        name: jsonx::req_str(o, "name")?,
+        id64: jsonx::opt_u64(o, "id64")?,
+        star_pos: [
+            jsonx::req_f64(c, "x")?,
+            jsonx::req_f64(c, "y")?,
+            jsonx::req_f64(c, "z")?,
+        ],
+    }))
 }
 
 /// `{}` y `[]` (sistema desconocido) -> `Ok(None)`. EDSM no da `discovered`,
@@ -122,5 +154,24 @@ mod tests {
         ] {
             assert_eq!(parse_system(bad), Err(NetFailure::Malformed), "{bad}");
         }
+    }
+
+    const COORDS: &str = include_str!("../../../tests/fixtures/net/coords_by_name.json");
+
+    fn sub(k: &str) -> String {
+        let v: serde_json::Value = serde_json::from_str(COORDS).unwrap();
+        v[k].to_string()
+    }
+
+    #[test]
+    fn parses_coords_fixture() {
+        let c = parse_coords(&sub("edsm")).unwrap().unwrap();
+        assert_eq!(c.star_pos, [0.5, -1.25, 3.75]);
+        assert_eq!(c.id64, Some(9000000000001));
+        assert_eq!(parse_coords(&sub("edsm_unknown")), Ok(None));
+        assert_eq!(
+            coords_url("Hip 1+2"),
+            "https://www.edsm.net/api-v1/system?systemName=Hip%201%2B2&showCoordinates=1&showId=1"
+        );
     }
 }

@@ -430,6 +430,9 @@ fn api_cache_key(query: &NetQuery) -> Option<(CacheKind, String)> {
     match query {
         NetQuery::CommodityImportsNearby { .. }
         | NetQuery::NearestService { .. }
+        | NetQuery::TradeRoute(_)
+        | NetQuery::CommodityExportsNearby { .. }
+        | NetQuery::SystemCoordsByName { .. }
         | NetQuery::BodyBio { .. } => cache_keys(query).into_iter().next(),
         _ => None,
     }
@@ -450,6 +453,9 @@ async fn read_api_cache(store: &Store, query: &NetQuery) -> Option<(NetOutcome, 
     let outcome = match kind {
         CacheKind::ArdentImports => NetOutcome::Markets(serde_json::from_str(&entry.value).ok()?),
         CacheKind::BodyBio => NetOutcome::BodyBio(serde_json::from_str(&entry.value).ok()?),
+        CacheKind::SpanshTrade => NetOutcome::TradeRoute(serde_json::from_str(&entry.value).ok()?),
+        CacheKind::ArdentExports => NetOutcome::Exports(serde_json::from_str(&entry.value).ok()?),
+        CacheKind::SystemCoords => NetOutcome::Coords(serde_json::from_str(&entry.value).ok()?),
         _ => NetOutcome::Stations(serde_json::from_str(&entry.value).ok()?),
     };
     Some((outcome, entry.fetched_at))
@@ -463,6 +469,9 @@ async fn write_api_cache(store: &Store, query: &NetQuery, outcome: &NetOutcome, 
         NetOutcome::Markets(items) => serde_json::to_string(items),
         NetOutcome::Stations(items) => serde_json::to_string(items),
         NetOutcome::BodyBio(bio) => serde_json::to_string(bio),
+        NetOutcome::TradeRoute(plan) => serde_json::to_string(plan),
+        NetOutcome::Exports(items) => serde_json::to_string(items),
+        NetOutcome::Coords(coords) => serde_json::to_string(coords),
         _ => return,
     };
     let Ok(json) = json else {
@@ -1004,6 +1013,44 @@ mod tests {
         let again = next_response(&mut rig).await;
         assert_eq!(again.source, NetSource::Cache);
         assert_eq!(rig.fake.calls(), 1);
+    }
+
+    #[tokio::test]
+    async fn coords_cached_for_30_days() {
+        let coords = r#"{"systemAddress":9000000000001,"systemName":"Origin","systemX":0.5,"systemY":-1.25,"systemZ":3.75}"#;
+        let mut rig = rig(vec![ok(200, coords)]);
+        let request = |id| NetRequest {
+            id,
+            module: "trade".into(),
+            key: "coords:origin".into(),
+            query: NetQuery::SystemCoordsByName {
+                name: "Origin".into(),
+            },
+        };
+        rig.handle.tx.send(request(1)).await.unwrap();
+        let first = next_response(&mut rig).await;
+        assert_eq!(first.source, NetSource::Ardent);
+        assert!(matches!(first.outcome, NetOutcome::Coords(_)));
+        rig.handle.tx.send(request(2)).await.unwrap();
+        let again = next_response(&mut rig).await;
+        assert_eq!(again.source, NetSource::Cache);
+        assert_eq!(again.outcome, first.outcome);
+        assert_eq!(rig.fake.calls(), 1);
+        // A los 29 días sigue vigente; a los 31 se vuelve a pedir.
+        rig.store
+            .api_cache_put(
+                "coords:origin",
+                &serde_json::to_string(&match &first.outcome {
+                    NetOutcome::Coords(c) => c.clone(),
+                    _ => unreachable!(),
+                })
+                .unwrap(),
+                Utc::now() - chrono::Duration::days(31),
+            )
+            .unwrap();
+        rig.handle.tx.send(request(3)).await.unwrap();
+        assert_eq!(next_response(&mut rig).await.source, NetSource::Ardent);
+        assert_eq!(rig.fake.calls(), 2);
     }
 
     #[tokio::test]
