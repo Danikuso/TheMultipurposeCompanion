@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F3 — spec ✅ aprobada (2026-10-19), diseñada con el propietario con maquetas (`f3-comercio.html`, `f3-misiones.html`) y revisada por builder. Turismo: opción B (cálculo automático al aceptar).
-- **Siguiente acción:** ejecutar el plan de F3 con subagentes (en curso: Task 6); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Siguiente acción:** ejecutar el plan de F3 con subagentes (en curso: Task 7); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Fases
 
@@ -39,8 +39,8 @@
 | 3 | Aprobaciones del propietario tras los spikes | ✅ hecha | (este commit) | Resultados de spikes como rulings del controlador en Desviaciones |
 | 4 | `tmc-model` — eventos de comercio | ✅ hecha | 299fc8c, ad46673 | Eventos de comercio tolerantes; max_pad, has_market |
 | 5 | `tmc-model` — eventos de misiones, pasajeros y objetivos comunitarios | ✅ hecha | 0463c11, ad46673 | Eventos de misiones/pasajeros/CG tolerantes; destinos múltiples |
-| 6 | `tmc-model::market` y `tmc-store` — tabla de precios, estaciones y coordenadas | 🔄 en curso | — |  |
-| 7 | `tmc-model` — consultas de red nuevas y ajustes de F3 | ⬜ pendiente | — |  |
+| 6 | `tmc-model::market` y `tmc-store` — tabla de precios, estaciones y coordenadas | ✅ hecha | b510911, c1214e2 | Tablas de precios/estaciones/coords; marcas de tiempo explícitas; retención 7/30 d |
+| 7 | `tmc-model` — consultas de red nuevas y ajustes de F3 | 🔄 en curso | — |  |
 | 8 | `tmc-net` — ruta comercial de Spansh y coordenadas por nombre | ⬜ pendiente | — |  |
 | 9 | `tmc-net` — exportaciones cercanas de Ardent | ⬜ pendiente | — |  |
 | 10 | `tmc-eddn` — decodificación y filtro | ⬜ pendiente | — |  |
