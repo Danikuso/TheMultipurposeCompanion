@@ -29,7 +29,13 @@ pub fn sql_fingerprint(sql: &str) -> u64 {
 const SQL_TEMPLATE_LIMIT: usize = 512;
 
 fn sql_template_is_constant(sql: &str) -> bool {
-    if sql.contains('\'') || sql.contains('"') || sql.contains('`') || sql.contains("--") {
+    if sql.contains('\'')
+        || sql.contains('"')
+        || sql.contains('`')
+        || sql.contains("--")
+        || sql.contains("/*")
+        || sql.contains('[')
+    {
         return false;
     }
     // A standalone digit run is a possible interpolated literal; identifiers like t1 are fine.
@@ -669,10 +675,83 @@ pub fn emit<T: Serialize + ?Sized>(
     let payload = serialize_diagnostic(payload, context);
     tracing::trace!(target: "tmc::diagnostics", context = context.label(), schema = context.schema(), code, payload = %payload);
 }
+/// Captura local de registros de diagnóstico para pruebas (sin E/S ni dependencias).
+#[cfg(debug_assertions)]
+#[doc(hidden)]
+pub mod capture {
+    use std::fmt::Debug;
+    use std::sync::{Arc, Mutex};
+    use tracing::field::{Field, Visit};
+    use tracing::span::{Attributes, Id, Record as SpanRecord};
+    use tracing::{Event, Metadata, Subscriber};
+
+    #[derive(Clone, Debug, Default)]
+    pub struct Record {
+        pub context: String,
+        pub schema: String,
+        pub code: String,
+        pub payload: String,
+    }
+
+    impl Visit for Record {
+        fn record_str(&mut self, field: &Field, value: &str) {
+            match field.name() {
+                "context" => self.context = value.to_owned(),
+                "schema" => self.schema = value.to_owned(),
+                "code" => self.code = value.to_owned(),
+                _ => {}
+            }
+        }
+        fn record_debug(&mut self, field: &Field, value: &dyn Debug) {
+            if field.name() == "payload" {
+                self.payload = format!("{value:?}");
+            }
+        }
+    }
+
+    struct Collector(Arc<Mutex<Vec<Record>>>);
+
+    impl Subscriber for Collector {
+        fn enabled(&self, metadata: &Metadata<'_>) -> bool {
+            metadata.target() == "tmc::diagnostics"
+        }
+        fn new_span(&self, _: &Attributes<'_>) -> Id {
+            Id::from_u64(1)
+        }
+        fn record(&self, _: &Id, _: &SpanRecord<'_>) {}
+        fn record_follows_from(&self, _: &Id, _: &Id) {}
+        fn event(&self, event: &Event<'_>) {
+            let mut record = Record::default();
+            event.record(&mut record);
+            if let Ok(mut records) = self.0.lock() {
+                records.push(record);
+            }
+        }
+        fn enter(&self, _: &Id) {}
+        fn exit(&self, _: &Id) {}
+    }
+
+    /// Ejecuta `f` y devuelve los registros de diagnóstico emitidos en este hilo.
+    pub fn capture<R>(f: impl FnOnce() -> R) -> (R, Vec<Record>) {
+        let records = Arc::new(Mutex::new(Vec::new()));
+        let result = tracing::subscriber::with_default(Collector(records.clone()), f);
+        let records = records.lock().map(|r| r.clone()).unwrap_or_default();
+        (result, records)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn sql_template_rejects_comments_and_bracket_identifiers() {
+        assert!(sql_template("SELECT a FROM t WHERE b = ?1").is_some());
+        assert!(sql_template("SELECT a /* x */ FROM t").is_none());
+        assert!(sql_template("SELECT [secret col] FROM t").is_none());
+        assert!(sql_template("SELECT a FROM t -- x").is_none());
+    }
 
     #[test]
     fn nested_private_containers_override_public_fields() {

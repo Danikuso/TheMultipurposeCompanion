@@ -157,6 +157,10 @@ impl ProspectorTracker {
         }
         self.current = Some(view);
         self.last_event = Some(ev.clone());
+        decide!(
+            "mining.prospector.applied",
+            tmc_model::diagnostics::json!({"history": self.history.len()})
+        );
         true
     }
 

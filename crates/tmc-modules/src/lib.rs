@@ -1,6 +1,17 @@
 //! Un módulo por rol del juego; F0 incorpora el panel general.
 #![forbid(unsafe_code)]
 
+/// Registra una decisión interna del módulo (solo compilaciones debug; en release no evalúa nada).
+macro_rules! decide {
+    ($code:literal, $payload:expr) => {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            $code,
+            $payload
+        )
+    };
+}
+
 pub mod combat;
 pub mod dashboard;
 pub mod data;
@@ -14,3 +25,6 @@ pub mod navigation;
 pub mod registry;
 pub use dashboard::Dashboard;
 pub use registry::all_modules;
+
+#[cfg(all(test, debug_assertions))]
+mod diag_tests;

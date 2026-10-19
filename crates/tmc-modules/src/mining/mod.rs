@@ -249,6 +249,10 @@ impl Mining {
             return;
         }
         ctx.store_task(TAG_PRICES, price_rebuild_task(cmdr));
+        decide!(
+            "mining.prices.rebuild.requested",
+            tmc_model::diagnostics::json!({})
+        );
     }
 
     fn on_journal(&mut self, je: &JournalEvent, state: &GameState) {
@@ -363,7 +367,14 @@ impl Mining {
 
     fn maybe_request(&mut self, state: &GameState, ctx: &mut ModuleCtx) {
         let addr = state.location.system_address;
-        if ctx.replaying || addr == 0 || !self.online(state) {
+        if ctx.replaying || addr == 0 {
+            return;
+        }
+        if !self.online(state) {
+            decide!(
+                "mining.sell.request.skipped_offline",
+                tmc_model::diagnostics::json!({"pending_keys": self.request_keys().len()})
+            );
             return;
         }
         let now = self.clock();
@@ -394,9 +405,14 @@ impl Mining {
                 max_distance_ly: self.settings.sell_search_radius_ly,
                 min_pad,
             };
-            if ctx.request(rk.clone(), query).is_none() {
+            let accepted = ctx.request(rk.clone(), query).is_some();
+            if !accepted {
                 self.inflight.finish(&rk);
             }
+            decide!(
+                "mining.sell.request.sent",
+                tmc_model::diagnostics::json!({"accepted": accepted})
+            );
         }
     }
 
@@ -668,6 +684,10 @@ impl Module for Mining {
             SourceEvent::Action { name, .. } if name == ACTION_RESET => {
                 let now = self.clock();
                 self.session.reset(now);
+                decide!(
+                    "mining.session.reset.applied",
+                    tmc_model::diagnostics::json!({})
+                );
                 session_dirty = true;
             }
             _ => return TopicSet::new(),
