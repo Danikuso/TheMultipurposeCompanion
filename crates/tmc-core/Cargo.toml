@@ -9,6 +9,7 @@ repository.workspace = true
 [dependencies]
 tmc-model = { path = "../tmc-model" }
 tmc-store = { path = "../tmc-store" }
+chrono.workspace = true
 tokio.workspace = true
 serde.workspace = true
 serde_json.workspace = true

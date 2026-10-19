@@ -1,6 +1,7 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
-  import { credits, decimal, relativeAge, skewFrom } from '../../lib/format';
+  import { credits, decimal, relativeAge } from '../../lib/format';
+  import { journalSkew } from '../../lib/clock.svelte';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
   import { materialName, namesFrom, type PadSize, type ProspectorTopic, type SellTopic } from './types';
@@ -15,7 +16,7 @@
   // Un único setInterval de 30 s para las antigüedades; no corre sin plan.
   $effect(() => {
     if (s?.status !== 'ok') return;
-    skew = skewFrom(s.as_of);
+    skew = journalSkew(s.as_of);
     tick = Date.now();
     const id = setInterval(() => {
       tick = Date.now();
