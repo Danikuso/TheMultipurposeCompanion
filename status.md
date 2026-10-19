@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F3 — spec ✅ aprobada (2026-10-19), diseñada con el propietario con maquetas (`f3-comercio.html`, `f3-misiones.html`) y revisada por builder. Turismo: opción B (cálculo automático al aceptar).
-- **Siguiente acción:** ejecutar el plan de F3 con subagentes (en curso: Task 4); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Siguiente acción:** ejecutar el plan de F3 con subagentes (en curso: Task 6); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Fases
 
@@ -37,9 +37,9 @@
 | 1 | Spike red — Spansh trade, Ardent exports, coordenadas | ✅ hecha | 1786893 | Spansh trade (requires_large_pad), Ardent exports, coords Ardent+EDSM |
 | 2 | Spike misiones | ✅ hecha | 61f06c6 | Turismo verificado; masacre; cabinas agregadas |
 | 3 | Aprobaciones del propietario tras los spikes | ✅ hecha | (este commit) | Resultados de spikes como rulings del controlador en Desviaciones |
-| 4 | `tmc-model` — eventos de comercio | 🔄 en curso | — |  |
-| 5 | `tmc-model` — eventos de misiones, pasajeros y objetivos comunitarios | ⬜ pendiente | — |  |
-| 6 | `tmc-model::market` y `tmc-store` — tabla de precios, estaciones y coordenadas | ⬜ pendiente | — |  |
+| 4 | `tmc-model` — eventos de comercio | ✅ hecha | 299fc8c, ad46673 | Eventos de comercio tolerantes; max_pad, has_market |
+| 5 | `tmc-model` — eventos de misiones, pasajeros y objetivos comunitarios | ✅ hecha | 0463c11, ad46673 | Eventos de misiones/pasajeros/CG tolerantes; destinos múltiples |
+| 6 | `tmc-model::market` y `tmc-store` — tabla de precios, estaciones y coordenadas | 🔄 en curso | — |  |
 | 7 | `tmc-model` — consultas de red nuevas y ajustes de F3 | ⬜ pendiente | — |  |
 | 8 | `tmc-net` — ruta comercial de Spansh y coordenadas por nombre | ⬜ pendiente | — |  |
 | 9 | `tmc-net` — exportaciones cercanas de Ardent | ⬜ pendiente | — |  |
