@@ -52,6 +52,7 @@ strip-col-exploration = Erkundung
 strip-col-politics = Politik
 strip-col-system = System
 strip-star-class = Klasse
+strip-star-classes = Klassen
 strip-discovered = Entdeckt
 strip-undiscovered = Nicht entdeckt
 strip-bodies = Körper

@@ -1,6 +1,7 @@
 //! Capa de red de TMC. Bloques puros y deterministas (reloj inyectado) más el
 //! cliente asíncrono que los compone.
 
+pub mod ardent;
 pub mod cache_policy;
 pub mod canonn;
 pub mod client;

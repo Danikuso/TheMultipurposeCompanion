@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
-import { contextPanel, layouts } from '../src/shell/layouts';
+import { autoLayout, contextPanel, layouts, nextPin } from '../src/shell/layouts';
 import { ageShort, starClassLabel } from '../src/lib/format';
 import { setLocale } from '../src/lib/i18n';
 import Panel from '../src/shell/Panel.svelte';
@@ -175,5 +175,70 @@ describe('Panel span and size', () => {
     const el = target.querySelector('section') as HTMLElement;
     expect(el.style.gridColumn).toBe('span 2');
     expect(el.classList.contains('large')).toBe(false);
+  });
+});
+
+describe('combat and mining layouts', () => {
+  beforeEach(() => { disconnect(); });
+  afterEach(() => { disconnect(); });
+  const visible = (id: string) => layouts.find((l) => l.id === id)!.slots
+    .filter((slot) => !slot.when || slot.when({ modules: [], manual: null }));
+
+  test('combat active switches to combat layout', () => {
+    expect(autoLayout([{ id: 'combat', relevance: 'active' }], null)).toBe('combat');
+    expect(autoLayout([{ id: 'combat', relevance: 'urgent' }, { id: 'mining', relevance: 'active' }], null)).toBe('combat');
+    expect(autoLayout([{ id: 'mining', relevance: 'active' }], null)).toBe('mining');
+    expect(autoLayout([{ id: 'combat', relevance: 'normal' }], null)).toBeNull();
+  });
+  test('manual choice wins', () => {
+    expect(autoLayout([{ id: 'combat', relevance: 'active' }], 'mining')).toBe('mining');
+  });
+  test('ax and cz slots hidden when not applicable', () => {
+    live.topics['combat.ax'] = { active: false };
+    live.topics['combat.conflict_zone'] = null;
+    expect(visible('combat')).toHaveLength(3);
+    live.topics['combat.ax'] = { active: true };
+    live.topics['combat.conflict_zone'] = { system: 'X', side: null, kills: 0, bonds_by_faction: {} };
+    expect(visible('combat')).toHaveLength(5);
+    expect(visible('mining')).toHaveLength(3);
+  });
+});
+
+describe('nextPin', () => {
+  test('pin holds while auto is unchanged, clears when auto changes', () => {
+    expect(nextPin('combat', 'combat', 'layout:mining')).toBe('layout:mining');
+    expect(nextPin('combat', null, 'layout:mining')).toBeNull();
+    expect(nextPin(null, 'combat', 'layout:mining')).toBeNull();
+  });
+});
+
+describe('app pin behaviour', () => {
+  let target: HTMLElement;
+  let instance: Record<string, unknown>;
+  beforeEach(() => {
+    disconnect(); setLocale('es');
+    live.topics['core.modules'] = [{ id: 'combat', relevance: 'active' }];
+    target = document.createElement('div'); document.body.appendChild(target);
+    instance = mount(App, { target }); flushSync();
+  });
+  afterEach(() => { unmount(instance); target.remove(); disconnect(); });
+  const slot = (id: string) => target.querySelector(`[data-layout-slot="${id}"]`);
+  const nav = (label: string) => (Array.from(target.querySelectorAll('aside button')) as HTMLButtonElement[])
+    .find((b) => b.textContent?.includes(label))!;
+
+  test('manual mining stays while combat active, auto returns when combat ends; settings does not pin', () => {
+    expect(slot('target')).not.toBeNull();
+    nav('Minería').click(); flushSync();
+    expect(slot('prospector')).not.toBeNull();
+    live.topics['core.status'] = { flags: 0 }; flushSync();
+    expect(slot('prospector')).not.toBeNull();
+    live.topics['core.modules'] = [{ id: 'combat', relevance: 'normal' }]; flushSync();
+    expect(slot('prospector')).toBeNull();
+    expect(slot('route')).not.toBeNull();
+    live.topics['core.modules'] = [{ id: 'combat', relevance: 'active' }]; flushSync();
+    nav('Ajustes').click(); flushSync();
+    expect(slot('target')).toBeNull();
+    nav('Combate').click(); flushSync();
+    expect(slot('target')).not.toBeNull();
   });
 });

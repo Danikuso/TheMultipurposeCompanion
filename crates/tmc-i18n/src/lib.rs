@@ -269,6 +269,32 @@ mod tests {
                 ("name", FluentValue::from("Bacterium Aurasus")),
                 ("after", FluentValue::from("5 CR")),
                 ("species", FluentValue::from("Bacterium Aurasus")),
+                ("reward", FluentValue::from("1,2 M CR")),
+                ("credits", FluentValue::from("3,4 M CR")),
+                ("price", FluentValue::from("5200 CR")),
+                ("rate", FluentValue::from("120 t/h")),
+                ("tons", FluentValue::from(12)),
+                ("fee", FluentValue::from("25 %")),
+                ("faction", FluentValue::from("Sol Workers")),
+                ("ship", FluentValue::from("Vulture")),
+                ("material", FluentValue::from("Painita")),
+                ("remaining", FluentValue::from("2 min")),
+                ("distance", FluentValue::from("12 ly")),
+                ("days", FluentValue::from(3)),
+                ("time", FluentValue::from("00:45")),
+                ("station", FluentValue::from("Jameson Memorial")),
+                ("sys", FluentValue::from("1,5")),
+                ("eng", FluentValue::from("2,5")),
+                ("wep", FluentValue::from(2)),
+                ("target", FluentValue::from("scout")),
+                ("side", FluentValue::from("Federación")),
+                ("rank", FluentValue::from("Experto")),
+                ("level", FluentValue::from("alto")),
+                ("detail", FluentValue::from("prospector 9")),
+                ("used", FluentValue::from(38)),
+                ("capacity", FluentValue::from(256)),
+                ("source", FluentValue::from("Ardent")),
+                ("demand", FluentValue::from(1200)),
             ] {
                 args.set(name, value);
             }
@@ -294,6 +320,65 @@ mod tests {
                 ["settings-language", "field-fuel"].map(|key| I18n::new(language).t(key, &[]));
             assert_ne!(translated, spanish, "{language}");
         }
+    }
+
+    #[test]
+    fn combat_and_mining_resources_load_in_all_languages() {
+        let reference = keys("es");
+        for key in [
+            "panel-combat",
+            "panel-mining",
+            "layout-combat",
+            "layout-mining",
+            "combat-badge-clean",
+            "combat-badge-wanted",
+            "combat-subsystem-powerplant",
+            "combat-subsystem-other",
+            "mining-verdict-worth",
+            "mining-verdict-not-worth",
+            "mining-no-data",
+        ] {
+            assert!(reference.contains(key), "{key}");
+        }
+        assert_eq!(
+            I18n::new("es").t("combat-badge-clean", &[]),
+            "LIMPIO · NO DISPARAR"
+        );
+        assert_eq!(
+            I18n::new("en").t("combat-badge-clean", &[]),
+            "CLEAN · DO NOT FIRE"
+        );
+        let wanted = I18n::new("en").t(
+            "combat-badge-wanted",
+            &[("reward", FluentValue::from("50 CR"))],
+        );
+        assert!(
+            wanted.contains("WANTED") && wanted.contains("50 CR"),
+            "{wanted}"
+        );
+        for language in LANGUAGES {
+            assert_eq!(keys(language), reference, "{language}");
+        }
+    }
+
+    #[test]
+    fn french_and_portuguese_plurals_use_the_number_for_zero() {
+        for (lang, key, var) in [
+            ("fr", "combat-kills", "count"),
+            ("pt", "combat-kills", "count"),
+            ("fr", "mining-limpets-left", "count"),
+            ("pt", "mining-limpets-left", "count"),
+            ("fr", "mining-price-age", "days"),
+            ("pt", "mining-price-age", "days"),
+        ] {
+            let text = I18n::new(lang).t(key, &[(var, FluentValue::from(0))]);
+            assert!(text.contains('0'), "{lang} {key}: {text}");
+        }
+        let fr = I18n::new("fr").t("combat-kills", &[("count", FluentValue::from(0))]);
+        assert!(
+            fr.ends_with("destruction") && !fr.ends_with("destructions"),
+            "{fr}"
+        );
     }
 
     #[test]

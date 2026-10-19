@@ -1,0 +1,8 @@
+{"timestamp":"2026-10-18T12:00:00Z","event":"FSDJump","StarSystem":"Synthetic AX","SystemAddress":1,"StarPos":[0,0,0],"ThargoidWar":{"CurrentState":"Thargoid_Probing"}}
+{"timestamp":"2026-10-18T12:01:00Z","event":"ShipTargeted","TargetLocked":true,"Ship":"scout","ScanStage":3,"HullHealth":100.0}
+{"timestamp":"2026-10-18T12:01:30Z","event":"FactionKillBond","Reward":6000000,"AwardingFaction":"Synthetic Defence","VictimFaction":"$faction_Thargoid;"}
+{"timestamp":"2026-10-18T12:03:00Z","event":"ShipTargeted","TargetLocked":true,"Ship":"cyclops","ScanStage":3,"HullHealth":100.0}
+{"timestamp":"2026-10-18T12:03:40Z","event":"FactionKillBond","Reward":8000000,"AwardingFaction":"Synthetic Defence","VictimFaction":"$faction_Thargoid;"}
+{"timestamp":"2026-10-18T12:03:42Z","event":"FactionKillBond","Reward":2000000,"AwardingFaction":"Synthetic Defence","VictimFaction":"$faction_Thargoid;"}
+{"timestamp":"2026-10-18T12:05:00Z","event":"FactionKillBond","Reward":6000000,"AwardingFaction":"Synthetic Defence","VictimFaction":"$faction_Thargoid;"}
+{"timestamp":"2026-10-18T12:06:00Z","event":"FSDJump","StarSystem":"Synthetic Clean","SystemAddress":2,"StarPos":[1,0,0]}

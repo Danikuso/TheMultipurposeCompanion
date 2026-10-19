@@ -60,3 +60,4 @@ exploration-scanned-count = { $scanned } / { $total } Himmelskörper gescannt
 exploration-unsold = Unverkaufte Daten
 exploration-unsold-systems = { $count } Systeme
 exploration-at-risk = Daten gefährdet
+exploration-stars = Sterne

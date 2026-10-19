@@ -2,6 +2,7 @@
 //! de especies sobre un historial de diarios (spec F1 §10.1). Solo produce
 //! métricas agregadas; reutiliza las funciones públicas de los módulos.
 
+use crate::combat::vouchers::{VoucherKind, VoucherLedger, declared_amount, redeem_kind};
 use crate::data::{FsdTable, bio_rules, fsd_table, species_table};
 use crate::exobiology::first_logged_estimate;
 use crate::exobiology::predict::{
@@ -10,11 +11,12 @@ use crate::exobiology::predict::{
 use crate::exobiology::species::SpeciesTable;
 use crate::exploration::unsold::UnsoldLedger;
 use crate::exploration::value::{body_kind, estimate_probes};
+use crate::mining::session::MiningSession;
 use crate::navigation::jump::{RangeSource, ShipMass, build_jump_model, jump_range_with};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use tmc_model::events::{
-    EventKind, JournalEvent, Loadout, OrganicScanType, SaaScanComplete, Scan, ScanOrganic,
-    SellOrganicData,
+    AsteroidContent, EventKind, JournalEvent, Loadout, OrganicScanType, SaaScanComplete, Scan,
+    ScanOrganic, SellOrganicData,
 };
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -85,8 +87,50 @@ pub struct SpeciesValueReport {
     pub unknown_symbols: Vec<String>,
 }
 
+/// Conciliación de vales de un tipo (importes en créditos).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct VoucherKindReport {
+    pub earned: u64,
+    /// Importe declarado en los `RedeemVoucher` del tipo.
+    pub redeemed: u64,
+    /// Vales perdidos al morir.
+    pub lost: u64,
+    /// Saldo del libro al final del historial.
+    pub pending: u64,
+    /// `ganado - perdido - canjeado - pendiente`; negativo si se canjeó más de
+    /// lo visto en el historial (p. ej. vales anteriores a los diarios).
+    pub difference: i64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct VoucherReport {
+    pub redeem_events: u32,
+    pub bounty: VoucherKindReport,
+    pub combat_bond: VoucherKindReport,
+}
+
+/// Toneladas refinadas atribuidas a los asteroides de un nivel de contenido.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct YieldLevel {
+    pub asteroids: u32,
+    pub tons: u32,
+    pub mean: f64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct MiningYieldReport {
+    pub low: YieldLevel,
+    pub medium: YieldLevel,
+    pub high: YieldLevel,
+    pub unknown: YieldLevel,
+    /// Refinados anteriores a cualquier asteroide prospectado de la sesión.
+    pub unattributed_tons: u32,
+}
+
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct EvalReport {
+    pub vouchers: VoucherReport,
+    pub mining: MiningYieldReport,
     pub range: RangeReport,
     pub value: ValueReport,
     pub prediction: PredictionReport,
@@ -114,6 +158,7 @@ pub(crate) fn eval_with(
     let mut run = Run::new(fsd, rules, species);
     for event in events {
         run.apply(&event.kind);
+        run.track_economy(&event);
     }
     run.finish()
 }
@@ -151,6 +196,22 @@ struct Run<'a> {
     /// Cuerpos escaneados (estrellas/planetas) y `BodyCount` del FSS por sistema.
     coverage: HashMap<String, (Option<u32>, HashSet<u32>)>,
     at_carrier: bool,
+    voucher_ledger: VoucherLedger,
+    vouchers: VoucherReport,
+    mining_session: MiningSession,
+    /// Índice (`level_index`) del último asteroide prospectado de la sesión.
+    last_asteroid: Option<usize>,
+    mining_levels: [YieldLevel; 4],
+    unattributed_tons: u32,
+}
+
+fn level_index(c: AsteroidContent) -> usize {
+    match c {
+        AsteroidContent::Low => 0,
+        AsteroidContent::Medium => 1,
+        AsteroidContent::High => 2,
+        AsteroidContent::Unknown => 3,
+    }
 }
 
 fn same(a: &str, b: &str) -> bool {
@@ -199,6 +260,12 @@ impl<'a> Run<'a> {
             fsd_stats: BTreeMap::new(),
             coverage: HashMap::new(),
             at_carrier: false,
+            voucher_ledger: VoucherLedger::default(),
+            vouchers: VoucherReport::default(),
+            mining_session: MiningSession::default(),
+            last_asteroid: None,
+            mining_levels: [YieldLevel::default(); 4],
+            unattributed_tons: 0,
         }
     }
 
@@ -254,6 +321,62 @@ impl<'a> Run<'a> {
         }
         // Mismo libro que el módulo: aplica Scan, ventas y muerte.
         self.ledger.apply_event(&self.system, kind, self.odyssey);
+    }
+
+    /// Vales y rendimiento de minería con los mismos libros que los módulos
+    /// (`VoucherLedger` y `MiningSession`); aquí solo se miden sus diferencias.
+    fn track_economy(&mut self, ev: &JournalEvent) {
+        let kinds = [VoucherKind::Bounty, VoucherKind::CombatBond];
+        let before = kinds.map(|k| self.voucher_ledger.total(k));
+        self.voucher_ledger
+            .apply_event(&ev.kind, &self.system, ev.timestamp);
+        let after = kinds.map(|k| self.voucher_ledger.total(k));
+        let redeem = match &ev.kind {
+            EventKind::RedeemVoucher(r) => {
+                let kind = redeem_kind(r).map(|k| usize::from(k == VoucherKind::CombatBond));
+                if kind.is_some() {
+                    self.vouchers.redeem_events += 1;
+                }
+                kind.map(|i| (i, declared_amount(r)))
+            }
+            _ => None,
+        };
+        let died = matches!(ev.kind, EventKind::Died);
+        for (i, report) in [&mut self.vouchers.bounty, &mut self.vouchers.combat_bond]
+            .into_iter()
+            .enumerate()
+        {
+            if died {
+                report.lost += before[i];
+            } else if redeem.is_none() && after[i] > before[i] {
+                report.earned += after[i] - before[i];
+            }
+            if let Some((kind, amount)) = redeem
+                && kind == i
+            {
+                report.redeemed += amount;
+            }
+        }
+
+        let refined_before: u32 = self.mining_session.refined.values().sum();
+        self.mining_session.apply_event(&ev.kind, ev.timestamp);
+        let refined_after: u32 = self.mining_session.refined.values().sum();
+        match &ev.kind {
+            EventKind::LoadGame(_) => self.last_asteroid = None,
+            EventKind::ProspectedAsteroid(p) => {
+                let index = level_index(p.content_level());
+                self.last_asteroid = Some(index);
+                self.mining_levels[index].asteroids += 1;
+            }
+            EventKind::MiningRefined(_) if refined_after > refined_before => {
+                let tons = refined_after - refined_before;
+                match self.last_asteroid {
+                    Some(index) => self.mining_levels[index].tons += tons,
+                    None => self.unattributed_tons += tons,
+                }
+            }
+            _ => {}
+        }
     }
 
     fn loadout(&mut self, lo: &Loadout) {
@@ -542,7 +665,30 @@ impl<'a> Run<'a> {
         if self.probes.cases > 0 {
             self.probes.mean_abs_error = self.probe_error_sum / f64::from(self.probes.cases);
         }
+        let mut vouchers = self.vouchers;
+        for (report, kind) in [
+            (&mut vouchers.bounty, VoucherKind::Bounty),
+            (&mut vouchers.combat_bond, VoucherKind::CombatBond),
+        ] {
+            report.pending = self.voucher_ledger.total(kind);
+            report.difference = i64::try_from(report.earned).unwrap_or(i64::MAX)
+                - i64::try_from(report.lost + report.redeemed + report.pending).unwrap_or(i64::MAX);
+        }
+        let [mut low, mut medium, mut high, mut unknown] = self.mining_levels;
+        for level in [&mut low, &mut medium, &mut high, &mut unknown] {
+            if level.asteroids > 0 {
+                level.mean = f64::from(level.tons) / f64::from(level.asteroids);
+            }
+        }
         EvalReport {
+            vouchers,
+            mining: MiningYieldReport {
+                low,
+                medium,
+                high,
+                unknown,
+                unattributed_tons: self.unattributed_tons,
+            },
             range: self.range,
             value: self.value,
             prediction: self.prediction,
@@ -771,6 +917,50 @@ mod tests {
             vec![Some(Likelihood::Medium), Some(Likelihood::High)]
         );
         assert!((report.prediction.ratio - 1.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn voucher_and_yield_reports_use_the_shared_ledgers() {
+        let lines: Vec<String> = [
+            r#"{"timestamp":"2026-10-18T10:00:00Z","event":"Bounty","Rewards":[{"Faction":"A","Reward":1000}],"TotalReward":1000}"#,
+            r#"{"timestamp":"2026-10-18T10:01:00Z","event":"RedeemVoucher","Type":"bounty","Amount":400,"Factions":[{"Faction":"A","Amount":400}]}"#,
+            r#"{"timestamp":"2026-10-18T10:02:00Z","event":"MiningRefined","Type":"$platinum_name;"}"#,
+            r#"{"timestamp":"2026-10-18T10:03:00Z","event":"ProspectedAsteroid","Materials":[],"Content":"$AsteroidMaterialContent_High;"}"#,
+            r#"{"timestamp":"2026-10-18T10:04:00Z","event":"MiningRefined","Type":"$platinum_name;"}"#,
+            r#"{"timestamp":"2026-10-18T10:05:00Z","event":"MiningRefined","Type":"$platinum_name;"}"#,
+        ]
+        .iter()
+        .map(|l| (*l).to_owned())
+        .collect();
+        let report = eval_events(events(&lines).into_iter());
+        let b = report.vouchers.bounty;
+        assert_eq!(
+            (b.earned, b.redeemed, b.pending, b.difference),
+            (1000, 400, 600, 0)
+        );
+        assert_eq!(report.mining.high.asteroids, 1);
+        assert_eq!(report.mining.high.tons, 2);
+        assert_eq!(report.mining.unattributed_tons, 1);
+    }
+
+    #[test]
+    fn redeemed_uses_the_nominal_amount_of_the_ledger() {
+        let lines: Vec<String> = [
+            r#"{"timestamp":"2026-10-18T10:00:00Z","event":"Bounty","Rewards":[{"Faction":"A","Reward":1000}],"TotalReward":1000}"#,
+            r#"{"timestamp":"2026-10-18T10:01:00Z","event":"Bounty","Rewards":[{"Faction":"B","Reward":500}],"TotalReward":500}"#,
+            r#"{"timestamp":"2026-10-18T10:02:00Z","event":"RedeemVoucher","Type":"bounty","Amount":300,"BrokerPercentage":25.0,"Faction":"A"}"#,
+            r#"{"timestamp":"2026-10-18T10:03:00Z","event":"RedeemVoucher","Type":"bounty","Amount":999,"Factions":[{"Faction":"A","Amount":200},{"Faction":"B","Amount":100}]}"#,
+        ]
+        .iter()
+        .map(|l| (*l).to_owned())
+        .collect();
+        let b = eval_events(events(&lines).into_iter()).vouchers.bounty;
+        // El corredor no cambia el importe (Amount tal cual) y las facciones
+        // mandan sobre Amount: 300 + 300, no 300 + 999.
+        assert_eq!(
+            (b.earned, b.redeemed, b.pending, b.difference),
+            (1500, 600, 900, 0)
+        );
     }
 
     #[test]

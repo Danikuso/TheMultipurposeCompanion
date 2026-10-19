@@ -302,3 +302,84 @@ async fn real_exploration_fixture_replays_end_to_end() {
     );
     running.server.shutdown();
 }
+
+#[tokio::test]
+async fn burst_of_1000_combat_events_stays_under_10hz_and_500ms() {
+    let (jdir, ddir) = (tempdir().unwrap(), tempdir().unwrap());
+    let journal = jdir.path().join("Journal.2026-10-18T100000.01.log");
+    std::fs::write(&journal, HEAD).unwrap();
+    let running = start_custom(
+        config(jdir.path(), ddir.path(), false),
+        Arc::new(FakeTransport),
+        Some(Duration::from_millis(250)),
+    )
+    .await
+    .unwrap();
+    wait_for(&running, "start", |s| s.contains_key("combat.ship")).await;
+    let mut rx = running.core.subscribe();
+
+    // 20 ráfagas de ~100 eventos (ShipTargeted y UnderAttack alternados). Solo el último
+    // evento de cada ráfaga lleva un casco único (50 + n), que identifica la ráfaga.
+    const BURSTS: u32 = 20;
+    let mut latencies = Vec::new();
+    let mut arrivals = Vec::new();
+    for burst in 0..BURSTS {
+        let marker = 50.0 + f64::from(burst);
+        let mut text = String::new();
+        for i in 0..50u32 {
+            let ts = format!("2026-10-18T10:{:02}:{:02}Z", 10 + burst, i);
+            let hull = 10.0 + f64::from(i % 7);
+            text.push_str(&format!(
+                r#"{{"timestamp":"{ts}","event":"ShipTargeted","TargetLocked":true,"Ship":"anaconda","ScanStage":3,"LegalStatus":"Wanted","Bounty":42000,"HullHealth":{hull}}}"#
+            ));
+            text.push('\n');
+            text.push_str(&format!(
+                r#"{{"timestamp":"{ts}","event":"UnderAttack","Target":"You"}}"#
+            ));
+            text.push('\n');
+        }
+        text.push_str(&format!(
+            r#"{{"timestamp":"2026-10-18T10:{:02}:59Z","event":"ShipTargeted","TargetLocked":true,"Ship":"anaconda","ScanStage":3,"LegalStatus":"Wanted","Bounty":42000,"HullHealth":{marker}}}"#,
+            10 + burst
+        ));
+        text.push('\n');
+        let t0 = Instant::now();
+        std::fs::OpenOptions::new()
+            .append(true)
+            .open(&journal)
+            .unwrap()
+            .write_all(text.as_bytes())
+            .unwrap();
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if let Ok(CoreMessage::Update { topics, .. }) = rx.recv().await {
+                    arrivals.push(Instant::now());
+                    if let Some(t) = topics.get("combat.target")
+                        && t["hull_pct"] == marker
+                    {
+                        return;
+                    }
+                }
+            }
+        })
+        .await
+        .unwrap_or_else(|_| panic!("burst {burst} not reflected"));
+        latencies.push(t0.elapsed());
+    }
+    latencies.sort();
+    // 20 muestras: p95 por rango más cercano = la 19.ª (índice 18).
+    let p95 = latencies[18];
+    eprintln!("combat burst p95 = {p95:?}, updates = {}", arrivals.len());
+    assert!(p95 < Duration::from_millis(500), "p95 = {p95:?}");
+    // El difusor emite como mucho 10/s; se mide por hora de recepción en el receptor, donde
+    // la planificación de tokio puede agrupar un envío extra en el borde de la ventana: se
+    // permite 1 de margen (≤ 11 por ventana deslizante de 1 s).
+    for (i, a) in arrivals.iter().enumerate() {
+        let n = arrivals[i..]
+            .iter()
+            .take_while(|b| b.duration_since(*a) < Duration::from_secs(1))
+            .count();
+        assert!(n <= 11, "{n} difusiones en 1 s");
+    }
+    running.server.shutdown();
+}

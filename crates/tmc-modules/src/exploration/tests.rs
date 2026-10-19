@@ -758,3 +758,30 @@ fn repeated_fss_body_signals_with_same_counts_are_not_dirty() {
     assert!(h.journal("FSSBodySignals", &more).contains(TOPIC));
     assert_eq!(h.row(2)["bio"], 3);
 }
+
+#[test]
+fn system_star_classes_lists_all_stars_ordered_and_deduplicated() {
+    let mut h = H::new();
+    h.jump("Sys", 1);
+    h.scan(
+        r#","BodyName":"Sys A","BodyID":1,"DistanceFromArrivalLS":0.0,"StarType":"K_OrangeGiant","StellarMass":0.9,"WasDiscovered":true"#,
+    );
+    h.scan(
+        r#","BodyName":"Sys B","BodyID":2,"DistanceFromArrivalLS":1200.0,"StarType":"M","StellarMass":0.4,"WasDiscovered":true"#,
+    );
+    h.scan(
+        r#","BodyName":"Sys C","BodyID":3,"DistanceFromArrivalLS":3000.0,"StarType":"M","StellarMass":0.3,"WasDiscovered":true"#,
+    );
+    h.scan(
+        r#","BodyName":"Sys D","BodyID":4,"DistanceFromArrivalLS":5000.0,"StarType":"DA","StellarMass":0.6,"WasDiscovered":true"#,
+    );
+    h.scan(&elw(5));
+
+    let star_classes: Vec<String> = h.topic()["star_classes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap().to_owned())
+        .collect();
+    assert_eq!(star_classes, vec!["K", "M", "DA"]);
+}
