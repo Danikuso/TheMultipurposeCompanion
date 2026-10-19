@@ -451,15 +451,15 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 
 ### Task 16: `trade` — «Mercado actual» y mejor venta en 48 h
 
-**Files:** Create `crates/tmc-modules/src/trade/market.rs`, `tests/fixtures/companion/market_trade.json`; Modify `trade/mod.rs` (`mod market;`), `crates/tmc-modules/src/mining/sell.rs` (`merge_sources`, `SellOption.origin`; `pad_ok` público si hace falta; resto sin cambios).
+**Files:** Create `crates/tmc-modules/src/trade/market.rs`, `tests/fixtures/companion/market_trade.json`; Modify `trade/mod.rs` (`mod market;`), `crates/tmc-model/src/market.rs` (`MarketIdentity`), `crates/tmc-store/src/{prices.rs,migrations.rs}` (observaciones dirigidas y marcador de snapshot completo), `trade/cost.rs` (constructor de test de `SellOption`), `crates/tmc-modules/src/mining/sell.rs` (`merge_sources`, `SellOption.origin`; `pad_ok` público si hace falta; resto sin cambios).
 
 **Interfaces:**
 - Consumes: `Store::best_prices` (ya filtra 48 h), `Store::replace_markets`, `mining::sell::{rank_markets, SellOption}`, `data::{ship_pads, rare_goods}`, `CompanionFile::Raw(Market, Value)`.
 - Produces:
   - `mining::sell`: `SellOption` + `origin: Option<PriceOrigin>` (copiado de `RemoteMarket.origin`); `pub fn merge_sources(local: &[PricedMarket], remote: &[RemoteMarket]) -> Vec<RemoteMarket>` (convierte `PricedMarket` con su `origin`; filas sin distancia fuera; **deduplica por `market_id`** —o por (estación, sistema) si falta— quedándose el dato **más nuevo** aunque sea más barato; después se ordena con `rank_markets`). Neutral: la usan `trade` y `mining`.
-  - `fn snapshot_from_market_json(json: &Value, docked: &Docked, star_pos: [f64;3], now) -> Option<MarketSnapshot>` (origen `Local`; tolerante; guarda `Name_Localised`); `fn best_sells(rows: &[PricedMarket], ardent: &[RemoteMarket], ship_pad: Option<PadSize>, top: usize) -> Vec<SellOption>` = `rank_markets(&merge_sources(rows, ardent), ship_pad, top)` (sin lógica de tiempo: la ventana de 48 h la aplica `Store::best_prices`); `CurrentMarketRow { commodity, name_localised, buy_price, stock, best_sell: Option<SellOption>, profit_per_ton: Option<i64>, age_s: Option<i64>, rare: Option<u32 /* sell_distance_ly */> }`; `CurrentMarket { station, system, rows: Vec<CurrentMarketRow>, as_of }`: 5 filas; primero las compras con venta conocida por beneficio/t desc; si hay menos de 5, se completan con compras sin venta conocida (`best_sell: None`, «sin datos») por precio de compra desc; `fn best_sells_task(cmdr: String, commodities: Vec<String>, center: [f64;3], radius_ly: f64, since, exclude_market: u64) -> StoreTask` (tag `trade.best_sells`, lectura).
+  - `fn snapshot_from_market_json(json: &Value, docked: &Docked, star_pos: [f64;3], now) -> Option<MarketSnapshot>` (origen `Local`; tolerante; guarda `Name_Localised`); `fn best_sells(rows: &[PricedMarket], ardent: &[RemoteMarket], ship_pad: Option<PadSize>, top: usize) -> Vec<SellOption>` = `rank_markets(&merge_sources(rows, ardent), ship_pad, top)` (sin lógica de tiempo: la ventana de 48 h la aplica `Store::best_prices`); `CurrentMarketRow { commodity, name_localised, buy_price, stock, best_sell: Option<SellOption>, profit_per_ton: Option<i64>, age_s: Option<i64>, rare: Option<u32 /* sell_distance_ly */> }`; `CurrentMarket { station, system, rows: Vec<CurrentMarketRow>, as_of }`: 5 filas; primero las compras con venta conocida por beneficio/t desc; si hay menos de 5, se completan con compras sin venta conocida (`best_sell: None`, «sin datos») por precio de compra desc; `fn best_sells_task(cmdr: String, commodities: Vec<String>, center: [f64;3], radius_ly: f64, since, exclude_market: u64, candidates: BTreeMap<String, Vec<MarketIdentity>>, ship_pad: Option<PadSize>) -> StoreTask` (tag `trade.best_sells`, lectura). Lee como máximo 500 mejores ofertas locales compatibles con `ship_pad` (incluidas plataformas desconocidas), filtrando la compatibilidad antes del límite mediante `Store::best_prices_for_ship`, y añade observaciones dirigidas de los candidatos remotos (máx. 50 por mercancía), incluidos cierres con precio/volumen cero antes de mezclar. `MarketIdentity { market_id: Option<u64>, station_name: String, system_name: String }` vive en `tmc-model::market`; ids conocidos mandan y el respaldo por nombres solo se resuelve si es inequívoco. Payload: `{cmdr,commodities,center,radius_ly,since,exclude_market,candidates,ship_pad,rows:{commodity_key:[PricedMarket]}}`. Construcción: `CurrentMarket::build(&MarketSnapshot, &BTreeMap<String,Vec<SellOption>>, now)`.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn top_five_buys_by_profit_per_ton() { /* 7 mercancías compradas aquí con mejor venta conocida → 5 filas ordenadas; la 1.ª gold con 11000−9400 = 1600 */ }
@@ -472,7 +472,7 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 #[test] fn market_json_to_snapshot() { /* market_trade.json → prices.len()==<n>, gold buy 9400 stock 5000 */ }
 ```
 
-- [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(trade): mercado actual con mejor venta de las últimas 48 h`
+- [x] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(trade): mercado actual con mejor venta de las últimas 48 h`
 
 ### Task 17: `trade` — ruta comercial con avance automático
 
@@ -497,10 +497,12 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 
 ### Task 18: `trade` — sesión de comercio y buscar mercancía
 
+**Precisión de Task 16:** antes de usar `best_prices_for_ship` para compras, añadir validación `buy_price > 0` antes del límite (mantener `best_prices` legado sin cambio); una prueba con muchas filas de precio cero y stock positivo debe conservar la primera oferta válida. La API creada en Task 16 solo se usa allí para ventas, ordenadas por precio descendente.
+
 **Files:** Create `crates/tmc-modules/src/trade/{session.rs, search.rs}`; Modify `trade/mod.rs` (`mod session; mod search;`).
 
 **Interfaces:**
-- Produces: `TradeSession { fn apply_event(&mut self, ev: &EventKind, basis: &CostBasis, at); fn reset(&mut self, at); started_at, profit: i64, revenue: u64, cost_of_sold: u64, tons_bought: u32, tons_sold: u32, operations: u32, best_trade: Option<(String, i64)>, fn credits_per_hour(&self, now) -> Option<i64> }` (beneficio = Σ `MarketSell.total_sale` − Σ `count × avg_paid` del `CostBasis` **antes** de la venta: **orden obligatorio por evento** `TradeSession::apply_event` → después `CostBasis::apply_event`; si no hay media, usa `AvgPricePaid` del evento; `LoadGame` reinicia, spec §10.4); rango: `Rank.trade` y `Progress.trade` del estado. `SearchResult { commodity, rows: Vec<BuyOption { station_name, system_name, distance_ly, buy_price, stock, pad: Option<PadSize>, pad_ok: Option<bool>, updated_at, origin }> }`; `fn merge_buys(local: &[PricedMarket], ardent: &[RemoteExport], ship_pad, top: usize) -> Vec<BuyOption>` (los `RemoteExport` se convierten con `origin: Ardent`; mismo mercado → el dato más nuevo; luego precio asc); `fn search_task(cmdr, commodity, center, radius_ly) -> StoreTask` (7 días, tag `trade.search`, lectura).
+- Produces: `TradeSession { fn apply_event(&mut self, ev: &EventKind, basis: &CostBasis, at); fn reset(&mut self, at); started_at, profit: i64, revenue: u64, cost_of_sold: u64, tons_bought: u32, tons_sold: u32, operations: u32, best_trade: Option<(String, i64)>, fn credits_per_hour(&self, now) -> Option<i64> }` (beneficio = Σ `MarketSell.total_sale` − Σ `count × avg_paid` del `CostBasis` **antes** de la venta: **orden obligatorio por evento** `TradeSession::apply_event` → después `CostBasis::apply_event`; si no hay media, usa `AvgPricePaid` del evento; `LoadGame` reinicia, spec §10.4); rango: `Rank.trade` y `Progress.trade` del estado. `SearchResult { commodity, rows: Vec<BuyOption { station_name, system_name, distance_ly, buy_price, stock, pad: Option<PadSize>, pad_ok: Option<bool>, updated_at, origin }> }`; `fn merge_buys(local: &[PricedMarket], ardent: &[RemoteExport], ship_pad, top: usize) -> Vec<BuyOption>` (los `RemoteExport` se convierten con `origin: Ardent`; mismo mercado → el dato más nuevo; luego precio asc); `fn search_task(cmdr, commodity, center, radius_ly, candidates: Vec<MarketIdentity>, ship_pad: Option<PadSize>) -> StoreTask` (7 días, tag `trade.search`, lectura). Aplica el patrón de Task 16: mejores compras locales compatibles limitadas (filtrar plataformas antes del límite) y observaciones dirigidas de candidatos remotos, incluidos stock/precio cero hasta deduplicar, para no resucitar exportaciones antiguas.
 
 - [ ] **Step 1: Tests:**
 
@@ -517,6 +519,8 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 - [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(trade): sesión de comercio y búsqueda de mercancía`
 
 ### Task 19: `trade` — módulo, topics, relevancia, red, almacén y registro
+
+**Precisión de Task 16:** `best_sells_task` recibe `ship_pad` y un mapa de candidatos `MarketIdentity` de las respuestas Ardent y devuelve ese contexto con sus filas (ver interfaz en Task 16); comprobar contexto/generación antes de aplicar. Los precios Ardent conservados en memoria se filtran a las últimas 48 h según el reloj del núcleo antes de generar candidatos y llamar a `best_sells`: el adaptador compartido de F2 admite 3 días y no se cambia. Añadir regresión de Ardent de hace 49 h y de oferta cerrada por snapshot completo nuevo.
 
 **Precisión de Task 15:** `trade.cost` devuelve `{cmdr,basis,cut,cut_pos}`; el módulo comprueba comandante/generación y concilia lo recibido desde el corte, como `combat`. El llamador pasa `since = reloj − 7 días`.
 
@@ -551,6 +555,8 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 - [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(trade): módulo de comercio con topics, relevancia, red y registro`
 
 ### Task 20: `mining` — «Dónde vender» con la tabla de precios
+
+**Precisión de Task 16:** replicar la lectura acotada (mejores ofertas compatibles, filtrando plataformas antes del límite, + observaciones dirigidas de candidatos Ardent por `MarketIdentity`, incluidas las cerradas) mediante las APIs neutrales de `tmc-store`, sin depender de `trade`. Filtrar Ardent en memoria a 48 h con el reloj del núcleo antes del merge; probar cotización de 49 h y cierres más nuevos que la oferta remota.
 
 **Files:** Modify `crates/tmc-modules/src/mining/{mod.rs, sell.rs}`, `crates/tmc-modules/src/mining/tests.rs`.
 
@@ -880,6 +886,10 @@ test('settings put eddn radius and reverts on 400', /* 600 → 400 → valor ant
 | 11 | 5 idiomas; avisos y procedencia; nada GPL/AGPL incorporado | tests de `tmc-i18n`, Task 13, Task 34 Step 3 | ⬜ |
 
 ## Desviaciones
+
+- 2026-10-19 · Task 16 verificada: `Store::best_prices_for_ship(commodity, side, center, radius_ly, since, exclude_market: Option<u64>, limit, ship_pad)` filtra plataformas antes del límite y conserva desconocidas; `best_prices` legado no cambia. `best_sells_task` añade `ship_pad` como octavo argumento y al payload. La migración aditiva `f3_market_full_snapshots` crea `market_full_snapshot(market_id,updated_at,origin)` y su índice; backfill solo de evidencia local/eddn visible, sin reconstruir catálogos históricos vacíos ya perdidos. 20 tests mercado y 46 Store PASS; workspace 924 PASS (2 ignorados), fmt/clippy OK; spec/calidad aprobadas.
+
+- 2026-10-19 · Task 16 (corrección de revisión, completada): `best_prices` descarta cierres antes de la mezcla y puede revivir Ardent obsoleto. Se añaden `MarketIdentity`, lectura dirigida de hasta 50 candidatos por mercancía y top local de 500; `best_sells_task` gana `candidates` y lo refleja en el payload. Se añade marcador persistente del último snapshot completo para representar mercancías ausentes y catálogos vacíos, sin inferirlo de metadata de estación. Migración aditiva y purga de 7 días; no cambia la semántica pública de `best_prices`. Interfaces de Tasks 18/19/20 sincronizadas. Los consumidores filtran Ardent a 48 h (búsquedas de compra: 7 días), pues el adaptador F2 mantiene sus 3 días.
 
 - 2026-10-19 · Task 15: `avg_paid` redondea al crédito más próximo; la media interna se mantiene sin redondeos intermedios. Carga parcialmente robada se divide en líneas Trade/Stolen sin duplicar used; Cargo de SRV no sustituye bodega de nave. `cost_rebuild_task` recibe `since = reloj − 7 días` del llamador, usa el paginador compartido y devuelve `{cmdr,basis,cut,cut_pos}` para conciliación de eventos llegados durante la lectura (Task 19). 13 tests específicos PASS, workspace 893 PASS (2 ignorados), fmt/clippy OK; spec/calidad aprobadas.
 

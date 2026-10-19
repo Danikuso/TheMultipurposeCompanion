@@ -103,6 +103,10 @@ impl Store {
                 id: "f3_prices",
                 sql: migrations::PRICES_SCHEMA,
             },
+            Migration {
+                id: "f3_market_full_snapshots",
+                sql: migrations::FULL_SNAPSHOTS_SCHEMA,
+            },
         ])?;
         Ok(store)
     }

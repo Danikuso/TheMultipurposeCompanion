@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+use tmc_model::market::{PriceOrigin, PricedMarket};
 use tmc_model::net::{PadSize, RemoteMarket};
 
 use super::prices::PriceSource;
@@ -22,6 +23,107 @@ pub struct SellOption {
     /// `None` si la nave o la plataforma de la estación se desconocen.
     pub pad_ok: Option<bool>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub origin: Option<PriceOrigin>,
+}
+
+/// Une observaciones de una mercancía. La fecha manda sobre el precio; a igual
+/// fecha se prefiere Local, EDDN y Ardent, en ese orden.
+pub fn merge_sources(local: &[PricedMarket], remote: &[RemoteMarket]) -> Vec<RemoteMarket> {
+    use std::collections::BTreeSet;
+    use tmc_model::market::is_fleet_carrier;
+
+    #[derive(PartialEq, Eq, PartialOrd, Ord)]
+    enum Key {
+        Id(u64),
+        Name(String, String),
+    }
+    fn names(m: &RemoteMarket) -> (String, String) {
+        (
+            m.station_name.trim().to_lowercase(),
+            m.system_name.trim().to_lowercase(),
+        )
+    }
+    fn origin_rank(origin: Option<PriceOrigin>) -> u8 {
+        match origin {
+            Some(PriceOrigin::Local) => 3,
+            Some(PriceOrigin::Eddn) => 2,
+            Some(PriceOrigin::Ardent) => 1,
+            None => 0,
+        }
+    }
+    let observations: Vec<_> = local
+        .iter()
+        .filter_map(|m| {
+            Some(RemoteMarket {
+                station_name: m.station_name.clone(),
+                system_name: m.system_name.clone(),
+                market_id: Some(m.market_id),
+                distance_ly: m.distance_ly?,
+                distance_to_arrival_ls: None,
+                sell_price: m.price,
+                demand: Some(m.volume),
+                max_pad: m.max_pad,
+                station_type: None,
+                updated_at: Some(m.updated_at),
+                origin: Some(m.origin),
+            })
+        })
+        .chain(remote.iter().cloned())
+        .filter(|m| {
+            m.distance_ly.is_finite()
+                && m.distance_ly >= 0.0
+                && !is_fleet_carrier(
+                    m.market_id.unwrap_or_default(),
+                    m.station_type.as_deref(),
+                    Some(&m.station_name),
+                )
+        })
+        .collect();
+    let mut ids_by_name: BTreeMap<(String, String), BTreeSet<u64>> = BTreeMap::new();
+    for m in &observations {
+        if let Some(id) = m.market_id {
+            ids_by_name.entry(names(m)).or_default().insert(id);
+        }
+    }
+    let mut merged: BTreeMap<Key, RemoteMarket> = BTreeMap::new();
+    for mut m in observations {
+        let pair = names(&m);
+        if m.market_id.is_none()
+            && let Some(ids) = ids_by_name.get(&pair)
+            && ids.len() == 1
+        {
+            m.market_id = ids.first().copied();
+        }
+        let key = m
+            .market_id
+            .map(Key::Id)
+            .unwrap_or_else(|| Key::Name(pair.0, pair.1));
+        match merged.entry(key) {
+            std::collections::btree_map::Entry::Vacant(e) => {
+                e.insert(m);
+            }
+            std::collections::btree_map::Entry::Occupied(mut e) => {
+                let old = e.get();
+                let order = m
+                    .updated_at
+                    .cmp(&old.updated_at)
+                    .then(origin_rank(m.origin).cmp(&origin_rank(old.origin)))
+                    .then(m.sell_price.cmp(&old.sell_price))
+                    .then(m.demand.cmp(&old.demand))
+                    .then_with(|| old.distance_ly.total_cmp(&m.distance_ly))
+                    .then(m.station_name.cmp(&old.station_name))
+                    .then(m.system_name.cmp(&old.system_name));
+                if order.is_gt() {
+                    e.insert(m);
+                }
+            }
+        }
+    }
+    // Primero se resuelve la frescura: una demanda cero nueva invalida la vieja.
+    merged
+        .into_values()
+        .filter(|m| m.sell_price > 0 && m.demand.is_some_and(|d| d > 0))
+        .collect()
 }
 
 fn pad_ok(m: &RemoteMarket, ship_pad: Option<PadSize>) -> Option<bool> {
@@ -73,6 +175,7 @@ pub fn rank_markets(
             pad: m.max_pad,
             pad_ok: pad_ok(m, ship_pad),
             updated_at: m.updated_at,
+            origin: m.origin,
         })
         .collect()
 }

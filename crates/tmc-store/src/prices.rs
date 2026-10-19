@@ -5,7 +5,7 @@ use chrono::{DateTime, SecondsFormat, Utc};
 use rusqlite::{OptionalExtension, Transaction, params};
 use std::collections::HashMap;
 use tmc_model::market::{
-    CommodityPrice, MarketSnapshot, PriceOrigin, PricedMarket, Side, StationInfo,
+    CommodityPrice, MarketIdentity, MarketSnapshot, PriceOrigin, PricedMarket, Side, StationInfo,
 };
 use tmc_model::net::PadSize;
 
@@ -148,12 +148,11 @@ impl Store {
             let mid = id(s.market_id)?;
             let stored: Option<String> = tx
                 .query_row(
-                    "SELECT MAX(updated_at) FROM market_price WHERE market_id=?1 AND origin IN ('local','eddn')",
+                    "SELECT updated_at FROM market_full_snapshot WHERE market_id=?1",
                     [mid],
                     |r| r.get(0),
                 )
-                .optional()?
-                .flatten();
+                .optional()?;
             if let Some(stored) = stored
                 && parse_ts(&stored)? >= s.updated_at
             {
@@ -182,6 +181,11 @@ impl Store {
                     ],
                 )?;
             }
+            tx.execute(
+                "INSERT INTO market_full_snapshot(market_id,updated_at,origin) VALUES(?1,?2,?3)
+                 ON CONFLICT(market_id) DO UPDATE SET updated_at=excluded.updated_at,origin=excluded.origin",
+                params![mid,ts(s.updated_at),origin_str(s.origin)],
+            )?;
             upsert_station(
                 &tx,
                 s.market_id,
@@ -226,7 +230,11 @@ impl Store {
             )?;
             changed += tx.execute(
                 "INSERT INTO market_price(market_id,commodity,name_localised,buy_price,sell_price,stock,demand,updated_at,origin)
-                 VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9)
+                 SELECT ?1,?2,?3,?4,?5,?6,?7,?8,?9
+                 WHERE NOT EXISTS (
+                   SELECT 1 FROM market_full_snapshot f WHERE f.market_id=?1 AND f.updated_at>=?8
+                     AND NOT EXISTS (SELECT 1 FROM market_price current WHERE current.market_id=?1 AND current.commodity=?2)
+                 )
                  ON CONFLICT(market_id,commodity) DO UPDATE SET
                    name_localised=COALESCE(excluded.name_localised, name_localised),
                    buy_price=excluded.buy_price, sell_price=excluded.sell_price, stock=excluded.stock,
@@ -355,47 +363,204 @@ impl Store {
         exclude_market: Option<u64>,
         limit: usize,
     ) -> Result<Vec<PricedMarket>, StoreError> {
-        let (price_col, vol_col, cond, order) = match side {
-            Side::Sell => ("p.sell_price", "p.demand", "p.demand > 0", "DESC"),
-            Side::Buy => ("p.buy_price", "p.stock", "p.stock > 0", "ASC"),
+        self.query_prices(
+            commodity,
+            side,
+            center,
+            radius_ly,
+            since,
+            exclude_market,
+            limit,
+            false,
+            None,
+            None,
+        )
+    }
+
+    /// Mejores precios compatibles con la plataforma de la nave.
+    #[allow(clippy::too_many_arguments)]
+    pub fn best_prices_for_ship(
+        &self,
+        commodity: &str,
+        side: Side,
+        center: [f64; 3],
+        radius_ly: f64,
+        since: DateTime<Utc>,
+        exclude_market: Option<u64>,
+        limit: usize,
+        ship_pad: Option<PadSize>,
+    ) -> Result<Vec<PricedMarket>, StoreError> {
+        self.query_prices(
+            commodity,
+            side,
+            center,
+            radius_ly,
+            since,
+            exclude_market,
+            limit,
+            false,
+            None,
+            ship_pad,
+        )
+    }
+
+    /// Observaciones para reconciliar fuentes, incluidas ofertas sin volumen o precio.
+    /// `limit` recorta la respuesta; un resultado recortado no prueba la ausencia
+    /// de una observación más reciente para mercados que no aparecen en él.
+    #[allow(clippy::too_many_arguments)]
+    pub fn price_observations(
+        &self,
+        commodity: &str,
+        side: Side,
+        center: [f64; 3],
+        radius_ly: f64,
+        since: DateTime<Utc>,
+        exclude_market: Option<u64>,
+        limit: usize,
+    ) -> Result<Vec<PricedMarket>, StoreError> {
+        self.query_prices(
+            commodity,
+            side,
+            center,
+            radius_ly,
+            since,
+            exclude_market,
+            limit,
+            true,
+            None,
+            None,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn price_observations_for_markets(
+        &self,
+        commodity: &str,
+        side: Side,
+        identities: &[MarketIdentity],
+        center: [f64; 3],
+        radius_ly: f64,
+        since: DateTime<Utc>,
+        exclude_market: Option<u64>,
+    ) -> Result<Vec<PricedMarket>, StoreError> {
+        if identities.len() > 50 {
+            return Err(StoreError::Unsupported(
+                "at most 50 candidate markets per commodity".into(),
+            ));
+        }
+        if identities.is_empty() {
+            return Ok(Vec::new());
+        }
+        self.query_prices(
+            commodity,
+            side,
+            center,
+            radius_ly,
+            since,
+            exclude_market,
+            identities.len(),
+            true,
+            Some(identities),
+            None,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn query_prices(
+        &self,
+        commodity: &str,
+        side: Side,
+        center: [f64; 3],
+        radius_ly: f64,
+        since: DateTime<Utc>,
+        exclude_market: Option<u64>,
+        limit: usize,
+        include_closed: bool,
+        identities: Option<&[MarketIdentity]>,
+        ship_pad: Option<PadSize>,
+    ) -> Result<Vec<PricedMarket>, StoreError> {
+        let (raw_price_col, raw_vol_col, order) = match side {
+            Side::Sell => ("p.sell_price", "p.demand", "DESC"),
+            Side::Buy => ("p.buy_price", "p.stock", "ASC"),
+        };
+        let cond = if include_closed {
+            "1".to_owned()
+        } else {
+            format!("{raw_vol_col} > 0")
+        };
+        let (price_col, vol_col, updated_col, origin_col, from, commodity_condition) =
+            if include_closed {
+                (
+                    format!("COALESCE({raw_price_col},0)"),
+                    format!("COALESCE({raw_vol_col},0)"),
+                    "COALESCE(p.updated_at,f.updated_at)",
+                    "COALESCE(p.origin,f.origin)",
+                    "market_station s LEFT JOIN market_price p ON p.market_id=s.market_id AND p.commodity=?1 LEFT JOIN market_full_snapshot f ON f.market_id=s.market_id",
+                    "1",
+                )
+            } else {
+                (
+                    raw_price_col.to_owned(),
+                    raw_vol_col.to_owned(),
+                    "p.updated_at",
+                    "p.origin",
+                    "market_price p JOIN market_station s ON s.market_id=p.market_id",
+                    "p.commodity=?1",
+                )
+            };
+        use rusqlite::types::Value as SqlValue;
+        let exclude = exclude_market.map(id).transpose()?;
+        let mut values: Vec<SqlValue> = vec![
+            key(commodity).into(),
+            ts(since).into(),
+            (center[0] - radius_ly).into(),
+            (center[0] + radius_ly).into(),
+            (center[1] - radius_ly).into(),
+            (center[1] + radius_ly).into(),
+            (center[2] - radius_ly).into(),
+            (center[2] + radius_ly).into(),
+            exclude.map(SqlValue::Integer).unwrap_or(SqlValue::Null),
+        ];
+        let identity_filter = if let Some(identities) = identities {
+            let mut clauses = Vec::new();
+            for identity in identities {
+                let idx = values.len() + 1;
+                if let Some(mid) = identity.market_id {
+                    values.push(id(mid)?.into());
+                    clauses.push(format!("s.market_id=?{idx}"));
+                } else {
+                    values.push(identity.station_name.trim().to_owned().into());
+                    values.push(identity.system_name.trim().to_owned().into());
+                    clauses.push(format!("(s.station_name COLLATE NOCASE=?{idx} AND s.system_name COLLATE NOCASE=?{} AND 1=(SELECT COUNT(*) FROM market_station ident WHERE ident.station_name COLLATE NOCASE=s.station_name AND ident.system_name COLLATE NOCASE=s.system_name))",idx+1));
+                }
+            }
+            format!(" AND ({})", clauses.join(" OR "))
+        } else {
+            String::new()
         };
         let sql = format!(
-            "SELECT s.market_id,s.station_name,s.system_name,s.x,s.y,s.z,s.max_pad,{price_col},{vol_col},p.updated_at,p.origin
-             FROM market_price p JOIN market_station s ON s.market_id=p.market_id
-             WHERE p.commodity=?1 AND p.updated_at>=?2 AND {cond}
+            "SELECT s.market_id,s.station_name,s.system_name,s.x,s.y,s.z,s.max_pad,{price_col},{vol_col},{updated_col},{origin_col}
+             FROM {from}
+             WHERE {commodity_condition} AND {updated_col}>=?2 AND {cond}
                AND s.x BETWEEN ?3 AND ?4 AND s.y BETWEEN ?5 AND ?6 AND s.z BETWEEN ?7 AND ?8
-               AND (?9 IS NULL OR s.market_id<>?9)
-             ORDER BY {price_col} {order}, p.updated_at DESC"
+               AND (?9 IS NULL OR s.market_id<>?9){identity_filter}
+             ORDER BY {price_col} {order}, {updated_col} DESC"
         );
         let conn = self.lock()?;
         let mut stmt = conn.prepare(&sql)?;
-        let exclude = exclude_market.map(id).transpose()?;
-        let rows = stmt.query_map(
-            params![
-                key(commodity),
-                ts(since),
-                center[0] - radius_ly,
-                center[0] + radius_ly,
-                center[1] - radius_ly,
-                center[1] + radius_ly,
-                center[2] - radius_ly,
-                center[2] + radius_ly,
-                exclude
-            ],
-            |r| {
-                Ok((
-                    r.get::<_, i64>(0)?,
-                    r.get::<_, String>(1)?,
-                    r.get::<_, String>(2)?,
-                    [r.get::<_, f64>(3)?, r.get(4)?, r.get(5)?],
-                    r.get::<_, Option<i64>>(6)?,
-                    r.get::<_, i64>(7)?,
-                    r.get::<_, i64>(8)?,
-                    r.get::<_, String>(9)?,
-                    r.get::<_, String>(10)?,
-                ))
-            },
-        )?;
+        let rows = stmt.query_map(rusqlite::params_from_iter(values), |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+                [r.get::<_, f64>(3)?, r.get(4)?, r.get(5)?],
+                r.get::<_, Option<i64>>(6)?,
+                r.get::<_, i64>(7)?,
+                r.get::<_, i64>(8)?,
+                r.get::<_, String>(9)?,
+                r.get::<_, String>(10)?,
+            ))
+        })?;
         let mut out = Vec::new();
         for row in rows {
             let (mid, station_name, system_name, pos, pad, price, volume, at, origin) = row?;
@@ -403,12 +568,19 @@ impl Store {
             if d > radius_ly {
                 continue;
             }
+            let max_pad = pad_from(pad);
+            if max_pad
+                .zip(ship_pad)
+                .is_some_and(|(station, ship)| !station.fits(ship))
+            {
+                continue;
+            }
             out.push(PricedMarket {
                 market_id: unsigned(mid),
                 station_name,
                 system_name,
                 distance_ly: Some(d),
-                max_pad: pad_from(pad),
+                max_pad,
                 price: unsigned(price),
                 volume: unsigned(volume),
                 updated_at: parse_ts(&at)?,
@@ -469,6 +641,10 @@ impl Store {
             "DELETE FROM market_price WHERE updated_at<?1",
             [ts(price_cutoff)],
         )?;
+        tx.execute(
+            "DELETE FROM market_full_snapshot WHERE updated_at<?1",
+            [ts(price_cutoff)],
+        )?;
         let stations = tx.execute(
             "DELETE FROM market_station WHERE updated_at<?1",
             [ts(price_cutoff)],
@@ -519,10 +695,321 @@ mod tests {
             prices,
         }
     }
+    #[test]
+    fn observations_keep_closed_sales_and_purchases_for_source_reconciliation() {
+        let store = Store::open_in_memory().unwrap();
+        let mut p = price("gold", None, 11000, 0);
+        p.buy_price = 9400;
+        store
+            .replace_markets(&[snap(1, 0.0, t(10), vec![p])])
+            .unwrap();
+        for side in [Side::Sell, Side::Buy] {
+            let observed = store
+                .price_observations("gold", side, [0.0; 3], 100.0, t(0), None, 5)
+                .unwrap();
+            assert_eq!(observed.len(), 1);
+            assert_eq!(observed[0].volume, 0);
+            assert!(near(&store, side, t(0)).is_empty());
+        }
+        store
+            .replace_markets(&[snap(1, 0.0, t(11), vec![price("gold", None, 0, 50)])])
+            .unwrap();
+        let observed = store
+            .price_observations("gold", Side::Sell, [0.0; 3], 100.0, t(0), None, 5)
+            .unwrap();
+        assert_eq!(observed.len(), 1);
+        assert_eq!((observed[0].price, observed[0].volume), (0, 50));
+    }
+
+    #[test]
+    fn limited_observations_are_partial_and_can_omit_a_closed_market() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .replace_markets(&[
+                snap(1, 0.0, t(10), vec![price("gold", None, 11000, 10)]),
+                snap(2, 0.0, t(11), vec![price("gold", None, 0, 0)]),
+            ])
+            .unwrap();
+        let partial = store
+            .price_observations("gold", Side::Sell, [0.0; 3], 100.0, t(0), None, 1)
+            .unwrap();
+        assert_eq!(partial.len(), 1);
+        assert_eq!(partial[0].market_id, 1);
+        let complete = store
+            .price_observations("gold", Side::Sell, [0.0; 3], 100.0, t(0), None, usize::MAX)
+            .unwrap();
+        assert_eq!(complete.len(), 2);
+        assert_eq!(complete[1].market_id, 2);
+        assert_eq!(complete[1].price, 0);
+    }
+
+    #[test]
+    fn targeted_observations_keep_closed_market_outside_top_limit() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .replace_markets(&[
+                snap(1, 0.0, t(10), vec![price("gold", None, 11000, 10)]),
+                snap(2, 0.0, t(11), vec![price("gold", None, 0, 0)]),
+            ])
+            .unwrap();
+        assert_eq!(
+            store
+                .best_prices("gold", Side::Sell, [0.0; 3], 100.0, t(0), None, 1)
+                .unwrap()[0]
+                .market_id,
+            1
+        );
+        let candidate = MarketIdentity {
+            market_id: Some(2),
+            station_name: "ignored if id known".into(),
+            system_name: "ignored".into(),
+        };
+        let observed = store
+            .price_observations_for_markets(
+                "gold",
+                Side::Sell,
+                &[candidate],
+                [0.0; 3],
+                100.0,
+                t(0),
+                None,
+            )
+            .unwrap();
+        assert_eq!(observed.len(), 1);
+        assert_eq!((observed[0].market_id, observed[0].price), (2, 0));
+    }
+
+    #[test]
+    fn targeted_idless_names_require_unambiguous_station_and_keep_bounds() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .replace_markets(&[snap(1, 0.0, t(10), vec![price("gold", None, 0, 0)])])
+            .unwrap();
+        let candidate = MarketIdentity {
+            market_id: None,
+            station_name: "PORT 1".into(),
+            system_name: "SYS 1".into(),
+        };
+        let query = |exclude| {
+            store
+                .price_observations_for_markets(
+                    "gold",
+                    Side::Sell,
+                    std::slice::from_ref(&candidate),
+                    [0.0; 3],
+                    100.0,
+                    t(0),
+                    exclude,
+                )
+                .unwrap()
+        };
+        assert_eq!(query(None).len(), 1);
+        assert!(query(Some(1)).is_empty());
+        let mut ambiguous = snap(2, 0.0, t(11), vec![price("gold", None, 0, 0)]);
+        ambiguous.station_name = "Port 1".into();
+        ambiguous.system_name = "Sys 1".into();
+        store.replace_markets(&[ambiguous]).unwrap();
+        assert!(query(None).is_empty());
+        let too_many = vec![candidate; 51];
+        assert!(
+            store
+                .price_observations_for_markets(
+                    "gold",
+                    Side::Sell,
+                    &too_many,
+                    [0.0; 3],
+                    100.0,
+                    t(0),
+                    None
+                )
+                .is_err()
+        );
+    }
+
     fn near(store: &Store, side: Side, since: DateTime<Utc>) -> Vec<PricedMarket> {
         store
             .best_prices("gold", side, [0.0; 3], 100.0, since, None, 10)
             .unwrap()
+    }
+
+    #[test]
+    fn compatible_price_query_filters_before_limit_and_keeps_unknown_pad() {
+        let store = Store::open_in_memory().unwrap();
+        let mut medium = snap(1, 0.0, t(10), vec![price("gold", None, 20000, 100)]);
+        medium.max_pad = Some(PadSize::Medium);
+        let mut unknown = snap(2, 0.0, t(10), vec![price("gold", None, 10000, 100)]);
+        unknown.max_pad = None;
+        store.replace_markets(&[medium, unknown]).unwrap();
+        let best = store
+            .best_prices_for_ship(
+                "gold",
+                Side::Sell,
+                [0.0; 3],
+                100.0,
+                t(0),
+                None,
+                1,
+                Some(PadSize::Large),
+            )
+            .unwrap();
+        assert_eq!(best.len(), 1);
+        assert_eq!(best[0].market_id, 2);
+        assert_eq!(best[0].max_pad, None);
+        assert_eq!(
+            store
+                .best_prices("gold", Side::Sell, [0.0; 3], 100.0, t(0), None, 1)
+                .unwrap()[0]
+                .market_id,
+            1
+        );
+        assert_eq!(
+            store
+                .best_prices_for_ship("gold", Side::Sell, [0.0; 3], 100.0, t(0), None, 1, None)
+                .unwrap()[0]
+                .market_id,
+            1
+        );
+    }
+    #[test]
+    fn empty_complete_snapshot_rejects_older_complete_and_partial_prices() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .replace_markets(&[snap(1, 0.0, t(12), vec![])])
+            .unwrap();
+        assert_eq!(
+            store
+                .replace_markets(&[snap(1, 0.0, t(11), vec![price("gold", None, 10000, 50)])])
+                .unwrap(),
+            0
+        );
+        let station = StationInfo {
+            market_id: 1,
+            station_name: "Port 1".into(),
+            system_name: "Sys 1".into(),
+            star_pos: Some([0.0; 3]),
+            max_pad: None,
+            station_type: None,
+            dist_ls: None,
+        };
+        for at in [t(11), t(12)] {
+            assert_eq!(
+                store
+                    .upsert_partial_prices(&[(
+                        station.clone(),
+                        price("gold", None, 10000, 50),
+                        at,
+                        PriceOrigin::Ardent
+                    )])
+                    .unwrap(),
+                0
+            );
+            assert!(store.market_prices(1).unwrap().is_empty());
+        }
+        assert_eq!(
+            store
+                .upsert_partial_prices(&[(
+                    station,
+                    price("gold", None, 11000, 50),
+                    t(13),
+                    PriceOrigin::Ardent
+                )])
+                .unwrap(),
+            1
+        );
+        assert_eq!(store.market_prices(1).unwrap()[0].sell_price, 11000);
+    }
+
+    #[test]
+    fn missing_commodity_from_complete_snapshot_is_a_closed_observation() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .replace_markets(&[snap(1, 0.0, t(10), vec![price("gold", None, 10000, 50)])])
+            .unwrap();
+        store
+            .replace_markets(&[snap(1, 0.0, t(12), vec![price("silver", None, 100, 50)])])
+            .unwrap();
+        let identity = MarketIdentity {
+            market_id: Some(1),
+            station_name: "Port 1".into(),
+            system_name: "Sys 1".into(),
+        };
+        let rows = store
+            .price_observations_for_markets(
+                "gold",
+                Side::Sell,
+                &[identity],
+                [0.0; 3],
+                100.0,
+                t(0),
+                None,
+            )
+            .unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(
+            (rows[0].price, rows[0].volume, rows[0].updated_at),
+            (0, 0, t(12))
+        );
+    }
+
+    #[test]
+    fn station_and_partial_updates_do_not_imply_complete_snapshot() {
+        let store = Store::open_in_memory().unwrap();
+        let station = StationInfo {
+            market_id: 1,
+            station_name: "Port 1".into(),
+            system_name: "Sys 1".into(),
+            star_pos: Some([0.0; 3]),
+            max_pad: None,
+            station_type: None,
+            dist_ls: None,
+        };
+        store
+            .upsert_partial_prices(&[(
+                station.clone(),
+                price("silver", None, 100, 50),
+                t(12),
+                PriceOrigin::Ardent,
+            )])
+            .unwrap();
+        store.upsert_stations(&[station], t(13)).unwrap();
+        let identity = MarketIdentity {
+            market_id: Some(1),
+            station_name: "Port 1".into(),
+            system_name: "Sys 1".into(),
+        };
+        assert!(
+            store
+                .price_observations_for_markets(
+                    "gold",
+                    Side::Sell,
+                    &[identity],
+                    [0.0; 3],
+                    100.0,
+                    t(0),
+                    None
+                )
+                .unwrap()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn full_snapshot_marker_expires_with_price_retention() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .replace_markets(&[snap(1, 0.0, t(10), vec![])])
+            .unwrap();
+        store.purge_prices_older_than(t(11), t(0)).unwrap();
+        assert_eq!(
+            store
+                .replace_markets(&[snap(1, 0.0, t(9), vec![])])
+                .unwrap(),
+            1
+        );
+        let rows = store
+            .query_json("SELECT market_id FROM market_full_snapshot", &[])
+            .unwrap();
+        assert_eq!(rows.len(), 1);
     }
 
     #[test]

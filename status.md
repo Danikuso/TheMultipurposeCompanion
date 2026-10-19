@@ -2,16 +2,16 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-19 22:09 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-19 23:52 (Europe/Madrid) · Codex
 - **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (🔄 en ejecución). F2 ✅ fusionada en `main` (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
-- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 16/35 hechas (aprobado al ordenar «escribe el plan y ejecútalo»). Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
+- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 17/35 hechas (aprobado al ordenar «escribe el plan y ejecútalo»). Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
 - **Rama de trabajo:** `fase/f3-comercio-misiones`
 
 ## Puntero actual
 
-- **Tarea:** F3 · Task 16 🔄 en curso, paso 1: tests de mercado, mezcla de fuentes, plataformas y fixture Market.json.
-- **Siguiente acción:** ejecutar Task 16 con TDD: CurrentMarket, snapshots locales y merge_sources neutral compartido con minería; luego revisiones y checks. Task 15: 893 Rust PASS (2 ignorados), fmt/clippy OK; UI sin cambios desde 144 PASS/check/build de Task 14. El propietario prueba `main@9154d41`: no reconstruir release ni usar puerto/base reales. `.claude/` ajeno; `.tmp/` logs locales. Ledger: `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Tarea:** F3 · Task 16 ✅ verificada; siguiente Task 17 (ruta comercial con avance automático).
+- **Siguiente acción:** guardar cierre de Task 16 y empezar Task 17 con TDD/revisiones. Task 16: 924 Rust PASS (2 ignorados), fmt/clippy OK; UI sin cambios desde 144 PASS/check/build de Task 14. El propietario prueba `main@9154d41`: no reconstruir release ni usar puerto/base reales. `.claude/` ajeno; `.tmp/` logs locales. Ledger: `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Fases
 
@@ -49,7 +49,7 @@
 | 13 | datos estáticos `rare_goods.json` y `cabins.json` | ✅ hecha | 440c5d9 | OnceLock, parser tolerante con avisos y recuperación por fila; catálogo inicial 1 rara/4 cabinas; spec/calidad aprobadas; 878 Rust PASS |
 | 14 | i18n — `trade.ftl` y `missions.ftl` | ✅ hecha | 7f6a9a9 | 125 claves de paneles por idioma y ajustes/disposiciones; rangos ingleses; spec/calidad aprobadas; 880 Rust y 144 UI PASS |
 | 15 | `trade` — coste pagado y «Mi carga» | ✅ hecha | 28e205b | Media ponderada, coste parcial, exclusión misión/robada, SRV protegido y reconstrucción paginada; spec/calidad aprobadas; 893 Rust PASS |
-| 16 | `trade` — «Mercado actual» y mejor venta en 48 h | 🔄 en curso | — | Paso 1: tests y fixture sintético de mercado |
+| 16 | `trade` — «Mercado actual» y mejor venta en 48 h | 🔄 en curso | — | 17 tests GREEN iniciales; calidad P2: preservar cierres al reconciliar precios. Cierres, ausencias y pad antes del límite GREEN; spec aprobada; 924 Rust PASS, revisión final de calidad pendiente |
 | 17 | `trade` — ruta comercial con avance automático | ⬜ pendiente | — |  |
 | 18 | `trade` — sesión de comercio y buscar mercancía | ⬜ pendiente | — |  |
 | 19 | `trade` — módulo, topics, relevancia, red, almacén y registro | ⬜ pendiente | — |  |
@@ -173,6 +173,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Bloqueos y pendientes del propietario
 
+- [x] **F3 · Task 16:** corregidos cierres SQL, mercancías ausentes/catálogos vacíos y compatibilidad antes del límite. Consulta dirigida acotada, marcador completo con migración aditiva y purga. APIs y Tasks 18/19/20 sincronizadas en el plan. Revisiones spec/calidad aprobadas; 924 Rust PASS, fmt/clippy OK.
+
 - [x] **F3 · Task 12:** corregidos helper de siembra tras importación, guardia replay explícita, recuperación tras lag y bloqueo de coordenadas por importación incompleta. Dos expectativas UI heredadas alineadas con rangos ingleses aprobados. Revisiones spec/calidad aprobadas y checks completos correctos (874 Rust/144 UI).
 - [x] **F2 · Criterio 9 (consumo con ventana):** ✅ medido 2026-10-19 (112,7 MB / 0 % CPU). Antes: cierra tu TMC.exe (PID 3808 ocupa 47320 y la instancia única impide otra) y ejecuta `pwsh scripts/measure-footprint.ps1 -Exe target-f2/release/TMC.exe -JournalDir .tmp/footprint-f2 -FixturePath tests/fixtures/journal/combat_session.log -ShowWindow -Seconds 120` y lo mismo con `mining_session.log`; o autoriza al agente a cerrarlo y medir. Límite < 150 MB y < 1 % CPU.
 - [ ] **F2 · Eval sobre tu historial:** vales INSUFICIENTE (el único canje incluye vales ganados antes del primer diario) y minería sin datos (n=0). `tmc-headless eval` queda listo para validar con futuras sesiones de caza/minería.
@@ -228,6 +230,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-19 23:52 (Europe/Madrid) · Codex · Task 16 cerrada con top5, snapshots locales, mezcla por frescura y origen; revisión detectó y corrigió resurrección de ofertas, ausencia de mercancías y límite antes de pad. Migración aditiva f3_market_full_snapshots y consultas bounded; spec/calidad aprobadas, 924 Rust PASS (2 ignorados), fmt/clippy OK.
 
 - 2026-10-19 22:09 (Europe/Madrid) · Codex · Task 15 cerrada con 13 tests RED→GREEN: coste medio, inventario parcial, misión/robado, guardia SRV y reconstrucción por comandante/fecha. Revisiones aprobadas, fmt/clippy OK, 893 Rust PASS (2 ignorados); UI sin cambios.
 
