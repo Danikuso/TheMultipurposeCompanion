@@ -179,8 +179,9 @@ test('lawless badge has a label', () => {
 });
 
 function sessionTopic(extra: Record<string, unknown> = {}) {
+  const nowMs = Date.now();
   return {
-    as_of: new Date().toISOString(), started_at: '2026-10-18T12:00:00Z', kills: 4, credits: 120000, kills_by_type: { python: 3, viper: 1 },
+    as_of: new Date(nowMs).toISOString(), started_at: '2026-10-18T12:00:00Z', kills: 4, credits: 120000, kills_by_type: { python: 3, viper: 1 },
     combat_rank: 5, combat_progress: 40,
     vouchers: [
       { kind: 'Bounty', faction: 'Los Pacíficos', amount: 50000, systems: ['Sol', 'Alpha Centauri'], ax: false, other: false, count: 1 },
@@ -190,7 +191,7 @@ function sessionTopic(extra: Record<string, unknown> = {}) {
     vouchers_total: { bounty: 50000, combat_bond: 31000 },
     nearest_if: {
       station_name: 'Hutton Orbital', system_name: 'Alpha Centauri', distance_ly: 4.38,
-      distance_to_arrival_ls: 100, max_pad: 'Large', updated_at: new Date(Date.now() - 7200_000).toISOString(),
+      distance_to_arrival_ls: 100, max_pad: 'Large', updated_at: new Date(nowMs - 7200_000).toISOString(),
     },
     if_fee_pct: 25, ...extra,
   };
