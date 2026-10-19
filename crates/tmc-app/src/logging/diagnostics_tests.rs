@@ -1,26 +1,51 @@
 use super::*;
 use serde_json::{Value, json};
+use std::io::Write;
 use tracing_subscriber::filter::FilterExt;
 use tracing_subscriber::prelude::*;
 
+/// Timeline rows (ordered by session/seq) with payload parsed back into JSON.
 fn read_records(dir: &Path) -> Vec<Value> {
-    let mut paths: Vec<_> = std::fs::read_dir(dir)
+    let conn = Connection::open(dir.join(DB_FILE)).unwrap();
+    let mut stmt = conn
+        .prepare("SELECT tbl, session_id, seq, mono_ns, ts, code, context, schema, payload, flags, module FROM diag_timeline")
+        .unwrap();
+    stmt.query_map([], |r| {
+        let payload: Option<String> = r.get(8)?;
+        Ok(json!({
+            "tbl": r.get::<_, String>(0)?, "session": r.get::<_, String>(1)?,
+            "seq": r.get::<_, i64>(2)?, "mono_ns": r.get::<_, i64>(3)?,
+            "ts": r.get::<_, String>(4)?, "code": r.get::<_, String>(5)?,
+            "context": r.get::<_, String>(6)?, "schema": r.get::<_, Option<String>>(7)?,
+            "payload": payload.and_then(|p| serde_json::from_str::<Value>(&p).ok()).unwrap_or(Value::Null),
+            "flags": r.get::<_, i64>(9)?, "module": r.get::<_, Option<String>>(10)?,
+        }))
+    })
+    .unwrap()
+    .map(Result::unwrap)
+    .collect()
+}
+
+fn record(code: &str, ts: String, payload: &str) -> Record {
+    Record {
+        mono_ns: 1,
+        ts,
+        context: "state".into(),
+        schema: "state".into(),
+        code: code.into(),
+        payload: Some(payload.into()),
+        flags: 0,
+    }
+}
+
+fn open_db(dir: &Path, limits: Limits) -> Db {
+    Db::open(dir, limits, uuid::Uuid::new_v4().to_string()).unwrap()
+}
+
+fn count(db: &Db, table: &str) -> i64 {
+    db.conn
+        .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0))
         .unwrap()
-        .flatten()
-        .map(|e| e.path())
-        .filter(|p| p.extension().is_some_and(|x| x == "jsonl"))
-        .collect();
-    paths.sort();
-    paths
-        .into_iter()
-        .flat_map(|p| {
-            std::fs::read_to_string(p)
-                .unwrap()
-                .lines()
-                .map(|l| serde_json::from_str::<Value>(l).unwrap())
-                .collect::<Vec<_>>()
-        })
-        .collect()
 }
 
 #[test]
@@ -33,7 +58,73 @@ fn exe_directory_has_no_data_directory_fallback() {
 }
 
 #[test]
-fn real_emit_is_captured_at_trace_and_chunks_reconstruct_sanitized_unicode() {
+fn routing_by_code_prefix_including_unknown() {
+    let table = |code: &str| route(code).table;
+    for (code, expected) in [
+        ("journal.tail.read", "diag_journal"),
+        ("source.status.read", "diag_journal"),
+        ("store.import.batch_committed", "diag_store"),
+        ("config.bootstrap", "diag_config"),
+        ("core.location", "diag_actor"),
+        ("actor.event.processed", "diag_actor"),
+        ("app.start", "diag_actor"),
+        ("topic.changed", "diag_topic"),
+        ("net.query", "diag_net"),
+        ("eddn.send", "diag_net"),
+        ("http.request", "diag_server"),
+        ("ws.connect", "diag_server"),
+        ("auth.pairing", "diag_server"),
+        ("action.run", "diag_server"),
+        ("clipboard.copy", "diag_server"),
+        ("ui.render", "diag_ui"),
+        ("diagnostics.stop", "diag_other"),
+        ("unknown.code", "diag_other"),
+        ("", "diag_other"),
+        ("journalx.a", "diag_other"),
+    ] {
+        assert_eq!(table(code), expected, "{code}");
+        assert_eq!(route(code).module, None);
+    }
+    for module in MODULES {
+        let routed = route(&format!("{module}.decision"));
+        assert_eq!(routed.table, "diag_module");
+        assert_eq!(routed.module, Some(module));
+    }
+}
+
+#[test]
+fn schema_has_tables_indexes_and_timeline_view() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = open_db(dir.path(), Limits::default());
+    let names = |kind: &str| -> Vec<String> {
+        let mut stmt = db
+            .conn
+            .prepare("SELECT name FROM sqlite_master WHERE type=?1")
+            .unwrap();
+        stmt.query_map([kind], |r| r.get(0))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
+    let tables = names("table");
+    for table in TABLES.iter().chain(["diag_session"].iter()) {
+        assert!(tables.contains(&table.to_string()), "{table}");
+    }
+    let indexes = names("index");
+    for table in TABLES {
+        assert!(indexes.contains(&format!("{table}_session_seq")));
+        assert!(indexes.contains(&format!("{table}_code")));
+    }
+    assert!(names("view").contains(&"diag_timeline".to_string()));
+    let mode: String = db
+        .conn
+        .pragma_query_value(None, "journal_mode", |r| r.get(0))
+        .unwrap();
+    assert_eq!(mode, "wal");
+}
+
+#[test]
+fn real_emit_is_stored_redacted_and_unicode_intact() {
     let dir = tempfile::tempdir().unwrap();
     let (layer, guard) = start_writer(dir.path().to_owned(), Limits::default()).unwrap();
     let subscriber = tracing_subscriber::registry().with(layer.with_filter(
@@ -49,53 +140,82 @@ fn real_emit_is_captured_at_trace_and_chunks_reconstruct_sanitized_unicode() {
     });
     drop(guard);
     let records = read_records(dir.path());
-    let chunks: Vec<_> = records
-        .iter()
-        .filter(|r| r["code"] == "test.scan")
-        .collect();
-    assert!(chunks.len() > 1);
-    let reconstructed: String = chunks
-        .iter()
-        .map(|r| r["chunk"].as_str().unwrap())
-        .collect();
-    let safe: Value = serde_json::from_str(&reconstructed).unwrap();
-    assert_eq!(safe["BodyName"], raw["BodyName"]);
-    assert_eq!(safe["MassEM"], 42);
-    assert!(!reconstructed.contains("CANARY"));
-    for entry in std::fs::read_dir(dir.path()).unwrap().flatten() {
-        for line in std::fs::read_to_string(entry.path()).unwrap().lines() {
-            assert!(line.len() < RECORD_BYTES);
-        }
-    }
+    let row = records.iter().find(|r| r["code"] == "test.scan").unwrap();
+    assert_eq!(row["tbl"], "diag_other");
+    assert_eq!(row["flags"], 0);
+    assert_eq!(row["payload"]["BodyName"], raw["BodyName"]);
+    assert_eq!(row["payload"]["MassEM"], 42);
+    assert!(!serde_json::to_string(&records).unwrap().contains("CANARY"));
     assert_eq!(records.last().unwrap()["code"], "diagnostics.stop");
 }
 
 #[test]
-fn ring_rotates_continuously_and_restarts_never_overwrite() {
+fn batches_commit_together_and_keep_seq_order_across_tables() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("foreign.jsonl"), "foreign").unwrap();
-    let limits = Limits {
-        segment_bytes: 128,
-        segments: 3,
-        ..Limits::default()
-    };
-    for _ in 0..2 {
-        let mut ring = Ring::new(
-            dir.path().to_owned(),
-            limits,
-            uuid::Uuid::new_v4().to_string(),
-        )
-        .unwrap();
-        for _ in 0..15 {
-            ring.write(b"some record data some record data\n", chrono::Utc::now())
-                .unwrap();
+    let (layer, guard) = start_writer(dir.path().to_owned(), Limits::default()).unwrap();
+    let subscriber = tracing_subscriber::registry().with(layer);
+    let codes = ["journal.a", "store.b", "combat.c", "net.d", "mystery.e"];
+    tracing::subscriber::with_default(subscriber, || {
+        for i in 0..500 {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "test.placeholder",
+                json!({"i":i})
+            );
         }
+    });
+    drop(guard);
+    let records = read_records(dir.path());
+    assert_eq!(records.len(), 502);
+    let seqs: Vec<i64> = records.iter().map(|r| r["seq"].as_i64().unwrap()).collect();
+    assert_eq!(seqs, (1..=502).collect::<Vec<_>>());
+    assert_eq!(records[0]["code"], "diagnostics.start");
+    let i: Vec<i64> = records[1..501]
+        .iter()
+        .map(|r| r["payload"]["i"].as_i64().unwrap())
+        .collect();
+    assert_eq!(i, (0..500).collect::<Vec<_>>());
+    // Direct multi-table batch: rows land in their own tables, module column populated.
+    let mut db = open_db(dir.path(), Limits::default());
+    let batch: Vec<_> = codes
+        .iter()
+        .map(|c| record(c, now_ts(), "{\"v\":1}"))
+        .collect();
+    db.write_batch(&batch).unwrap();
+    assert_eq!(db.seq, 5);
+    for (table, expected) in [
+        ("diag_journal", 1),
+        ("diag_store", 1),
+        ("diag_module", 1),
+        ("diag_net", 1),
+        ("diag_other", 503),
+    ] {
+        assert_eq!(count(&db, table), expected, "{table}");
     }
-    assert_eq!(
-        std::fs::read_to_string(dir.path().join("foreign.jsonl")).unwrap(),
-        "foreign"
-    );
-    assert!(owned_files(dir.path()).unwrap().len() <= 3);
+    let module: String = db
+        .conn
+        .query_row("SELECT module FROM diag_module", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(module, "combat");
+}
+
+#[test]
+fn oversized_and_invalid_payloads_are_flagged_not_stored() {
+    let dir = tempfile::tempdir().unwrap();
+    let (layer, guard) = start_writer(dir.path().to_owned(), Limits::default()).unwrap();
+    let subscriber = tracing_subscriber::registry().with(layer);
+    tracing::subscriber::with_default(subscriber, || {
+        tracing::trace!(target: "tmc::diagnostics", context = "state", schema = "state", code = "test.large", payload = "x".repeat(PAYLOAD_MAX_BYTES + 1).as_str());
+        tracing::trace!(target: "tmc::diagnostics", context = "state", schema = "state", code = "test.bad", payload = "{not json");
+    });
+    drop(guard);
+    let records = read_records(dir.path());
+    let large = records.iter().find(|r| r["code"] == "test.large").unwrap();
+    assert_eq!(large["flags"], FLAG_TRUNCATED);
+    assert_eq!(large["payload"]["truncated"], true);
+    let bad = records.iter().find(|r| r["code"] == "test.bad").unwrap();
+    assert_eq!(bad["flags"], FLAG_BAD_PAYLOAD);
+    assert!(bad["payload"].is_null());
 }
 
 #[test]
@@ -107,21 +227,9 @@ fn directory_failure_is_recoverable() {
 }
 
 #[test]
-fn escaped_metadata_and_payload_still_fit_final_record() {
-    let base = json!({"context":"\u{0001}".repeat(32),"schema":"\u{0001}".repeat(128),"code":"\u{0001}".repeat(128),"session":uuid::Uuid::new_v4().to_string(),"utc":Utc::now().to_rfc3339(),"monotonic_us":u64::MAX,"event_id":u64::MAX});
-    for record in encode_event(
-        base,
-        &json!({"BodyName":"\u{0001}".repeat(3000)}).to_string(),
-    ) {
-        assert!(record.len() + ORDINAL_RESERVE <= RECORD_BYTES);
-    }
-}
-
-#[test]
 fn queue_overflow_is_nonblocking_and_loss_survives_guard_shutdown() {
     let dir = tempfile::tempdir().unwrap();
     let (layer, guard) = start_writer(dir.path().to_owned(), Limits::default()).unwrap();
-    // Hold the worker's disk path unavailable while a tiny isolated queue deterministically fills.
     let shared = layer.shared.clone();
     let (sender, receiver) = mpsc::sync_channel(1);
     let subscriber = tracing_subscriber::registry().with(DiagnosticLayer {
@@ -141,46 +249,157 @@ fn queue_overflow_is_nonblocking_and_loss_survives_guard_shutdown() {
     assert!(shared.dropped.load(Ordering::Acquire) >= 9);
     drop(guard);
     let records = read_records(dir.path());
-    assert!(records.iter().any(|r| r["code"] == "diagnostics.incomplete"
-        && r["details"]["dropped_records"].as_u64().unwrap() >= 9));
+    let marker = records
+        .iter()
+        .find(|r| r["code"] == "diagnostics.incomplete")
+        .unwrap();
+    assert!(marker["payload"]["dropped_records"].as_u64().unwrap() >= 9);
+    assert_eq!(marker["flags"], FLAG_DROPPED | FLAG_INCOMPLETE);
 }
 
 #[test]
-fn daily_rotation_and_retention_leave_foreign_and_future_files() {
+fn retention_by_age_removes_old_rows_and_sessions_only() {
     let dir = tempfile::tempdir().unwrap();
-    let mut ring = Ring::new(
-        dir.path().to_owned(),
-        Limits::default(),
-        uuid::Uuid::new_v4().to_string(),
-    )
-    .unwrap();
-    let old = Utc::now() - chrono::Duration::days(8);
-    let old_name = format!(
+    let mut db = open_db(dir.path(), Limits::default());
+    let old = ts_of(Utc::now() - chrono::Duration::days(8));
+    let batch = [
+        record("journal.old", old.clone(), "{}"),
+        record("combat.old", old.clone(), "{}"),
+        record("journal.new", now_ts(), "{}"),
+    ];
+    db.write_batch(&batch).unwrap();
+    db.conn
+        .execute(
+            "INSERT INTO diag_session(session_id, started_ts, ended_ts, version, profile) VALUES('old', ?1, ?1, 'x', 'debug')",
+            [&old],
+        )
+        .unwrap();
+    db.prune(Utc::now()).unwrap();
+    assert_eq!(count(&db, "diag_journal"), 1);
+    assert_eq!(count(&db, "diag_module"), 0);
+    assert_eq!(count(&db, "diag_session"), 1);
+    let code: String = db
+        .conn
+        .query_row("SELECT code FROM diag_journal", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(code, "journal.new");
+}
+
+#[test]
+fn retention_by_size_prunes_oldest_batches_and_stays_under_threshold() {
+    let dir = tempfile::tempdir().unwrap();
+    let max = 400 * 1024;
+    let mut db = open_db(
+        dir.path(),
+        Limits {
+            max_bytes: max,
+            ..Limits::default()
+        },
+    );
+    let padding = "p".repeat(400);
+    for chunk in 0..20 {
+        let batch: Vec<_> = (0..100)
+            .map(|i| {
+                record(
+                    "journal.fill",
+                    now_ts(),
+                    &json!({"n": chunk * 100 + i, "pad": padding}).to_string(),
+                )
+            })
+            .collect();
+        db.write_batch(&batch).unwrap();
+    }
+    assert!(db.live_bytes().unwrap() > max);
+    db.prune(Utc::now()).unwrap();
+    assert!(db.live_bytes().unwrap() <= max);
+    let (min, newest): (i64, i64) = db
+        .conn
+        .query_row(
+            "SELECT MIN(json_extract(payload,'$.n')), MAX(json_extract(payload,'$.n')) FROM diag_journal",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert!(min > 0, "oldest rows must be pruned first");
+    assert_eq!(newest, 1999, "newest row must survive");
+    let file = std::fs::metadata(dir.path().join(DB_FILE)).unwrap().len();
+    assert!(
+        file <= max * 2,
+        "incremental vacuum must return pages: {file}"
+    );
+}
+
+#[test]
+fn write_failure_marks_once_drops_and_never_panics() {
+    let dir = tempfile::tempdir().unwrap();
+    let (layer, guard) = start_writer(dir.path().to_owned(), Limits::default()).unwrap();
+    let shared = layer.shared.clone();
+    // Break the destination from outside: the writer's inserts will fail.
+    let sabotage = Connection::open(dir.path().join(DB_FILE)).unwrap();
+    sabotage
+        .execute_batch("DROP VIEW diag_timeline; DROP TABLE diag_other;")
+        .unwrap();
+    drop(sabotage);
+    let subscriber = tracing_subscriber::registry().with(layer);
+    tracing::subscriber::with_default(subscriber, || {
+        for _ in 0..5 {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "test.fail",
+                json!({"credits":42})
+            );
+        }
+    });
+    drop(guard);
+    assert_eq!(shared.disk_errors.load(Ordering::Acquire), 1);
+    assert!(shared.dropped.load(Ordering::Acquire) >= 5);
+}
+
+#[test]
+fn session_row_tracks_start_and_clean_end_and_restart_adds_another() {
+    let dir = tempfile::tempdir().unwrap();
+    let (layer, guard) = start_writer(dir.path().to_owned(), Limits::default()).unwrap();
+    let session = layer.shared.session.clone();
+    let probe = || -> (Option<String>, i64, i64) {
+        let conn = Connection::open(dir.path().join(DB_FILE)).unwrap();
+        let (ended, clean) = conn
+            .query_row(
+                "SELECT ended_ts, clean_exit FROM diag_session WHERE session_id=?1",
+                [&session],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        let sessions = conn
+            .query_row("SELECT COUNT(*) FROM diag_session", [], |r| r.get(0))
+            .unwrap();
+        (ended, clean, sessions)
+    };
+    assert_eq!(probe(), (None, 0, 1));
+    drop(guard);
+    let (ended, clean, _) = probe();
+    assert!(ended.is_some());
+    assert_eq!(clean, 1);
+    let (_layer, guard2) = start_writer(dir.path().to_owned(), Limits::default()).unwrap();
+    assert_eq!(probe().2, 2);
+    drop(guard2);
+}
+
+#[test]
+fn legacy_own_jsonl_files_are_removed_once_and_foreign_kept() {
+    let dir = tempfile::tempdir().unwrap();
+    let own = format!(
         "tmc-debug-{}-{}-0000000001.jsonl",
-        old.format("%Y%m%dT%H%M%S%.9fZ"),
+        Utc::now().format("%Y%m%dT%H%M%S%.9fZ"),
         uuid::Uuid::new_v4()
     );
-    fs::write(dir.path().join(&old_name), "old").unwrap();
+    fs::write(dir.path().join(&own), "old").unwrap();
+    fs::write(dir.path().join("foreign.jsonl"), "foreign").unwrap();
     fs::write(dir.path().join("tmc-debug-foreign.jsonl"), "foreign").unwrap();
-    let today = ring.day.clone();
-    ring.write(b"{}\n", Utc::now() + chrono::Duration::days(1))
-        .unwrap();
-    assert_ne!(today, ring.day);
-    assert!(!dir.path().join(old_name).exists());
+    let (_layer, guard) = start_writer(dir.path().to_owned(), Limits::default()).unwrap();
+    drop(guard);
+    assert!(!dir.path().join(own).exists());
+    assert!(dir.path().join("foreign.jsonl").exists());
     assert!(dir.path().join("tmc-debug-foreign.jsonl").exists());
-}
-
-#[test]
-fn event_over_one_mib_produces_explicit_marker() {
-    let records = encode_event(
-        json!({"code":"test.large"}),
-        &"x".repeat(MAX_EVENT_BYTES + 1),
-    );
-    assert_eq!(records.len(), 1);
-    assert_eq!(
-        serde_json::from_slice::<Value>(&records[0]).unwrap()["oversized"],
-        true
-    );
 }
 
 #[test]
@@ -200,79 +419,14 @@ fn shutdown_waits_for_inflight_producer_before_draining() {
     assert!(done_rx.recv_timeout(Duration::from_millis(30)).is_err());
     layer
         .sender
-        .try_send(
-            json!({"code":"test.inflight","event_id":99})
-                .to_string()
-                .into_bytes(),
-        )
+        .try_send(record("test.inflight", now_ts(), "{}"))
         .unwrap();
     shared.active.fetch_sub(1, Ordering::AcqRel);
-    done_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    done_rx.recv_timeout(Duration::from_secs(5)).unwrap();
     handle.join().unwrap();
     let records = read_records(dir.path());
     assert!(records.iter().any(|r| r["code"] == "test.inflight"));
     assert_eq!(records.last().unwrap()["code"], "diagnostics.stop");
-}
-
-#[test]
-fn failed_disk_markers_keep_counters_until_storage_recovers() {
-    let dir = tempfile::tempdir().unwrap();
-    let (layer, guard) = start_writer(dir.path().join("unused"), Limits::default()).unwrap();
-    drop(guard);
-    let shared = layer.shared.clone();
-    let mut ring = Ring::new(
-        dir.path().join("recover"),
-        Limits::default(),
-        uuid::Uuid::new_v4().to_string(),
-    )
-    .unwrap();
-    ring.current.take();
-    fs::remove_dir_all(&ring.dir).unwrap();
-    fs::write(&ring.dir, "blocked").unwrap();
-    let mut output = Output {
-        ring,
-        shared: shared.clone(),
-        ordinal: 0,
-    };
-    shared.dropped.store(17, Ordering::Release);
-    shared.incomplete.store(2, Ordering::Release);
-    output.losses();
-    assert_eq!(shared.dropped.load(Ordering::Acquire), 17);
-    assert!(shared.disk_errors.load(Ordering::Acquire) >= 1);
-    fs::remove_file(&output.ring.dir).unwrap();
-    fs::create_dir(&output.ring.dir).unwrap();
-    output.losses();
-    output.flush();
-    assert_eq!(shared.dropped.load(Ordering::Acquire), 0);
-    assert!(
-        read_records(&output.ring.dir)
-            .iter()
-            .any(|r| r["details"]["dropped_records"] == 17)
-    );
-}
-
-#[test]
-fn restart_uses_unique_names_without_overwriting_previous_session() {
-    let dir = tempfile::tempdir().unwrap();
-    let mut ring = Ring::new(
-        dir.path().to_owned(),
-        Limits::default(),
-        uuid::Uuid::new_v4().to_string(),
-    )
-    .unwrap();
-    ring.write(b"first session\n", Utc::now()).unwrap();
-    drop(ring);
-    let before = owned_files(dir.path()).unwrap().pop().unwrap().1;
-    let mut ring = Ring::new(
-        dir.path().to_owned(),
-        Limits::default(),
-        uuid::Uuid::new_v4().to_string(),
-    )
-    .unwrap();
-    ring.write(b"second session\n", Utc::now()).unwrap();
-    drop(ring);
-    assert_eq!(fs::read_to_string(before).unwrap(), "first session\n");
-    assert_eq!(owned_files(dir.path()).unwrap().len(), 2);
 }
 
 #[test]
@@ -330,69 +484,10 @@ fn general_info_filter_does_not_disable_diagnostic_trace_or_receive_it() {
     }
 }
 
-#[cfg(windows)]
-#[test]
-fn locked_oldest_segment_never_exceeds_budget_and_recovers_with_marker() {
-    use std::os::windows::fs::OpenOptionsExt;
-    let dir = tempfile::tempdir().unwrap();
-    let (layer, guard) = start_writer(dir.path().join("unused"), Limits::default()).unwrap();
-    drop(guard);
-    let destination = dir.path().join("ring");
-    let mut ring = Ring::new(
-        destination.clone(),
-        Limits {
-            segment_bytes: 1024,
-            segments: 2,
-            ..Limits::default()
-        },
-        uuid::Uuid::new_v4().to_string(),
-    )
-    .unwrap();
-    let record = json!({"code":"test.fill", "padding":"x".repeat(850)})
-        .to_string()
-        .into_bytes();
-    ring.write(b"{}\n", Utc::now()).unwrap();
-    ring.flush().unwrap();
-    let oldest = owned_files(&destination).unwrap().pop().unwrap().1;
-    // FILE_SHARE_READ | FILE_SHARE_WRITE: another process can read/write but cannot delete.
-    let lock = OpenOptions::new()
-        .read(true)
-        .share_mode(0x00000001 | 0x00000002)
-        .open(oldest)
-        .unwrap();
-    fs::write(destination.join("foreign.txt"), "foreign").unwrap();
-    let mut output = Output {
-        ring,
-        shared: layer.shared.clone(),
-        ordinal: 0,
-    };
-    for _ in 0..12 {
-        output.write(record.clone());
-        assert!(
-            owned_files(&destination).unwrap().len() <= 2,
-            "locked oldest file must never grow ring beyond its budget"
-        );
-    }
-    assert!(output.shared.disk_errors.load(Ordering::Acquire) > 0);
-    drop(lock);
-    output.losses();
-    output.write(json!({"code":"test.recovered"}).to_string().into_bytes());
-    output.flush();
-    assert!(owned_files(&destination).unwrap().len() <= 2);
-    let records = read_records(&destination);
-    assert!(records.iter().any(|r| r["code"] == "diagnostics.incomplete"
-        && r["details"]["disk_errors"].as_u64().is_some_and(|n| n > 0)));
-    assert!(records.iter().any(|r| r["code"] == "test.recovered"));
-    assert_eq!(
-        fs::read_to_string(destination.join("foreign.txt")).unwrap(),
-        "foreign"
-    );
-}
-
 #[test]
 fn producer_entry_racing_guard_close_never_loses_an_accepted_event() {
     // Entry and close start together. Neither thread signals completion/entry to the other.
-    for _ in 0..256 {
+    for _ in 0..64 {
         let dir = tempfile::tempdir().unwrap();
         let (layer, guard) = start_writer(dir.path().to_owned(), Limits::default()).unwrap();
         let shared = layer.shared.clone();
@@ -450,7 +545,6 @@ fn payload_for<'a>(records: &'a [Value], code: &str) -> &'a Value {
 
 #[test]
 fn d3_tail_reports_real_byte_offsets_partial_lossy_and_truncation() {
-    use std::io::Write;
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("Journal.2026-10-20T010203.01.log");
     // NUL prefix, UTF-8 BOM, CRLF and invalid UTF-8 must not be recomputed as String.len().

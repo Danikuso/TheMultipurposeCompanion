@@ -4937,6 +4937,7 @@ dependencies = [
  "axum",
  "chrono",
  "directories",
+ "rusqlite",
  "serde",
  "serde_json",
  "tempfile",
