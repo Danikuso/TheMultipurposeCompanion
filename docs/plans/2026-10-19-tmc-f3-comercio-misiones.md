@@ -436,7 +436,7 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 - Consumes: `MarketBuy`, `MarketSell`, `EjectCargo`, `Cargo` (`inventory: Option<Vec<events::CargoItem>>`, la única fuente de inventario), `CargoItem::{is_mission, stolen_count}`.
 - Produces: `CostBasis { fn apply_event(&mut self, ev: &EventKind); fn reconcile(&mut self, inventory: &[CargoItem]); fn avg_paid(&self, commodity: &str) -> Option<u64>; fn is_partial(&self, commodity: &str) -> bool }` (media ponderada; vender/expulsar resta a la media sin cambiarla; `reconcile` escala si sobra y marca parcial si falta: carga de origen desconocido); `CargoLine { commodity, name_localised, tons: u32, paid_avg: Option<u64>, paid_partial: bool, price_here: Option<u64>, best_nearby: Option<SellOption>, est_profit: Option<i64>, advice: Option<CargoAdvice>, kind: CargoKind }`, `enum CargoKind { Trade, Mission, Stolen }`, `enum CargoAdvice { SellHere, Carry }` (`SellHere` si `price_here ≥ 0,98 × best_nearby` o no hay mejor venta y `price_here > paid_avg`); `CargoView { lines: Vec<CargoLine>, used: u32, capacity: Option<u32> }` con `fn build(inventory: &[CargoItem], basis: &CostBasis, here: &HashMap<String, u64> /* precio de venta aquí, de Market.json */, best: &HashMap<String, SellOption>, capacity: Option<u32>) -> CargoView`; `fn cost_rebuild_task(cmdr: String, since: DateTime<Utc>) -> StoreTask` (tag `trade.cost`, lectura; paginando con `history::for_each_after`; 7 días).
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn weighted_average_over_two_buys() { /* 100 t a 9400 y 50 t a 9700 → avg_paid("gold") Some(9500) */ }
@@ -447,7 +447,7 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 #[test] fn cost_rebuilt_after_restart_matches_live() { /* store en memoria con los mismos eventos → avg y toneladas iguales a las de en vivo */ }
 ```
 
-- [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(trade): coste pagado medio ponderado y vista de la carga`
+- [x] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(trade): coste pagado medio ponderado y vista de la carga`
 
 ### Task 16: `trade` — «Mercado actual» y mejor venta en 48 h
 
@@ -517,6 +517,8 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 - [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(trade): sesión de comercio y búsqueda de mercancía`
 
 ### Task 19: `trade` — módulo, topics, relevancia, red, almacén y registro
+
+**Precisión de Task 15:** `trade.cost` devuelve `{cmdr,basis,cut,cut_pos}`; el módulo comprueba comandante/generación y concilia lo recibido desde el corte, como `combat`. El llamador pasa `since = reloj − 7 días`.
 
 **Files:** Create `crates/tmc-modules/src/trade/tests.rs`, `crates/tmc-modules/src/topicx.rs`; Modify `trade/mod.rs`, `crates/tmc-modules/src/{lib.rs, registry.rs}`, `crates/tmc-modules/src/{combat/mod.rs, mining/mod.rs}` (sus `strip_as_of` privados pasan a `topicx::strip_as_of`), `crates/tmc-app/src/clipboard.rs` (`MODULE_PREFIXES` + `"trade."`, `"missions."`; `copy-next-system` también lee `trade.route.copy_target/copy_seq`).
 
@@ -878,6 +880,8 @@ test('settings put eddn radius and reverts on 400', /* 600 → 400 → valor ant
 | 11 | 5 idiomas; avisos y procedencia; nada GPL/AGPL incorporado | tests de `tmc-i18n`, Task 13, Task 34 Step 3 | ⬜ |
 
 ## Desviaciones
+
+- 2026-10-19 · Task 15: `avg_paid` redondea al crédito más próximo; la media interna se mantiene sin redondeos intermedios. Carga parcialmente robada se divide en líneas Trade/Stolen sin duplicar used; Cargo de SRV no sustituye bodega de nave. `cost_rebuild_task` recibe `since = reloj − 7 días` del llamador, usa el paginador compartido y devuelve `{cmdr,basis,cut,cut_pos}` para conciliación de eventos llegados durante la lectura (Task 19). 13 tests específicos PASS, workspace 893 PASS (2 ignorados), fmt/clippy OK; spec/calidad aprobadas.
 
 - 2026-10-19 · Task 13: catálogo inicial explícitamente parcial: Lavian Brandy y las cuatro cabinas de referencia del plan, con source propia y verified:false; símbolos desconocidos devuelven None. No se extrapolan datos sin comprobar ni se importan tablas incompatibles. Parser por fila conserva entradas válidas y avisa de las defectuosas. TDD: 4 fallos de comportamiento → 12 tests de datos PASS; workspace 878 PASS (2 ignorados), fmt/clippy OK; revisiones spec/calidad aprobadas.
 
