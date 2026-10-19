@@ -12,5 +12,6 @@ pub mod inflight;
 pub mod mining;
 pub mod navigation;
 pub mod registry;
+pub mod trade;
 pub use dashboard::Dashboard;
 pub use registry::all_modules;
