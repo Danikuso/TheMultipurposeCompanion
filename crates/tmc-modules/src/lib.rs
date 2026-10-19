@@ -3,6 +3,9 @@
 
 /// Registra una decisión interna del módulo (solo compilaciones debug; en release no evalúa nada).
 macro_rules! decide {
+    ($code:literal, { $($payload:tt)* }) => {
+        decide!($code, tmc_model::diagnostics::json!({ $($payload)* }))
+    };
     ($code:literal, $payload:expr) => {
         tmc_model::diagnostic!(
             tmc_model::diagnostics::DiagnosticContext::State,
@@ -10,6 +13,22 @@ macro_rules! decide {
             $payload
         )
     };
+}
+
+/// Como `decide!`, pero solo si `$cond` es cierta; en release evalúa la condición sin emitir.
+#[cfg(debug_assertions)]
+macro_rules! decide_if {
+    ($cond:expr, $code:literal, $($payload:tt)*) => {
+        if $cond {
+            decide!($code, $($payload)*);
+        }
+    };
+}
+#[cfg(not(debug_assertions))]
+macro_rules! decide_if {
+    ($cond:expr, $code:literal, $($payload:tt)*) => {{
+        let _ = $cond;
+    }};
 }
 
 pub mod combat;

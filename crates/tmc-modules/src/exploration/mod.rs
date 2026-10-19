@@ -46,9 +46,20 @@ impl Exploration {
                 std::mem::replace(&mut self.odyssey, odyssey) != odyssey
             }
             EventKind::FsdJump(l) | EventKind::CarrierJump(l) | EventKind::Location(l) => {
-                self.system.enter(&l.star_system, l.system_address)
+                let changed = self.system.enter(&l.star_system, l.system_address);
+                decide_if!(changed, "exploration.system.entered", {"bodies_known": self.system.scanned()});
+                changed
             }
-            EventKind::Scan(s) => self.system.on_scan(s),
+            EventKind::Scan(s) => {
+                let changed = self.system.on_scan(s);
+                decide_if!(changed, "exploration.scan.recorded", {
+                    "scanned": self.system.scanned(),
+                    "expected": self.system.body_count(),
+                    "first_discovery": s.was_discovered == Some(false),
+                    "first_mapping": s.was_mapped == Some(false),
+                });
+                changed
+            }
             EventKind::FssDiscoveryScan(d) => {
                 self.system.on_fss_discovery(d.body_count, d.system_address)
             }
@@ -79,8 +90,10 @@ impl Module for Exploration {
         let unsold_changed = self.unsold.on_event(ev, state, ctx);
         let changed = match ev {
             SourceEvent::Settings(s) => {
-                std::mem::replace(&mut self.threshold, s.map_value_threshold)
-                    != s.map_value_threshold
+                let changed = std::mem::replace(&mut self.threshold, s.map_value_threshold)
+                    != s.map_value_threshold;
+                decide_if!(changed, "exploration.threshold.changed", {"threshold": self.threshold});
+                changed
             }
             SourceEvent::Journal { ev, .. } => self.on_journal(&ev.kind),
             _ => false,

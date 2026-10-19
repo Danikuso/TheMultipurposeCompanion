@@ -37,6 +37,14 @@ fn run() -> Vec<(String, String)> {
         load,
         action("combat.reset_session"),
         action("mining.reset_session"),
+        journal(
+            "ShipTargeted",
+            r#","TargetLocked":true,"Ship":"anaconda","ScanStage":3"#,
+        ),
+        journal(
+            "ProspectedAsteroid",
+            r#","Materials":[{"Name":"Platinum","Proportion":20.0}],"Content":"$AsteroidMaterialContent_High;","Remaining":100.0"#,
+        ),
         journal("Shutdown", ""),
     ];
     let mut modules = crate::all_modules();
@@ -59,6 +67,8 @@ fn module_decisions_are_reproducible_and_private() {
         "combat.session.reset.applied",
         "mining.session.reset.applied",
         "dashboard.session.reset",
+        "combat.target.changed",
+        "mining.prospector.verdict",
     ] {
         assert!(codes.contains(&expected), "{expected} missing in {codes:?}");
     }

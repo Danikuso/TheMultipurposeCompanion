@@ -354,6 +354,7 @@ impl Navigation {
                 (here.system_address != 0).then_some(here.system_address),
             );
         }
+        decide!("navigation.plan.accepted", {"hops": plan.hops.len(), "index": plan.current_index});
         self.plan = Some(plan);
         self.plan_dirty = true;
         self.load_pending = false;
@@ -428,6 +429,9 @@ impl Navigation {
             NetOutcome::Failed(_) => self.plan_fail(ERR_SERVICE),
             _ => return,
         }
+        decide!("navigation.planner.result", {"ok": self.planner.status == PlanStatus::Ready,
+            "disabled": self.planner.status == PlanStatus::Disabled,
+            "jumps": self.planner.result.as_ref().map(|r| r.hops.len())});
         self.planner.req_id = keep;
     }
 
@@ -482,6 +486,8 @@ impl Navigation {
             || self.plan.is_some()
             || !self.load_pending
         {
+            decide!("navigation.plan.load.discarded", {"pending": self.load_pending,
+                "has_plan": self.plan.is_some()});
             return;
         }
         self.load_pending = false;
@@ -490,6 +496,7 @@ impl Navigation {
             .filter(|p| !p.is_null())
             .and_then(|p| serde_json::from_value::<ActivePlan>(p.clone()).ok())
         else {
+            decide!("navigation.plan.load.none", {});
             return;
         };
         if !plan.params.is_object() {
@@ -504,6 +511,8 @@ impl Navigation {
             // Puede haber llegado o cambiado de índice: se vuelca al sincronizar.
             self.plan_dirty = true;
         }
+        decide!("navigation.plan.loaded", {"hops": plan.hops.len(), "index": plan.current_index,
+            "off_route": plan.off_route});
         self.plan = Some(plan);
     }
 
