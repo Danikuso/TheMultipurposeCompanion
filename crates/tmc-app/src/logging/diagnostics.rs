@@ -1,9 +1,11 @@
-//! Bounded debug writer. This entire module is absent from release builds.
-use chrono::{DateTime, Utc};
+//! Bounded debug writer backed by a separate SQLite database.
+//! This entire module is absent from release builds. The writer never uses
+//! `tmc-store` and never emits diagnostics about itself.
+use chrono::{DateTime, SecondsFormat, Utc};
+use rusqlite::{Connection, Transaction, params};
 use serde_json::{Value, json};
 use std::{
-    fs::{self, File, OpenOptions},
-    io::{self, BufWriter, Write},
+    fs, io,
     path::{Path, PathBuf},
     sync::{
         Arc,
@@ -20,22 +22,55 @@ use tracing::{
 use tracing_subscriber::{Layer, layer::Context};
 
 const TARGET: &str = "tmc::diagnostics";
-const RECORD_BYTES: usize = 2048;
-const MAX_EVENT_BYTES: usize = 1024 * 1024;
+const DB_FILE: &str = "diagnostics.sqlite";
+const PAYLOAD_MAX_BYTES: usize = 128 * 1024;
 const QUEUE_RECORDS: usize = 2048;
+const PRUNE_BATCH: usize = 5000;
+
+const FLAG_TRUNCATED: i64 = 1;
+const FLAG_DROPPED: i64 = 2;
+const FLAG_INCOMPLETE: i64 = 4;
+const FLAG_BAD_PAYLOAD: i64 = 8;
+
+const TABLES: [&str; 10] = [
+    "diag_journal",
+    "diag_store",
+    "diag_config",
+    "diag_actor",
+    "diag_module",
+    "diag_topic",
+    "diag_net",
+    "diag_server",
+    "diag_ui",
+    "diag_other",
+];
+const MODULES: [&str; 8] = [
+    "combat",
+    "mining",
+    "trade",
+    "missions",
+    "navigation",
+    "exploration",
+    "exobiology",
+    "dashboard",
+];
 
 #[derive(Clone, Copy)]
 pub(super) struct Limits {
-    segment_bytes: usize,
-    segments: usize,
+    max_bytes: u64,
     retention_days: i64,
+    batch_records: usize,
+    batch_interval: Duration,
+    prune_interval: Duration,
 }
 impl Default for Limits {
     fn default() -> Self {
         Self {
-            segment_bytes: 8 * 1024 * 1024,
-            segments: 32,
+            max_bytes: 256 * 1024 * 1024,
             retention_days: 7,
+            batch_records: 200,
+            batch_interval: Duration::from_millis(250),
+            prune_interval: Duration::from_secs(30),
         }
     }
 }
@@ -45,6 +80,39 @@ pub(super) fn directory_for_executable(exe: &Path) -> io::Result<PathBuf> {
         .filter(|p| !p.as_os_str().is_empty())
         .map(|p| p.join("debug_logs"))
         .ok_or_else(|| io::Error::from(io::ErrorKind::NotFound))
+}
+
+/// Destination of a diagnostic code: table plus the module column for `diag_module`.
+#[derive(Debug, PartialEq, Eq)]
+struct Route {
+    table: &'static str,
+    module: Option<&'static str>,
+}
+fn route(code: &str) -> Route {
+    let prefix = code.split('.').next().unwrap_or("");
+    let table = match prefix {
+        "journal" | "source" => "diag_journal",
+        "store" => "diag_store",
+        "config" => "diag_config",
+        "core" | "actor" | "app" => "diag_actor",
+        "topic" => "diag_topic",
+        "net" | "eddn" => "diag_net",
+        "http" | "ws" | "auth" | "action" | "clipboard" => "diag_server",
+        "ui" => "diag_ui",
+        other => {
+            if let Some(module) = MODULES.iter().find(|m| **m == other) {
+                return Route {
+                    table: "diag_module",
+                    module: Some(module),
+                };
+            }
+            "diag_other"
+        }
+    };
+    Route {
+        table,
+        module: None,
+    }
 }
 
 struct Shared {
@@ -74,8 +142,38 @@ impl Drop for DiagnosticGuard {
     }
 }
 
+/// One queued row. The payload is already redacted JSON from D1.
+struct Record {
+    mono_ns: u64,
+    ts: String,
+    context: String,
+    schema: String,
+    code: String,
+    payload: Option<String>,
+    flags: i64,
+}
+impl Record {
+    fn marker(shared: &Shared, code: &str, details: Value, flags: i64) -> Self {
+        Self {
+            mono_ns: shared.started.elapsed().as_nanos().min(u64::MAX as u128) as u64,
+            ts: now_ts(),
+            context: "state".into(),
+            schema: "diagnostics".into(),
+            code: code.into(),
+            payload: Some(details.to_string()),
+            flags,
+        }
+    }
+}
+fn ts_of(at: DateTime<Utc>) -> String {
+    at.to_rfc3339_opts(SecondsFormat::Millis, true)
+}
+fn now_ts() -> String {
+    ts_of(Utc::now())
+}
+
 pub(super) struct DiagnosticLayer {
-    sender: SyncSender<Vec<u8>>,
+    sender: SyncSender<Record>,
     shared: Arc<Shared>,
 }
 #[derive(Default)]
@@ -117,101 +215,273 @@ impl<S: Subscriber> Layer<S> for DiagnosticLayer {
         };
         // All entry/close operations share one total order: an entrant that sees
         // closing=false precedes the close store, whose subsequent active load
-        // must see that entrant until its RAII decrement. Acquire/Release on two
-        // independent atomics would permit store buffering and an early drain.
+        // must see that entrant until its RAII decrement.
         self.shared.active.fetch_add(1, Ordering::SeqCst);
         let _active = ActiveProducer(&self.shared.active);
         if self.shared.closing.load(Ordering::SeqCst) {
             return;
         }
-        // D1 alone supplies these validated schema labels and literal codes.
         if context.len() > 32 || schema.len() > 128 || code.len() > 128 {
             return;
         }
         let id = self.shared.next_event.fetch_add(1, Ordering::Relaxed);
-        let base = json!({"session":self.shared.session,"utc":Utc::now().to_rfc3339(),"monotonic_us":self.shared.started.elapsed().as_micros() as u64,"event_id":id,"context":context,"schema":schema,"code":code});
-        let records = encode_event(base, &payload);
-        let mut dropped = 0;
-        for record in records {
-            if let Err(TrySendError::Full(_) | TrySendError::Disconnected(_)) =
-                self.sender.try_send(record)
-            {
-                dropped += 1;
-            }
-        }
-        if dropped != 0 {
-            self.shared.dropped.fetch_add(dropped, Ordering::Relaxed);
+        let (payload, flags) = if payload.len() > PAYLOAD_MAX_BYTES {
+            (
+                Some(json!({"truncated":true,"payload_bytes":payload.len()}).to_string()),
+                FLAG_TRUNCATED,
+            )
+        } else if serde_json::from_str::<Value>(&payload).is_ok() {
+            (Some(payload), 0)
+        } else {
+            (None, FLAG_BAD_PAYLOAD)
+        };
+        let record = Record {
+            mono_ns: self
+                .shared
+                .started
+                .elapsed()
+                .as_nanos()
+                .min(u64::MAX as u128) as u64,
+            ts: now_ts(),
+            context,
+            schema,
+            code,
+            payload,
+            flags,
+        };
+        if let Err(TrySendError::Full(_) | TrySendError::Disconnected(_)) =
+            self.sender.try_send(record)
+        {
+            self.shared.dropped.fetch_add(1, Ordering::Relaxed);
             self.shared.incomplete.fetch_add(1, Ordering::Relaxed);
             self.shared.last_incomplete.store(id, Ordering::Relaxed);
         }
     }
 }
 
-// Leave room for worker ordinal (u64) and newline, measured on fully escaped JSON.
-const ORDINAL_RESERVE: usize = 40;
-fn encode_event(mut base: Value, payload: &str) -> Vec<Vec<u8>> {
-    if payload.len() > MAX_EVENT_BYTES {
-        base["oversized"] = json!(true);
-        base["payload_bytes"] = json!(payload.len());
-        return vec![base.to_string().into_bytes()];
+struct ActiveProducer<'a>(&'a AtomicUsize);
+impl Drop for ActiveProducer<'_> {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::SeqCst);
     }
-    if let Ok(value) = serde_json::from_str::<Value>(payload) {
-        base["payload"] = value;
-        let normal = base.to_string().into_bytes();
-        if normal.len() + ORDINAL_RESERVE <= RECORD_BYTES {
-            return vec![normal];
-        }
-        if let Some(object) = base.as_object_mut() {
-            object.remove("payload");
-        }
-    } else {
-        base["serialization_failed"] = json!(true);
-        return vec![base.to_string().into_bytes()];
+}
+
+fn db_err(error: rusqlite::Error) -> io::Error {
+    io::Error::other(error)
+}
+
+fn schema_sql() -> String {
+    let mut sql = String::from(
+        "CREATE TABLE IF NOT EXISTS diag_session(
+            id INTEGER PRIMARY KEY, session_id TEXT NOT NULL UNIQUE, started_ts TEXT NOT NULL,
+            ended_ts TEXT, version TEXT NOT NULL, profile TEXT NOT NULL,
+            dropped INTEGER NOT NULL DEFAULT 0, incomplete INTEGER NOT NULL DEFAULT 0,
+            disk_errors INTEGER NOT NULL DEFAULT 0, clean_exit INTEGER NOT NULL DEFAULT 0);\n",
+    );
+    let mut view = Vec::new();
+    for table in TABLES {
+        let module_col = if table == "diag_module" {
+            ", module TEXT NOT NULL"
+        } else {
+            ""
+        };
+        sql.push_str(&format!(
+            "CREATE TABLE IF NOT EXISTS {table}(
+                id INTEGER PRIMARY KEY, session_id TEXT NOT NULL, seq INTEGER NOT NULL,
+                mono_ns INTEGER NOT NULL, ts TEXT NOT NULL, code TEXT NOT NULL,
+                context TEXT NOT NULL, schema TEXT, payload TEXT,
+                flags INTEGER NOT NULL DEFAULT 0{module_col});
+            CREATE INDEX IF NOT EXISTS {table}_session_seq ON {table}(session_id, seq);
+            CREATE INDEX IF NOT EXISTS {table}_code ON {table}(code);\n"
+        ));
+        let module = if table == "diag_module" {
+            "module"
+        } else {
+            "NULL"
+        };
+        view.push(format!(
+            "SELECT '{table}' AS tbl, id, session_id, seq, mono_ns, ts, code, context, schema, payload, flags, {module} AS module FROM {table}"
+        ));
     }
-    // Measure the complete escaped record, including worst-case chunk metadata.
-    let mut template = base.clone();
-    template["chunk_index"] = json!(MAX_EVENT_BYTES);
-    template["chunk_count"] = json!(MAX_EVENT_BYTES);
-    template["start"] = json!(false);
-    template["end"] = json!(false);
-    let mut fragments = Vec::new();
-    let mut offset = 0;
-    while offset < payload.len() {
-        let mut end = (offset + 1024).min(payload.len());
-        loop {
-            while !payload.is_char_boundary(end) {
-                end -= 1;
+    sql.push_str(&format!(
+        "CREATE VIEW IF NOT EXISTS diag_timeline AS {} ORDER BY session_id, seq;",
+        view.join(" UNION ALL ")
+    ));
+    sql
+}
+
+struct Db {
+    conn: Connection,
+    session: String,
+    limits: Limits,
+    seq: i64,
+}
+impl Db {
+    fn open(dir: &Path, limits: Limits, session: String) -> io::Result<Self> {
+        if let Ok(meta) = fs::symlink_metadata(dir)
+            && (meta.file_type().is_symlink() || !meta.is_dir())
+        {
+            return Err(io::ErrorKind::InvalidInput.into());
+        }
+        fs::create_dir_all(dir)?;
+        remove_legacy_jsonl(dir);
+        let conn = Connection::open(dir.join(DB_FILE)).map_err(db_err)?;
+        conn.busy_timeout(Duration::from_secs(2)).map_err(db_err)?;
+        let auto: i64 = conn
+            .pragma_query_value(None, "auto_vacuum", |r| r.get(0))
+            .map_err(db_err)?;
+        if auto != 2 {
+            // Startup only: switching mode needs a VACUUM on an existing database.
+            conn.pragma_update(None, "auto_vacuum", 2).map_err(db_err)?;
+            conn.execute_batch("VACUUM").map_err(db_err)?;
+        }
+        conn.execute_batch(
+            "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA journal_size_limit=16777216;",
+        )
+        .map_err(db_err)?;
+        conn.execute_batch(&schema_sql()).map_err(db_err)?;
+        conn.execute(
+            "INSERT INTO diag_session(session_id, started_ts, version, profile) VALUES(?1, ?2, ?3, 'debug')",
+            params![session, now_ts(), env!("CARGO_PKG_VERSION")],
+        )
+        .map_err(db_err)?;
+        let mut db = Self {
+            conn,
+            session,
+            limits,
+            seq: 0,
+        };
+        let _ = db.prune(Utc::now());
+        Ok(db)
+    }
+
+    /// Insert records in one transaction. `seq` advances only on commit.
+    fn write_batch(&mut self, batch: &[Record]) -> rusqlite::Result<()> {
+        let tx = self.conn.transaction()?;
+        let mut seq = self.seq;
+        for record in batch {
+            seq += 1;
+            insert(&tx, &self.session, seq, record)?;
+        }
+        tx.commit()?;
+        self.seq = seq;
+        Ok(())
+    }
+
+    fn end_session(&self, shared: &Shared) {
+        let _ = self.conn.execute(
+            "UPDATE diag_session SET ended_ts=?1, dropped=?2, incomplete=?3, disk_errors=?4, clean_exit=1 WHERE session_id=?5",
+            params![
+                now_ts(),
+                shared.dropped.load(Ordering::Acquire) as i64,
+                shared.incomplete.load(Ordering::Acquire) as i64,
+                shared.disk_errors.load(Ordering::Acquire) as i64,
+                self.session
+            ],
+        );
+    }
+
+    fn live_bytes(&self) -> rusqlite::Result<u64> {
+        let pragma = |name: &str| -> rusqlite::Result<u64> {
+            self.conn
+                .pragma_query_value(None, name, |r| r.get::<_, i64>(0))
+                .map(|v| v.max(0) as u64)
+        };
+        let pages = pragma("page_count")?.saturating_sub(pragma("freelist_count")?);
+        Ok(pages * pragma("page_size")?)
+    }
+
+    fn prune(&mut self, now: DateTime<Utc>) -> rusqlite::Result<()> {
+        self.prune_by_age(now - chrono::Duration::days(self.limits.retention_days))?;
+        self.prune_by_size()
+    }
+
+    fn prune_by_age(&mut self, cutoff: DateTime<Utc>) -> rusqlite::Result<()> {
+        let cutoff = ts_of(cutoff);
+        for table in TABLES {
+            loop {
+                let deleted = self.conn.execute(
+                    &format!(
+                        "DELETE FROM {table} WHERE id IN (SELECT id FROM {table} WHERE ts < ?1 ORDER BY id LIMIT {PRUNE_BATCH})"
+                    ),
+                    params![cutoff],
+                )?;
+                if deleted < PRUNE_BATCH {
+                    break;
+                }
             }
-            template["chunk"] = json!(&payload[offset..end]);
-            if template.to_string().len() + ORDINAL_RESERVE <= RECORD_BYTES {
+        }
+        self.conn.execute(
+            "DELETE FROM diag_session WHERE session_id <> ?1 AND COALESCE(ended_ts, started_ts) < ?2",
+            params![self.session, cutoff],
+        )?;
+        Ok(())
+    }
+
+    /// Drop the oldest tenth of every table per round until the live size fits.
+    fn prune_by_size(&mut self) -> rusqlite::Result<()> {
+        if self.live_bytes()? <= self.limits.max_bytes {
+            return Ok(());
+        }
+        for _ in 0..200 {
+            if self.live_bytes()? <= self.limits.max_bytes {
                 break;
             }
-            end = offset + (end - offset) / 2;
-            if end == offset {
-                return vec![
-                    json!({"code":"diagnostics.invalid_metadata"})
-                        .to_string()
-                        .into_bytes(),
-                ];
+            let mut removed = 0;
+            for table in TABLES {
+                let count: i64 =
+                    self.conn
+                        .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0))?;
+                let batch = count / 10 + 1;
+                removed += self.conn.execute(
+                    &format!(
+                        "DELETE FROM {table} WHERE id IN (SELECT id FROM {table} ORDER BY id LIMIT {batch})"
+                    ),
+                    [],
+                )?;
+            }
+            if removed == 0 {
+                break;
             }
         }
-        fragments.push(&payload[offset..end]);
-        offset = end;
+        self.conn.execute(
+            "DELETE FROM diag_session WHERE session_id <> ?1 AND NOT EXISTS (SELECT 1 FROM diag_timeline t WHERE t.session_id = diag_session.session_id)",
+            params![self.session],
+        )?;
+        // incremental_vacuum frees one page per step: drain every row.
+        {
+            let mut stmt = self.conn.prepare("PRAGMA incremental_vacuum")?;
+            let mut rows = stmt.query([])?;
+            while rows.next()?.is_some() {}
+        }
+        self.conn
+            .query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |_| Ok(()))?;
+        Ok(())
     }
-    let count = fragments.len();
-    fragments
-        .into_iter()
-        .enumerate()
-        .map(|(index, chunk)| {
-            let mut record = base.clone();
-            record["chunk"] = json!(chunk);
-            record["chunk_index"] = json!(index);
-            record["chunk_count"] = json!(count);
-            record["start"] = json!(index == 0);
-            record["end"] = json!(index + 1 == count);
-            record.to_string().into_bytes()
-        })
-        .collect()
+}
+
+fn insert(tx: &Transaction, session: &str, seq: i64, r: &Record) -> rusqlite::Result<()> {
+    let route = route(&r.code);
+    let mono = r.mono_ns.min(i64::MAX as u64) as i64;
+    let common = "session_id, seq, mono_ns, ts, code, context, schema, payload, flags";
+    match route.module {
+        Some(module) => tx
+            .prepare_cached(&format!(
+                "INSERT INTO diag_module({common}, module) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)"
+            ))?
+            .execute(params![
+                session, seq, mono, r.ts, r.code, r.context, r.schema, r.payload, r.flags, module
+            ]),
+        None => tx
+            .prepare_cached(&format!(
+                "INSERT INTO {}({common}) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9)",
+                route.table
+            ))?
+            .execute(params![
+                session, seq, mono, r.ts, r.code, r.context, r.schema, r.payload, r.flags
+            ]),
+    }
+    .map(|_| ())
 }
 
 pub(super) fn start_writer(
@@ -229,12 +499,12 @@ pub(super) fn start_writer(
         session: uuid::Uuid::new_v4().to_string(),
         started: Instant::now(),
     });
-    let ring = Ring::new(dir, limits, shared.session.clone())?;
+    let db = Db::open(&dir, limits, shared.session.clone())?;
     let (sender, receiver) = mpsc::sync_channel(QUEUE_RECORDS);
     let state = shared.clone();
     let worker = thread::Builder::new()
         .name("tmc-diagnostics".into())
-        .spawn(move || run_worker(ring, receiver, state))?;
+        .spawn(move || run_worker(db, receiver, state))?;
     Ok((
         DiagnosticLayer {
             sender,
@@ -247,224 +517,141 @@ pub(super) fn start_writer(
     ))
 }
 
-struct ActiveProducer<'a>(&'a AtomicUsize);
-impl Drop for ActiveProducer<'_> {
-    fn drop(&mut self) {
-        self.0.fetch_sub(1, Ordering::SeqCst);
+struct Output {
+    db: Db,
+    shared: Arc<Shared>,
+    failed: bool,
+}
+impl Output {
+    /// Write the batch plus pending loss counters; on failure mark once and drop everything.
+    fn flush(&mut self, batch: &mut Vec<Record>) {
+        if self.failed {
+            // Counters stay as the only evidence; there is no alternative destination.
+            self.shared
+                .dropped
+                .fetch_add(batch.len() as u64, Ordering::Relaxed);
+            batch.clear();
+            return;
+        }
+        let dropped = self.shared.dropped.swap(0, Ordering::AcqRel);
+        let incomplete = self.shared.incomplete.swap(0, Ordering::AcqRel);
+        if dropped != 0 || incomplete != 0 {
+            batch.push(Record::marker(
+                &self.shared,
+                "diagnostics.incomplete",
+                json!({"dropped_records":dropped,"incomplete_events":incomplete,"last_event_id":self.shared.last_incomplete.load(Ordering::Acquire)}),
+                FLAG_DROPPED | FLAG_INCOMPLETE,
+            ));
+        }
+        if batch.is_empty() {
+            return;
+        }
+        if self.db.write_batch(batch).is_err() {
+            self.failed = true;
+            self.shared.disk_errors.fetch_add(1, Ordering::Relaxed);
+            self.shared
+                .dropped
+                .fetch_add(batch.len() as u64, Ordering::Relaxed);
+            eprintln!("TMC diagnostics: disk_write_failed");
+        }
+        batch.clear();
     }
 }
 
-struct Output {
-    ring: Ring,
-    shared: Arc<Shared>,
-    ordinal: u64,
-}
-impl Output {
-    fn write(&mut self, mut bytes: Vec<u8>) -> bool {
-        self.ordinal += 1;
-        if bytes.pop() != Some(b'}') {
-            return false;
-        }
-        bytes.extend_from_slice(format!(",\"ordinal\":{}}}\n", self.ordinal).as_bytes());
-        if self.ring.write(&bytes, Utc::now()).is_err() {
-            self.shared.disk_errors.fetch_add(1, Ordering::Relaxed);
-            eprintln!("TMC diagnostics: disk_write_failed");
-            return false;
-        }
-        true
-    }
-    fn marker(&mut self, code: &str, details: Value) -> bool {
-        self.write(json!({"session":self.shared.session,"utc":Utc::now().to_rfc3339(),"monotonic_us":self.shared.started.elapsed().as_micros() as u64,"code":code,"details":details}).to_string().into_bytes())
-    }
-    fn losses(&mut self) {
-        let dropped = self.shared.dropped.swap(0, Ordering::AcqRel);
-        let incomplete = self.shared.incomplete.swap(0, Ordering::AcqRel);
-        let disk = self.shared.disk_errors.swap(0, Ordering::AcqRel);
-        if (dropped != 0 || incomplete != 0 || disk != 0)
-            && !self.marker("diagnostics.incomplete", json!({"dropped_records":dropped,"incomplete_events":incomplete,"last_event_id":self.shared.last_incomplete.load(Ordering::Acquire),"disk_errors":disk})) {
-                self.shared.dropped.fetch_add(dropped, Ordering::Relaxed);
-                self.shared.incomplete.fetch_add(incomplete, Ordering::Relaxed);
-                self.shared.disk_errors.fetch_add(disk, Ordering::Relaxed);
-        }
-    }
-    fn flush(&mut self) {
-        if self.ring.flush().is_err() {
-            self.shared.disk_errors.fetch_add(1, Ordering::Relaxed);
-            eprintln!("TMC diagnostics: disk_flush_failed");
-        }
-    }
-}
-fn run_worker(ring: Ring, receiver: Receiver<Vec<u8>>, shared: Arc<Shared>) {
+fn run_worker(db: Db, receiver: Receiver<Record>, shared: Arc<Shared>) {
+    let interval = db.limits.batch_interval;
+    let capacity = db.limits.batch_records;
+    let prune_every = db.limits.prune_interval;
     let mut output = Output {
-        ring,
+        db,
         shared,
-        ordinal: 0,
+        failed: false,
     };
-    output.marker("diagnostics.start", json!({"version":env!("CARGO_PKG_VERSION"),"profile":"debug","segment_bytes":output.ring.limits.segment_bytes,"segments":output.ring.limits.segments}));
+    let mut batch = Vec::with_capacity(capacity);
+    batch.push(Record::marker(
+        &output.shared,
+        "diagnostics.start",
+        json!({"version":env!("CARGO_PKG_VERSION"),"profile":"debug"}),
+        0,
+    ));
     let mut flushed = Instant::now();
+    let mut pruned = Instant::now();
     loop {
         if output.shared.closing.load(Ordering::SeqCst)
             && output.shared.active.load(Ordering::SeqCst) == 0
         {
             while let Ok(record) = receiver.try_recv() {
-                output.write(record);
+                batch.push(record);
+                if batch.len() >= capacity {
+                    output.flush(&mut batch);
+                }
             }
             break;
         }
-        match receiver.recv_timeout(Duration::from_millis(250)) {
+        match receiver.recv_timeout(interval) {
             Ok(record) => {
-                output.write(record);
+                batch.push(record);
+                if batch.len() >= capacity {
+                    output.flush(&mut batch);
+                    flushed = Instant::now();
+                }
             }
             Err(mpsc::RecvTimeoutError::Disconnected) => break,
             Err(mpsc::RecvTimeoutError::Timeout) => {}
         }
-        if flushed.elapsed() >= Duration::from_millis(250) {
-            output.losses();
-            output.flush();
+        if flushed.elapsed() >= interval {
+            output.flush(&mut batch);
             flushed = Instant::now();
         }
+        if !output.failed && pruned.elapsed() >= prune_every {
+            let _ = output.db.prune(Utc::now());
+            pruned = Instant::now();
+        }
     }
-    output.losses();
-    output.marker("diagnostics.stop", json!({"drained":true}));
-    output.flush();
+    output.flush(&mut batch);
+    batch.push(Record::marker(
+        &output.shared,
+        "diagnostics.stop",
+        json!({"drained":true}),
+        0,
+    ));
+    output.flush(&mut batch);
+    output.db.end_session(&output.shared);
     let errors = output.shared.disk_errors.load(Ordering::Acquire);
     if errors != 0 {
         eprintln!("TMC diagnostics: shutdown_disk_errors count={errors}");
     }
 }
 
-struct Ring {
-    dir: PathBuf,
-    limits: Limits,
-    session: String,
-    segment: u64,
-    current: Option<BufWriter<File>>,
-    bytes: usize,
-    day: String,
-}
-impl Ring {
-    fn new(dir: PathBuf, limits: Limits, session: String) -> io::Result<Self> {
-        if let Ok(meta) = fs::symlink_metadata(&dir)
-            && (meta.file_type().is_symlink() || !meta.is_dir())
-        {
-            return Err(io::ErrorKind::InvalidInput.into());
-        }
-        fs::create_dir_all(&dir)?;
-        let mut ring = Self {
-            dir,
-            limits,
-            session,
-            segment: 0,
-            current: None,
-            bytes: 0,
-            day: String::new(),
-        };
-        ring.rotate(Utc::now())?;
-        Ok(ring)
-    }
-    fn rotate(&mut self, now: DateTime<Utc>) -> io::Result<()> {
-        self.flush()?;
-        self.current = None;
-        // Reserve the next slot before creating it. If an old file is locked,
-        // leave no current segment and retry cleanup on the next write.
-        self.cleanup(now)?;
-        self.day = now.format("%Y%m%d").to_string();
-        self.segment += 1;
-        let name = format!(
-            "tmc-debug-{}-{}-{:010}.jsonl",
-            now.format("%Y%m%dT%H%M%S%.9fZ"),
-            self.session,
-            self.segment
-        );
-        let file = OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(self.dir.join(name))?;
-        self.current = Some(BufWriter::with_capacity(32 * 1024, file));
-        self.bytes = 0;
-        Ok(())
-    }
-    fn cleanup(&self, now: DateTime<Utc>) -> io::Result<()> {
-        let mut files = owned_files(&self.dir)?;
-        files.sort_by(|a, b| a.0.cmp(&b.0));
-        let mut remaining = files.len();
-        for (_, path, date) in files {
-            if remaining >= self.limits.segments
-                || now.signed_duration_since(date).num_days() >= self.limits.retention_days
-            {
-                fs::remove_file(path)?;
-                remaining -= 1;
-            }
-        }
-        Ok(())
-    }
-    fn write(&mut self, bytes: &[u8], now: DateTime<Utc>) -> io::Result<()> {
-        if self.current.is_none()
-            || self.day != now.format("%Y%m%d").to_string()
-            || self.bytes + bytes.len() > self.limits.segment_bytes
-        {
-            self.rotate(now)?;
-        }
-        let result = self
-            .current
-            .as_mut()
-            .ok_or(io::ErrorKind::NotConnected)?
-            .write_all(bytes);
-        if result.is_err() {
-            self.current = None;
-        } else {
-            self.bytes += bytes.len();
-        }
-        result
-    }
-    fn flush(&mut self) -> io::Result<()> {
-        let result = match self.current.as_mut() {
-            Some(file) => file.flush(),
-            None => Ok(()),
-        };
-        if result.is_err() {
-            self.current = None;
-        }
-        result
-    }
-}
-impl Drop for Ring {
-    fn drop(&mut self) {
-        let _ = self.flush();
-    }
-}
-fn owned_files(dir: &Path) -> io::Result<Vec<(String, PathBuf, DateTime<Utc>)>> {
-    let mut owned = Vec::new();
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        if !entry.file_type()?.is_file() {
-            continue;
-        }
+/// One-time migration: remove only our own legacy circular JSONL files.
+fn remove_legacy_jsonl(dir: &Path) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
         let name = entry.file_name().to_string_lossy().into_owned();
-        let Some(rest) = name
-            .strip_prefix("tmc-debug-")
-            .and_then(|s| s.strip_suffix(".jsonl"))
-        else {
-            continue;
-        };
-        let Some((date, tail)) = rest.split_once('-') else {
-            continue;
-        };
-        let Some((session, segment)) = tail.rsplit_once('-') else {
-            continue;
-        };
-        if uuid::Uuid::parse_str(session).is_err()
-            || segment.len() != 10
-            || !segment.bytes().all(|c| c.is_ascii_digit())
-        {
-            continue;
+        if is_legacy_name(&name) && entry.file_type().is_ok_and(|t| t.is_file()) {
+            let _ = fs::remove_file(entry.path());
         }
-        let Ok(date) = chrono::NaiveDateTime::parse_from_str(date, "%Y%m%dT%H%M%S%.9fZ") else {
-            continue;
-        };
-        owned.push((name, entry.path(), date.and_utc()));
     }
-    Ok(owned)
+}
+fn is_legacy_name(name: &str) -> bool {
+    let Some(rest) = name
+        .strip_prefix("tmc-debug-")
+        .and_then(|s| s.strip_suffix(".jsonl"))
+    else {
+        return false;
+    };
+    let Some((date, tail)) = rest.split_once('-') else {
+        return false;
+    };
+    let Some((session, segment)) = tail.rsplit_once('-') else {
+        return false;
+    };
+    uuid::Uuid::parse_str(session).is_ok()
+        && segment.len() == 10
+        && segment.bytes().all(|c| c.is_ascii_digit())
+        && chrono::NaiveDateTime::parse_from_str(date, "%Y%m%dT%H%M%S%.9fZ").is_ok()
 }
 
 #[cfg(test)]
