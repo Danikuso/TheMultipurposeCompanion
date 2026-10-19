@@ -290,7 +290,15 @@ La procedencia declarada en los archivos y la decisión de construcción están 
 | `crates/tmc-modules/data/bio_rules.json` | 90 reglas redactadas por TMC a partir de condiciones conocidas del juego; estructura propia. | Condiciones y límites pendientes de contraste con historial; referencia adicional en `docs/research/notes/bio_rules_f1.md`. |
 | `crates/tmc-modules/data/probes.json` | 7 bandas de radio con estimación de sondas; hechos transcritos por TMC. | Entradas `verified: false`; la UI identifica la estimación. |
 
-Las menciones de SrvSurvey en `bio_rules.json` explican su exclusión como fuente; no son código ni datos importados. Las búsquedas en `crates/`, `ui/src/` y `locales/` solo encuentran esas declaraciones de procedencia. No se incorporan tablas de wikis, Coriolis, EDSY ni datos de Canonn. El adaptador Canonn permanece desactivado hasta confirmar el permiso formal de uso por red ([spike_canonn_f1.md](docs/research/notes/spike_canonn_f1.md)); sus fixtures son sintéticos.
+Las menciones de SrvSurvey en `bio_rules.json` explican su exclusión como fuente; no son código ni datos importados. Las búsquedas en `crates/`, `ui/src/` y `locales/` solo encuentran esas declaraciones de procedencia. No se incorporan tablas de wikis, Coriolis, EDSY ni datos de Canonn. Canonn se usa solo como servicio de red (véase «Canonn» más abajo); sus fixtures son sintéticos.
+
+## Servicio de red de exobiología (capa 3)
+
+### Canonn (servicio de red GPL-3.0, no incorporado)
+- Uso: consultas HTTP de solo lectura desde `tmc-net` (`getSystemPoi` por nombre de sistema y `codex/ref` de Biología) para refinar la predicción de especies con observaciones de otros comandantes. Activo desde 2026-10-19 con **permiso de Canonn** obtenido por el propietario ([spike_canonn_f1.md](docs/research/notes/spike_canonn_f1.md)).
+- Licencia de sus datos y código: GPL-3.0. TMC lo utiliza **únicamente por red**; no se copia ni se enlaza su código ni se incorporan sus datos al repositorio (los fixtures son sintéticos). Las respuestas solo se guardan en la caché local con caducidad.
+- Privacidad: solo salen el nombre del sistema y la categoría `Biology`; nunca nombre de comandante, FID ni otros datos del jugador. Límite propio de 1 petición/s.
+- Opt-out: se desactiva con las consultas a servicios en línea; desactivado no se realiza ninguna petición. No se consulta en la galaxia Legacy ni durante el replay del diario.
 
 ## Servicios de red y datos de F2 (combate y minería)
 

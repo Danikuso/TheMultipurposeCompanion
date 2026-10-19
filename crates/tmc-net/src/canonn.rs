@@ -1,11 +1,12 @@
-//! Adaptador puro de Canonn (`getSystemPoi`). En F1 la capa 3 está DESACTIVADA
-//! (decisión del propietario: falta el permiso formal de Canonn); estas
-//! funciones existen y están probadas, pero `NetClient` no las invoca.
+//! Adaptador puro de Canonn (`getSystemPoi` y `codex/ref`), capa 3 de la
+//! exobiología. Activa con permiso de Canonn (el propietario lo obtuvo): solo se
+//! consume por red, sin copiar sus datos al repo. Por la red solo salen el
+//! nombre del sistema y la categoría; nunca datos del jugador.
 
 use crate::jsonx;
 use crate::transport::url_encode;
 use serde_json::Value;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use tmc_model::net::{NetFailure, RemoteBodyBio, RemoteSpeciesHint};
 
 pub const BASE: &str = "https://us-central1-canonn-api-236217.cloudfunctions.net/query";
@@ -17,6 +18,38 @@ pub fn body_url(system_name: &str) -> String {
         "{BASE}/getSystemPoi?system={}&odyssey=Y",
         url_encode(system_name)
     )
+}
+
+/// Referencia del códex de Biología (`entryid` -> nombre). Sin parámetros del
+/// usuario; se descarga una vez y se reutiliza en memoria.
+pub fn codex_ref_url() -> String {
+    format!("{BASE}/codex/ref?category=Biology")
+}
+
+/// `codex/ref` -> `entryid` -> `(género, especie)`. El género es `sub_class`
+/// (p. ej. `Electricae`) y la especie el `english_name` sin la variante tras
+/// `" - "` (p. ej. `Electricae Pluma`). Las filas incompletas se omiten.
+pub fn parse_codex_ref(body: &str) -> Result<HashMap<u64, (String, String)>, NetFailure> {
+    let v = jsonx::parse(body)?;
+    let root = jsonx::as_obj(&v)?;
+    let mut map = HashMap::new();
+    for row in root.values() {
+        let Ok(row) = jsonx::as_obj(row) else {
+            continue;
+        };
+        let (Ok(entry), Ok(Some(name)), Ok(Some(genus))) = (
+            jsonx::req_u64(row, "entryid"),
+            jsonx::opt_str(row, "english_name"),
+            jsonx::opt_str(row, "sub_class"),
+        ) else {
+            continue;
+        };
+        let species = name.split(" - ").next().unwrap_or(&name).trim().to_string();
+        if !species.is_empty() && !genus.trim().is_empty() {
+            map.insert(entry, (genus.trim().to_string(), species));
+        }
+    }
+    Ok(map)
 }
 
 /// Nombre del cuerpo sin el prefijo `<sistema> ` (sin distinguir mayúsculas).
@@ -121,6 +154,32 @@ mod tests {
             body_url("HIP 1727"),
             "https://us-central1-canonn-api-236217.cloudfunctions.net/query/getSystemPoi?system=HIP%201727&odyssey=Y"
         );
+    }
+
+    #[test]
+    fn codex_ref_url_is_biology_only() {
+        assert_eq!(
+            codex_ref_url(),
+            "https://us-central1-canonn-api-236217.cloudfunctions.net/query/codex/ref?category=Biology"
+        );
+    }
+
+    #[test]
+    fn codex_ref_maps_entry_to_genus_and_species() {
+        let body = r#"{
+          "1": {"entryid": 1, "english_name": "Electricae Pluma - Red", "sub_class": "Electricae", "hud_category": "Biology"},
+          "2": {"entryid": 2, "english_name": "Roseum Brain Tree", "sub_class": "Brain Tree"},
+          "3": {"entryid": 3, "sub_class": "Sin nombre"},
+          "4": 7
+        }"#;
+        let m = parse_codex_ref(body).unwrap();
+        assert_eq!(m.len(), 2);
+        assert_eq!(
+            m[&1],
+            ("Electricae".to_string(), "Electricae Pluma".to_string())
+        );
+        assert_eq!(m[&2].1, "Roseum Brain Tree");
+        assert_eq!(parse_codex_ref("["), Err(NetFailure::Malformed));
     }
 
     #[test]
