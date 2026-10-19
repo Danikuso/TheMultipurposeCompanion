@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-19 17:25 (Europe/Madrid) · Claude Opus 5.5
+- **Última actualización:** 2026-10-19 17:45 (Europe/Madrid) · Claude Opus 5.5
 - **Fase actual:** F2 — Combate y minería (✅ completada y fusionada en `main` en `e069a14`). F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) — ✅ aprobada (2026-10-18); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
 - **Plan activo:** [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) — ✅ 29/29 tareas. Anteriores: F1 ✅ 33/33, F0 ✅ 19/19
@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** preparar la spec de F3 según la hoja de ruta (spec de arquitectura §13) con el propietario. Pendientes del propietario en «Bloqueos» (rangos de combate es/de/pt, Canonn, CAPI/Inara/EDSM).
+- **Siguiente acción:** preparar la spec de F3 según la hoja de ruta (spec de arquitectura §13) con el propietario. Cuentas de CAPI/Inara/EDSM en proceso de aprobación (necesarias en F6).
 
 ## Fases
 
@@ -135,7 +135,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [x] **F2 · Criterio 9 (consumo con ventana):** ✅ medido 2026-10-19 (112,7 MB / 0 % CPU). Antes: cierra tu TMC.exe (PID 3808 ocupa 47320 y la instancia única impide otra) y ejecuta `pwsh scripts/measure-footprint.ps1 -Exe target-f2/release/TMC.exe -JournalDir .tmp/footprint-f2 -FixturePath tests/fixtures/journal/combat_session.log -ShowWindow -Seconds 120` y lo mismo con `mining_session.log`; o autoriza al agente a cerrarlo y medir. Límite < 150 MB y < 1 % CPU.
 - [ ] **F2 · Eval sobre tu historial:** vales INSUFICIENTE (el único canje incluye vales ganados antes del primer diario) y minería sin datos (n=0). `tmc-headless eval` queda listo para validar con futuras sesiones de caza/minería.
 
-- [ ] **F2 · Nombres de rangos de combate** en es/de/pt escritos por el agente; confírmalos con los del juego cuando puedas (no bloquea).
+- [x] **F2 · Nombres de rangos de combate:** decidido 2026-10-19 → se mantienen **en inglés** en todos los idiomas, como en el juego (`4e75386`).
 
 - [ ] **F2 · Resultados de los spikes (para tu visto bueno; F2 sigue avanzando):**
   - **AX:** tus 7 diarios no tienen ningún dato AX. Los paneles AX se construyen con nombres de eventos y naves de fuentes secundarias, marcados como no verificados, y se prueban con datos sintéticos; se ajustarán cuando juegues una sesión AX.
@@ -146,7 +146,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [x] **F1 · Corrección de spec §5.1:** propietario aprueba explícitamente el 2026-10-18 validar MaxJumpRange con masa en vacío más combustible máximo por salto (no depósito lleno). Spec actualizada; evidencia de 15 loadouts en Task 29. Código ya alineado.
 - [x] **F1 · Cierre con el historial local actual (7 diarios):** propietario ordena finalizar F1 (2026-10-18). Los criterios 3, 4 y 6 pasan en fixtures y los 15/15 loadouts locales coinciden (±0,0023 al); `tmc-headless eval` queda disponible para validar futuras sesiones con FSD de ingeniería/Guardian, ventas de exploración cubiertas y exobiología.
 - [x] **Sincronización de F1:** propietario autoriza explícitamente push de `fase/f1-navegacion-exploracion` al repo privado Danikuso/TheMultipurposeCompanion (2026-10-18). Rechazo previo resuelto por esta autorización; push ejecutado correctamente hasta 3656ee3, los cierres siguientes se sincronizarán tras verificar.
-- [ ] **F1 · Canonn (capa 3 de exobiología)** — decidido 2026-10-17: queda **desactivada**; el propietario solicitará permiso a Canonn **sin enviar datos de usuarios**. Pendiente: respuesta de Canonn. Mientras tanto, F1 funciona con reglas propias + historial.
+- [x] **F1 · Canonn (capa 3 de exobiología):** el propietario **tiene el permiso** de Canonn (2026-10-19) → capa activada (`4f33956`, `7c35289`, `0ff96f1`): solo se envía el nombre del sistema (`getSystemPoi`) y la categoría (`codex/ref`), nunca datos del comandante; 1 petición/s con semáforo propio, timeout 15 s, caché persistente; respeta opt-out, Legacy y replay.
 - [x] **F1 · Nombres de especies:** propietario aprueba aplazar tabla propia por idioma; F1 usa `_Localised` del diario y nombre latino de respaldo (2026-10-18). Spec §8 y plan actualizados.
 - [x] **F1 — plan aprobado** (2026-10-17).
 - [x] **F1 — dónde vive `eval`:** resuelto → `tmc-headless eval`.
@@ -154,8 +154,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [x] **F1 — spec aprobada** y **F0 fusionada en `main`** (2b953e6, merge --no-ff; re-verificado: fmt, clippy y 150 tests PASS). Sin push.
 - [x] **Antes de Task 8 — dependencia arquitectónica aprobada:** spec §3.1 permite tmc-store→tmc-model, pero Task 8 requiere también tmc-journal para list_journals/LineTailer. Propuesta concreta en el plan: permitir tmc-store→tmc-journal (sin ciclos, sin cambiar interfaces). El propietario aprobó explícitamente añadir la dependencia; spec §3.1 sincronizada. Tasks 6–7 continúan.
 - [x] **Discrepancia de seguimiento resuelta por autorización del propietario (2026-10-17):** al abrir la sesión, Task 4 figuraba pendiente y en Step 1, pero `git log` y `git show --stat` confirman `70e4999` (GameState, SourceEvent, HudTheme y reductores) y `177eac1` (correcciones de reductores). Además, la siguiente acción apuntaba a Task 2, ya marcada hecha, y F0 figura «sin empezar» pese a Tasks 0–3 hechas. La spec conserva «pendiente de revisión» mientras esta cabecera la declara aprobada. El propietario confirmó «Sí, hazlo»: aprobación de spec y plan válida; se autoriza revisar y verificar Task 4 y continuar con Task 5 si pasa.
-- [ ] **CAPI de Frontier:** solicitud de cliente en user.frontierstore.net (scopes `auth` + `capi`). Pendiente confirmar que se envió y recibir el Client ID → guardarlo en `.env` como `TMC_CAPI_CLIENT_ID` (nunca en el repo). Necesario en F6.
-- [ ] **Inara:** la clave personal se pegó en el chat el 2026-10-17 → regenerarla antes de usarla en TMC. Whitelisting del nombre `TheMultipurposeCompanion` cuando haya versión funcional (F6).
+- [ ] **(en aprobación 2026-10-19) CAPI de Frontier:** solicitud de cliente en user.frontierstore.net (scopes `auth` + `capi`). Pendiente confirmar que se envió y recibir el Client ID → guardarlo en `.env` como `TMC_CAPI_CLIENT_ID` (nunca en el repo). Necesario en F6.
+- [ ] **(en aprobación 2026-10-19) Inara:** la clave personal se pegó en el chat el 2026-10-17 → regenerarla antes de usarla en TMC. Whitelisting del nombre `TheMultipurposeCompanion` cuando haya versión funcional (F6).
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
 
 ## Decisiones tomadas
@@ -187,6 +187,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
+- 2026-10-19 17:45 (Europe/Madrid) · Claude Opus 5.5 · Respuestas del propietario: rangos de combate en inglés (`4e75386`); permiso de Canonn obtenido → capa 3 activada y revisada (`4f33956`, `7c35289`, `0ff96f1`; 768 tests Rust PASS); cuentas CAPI/Inara/EDSM en aprobación.
 - 2026-10-19 17:25 (Europe/Madrid) · Claude Opus 5.5 · Propietario autoriza la fusión: `fase/f2-combate-mineria` fusionada en `main` (`e069a14`, --no-ff). Sobre `main`: fmt/clippy limpios, 755 tests Rust PASS, svelte-check 0 errores, 144 vitest PASS, build OK. `main` subida a GitHub privado.
 - 2026-10-19 14:35 (Europe/Madrid) · Claude Opus 5.5 · F2 ejecutada con subagentes (Tasks 19–28) y cerrada: 10/10 criterios PASS con evidencias en el plan; footprint con ventana 112,7 MB / 0 % CPU; revisión final de rama (Opus) con 1 crítico corregido (acciones reset de combate/minería no llegaban al núcleo, `c54a541`) y robustez (`cb484d8`); `core.clock` para la hora del diario en paneles. Rama `fase/f2-combate-mineria` subida; falta fusionar en `main` con autorización del propietario.
 - 2026-10-18 20:56 (Europe/Madrid) · Antigravity · Solicitud del propietario completada: añadida visualización de todos los tipos de estrellas del sistema actual en la vista de exploración (commit `6e4276e`). Incluye `star_classes` ordenadas y desduplicadas en `SystemTopic`, insignias por tipo con marcado repostable en `SystemBodiesPanel`, reflejo en la tarjeta de `RouteStrip` y textos en los 5 idiomas. 527 tests Rust PASS, 91 tests Vitest PASS, svelte-check y build en verde.
