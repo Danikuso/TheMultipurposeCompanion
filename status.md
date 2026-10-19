@@ -2,16 +2,16 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-19 14:25 (Europe/Madrid) · Claude Opus 5.5
-- **Fase actual:** F2 — Combate y minería (🔄 Tasks 0–27 ✅; Task 28 de cierre pendiente solo del criterio 9 con ventana). F1 ✅ fusionada en `main` (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Última actualización:** 2026-10-19 14:35 (Europe/Madrid) · Claude Opus 5.5
+- **Fase actual:** F2 — Combate y minería (✅ 29/29 tareas y 10/10 criterios; pendiente de fusionar en `main`). F1 ✅ fusionada en `main` (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) — ✅ aprobada (2026-10-18); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
-- **Plan activo:** [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) — 🔄 28/29 tareas. Anteriores: F1 ✅ 33/33, F0 ✅ 19/19
+- **Plan activo:** [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) — ✅ 29/29 tareas. Anteriores: F1 ✅ 33/33, F0 ✅ 19/19
 - **Rama de trabajo:** `fase/f2-combate-mineria` (subida a GitHub privado; CI desactivado por orden del propietario)
 
 ## Puntero actual
 
 - **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** el propietario mide el criterio 9 con ventana (ver «Bloqueos»); si < 150 MB y < 1 % CPU, marcar Task 28 ✅, anotar la medición en «Verificación F2» y fusionar la rama en `main`. Revisión final de rama hecha: hallazgos corregidos en `c54a541`, `cb484d8`. Ledger en `.superpowers/sdd/2026-10-18-tmc-f2-combate-mineria/progress.md`.
+- **Siguiente acción:** fusionar `fase/f2-combate-mineria` en `main` cuando el propietario lo autorice (revisión final aprobada, criterios verificados con evidencias en «Verificación F2» del plan); después, spec de F3 según la hoja de ruta (spec de arquitectura §13).
 
 ## Fases
 
@@ -63,7 +63,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 25 | UI — disposiciones «Combate» y «Minería», relevancia y ajustes | ✅ hecha | f0c843a, 38568cf | Disposiciones Combate/Minería, vuelta a auto, ajustes de minería |
 | 26 | fixtures sintéticos y pruebas de extremo a extremo | ✅ hecha | 05663ac, b50630b | Fixtures sintéticos + e2e (Playwright 5/5); ráfaga p95 ~311 ms |
 | 27 | `tmc-headless eval` — vales y rendimiento de asteroides | ✅ hecha | 996fae3, 81352c0, 606fcc1 | Eval vales/rendimiento; historial propietario: vales INSUFICIENTE (canje incluye vales previos al primer diario), minería sin datos |
-| 28 | avisos, consumo, verificación de los 10 criterios y cierre | 🔄 en curso | 9b2f5bf, fdcbfca | Criterios 1–8 y 10 PASS (750 tests Rust, 144 vitest, 5 e2e). Criterio 9 PARCIAL: núcleo 10 MB / CPU reposo < 0,25 %; falta medir con ventana (WebView2) — TMC.exe del propietario abierto lo impide. Pendiente revisión final de rama. |
+| 28 | avisos, consumo, verificación de los 10 criterios y cierre | ✅ hecha | 9b2f5bf, fdcbfca, c54a541, cb484d8 | 10/10 criterios PASS (750+ tests Rust, 144 vitest, 5 e2e). Footprint con ventana: combate 112,7 MB, minería 111,5 MB, CPU en reposo 0 %. Revisión final de rama: «Ready to merge» tras corregir acciones reset de combate/minería (no llegaban al núcleo) y reinicio por comandante. |
 
 ## Tareas de F1
 
@@ -132,7 +132,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 18 | Presupuesto de consumo y cierre de F0 | ✅ hecha | fe99cd6 | `measure-footprint.ps1` (`max_mb=144.91` < 150, `avg_cpu_idle=0.09%` < 1% PASS), `README.md` y 9/9 criterios §15 verificados. |
 
 ## Bloqueos y pendientes del propietario
-- [ ] **F2 · Criterio 9 (consumo con ventana):** cierra tu TMC.exe (PID 3808 ocupa 47320 y la instancia única impide otra) y ejecuta `pwsh scripts/measure-footprint.ps1 -Exe target-f2/release/TMC.exe -JournalDir .tmp/footprint-f2 -FixturePath tests/fixtures/journal/combat_session.log -ShowWindow -Seconds 120` y lo mismo con `mining_session.log`; o autoriza al agente a cerrarlo y medir. Límite < 150 MB y < 1 % CPU.
+- [x] **F2 · Criterio 9 (consumo con ventana):** ✅ medido 2026-10-19 (112,7 MB / 0 % CPU). Antes: cierra tu TMC.exe (PID 3808 ocupa 47320 y la instancia única impide otra) y ejecuta `pwsh scripts/measure-footprint.ps1 -Exe target-f2/release/TMC.exe -JournalDir .tmp/footprint-f2 -FixturePath tests/fixtures/journal/combat_session.log -ShowWindow -Seconds 120` y lo mismo con `mining_session.log`; o autoriza al agente a cerrarlo y medir. Límite < 150 MB y < 1 % CPU.
 - [ ] **F2 · Eval sobre tu historial:** vales INSUFICIENTE (el único canje incluye vales ganados antes del primer diario) y minería sin datos (n=0). `tmc-headless eval` queda listo para validar con futuras sesiones de caza/minería.
 
 - [ ] **F2 · Nombres de rangos de combate** en es/de/pt escritos por el agente; confírmalos con los del juego cuando puedas (no bloquea).
@@ -187,6 +187,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
+- 2026-10-19 14:35 (Europe/Madrid) · Claude Opus 5.5 · F2 ejecutada con subagentes (Tasks 19–28) y cerrada: 10/10 criterios PASS con evidencias en el plan; footprint con ventana 112,7 MB / 0 % CPU; revisión final de rama (Opus) con 1 crítico corregido (acciones reset de combate/minería no llegaban al núcleo, `c54a541`) y robustez (`cb484d8`); `core.clock` para la hora del diario en paneles. Rama `fase/f2-combate-mineria` subida; falta fusionar en `main` con autorización del propietario.
 - 2026-10-18 20:56 (Europe/Madrid) · Antigravity · Solicitud del propietario completada: añadida visualización de todos los tipos de estrellas del sistema actual en la vista de exploración (commit `6e4276e`). Incluye `star_classes` ordenadas y desduplicadas en `SystemTopic`, insignias por tipo con marcado repostable en `SystemBodiesPanel`, reflejo en la tarjeta de `RouteStrip` y textos en los 5 idiomas. 527 tests Rust PASS, 91 tests Vitest PASS, svelte-check y build en verde.
 - 2026-10-18 18:43 (Europe/Madrid) · Gemini 4 Argon (Medium) · Task 32 y cierre de F1 completados: `cargo tauri build` (`TMC_0.1.0_x64-setup.exe` 5,79 MiB), `measure-footprint.ps1 -ShowWindow -Seconds 120` (`max_mb=108.01` < 150 MB, `avg_cpu_idle=0.00%` < 1 % PASS), Criterio 7 verificado en vivo contra Spansh + portapapeles, 526 tests Rust PASS, 89 tests Vitest PASS, Playwright E2E PASS y 10/10 criterios documentados en el plan. Fase F1 cerrada.
 - 2026-10-18 18:01 (Europe/Madrid) · Codex · Task31 terminada con TDD, revisión y 3 rondas de corrección de bordes: 515 Rust/81 UI, fmt/clippy/check/build y smoke real PASS (puerto47322, viewport2560/800). §5.1 aprobada por el propietario y sincronizada. Task32 inicia build/consumo; criterios3/4/6 sin datos suficientes siguen pendientes.
