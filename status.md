@@ -10,9 +10,9 @@
 
 ## Puntero actual
 
-- **Tarea:** F3 en ejecución con subagentes (en curso: Task 27). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
+- **Tarea:** F3 en ejecución con subagentes (en curso: Task 28). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
 - **Último paso completado:** Task 17 ✅ (08aacf3), revisión aprobada.
-- **Siguiente acción:** Task 27 (missions: turismo, ruta óptima y cr/al); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Siguiente acción:** Task 28 (missions: módulo, coordenadas, topics, relevancia y registro); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Tareas de diagnóstico debug
 
@@ -75,8 +75,8 @@
 | 24 | `missions` — pila de masacre | ✅ hecha | d654f97, 10f49af | Pila de masacre con la regla exacta de §10.10; fixture massacre_session.log |
 | 25 | `missions` — avisos, recompensas de la sesión y objetivos comunitarios | ✅ hecha | 70645b6, 250119f | Avisos (caducidad, carga al llegar al destino), recompensas acumuladas, objetivos comunitarios |
 | 26 | `missions` — pasajeros y cabinas | ✅ hecha | 88df42a, 250119f | Pasajeros por destino (VIP/buscado) y cabinas por clase (ocupación agregada) |
-| 27 | `missions` — turismo: ruta óptima, cr/al y veredicto | 🔄 en curso | — |  |
-| 28 | `missions` — módulo, coordenadas, topics, relevancia y registro | ⬜ pendiente | — |  |
+| 27 | `missions` — turismo: ruta óptima, cr/al y veredicto | ✅ hecha | 4cfa8cd, 6a2627e | Turismo: ruta óptima (exacta ≤8, heurística), cr/al, veredicto; robusto ante datos inválidos |
+| 28 | `missions` — módulo, coordenadas, topics, relevancia y registro | 🔄 en curso | — |  |
 | 29 | UI — «Misiones activas», «Masacre» y «Avisos» | ⬜ pendiente | — |  |
 | 30 | UI — «Pasajeros», «Turismo», «Recompensas» y «Objetivos comunitarios» | ⬜ pendiente | — |  |
 | 31 | UI — disposiciones «Comercio» y «Misiones», prioridad y ajustes | ⬜ pendiente | — |  |
