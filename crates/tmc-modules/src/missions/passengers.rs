@@ -46,6 +46,15 @@ impl Cabins {
         c
     }
 
+    /// Vacía la ocupación. Contrato: quien llama lo invoca en `LoadGame` (el manifiesto
+    /// anterior ya no vale); un `Passengers` vacío también deja el total en 0.
+    pub fn reset_occupancy(&mut self) {
+        self.occupied_total = 0;
+        for o in self.by_class.values_mut() {
+            o.occupied = None;
+        }
+    }
+
     /// Total por manifiesto; por clase no hay dato, así que sigue en `None`.
     pub fn apply_manifest(&mut self, p: &Passengers) {
         self.occupied_total = p.manifest.iter().map(|e| e.count).sum();
@@ -61,25 +70,39 @@ impl Cabins {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct PassengerGroup {
-    pub destination: String,
+    /// `None` si la misión no está en el libro (grupo propio por misión).
+    pub destination: Option<String>,
     pub count: u32,
     pub vip: bool,
     pub wanted: bool,
     pub mission_id: u64,
 }
 
-/// Agrupa el manifiesto por destino (el de la misión en el libro; vacío si se desconoce).
+/// Agrupa el manifiesto por destino (el de la misión en el libro; en multidestino, la
+/// próxima parada). Las misiones que no están en el libro forman un grupo cada una.
 pub fn groups(book: &MissionBook, p: &Passengers) -> Vec<PassengerGroup> {
     let mut by_dest: BTreeMap<String, PassengerGroup> = BTreeMap::new();
+    let mut unknown = Vec::new();
     for e in &p.manifest {
-        let destination = book
-            .get(e.mission_id)
-            .and_then(|m| m.destination_system.clone())
-            .unwrap_or_default();
+        let dest = book.get(e.mission_id).and_then(|m| {
+            m.destination_system
+                .clone()
+                .or_else(|| m.stops.first().cloned())
+        });
+        let Some(dest) = dest else {
+            unknown.push(PassengerGroup {
+                destination: None,
+                count: e.count,
+                vip: e.vip,
+                wanted: e.wanted,
+                mission_id: e.mission_id,
+            });
+            continue;
+        };
         let g = by_dest
-            .entry(destination.clone())
+            .entry(dest.clone())
             .or_insert_with(|| PassengerGroup {
-                destination,
+                destination: Some(dest),
                 count: 0,
                 vip: false,
                 wanted: false,
@@ -90,7 +113,10 @@ pub fn groups(book: &MissionBook, p: &Passengers) -> Vec<PassengerGroup> {
         g.wanted |= e.wanted;
         g.mission_id = g.mission_id.min(e.mission_id);
     }
-    by_dest.into_values().collect()
+    let mut out: Vec<_> = by_dest.into_values().collect();
+    unknown.sort_by_key(|g| g.mission_id);
+    out.extend(unknown);
+    out
 }
 
 pub fn wanted_aboard(p: &Passengers) -> bool {
@@ -114,6 +140,7 @@ mod tests {
             mission_id: id,
             count,
             wanted,
+            vip: id == 2,
             ..Default::default()
         }
     }
@@ -172,9 +199,39 @@ mod tests {
             ]),
         );
         assert_eq!(g.len(), 2);
-        let lave = g.iter().find(|g| g.destination == "Lave").unwrap();
+        let lave = g
+            .iter()
+            .find(|g| g.destination.as_deref() == Some("Lave"))
+            .unwrap();
         assert_eq!(lave.count, 5);
         assert!(lave.wanted);
+        assert!(lave.vip);
+        let leesti = g
+            .iter()
+            .find(|g| g.destination.as_deref() == Some("Leesti"));
+        assert!(!leesti.unwrap().vip);
+    }
+
+    #[test]
+    fn unknown_destination_groups_stay_separate() {
+        let g = groups(
+            &MissionBook::default(),
+            &manifest(vec![entry(5, 1, false), entry(6, 2, false)]),
+        );
+        assert_eq!(g.len(), 2);
+        assert!(g.iter().all(|g| g.destination.is_none()));
+    }
+
+    #[test]
+    fn manifest_reset_and_empty_manifest() {
+        let mut c = Cabins::from_loadout(&[module("int_passengercabin_size4_class1")]);
+        c.apply_manifest(&manifest(vec![entry(1, 3, false)]));
+        assert_eq!(c.occupied_total, 3);
+        c.apply_manifest(&manifest(vec![]));
+        assert_eq!(c.occupied_total, 0);
+        c.apply_manifest(&manifest(vec![entry(1, 3, false)]));
+        c.reset_occupancy();
+        assert_eq!(c.occupied_total, 0);
     }
 
     #[test]

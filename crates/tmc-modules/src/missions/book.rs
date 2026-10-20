@@ -71,6 +71,8 @@ pub struct Mission {
     pub details_missing: bool,
     pub target_faction: Option<String>,
     pub wing: bool,
+    /// Mercancía de la entrega (localizada si existe); `None` si se desconoce.
+    pub commodity: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -121,6 +123,10 @@ fn from_accepted(m: &MissionAccepted, at: Option<DateTime<Utc>>) -> Mission {
         details_missing: false,
         target_faction: m.target_faction.clone(),
         wing: m.wing.unwrap_or(false),
+        commodity: m
+            .commodity_localised
+            .clone()
+            .or_else(|| m.commodity.clone()),
     }
 }
 
@@ -182,6 +188,7 @@ impl MissionBook {
                             details_missing: true,
                             target_faction: None,
                             wing: false,
+                            commodity: None,
                         }
                     });
                     next.insert(r.mission_id, m);
