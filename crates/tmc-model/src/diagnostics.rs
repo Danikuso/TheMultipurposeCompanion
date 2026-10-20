@@ -570,6 +570,24 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
         "action" => registered(text, ACTIONS) != REDACTED,
         "event" => registered(text, EVENTS) != REDACTED,
         "source" | "provider" => matches!(text, "Spansh" | "Edsm" | "Canonn" | "Ardent" | "Cache"),
+        "endpoint" => {
+            matches!(
+                context,
+                DiagnosticContext::NetQuery | DiagnosticContext::NetOutcome
+            ) && matches!(
+                text,
+                "spansh.system"
+                    | "spansh.route.job"
+                    | "spansh.route.results"
+                    | "spansh.autocomplete"
+                    | "edsm.system"
+                    | "canonn.codex_ref"
+                    | "canonn.system_poi"
+                    | "ardent.nearby.imports"
+                    | "ardent.nearest.service"
+                    | "unknown"
+            )
+        }
         _ => false,
     }
 }
@@ -715,6 +733,19 @@ pub mod capture {
         fn enabled(&self, metadata: &Metadata<'_>) -> bool {
             metadata.target() == "tmc::diagnostics"
         }
+        fn register_callsite(
+            &self,
+            metadata: &'static Metadata<'static>,
+        ) -> tracing::subscriber::Interest {
+            if metadata.target() == "tmc::diagnostics" {
+                tracing::subscriber::Interest::always()
+            } else {
+                tracing::subscriber::Interest::never()
+            }
+        }
+        fn max_level_hint(&self) -> Option<tracing::metadata::LevelFilter> {
+            Some(tracing::metadata::LevelFilter::TRACE)
+        }
         fn new_span(&self, _: &Attributes<'_>) -> Id {
             Id::from_u64(1)
         }
@@ -733,8 +764,28 @@ pub mod capture {
 
     /// Ejecuta `f` y devuelve los registros de diagnóstico emitidos en este hilo.
     pub fn capture<R>(f: impl FnOnce() -> R) -> (R, Vec<Record>) {
+        // Una captura a la vez: dos recolectores simultáneos se pisan el interés del callsite.
+        static SERIAL: Mutex<()> = Mutex::new(());
+        let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         let records = Arc::new(Mutex::new(Vec::new()));
-        let result = tracing::subscriber::with_default(Collector(records.clone()), f);
+        // Los callsites son globales: otros hilos de prueba pueden haber cacheado «sin interés».
+        let result = tracing::subscriber::with_default(Collector(records.clone()), || {
+            // El callsite de `emit` es único: otro hilo sin suscriptor puede haberlo
+            // registrado antes con interés «nunca». Se calienta hasta que este recolector lo ve.
+            for _ in 0..200 {
+                super::emit(super::DiagnosticContext::State, "diagnostics.warmup", &());
+                let seen = records.lock().map(|r| !r.is_empty()).unwrap_or(true);
+                if seen {
+                    break;
+                }
+                tracing::callsite::rebuild_interest_cache();
+                std::thread::yield_now();
+            }
+            if let Ok(mut seen) = records.lock() {
+                seen.clear();
+            }
+            f()
+        });
         let records = records.lock().map(|r| r.clone()).unwrap_or_default();
         (result, records)
     }

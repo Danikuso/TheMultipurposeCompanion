@@ -138,9 +138,11 @@ pub async fn enforce_security(
     next: Next,
 ) -> Result<Response, StatusCode> {
     let Some(host_val) = req.headers().get(header::HOST) else {
+        crate::diag::auth_event!("auth.guard.host_missing", {"attempts": crate::diag::rejected_attempts()});
         return Err(StatusCode::FORBIDDEN);
     };
     let Ok(host) = host_val.to_str() else {
+        crate::diag::auth_event!("auth.guard.host_invalid", {"attempts": crate::diag::rejected_attempts()});
         return Err(StatusCode::FORBIDDEN);
     };
 
@@ -155,12 +157,21 @@ pub async fn enforce_security(
 
     if is_loopback {
         if !is_loopback_host(host, state.port) {
+            crate::diag::auth_event!("auth.guard.rebinding_rejected",
+                {"attempts": crate::diag::rejected_attempts()});
             return Err(StatusCode::FORBIDDEN);
         }
         if is_ws && !origin_matches_host(req.headers(), host, false) {
+            crate::diag::auth_event!("auth.guard.origin_rejected",
+                {"loopback": true, "attempts": crate::diag::rejected_attempts()});
             return Err(StatusCode::FORBIDDEN);
         }
-        guard_state_change(&req, host)?;
+        if let Err(status) = guard_state_change(&req, host) {
+            crate::diag::auth_event!("auth.guard.csrf_rejected", {"loopback": true,
+                "status": status.as_u16(), "attempts": crate::diag::rejected_attempts()});
+            return Err(status);
+        }
+        crate::diag::auth_event!("auth.guard.loopback_accepted", {"ws": is_ws});
         req.extensions_mut()
             .insert(ClientTrust { is_loopback: true });
         return Ok(next.run(req).await);
@@ -168,16 +179,26 @@ pub async fn enforce_security(
 
     // Petición desde otra IP (LAN)
     if !state.cfg.lan || state.cfg.token.is_empty() {
+        crate::diag::auth_event!("auth.lan.disabled_rejected", {"lan_enabled": state.cfg.lan,
+            "attempts": crate::diag::rejected_attempts()});
         return Err(StatusCode::FORBIDDEN);
     }
     if !is_lan_host(host, &state.lan_ip, state.port) {
+        crate::diag::auth_event!("auth.lan.host_rejected",
+            {"attempts": crate::diag::rejected_attempts()});
         return Err(StatusCode::FORBIDDEN);
     }
     if is_ws && !origin_matches_host(req.headers(), host, true) {
+        crate::diag::auth_event!("auth.guard.origin_rejected",
+            {"loopback": false, "attempts": crate::diag::rejected_attempts()});
         return Err(StatusCode::FORBIDDEN);
     }
 
-    guard_state_change(&req, host)?;
+    if let Err(status) = guard_state_change(&req, host) {
+        crate::diag::auth_event!("auth.guard.csrf_rejected", {"loopback": false,
+            "status": status.as_u16(), "attempts": crate::diag::rejected_attempts()});
+        return Err(status);
+    }
 
     let expected = state.cfg.token.as_bytes();
     let query_tok = extract_query_token(req.uri().query());
@@ -191,8 +212,13 @@ pub async fn enforce_security(
         .is_some_and(|t| constant_time_eq(t.as_bytes(), expected));
 
     if !matched_query && !matched_cookie {
+        crate::diag::auth_event!("auth.lan.token_rejected", {"presented_query": query_tok.is_some(),
+            "presented_cookie": cookie_tok.is_some(),
+            "attempts": crate::diag::rejected_attempts()});
         return Err(StatusCode::FORBIDDEN);
     }
+    crate::diag::auth_event!("auth.lan.accepted", {"via_query": matched_query,
+        "via_cookie": matched_cookie, "ws": is_ws});
 
     req.extensions_mut()
         .insert(ClientTrust { is_loopback: false });

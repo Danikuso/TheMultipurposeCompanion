@@ -2,6 +2,7 @@
 #![forbid(unsafe_code)]
 
 pub mod assets;
+mod diag;
 pub mod pairing;
 pub mod rest;
 pub mod security;
@@ -143,7 +144,7 @@ pub fn build_router(
         store,
         host,
     };
-    Router::new()
+    let router = Router::new()
         .route("/ws", axum::routing::get(ws::ws_handler))
         .route("/api/health", axum::routing::get(rest::get_health))
         .route(
@@ -168,7 +169,10 @@ pub fn build_router(
             state.clone(),
             security::enforce_security,
         ))
-        .with_state(state)
+        .with_state(state);
+    #[cfg(debug_assertions)]
+    let router = router.layer(axum::middleware::from_fn(diag::trace_http));
+    router
 }
 
 async fn bind_with_fallback(
@@ -1143,5 +1147,98 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(&body[..], b"<h1>TMC UI</h1>");
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn diagnostics_use_templates_and_never_credentials() {
+        use tmc_model::diagnostics::capture::capture;
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let (_, records) = capture(|| {
+            rt.block_on(async {
+                let (app, _core, _store) = test_router(true, "secret-token-123456");
+                let lan = |uri: &str| {
+                    with_peer(
+                        Request::builder()
+                            .uri(uri)
+                            .header(header::HOST, "192.168.1.50:47320")
+                            .header(header::COOKIE, "tmc_token=CANARYCOOKIE")
+                            .header(header::AUTHORIZATION, "Bearer CANARYBEARER")
+                            .body(Body::empty())
+                            .unwrap(),
+                        "192.168.1.99:55000",
+                    )
+                };
+                let r = app
+                    .clone()
+                    .oneshot(lan("/api/health?token=CANARYTOKEN"))
+                    .await;
+                assert_eq!(r.unwrap().status(), StatusCode::FORBIDDEN);
+                let r = app
+                    .clone()
+                    .oneshot(lan("/api/health?token=secret-token-123456"))
+                    .await;
+                assert_eq!(r.unwrap().status(), StatusCode::OK);
+                let local = |method: &str, uri: &str| {
+                    with_peer(
+                        Request::builder()
+                            .method(method)
+                            .uri(uri)
+                            .header(header::HOST, "127.0.0.1:47320")
+                            .body(Body::empty())
+                            .unwrap(),
+                        "127.0.0.1:55000",
+                    )
+                };
+                for req in [
+                    local("POST", "/api/actions/clipboard.copy-next-system"),
+                    local("POST", "/api/actions/fail"),
+                    local("GET", "/api/health?x=CANARYQUERY"),
+                    local("GET", "/api/zzz?q=CANARYQUERY"),
+                ] {
+                    let _ = app.clone().oneshot(req).await.unwrap();
+                }
+            })
+        });
+        let all: String = records
+            .iter()
+            .filter(|r| !r.code.starts_with("actor.") && !r.code.starts_with("core."))
+            .map(|r| {
+                format!(
+                    "{} {} {}
+",
+                    r.code, r.context, r.payload
+                )
+            })
+            .collect();
+        for canary in [
+            "CANARYTOKEN",
+            "secret-token-123456",
+            "CANARYCOOKIE",
+            "CANARYBEARER",
+            "CANARYQUERY",
+            "boom",
+            "?token",
+        ] {
+            assert!(!all.contains(canary), "{canary} leaked: {all}");
+        }
+        let codes: Vec<&str> = records.iter().map(|r| r.code.as_str()).collect();
+        for code in [
+            "auth.lan.token_rejected",
+            "auth.lan.accepted",
+            "auth.guard.loopback_accepted",
+            "action.requested",
+            "action.succeeded",
+            "action.failed",
+            "http.request",
+        ] {
+            assert!(codes.contains(&code), "falta {code}: {codes:?}");
+        }
+        for route in ["/api/actions/{name}", "/api/health", "<unmatched>"] {
+            assert!(all.contains(route), "falta ruta {route}: {all}");
+        }
     }
 }
