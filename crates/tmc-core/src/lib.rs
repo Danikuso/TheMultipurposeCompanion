@@ -2,6 +2,8 @@
 
 pub mod actor;
 pub mod alert;
+#[cfg(debug_assertions)]
+pub mod debug_hooks;
 pub mod module;
 pub mod topics;
 

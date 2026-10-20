@@ -52,6 +52,7 @@ if (ardentPort > 0) {
     stockBracket: 0, updatedAt: ago(min), distance: dist,
   });
   const fixtures = path.resolve(uiDir, '../tests/fixtures/net');
+  // Turismo: 3 destinos (tour a/b/c) más el origen de la fixture; solo los destinos necesitan coordenadas aquí.
   const tourCoords = { 'tour a': [10, 0, 0], 'tour b': [-10, 0, 0], 'tour c': [11, 0, 0] };
   const send = (res, status, body) => {
     res.statusCode = status;
@@ -116,7 +117,11 @@ const exeSuffix = process.platform === 'win32' ? '.exe' : '';
 const replayBin = path.resolve(uiDir, `../target/debug/tmc-replay${exeSuffix}`);
 const headlessBin = path.resolve(uiDir, `../target/debug/tmc-headless${exeSuffix}`);
 
-const childEnv = { ...process.env, TMC_E2E_GAME_RUNNING: '1' };
+// Solo los escenarios de F3 (comercio/misiones/EDDN) simulan «juego en marcha».
+const f3Scenario = ['trade_session.log', 'missions_session.log'].includes(fixtureName);
+const childEnv = { ...process.env };
+if (f3Scenario) childEnv.TMC_E2E_GAME_RUNNING = '1';
+else delete childEnv.TMC_E2E_GAME_RUNNING;
 if (relayPort > 0) childEnv.TMC_E2E_EDDN_RELAY = `tcp://127.0.0.1:${relayPort}`;
 if (ardentPort > 0) childEnv.TMC_E2E_ARDENT_BASE = `http://127.0.0.1:${ardentPort}`;
 

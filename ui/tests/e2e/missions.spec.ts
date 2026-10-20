@@ -8,4 +8,7 @@ test('missions_grouped_with_alerts', async ({ page }) => {
   // La misión de té caduca en menos de una hora.
   await expect(page.getByTestId('missions-alert').first()).toBeVisible();
   await expect(page.getByTestId('missions-alert').first()).toContainText(/hora/);
+  // Criterio 6: la redirección y el fallo del diario también generan alerta.
+  await expect(page.getByTestId('missions-alert').filter({ hasText: 'Alpha Base' })).toBeVisible();
+  await expect(page.getByTestId('missions-alert').filter({ hasText: /fallida/ })).toBeVisible();
 });

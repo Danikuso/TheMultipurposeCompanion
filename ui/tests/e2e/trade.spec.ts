@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { appendJournal, basePort, openLayout, readClipboard } from './helpers';
+import { appendJournal, basePort, openLayout, isWindows, readClipboard, writeClipboard } from './helpers';
 
 const FAKE = basePort + 11;
 
@@ -34,21 +34,26 @@ test('trade_session_profit_is_exact', async ({ page }) => {
 });
 
 test('trade_route_advances_and_copies_next_system', async ({ page }) => {
-  await openLayout(page, 'Comercio');
-  await expect(page.getByTestId('market-row').first()).toBeVisible({ timeout: 20_000 });
-  await page.getByTestId('route-recalculate').click();
-  await expect(page.getByTestId('route-stop')).toHaveCount(2, { timeout: 20_000 });
-  await expect(page.getByTestId('route-progress')).toContainText('1');
-  await expect(page.getByTestId('route-total')).toContainText(/15\D?500|1\D?475\D?000/);
-  // Atraca en el destino de la primera etapa: avanza y copia el sistema siguiente.
-  const now = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
-  await appendJournal(FAKE, JSON.stringify({
-    timestamp: now, event: 'Docked', StationName: 'Fictional Dock', StationType: 'Coriolis',
-    MarketID: 900000002, StarSystem: 'Testia', SystemAddress: 9000000000002,
-    StationServices: ['commodities'], LandingPads: { Small: 4, Medium: 4, Large: 2 },
-  }));
-  await expect(page.getByTestId('route-copied')).toContainText('Ficticia', { timeout: 15_000 });
-  await expect(page.getByTestId('route-stop').nth(1)).toHaveAttribute('aria-current', 'step');
-  const clip = readClipboard();
-  if (clip !== null) expect(clip).toBe('Ficticia');
+  test.skip(!isWindows(), 'la comprobación del portapapeles del sistema solo existe en Windows');
+  const previousClipboard = readClipboard() ?? '';
+  try {
+    await openLayout(page, 'Comercio');
+    await expect(page.getByTestId('market-row').first()).toBeVisible({ timeout: 20_000 });
+    await page.getByTestId('route-recalculate').click();
+    await expect(page.getByTestId('route-stop')).toHaveCount(2, { timeout: 20_000 });
+    await expect(page.getByTestId('route-progress')).toContainText('1');
+    await expect(page.getByTestId('route-total')).toContainText(/15\D?500|1\D?475\D?000/);
+    // Atraca en el destino de la primera etapa: avanza y copia el sistema siguiente.
+    const now = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+    await appendJournal(FAKE, JSON.stringify({
+      timestamp: now, event: 'Docked', StationName: 'Fictional Dock', StationType: 'Coriolis',
+      MarketID: 900000002, StarSystem: 'Testia', SystemAddress: 9000000000002,
+      StationServices: ['commodities'], LandingPads: { Small: 4, Medium: 4, Large: 2 },
+    }));
+    await expect(page.getByTestId('route-copied')).toContainText('Ficticia', { timeout: 15_000 });
+    await expect(page.getByTestId('route-stop').nth(1)).toHaveAttribute('aria-current', 'step');
+    expect(readClipboard()).toBe('Ficticia');
+  } finally {
+    writeClipboard(previousClipboard);
+  }
 });
