@@ -2,17 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-20 16:14 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-20 18:50 (Europe/Madrid) · Claude Opus 5.5
 - **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (🔄 en ejecución). F2 ✅ fusionada en `main` (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversal: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md).
-- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 34/35 hechas (aprobado al ordenar «escribe el plan y ejecútalo»). Diagnóstico: [plan](docs/plans/2026-10-20-diagnostico-debug.md) D1–D7b. Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
+- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — ✅ 35/35 hechas (criterio 10 parcial) (aprobado al ordenar «escribe el plan y ejecútalo»). Diagnóstico: [plan](docs/plans/2026-10-20-diagnostico-debug.md) D1–D7b. Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
 - **Rama de trabajo:** `fase/f3-comercio-misiones`
 
 ## Puntero actual
 
-- **Tarea:** F3 en ejecución con subagentes (en curso: Task 34). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
+- **Tarea:** F3 en ejecución con subagentes (en curso: Task -). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
 - **Último paso completado:** Task 17 ✅ (08aacf3), revisión aprobada.
-- **Siguiente acción:** Task 34 (avisos, consumo con EDDN, verificación de 11 criterios y cierre); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Siguiente acción:** revisión final de la rama F3 (en curso); después, medición con ventana del criterio 10 por el propietario (cerrar TMC.exe y ejecutar el comando de la fila 10 de «Verificación F3», con `target-f3`) y fusión en `main` con su autorización.
 
 ## Tareas de diagnóstico debug
 
@@ -82,7 +82,7 @@
 | 31 | UI — disposiciones «Comercio» y «Misiones», prioridad y ajustes | ✅ hecha | 2d449e9, b6dbdde | Disposiciones Comercio/Misiones con prioridad; ajustes EDDN/turismo; relevancia solo con carga comercial |
 | 32 | fixtures sintéticos y pruebas de extremo a extremo | ✅ hecha | 502804f, 69f83c5, 7fc00e0 | Fixtures F3, contratos trade/missions, ráfaga EDDN (p95 299 ms, ≤1 consulta/10 s, corruptos), 14 Playwright; hooks e2e solo debug y estrictos |
 | 33 | `tmc-headless eval` — conciliación de coste pagado y de masacre | ✅ hecha | f262180, 0bda26e, 939de0b | Eval coste pagado y masacre (historial: 2/2 y 4/4, INSUFICIENTE por n<5); release sin avisos |
-| 34 | avisos, consumo con EDDN, verificación de los 11 criterios y cierre | 🔄 en curso | — |  |
+| 34 | avisos, consumo con EDDN, verificación de los 11 criterios y cierre | ✅ hecha | 55c5407 | 10/11 criterios PASS; 10 PARCIAL (núcleo con EDDN 34 MB/0,05 % CPU; ventana pendiente del propietario) |
 
 ## Tareas de F2
 
@@ -187,6 +187,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 18 | Presupuesto de consumo y cierre de F0 | ✅ hecha | fe99cd6 | `measure-footprint.ps1` (`max_mb=144.91` < 150, `avg_cpu_idle=0.09%` < 1% PASS), `README.md` y 9/9 criterios §15 verificados. |
 
 ## Bloqueos y pendientes del propietario
+- [ ] **F3 · Criterio 10 (consumo con ventana y EDDN):** cierra TMC.exe y ejecuta `CARGO_TARGET_DIR=target-f3 cargo build --release -p tmc-desktop` y `pwsh scripts/measure-footprint.ps1 -Exe target-f3/release/TMC.exe -JournalDir .tmp/footprint-f3-trade -FixturePath tests/fixtures/journal/trade_session.log -ShowWindow -Seconds 120` (y con `missions_session.log`); o autoriza al agente a hacerlo. Límite < 150 MB y < 1 % CPU.
 
 - [x] **F3 · Task 16:** corregidos cierres SQL, mercancías ausentes/catálogos vacíos y compatibilidad antes del límite. Consulta dirigida acotada, marcador completo con migración aditiva y purga. APIs y Tasks 18/19/20 sincronizadas en el plan. Revisiones spec/calidad aprobadas; 924 Rust PASS, fmt/clippy OK.
 
