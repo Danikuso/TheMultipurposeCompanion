@@ -63,7 +63,7 @@ test('market row shows profit distance pad and age', () => {
   expect(row.textContent).toContain('9.400');
   expect(row.textContent).toContain('1.600');
   expect(row.textContent).toContain('12,3 al');
-  expect(row.textContent).toContain('L');
+  expect(q('pad-label')!.textContent).toBe('L');
   expect(row.textContent).toContain('Ogden Port');
   expect(row.textContent).toContain('hace 2 h');
   expect(row.textContent).toContain('EDDN');
@@ -123,7 +123,7 @@ function stop(extra: Record<string, unknown> = {}) {
   return {
     from_system: 'LHS 20', from_station: 'Ogden Port', to_system: 'Wolf 359', to_station: 'Wolf 359 Hub',
     commodities: [{ commodity: 'palladium', name_localised: 'Paladio', amount: 400, buy_price: 48210, sell_price: 61080, profit_per_ton: 12870 }],
-    stop_profit: 1000000, distance_ly: 14, data_updated_at: '2030-01-01T10:00:00Z', ...extra,
+    stop_profit: 1000000, distance_ly: 14, jumps: 2, data_updated_at: '2030-01-01T10:00:00Z', ...extra,
   };
 }
 function route(extra: Record<string, unknown> = {}) {
@@ -141,6 +141,8 @@ test('route highlights current stop and total', () => {
   expect(q('route-total')!.textContent).toContain('3.200.000');
   expect(stops[1].textContent).toContain('Paladio');
   expect(stops[1].textContent).toContain('14 al');
+  expect(stops[1].textContent).toContain('Saltos: 2');
+  expect(stops.map((s) => s.getAttribute('aria-current'))).toEqual([null, 'step', null]);
 });
 
 test('recalculate posts json action', () => {
@@ -182,6 +184,8 @@ test('session shows english trade rank', () => {
 });
 
 test('session rates use the journal clock', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2031-06-01T00:00:00Z'));
   mountWith(TradeSessionPanel, { 'core.clock': { as_of: '2030-01-01T01:00:00Z' }, 'trade.session': session({ profit: 13500000 }) });
   expect(q('session-profit')!.textContent).toContain('13.500.000');
   expect(q('session-rate')!.textContent).toContain('13.500.000');
@@ -246,4 +250,65 @@ test('search loading and no data states', () => {
   unmount(mounted!); mounted = undefined; target.innerHTML = '';
   mountWith(SearchPanel, { 'trade.search': { commodity: 'gold', status: 'no_data', rows: [] } });
   expect(q('search-state')!.textContent).toContain('sin datos');
+});
+
+test('rare row does not repeat the distance', () => {
+  mountWith(MarketPanel, { 'trade.market': market([mrow({ best_sell: null, profit_per_ton: null, rare: 160 })]) });
+  expect(q('market-row')!.textContent!.match(/160/g)!.length).toBe(1);
+});
+
+test('route statuses: no_data, idle, loading and completed', () => {
+  mountWith(RoutePanel, { 'trade.route': route({ status: 'no_data', plan: null }) });
+  expect(q('route-state')!.textContent).toContain('No hay ninguna ruta');
+  unmount(mounted!); mounted = undefined; target.innerHTML = '';
+  mountWith(RoutePanel, { 'trade.route': route({ status: 'idle', plan: null }) });
+  expect(q('route-state')!.textContent).toContain('Recalcular');
+  expect((q('route-recalculate') as HTMLButtonElement).disabled).toBe(false);
+  unmount(mounted!); mounted = undefined; target.innerHTML = '';
+  mountWith(RoutePanel, { 'trade.route': route({ status: 'loading', plan: null }) });
+  expect(q('route-state')!.textContent).toContain('Calculando');
+  expect((q('route-recalculate') as HTMLButtonElement).disabled).toBe(true);
+  unmount(mounted!); mounted = undefined; target.innerHTML = '';
+  mountWith(RoutePanel, { 'trade.route': route({ completed: true, current: 3 }) });
+  expect(q('route-progress')!.textContent).toContain('completada');
+  expect(qa('route-stop').some((s) => s.classList.contains('current'))).toBe(false);
+});
+
+test('copied badge appears when copy_seq increments and hides after 5 s', () => {
+  vi.useFakeTimers();
+  mountWith(RoutePanel, { 'trade.route': route({ copy_seq: 1, copy_target: 'Wolf 359' }) });
+  expect(q('route-copied')).toBeNull();
+  live.topics['trade.route'] = route({ copy_seq: 2, copy_target: 'Nakamura' });
+  flushSync();
+  expect(q('route-copied')!.textContent).toContain('Nakamura');
+  vi.advanceTimersByTime(5000);
+  flushSync();
+  expect(q('route-copied')).toBeNull();
+});
+
+test('no timers run without data', () => {
+  vi.useFakeTimers();
+  mountWith(MarketPanel, { 'trade.market': { station: null, system: null, rows: [] } });
+  unmount(mounted!); mounted = undefined;
+  mountWith(RoutePanel, { 'trade.route': route({ status: 'idle', plan: null }) });
+  unmount(mounted!); mounted = undefined;
+  mountWith(SearchPanel, { 'trade.search': { commodity: null, status: 'idle', rows: [] } });
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+test('session without rank or progress hides the rank bar', () => {
+  mountWith(TradeSessionPanel, { 'trade.session': session({ rank: null, progress: null }) });
+  expect(q('session-rank')).toBeNull();
+  expect(q('rank-bar')).toBeNull();
+  unmount(mounted!); mounted = undefined; target.innerHTML = '';
+  mountWith(TradeSessionPanel, { 'trade.session': session({ rank: 4, progress: null }) });
+  expect(q('session-rank')!.textContent).toContain('Merchant');
+  expect(q('rank-bar')).toBeNull();
+});
+
+test('session reset failure uses the trade message', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) }));
+  mountWith(TradeSessionPanel, { 'trade.session': session() });
+  (q('session-reset') as HTMLButtonElement).click();
+  await vi.waitFor(() => { flushSync(); expect(target.querySelector('[role="alert"]')!.textContent).toContain('sesión'); });
 });

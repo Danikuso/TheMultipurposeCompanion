@@ -497,6 +497,8 @@ fn route_advance_copies_next_system() {
     let route = h.val("trade.route");
     assert_eq!(route["status"], json!("ok"));
     assert_eq!(route["copy_target"], json!("B"));
+    // 20 al con alcance 22,5 al: un salto (ceil(distancia / alcance)).
+    assert_eq!(route["plan"]["stops"][0]["jumps"], json!(1));
     let seq = route["copy_seq"].as_u64().unwrap();
     h.journal(
         20,

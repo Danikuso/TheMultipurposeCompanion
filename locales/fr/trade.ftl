@@ -75,3 +75,5 @@ trade-route-done = Itinéraire terminé
 trade-rank-aria = Progression du rang de commerce
 trade-search-label = Marchandise
 trade-route-per-ton = { $profit }/t
+trade-reset-failed = Impossible de réinitialiser la session
+trade-route-copied = Prochain système copié : { $system }

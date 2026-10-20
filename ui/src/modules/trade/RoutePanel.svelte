@@ -1,10 +1,9 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
-  import { decimal, relativeAge } from '../../lib/format';
+  import { credits, decimal, relativeAge } from '../../lib/format';
   import { journalSkew } from '../../lib/clock.svelte';
   import { action, topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
-  import { cr } from './labels';
   import { commodityName, type RouteTopic } from './types';
 
   const r = $derived(topic<RouteTopic>('trade.route'));
@@ -26,6 +25,28 @@
     }, 30_000);
     return () => clearInterval(id);
   });
+
+  // Aviso efímero de «siguiente sistema copiado»: un único timeout de 5 s, sin temporizador permanente.
+  let copied = $state<string | null>(null);
+  let seenSeq: number | null = null;
+  let copiedTimer: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => {
+    if (!r) return;
+    const seq = r.copy_seq;
+    if (seenSeq === null) {
+      seenSeq = seq;
+      return;
+    }
+    if (seq > seenSeq) {
+      seenSeq = seq;
+      copied = r.copy_target;
+      clearTimeout(copiedTimer);
+      copiedTimer = setTimeout(() => {
+        copied = null;
+      }, 5000);
+    }
+  });
+  $effect(() => () => clearTimeout(copiedTimer));
 
   async function recalc() {
     failed = false;
@@ -56,30 +77,31 @@
       <ol class="stops">
         {#each plan.stops as s, i (i)}
           {@const tons = s.commodities.reduce((n, c) => n + c.amount, 0)}
-          <li class="hop" class:current={!r.completed && i === r.current} class:done={r.completed || i < r.current} data-testid="route-stop">
+          <li class="hop" class:current={!r.completed && i === r.current} class:done={r.completed || i < r.current} data-testid="route-stop" aria-current={!r.completed && i === r.current ? 'step' : undefined}>
             <span class="k" aria-hidden="true">{i < r.current || r.completed ? '✓' : i + 1}</span>
             <div>
               <div>
                 <b>{t('trade-route-buy', { tons: decimal(tons, 0), station: s.from_station })}</b>
                 → {t('trade-route-sell', { station: s.to_station })}
-                <span class="muted">· {s.to_system} · {t('mining-distance', { distance: decimal(s.distance_ly, 1) })}</span>
+                <span class="muted">· {s.to_system} · {t('mining-distance', { distance: decimal(s.distance_ly, 1) })}{#if s.jumps != null} · {t('trade-route-jumps', { jumps: s.jumps })}{/if}</span>
               </div>
               <div class="muted">
                 {#each s.commodities as c, j (c.commodity + j)}
-                  {#if j > 0}, {/if}{commodityName(c.commodity, c.name_localised)} ({t('trade-route-per-ton', { profit: cr(c.profit_per_ton) })})
+                  {#if j > 0}, {/if}{commodityName(c.commodity, c.name_localised)} ({t('trade-route-per-ton', { profit: credits(c.profit_per_ton) })})
                 {/each}
                 · {relativeAge(s.data_updated_at, now)}
               </div>
             </div>
-            <span class="ok mono" data-testid="route-stop-profit">{cr(s.stop_profit)}</span>
+            <span class="ok mono" data-testid="route-stop-profit">{credits(s.stop_profit)}</span>
           </li>
         {/each}
       </ol>
-      <p data-testid="route-total"><b>{t('trade-route-total', { profit: cr(plan.total_profit) })}</b></p>
+      <p data-testid="route-total"><b>{t('trade-route-total', { profit: credits(plan.total_profit) })}</b></p>
     {/if}
     {#if r.status !== 'blocked'}
-      <button type="button" data-testid="route-recalculate" onclick={recalc}>{t('trade-recalculate')}</button>
+      <button type="button" data-testid="route-recalculate" disabled={r.status === 'loading'} onclick={recalc}>{t('trade-recalculate')}</button>
     {/if}
+    {#if copied}<p class="muted" role="status" data-testid="route-copied">{t('trade-route-copied', { system: copied })}</p>{/if}
     {#if failed}<p class="err" role="alert">{t('trade-route-failed')}</p>{/if}
   {/if}
 </Panel>

@@ -75,3 +75,5 @@ trade-route-done = Route completed
 trade-rank-aria = Trade rank progress
 trade-search-label = Commodity
 trade-route-per-ton = { $profit }/t
+trade-reset-failed = Could not reset the session
+trade-route-copied = Next system copied: { $system }

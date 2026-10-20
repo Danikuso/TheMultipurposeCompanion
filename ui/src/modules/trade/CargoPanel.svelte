@@ -1,9 +1,9 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
-  import { cssPct, decimal } from '../../lib/format';
+  import { credits, cssPct, decimal } from '../../lib/format';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
-  import { cr, padLabel, originLabel } from './labels';
+  import { padLabel, originLabel } from './labels';
   import { commodityName, type CargoTopic } from './types';
 
   const c = $derived(topic<CargoTopic>('trade.cargo'));
@@ -46,23 +46,23 @@
             </td>
             <td class="n mono">{l.tons}</td>
             <td class="n mono">
-              {l.paid_avg == null ? '—' : cr(l.paid_avg)}
+              {l.paid_avg == null ? '—' : credits(l.paid_avg)}
               {#if l.paid_partial}<span class="warn" role="img" aria-label={t('trade-paid-partial')} title={t('trade-paid-partial')}>⚠</span>{/if}
             </td>
-            <td class="n mono">{l.price_here == null ? '—' : cr(l.price_here)}</td>
+            <td class="n mono">{l.price_here == null ? '—' : credits(l.price_here)}</td>
             <td>
               {#if l.kind === 'Stolen'}
                 <span class="muted">{t('trade-black-market-only')}</span>
               {:else if b}
                 {b.station_name} · {t('mining-distance', { distance: decimal(b.distance_ly, 1) })} · {padLabel(b.pad)}
                 {#if b.pad_ok === null}<span class="warn" data-testid="pad-warning" role="img" aria-label={t('trade-pad-unknown')} title={t('trade-pad-unknown')}>⚠</span>{/if}
-                · {cr(b.sell_price)}
+                · {credits(b.sell_price)}
                 <span class="muted small">{originLabel(b.origin)}</span>
               {:else}
                 <span class="muted">—</span>
               {/if}
             </td>
-            <td class="n mono ok" data-testid="cargo-profit">{l.kind === 'Trade' && l.est_profit != null ? cr(l.est_profit) : '—'}</td>
+            <td class="n mono ok" data-testid="cargo-profit">{l.kind === 'Trade' && l.est_profit != null ? credits(l.est_profit) : '—'}</td>
             <td>
               {#if l.kind === 'Trade' && l.advice === 'SellHere'}<span class="badge ok">{t('trade-sell-here')}</span>
               {:else if l.kind === 'Trade' && l.advice === 'Carry'}<span class="badge">{t('trade-carry')}</span>{/if}

@@ -82,6 +82,8 @@ export interface TradeStop {
   commodities: TradeCommodity[];
   stop_profit: number;
   distance_ly: number;
+  /** Saltos estimados: ceil(distancia / alcance de salto); `null` si se desconoce. */
+  jumps: number | null;
   data_updated_at: string | null;
 }
 

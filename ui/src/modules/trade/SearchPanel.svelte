@@ -1,10 +1,10 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
-  import { decimal, relativeAge } from '../../lib/format';
+  import { credits, decimal, relativeAge } from '../../lib/format';
   import { journalSkew } from '../../lib/clock.svelte';
   import { action, topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
-  import { cr, originLabel, padLabel } from './labels';
+  import { originLabel, padLabel } from './labels';
   import { commodityName, type CommoditiesTopic, type SearchTopic } from './types';
 
   const s = $derived(topic<SearchTopic>('trade.search'));
@@ -88,7 +88,7 @@
               {#if o.pad_ok === null}<span class="warn" data-testid="pad-warning" role="img" aria-label={t('trade-pad-unknown')} title={t('trade-pad-unknown')}>⚠</span>{/if}
             </td>
             <td class="n mono">{t('mining-distance', { distance: decimal(o.distance_ly, 1) })}</td>
-            <td class="n mono">{cr(o.buy_price)}</td>
+            <td class="n mono">{credits(o.buy_price)}</td>
             <td class="n mono">{decimal(o.stock, 0)} t</td>
             <td class="mono muted">{relativeAge(o.updated_at, now)} · {originLabel(o.origin)}</td>
           </tr>
