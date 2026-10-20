@@ -241,6 +241,10 @@ async fn start_inner(
     let watch_opts = WatchOptions {
         journal_dir: journal_dir.clone(),
         poll_idle: poll_idle.unwrap_or(WatchOptions::default().poll_idle),
+        // Un `poll_idle` explícito (solo pruebas) también acorta el sondeo con el juego activo.
+        poll_active: poll_idle.map_or(WatchOptions::default().poll_active, |p| {
+            p.min(WatchOptions::default().poll_active)
+        }),
         ..Default::default()
     };
     spawn_watcher(watch_opts, core.events.clone());

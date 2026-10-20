@@ -9,6 +9,14 @@ const combatPort = port + 1;
 const miningOnPort = port + 2;
 const miningOffPort = port + 3;
 const ardentPort = port + 4;
+// F3: +5 comercio (Ardent/Spansh falsos en +11), +6 EDDN activo (+12, relay +14),
+// +7 EDDN con servicios desactivados (relay +15), +8 misiones, +9 masacre, +10 turismo (+13).
+const tradePort = port + 5;
+const eddnOnPort = port + 6;
+const eddnOffPort = port + 7;
+const missionsPort = port + 8;
+const massacrePort = port + 9;
+const tourismPort = port + 10;
 
 const server = (p: number, env: Record<string, string>) => ({
   command: 'node scripts/e2e-server.mjs',
@@ -28,6 +36,12 @@ export default defineConfig({
     { name: 'combat', testMatch: 'combat.spec.ts', use: { baseURL: `http://127.0.0.1:${combatPort}`, channel } },
     { name: 'mining-on', testMatch: 'mining-on.spec.ts', use: { baseURL: `http://127.0.0.1:${miningOnPort}`, channel } },
     { name: 'mining-off', testMatch: 'mining-off.spec.ts', use: { baseURL: `http://127.0.0.1:${miningOffPort}`, channel } },
+    { name: 'trade', testMatch: 'trade.spec.ts', use: { baseURL: `http://127.0.0.1:${tradePort}`, channel } },
+    { name: 'eddn-on', testMatch: 'eddn-on.spec.ts', use: { baseURL: `http://127.0.0.1:${eddnOnPort}`, channel } },
+    { name: 'eddn-off', testMatch: 'eddn-off.spec.ts', use: { baseURL: `http://127.0.0.1:${eddnOffPort}`, channel } },
+    { name: 'missions', testMatch: 'missions.spec.ts', use: { baseURL: `http://127.0.0.1:${missionsPort}`, channel } },
+    { name: 'massacre', testMatch: 'massacre.spec.ts', use: { baseURL: `http://127.0.0.1:${massacrePort}`, channel } },
+    { name: 'tourism', testMatch: 'tourism.spec.ts', use: { baseURL: `http://127.0.0.1:${tourismPort}`, channel } },
   ],
   webServer: [
     {
@@ -44,5 +58,37 @@ export default defineConfig({
       TMC_E2E_ARDENT_PORT: String(ardentPort),
     }),
     server(miningOffPort, { TMC_E2E_FIXTURE: 'mining_session.log' }),
+    server(tradePort, {
+      TMC_E2E_FIXTURE: 'trade_session.log',
+      TMC_E2E_ONLINE: 'true',
+      TMC_E2E_SHIFT: 'true',
+      TMC_E2E_MARKET: 'true',
+      TMC_E2E_AUTOCOPY: 'true',
+      TMC_E2E_ARDENT_PORT: String(port + 11),
+    }),
+    server(eddnOnPort, {
+      TMC_E2E_FIXTURE: 'trade_session.log',
+      TMC_E2E_ONLINE: 'true',
+      TMC_E2E_SHIFT: 'true',
+      TMC_E2E_MARKET: 'true',
+      TMC_E2E_ARDENT_PORT: String(port + 12),
+      TMC_E2E_RELAY_PORT: String(port + 14),
+      TMC_E2E_RELAY_FILE: 'e2e_gold_buyer.jsonl',
+    }),
+    server(eddnOffPort, {
+      TMC_E2E_FIXTURE: 'trade_session.log',
+      TMC_E2E_SHIFT: 'true',
+      TMC_E2E_MARKET: 'true',
+      TMC_E2E_RELAY_PORT: String(port + 15),
+      TMC_E2E_RELAY_FILE: 'e2e_gold_buyer.jsonl',
+    }),
+    server(missionsPort, { TMC_E2E_FIXTURE: 'missions_session.log', TMC_E2E_SHIFT: 'true' }),
+    server(massacrePort, { TMC_E2E_FIXTURE: 'massacre_session.log', TMC_E2E_SHIFT: 'true' }),
+    server(tourismPort, {
+      TMC_E2E_FIXTURE: 'tourism_session.log',
+      TMC_E2E_ONLINE: 'true',
+      TMC_E2E_SHIFT: 'true',
+      TMC_E2E_ARDENT_PORT: String(port + 13),
+    }),
   ],
 });

@@ -396,3 +396,79 @@ fn no_center_emits_no_coords() {
     assert!(coords.is_empty());
     r.finish();
 }
+
+/// `burst.jsonl`: 500 mercados cercanos se almacenan y los 20 mensajes corruptos se cuentan.
+#[test]
+fn burst_fixture_yields_500_markets_and_20_corrupt_drops() {
+    let now = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
+    let text = include_str!("../../../tests/fixtures/eddn/burst.jsonl");
+    let script: Vec<Step> = text
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| {
+            let mut e = ZlibEncoder::new(Vec::new(), Compression::default());
+            e.write_all(l.replace("@NOW@", &now).as_bytes()).unwrap();
+            Step::Frame(e.finish().unwrap())
+        })
+        .collect();
+    assert_eq!(script.len(), 520);
+    let center = EddnFilter {
+        enabled: true,
+        center: Some([0.0; 3]),
+        radius_ly: 500.0,
+    };
+    let clock = FakeClock::new();
+    let counts = Arc::new(Mutex::new(Counts::default()));
+    let source = FakeSource {
+        script: script.into(),
+        clock: clock.clone(),
+        counts,
+    };
+    let (_ftx, frx) = watch::channel(center);
+    let (tx, rx) = mpsc::channel(1024);
+    // Un solo mercado por sistema `Sistema Burst i`: se siembran sus coordenadas.
+    let seed = (0..500)
+        .map(|i| {
+            (
+                format!("sistema burst {i}"),
+                None,
+                [f64::from(i % 100), 0.0, 0.0],
+            )
+        })
+        .collect();
+    let handle = spawn_subscriber(
+        Box::new(source),
+        Box::new(clock),
+        "tcp://fake".into(),
+        frx,
+        tx,
+        seed,
+    );
+    let mut r = Rig {
+        rx,
+        ftx: watch::channel(filter(true)).0,
+        clock: FakeClock::new(),
+        counts: Arc::new(Mutex::new(Counts::default())),
+        handle,
+        t0: std::time::Instant::now(),
+    };
+    let mut seen = std::collections::HashSet::new();
+    let mut corrupt = 0;
+    while seen.len() < 500 || corrupt < 20 {
+        match r.next() {
+            EddnOutput::Batch(m, _, _) => seen.extend(m.into_iter().map(|s| s.market_id)),
+            EddnOutput::Status(s) => {
+                corrupt = corrupt.max(
+                    s.stats
+                        .dropped
+                        .get(&DropReason::Corrupt)
+                        .copied()
+                        .unwrap_or(0),
+                )
+            }
+        }
+    }
+    assert_eq!(seen.len(), 500);
+    assert_eq!(corrupt, 20);
+    r.finish();
+}

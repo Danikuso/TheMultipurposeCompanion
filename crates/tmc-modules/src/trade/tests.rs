@@ -120,7 +120,9 @@ impl H {
 
     /// Fixture de comercio, atraque en «Synthetic Port» (sistema 5) y `Market.json`.
     fn dock_with_market(&mut self) {
-        self.fixture();
+        if self.line_no == 0 {
+            self.fixture();
+        }
         self.journal(
             0,
             "Location",
@@ -354,6 +356,7 @@ fn ardent_rows_without_coords_stay_in_memory_only() {
 #[test]
 fn no_requests_in_legacy_or_offline() {
     let mut h = H::with_store();
+    h.fixture();
     h.state.galaxy = Galaxy::Legacy;
     h.dock_with_market();
     h.action("trade.search", json!({"commodity": "gold"}));
@@ -778,6 +781,7 @@ fn offline_writes_market_but_no_ardent_and_legacy_writes_neither() {
     assert_eq!(h.count_tag("trade.ardent.write"), 0);
 
     let mut h = H::with_store();
+    h.fixture();
     h.state.galaxy = Galaxy::Legacy;
     h.dock_with_market();
     h.send(net(
