@@ -3,7 +3,7 @@
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
 - **Última actualización:** 2026-10-20 18:50 (Europe/Madrid) · Claude Opus 5.5
-- **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (🔄 en ejecución). F2 ✅ fusionada en `main` (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (✅ 35/35 tareas; criterio 10 pendiente de medición con ventana). F2 ✅ fusionada en `main` (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversal: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md).
 - **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — ✅ 35/35 hechas (criterio 10 parcial) (aprobado al ordenar «escribe el plan y ejecútalo»). Diagnóstico: [plan](docs/plans/2026-10-20-diagnostico-debug.md) D1–D7b. Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
 - **Rama de trabajo:** `fase/f3-comercio-misiones`
@@ -12,7 +12,7 @@
 
 - **Tarea:** F3 en ejecución con subagentes (en curso: Task -). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
 - **Último paso completado:** Task 17 ✅ (08aacf3), revisión aprobada.
-- **Siguiente acción:** revisión final de la rama F3 (en curso); después, medición con ventana del criterio 10 por el propietario (cerrar TMC.exe y ejecutar el comando de la fila 10 de «Verificación F3», con `target-f3`) y fusión en `main` con su autorización.
+- **Siguiente acción:** revisión final de rama hecha y corregida (`7a99bfd`). Falta solo el criterio 10 con ventana (y, si es posible, con EDDN real durante una sesión de juego atracado en un mercado); después, fusionar `fase/f3-comercio-misiones` en `main` con autorización del propietario.
 
 ## Tareas de diagnóstico debug
 
@@ -253,6 +253,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
+- 2026-10-20 19:05 (Europe/Madrid) · Claude Opus 5.5 · F3 ejecutada hasta la Task 34 con subagentes (Tasks 17–34 tras integrar el diagnóstico debug D1–D7b y logs en SQLite). Revisión final de rama (Opus): sin críticos; corregido comercio en Legacy y coordenadas propias en replay (`7a99bfd`). 1154+ Rust, 228 UI, 14 Playwright, clippy release PASS. Pendiente: criterio 10 con ventana (propietario) y fusión en `main`.
 - 2026-10-20 16:14 (Europe/Madrid) · Codex · Limpieza solicitada por el propietario: eliminados 103,771 GiB de artefactos regenerables de Cargo entre el checkout principal y prueba-main (incremental, deps, build y fingerprints). Sin compilaciones activas; 22 ejecutables, instaladores y símbolos conservados con SHA256 idéntico. Logs, datos, código y cambios pendientes de missions intactos. Inventario local: `.tmp/cleanup-build-artifacts.json`. Puntero de desarrollo sin cambios; la próxima compilación regenerará dependencias.
 
 - 2026-10-20 · Claude Opus 5.5 · D7b: `codex/diagnostico-logs` fusionada en F3 (6e5e97a, 6 conflictos resueltos) y cableado de EDDN/comercio/endpoints F3 (a1c2bb3). fmt/clippy/clippy release PASS, 999 Rust PASS ×2, 160 UI PASS. WIP de Task 17 preservado en stash y restaurado sin commit. Siguiente: Task 17.
