@@ -11,7 +11,7 @@ mod massacre;
 mod passengers;
 mod rewards;
 
-pub use alerts::{AlertKind, MissionAlert, alert_from_change, evaluate_alerts};
+pub use alerts::{AlertKind, Here, MissionAlert, alert_from_change, evaluate_alerts};
 pub use book::{
     BookChange, Mission, MissionBook, MissionKind, MissionProgress, accepted_from_result,
     accepted_rebuild_task, classify_kind,

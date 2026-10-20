@@ -5,17 +5,41 @@ use serde::Serialize;
 use std::collections::BTreeMap;
 use tmc_model::events::{CommunityGoal, EventKind};
 
+/// Tendencia acumulada de una facción: último token y puntuación con signo
+/// (`+` suma 1, `-` resta 1; `Up*` = +1, `Down*` = -1).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 pub struct FactionDelta {
     pub reputation: String,
     pub influence: String,
+    pub reputation_score: i32,
+    pub influence_score: i32,
 }
 
+fn token_score(t: &str) -> i32 {
+    let t = t.trim();
+    if t.starts_with("Up") {
+        1
+    } else if t.starts_with("Down") {
+        -1
+    } else {
+        t.chars()
+            .map(|c| match c {
+                '+' => 1,
+                '-' => -1,
+                _ => 0,
+            })
+            .sum()
+    }
+}
+
+/// `credits` suma solo `Reward`; la `Donation` queda fuera (es un gasto, no un cobro).
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct SessionRewards {
     pub credits: u64,
     pub completed: u32,
     pub failed: u32,
+    /// Abandonadas: se cuentan aparte, no como fallidas.
+    pub abandoned: u32,
     pub materials: BTreeMap<String, u32>,
     pub factions: BTreeMap<String, FactionDelta>,
     pub since: Option<DateTime<Utc>>,
@@ -48,13 +72,18 @@ impl SessionRewards {
                     let d = self.factions.entry(f.faction.clone()).or_default();
                     if let Some(r) = f.reputation.as_ref().filter(|r| !r.is_empty()) {
                         d.reputation = r.clone();
+                        d.reputation_score += token_score(r);
                     }
                     if let Some(i) = f.influence.iter().rev().find(|i| !i.influence.is_empty()) {
                         d.influence = i.influence.clone();
                     }
+                    for i in &f.influence {
+                        d.influence_score += token_score(&i.influence);
+                    }
                 }
             }
             EventKind::MissionFailed(_) => self.failed += 1,
+            EventKind::MissionAbandoned(_) => self.abandoned += 1,
             _ => {}
         }
     }
@@ -158,6 +187,35 @@ mod tests {
         assert_eq!(r.materials["tellurium"], 3);
         assert_eq!(r.factions["A"].influence, "+++");
         assert_eq!(r.factions["A"].reputation, "++");
+        assert_eq!(r.factions["A"].influence_score, 6);
+        assert_eq!(r.factions["A"].reputation_score, 4);
+    }
+
+    #[test]
+    fn distinct_trends_accumulate_and_abandoned_is_separate() {
+        let mut r = SessionRewards::default();
+        for tok in ["+", "++", "DownBad"] {
+            r.apply_event(
+                &EventKind::MissionCompleted(Box::new(MissionCompleted {
+                    donation: Some(5),
+                    faction_effects: vec![FactionEffect {
+                        faction: "B".into(),
+                        reputation: None,
+                        influence: vec![InfluenceEffect {
+                            influence: tok.into(),
+                            ..Default::default()
+                        }],
+                    }],
+                    ..Default::default()
+                })),
+                at(),
+            );
+        }
+        assert_eq!(r.factions["B"].influence_score, 2);
+        assert_eq!(r.factions["B"].influence, "DownBad");
+        assert_eq!(r.credits, 0);
+        r.apply_event(&EventKind::MissionAbandoned(MissionEnded::default()), at());
+        assert_eq!((r.abandoned, r.failed), (1, 0));
     }
 
     #[test]
@@ -174,6 +232,27 @@ mod tests {
         assert_eq!(c.goals[0].cgid, 750);
         assert_eq!(c.goals[0].percentile, Some(25));
         assert_eq!(c.goals[0].bonus, Some(15_000_000));
+        c.apply(&CommunityGoal {
+            current_goals: vec![CgEntry {
+                cgid: 1,
+                tier_reached: Some("Tier 2".into()),
+                expiry: Some(at()),
+                player_contribution: Some(500),
+                ..Default::default()
+            }],
+        });
+        assert_eq!(c.goals.len(), 1);
+        assert_eq!(c.goals[0].tier.as_deref(), Some("Tier 2"));
+        assert_eq!(c.goals[0].expiry, Some(at()));
+        assert_eq!(c.goals[0].contribution, 500);
+        c.apply(&CommunityGoal {
+            current_goals: vec![CgEntry {
+                cgid: 750,
+                player_percentile_band: Some(25),
+                bonus: Some(15_000_000),
+                ..Default::default()
+            }],
+        });
         c.apply(&CommunityGoal::default());
         assert!(c.goals.is_empty());
     }
