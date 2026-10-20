@@ -576,7 +576,10 @@ async fn burst_of_500_eddn_markets_keeps_10hz_and_one_requery() {
     tokio::time::sleep(Duration::from_secs(7)).await;
     let corrupt = crate::eddn_service::E2E_CORRUPT_DROPS.load(std::sync::atomic::Ordering::Relaxed);
     eprintln!("eddn burst corrupt drops = {corrupt}");
-    assert!(corrupt >= 20 && corrupt.is_multiple_of(20), "corrupt = {corrupt}");
+    assert!(
+        corrupt >= 20 && corrupt.is_multiple_of(20),
+        "corrupt = {corrupt}"
+    );
     // El suscriptor llegó a conectarse.
     wait_for(&running, "eddn connected", |s| {
         s.get("trade.market")

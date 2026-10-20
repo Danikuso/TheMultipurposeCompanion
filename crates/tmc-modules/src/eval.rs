@@ -12,7 +12,9 @@ use crate::exobiology::species::SpeciesTable;
 use crate::exploration::unsold::UnsoldLedger;
 use crate::exploration::value::{body_kind, estimate_probes};
 use crate::mining::session::MiningSession;
+use crate::missions::{MassacreStack, MissionBook, MissionKind};
 use crate::navigation::jump::{RangeSource, ShipMass, build_jump_model, jump_range_with};
+use crate::trade::CostBasis;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use tmc_model::events::{
     AsteroidContent, EventKind, JournalEvent, Loadout, OrganicScanType, SaaScanComplete, Scan,
@@ -127,8 +129,37 @@ pub struct MiningYieldReport {
     pub unattributed_tons: u32,
 }
 
+/// `CostBasis` frente a `AvgPricePaid` de las ventas del juego.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct CostReport {
+    /// Ventas comparables (coste conocido, completo y `AvgPricePaid` > 0).
+    pub sales: u32,
+    /// Ventas con diferencia exactamente 0.
+    pub exact: u32,
+    pub mean_abs_diff: f64,
+    pub max_abs_diff: u64,
+    /// Ventas no comparables (sin coste conocido, parcial o sin dato del juego).
+    pub skipped: u32,
+}
+
+/// Misiones de masacre redirigidas y su recuento local en ese momento.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MassacreReport {
+    pub redirected: u32,
+    /// Recuento local igual al requerido.
+    pub matched: u32,
+    /// Recuento local menor que el requerido.
+    pub short: u32,
+    /// Recuento local mayor que el requerido.
+    pub over: u32,
+    /// Redirigidas que no figuraban como masacre en el libro (historial previo).
+    pub unknown: u32,
+}
+
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct EvalReport {
+    pub cost: CostReport,
+    pub massacre: MassacreReport,
     pub vouchers: VoucherReport,
     pub mining: MiningYieldReport,
     pub range: RangeReport,
@@ -203,6 +234,12 @@ struct Run<'a> {
     last_asteroid: Option<usize>,
     mining_levels: [YieldLevel; 4],
     unattributed_tons: u32,
+    cost_basis: CostBasis,
+    cost: CostReport,
+    cost_diff_sum: u64,
+    mission_book: MissionBook,
+    massacre_stack: MassacreStack,
+    massacre: MassacreReport,
 }
 
 fn level_index(c: AsteroidContent) -> usize {
@@ -266,6 +303,12 @@ impl<'a> Run<'a> {
             last_asteroid: None,
             mining_levels: [YieldLevel::default(); 4],
             unattributed_tons: 0,
+            cost_basis: CostBasis::default(),
+            cost: CostReport::default(),
+            cost_diff_sum: 0,
+            mission_book: MissionBook::default(),
+            massacre_stack: MassacreStack::default(),
+            massacre: MassacreReport::default(),
         }
     }
 
@@ -326,6 +369,7 @@ impl<'a> Run<'a> {
     /// Vales y rendimiento de minería con los mismos libros que los módulos
     /// (`VoucherLedger` y `MiningSession`); aquí solo se miden sus diferencias.
     fn track_economy(&mut self, ev: &JournalEvent) {
+        self.track_trade_and_missions(ev);
         let kinds = [VoucherKind::Bounty, VoucherKind::CombatBond];
         let before = kinds.map(|k| self.voucher_ledger.total(k));
         self.voucher_ledger
@@ -377,6 +421,54 @@ impl<'a> Run<'a> {
             }
             _ => {}
         }
+    }
+
+    /// Coste pagado y pilas de masacre con los mismos libros que los módulos.
+    /// Cada comprobación se hace con el estado previo al evento.
+    fn track_trade_and_missions(&mut self, ev: &JournalEvent) {
+        match &ev.kind {
+            EventKind::MarketSell(sale) => {
+                let ours = self
+                    .cost_basis
+                    .avg_paid(&sale.type_)
+                    .filter(|_| !self.cost_basis.is_partial(&sale.type_));
+                match (ours, sale.avg_price_paid.filter(|p| *p > 0)) {
+                    (Some(ours), Some(game)) => {
+                        let diff = ours.abs_diff(game);
+                        self.cost.sales += 1;
+                        self.cost.exact += u32::from(diff == 0);
+                        self.cost.max_abs_diff = self.cost.max_abs_diff.max(diff);
+                        self.cost_diff_sum += diff;
+                    }
+                    _ => self.cost.skipped += 1,
+                }
+            }
+            EventKind::MissionRedirected(r) => {
+                self.massacre.redirected += 1;
+                match self
+                    .mission_book
+                    .get(r.mission_id)
+                    .filter(|m| m.kind == MissionKind::Massacre)
+                {
+                    Some(m) => {
+                        let local = self.massacre_stack.kills_for(r.mission_id);
+                        let needed = m.progress.kills_needed.unwrap_or(0);
+                        match local.cmp(&needed) {
+                            std::cmp::Ordering::Equal => self.massacre.matched += 1,
+                            std::cmp::Ordering::Less => self.massacre.short += 1,
+                            std::cmp::Ordering::Greater => self.massacre.over += 1,
+                        }
+                    }
+                    None => self.massacre.unknown += 1,
+                }
+            }
+            _ => {}
+        }
+        self.cost_basis.apply_event(&ev.kind);
+        // La pila se aplica con el libro tal como estaba antes del evento.
+        self.massacre_stack
+            .apply_event(&ev.kind, ev.timestamp, &self.mission_book);
+        self.mission_book.apply_event(&ev.kind, ev.timestamp);
     }
 
     fn loadout(&mut self, lo: &Loadout) {
@@ -665,6 +757,9 @@ impl<'a> Run<'a> {
         if self.probes.cases > 0 {
             self.probes.mean_abs_error = self.probe_error_sum / f64::from(self.probes.cases);
         }
+        if self.cost.sales > 0 {
+            self.cost.mean_abs_diff = self.cost_diff_sum as f64 / f64::from(self.cost.sales);
+        }
         let mut vouchers = self.vouchers;
         for (report, kind) in [
             (&mut vouchers.bounty, VoucherKind::Bounty),
@@ -681,6 +776,8 @@ impl<'a> Run<'a> {
             }
         }
         EvalReport {
+            cost: self.cost,
+            massacre: self.massacre,
             vouchers,
             mining: MiningYieldReport {
                 low,
