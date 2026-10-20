@@ -5,11 +5,15 @@
 //! masacres no se cuentan aquí (las lleva `MassacreStack`). Las escrituras al
 //! almacén llevan la etiqueta `*.write` y no ocurren en replay.
 
+mod alerts;
 mod book;
 mod massacre;
+mod rewards;
 
+pub use alerts::{AlertKind, MissionAlert, alert_from_change, evaluate_alerts};
 pub use book::{
     BookChange, Mission, MissionBook, MissionKind, MissionProgress, accepted_from_result,
     accepted_rebuild_task, classify_kind,
 };
 pub use massacre::{IssuerBar, MASSACRE_COUNTS_KILL_BONDS, MassacrePile, MassacreStack};
+pub use rewards::{CgView, CommunityGoals, FactionDelta, SessionRewards};
