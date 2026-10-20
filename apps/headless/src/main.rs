@@ -78,24 +78,41 @@ async fn main() -> anyhow::Result<()> {
 #[cfg(debug_assertions)]
 fn e2e_transport() -> anyhow::Result<Option<std::sync::Arc<dyn tmc_net::Transport>>> {
     use tmc_net::{BoxFut, HttpReply, ReqwestTransport, Transport, TransportError};
-    const ARDENT: &str = "https://api.ardent-insight.com";
+    // Solo estos servicios se redirigen al servidor falso local (Ardent, Spansh y EDSM).
+    const HOSTS: [&str; 3] = [
+        "https://api.ardent-insight.com",
+        "https://spansh.co.uk",
+        "https://www.edsm.net",
+    ];
+    const SPANSH: &str = "https://spansh.co.uk";
     struct Redirect {
         base: String,
         inner: ReqwestTransport,
     }
+    impl Redirect {
+        fn map(&self, url: &str) -> Option<String> {
+            HOSTS
+                .iter()
+                .find_map(|h| url.strip_prefix(h))
+                .map(|rest| format!("{}{rest}", self.base))
+        }
+    }
     impl Transport for Redirect {
         fn get(&self, url: &str) -> BoxFut<'_, Result<HttpReply, TransportError>> {
-            match url.strip_prefix(ARDENT) {
-                Some(rest) => self.inner.get(&format!("{}{rest}", self.base)),
+            match self.map(url) {
+                Some(target) => self.inner.get(&target),
                 None => Box::pin(async { Err(TransportError::Connect("blocked in e2e".into())) }),
             }
         }
         fn post_form(
             &self,
-            _url: &str,
-            _form: &[(String, String)],
+            url: &str,
+            form: &[(String, String)],
         ) -> BoxFut<'_, Result<HttpReply, TransportError>> {
-            Box::pin(async { Err(TransportError::Connect("blocked in e2e".into())) })
+            match url.strip_prefix(SPANSH) {
+                Some(rest) => self.inner.post_form(&format!("{}{rest}", self.base), form),
+                None => Box::pin(async { Err(TransportError::Connect("blocked in e2e".into())) }),
+            }
         }
     }
     let base = match std::env::var("TMC_E2E_ARDENT_BASE") {

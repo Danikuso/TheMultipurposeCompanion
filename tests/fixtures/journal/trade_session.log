@@ -1,4 +1,4 @@
-{"timestamp":"2026-10-19T12:00:00Z","event":"LoadGame","Commander":"TESTER","Ship":"type9","Credits":5000000}
+{"timestamp":"2026-10-19T12:00:00Z","event":"LoadGame","Commander":"TESTER","Ship":"type9","GameMode":"Solo","gameversion":"4.1.0.0","Credits":5000000}
 {"timestamp":"2026-10-19T12:00:01Z","event":"Loadout","Ship":"type9","ShipID":3,"MaxJumpRange":22.5,"CargoCapacity":256,"Modules":[]}
 {"timestamp":"2026-10-19T12:00:02Z","event":"Docked","StationName":"Origin Port","StationType":"Coriolis","MarketID":128000002,"StarSystem":"Origin Start","SystemAddress":4,"StationServices":["commodities"],"LandingPads":{"Small":4,"Medium":4,"Large":2}}
 {"timestamp":"2026-10-19T12:00:03Z","event":"MarketBuy","Type":"Gold","Count":100,"BuyPrice":9400,"TotalCost":940000}
