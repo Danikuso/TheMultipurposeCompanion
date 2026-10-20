@@ -241,6 +241,18 @@ describe('app pin behaviour', () => {
     nav('Combate').click(); flushSync();
     expect(slot('target')).not.toBeNull();
   });
+
+  test('manual trade pin stays while auto missions is stable, drops when auto becomes combat', () => {
+    live.topics['core.modules'] = [{ id: 'missions', relevance: 'active' }]; flushSync();
+    expect(slot('mission-alerts')).not.toBeNull();
+    nav('Comercio').click(); flushSync();
+    expect(slot('trade-session')).not.toBeNull();
+    live.topics['core.status'] = { flags: 0 }; flushSync();
+    expect(slot('trade-session')).not.toBeNull();
+    live.topics['core.modules'] = [{ id: 'missions', relevance: 'active' }, { id: 'combat', relevance: 'active' }]; flushSync();
+    expect(slot('trade-session')).toBeNull();
+    expect(slot('target')).not.toBeNull();
+  });
 });
 
 describe('trade and missions layouts', () => {

@@ -492,12 +492,14 @@ impl Trade {
 
     // ----- Carga y mercado -----
 
-    /// Mercancías comerciables de la carga (sin misión ni robadas), ordenadas.
+    /// Mercancías comerciables de la carga (sin misión, robadas ni limpets), ordenadas.
     fn cargo_keys(&self) -> Vec<String> {
         let mut keys: Vec<String> = self
             .inventory
             .iter()
-            .filter(|i| !i.is_mission() && i.count > i.stolen_count())
+            .filter(|i| {
+                !i.is_mission() && i.count > i.stolen_count() && commodity_key(&i.name) != "drones"
+            })
             .map(|i| commodity_key(&i.name))
             .collect();
         keys.sort();

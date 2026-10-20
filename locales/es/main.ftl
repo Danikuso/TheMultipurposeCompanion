@@ -109,5 +109,5 @@ layout-trade = Comercio
 layout-missions = Misiones
 eddn-radius = Radio de recepción EDDN (al)
 tourism-reference = Referencia inicial de turismo (cr/al)
-settings-eddn-radius = Radio de datos EDDN (ly, 20–500)
+settings-eddn-radius = Radio de datos EDDN (al, 20–500)
 settings-tourism-reference = Referencia de turismo (cr/al, 1 000–10 000 000)
