@@ -15,6 +15,14 @@
 //! aplicar su resultado (comandante comprobado) → (2) `missions.bounties` desde la
 //! aceptación de masacre más antigua y (3) `missions.passenger_stats`.
 //!
+//! Turismo: el diario no indica si la misión exige volver al origen, así que el plan
+//! no incluye tramo de regreso (`return_to = None`); tras `MissionRedirected` se
+//! recalcula desde la posición actual al nuevo destino y la distancia se acumula.
+//!
+//! «A la ruta» (`missions.to_route`): copia el sistema al portapapeles (`copy_target`
+//! y `copy_seq` en `missions.active`); un módulo no puede invocar a otro, así que la
+//! UI puede enviar además `navigation.plan` para abrir el planificador de F1.
+//!
 //! Red y almacén: nada en replay. Coordenadas por red (`SystemCoordsByName`) nunca
 //! en Legacy ni sin «servicios online». Las escrituras llevan la etiqueta `*.write`
 //! y tampoco ocurren en Legacy.
@@ -159,7 +167,43 @@ struct Trip {
     accepted_at: DateTime<Utc>,
     plan: Option<TourismPlan>,
     written: bool,
+    /// Reconstruida del historial: la fila solo se inserta si aún no existe.
+    rebuilt: bool,
+    /// Distancia ya cubierta por planes anteriores (antes de una redirección).
+    base_ly: f64,
+    /// La fila escrita debe actualizarse con la nueva distancia total.
+    rewrite: bool,
 }
+
+impl Trip {
+    fn total_ly(&self) -> Option<f64> {
+        self.plan.as_ref().map(|p| self.base_ly + p.optimal_ly)
+    }
+}
+
+/// Escritura (`missions.stats.write`) que no pisa una fila existente (viajes reconstruidos).
+fn stats_insert_missing_task(
+    cmdr: String,
+    mission_id: u64,
+    accepted_at: String,
+    reward: u64,
+    route_ly: f64,
+) -> StoreTask {
+    Box::new(move |store| {
+        let bad = |e: std::num::TryFromIntError| tmc_core::StoreError::Unsupported(e.to_string());
+        let id = i64::try_from(mission_id).map_err(bad)?;
+        let r = i64::try_from(reward).map_err(bad)?;
+        store.exec_json(
+            "INSERT INTO missions_passenger_stats (mission_id, cmdr, accepted_at, reward, route_ly) \
+             VALUES (?1, ?2, ?3, ?4, ?5) ON CONFLICT(mission_id) DO NOTHING",
+            &[json!(id), json!(cmdr), json!(accepted_at), json!(r), json!(route_ly)],
+        )?;
+        Ok(json!({"mission_id": mission_id}))
+    })
+}
+
+/// Un fallo de red al pedir coordenadas se reintenta pasado este tiempo.
+const COORDS_RETRY_S: i64 = 300;
 
 pub struct Missions {
     settings: ModuleSettings,
@@ -185,6 +229,12 @@ pub struct Missions {
     inflight: Inflight,
     copy_target: Option<String>,
     copy_seq: u64,
+    /// Última redirección aplicada en vivo por misión (gana a las del historial).
+    live_redirects: std::collections::HashMap<u64, DateTime<Utc>>,
+    /// Reintento de coordenadas tras un fallo de red.
+    coords_retry: std::collections::HashMap<String, DateTime<Utc>>,
+    /// Ya se registró que la red está desactivada (un aviso por cambio de estado).
+    offline_logged: bool,
     values: std::collections::HashMap<&'static str, Value>,
 }
 
@@ -213,6 +263,9 @@ impl Missions {
             inflight: Inflight::default(),
             copy_target: None,
             copy_seq: 0,
+            live_redirects: std::collections::HashMap::new(),
+            coords_retry: std::collections::HashMap::new(),
+            offline_logged: false,
             values: std::collections::HashMap::new(),
         }
     }
@@ -289,6 +342,8 @@ impl Missions {
         self.inflight.finish(ACCEPTED_KEY);
         self.inflight.finish_prefix(COORDS_PREFIX);
         self.copy_target = None;
+        self.live_redirects.clear();
+        self.coords_retry.clear();
     }
 
     // ----- Reconstrucción -----
@@ -310,7 +365,12 @@ impl Missions {
         ctx.store_task(TAG_ACCEPTED, accepted_rebuild_task(cmdr, ids));
     }
 
-    fn on_accepted_stored(&mut self, value: &Value, ctx: &mut ModuleCtx) -> bool {
+    fn on_accepted_stored(
+        &mut self,
+        value: &Value,
+        state: &GameState,
+        ctx: &mut ModuleCtx,
+    ) -> bool {
         if !self.stored_cmdr_ok(value) {
             decide!("missions.accepted.discarded", {});
             return false;
@@ -319,6 +379,31 @@ impl Missions {
         self.inflight.finish(ACCEPTED_KEY);
         self.needs_rebuild = false;
         self.book.on_history_result(&cmdr, value);
+        // Viajes de pasajeros activos tras un reinicio: el plan sale de la posición actual.
+        let rebuilt: Vec<(u64, u64, DateTime<Utc>)> = self
+            .book
+            .active()
+            .filter(|m| matches!(m.kind, MissionKind::Passenger | MissionKind::Sightseeing))
+            .filter(|m| !self.trips.contains_key(&m.id))
+            .filter_map(|m| Some((m.id, m.reward.unwrap_or(0), m.accepted_at?)))
+            .collect();
+        decide!("missions.trips.rebuilt", {"trips": rebuilt.len()});
+        for (id, reward, at) in rebuilt {
+            self.trips.insert(
+                id,
+                Trip {
+                    start: Self::position(state),
+                    start_market: None,
+                    reward,
+                    accepted_at: at,
+                    plan: None,
+                    written: false,
+                    rebuilt: true,
+                    base_ly: 0.0,
+                    rewrite: false,
+                },
+            );
+        }
         let since = self
             .book
             .active()
@@ -350,8 +435,17 @@ impl Missions {
                 continue;
             };
             self.stack.apply_event(&ev.kind, ev.timestamp, &self.book);
-            if matches!(ev.kind, EventKind::MissionRedirected(_)) {
-                self.book.apply_event(&ev.kind, ev.timestamp);
+            // Una redirección del historial no pisa otra igual o más reciente vista en vivo.
+            if let EventKind::MissionRedirected(r) = &ev.kind {
+                let stale = self
+                    .live_redirects
+                    .get(&r.mission_id)
+                    .is_some_and(|live| *live >= ev.timestamp);
+                if stale {
+                    decide!("missions.bounties.redirect_skipped", {"mission": r.mission_id});
+                } else {
+                    self.book.apply_event(&ev.kind, ev.timestamp);
+                }
             }
             last = Some(last.map_or(ev.timestamp, |l| l.max(ev.timestamp)));
             applied += 1;
@@ -359,7 +453,8 @@ impl Missions {
         // Lo visto en vivo después del último evento guardado se vuelve a aplicar.
         let buffered = std::mem::take(&mut self.live_buffer);
         for (kind, at) in buffered {
-            if last.is_none_or(|l| at > l) {
+            // Las redirecciones son idempotentes en la pila: se aplican siempre.
+            if last.is_none_or(|l| at > l) || matches!(kind, EventKind::MissionRedirected(_)) {
                 self.stack.apply_event(&kind, at, &self.book);
             }
         }
@@ -413,15 +508,22 @@ impl Missions {
             return;
         }
         if !self.online(state) {
-            decide!("missions.coords.skipped_offline", {"names": candidates.len()});
+            if !self.offline_logged {
+                self.offline_logged = true;
+                decide!("missions.coords.skipped_offline", {"names": candidates.len()});
+            }
             return;
         }
+        self.offline_logged = false;
         let now = self.clock();
         for name in candidates {
             if self.coords_pending.len() >= MAX_COORDS_INFLIGHT {
                 break;
             }
             let key = format!("{COORDS_PREFIX}{}", coord_key(&name));
+            if self.coords_retry.get(&key).is_some_and(|at| now < *at) {
+                continue;
+            }
             if self.coords_pending.contains(&key) || !self.inflight.begin(&key, now) {
                 continue;
             }
@@ -438,10 +540,13 @@ impl Missions {
     }
 
     fn on_coords_stored(&mut self, value: &Value) -> bool {
+        let (names, map) = coords_from_result(value);
         if !self.stored_cmdr_ok(value) {
+            // Descartado: esos nombres se volverán a preguntar al almacén.
+            self.resolver.forget_asked(&names);
+            decide!("missions.coords.local_discarded", {"asked": names.len()});
             return false;
         }
-        let (names, map) = coords_from_result(value);
         decide!("missions.coords.local_applied", {"asked": names.len(), "found": map.len()});
         self.resolver.on_local_for(&names, map);
         true
@@ -455,13 +560,20 @@ impl Missions {
         self.coords_pending.remove(&r.key);
         match &r.outcome {
             NetOutcome::Coords(c) => {
+                self.coords_retry.remove(&r.key);
                 self.resolver.learn(k, c.star_pos);
                 self.resolver.on_remote(c);
                 decide!("missions.coords.remote_applied", {});
             }
-            _ => {
+            NetOutcome::NoData => {
                 self.resolver.mark_unresolvable(k);
                 decide!("missions.coords.remote_missing", {});
+            }
+            _ => {
+                // Fallo, límite o servicio desactivado: se reintenta más tarde.
+                let retry = self.clock() + chrono::Duration::seconds(COORDS_RETRY_S);
+                self.coords_retry.insert(r.key.clone(), retry);
+                decide!("missions.coords.remote_failed", {"retry_s": COORDS_RETRY_S});
             }
         }
         true
@@ -485,6 +597,9 @@ impl Missions {
                 accepted_at: at,
                 plan: None,
                 written: false,
+                rebuilt: false,
+                base_ly: 0.0,
+                rewrite: false,
             },
         );
     }
@@ -529,18 +644,17 @@ impl Missions {
             let Ok(plan) = tourism_plan(&input) else {
                 continue;
             };
-            if write && !trip.written {
-                ctx.store_task(
-                    TAG_STATS_WRITE,
-                    stats_write_task(
-                        cmdr.clone(),
-                        id,
-                        trip.accepted_at.to_rfc3339_opts(SecondsFormat::Secs, true),
-                        trip.reward,
-                        plan.optimal_ly,
-                    ),
-                );
+            let total = trip.base_ly + plan.optimal_ly;
+            let accepted_at = trip.accepted_at.to_rfc3339_opts(SecondsFormat::Secs, true);
+            if write && (!trip.written || trip.rewrite) {
+                let task = if trip.rebuilt && !trip.written {
+                    stats_insert_missing_task(cmdr.clone(), id, accepted_at, trip.reward, total)
+                } else {
+                    stats_write_task(cmdr.clone(), id, accepted_at, trip.reward, total)
+                };
+                ctx.store_task(TAG_STATS_WRITE, task);
                 trip.written = true;
+                trip.rewrite = false;
             }
             trip.plan = Some(plan);
         }
@@ -553,7 +667,7 @@ impl Missions {
         if !completed {
             return;
         }
-        let ly = trip.plan.as_ref().map(|p| p.optimal_ly);
+        let ly = trip.total_ly();
         if let (Some(rows), Some(ly)) = (self.stats_rows.as_mut(), ly)
             && ly > 0.0
         {
@@ -697,8 +811,12 @@ impl Missions {
                     self.end_trip(*id, false, state, ctx)
                 }
                 BookChange::Redirected { id, .. } => {
+                    self.live_redirects.insert(*id, at);
                     if let Some(t) = self.trips.get_mut(id) {
-                        t.plan = None;
+                        if let Some(p) = t.plan.take() {
+                            t.base_ly += p.optimal_ly;
+                            t.rewrite = t.written;
+                        }
                         t.start = Self::position(state).or(t.start);
                     }
                 }
@@ -966,7 +1084,7 @@ impl Module for Missions {
                     return TopicSet::new();
                 }
                 let applied = match tag.as_str() {
-                    TAG_ACCEPTED => self.on_accepted_stored(value, ctx),
+                    TAG_ACCEPTED => self.on_accepted_stored(value, state, ctx),
                     TAG_BOUNTIES => self.on_bounties_stored(value),
                     TAG_PASSENGER_STATS => self.on_stats_stored(value),
                     TAG_COORDS => self.on_coords_stored(value),

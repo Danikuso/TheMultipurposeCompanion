@@ -474,3 +474,101 @@ fn migrations_include_passenger_stats() {
     assert_eq!(Missions::migrations()[0].id, "missions-001");
     assert_eq!(Missions::new().id(), "missions");
 }
+
+fn net_outcome(h: &mut H, name: &str, outcome: NetOutcome) {
+    h.dispatch(SourceEvent::Net(NetResponse {
+        id: 0,
+        module: "missions".into(),
+        key: format!("coords:{}", coord_key(name)),
+        source: NetSource::Ardent,
+        fetched_at: Utc::now(),
+        outcome,
+    }));
+}
+
+fn music(h: &mut H, ts: &str) {
+    h.journal(ts, "Music", r#","MusicTrack":"Exploration""#);
+}
+
+#[test]
+fn tourism_trip_rebuilt_after_restart() {
+    let mut h = H::with_store();
+    write_events(&h.store, TOURISM);
+    h.lines(
+        &TOURISM
+            .lines()
+            .filter(|l| !l.contains("MissionAccepted"))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
+    h.journal(
+        "2026-10-20T15:00:00Z",
+        "Missions",
+        r#","Active":[{"MissionID":65000201,"Name":"Mission_Sightseeing_name","PassengerMission":true,"Expires":200000}],"Failed":[],"Complete":[]"#,
+    );
+    let t = h.val(TOPIC_TOURISM)["trips"][0].clone();
+    assert_eq!(t["mission_id"], 65000201);
+    assert_eq!(t["status"], "loading");
+    h.coords("Tour A", [10.0, 0.0, 0.0]);
+    h.coords("Tour B", [-10.0, 0.0, 0.0]);
+    h.coords("Tour C", [11.0, 0.0, 0.0]);
+    assert_eq!(h.val(TOPIC_TOURISM)["trips"][0]["status"], "ok");
+    assert!(h.tags.iter().any(|t| t == TAG_STATS_WRITE));
+}
+
+#[test]
+fn stored_redirect_older_than_live_is_skipped() {
+    let accepted = MASSACRE
+        .lines()
+        .find(|l| l.contains("65000004") && l.contains("MissionAccepted"))
+        .unwrap();
+    let old = r#"{"timestamp":"2026-10-20T12:30:00Z","event":"MissionRedirected","MissionID":65000004,"Name":"Mission_Massacre_name","NewDestinationStation":"Old Port","NewDestinationSystem":"Old Place"}"#;
+    let live = MASSACRE.lines().last().unwrap();
+    let mut h = H::new();
+    write_events(&h.store, &format!("{accepted}\n{old}\n{live}"));
+    h.journal(
+        "2026-10-20T12:00:00Z",
+        "Commander",
+        r#","FID":"F0000000","Name":"TESTER""#,
+    );
+    h.line(accepted);
+    h.line(live);
+    h.line(massacre_missions_event());
+    h.run_pending();
+    h.run_pending();
+    assert!(h.results.contains_key(TAG_BOUNTIES));
+    let m = h.m.book.get(65000004).unwrap();
+    assert_eq!(m.destination_system.as_deref(), Some("Home"));
+}
+
+#[test]
+fn coords_failed_retries_after_cooldown_and_no_data_never() {
+    use tmc_model::net::NetFailure;
+    let mut h = H::with_store();
+    here(&mut h);
+    h.line(&accept_line(1, "Lave", "2026-10-21T12:00:00Z"));
+    assert_eq!(h.requests.len(), 1);
+    net_outcome(&mut h, "Lave", NetOutcome::Failed(NetFailure::Timeout));
+    music(&mut h, "2026-10-20T12:01:00Z");
+    assert_eq!(h.requests.len(), 1);
+    music(&mut h, "2026-10-20T12:06:00Z");
+    assert_eq!(h.requests.len(), 2);
+    net_outcome(&mut h, "Lave", NetOutcome::NoData);
+    music(&mut h, "2026-10-20T12:30:00Z");
+    assert_eq!(h.requests.len(), 2);
+}
+
+#[test]
+fn discarded_local_coords_are_asked_again() {
+    let mut h = H::new();
+    here(&mut h);
+    h.line(&accept_line(1, "Lave", "2026-10-21T12:00:00Z"));
+    assert_eq!(h.tags.iter().filter(|t| *t == TAG_COORDS).count(), 1);
+    h.dispatch(SourceEvent::Stored {
+        module: "missions".into(),
+        tag: TAG_COORDS.into(),
+        value: json!({"cmdr": "OTRO", "names": ["Lave"], "coords": {}}),
+    });
+    music(&mut h, "2026-10-20T12:01:00Z");
+    assert_eq!(h.tags.iter().filter(|t| *t == TAG_COORDS).count(), 2);
+}
