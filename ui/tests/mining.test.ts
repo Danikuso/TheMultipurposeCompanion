@@ -145,6 +145,8 @@ test('loading status shows loading text', () => {
 
 test('session shows rates computed from the journal clock', () => {
   // 36 t y 9,1 M cr en 1 h de diario (core.clock manda sobre el as_of del topic).
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2031-06-01T00:00:00Z'));
   mountWith(MiningSessionPanel, { 'core.clock': { as_of: '2030-01-01T01:00:00Z' }, 'mining.session': sessionTopic() });
   expect(q('tons-hour')!.textContent).toContain('36 t/h');
   expect(q('credits-total')!.textContent).toContain('≈');
