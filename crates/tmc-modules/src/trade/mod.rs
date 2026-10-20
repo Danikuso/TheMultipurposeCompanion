@@ -146,6 +146,8 @@ pub struct Trade {
     route_key: Option<String>,
     /// Último `Docked` propio: `LocationState` no lo conserva.
     docked: Option<Docked>,
+    /// Último `Market.json` crudo: puede llegar antes que `Docked`.
+    raw_market: Option<Value>,
     market: Option<MarketSnapshot>,
     /// Sistema para el que valen las respuestas de red conservadas.
     addr: u64,
@@ -189,6 +191,7 @@ impl Trade {
             route_blocker: None,
             route_key: None,
             docked: None,
+            raw_market: None,
             market: None,
             addr: 0,
             pad: None,
@@ -271,6 +274,18 @@ impl Trade {
         }
     }
 
+    /// Vacía la ruta conservando `copy_seq`: es monótono para que el portapapeles
+    /// copie el primer destino de un plan nuevo.
+    fn reset_route(&mut self) {
+        let seq = self.route.copy_seq;
+        self.route = TradeRouteState::default();
+        self.route.copy_seq = seq;
+        self.route_status = "idle";
+        self.route_blocker = None;
+        self.route_key = None;
+        self.inflight.finish_prefix("route:");
+    }
+
     fn clear_remote(&mut self) {
         self.ardent_sells.clear();
         self.answered.clear();
@@ -306,11 +321,9 @@ impl Trade {
         if switched {
             self.session = TradeSession::default();
             self.session.reset(self.clock());
-            self.route = TradeRouteState::default();
-            self.route_status = "idle";
-            self.route_blocker = None;
-            self.route_key = None;
-            self.inflight.finish_prefix("route:");
+            self.reset_route();
+            self.docked = None;
+            self.raw_market = None;
             self.market = None;
             self.sells_sent = None;
             self.sells_loaded = false;
@@ -379,10 +392,12 @@ impl Trade {
                 // Nueva partida: el coste pagado se vuelve a leer del almacén.
                 self.cost_loaded = false;
                 self.pending.clear();
+                self.inventory.clear();
                 self.inflight.finish(COST_KEY);
                 self.clear_remote();
                 self.sells_loaded = false;
             }
+            EventKind::ShipyardSwap(_) => self.inventory.clear(),
             EventKind::Docked(d) => {
                 let same = self.docked.as_ref().and_then(|p| p.market_id) == d.market_id;
                 self.docked = Some(d.clone());
@@ -540,12 +555,12 @@ impl Trade {
     }
 
     fn current_market(&self, state: &GameState) -> Option<CurrentMarket> {
+        self.market_with(&self.sells_map(state))
+    }
+
+    fn market_with(&self, sells: &BTreeMap<String, Vec<SellOption>>) -> Option<CurrentMarket> {
         let snap = self.market.as_ref()?;
-        Some(CurrentMarket::build(
-            snap,
-            &self.sells_map(state),
-            self.clock(),
-        ))
+        Some(CurrentMarket::build(snap, sells, self.clock()))
     }
 
     /// Pide al almacén las mejores ventas conocidas de las mercancías de interés.
@@ -700,7 +715,7 @@ impl Trade {
 
     /// Escribe (en vivo) las filas de Ardent con coordenadas conocidas.
     fn write_ardent(&self, ctx: &mut ModuleCtx, state: &GameState, rows: Vec<ArdentRow>) {
-        if ctx.replaying || state.galaxy == Galaxy::Legacy || rows.is_empty() {
+        if ctx.replaying || !self.online(state) || rows.is_empty() {
             return;
         }
         ctx.store_task(TAG_ARDENT_WRITE, ardent_write_task(rows));
@@ -725,12 +740,12 @@ impl Trade {
         };
         self.inflight.finish(&r.key);
         let key = commodity_key(&commodity);
-        let pending = self.pending_imports.remove(&key);
         let cur = self.cur_pad(state).unwrap_or(PadSize::Small);
         if pad != pad_tag(cur) || addr != state.location.system_address || addr != self.addr {
             decide!("trade.imports.response.stale", {});
             return false;
         }
+        let pending = self.pending_imports.remove(&key);
         let now = self.clock();
         let changed = match &r.outcome {
             NetOutcome::Markets(ms) => {
@@ -964,6 +979,9 @@ impl Trade {
         }
     }
 
+    /// Una ruta pedida desde otro sistema de origen se acepta: el plan es válido
+    /// desde su origen y `on_docked` lo hace avanzar al llegar a sus paradas.
+    /// Solo se descartan las respuestas cuya clave no es la de la última petición.
     fn apply_route_response(&mut self, r: &NetResponse) -> bool {
         if self.route_key.as_deref() != Some(r.key.as_str()) {
             decide!("trade.route.response.stale", {});
@@ -995,9 +1013,9 @@ impl Trade {
         v
     }
 
-    fn render_market(&self, state: &GameState) -> Value {
+    fn render_market(&self, sells: &BTreeMap<String, Vec<SellOption>>) -> Value {
         let mut v = self
-            .current_market(state)
+            .market_with(sells)
             .and_then(|m| serde_json::to_value(m).ok())
             .unwrap_or_else(|| json!({"station": null, "system": null, "rows": []}));
         if let Some(o) = v.as_object_mut() {
@@ -1006,7 +1024,7 @@ impl Trade {
         self.stamp(v)
     }
 
-    fn render_cargo(&self, state: &GameState) -> Value {
+    fn render_cargo(&self, state: &GameState, sells: &BTreeMap<String, Vec<SellOption>>) -> Value {
         let here: HashMap<String, u64> = self
             .market
             .as_ref()
@@ -1018,10 +1036,9 @@ impl Trade {
                     .collect()
             })
             .unwrap_or_default();
-        let best: HashMap<String, SellOption> = self
-            .sells_map(state)
-            .into_iter()
-            .filter_map(|(k, v)| v.into_iter().next().map(|o| (k, o)))
+        let best: HashMap<String, SellOption> = sells
+            .iter()
+            .filter_map(|(k, v)| v.first().map(|o| (k.clone(), o.clone())))
             .collect();
         let capacity = state.ship.as_ref().and_then(|s| s.cargo_capacity);
         let view = CargoView::build(&self.inventory, &self.basis, &here, &best, capacity);
@@ -1029,14 +1046,7 @@ impl Trade {
     }
 
     fn render_session(&self) -> Value {
-        let mut v = serde_json::to_value(&self.session).unwrap_or_default();
-        if let Some(o) = v.as_object_mut() {
-            o.insert(
-                "credits_per_hour".into(),
-                json!(self.session.credits_per_hour(self.clock())),
-            );
-        }
-        self.stamp(v)
+        self.stamp(serde_json::to_value(&self.session).unwrap_or_default())
     }
 
     fn render_route(&self, state: &GameState) -> Value {
@@ -1107,6 +1117,49 @@ impl Trade {
         crate::topicx::set_topic(&mut self.values, topic, v, dirty);
     }
 
+    /// Docked conocido: el del diario o, si el módulo arrancó ya atracado, el de la ubicación.
+    fn dock_context(&self, state: &GameState) -> Option<Docked> {
+        if let Some(d) = &self.docked {
+            return Some(d.clone());
+        }
+        let loc = &state.location;
+        (loc.mode == FlightMode::Docked && loc.station.is_some()).then(|| Docked {
+            station_name: loc.station.clone(),
+            station_type: loc.station_type.clone(),
+            market_id: loc.market_id,
+            star_system: Some(loc.system.clone()),
+            system_address: Some(loc.system_address),
+            ..Docked::default()
+        })
+    }
+
+    /// Procesa el último `Market.json` si encaja con la estación actual.
+    fn try_market(&mut self, state: &GameState, ctx: &mut ModuleCtx) {
+        let (Some(raw), Some(d)) = (&self.raw_market, self.dock_context(state)) else {
+            return;
+        };
+        let Some(snap) = snapshot_from_market_json(raw, &d, state.location.star_pos, self.clock())
+        else {
+            decide!("trade.market.rejected", {});
+            return;
+        };
+        decide!("trade.market.loaded", {"prices": snap.prices.len()});
+        if !ctx.replaying && state.galaxy != Galaxy::Legacy {
+            let s = snap.clone();
+            ctx.store_task(
+                TAG_MARKET_WRITE,
+                Box::new(move |store| {
+                    let applied = store.replace_markets(&[s])?;
+                    Ok(json!({"applied": applied}))
+                }),
+            );
+        }
+        self.market = Some(snap);
+        self.commodities_loaded = false;
+        self.ensure_commodities_task(ctx);
+        self.request_sells(state, ctx);
+    }
+
     fn on_eddn(&mut self, n: &EddnNotice, state: &GameState, ctx: &mut ModuleCtx) {
         self.eddn_connected = n.connected;
         if ctx.replaying || self.market.is_none() {
@@ -1166,6 +1219,31 @@ impl Module for Trade {
                 self.on_journal(je, file, *line, ctx.replaying, state);
                 self.ensure_cost_task(ctx);
                 self.ensure_commodities_task(ctx);
+                let relevant = matches!(
+                    je.kind,
+                    EventKind::Commander(_)
+                        | EventKind::LoadGame(_)
+                        | EventKind::Docked(_)
+                        | EventKind::Undocked(_)
+                        | EventKind::Location(_)
+                        | EventKind::FsdJump(_)
+                        | EventKind::CarrierJump(_)
+                        | EventKind::Cargo(_)
+                        | EventKind::MarketBuy(_)
+                        | EventKind::MarketSell(_)
+                        | EventKind::EjectCargo(_)
+                        | EventKind::Rank(_)
+                        | EventKind::Progress(_)
+                        | EventKind::ShipyardSwap(_)
+                );
+                if !relevant {
+                    return TopicSet::new();
+                }
+                if self.market.is_none()
+                    && matches!(je.kind, EventKind::Docked(_) | EventKind::Location(_))
+                {
+                    self.try_market(state, ctx);
+                }
                 self.sync_sells(state, ctx);
                 if matches!(
                     je.kind,
@@ -1185,29 +1263,8 @@ impl Module for Trade {
                 self.maybe_request_imports(state, ctx);
             }
             SourceEvent::Companion(CompanionFile::Raw(CompanionKind::Market, v)) => {
-                let snap = self.docked.as_ref().and_then(|d| {
-                    snapshot_from_market_json(v, d, state.location.star_pos, self.clock())
-                });
-                match snap {
-                    Some(snap) => {
-                        decide!("trade.market.loaded", {"prices": snap.prices.len()});
-                        if !ctx.replaying && state.galaxy != Galaxy::Legacy {
-                            let s = snap.clone();
-                            ctx.store_task(
-                                TAG_MARKET_WRITE,
-                                Box::new(move |store| {
-                                    let applied = store.replace_markets(&[s])?;
-                                    Ok(json!({"applied": applied}))
-                                }),
-                            );
-                        }
-                        self.market = Some(snap);
-                        self.commodities_loaded = false;
-                        self.ensure_commodities_task(ctx);
-                        self.request_sells(state, ctx);
-                    }
-                    None => decide!("trade.market.rejected", {}),
-                }
+                self.raw_market = Some(v.clone());
+                self.try_market(state, ctx);
             }
             SourceEvent::Eddn(n) => self.on_eddn(n, state, ctx),
             SourceEvent::Stored { module, tag, value } if module == "trade" => {
@@ -1266,11 +1323,7 @@ impl Module for Trade {
                     decide!("trade.session.reset.applied", {});
                 }
                 ACTION_ROUTE_CLEAR => {
-                    self.route = TradeRouteState::default();
-                    self.route_status = "idle";
-                    self.route_blocker = None;
-                    self.route_key = None;
-                    self.inflight.finish_prefix("route:");
+                    self.reset_route();
                     decide!("trade.route.cleared", {});
                 }
                 ACTION_ROUTE_REQUEST => {
@@ -1293,9 +1346,10 @@ impl Module for Trade {
             _ => return TopicSet::new(),
         }
         let mut dirty = TopicSet::new();
-        let v = self.render_market(state);
+        let sells = self.sells_map(state);
+        let v = self.render_market(&sells);
         self.set(TOPIC_MARKET, v, &mut dirty);
-        let v = self.render_cargo(state);
+        let v = self.render_cargo(state, &sells);
         self.set(TOPIC_CARGO, v, &mut dirty);
         let v = self.render_route(state);
         self.set(TOPIC_ROUTE, v, &mut dirty);
