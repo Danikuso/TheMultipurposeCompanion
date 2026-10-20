@@ -5,14 +5,14 @@
 - **Última actualización:** 2026-10-20 16:14 (Europe/Madrid) · Codex
 - **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (🔄 en ejecución). F2 ✅ fusionada en `main` (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversal: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md).
-- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 29/35 hechas (aprobado al ordenar «escribe el plan y ejecútalo»). Diagnóstico: [plan](docs/plans/2026-10-20-diagnostico-debug.md) D1–D7b. Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
+- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 31/35 hechas (aprobado al ordenar «escribe el plan y ejecútalo»). Diagnóstico: [plan](docs/plans/2026-10-20-diagnostico-debug.md) D1–D7b. Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
 - **Rama de trabajo:** `fase/f3-comercio-misiones`
 
 ## Puntero actual
 
-- **Tarea:** F3 en ejecución con subagentes (en curso: Task 29). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
+- **Tarea:** F3 en ejecución con subagentes (en curso: Task 31). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
 - **Último paso completado:** Task 17 ✅ (08aacf3), revisión aprobada.
-- **Siguiente acción:** Tasks 29–30 (UI de misiones); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Siguiente acción:** Task 31 (disposiciones Comercio/Misiones, prioridad y ajustes); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Tareas de diagnóstico debug
 
@@ -77,9 +77,9 @@
 | 26 | `missions` — pasajeros y cabinas | ✅ hecha | 88df42a, 250119f | Pasajeros por destino (VIP/buscado) y cabinas por clase (ocupación agregada) |
 | 27 | `missions` — turismo: ruta óptima, cr/al y veredicto | ✅ hecha | 4cfa8cd, 6a2627e | Turismo: ruta óptima (exacta ≤8, heurística), cr/al, veredicto; robusto ante datos inválidos |
 | 28 | `missions` — módulo, coordenadas, topics, relevancia y registro | ✅ hecha | b0a340c, 7d37024 | Módulo de misiones: libro+masacre+avisos+pasajeros+turismo cableados; turismo tras reiniciar; coordenadas con reintento |
-| 29 | UI — «Misiones activas», «Masacre» y «Avisos» | 🔄 en curso | — |  |
-| 30 | UI — «Pasajeros», «Turismo», «Recompensas» y «Objetivos comunitarios» | ⬜ pendiente | — |  |
-| 31 | UI — disposiciones «Comercio» y «Misiones», prioridad y ajustes | ⬜ pendiente | — |  |
+| 29 | UI — «Misiones activas», «Masacre» y «Avisos» | ✅ hecha | 17fd079, fd69ee4 | Misiones activas por destino, masacre (vista de pila), avisos |
+| 30 | UI — «Pasajeros», «Turismo», «Recompensas» y «Objetivos comunitarios» | ✅ hecha | abaf317, fd69ee4, cda1014 | Pasajeros, turismo (veredicto con contrato real), recompensas, objetivos comunitarios; contrato JSON Rust→UI |
+| 31 | UI — disposiciones «Comercio» y «Misiones», prioridad y ajustes | 🔄 en curso | — |  |
 | 32 | fixtures sintéticos y pruebas de extremo a extremo | ⬜ pendiente | — |  |
 | 33 | `tmc-headless eval` — conciliación de coste pagado y de masacre | ⬜ pendiente | — |  |
 | 34 | avisos, consumo con EDDN, verificación de los 11 criterios y cierre | ⬜ pendiente | — |  |
