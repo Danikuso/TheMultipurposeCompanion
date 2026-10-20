@@ -49,6 +49,8 @@ fn needed(m: &Mission) -> u32 {
 }
 
 impl MassacreStack {
+    /// Recuento local real (una redirigida con 7/10 sigue en 7); la UI usa `view`,
+    /// que muestra las redirigidas como completas.
     pub fn kills_for(&self, mission_id: u64) -> u32 {
         self.kills.get(&mission_id).copied().unwrap_or(0)
     }
@@ -153,13 +155,18 @@ impl MassacreStack {
             });
             pile.reward += m.reward.unwrap_or(0);
             pile.missing |= m.details_missing || m.accepted_at.is_none();
+            if m.accepted_at.is_none() {
+                // Sin detalles: no suma a barras ni al restante, solo la marca.
+                continue;
+            }
             let need = needed(m);
             let kills = if self.complete.contains(&m.id) {
                 need
             } else {
                 self.kills_for(m.id).min(need)
             };
-            let faction = m.faction.clone().unwrap_or_default();
+            // Emisor desconocido: clave propia "?", nunca fusionado con una facción real.
+            let faction = m.faction.clone().unwrap_or_else(|| "?".into());
             let bar = pile
                 .issuers
                 .entry(norm(&faction))
@@ -367,5 +374,71 @@ mod tests {
             .find(|p| p.target_faction == "Pirate Clan Y")
             .unwrap();
         assert_eq!(y.kills_remaining, 1);
+    }
+
+    #[test]
+    fn completed_mid_stream_moves_to_next_and_overflow_ignored() {
+        let mut b = MissionBook::default();
+        accept(&mut b, mass(1, "A", "X", 2), at(12, 0));
+        accept(&mut b, mass(2, "A", "X", 2), at(12, 1));
+        let mut s = MassacreStack::default();
+        kill(&mut s, &b, "X", at(13, 0));
+        let mut c = Box::<tmc_model::events::MissionCompleted>::default();
+        c.mission_id = 1;
+        let ev = EventKind::MissionCompleted(c);
+        s.apply_event(&ev, at(13, 1), &b);
+        b.apply_event(&ev, at(13, 1));
+        for i in 2..8 {
+            kill(&mut s, &b, "X", at(13, i));
+        }
+        assert_eq!(s.kills_for(2), 2);
+        assert_eq!(s.view(&b)[0].kills_remaining, 0);
+    }
+
+    #[test]
+    fn issuer_names_case_and_spaces_group_and_equal_time_not_counted() {
+        let mut b = MissionBook::default();
+        accept(&mut b, mass(1, "Alpha", "X", 5), at(12, 0));
+        accept(&mut b, mass(2, " alpha ", "X", 5), at(12, 1));
+        let mut s = MassacreStack::default();
+        kill(&mut s, &b, "X", at(12, 0));
+        assert_eq!(s.kills_for(1), 0);
+        kill(&mut s, &b, "X", at(12, 5));
+        assert_eq!(s.kills_for(1), 1);
+        let v = s.view(&b);
+        assert_eq!(v[0].issuers.len(), 1);
+        assert_eq!(v[0].issuers[0].missions, 2);
+    }
+
+    #[test]
+    fn missing_details_excluded_from_remaining_and_insertion_order_irrelevant() {
+        let mut b = MissionBook::default();
+        b.apply_event(
+            &EventKind::Missions(Box::new(MissionsList {
+                active: vec![MissionRef {
+                    mission_id: 9,
+                    name: "Mission_Massacre_name".into(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            })),
+            at(12, 0),
+        );
+        accept(&mut b, mass(2, "A", "X", 5), at(12, 1));
+        let v = MassacreStack::default().view(&b);
+        assert_eq!(v.len(), 1);
+        assert_eq!(v[0].kills_remaining, 5);
+
+        let run = |order: [(u64, u32); 2]| {
+            let mut b = MissionBook::default();
+            for (id, m) in order {
+                accept(&mut b, mass(id, "A", "X", 3), at(12, m));
+            }
+            let mut s = MassacreStack::default();
+            kill(&mut s, &b, "X", at(13, 0));
+            (s.kills_for(1), s.kills_for(2))
+        };
+        assert_eq!(run([(1, 0), (2, 0)]), run([(2, 0), (1, 0)]));
+        assert_eq!(run([(1, 0), (2, 0)]), (1, 0));
     }
 }
