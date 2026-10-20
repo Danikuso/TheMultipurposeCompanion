@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-20 (Europe/Madrid) · Claude Opus 5.5 (D7b)
+- **Última actualización:** 2026-10-20 03:15 (Europe/Madrid) · Claude Opus 5.5
 - **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (🔄 en ejecución). F2 ✅ fusionada en `main` (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversal: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md).
 - **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 17/35 hechas (aprobado al ordenar «escribe el plan y ejecútalo»). Diagnóstico: [plan](docs/plans/2026-10-20-diagnostico-debug.md) D1–D7b. Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
@@ -10,9 +10,9 @@
 
 ## Puntero actual
 
-- **Tarea:** diagnóstico debug integrado en F3 (D7b ✅, merge 6e5e97a + cableado a1c2bb3). F3 Task 17 🔄 reanudable.
-- **Último paso completado:** D7b verificado: fmt/clippy (debug y release) PASS, 999 Rust PASS ×2 (2 ignorados), UI 160 PASS, check/build OK, hash del release intacto.
-- **Siguiente acción:** retomar F3 Task 17 (ruta comercial con avance automático) desde el WIP preservado sin commit: `crates/tmc-modules/src/trade/route.rs` (tests/stubs) y `crates/tmc-modules/src/trade/mod.rs` (`mod route;` + `pub use`). Primer paso: confirmar el RED de sus tests. Regla nueva: todo topic/acción/consulta/endpoint/ajuste nuevo se registra en las listas de diagnóstico con test canario (spec de diagnóstico, «Cobertura»). `.claude/` y `.tmp/` locales no se incluyen.
+- **Tarea:** F3 en ejecución con subagentes (en curso: Task 18). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
+- **Último paso completado:** Task 17 ✅ (08aacf3), revisión aprobada.
+- **Siguiente acción:** Task 18 (sesión de comercio y buscar mercancía); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Tareas de diagnóstico debug
 
