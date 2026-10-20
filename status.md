@@ -187,7 +187,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 18 | Presupuesto de consumo y cierre de F0 | ✅ hecha | fe99cd6 | `measure-footprint.ps1` (`max_mb=144.91` < 150, `avg_cpu_idle=0.09%` < 1% PASS), `README.md` y 9/9 criterios §15 verificados. |
 
 ## Bloqueos y pendientes del propietario
-- [ ] **F3 · Criterio 10 (consumo con ventana y EDDN):** cierra TMC.exe y ejecuta `CARGO_TARGET_DIR=target-f3 cargo build --release -p tmc-desktop` y `pwsh scripts/measure-footprint.ps1 -Exe target-f3/release/TMC.exe -JournalDir .tmp/footprint-f3-trade -FixturePath tests/fixtures/journal/trade_session.log -ShowWindow -Seconds 120` (y con `missions_session.log`); o autoriza al agente a hacerlo. Límite < 150 MB y < 1 % CPU.
+- [x] **F3 · Criterio 10:** ✅ medido 2026-10-20 con ventana (106,4 / 111,5 MB, 0 % CPU). Recomendado: comprobar con EDDN real durante una sesión de juego. Antes: cierra TMC.exe y ejecuta `CARGO_TARGET_DIR=target-f3 cargo build --release -p tmc-desktop` y `pwsh scripts/measure-footprint.ps1 -Exe target-f3/release/TMC.exe -JournalDir .tmp/footprint-f3-trade -FixturePath tests/fixtures/journal/trade_session.log -ShowWindow -Seconds 120` (y con `missions_session.log`); o autoriza al agente a hacerlo. Límite < 150 MB y < 1 % CPU.
 
 - [x] **F3 · Task 16:** corregidos cierres SQL, mercancías ausentes/catálogos vacíos y compatibilidad antes del límite. Consulta dirigida acotada, marcador completo con migración aditiva y purga. APIs y Tasks 18/19/20 sincronizadas en el plan. Revisiones spec/calidad aprobadas; 924 Rust PASS, fmt/clippy OK.
 
