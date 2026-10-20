@@ -4,6 +4,7 @@ use crate::exobiology::Exobiology;
 use crate::exploration::Exploration;
 use crate::mining::Mining;
 use crate::navigation::Navigation;
+use crate::trade::Trade;
 use tmc_core::Module;
 
 pub fn all_modules() -> Vec<Box<dyn Module>> {
@@ -14,5 +15,6 @@ pub fn all_modules() -> Vec<Box<dyn Module>> {
         Box::new(Exobiology::new()),
         Box::new(Combat::new()),
         Box::new(Mining::new()),
+        Box::new(Trade::new()),
     ]
 }

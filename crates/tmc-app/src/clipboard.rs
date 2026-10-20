@@ -295,6 +295,7 @@ impl ActionHost for AppActions {
                         .filter(|s| !s.is_empty())
                 };
                 let next = pick("navigation.route", "copy_target")
+                    .or_else(|| pick("trade.route", "copy_target"))
                     .or_else(|| pick("core.route", "next_system"))
                     .ok_or_else(|| {
                         tmc_model::diagnostic!(
@@ -368,12 +369,14 @@ impl ActionHost for AppActions {
     }
 }
 
-const MODULE_PREFIXES: [&str; 5] = [
+const MODULE_PREFIXES: [&str; 7] = [
     "navigation.",
     "exploration.",
     "exobiology.",
     "combat.",
     "mining.",
+    "trade.",
+    "missions.",
 ];
 
 #[cfg(test)]

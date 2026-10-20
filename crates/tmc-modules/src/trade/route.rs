@@ -69,6 +69,7 @@ impl TradeRouteState {
     pub fn on_plan(&mut self, plan: TradeRoutePlan) {
         self.current = 0;
         self.completed = false;
+        self.requested_at = None;
         self.copy_target = plan.stops.first().map(|s| s.to_system.clone());
         if self.copy_target.is_some() {
             self.copy_seq += 1;
@@ -84,12 +85,19 @@ impl TradeRouteState {
         }
         let stops = &self.plan.as_ref()?.stops;
         let stop = stops.get(self.current)?;
-        let (Some(system), Some(station)) = (d.star_system.as_deref(), d.station_name.as_deref())
-        else {
-            return None;
+        // Con MarketID en ambos lados manda la identidad; si no, el nombre.
+        let matches = match stop.to_market_id.zip(d.market_id) {
+            Some((expected, docked)) => expected == docked,
+            None => {
+                let (Some(system), Some(station)) =
+                    (d.star_system.as_deref(), d.station_name.as_deref())
+                else {
+                    return None;
+                };
+                stop.to_station.trim().eq_ignore_ascii_case(station.trim())
+                    && stop.to_system.trim().eq_ignore_ascii_case(system.trim())
+            }
         };
-        let matches = stop.to_station.trim().eq_ignore_ascii_case(station.trim())
-            && stop.to_system.trim().eq_ignore_ascii_case(system.trim());
         if !matches {
             decide!("trade.route.off_route", { "current": self.current });
             return None;
@@ -215,6 +223,35 @@ mod tests {
         assert_eq!(route.current, 1);
         assert_eq!(route.copy_target.as_deref(), Some("C"));
         assert_eq!(route.copy_seq, 2);
+    }
+
+    #[test]
+    fn market_id_match_wins_over_names() {
+        let mut p = plan();
+        p.stops[0].to_market_id = Some(42);
+        let mut route = TradeRouteState::default();
+        route.on_plan(p);
+        let mut d = docking("Renamed", "Renamed Port");
+        d.market_id = Some(42);
+        assert_eq!(route.on_docked(&d), Some("C".into()));
+        let mut other = docking("C", "Port C");
+        other.market_id = Some(7);
+        let mut p2 = plan();
+        p2.stops[0].to_market_id = Some(42);
+        route.on_plan(p2);
+        let before = route.clone();
+        assert_eq!(route.on_docked(&other), None);
+        assert_eq!(route, before);
+    }
+
+    #[test]
+    fn on_plan_resets_requested_at() {
+        let mut route = TradeRouteState {
+            requested_at: Some(Utc::now()),
+            ..Default::default()
+        };
+        route.on_plan(plan());
+        assert_eq!(route.requested_at, None);
     }
 
     #[test]
