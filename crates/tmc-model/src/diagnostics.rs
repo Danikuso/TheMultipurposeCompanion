@@ -798,7 +798,6 @@ pub fn emit<T: Serialize + ?Sized>(
 #[doc(hidden)]
 pub mod capture {
     use std::fmt::Debug;
-    use std::sync::{Arc, Mutex};
     use tracing::field::{Field, Visit};
     use tracing::span::{Attributes, Id, Record as SpanRecord};
     use tracing::{Event, Metadata, Subscriber};
@@ -827,7 +826,14 @@ pub mod capture {
         }
     }
 
-    struct Collector(Arc<Mutex<Vec<Record>>>);
+    thread_local! {
+        /// Búfer de la captura activa en este hilo; fuera de una captura los eventos se ignoran.
+        static ACTIVE: std::cell::RefCell<Option<Vec<Record>>> = const { std::cell::RefCell::new(None) };
+    }
+
+    /// Recolector global instalado una sola vez: su interés es estático, así que el caché de
+    /// callsites no depende de qué pruebas corran en paralelo.
+    struct Collector;
 
     impl Subscriber for Collector {
         fn enabled(&self, metadata: &Metadata<'_>) -> bool {
@@ -854,9 +860,11 @@ pub mod capture {
         fn event(&self, event: &Event<'_>) {
             let mut record = Record::default();
             event.record(&mut record);
-            if let Ok(mut records) = self.0.lock() {
-                records.push(record);
-            }
+            ACTIVE.with(|active| {
+                if let Some(records) = active.borrow_mut().as_mut() {
+                    records.push(record);
+                }
+            });
         }
         fn enter(&self, _: &Id) {}
         fn exit(&self, _: &Id) {}
@@ -864,29 +872,20 @@ pub mod capture {
 
     /// Ejecuta `f` y devuelve los registros de diagnóstico emitidos en este hilo.
     pub fn capture<R>(f: impl FnOnce() -> R) -> (R, Vec<Record>) {
-        // Una captura a la vez: dos recolectores simultáneos se pisan el interés del callsite.
-        static SERIAL: Mutex<()> = Mutex::new(());
-        let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
-        let records = Arc::new(Mutex::new(Vec::new()));
-        // Los callsites son globales: otros hilos de prueba pueden haber cacheado «sin interés».
-        let result = tracing::subscriber::with_default(Collector(records.clone()), || {
-            // El callsite de `emit` es único: otro hilo sin suscriptor puede haberlo
-            // registrado antes con interés «nunca». Se calienta hasta que este recolector lo ve.
-            for _ in 0..200 {
-                super::emit(super::DiagnosticContext::State, "diagnostics.warmup", &());
-                let seen = records.lock().map(|r| !r.is_empty()).unwrap_or(true);
-                if seen {
-                    break;
-                }
-                tracing::callsite::rebuild_interest_cache();
-                std::thread::yield_now();
-            }
-            if let Ok(mut seen) = records.lock() {
-                seen.clear();
-            }
+        static GLOBAL: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        let global =
+            *GLOBAL.get_or_init(|| tracing::subscriber::set_global_default(Collector).is_ok());
+        let previous = ACTIVE.with(|a| a.replace(Some(Vec::new())));
+        let result = if global {
             f()
-        });
-        let records = records.lock().map(|r| r.clone()).unwrap_or_default();
+        } else {
+            // Otro suscriptor global ocupa el sitio: recolector local como último recurso.
+            tracing::subscriber::with_default(Collector, || {
+                tracing::callsite::rebuild_interest_cache();
+                f()
+            })
+        };
+        let records = ACTIVE.with(|a| a.replace(previous)).unwrap_or_default();
         (result, records)
     }
 }
