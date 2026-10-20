@@ -5,14 +5,14 @@
 - **Última actualización:** 2026-10-20 16:14 (Europe/Madrid) · Codex
 - **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (🔄 en ejecución). F2 ✅ fusionada en `main` (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversal: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md).
-- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 33/35 hechas (aprobado al ordenar «escribe el plan y ejecútalo»). Diagnóstico: [plan](docs/plans/2026-10-20-diagnostico-debug.md) D1–D7b. Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
+- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 34/35 hechas (aprobado al ordenar «escribe el plan y ejecútalo»). Diagnóstico: [plan](docs/plans/2026-10-20-diagnostico-debug.md) D1–D7b. Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
 - **Rama de trabajo:** `fase/f3-comercio-misiones`
 
 ## Puntero actual
 
-- **Tarea:** F3 en ejecución con subagentes (en curso: Task 33). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
+- **Tarea:** F3 en ejecución con subagentes (en curso: Task 34). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
 - **Último paso completado:** Task 17 ✅ (08aacf3), revisión aprobada.
-- **Siguiente acción:** Task 33 (tmc-headless eval de coste pagado y masacre); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Siguiente acción:** Task 34 (avisos, consumo con EDDN, verificación de 11 criterios y cierre); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Tareas de diagnóstico debug
 
@@ -81,8 +81,8 @@
 | 30 | UI — «Pasajeros», «Turismo», «Recompensas» y «Objetivos comunitarios» | ✅ hecha | abaf317, fd69ee4, cda1014 | Pasajeros, turismo (veredicto con contrato real), recompensas, objetivos comunitarios; contrato JSON Rust→UI |
 | 31 | UI — disposiciones «Comercio» y «Misiones», prioridad y ajustes | ✅ hecha | 2d449e9, b6dbdde | Disposiciones Comercio/Misiones con prioridad; ajustes EDDN/turismo; relevancia solo con carga comercial |
 | 32 | fixtures sintéticos y pruebas de extremo a extremo | ✅ hecha | 502804f, 69f83c5, 7fc00e0 | Fixtures F3, contratos trade/missions, ráfaga EDDN (p95 299 ms, ≤1 consulta/10 s, corruptos), 14 Playwright; hooks e2e solo debug y estrictos |
-| 33 | `tmc-headless eval` — conciliación de coste pagado y de masacre | 🔄 en curso | — |  |
-| 34 | avisos, consumo con EDDN, verificación de los 11 criterios y cierre | ⬜ pendiente | — |  |
+| 33 | `tmc-headless eval` — conciliación de coste pagado y de masacre | ✅ hecha | f262180, 0bda26e, 939de0b | Eval coste pagado y masacre (historial: 2/2 y 4/4, INSUFICIENTE por n<5); release sin avisos |
+| 34 | avisos, consumo con EDDN, verificación de los 11 criterios y cierre | 🔄 en curso | — |  |
 
 ## Tareas de F2
 
