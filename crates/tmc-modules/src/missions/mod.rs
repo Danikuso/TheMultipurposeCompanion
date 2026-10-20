@@ -10,6 +10,7 @@ mod book;
 mod massacre;
 mod passengers;
 mod rewards;
+pub mod tourism;
 
 pub use alerts::{AlertKind, Here, MissionAlert, alert_from_change, evaluate_alerts};
 pub use book::{
