@@ -38,7 +38,8 @@ pub struct TourismPlan {
     pub board_order_ly: f64,
     pub optimal_ly: f64,
     pub jumps: Option<u32>,
-    pub cr_per_ly: f64,
+    /// `None` si la ruta mide 0 al (veredicto rentable: sin coste de viaje).
+    pub cr_per_ly: Option<f64>,
     /// Estimación (≈) con constantes sin verificar.
     pub cr_per_hour: Option<f64>,
     pub estimates_verified: bool,
@@ -71,8 +72,16 @@ pub fn path_length(
 }
 
 fn len_of_perm(start: [f64; 3], stops: &[[f64; 3]], perm: &[usize], ret: Option<[f64; 3]>) -> f64 {
-    let pts: Vec<[f64; 3]> = perm.iter().map(|&i| stops[i]).collect();
-    path_length(start, &pts, ret)
+    let mut cur = start;
+    let mut total = 0.0;
+    for &i in perm {
+        total += dist(cur, stops[i]);
+        cur = stops[i];
+    }
+    if let Some(r) = ret {
+        total += dist(cur, r);
+    }
+    total
 }
 
 /// Orden óptimo exacto por permutaciones (úsese con pocas paradas).
@@ -235,7 +244,12 @@ fn estimate_jumps(start: [f64; 3], pts: &[[f64; 3]], ret: Option<[f64; 3]>, rang
 
 /// Calcula el plan; `Err("stops_unavailable")` si no hay paradas.
 pub fn plan(input: &PlanInput) -> Result<TourismPlan, &'static str> {
-    if input.stops.is_empty() {
+    let finite = |p: &[f64; 3]| p.iter().all(|v| v.is_finite());
+    if input.stops.is_empty()
+        || !finite(&input.start)
+        || input.stops.iter().any(|s| !finite(&s.1))
+        || input.return_to.is_some_and(|r| !finite(&r))
+    {
         return Err(STATUS_STOPS_UNAVAILABLE);
     }
     let coords: Vec<[f64; 3]> = input.stops.iter().map(|s| s.1).collect();
@@ -245,25 +259,24 @@ pub fn plan(input: &PlanInput) -> Result<TourismPlan, &'static str> {
     let ordered: Vec<[f64; 3]> = order.iter().map(|&i| coords[i]).collect();
     let jumps = input
         .jump_range
-        .filter(|r| *r > 0.0)
+        .filter(|r| r.is_finite() && *r > 0.0)
         .map(|r| estimate_jumps(input.start, &ordered, input.return_to, r));
-    let cr_per_ly = if optimal_ly > 0.0 {
-        input.reward as f64 / optimal_ly
-    } else {
-        0.0
-    };
+    let cr_per_ly = (optimal_ly > 0.0).then(|| input.reward as f64 / optimal_ly);
     let cr_per_hour = jumps.map(|j| {
         let secs = j as f64 * SECONDS_PER_JUMP + coords.len() as f64 * SECONDS_PER_STOP;
         input.reward as f64 / (secs / 3600.0)
     });
-    let (reference, own) = match input.own_reference {
+    let valid = |r: f64| r.is_finite() && r > 0.0;
+    let (reference, own) = match input.own_reference.filter(|r| valid(*r)) {
         Some(r) => (r, true),
-        None => (input.setting_reference, false),
+        None if valid(input.setting_reference) => (input.setting_reference, false),
+        None => (100_000.0, false),
     };
-    let verdict = if cr_per_ly >= reference {
-        Verdict::Profitable
-    } else {
-        Verdict::NotWorth
+    // Ruta de 0 al con recompensa: no hay coste de viaje, se considera rentable.
+    let verdict = match cr_per_ly {
+        None if input.reward > 0 => Verdict::Profitable,
+        Some(c) if c >= reference => Verdict::Profitable,
+        _ => Verdict::NotWorth,
     };
     decide!("missions.tourism", {
         "stops": coords.len(),
@@ -428,7 +441,7 @@ mod tests {
     fn cr_per_ly_and_verdict_vs_reference() {
         let stops = vec![("A".to_string(), [32.0, 0.0, 0.0])];
         let p = plan(&input(&stops, 3_200_000, None, 120_000.0)).unwrap();
-        assert!((p.cr_per_ly - 100_000.0).abs() < 1e-6);
+        assert!((p.cr_per_ly.unwrap() - 100_000.0).abs() < 1e-6);
         assert_eq!(p.verdict, Verdict::NotWorth);
         assert!(!p.reference_is_own);
         assert_eq!(p.jumps, Some(4));
@@ -467,5 +480,111 @@ mod tests {
         stats_complete_task("C".into(), 6, "t2".into())(&store).unwrap();
         let rows = rows_from_result(&stats_read_task("C".into())(&store).unwrap());
         assert_eq!(own_reference(&rows), Some(75_000.0));
+    }
+
+    fn stop(x: f64) -> (String, [f64; 3]) {
+        ("S".to_string(), [x, 0.0, 0.0])
+    }
+
+    #[test]
+    fn non_finite_coordinates_are_unavailable() {
+        for bad in [f64::NAN, f64::INFINITY] {
+            let s = vec![stop(bad)];
+            assert!(plan(&input(&s, 1, None, 1.0)).is_err());
+        }
+        let s = vec![stop(5.0)];
+        let mut i = input(&s, 1, None, 1.0);
+        i.start = [f64::NAN, 0.0, 0.0];
+        assert!(plan(&i).is_err());
+        let mut i = input(&s, 1, None, 1.0);
+        i.return_to = Some([0.0, f64::INFINITY, 0.0]);
+        assert!(plan(&i).is_err());
+    }
+
+    #[test]
+    fn zero_distance_is_profitable_without_cr_per_ly() {
+        let s = vec![stop(0.0), stop(0.0)];
+        let p = plan(&input(&s, 500_000, None, 100_000.0)).unwrap();
+        assert_eq!(p.cr_per_ly, None);
+        assert_eq!(p.verdict, Verdict::Profitable);
+        assert_eq!(p.jumps, Some(0));
+        let p = plan(&input(&s, 0, None, 100_000.0)).unwrap();
+        assert_eq!(p.verdict, Verdict::NotWorth);
+    }
+
+    #[test]
+    fn invalid_jump_range_gives_no_jumps_or_hourly() {
+        let s = vec![stop(10.0)];
+        for r in [None, Some(0.0), Some(f64::NAN), Some(f64::INFINITY)] {
+            let mut i = input(&s, 1_000, None, 1.0);
+            i.jump_range = r;
+            let p = plan(&i).unwrap();
+            assert!(p.jumps.is_none() && p.cr_per_hour.is_none(), "{r:?}");
+        }
+    }
+
+    #[test]
+    fn invalid_references_fall_back() {
+        let s = vec![stop(10.0)];
+        let p = plan(&input(&s, 1_000_000, Some(f64::NAN), 50_000.0)).unwrap();
+        assert!(!p.reference_is_own && p.reference_cr_ly == 50_000.0);
+        let p = plan(&input(&s, 1_000_000, Some(0.0), f64::NAN)).unwrap();
+        assert_eq!(p.reference_cr_ly, 100_000.0);
+    }
+
+    #[test]
+    fn plan_includes_return_leg() {
+        let s = vec![stop(10.0)];
+        let mut i = input(&s, 2_000_000, None, 1.0);
+        i.return_to = Some(O);
+        let p = plan(&i).unwrap();
+        assert!((p.optimal_ly - 20.0).abs() < 1e-9);
+        assert_eq!(p.jumps, Some(2));
+    }
+
+    #[test]
+    fn heuristic_matches_exact_on_several_instances() {
+        for seed in 1..=6u64 {
+            for n in [4usize, 6, 7] {
+                let pts = lcg_points(seed, n);
+                for ret in [None, Some(O)] {
+                    let (_, e) = exact_order(O, &pts, ret);
+                    let (ho, h) = heuristic_order(O, &pts, ret);
+                    assert!(h >= e - 1e-9, "seed {seed} n {n}");
+                    assert!(h <= e * 1.15 + 1e-9, "seed {seed} n {n}: {h} vs {e}");
+                    assert_eq!(ho.len(), n);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn stats_write_is_idempotent_and_read_excludes_zero_route() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .apply_migrations(&[PASSENGER_STATS_MIGRATION])
+            .unwrap();
+        for ly in [10.0, 12.0] {
+            stats_write_task("C".into(), 5, "t".into(), 1_000_000, ly)(&store).unwrap();
+        }
+        stats_write_task("C".into(), 6, "t".into(), 900_000, 0.0)(&store).unwrap();
+        let n = store
+            .query_json("SELECT route_ly FROM missions_passenger_stats", &[])
+            .unwrap();
+        assert_eq!(n.len(), 2);
+        stats_complete_task("C".into(), 5, "t2".into())(&store).unwrap();
+        stats_complete_task("C".into(), 6, "t2".into())(&store).unwrap();
+        let rows = rows_from_result(&stats_read_task("C".into())(&store).unwrap());
+        assert_eq!(rows, vec![(1_000_000, 12.0)]);
+    }
+
+    #[test]
+    fn reward_above_i64_max_is_an_error() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .apply_migrations(&[PASSENGER_STATS_MIGRATION])
+            .unwrap();
+        assert!(stats_write_task("C".into(), 1, "t".into(), u64::MAX, 1.0)(&store).is_err());
+        assert!(stats_write_task("C".into(), u64::MAX, "t".into(), 1, 1.0)(&store).is_err());
     }
 }
