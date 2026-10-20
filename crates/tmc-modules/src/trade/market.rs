@@ -12,7 +12,8 @@ use tmc_model::{
     net::{PadSize, RemoteMarket},
 };
 
-const LOCAL_SELL_CANDIDATES: usize = 500;
+pub(super) const LOCAL_CANDIDATES: usize = 500;
+const LOCAL_SELL_CANDIDATES: usize = LOCAL_CANDIDATES;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct CurrentMarketRow {
