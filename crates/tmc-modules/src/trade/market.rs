@@ -23,7 +23,6 @@ pub struct CurrentMarketRow {
     pub stock: u64,
     pub best_sell: Option<SellOption>,
     pub profit_per_ton: Option<i64>,
-    pub age_s: Option<i64>,
     pub rare: Option<u32>,
 }
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -51,10 +50,6 @@ impl CurrentMarket {
                         .clamp(i128::from(i64::MIN), i128::from(i64::MAX))
                         as i64
                 });
-                let age_s = best_sell
-                    .as_ref()
-                    .and_then(|s| s.updated_at)
-                    .map(|at| (now - at).num_seconds().max(0));
                 CurrentMarketRow {
                     commodity: p.commodity.clone(),
                     name_localised: p.name_localised.clone(),
@@ -62,7 +57,6 @@ impl CurrentMarket {
                     stock: p.stock,
                     best_sell,
                     profit_per_ton,
-                    age_s,
                     rare: crate::data::rare_goods()
                         .get(&p.commodity)
                         .map(|r| r.sell_distance_ly),
@@ -294,7 +288,14 @@ mod tests {
         assert_eq!(market.rows.len(), 5);
         assert_eq!(market.rows[0].commodity, "gold");
         assert_eq!(market.rows[0].profit_per_ton, Some(1600));
-        assert_eq!(market.rows[0].age_s, Some(0));
+        assert!(
+            market.rows[0]
+                .best_sell
+                .as_ref()
+                .unwrap()
+                .updated_at
+                .is_some()
+        );
         assert!(
             market
                 .rows
@@ -346,7 +347,7 @@ mod tests {
             market
                 .rows
                 .iter()
-                .all(|r| r.best_sell.is_none() && r.profit_per_ton.is_none() && r.age_s.is_none())
+                .all(|r| r.best_sell.is_none() && r.profit_per_ton.is_none())
         );
     }
     #[test]

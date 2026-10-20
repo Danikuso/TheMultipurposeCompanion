@@ -639,3 +639,119 @@ fn closed_offer_from_newer_full_snapshot_blocks_ardent_sale() {
     assert!(h.val("trade.market")["rows"][0]["best_sell"].is_null());
     assert!(h.count_tag("trade.best_sells") >= 2);
 }
+
+#[test]
+fn irrelevant_events_dirty_no_trade_topic() {
+    let mut h = H::with_store();
+    seed_buyer(&h.store, 2, "Other", 100, t(-3600));
+    h.dock_with_market();
+    assert!(!h.val("trade.market")["rows"][0]["best_sell"].is_null());
+    let dirty = h.journal(900, "Music", r#","MusicTrack":"Exploration""#);
+    assert!(dirty.is_empty(), "{dirty:?}");
+    let row = &h.val("trade.market")["rows"][0];
+    assert!(row.get("age_s").is_none());
+    assert!(h.val("trade.session").get("credits_per_hour").is_none());
+}
+
+#[test]
+fn copy_seq_is_monotonic_across_clear_and_new_plan() {
+    let mut h = H::new();
+    h.dock_with_market();
+    h.ship();
+    h.action("trade.route_request", json!({}));
+    let key = h.requests_with("route:")[0].key.clone();
+    h.send(net(&key, NetOutcome::TradeRoute(plan())));
+    assert_eq!(h.val("trade.route")["copy_seq"], json!(1));
+    h.action("trade.route_clear", json!({}));
+    assert_eq!(h.val("trade.route")["copy_seq"], json!(1));
+    h.action("trade.route_request", json!({}));
+    let key = h.requests_with("route:")[1].key.clone();
+    h.send(net(&key, NetOutcome::TradeRoute(plan())));
+    assert_eq!(h.val("trade.route")["copy_seq"], json!(2));
+}
+
+#[test]
+fn market_json_before_docked_and_when_starting_docked() {
+    let mut h = H::new();
+    h.fixture();
+    h.journal(
+        0,
+        "Location",
+        r#","StarSystem":"Synthetic System","SystemAddress":5,"StarPos":[0,0,0]"#,
+    );
+    h.market_json();
+    assert!(h.val("trade.market")["station"].is_null());
+    h.journal(
+        1,
+        "Docked",
+        r#","StationName":"Synthetic Port","StationType":"Coriolis","MarketID":128000001,"StarSystem":"Synthetic System","SystemAddress":5,"StationServices":["commodities"]"#,
+    );
+    assert_eq!(h.val("trade.market")["station"], json!("Synthetic Port"));
+
+    let mut h = H::new();
+    h.fixture();
+    h.journal(
+        0,
+        "Location",
+        r#","Docked":true,"StationName":"Synthetic Port","StationType":"Coriolis","MarketID":128000001,"StarSystem":"Synthetic System","SystemAddress":5,"StarPos":[0,0,0]"#,
+    );
+    h.market_json();
+    assert_eq!(h.val("trade.market")["station"], json!("Synthetic Port"));
+}
+
+#[test]
+fn late_response_from_previous_system_keeps_new_pending_imports() {
+    let mut h = H::with_store();
+    h.dock_with_market();
+    let old = h.requests_with("sells:")[0].key.clone();
+    h.journal(
+        10,
+        "FSDJump",
+        r#","StarSystem":"Elsewhere","SystemAddress":6,"StarPos":[5,0,0]"#,
+    );
+    h.m.pending_imports.insert("gold".into());
+    h.send(net(&old, NetOutcome::NoData));
+    assert!(h.m.pending_imports.contains("gold"));
+}
+
+#[test]
+fn shipyard_swap_and_load_game_clear_inventory_and_switch_resets_dock() {
+    let mut h = H::new();
+    h.dock_with_market();
+    assert!(!h.val("trade.cargo")["lines"].as_array().unwrap().is_empty());
+    h.journal(20, "ShipyardSwap", r#","ShipType":"python","ShipID":2"#);
+    assert!(h.val("trade.cargo")["lines"].as_array().unwrap().is_empty());
+    h.journal(
+        30,
+        "LoadGame",
+        r#","FID":"F9","Commander":"OTRO","Ship":"type9","Credits":1000"#,
+    );
+    assert!(h.m.docked.is_none() && h.m.market.is_none());
+}
+
+#[test]
+fn offline_writes_market_but_no_ardent_and_legacy_writes_neither() {
+    let mut h = H::with_store();
+    h.dock_with_market();
+    let key = h.requests_with("sells:")[0].key.clone();
+    h.send(SourceEvent::Settings(ModuleSettings {
+        online_services: false,
+        ..ModuleSettings::default()
+    }));
+    h.send(net(
+        &key,
+        NetOutcome::Markets(vec![remote(11, "Known", 11000, t(-3600))]),
+    ));
+    assert_eq!(h.count_tag("trade.market.write"), 1);
+    assert_eq!(h.count_tag("trade.ardent.write"), 0);
+
+    let mut h = H::with_store();
+    h.state.galaxy = Galaxy::Legacy;
+    h.dock_with_market();
+    h.send(net(
+        "sells:5:gold:l",
+        NetOutcome::Markets(vec![remote(11, "Known", 11000, t(-3600))]),
+    ));
+    assert_eq!(h.count_tag("trade.market.write"), 0);
+    assert_eq!(h.count_tag("trade.ardent.write"), 0);
+}
