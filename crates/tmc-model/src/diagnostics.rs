@@ -334,6 +334,16 @@ const EVENTS: &[&str] = &[
     "Repair",
     "ScanBody",
 ];
+/// Indica si un tema está en el registro de diagnóstico (si no, su nombre se redacta).
+pub fn is_registered_topic(name: &str) -> bool {
+    registered(name, TOPICS) != REDACTED
+}
+
+/// Indica si una acción está en el registro de diagnóstico (si no, su nombre se redacta).
+pub fn is_registered_action(name: &str) -> bool {
+    registered(name, ACTIONS) != REDACTED
+}
+
 fn registered(value: &str, registry: &[&'static str]) -> &'static str {
     registry
         .iter()

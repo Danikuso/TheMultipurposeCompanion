@@ -501,7 +501,10 @@ mod tests {
         assert_eq!(hello["type"], "hello");
         assert_eq!(hello["version"], 1);
         assert_eq!(hello["locale"], "es");
+        #[cfg(debug_assertions)]
         assert_eq!(hello["capabilities"]["diagnostics"], true);
+        #[cfg(not(debug_assertions))]
+        assert!(hello["capabilities"]["diagnostics"].is_null());
         assert!(hello["topics"].as_array().unwrap().len() >= 8);
 
         let snap: Value = serde_json::from_str(&ws.next_text().await).unwrap();

@@ -688,19 +688,15 @@ fn contract_snapshot() -> Value {
     ];
     let passengers =
         h.m.stamp(json!({"cabins": cabins, "groups": groups, "wanted": true}));
-    let cg = CgView {
-        cgid: 1,
-        title: "Goal".into(),
-        system: Some("Sol".into()),
-        station: None,
-        contribution: 5000,
-        percentile: Some(25),
-        tier: Some("Tier 2".into()),
-        expiry: Some(at),
-        bonus: Some(1_000_000),
-        complete: false,
-    };
-    let goals = h.m.stamp(json!({"goals": [cg]}));
+    // Por el camino real del módulo: un evento CommunityGoal del diario.
+    h.line(
+        &json!({"timestamp": at.to_rfc3339(), "event": "CommunityGoal", "CurrentGoals": [{
+            "CGID": 1, "Title": "Goal", "SystemName": "Sol", "Expiry": at.to_rfc3339(),
+            "IsComplete": false, "PlayerContribution": 5000, "PlayerPercentileBand": 25,
+            "TierReached": "Tier 2", "Bonus": 1_000_000}]})
+        .to_string(),
+    );
+    let goals = h.val(TOPIC_CG);
     json!({
         "missions.active": active,
         "missions.massacre": massacre,

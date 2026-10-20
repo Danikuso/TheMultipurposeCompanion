@@ -110,16 +110,13 @@ async fn purge(store: &Store) {
 }
 
 /// Copia las coordenadas propias al arrancar y al terminar la importación histórica.
-/// Se llama desde un worker, nunca desde el bucle asíncrono.
+/// Se llama desde un worker, nunca desde el bucle asíncrono. Siembra las coordenadas propias con `seen_at = ahora`, por lo que sobreviven a la purga de 30 días
+/// mientras se re-siembren al arrancar y tras cada importación. Se omiten los diarios de Legacy
+/// (`journal_file.galaxy`), cuyo espacio de coordenadas no es el de Live.
 pub(crate) fn seed_own_jumps_blocking(store: &Store) {
     let r = (|| -> Result<usize, tmc_store::StoreError> {
         let rows = store.query_json(
-            "SELECT json_extract(json,'$.StarSystem'), json_extract(json,'$.SystemAddress'), \
-             json_extract(json,'$.StarPos[0]'), json_extract(json,'$.StarPos[1]'), \
-             json_extract(json,'$.StarPos[2]') \
-             FROM event WHERE name IN ('FSDJump','Location','CarrierJump') \
-             AND json_extract(json,'$.StarPos[2]') IS NOT NULL \
-             GROUP BY json_extract(json,'$.StarSystem')",
+            "SELECT json_extract(e.json,'$.StarSystem'), json_extract(e.json,'$.SystemAddress'),              json_extract(e.json,'$.StarPos[0]'), json_extract(e.json,'$.StarPos[1]'),              json_extract(e.json,'$.StarPos[2]')              FROM event e LEFT JOIN journal_file f ON f.id=e.file_id              WHERE e.name IN ('FSDJump','Location','CarrierJump')              AND json_extract(e.json,'$.StarPos[2]') IS NOT NULL              AND COALESCE(f.galaxy,'')<>'Legacy'              GROUP BY json_extract(e.json,'$.StarSystem')",
             &[],
         )?;
         let coords: Vec<CoordEntry> = rows
@@ -544,5 +541,45 @@ mod tests {
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
         h.abort();
+    }
+
+    #[test]
+    fn seed_skips_legacy_files_and_survives_purge() {
+        let store = Store::open_in_memory().unwrap();
+        for (id, gal) in [(1, "Live"), (2, "Legacy")] {
+            store
+                .exec_json(
+                    "INSERT INTO journal_file(id,name,size,offset,galaxy) VALUES(?1,?2,0,0,?3)",
+                    &[
+                        serde_json::json!(id),
+                        serde_json::json!(format!("j{id}.log")),
+                        serde_json::json!(gal),
+                    ],
+                )
+                .unwrap();
+        }
+        for (id, name) in [(1, "Lave"), (2, "Legacyville")] {
+            store
+                .exec_json(
+                    "INSERT INTO event(file_id,line,ts,name,json) VALUES(?1,1,'2026-10-18T10:00:00Z','FSDJump',?2)",
+                    &[
+                        serde_json::json!(id),
+                        serde_json::json!(format!(
+                            r#"{{"event":"FSDJump","StarSystem":"{name}","SystemAddress":1,"StarPos":[1.0,2.0,3.0]}}"#
+                        )),
+                    ],
+                )
+                .unwrap();
+        }
+        seed_own_jumps_blocking(&store);
+        let names = ["lave".to_owned(), "legacyville".to_owned()];
+        let got = store.coords_by_names(&names).unwrap();
+        assert!(got.contains_key("lave") && !got.contains_key("legacyville"));
+        // La purga las borra solo cuando son antiguas; la re-siembra las restituye.
+        let far = Utc::now() + chrono::Duration::days(365);
+        store.purge_prices_older_than(far, far).unwrap();
+        assert!(store.coords_by_names(&names).unwrap().is_empty());
+        seed_own_jumps_blocking(&store);
+        assert!(store.coords_by_names(&names).unwrap().contains_key("lave"));
     }
 }
