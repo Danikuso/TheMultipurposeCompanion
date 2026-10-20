@@ -601,6 +601,44 @@ mod tests {
     }
 
     #[test]
+    fn cost_and_massacre_verdicts_need_five_cases() {
+        use tmc_modules::eval::{CostReport, MassacreReport};
+        let cost = |sales, exact| CostReport {
+            sales,
+            exact,
+            ..Default::default()
+        };
+        assert_eq!(cost_verdict(&cost(5, 5)), Verdict::Pass);
+        assert_eq!(cost_verdict(&cost(5, 4)), Verdict::Fail);
+        assert_eq!(cost_verdict(&cost(4, 4)), Verdict::Insufficient);
+        assert_eq!(cost_verdict(&cost(4, 3)), Verdict::Insufficient);
+        let massacre = |matched, short, over, unknown| MassacreReport {
+            redirected: matched + short + over + unknown,
+            matched,
+            short,
+            over,
+            unknown,
+        };
+        assert_eq!(massacre_verdict(&massacre(5, 0, 0, 0)), Verdict::Pass);
+        assert_eq!(massacre_verdict(&massacre(4, 1, 0, 0)), Verdict::Fail);
+        assert_eq!(massacre_verdict(&massacre(3, 1, 1, 0)), Verdict::Fail);
+        assert_eq!(
+            massacre_verdict(&massacre(4, 0, 0, 0)),
+            Verdict::Insufficient
+        );
+        assert_eq!(
+            massacre_verdict(&massacre(3, 1, 0, 0)),
+            Verdict::Insufficient
+        );
+        // Las desconocidas no cuentan: 4 conocidas + 20 sin libro sigue siendo INSUFICIENTE.
+        assert_eq!(
+            massacre_verdict(&massacre(4, 0, 0, 20)),
+            Verdict::Insufficient
+        );
+        assert_eq!(massacre_verdict(&massacre(5, 0, 0, 20)), Verdict::Pass);
+    }
+
+    #[test]
     fn voucher_excess_redeem_is_insufficient_not_fail() {
         use tmc_modules::eval::{VoucherKindReport, VoucherReport};
         let mut v = VoucherReport {
