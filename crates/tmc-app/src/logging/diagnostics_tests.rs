@@ -131,7 +131,7 @@ fn real_emit_is_stored_redacted_and_unicode_intact() {
         tracing_subscriber::filter::filter_fn(|m| m.target() == TARGET),
     ));
     let raw = json!({"BodyName":"ÃƒÅ½Ã‚Â©\"\n".repeat(1200),"FID":"CANARY-SECRET","MassEM":42});
-    tracing::subscriber::with_default(subscriber, || {
+    scoped(subscriber, || {
         tmc_model::diagnostics::emit(
             tmc_model::diagnostics::DiagnosticContext::Journal { event: "Scan" },
             "test.scan",
@@ -155,7 +155,7 @@ fn batches_commit_together_and_keep_seq_order_across_tables() {
     let (layer, guard) = start_writer(dir.path().to_owned(), Limits::default()).unwrap();
     let subscriber = tracing_subscriber::registry().with(layer);
     let codes = ["journal.a", "store.b", "combat.c", "net.d", "mystery.e"];
-    tracing::subscriber::with_default(subscriber, || {
+    scoped(subscriber, || {
         for i in 0..500 {
             tmc_model::diagnostic!(
                 tmc_model::diagnostics::DiagnosticContext::State,
@@ -204,7 +204,7 @@ fn oversized_and_invalid_payloads_are_flagged_not_stored() {
     let dir = tempfile::tempdir().unwrap();
     let (layer, guard) = start_writer(dir.path().to_owned(), Limits::default()).unwrap();
     let subscriber = tracing_subscriber::registry().with(layer);
-    tracing::subscriber::with_default(subscriber, || {
+    scoped(subscriber, || {
         tracing::trace!(target: "tmc::diagnostics", context = "state", schema = "state", code = "test.large", payload = "x".repeat(PAYLOAD_MAX_BYTES + 1).as_str());
         tracing::trace!(target: "tmc::diagnostics", context = "state", schema = "state", code = "test.bad", payload = "{not json");
     });
@@ -236,7 +236,7 @@ fn queue_overflow_is_nonblocking_and_loss_survives_guard_shutdown() {
         sender,
         shared: shared.clone(),
     });
-    tracing::subscriber::with_default(subscriber, || {
+    scoped(subscriber, || {
         for _ in 0..10 {
             tmc_model::diagnostic!(
                 tmc_model::diagnostics::DiagnosticContext::State,
@@ -477,7 +477,7 @@ fn write_failure_marks_once_drops_and_never_panics() {
         .unwrap();
     drop(sabotage);
     let subscriber = tracing_subscriber::registry().with(layer);
-    tracing::subscriber::with_default(subscriber, || {
+    scoped(subscriber, || {
         for _ in 0..5 {
             tmc_model::diagnostic!(
                 tmc_model::diagnostics::DiagnosticContext::State,
@@ -597,7 +597,7 @@ fn general_info_filter_does_not_disable_diagnostic_trace_or_receive_it() {
                     m.target() == TARGET
                 })),
             );
-        tracing::subscriber::with_default(subscriber, || {
+        scoped(subscriber, || {
             tmc_model::diagnostic!(
                 tmc_model::diagnostics::DiagnosticContext::State,
                 "test.independent",
@@ -631,7 +631,7 @@ fn producer_entry_racing_guard_close_never_loses_an_accepted_event() {
         let producer_barrier = barrier.clone();
         let producer = std::thread::spawn(move || {
             let subscriber = tracing_subscriber::registry().with(layer);
-            tracing::subscriber::with_default(subscriber, || {
+            scoped(subscriber, || {
                 producer_barrier.wait();
                 tmc_model::diagnostic!(
                     tmc_model::diagnostics::DiagnosticContext::State,
@@ -667,7 +667,7 @@ fn capture_sources(f: impl FnOnce()) -> Vec<Value> {
     let subscriber = tracing_subscriber::registry().with(layer.with_filter(
         tracing_subscriber::filter::filter_fn(|m| m.target() == TARGET),
     ));
-    tracing::subscriber::with_default(subscriber, f);
+    scoped(subscriber, f);
     drop(guard);
     read_records(dir.path())
 }
@@ -1004,7 +1004,7 @@ fn d3_general_logs_also_classify_errors_without_paths_or_parse_values() {
                 m.target() == TARGET
             })),
         );
-    tracing::subscriber::with_default(subscriber, || {
+    scoped(subscriber, || {
         assert!(tmc_journal::LineTailer::open(&private.join("CANARY-MISSING"), 0).is_err());
         assert!(
             tmc_journal::read_companion(&private, tmc_model::companion::CompanionKind::Cargo)
@@ -1203,4 +1203,20 @@ fn d3_live_event_has_single_payload_and_query_payloads_are_capped() {
     assert_eq!(templates[0], "SELECT name FROM event WHERE name = ?1");
     assert_eq!(templates[1], Value::Null);
     assert!(!serde_json::to_string(&records).unwrap().contains("CANARY"));
+}
+
+/// Ejecuta `f` con `subscriber` como suscriptor del hilo, de una en una entre pruebas.
+///
+/// El interés de los callsites se cachea globalmente: dos suscriptores simultáneos o un
+/// callsite registrado antes sin suscriptor lo dejan en «nunca». Se serializa y se recalcula.
+fn scoped<S, R>(subscriber: S, f: impl FnOnce() -> R) -> R
+where
+    S: tracing::Subscriber + Send + Sync + 'static,
+{
+    static SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+    tracing::subscriber::with_default(subscriber, || {
+        tracing::callsite::rebuild_interest_cache();
+        f()
+    })
 }
