@@ -89,3 +89,7 @@ missions-tourism-loading = Calcul de l’itinéraire…
 missions-tourism-no-coords = Impossible d’obtenir les coordonnées des étapes
 missions-cg-none = Aucun objectif communautaire actif
 missions-cg-complete = TERMINÉ
+
+missions-tourism-reference-default = Référence : { $crly } cr/al
+missions-rewards-reputation-short = Rép.
+missions-rewards-influence-short = Inf.

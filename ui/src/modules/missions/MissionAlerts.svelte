@@ -31,7 +31,7 @@
     <ul>
       {#each alerts as x (`${x.mission_id}|${x.at}|${x.bucket}|${typeof x.kind === 'string' ? x.kind : Object.keys(x.kind)[0]}`)}
         <li data-testid="missions-alert">
-          <span class="warn" role="img" aria-hidden="true">⚠</span>
+          <span class="warn" aria-hidden="true">⚠</span>
           <span>{text(x)}</span>
           <button type="button" onclick={() => dismiss(x.mission_id)}>{t('missions-dismiss')}</button>
         </li>

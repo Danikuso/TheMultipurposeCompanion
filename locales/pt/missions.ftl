@@ -89,3 +89,7 @@ missions-tourism-loading = Calculando a rota…
 missions-tourism-no-coords = Não é possível obter as coordenadas das paradas
 missions-cg-none = Nenhum objetivo comunitário ativo
 missions-cg-complete = CONCLUÍDO
+
+missions-tourism-reference-default = Referência: { $crly } cr/al
+missions-rewards-reputation-short = Rep.
+missions-rewards-influence-short = Inf.

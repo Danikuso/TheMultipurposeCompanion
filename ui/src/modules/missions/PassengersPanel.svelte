@@ -34,7 +34,7 @@
           <tr><th>{t('missions-col-destination')}</th><th class="n">{t('missions-col-passengers')}</th><th></th></tr>
         </thead>
         <tbody>
-          {#each p.groups as g (g.mission_id + '|' + g.destination)}
+          {#each p.groups as g, i (`${g.mission_id}|${g.destination ?? ''}|${i}`)}
             <tr data-testid="passenger-group">
               <td>{g.destination ?? t('missions-passenger-unknown-destination')}</td>
               <td class="n mono">{integer(g.count)}</td>
