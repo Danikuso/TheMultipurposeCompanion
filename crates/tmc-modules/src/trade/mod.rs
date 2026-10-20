@@ -413,6 +413,7 @@ impl Trade {
                 }
                 let seq = self.route.copy_seq;
                 let advanced = self.route.on_docked(d);
+                let _ = &advanced; // solo lo lee el diagnóstico
                 self.guard_copy_seq(seq, replaying);
                 decide!("trade.docked", {"has_market": d.has_market(), "advanced": advanced.is_some()});
             }

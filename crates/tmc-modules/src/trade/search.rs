@@ -119,6 +119,7 @@ pub fn merge_buys(
         Name(String, String),
     }
     let total = observations.len();
+    let _ = total; // solo lo lee el diagnóstico
     let mut merged: BTreeMap<Key, Obs> = BTreeMap::new();
     for mut o in observations {
         let pair = names(&o);

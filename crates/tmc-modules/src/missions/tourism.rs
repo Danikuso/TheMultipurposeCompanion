@@ -256,6 +256,7 @@ pub fn plan(input: &PlanInput) -> Result<TourismPlan, &'static str> {
     let board_ly = path_length(input.start, &coords, input.return_to);
     let (order, optimal_ly) = optimal_order(input.start, &coords, input.return_to);
     let heuristic = coords.len() > EXACT_MAX_STOPS;
+    let _ = heuristic; // solo lo lee el diagnóstico
     let ordered: Vec<[f64; 3]> = order.iter().map(|&i| coords[i]).collect();
     let jumps = input
         .jump_range

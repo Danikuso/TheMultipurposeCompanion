@@ -459,6 +459,7 @@ impl Missions {
             }
         }
         self.rebuilding = false;
+        let _ = applied; // solo lo lee el diagnóstico
         decide!("missions.bounties.applied", {"events": applied});
         true
     }
@@ -1028,6 +1029,7 @@ impl Missions {
                     return false;
                 };
                 let before = self.alerts.len();
+                let _ = before; // solo lo lee el diagnóstico
                 self.alerts.retain(|a| a.mission_id != id);
                 decide!("missions.alert.dismissed", {"removed": before - self.alerts.len()});
                 true

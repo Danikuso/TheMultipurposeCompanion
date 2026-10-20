@@ -15,7 +15,7 @@ pub use logging::{LoggingGuards, init_logging};
 pub use net_service::{NetServiceHandle, spawn_net_service};
 pub use wiring::{Running, start, start_custom, start_full, start_with_transport};
 
-#[cfg(test)]
+#[cfg(all(test, debug_assertions))]
 mod e2e_tests;
 
 #[cfg(test)]
