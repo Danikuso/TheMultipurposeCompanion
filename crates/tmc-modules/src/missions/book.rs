@@ -142,28 +142,48 @@ impl MissionBook {
                 out.push(BookChange::Added(m.mission_id));
             }
             EventKind::Missions(list) => {
+                // Las conocidas que aparecen como falladas/completadas generan aviso;
+                // las desconocidas (arranque) no. Las conocidas que no figuran en
+                // ninguna lista se descartan en silencio: la lista activa manda.
+                for (refs, failed) in [(&list.failed, true), (&list.complete, false)] {
+                    for r in refs {
+                        if !list.active.iter().any(|a| a.mission_id == r.mission_id)
+                            && self.missions.remove(&r.mission_id).is_some()
+                        {
+                            out.push(if failed {
+                                BookChange::Failed(r.mission_id)
+                            } else {
+                                BookChange::Completed(r.mission_id)
+                            });
+                        }
+                    }
+                }
                 let mut next = BTreeMap::new();
                 for r in &list.active {
-                    let m = self
-                        .missions
-                        .remove(&r.mission_id)
-                        .unwrap_or_else(|| Mission {
+                    let m = self.missions.remove(&r.mission_id).unwrap_or_else(|| {
+                        let kind = classify_kind(&r.name, r.passenger_mission);
+                        Mission {
                             id: r.mission_id,
-                            kind: classify_kind(&r.name, r.passenger_mission),
-                            name_localised: r.name.clone(),
+                            kind,
+                            // Nombre legible: nunca el interno `Mission_X_name`.
+                            name_localised: format!("{kind:?}"),
                             faction: None,
                             destination_system: None,
                             destination_station: None,
                             stops: Vec::new(),
                             accepted_at: None,
-                            expiry: r.expires.map(|s| at + Duration::seconds(s)),
+                            expiry: r
+                                .expires
+                                .filter(|s| *s > 0)
+                                .map(|s| at + Duration::seconds(s)),
                             reward: None,
                             progress: MissionProgress::default(),
                             redirected: false,
                             details_missing: true,
                             target_faction: None,
                             wing: false,
-                        });
+                        }
+                    });
                     next.insert(r.mission_id, m);
                 }
                 decide!("missions.rebuild", {
@@ -189,15 +209,19 @@ impl MissionBook {
             }
             EventKind::MissionRedirected(r) => {
                 if let Some(m) = self.missions.get_mut(&r.mission_id)
-                    && let Some(sys) = r.new_destination_system.clone()
+                    && (r.new_destination_system.is_some() || r.new_destination_station.is_some())
                 {
-                    m.destination_system = Some(sys.clone());
+                    if let Some(sys) = r.new_destination_system.clone() {
+                        // Vuelta del turismo: un único destino nuevo.
+                        m.destination_system = Some(sys);
+                        m.stops.clear();
+                    }
                     m.destination_station = r.new_destination_station.clone();
                     m.redirected = true;
                     out.push(BookChange::Redirected {
                         id: r.mission_id,
-                        system: sys,
-                        station: r.new_destination_station.clone(),
+                        system: m.destination_system.clone().unwrap_or_default(),
+                        station: m.destination_station.clone(),
                     });
                 }
             }
@@ -214,6 +238,18 @@ impl MissionBook {
             _ => {}
         }
         out
+    }
+
+    /// Vacía el libro (cambio de comandante).
+    pub fn clear(&mut self) {
+        self.missions.clear();
+    }
+
+    /// Aplica el resultado de [`accepted_rebuild_task`] solo si es del comandante dado.
+    pub fn on_history_result(&mut self, cmdr: &str, result: &Value) {
+        if result["cmdr"].as_str() == Some(cmdr) {
+            self.on_history_accepted(accepted_from_result(result));
+        }
     }
 
     /// Completa con el historial las misiones activas que quedaron sin detalles.
@@ -418,6 +454,121 @@ mod tests {
         let m = b.get(5).unwrap();
         assert_eq!(m.stops.len(), 3);
         assert_eq!(m.kind, MissionKind::Sightseeing);
+    }
+
+    fn end(id: u64) -> MissionEnded {
+        MissionEnded {
+            mission_id: id,
+            ..Default::default()
+        }
+    }
+    fn mref(id: u64) -> MissionRef {
+        MissionRef {
+            mission_id: id,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn failed_and_abandoned_known_ids() {
+        let mut b = MissionBook::default();
+        accept(&mut b, accepted(1, "Mission_Delivery"));
+        accept(&mut b, accepted(2, "Mission_Delivery"));
+        assert_eq!(
+            b.apply_event(&EventKind::MissionFailed(end(1)), t(12)),
+            vec![BookChange::Failed(1)]
+        );
+        assert_eq!(
+            b.apply_event(&EventKind::MissionAbandoned(end(2)), t(12)),
+            vec![BookChange::Abandoned(2)]
+        );
+    }
+
+    #[test]
+    fn missions_event_reconciles_failed_complete_and_keeps_details() {
+        let mut b = MissionBook::default();
+        for id in [1, 2, 3, 4] {
+            accept(&mut b, accepted(id, "Mission_Delivery"));
+        }
+        let ev = EventKind::Missions(Box::new(MissionsList {
+            active: vec![mref(1)],
+            failed: vec![mref(2), mref(99)],
+            complete: vec![mref(3)],
+        }));
+        let c = b.apply_event(&ev, t(12));
+        assert_eq!(c, vec![BookChange::Failed(2), BookChange::Completed(3)]);
+        assert!(!b.get(1).unwrap().details_missing);
+        assert_eq!(b.get(1).unwrap().reward, Some(1234));
+        assert!(b.get(4).is_none());
+    }
+
+    #[test]
+    fn expires_non_positive_means_no_expiry_and_name_is_readable() {
+        let mut b = MissionBook::default();
+        let ev = EventKind::Missions(Box::new(MissionsList {
+            active: vec![MissionRef {
+                mission_id: 1,
+                name: "Mission_Massacre_name".into(),
+                expires: Some(0),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }));
+        b.apply_event(&ev, t(12));
+        let m = b.get(1).unwrap();
+        assert_eq!(m.expiry, None);
+        assert_eq!(m.name_localised, "Massacre");
+    }
+
+    #[test]
+    fn redirected_without_system_updates_station_and_multistop_collapses() {
+        let mut b = MissionBook::default();
+        accept(&mut b, accepted(5, "Mission_Delivery"));
+        b.apply_event(
+            &EventKind::MissionRedirected(MissionRedirected {
+                mission_id: 5,
+                new_destination_station: Some("Port".into()),
+                ..Default::default()
+            }),
+            t(12),
+        );
+        assert_eq!(
+            b.get(5).unwrap().destination_station.as_deref(),
+            Some("Port")
+        );
+        let mut a = accepted(6, "Mission_Sightseeing");
+        a.destination_system = Some("A$MISSIONUTIL_MULTIPLE_FINAL_SEPARATOR;B".into());
+        accept(&mut b, a);
+        assert_eq!(b.get(6).unwrap().stops.len(), 2);
+        b.apply_event(
+            &EventKind::MissionRedirected(MissionRedirected {
+                mission_id: 6,
+                new_destination_system: Some("Home".into()),
+                ..Default::default()
+            }),
+            t(12),
+        );
+        let m = b.get(6).unwrap();
+        assert!(m.stops.is_empty());
+        assert_eq!(m.destination_system.as_deref(), Some("Home"));
+    }
+
+    #[test]
+    fn duplicate_history_first_wins_and_cmdr_mismatch_ignored() {
+        let mut b = MissionBook::default();
+        b.apply_event(&missions_ev(&[9]), t(12));
+        let mut first = accepted(9, "Mission_Delivery");
+        first.reward = Some(1);
+        let mut second = accepted(9, "Mission_Delivery");
+        second.reward = Some(2);
+        b.on_history_accepted(vec![(first, t(8)), (second, t(9))]);
+        assert_eq!(b.get(9).unwrap().reward, Some(1));
+        let mut b2 = MissionBook::default();
+        b2.apply_event(&missions_ev(&[9]), t(12));
+        b2.on_history_result("OTHER", &json!({"cmdr":"TESTER","accepted":[]}));
+        assert!(b2.get(9).unwrap().details_missing);
+        b2.clear();
+        assert_eq!(b2.active().count(), 0);
     }
 
     #[test]
