@@ -718,3 +718,132 @@ fn sell_topic_with_two_sources_stays_under_16_kib() {
     assert_eq!(by.len(), 10);
     assert!(by.values().all(|v| v.as_array().unwrap().len() == 5));
 }
+
+fn seed_full(
+    store: &tmc_core::Store,
+    id: u64,
+    name: &str,
+    price: u64,
+    pad: Option<PadSize>,
+    station_type: &str,
+) {
+    use tmc_model::market::{CommodityPrice, MarketSnapshot, PriceOrigin};
+    store
+        .replace_markets(&[MarketSnapshot {
+            market_id: id,
+            station_name: name.into(),
+            system_name: format!("{name} System"),
+            system_address: Some(900 + id),
+            star_pos: Some([3.0, 0.0, 0.0]),
+            max_pad: pad,
+            station_type: Some(station_type.into()),
+            updated_at: t(-60),
+            origin: PriceOrigin::Eddn,
+            prices: vec![CommodityPrice {
+                commodity: "platinum".into(),
+                name_localised: None,
+                buy_price: 0,
+                sell_price: price,
+                stock: 0,
+                demand: 10,
+            }],
+        }])
+        .unwrap();
+}
+
+fn platinum_options(h: &H) -> Vec<serde_json::Value> {
+    h.val("mining.sell")["by_commodity"]["platinum"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+}
+
+#[test]
+fn newer_closed_observation_removes_older_ardent_offer() {
+    let mut h = H::with_store();
+    // Cierre (demanda 0) más nuevo que la oferta remota del mismo mercado.
+    eddn_seed(h.store.as_ref().unwrap(), 5, 225_000, 0, t(-60));
+    h.start();
+    h.cargo(3, &[("platinum", 5)]);
+    let key = h.sell_requests()[0].key.clone();
+    let mut a = market("Buyer 5", 240_000);
+    a.station_name = "Buyer 5".into();
+    a.system_name = "Buyer 5 System".into();
+    a.market_id = Some(5);
+    a.updated_at = Some(t(-3600));
+    h.send(markets_response(&key, vec![a]));
+    // El eco de candidatos llegó a la tarea y la lectura se aplicó.
+    let sent = h.m.local_sent.clone().unwrap();
+    assert_eq!(sent["candidates"]["platinum"][0]["market_id"], json!(5));
+    assert!(h.m.local_rows["platinum"].iter().any(|r| r.market_id == 5));
+    assert!(platinum_options(&h).is_empty());
+}
+
+#[test]
+fn stale_local_stored_is_discarded() {
+    let mut h = H::with_store();
+    eddn_seed(h.store.as_ref().unwrap(), 5, 230_000, 100, t(-60));
+    h.start();
+    h.cargo(3, &[("platinum", 5)]);
+    let good = {
+        let mut v = h.m.local_sent.clone().unwrap();
+        v["rows"] = json!({});
+        v
+    };
+    let mut other_cmdr = good.clone();
+    other_cmdr["cmdr"] = json!("OTHER");
+    let mut other_params = good.clone();
+    other_params["radius_ly"] = json!(1);
+    for value in [other_cmdr, other_params] {
+        let d = h.dispatch(SourceEvent::Stored {
+            module: "mining".into(),
+            tag: "mining.local_sells".into(),
+            value,
+        });
+        assert!(d.is_empty());
+        assert!(!h.m.local_rows["platinum"].is_empty());
+    }
+}
+
+#[test]
+fn no_local_task_in_replay_or_legacy() {
+    let mut h = H::with_store();
+    h.replaying = true;
+    h.start();
+    h.cargo(3, &[("platinum", 5)]);
+    assert!(!h.tags.iter().any(|t| t == "mining.local_sells"));
+
+    let mut h = H::with_store();
+    h.state.galaxy = Galaxy::Legacy;
+    h.start();
+    h.cargo(3, &[("platinum", 5)]);
+    assert!(!h.tags.iter().any(|t| t == "mining.local_sells"));
+}
+
+#[test]
+fn local_sells_filter_pad_and_exclude_carriers() {
+    let mut h = offline();
+    let st = h.store.as_ref().unwrap();
+    // Nave mediana: la plataforma pequeña se descarta, la desconocida se conserva.
+    seed_full(st, 10, "Tiny", 300_000, Some(PadSize::Small), "Outpost");
+    seed_full(st, 11, "Unknown", 200_000, None, "Outpost");
+    seed_full(st, 12, "Big", 100_000, Some(PadSize::Large), "Coriolis");
+    seed_full(
+        st,
+        3_700_000_001,
+        "ABC-123",
+        900_000,
+        Some(PadSize::Large),
+        "FleetCarrier",
+    );
+    h.start();
+    h.cargo(3, &[("platinum", 5)]);
+    let opts = platinum_options(&h);
+    let names: Vec<_> = opts
+        .iter()
+        .map(|o| o["station_name"].as_str().unwrap())
+        .collect();
+    assert_eq!(names, ["Unknown", "Big"]);
+    assert_eq!(opts[0]["pad_ok"], json!(null));
+    assert_eq!(opts[1]["pad_ok"], json!(true));
+}

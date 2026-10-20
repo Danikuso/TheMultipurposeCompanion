@@ -547,7 +547,7 @@ impl Store {
             String::new()
         };
         let sql = format!(
-            "SELECT s.market_id,s.station_name,s.system_name,s.x,s.y,s.z,s.max_pad,{price_col},{vol_col},{updated_col},{origin_col}
+            "SELECT s.market_id,s.station_name,s.system_name,s.x,s.y,s.z,s.max_pad,{price_col},{vol_col},{updated_col},{origin_col},s.station_type
              FROM {from}
              WHERE {commodity_condition} AND {updated_col}>=?2 AND {cond}
                AND s.x BETWEEN ?3 AND ?4 AND s.y BETWEEN ?5 AND ?6 AND s.z BETWEEN ?7 AND ?8
@@ -567,11 +567,21 @@ impl Store {
                 r.get::<_, i64>(8)?,
                 r.get::<_, String>(9)?,
                 r.get::<_, String>(10)?,
+                r.get::<_, Option<String>>(11)?,
             ))
         })?;
         let mut out = Vec::new();
         for row in rows {
-            let (mid, station_name, system_name, pos, pad, price, volume, at, origin) = row?;
+            let (mid, station_name, system_name, pos, pad, price, volume, at, origin, station_type) =
+                row?;
+            // Los portaaviones no consumen el límite: nunca son destino de venta.
+            if tmc_model::market::is_fleet_carrier(
+                unsigned(mid),
+                station_type.as_deref(),
+                Some(&station_name),
+            ) {
+                continue;
+            }
             let d = dist(center, pos);
             if d > radius_ly {
                 continue;

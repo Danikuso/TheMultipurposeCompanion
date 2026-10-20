@@ -476,13 +476,17 @@ impl Mining {
         let now = self.clock();
         match &r.outcome {
             NetOutcome::Markets(ms) => {
-                let ms = filter_compatible(ms, self.cur_pad(state));
+                // Sin fecha propia, la cotización vale la de la consulta (filtro de 48 h).
+                let mut ms = filter_compatible(ms, self.cur_pad(state));
+                for m in &mut ms {
+                    m.updated_at.get_or_insert(r.fetched_at);
+                }
                 decide!("mining.sell.response.applied", {"candidates": ms.len(), "current": current});
                 if current {
                     self.results.insert(key.clone(), ms);
                     self.answered.insert(key.clone(), now);
                     self.fetched_at = self.fetched_at.max(Some(r.fetched_at));
-                    self.refresh_book(&key, r.fetched_at);
+                    self.refresh_book(&key, r.fetched_at, self.cur_pad(state));
                 } else {
                     self.prices.on_remote(&key, &ms, r.fetched_at);
                 }
@@ -494,7 +498,7 @@ impl Mining {
                 if current {
                     self.results.insert(key.clone(), Vec::new());
                     self.answered.insert(key.clone(), now);
-                    self.refresh_book(&key, r.fetched_at);
+                    self.refresh_book(&key, r.fetched_at, self.cur_pad(state));
                 } else {
                     self.prices.on_remote(&key, &[], r.fetched_at);
                 }
@@ -540,8 +544,8 @@ impl Mining {
 
     /// Alimenta el libro de precios con la unión de fuentes. Lo propio y de EDDN
     /// entra como remoto con su fecha; Ardent con la de su consulta.
-    fn refresh_book(&mut self, key: &str, fetched_at: DateTime<Utc>) {
-        let ms = filter_compatible(&self.merged(key, true), self.pad);
+    fn refresh_book(&mut self, key: &str, fetched_at: DateTime<Utc>, pad: Option<PadSize>) {
+        let ms = filter_compatible(&self.merged(key, true), pad);
         let at = ms
             .iter()
             .max_by_key(|m| m.sell_price)
@@ -609,7 +613,7 @@ impl Mining {
     }
 
     /// Aplica la lectura de la tabla. `true` si se aplicó.
-    fn on_local_stored(&mut self, value: &Value) -> bool {
+    fn on_local_stored(&mut self, value: &Value, state: &GameState) -> bool {
         let Some(sent) = self.local_sent.as_ref().and_then(Value::as_object) else {
             decide!("mining.local_sells.stored.discarded", {"reason": 0});
             return false;
@@ -627,9 +631,10 @@ impl Mining {
         decide!("mining.local_sells.stored.applied", {"commodities": rows.len()});
         let fetched = self.fetched_at.unwrap_or_else(|| self.clock());
         self.local_rows = rows;
+        let pad = self.cur_pad(state);
         let keys: Vec<String> = self.local_rows.keys().cloned().collect();
         for k in keys {
-            self.refresh_book(&k, fetched);
+            self.refresh_book(&k, fetched, pad);
         }
         true
     }
@@ -726,6 +731,8 @@ impl Mining {
     }
 
     /// Un aviso de EDDN sobre materias del plan relanza la lectura de la tabla.
+    /// Throttle: como máximo una relectura cada 10 s de reloj del aviso; los avisos
+    /// intermedios se descartan (no se aplazan), y los de materias ajenas no cuentan.
     fn on_eddn(&mut self, n: &EddnNotice, state: &GameState, ctx: &mut ModuleCtx) {
         if ctx.replaying {
             return;
@@ -856,7 +863,7 @@ impl Module for Mining {
                 }
                 let applied = match tag.as_str() {
                     TAG_PRICES => self.on_stored(value),
-                    TAG_LOCAL => self.on_local_stored(value),
+                    TAG_LOCAL => self.on_local_stored(value, state),
                     _ => false,
                 };
                 if !applied {
