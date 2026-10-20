@@ -6,8 +6,10 @@
 //! almacén llevan la etiqueta `*.write` y no ocurren en replay.
 
 mod book;
+mod massacre;
 
 pub use book::{
     BookChange, Mission, MissionBook, MissionKind, MissionProgress, accepted_from_result,
     accepted_rebuild_task, classify_kind,
 };
+pub use massacre::{IssuerBar, MASSACRE_COUNTS_KILL_BONDS, MassacrePile, MassacreStack};
