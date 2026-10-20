@@ -231,7 +231,7 @@ async fn start_inner(
         core.events.clone(),
         core.clone(),
         settings_rx,
-        eddn_url.unwrap_or_else(|| RELAY_URL.to_owned()),
+        eddn_relay_url(eddn_url),
     );
     let _ = core
         .events
@@ -418,4 +418,16 @@ async fn start_inner(
         store,
         clipboard,
     })
+}
+
+/// URL del relay EDDN. La sustitución (solo e2e) únicamente existe en depuración; en release
+/// se usa siempre el relay oficial.
+#[cfg(debug_assertions)]
+fn eddn_relay_url(override_url: Option<String>) -> String {
+    override_url.unwrap_or_else(|| RELAY_URL.to_owned())
+}
+
+#[cfg(not(debug_assertions))]
+fn eddn_relay_url(_override_url: Option<String>) -> String {
+    RELAY_URL.to_owned()
 }

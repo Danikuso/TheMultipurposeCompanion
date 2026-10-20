@@ -198,6 +198,16 @@ async fn run(
         tokio::select! {
             out = rx.recv() => {
                 let Some(out) = out else { return };
+                #[cfg(debug_assertions)]
+                if let EddnOutput::Status(s) = &out {
+                    let corrupt = s
+                        .stats
+                        .dropped
+                        .get(&tmc_eddn::DropReason::Corrupt)
+                        .copied()
+                        .unwrap_or(0);
+                    E2E_CORRUPT_DROPS.fetch_max(corrupt, std::sync::atomic::Ordering::Relaxed);
+                }
                 let notice = match out {
                     EddnOutput::Batch(markets, stations, coords) => {
                         let ids: Vec<u64> = markets.iter().map(|m| m.market_id).collect();
@@ -267,6 +277,11 @@ async fn run(
         }
     }
 }
+
+/// Solo depuración (pruebas e2e): mayor cifra de mensajes corruptos descartados vista en el estado.
+#[cfg(debug_assertions)]
+pub(crate) static E2E_CORRUPT_DROPS: std::sync::atomic::AtomicU64 =
+    std::sync::atomic::AtomicU64::new(0);
 
 #[cfg(test)]
 mod tests {

@@ -6,8 +6,8 @@ use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System};
 static FORCE_RUNNING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 #[cfg(debug_assertions)]
-pub fn force_game_running_for_e2e(on: bool) {
-    FORCE_RUNNING.store(on, std::sync::atomic::Ordering::Relaxed);
+pub fn force_game_running_for_e2e(on: bool) -> bool {
+    FORCE_RUNNING.swap(on, std::sync::atomic::Ordering::Relaxed)
 }
 
 pub fn is_game_running() -> bool {

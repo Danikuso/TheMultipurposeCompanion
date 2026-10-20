@@ -117,6 +117,8 @@ fn store_worker(
 ) {
     while let Ok((module, tag, task)) = jobs.recv() {
         #[cfg(debug_assertions)]
+        crate::debug_hooks::record_store_task(&tag);
+        #[cfg(debug_assertions)]
         let started = std::time::Instant::now();
         let outcome = catch_unwind(AssertUnwindSafe(|| task(&store)));
         tmc_model::diagnostic!(

@@ -32,3 +32,13 @@ export function readClipboard(): string | null {
   if (process.platform !== 'win32') return null;
   return execSync('powershell -NoProfile -Command Get-Clipboard').toString().trim();
 }
+
+/** Restaura el texto del portapapeles (solo Windows). */
+export function writeClipboard(text: string): void {
+  if (process.platform !== 'win32') return;
+  execSync('powershell -NoProfile -Command "$input | Set-Clipboard"', { input: text });
+}
+
+export function isWindows(): boolean {
+  return process.platform === 'win32';
+}

@@ -52,10 +52,8 @@ async fn main() -> anyhow::Result<()> {
         } else {
             let transport = match transport {
                 Some(t) => t,
-                None => std::sync::Arc::new(
-                    tmc_net::ReqwestTransport::new()
-                        .map_err(|e| anyhow::anyhow!("no se pudo crear el transporte: {e:?}"))?,
-                ),
+                // Solo relay falso: ninguna petición HTTP real sale de la prueba.
+                None => std::sync::Arc::new(DenyAll),
             };
             tmc_app::start_full(config, transport, None, relay).await?
         }
@@ -70,6 +68,27 @@ async fn main() -> anyhow::Result<()> {
     tokio::signal::ctrl_c().await?;
     running.server.shutdown();
     Ok(())
+}
+
+/// Transporte que rechaza toda petición (e2e con relay falso y sin servidor HTTP falso).
+#[cfg(debug_assertions)]
+struct DenyAll;
+
+#[cfg(debug_assertions)]
+impl tmc_net::Transport for DenyAll {
+    fn get(
+        &self,
+        _url: &str,
+    ) -> tmc_net::BoxFut<'_, Result<tmc_net::HttpReply, tmc_net::TransportError>> {
+        Box::pin(async { Err(tmc_net::TransportError::Connect("blocked in e2e".into())) })
+    }
+    fn post_form(
+        &self,
+        _url: &str,
+        _form: &[(String, String)],
+    ) -> tmc_net::BoxFut<'_, Result<tmc_net::HttpReply, tmc_net::TransportError>> {
+        self.get("")
+    }
 }
 
 /// Solo en compilaciones de depuración (pruebas e2e de la UI): con
@@ -91,9 +110,12 @@ fn e2e_transport() -> anyhow::Result<Option<std::sync::Arc<dyn tmc_net::Transpor
     }
     impl Redirect {
         fn map(&self, url: &str) -> Option<String> {
+            // Falla cerrado: tras el host solo cabe el fin, una ruta o una consulta
+            // (evita `https://spansh.co.uk.evil.com` o `...@host`).
             HOSTS
                 .iter()
                 .find_map(|h| url.strip_prefix(h))
+                .filter(|rest| rest.is_empty() || rest.starts_with('/') || rest.starts_with('?'))
                 .map(|rest| format!("{}{rest}", self.base))
         }
     }

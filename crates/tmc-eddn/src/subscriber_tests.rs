@@ -24,6 +24,10 @@ struct FakeSource {
     script: VecDeque<Step>,
     clock: FakeClock,
     counts: Arc<Mutex<Counts>>,
+    /// Con el guion agotado: `None` avanza el reloj falso el tiempo de espera sin límite;
+    /// `Some(presupuesto)` lo avanza hasta agotarlo y luego espera de verdad sin tocar el reloj
+    /// (el suscriptor no puede alcanzar `IDLE_TIMEOUT` ni reconectar por su cuenta).
+    empty_budget: Option<Duration>,
 }
 
 impl FrameSource for FakeSource {
@@ -36,8 +40,16 @@ impl FrameSource for FakeSource {
         match self.script.pop_front() {
             Some(Step::Frame(f)) => Ok(Some(f)),
             Some(Step::Fail) => Err(EddnError::Transport("caída".into())),
+            None if self.empty_budget.is_some_and(|b| b.is_zero()) => {
+                std::thread::sleep(Duration::from_millis(1));
+                Ok(None)
+            }
             None => {
-                self.clock.advance(timeout);
+                let step = self.empty_budget.map_or(timeout, |b| timeout.min(b));
+                if let Some(b) = &mut self.empty_budget {
+                    *b -= step;
+                }
+                self.clock.advance(step);
                 Ok(None)
             }
         }
@@ -82,6 +94,14 @@ fn rig(script: Vec<Step>, enabled: bool) -> Rig {
 }
 
 fn rig_with(script: Vec<Step>, f: EddnFilter, cap: usize) -> Rig {
+    rig_full(script, f, cap, None)
+}
+
+fn rig_blocking(script: Vec<Step>, enabled: bool) -> Rig {
+    rig_full(script, filter(enabled), 1024, Some(Duration::ZERO))
+}
+
+fn rig_full(script: Vec<Step>, f: EddnFilter, cap: usize, empty_budget: Option<Duration>) -> Rig {
     let clock = FakeClock::new();
     let t0 = clock.now();
     let counts = Arc::new(Mutex::new(Counts::default()));
@@ -89,6 +109,7 @@ fn rig_with(script: Vec<Step>, f: EddnFilter, cap: usize) -> Rig {
         script: script.into(),
         clock: clock.clone(),
         counts: counts.clone(),
+        empty_budget,
     };
     let (ftx, frx) = watch::channel(f);
     let (tx, rx) = mpsc::channel(cap);
@@ -195,7 +216,7 @@ fn connected_status_emitted_on_connect() {
 
 #[test]
 fn disabled_filter_disconnects_within_1s() {
-    let mut r = rig(vec![], true);
+    let mut r = rig_blocking(vec![], true);
     assert!(matches!(r.next(), EddnOutput::Status(s) if s.connected));
     r.ftx.send(filter(false)).unwrap();
     loop {
@@ -220,7 +241,7 @@ fn disabled_filter_disconnects_within_1s() {
 
 #[test]
 fn disabled_from_start_never_connects() {
-    let r = rig(vec![], false);
+    let r = rig_blocking(vec![], false);
     while r.clock.sleeps().len() < 3 {
         std::thread::yield_now();
     }
@@ -262,6 +283,7 @@ fn full_out_channel_never_blocks_and_merges() {
         script,
         clock: clock.clone(),
         counts,
+        empty_budget: None,
     };
     let (_ftx, frx) = watch::channel(filter(true));
     let (tx, mut rx) = mpsc::channel(1);
@@ -423,6 +445,9 @@ fn burst_fixture_yields_500_markets_and_20_corrupt_drops() {
         script: script.into(),
         clock: clock.clone(),
         counts,
+        // El estado final (con los descartes corruptos) sale al caer por inactividad: se avanza
+        // el reloj lo justo para ello y después se espera sin tocarlo (sin más reconexiones).
+        empty_budget: Some(IDLE_TIMEOUT + Duration::from_secs(5)),
     };
     let (_ftx, frx) = watch::channel(center);
     let (tx, rx) = mpsc::channel(1024);
