@@ -8,6 +8,7 @@
 mod alerts;
 mod book;
 mod massacre;
+mod passengers;
 mod rewards;
 
 pub use alerts::{AlertKind, MissionAlert, alert_from_change, evaluate_alerts};
@@ -16,4 +17,5 @@ pub use book::{
     accepted_rebuild_task, classify_kind,
 };
 pub use massacre::{IssuerBar, MASSACRE_COUNTS_KILL_BONDS, MassacrePile, MassacreStack};
+pub use passengers::{CabinOccupancy, Cabins, PassengerGroup, groups, wanted_aboard};
 pub use rewards::{CgView, CommunityGoals, FactionDelta, SessionRewards};
