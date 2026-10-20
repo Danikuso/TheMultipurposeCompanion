@@ -59,3 +59,20 @@ test('out of range f3 values are rejected client side', async () => {
   await tick();
   expect(put).not.toHaveBeenCalled();
 });
+
+test.each([['eddn-radius', '20'], ['eddn-radius', '500'], ['tourism-reference', '1000'], ['tourism-reference', '10000000']])(
+  'bound %s=%s is accepted', async (id, v) => {
+    const put = await render(200);
+    change(id, v);
+    await tick();
+    expect(put).toHaveBeenCalledTimes(1);
+  });
+
+test.each([['eddn-radius', '19'], ['eddn-radius', '501'], ['tourism-reference', '999'], ['tourism-reference', '10000001']])(
+  'bound %s=%s is rejected', async (id, v) => {
+    const put = await render(200);
+    change(id, v);
+    await tick();
+    expect(put).not.toHaveBeenCalled();
+    expect(target.querySelector('[data-testid="validation-error"]')).not.toBeNull();
+  });

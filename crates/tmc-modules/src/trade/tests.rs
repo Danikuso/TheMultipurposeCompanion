@@ -604,6 +604,30 @@ fn relevance_active_when_docked_with_market() {
 }
 
 #[test]
+fn relevance_ignores_limpets_mission_and_stolen_cargo() {
+    let mut h = H::new();
+    h.journal(0, "Commander", r#","FID":"F1","Name":"TESTER""#);
+    h.journal(
+        1,
+        "Cargo",
+        r#","Vessel":"Ship","Count":5,"Inventory":[{"Name":"drones","Count":5}]"#,
+    );
+    assert_eq!(h.m.relevance(&h.state), Relevance::Normal);
+    h.journal(
+        2,
+        "Cargo",
+        r#","Vessel":"Ship","Count":3,"Inventory":[{"Name":"Gold","Count":3,"MissionID":77}]"#,
+    );
+    assert_eq!(h.m.relevance(&h.state), Relevance::Normal);
+    h.journal(
+        3,
+        "Cargo",
+        r#","Vessel":"Ship","Count":1,"Inventory":[{"Name":"Gold","Count":1}]"#,
+    );
+    assert_eq!(h.m.relevance(&h.state), Relevance::Active);
+}
+
+#[test]
 fn ardent_prices_older_than_48h_are_ignored() {
     let mut h = H::with_store();
     h.dock_with_market();
