@@ -572,3 +572,159 @@ fn discarded_local_coords_are_asked_again() {
     music(&mut h, "2026-10-20T12:01:00Z");
     assert_eq!(h.tags.iter().filter(|t| *t == TAG_COORDS).count(), 2);
 }
+
+/// Instantánea JSON de los topics tal como los ve la UI (contrato serde Rust → TypeScript).
+fn contract_snapshot() -> Value {
+    let mut h = H::with_store();
+    h.lines(MASSACRE);
+    let ids = active_ids(&h);
+    let ids: Vec<u64> = if ids.is_empty() { vec![1] } else { ids };
+    let at = h.m.clock();
+    let kinds = [
+        AlertKind::ExpiringSoon,
+        AlertKind::Redirected {
+            system: "Redirected System".into(),
+            station: Some("Redirected Port".into()),
+        },
+        AlertKind::Failed,
+        AlertKind::CargoMissing {
+            commodity: "gold".into(),
+            missing: 14,
+        },
+    ];
+    for (i, kind) in kinds.into_iter().enumerate() {
+        h.m.alerts.push(MissionAlert {
+            mission_id: ids[i % ids.len()],
+            kind,
+            at,
+            bucket: i as i64,
+        });
+    }
+    h.m.rewards.credits = 6_300_000;
+    h.m.rewards.completed = 7;
+    h.m.rewards.failed = 1;
+    h.m.rewards.abandoned = 2;
+    h.m.rewards.materials.insert("Modular Terminals".into(), 3);
+    h.m.rewards.factions.insert(
+        "Liberty Party".into(),
+        FactionDelta {
+            reputation: "UpGood".into(),
+            influence: "Down".into(),
+            reputation_score: 2,
+            influence_score: -1,
+        },
+    );
+    let state = h.state.clone();
+    let active = h.m.render_active(&state);
+    let massacre = h.m.stamp(json!({"piles": h.m.stack.view(&h.m.book)}));
+    let alerts = h.m.render_alerts();
+    let rewards = h.m.stamp(serde_json::to_value(&h.m.rewards).unwrap());
+
+    let mut t = H::with_store();
+    t.lines(TOURISM);
+    t.coords("Tour A", [10.0, 0.0, 0.0]);
+    t.coords("Tour B", [-10.0, 0.0, 0.0]);
+    t.coords("Tour C", [11.0, 0.0, 0.0]);
+    let profitable = t.val(TOPIC_TOURISM);
+    let mut tourism = profitable.clone();
+    let mut worse = tourism["trips"][0].clone();
+    let trip =
+        t.m.trips
+            .values()
+            .next()
+            .and_then(|x| x.plan.clone())
+            .unwrap();
+    let not_worth = TourismPlan {
+        verdict: Verdict::Profitable,
+        ..trip
+    };
+    worse["mission_id"] = json!(99);
+    worse["plan"] = serde_json::to_value(not_worth).unwrap();
+    tourism["trips"].as_array_mut().unwrap().push(worse);
+    // Estados sin plan: lo que publica `render_tourism` con cada `status`.
+    for (id, status) in [
+        (100, "loading"),
+        (101, "no_coords"),
+        (102, "stops_unavailable"),
+    ] {
+        tourism["trips"].as_array_mut().unwrap().push(json!({
+            "mission_id": id, "name": "Tour", "stops": ["Tour A"], "status": status, "plan": null,
+        }));
+    }
+
+    let mut cabins = Cabins::default();
+    cabins.by_class.insert(
+        crate::data::CabinClass::Economy,
+        CabinOccupancy {
+            occupied: Some(12),
+            seats: 16,
+        },
+    );
+    cabins.by_class.insert(
+        crate::data::CabinClass::Business,
+        CabinOccupancy {
+            occupied: None,
+            seats: 22,
+        },
+    );
+    cabins.occupied_total = 12;
+    cabins.seats_total = 38;
+    let groups = vec![
+        PassengerGroup {
+            destination: Some("Sol".into()),
+            count: 12,
+            vip: false,
+            wanted: true,
+            mission_id: 1,
+        },
+        PassengerGroup {
+            destination: None,
+            count: 4,
+            vip: true,
+            wanted: false,
+            mission_id: 2,
+        },
+    ];
+    let passengers =
+        h.m.stamp(json!({"cabins": cabins, "groups": groups, "wanted": true}));
+    let cg = CgView {
+        cgid: 1,
+        title: "Goal".into(),
+        system: Some("Sol".into()),
+        station: None,
+        contribution: 5000,
+        percentile: Some(25),
+        tier: Some("Tier 2".into()),
+        expiry: Some(at),
+        bonus: Some(1_000_000),
+        complete: false,
+    };
+    let goals = h.m.stamp(json!({"goals": [cg]}));
+    json!({
+        "missions.active": active,
+        "missions.massacre": massacre,
+        "missions.alerts": alerts,
+        "missions.rewards": rewards,
+        "missions.passengers": passengers,
+        "missions.tourism": tourism,
+        "missions.community_goals": goals,
+    })
+}
+
+#[test]
+fn ui_contract_snapshot_is_up_to_date() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../ui/tests/fixtures/missions-topics.json");
+    let text = serde_json::to_string_pretty(&contract_snapshot()).unwrap() + "\n";
+    if std::env::var_os("UPDATE_CONTRACTS").is_some() {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, &text).unwrap();
+        return;
+    }
+    let current = std::fs::read_to_string(&path).unwrap_or_default();
+    assert_eq!(
+        current.replace("\r\n", "\n"),
+        text,
+        "el contrato JSON de missions.* cambió: regenéralo con UPDATE_CONTRACTS=1 cargo test -p tmc-modules ui_contract_snapshot"
+    );
+}
