@@ -14,3 +14,8 @@ export function cr(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
   return `${new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 0, useGrouping: 'always' as unknown as boolean }).format(n)} CR`;
 }
+
+/** Entero con separador de miles siempre. */
+export function grp(n: number): string {
+  return new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 0, useGrouping: 'always' as unknown as boolean }).format(n);
+}

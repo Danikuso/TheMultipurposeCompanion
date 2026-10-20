@@ -5,6 +5,9 @@ import { disconnect, live } from '../src/lib/ws.svelte';
 import { setLocale } from '../src/lib/i18n';
 import MarketPanel from '../src/modules/trade/MarketPanel.svelte';
 import CargoPanel from '../src/modules/trade/CargoPanel.svelte';
+import RoutePanel from '../src/modules/trade/RoutePanel.svelte';
+import TradeSessionPanel from '../src/modules/trade/TradeSessionPanel.svelte';
+import SearchPanel from '../src/modules/trade/SearchPanel.svelte';
 
 let target: HTMLDivElement;
 let mounted: ReturnType<typeof mount> | undefined;
@@ -114,4 +117,133 @@ test('hold bar used over capacity', () => {
   expect(bar.getAttribute('aria-valuenow')).toBe('180');
   expect(bar.getAttribute('aria-valuemax')).toBe('256');
   expect(q('hold')!.textContent).toContain('180');
+});
+
+function stop(extra: Record<string, unknown> = {}) {
+  return {
+    from_system: 'LHS 20', from_station: 'Ogden Port', to_system: 'Wolf 359', to_station: 'Wolf 359 Hub',
+    commodities: [{ commodity: 'palladium', name_localised: 'Paladio', amount: 400, buy_price: 48210, sell_price: 61080, profit_per_ton: 12870 }],
+    stop_profit: 1000000, distance_ly: 14, data_updated_at: '2030-01-01T10:00:00Z', ...extra,
+  };
+}
+function route(extra: Record<string, unknown> = {}) {
+  return {
+    as_of: '2030-01-01T12:00:00Z', status: 'ok', blocker: null, current: 1, completed: false, copy_target: null, copy_seq: 0,
+    plan: { stops: [stop(), stop({ to_station: 'Nakamura Dock' }), stop({ to_station: 'Ogden Port' })], total_profit: 3200000 }, ...extra,
+  };
+}
+
+test('route highlights current stop and total', () => {
+  mountWith(RoutePanel, { 'trade.route': route() });
+  const stops = qa('route-stop');
+  expect(stops.length).toBe(3);
+  expect(stops.map((s) => s.classList.contains('current'))).toEqual([false, true, false]);
+  expect(q('route-total')!.textContent).toContain('3.200.000');
+  expect(stops[1].textContent).toContain('Paladio');
+  expect(stops[1].textContent).toContain('14 al');
+});
+
+test('recalculate posts json action', () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+  vi.stubGlobal('fetch', fetchMock);
+  mountWith(RoutePanel, { 'trade.route': route() });
+  (q('route-recalculate') as HTMLButtonElement).click();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  const [url, init] = fetchMock.mock.calls[0];
+  expect(url).toBe('/api/actions/trade.route_request');
+  expect(init.method).toBe('POST');
+  expect(init.headers['content-type']).toBe('application/json');
+});
+
+test('blocked route shows dock hint', () => {
+  mountWith(RoutePanel, { 'trade.route': route({ status: 'blocked', blocker: 'NotDocked', plan: null }) });
+  expect(q('route-dock-first')!.textContent).toContain('Atraca');
+});
+
+test('route failure shows alert', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) }));
+  mountWith(RoutePanel, { 'trade.route': route() });
+  (q('route-recalculate') as HTMLButtonElement).click();
+  await vi.waitFor(() => { flushSync(); expect(target.querySelector('[role="alert"]')).not.toBeNull(); });
+});
+
+function session(extra: Record<string, unknown> = {}) {
+  return {
+    as_of: '2030-01-01T01:05:00Z', started_at: '2030-01-01T00:00:00Z', profit: 14600000, revenue: 20000000, cost_of_sold: 5400000,
+    tons_bought: 1216, tons_sold: 1120, operations: 6, best_trade: ['Paladio', 5100000], unknown_cost_tons: 0, rank: 8, progress: 42, ...extra,
+  };
+}
+
+test('session shows english trade rank', () => {
+  mountWith(TradeSessionPanel, { 'trade.session': session() });
+  expect(q('session-rank')!.textContent).toContain('Elite');
+  expect(q('session-rank')!.textContent).toContain('42');
+  expect(q('rank-bar')!.getAttribute('aria-valuenow')).toBe('42');
+});
+
+test('session rates use the journal clock', () => {
+  mountWith(TradeSessionPanel, { 'core.clock': { as_of: '2030-01-01T01:00:00Z' }, 'trade.session': session({ profit: 13500000 }) });
+  expect(q('session-profit')!.textContent).toContain('13.500.000');
+  expect(q('session-rate')!.textContent).toContain('13.500.000');
+  expect(q('session-tons')!.textContent).toContain('1.216');
+  expect(q('session-best')!.textContent).toContain('Paladio');
+});
+
+test('session rate is dash under 60 s', () => {
+  mountWith(TradeSessionPanel, { 'trade.session': session({ as_of: '2030-01-01T00:00:30Z' }) });
+  expect(q('session-rate')!.textContent).toContain('—');
+});
+
+test('session reset posts json action', () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+  vi.stubGlobal('fetch', fetchMock);
+  mountWith(TradeSessionPanel, { 'trade.session': session() });
+  (q('session-reset') as HTMLButtonElement).click();
+  const [url, init] = fetchMock.mock.calls[0];
+  expect(url).toBe('/api/actions/trade.reset_session');
+  expect(init.headers['content-type']).toBe('application/json');
+});
+
+function buy(extra: Record<string, unknown> = {}) {
+  return {
+    station_name: 'Hutton Orbital', system_name: 'Alpha Centauri', distance_ly: 7, buy_price: 42100, stock: 1900,
+    pad: 'Large', pad_ok: true, updated_at: '2030-01-01T10:00:00Z', origin: 'Ardent', ...extra,
+  };
+}
+
+test('search autocompletes known commodities', () => {
+  mountWith(SearchPanel, {
+    'trade.commodities': { items: [['tritium', 'Tritio'], ['gold', null], ['palladium', 'Paladio']] },
+    'trade.search': { commodity: null, status: 'idle', rows: [] },
+  });
+  expect(target.querySelectorAll('datalist option').length).toBe(3);
+});
+
+test('search posts the commodity key and shows results', () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+  vi.stubGlobal('fetch', fetchMock);
+  mountWith(SearchPanel, {
+    'trade.commodities': { items: [['tritium', 'Tritio']] },
+    'trade.search': { as_of: '2030-01-01T12:00:00Z', commodity: 'tritium', status: 'ok', rows: [buy(), buy({ pad_ok: null, pad: null })] },
+  });
+  expect(qa('search-row').length).toBe(2);
+  expect(qa('search-row')[0].textContent).toContain('Hutton Orbital');
+  expect(qa('search-row')[0].textContent).toContain('42.100');
+  expect(qa('search-row')[0].textContent).toContain('Ardent');
+  expect(qa('pad-warning').length).toBe(1);
+  const input = q('search-input') as HTMLInputElement;
+  input.value = 'Tritio';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  (q('search-go') as HTMLButtonElement).click();
+  const [url, init] = fetchMock.mock.calls[0];
+  expect(url).toBe('/api/actions/trade.search');
+  expect(JSON.parse(init.body)).toEqual({ commodity: 'tritium' });
+});
+
+test('search loading and no data states', () => {
+  mountWith(SearchPanel, { 'trade.search': { commodity: 'gold', status: 'loading', rows: [] } });
+  expect(q('search-state')!.textContent).toContain('Consultando');
+  unmount(mounted!); mounted = undefined; target.innerHTML = '';
+  mountWith(SearchPanel, { 'trade.search': { commodity: 'gold', status: 'no_data', rows: [] } });
+  expect(q('search-state')!.textContent).toContain('sin datos');
 });
