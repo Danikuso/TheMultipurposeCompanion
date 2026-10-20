@@ -48,7 +48,6 @@
     diag('ui.app.layout', {
       tab: activeTab,
       layout: activeLayout?.id ?? 'none',
-      auto: auto ?? 'none',
       pinned: pin !== null,
       slot: visibleSlots.map((s) => s.id),
       defined_slots: activeLayout?.slots.length ?? 0,

@@ -253,8 +253,12 @@ async fn run_socket(
                             ClientMessage::Action { name, args } => {
                                 let snapshot = state.core.snapshot().await;
                                 let args = args.unwrap_or(Value::Null);
+                                #[cfg(debug_assertions)]
+                                let client = format!("ws:{}", stats.id);
+                                #[cfg(not(debug_assertions))]
+                                let client = String::new();
                                 let _ = crate::diag::run_action(
-                                    state.host.as_ref(), &name, &args, &snapshot, true);
+                                    state.host.as_ref(), &name, &args, &snapshot, true, &client);
                             }
                         }
                     } else {

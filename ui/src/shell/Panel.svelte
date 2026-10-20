@@ -17,7 +17,7 @@
 
   $effect(() => {
     if (!diagOn()) return;
-    const shape = { panel: titleKey, span: span ?? 'auto', size, has_children: children !== undefined };
+    const shape = { panel: titleKey, span: span === 'full' ? 0 : (span ?? 1), large: size === 'large', has_children: children !== undefined };
     diag('ui.panel.mounted', shape);
     return () => diag('ui.panel.unmounted', { panel: shape.panel });
   });

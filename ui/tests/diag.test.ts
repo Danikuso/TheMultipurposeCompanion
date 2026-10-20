@@ -15,6 +15,14 @@ import Panel from '../src/shell/Panel.svelte';
 import Pairing from '../src/settings/Pairing.svelte';
 import rust from '../../crates/tmc-server/src/diag_ui.rs?raw';
 import ts from '../src/lib/diag.svelte.ts?raw';
+import redaction from '../../crates/tmc-model/src/diagnostics.rs?raw';
+import layoutsSrc from '../src/shell/layouts.ts?raw';
+const svelteSources = import.meta.glob('../src/**/*.svelte', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+
+function rustList(name: string): string[] {
+  const block = new RegExp(String.raw`const ${name}: &\[&str\] = &\[([\s\S]*?)\];`).exec(redaction)![1];
+  return [...block.matchAll(/"([^"]+)"/g)].map((m) => m[1]).sort();
+}
 
 class MockWebSocket {
   static instances: MockWebSocket[] = [];
@@ -245,5 +253,80 @@ describe('ui diagnostics', () => {
     const type = /export type DiagCode =([\s\S]*?);/.exec(ts)![1];
     const tsCodes = [...type.matchAll(/'(ui\.[a-z_.]+)'/g)].map((m) => m[1]).sort();
     expect(tsCodes).toEqual(rustCodes);
+  });
+
+  test('no gap after a subscription filter change', async () => {
+    const ws = hello({ diagnostics: true });
+    ws.receive({ type: 'snapshot', seq: 10, topics: {} });
+    ws.receive({ type: 'update', seq: 11, topics: { 'core.status': {} } });
+    Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    ws.receive({ type: 'update', seq: 20, topics: { 'core.game': {} } }); // filtrada: saltos legítimos
+    ws.receive({ type: 'update', seq: 31, topics: { 'core.game': {} } });
+    Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    ws.receive({ type: 'update', seq: 40, topics: { 'core.status': {} } });
+    ws.receive({ type: 'update', seq: 41, topics: { 'core.status': {} } });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(records(fetchMock).filter((r) => r.code === 'ui.ws.gap')).toHaveLength(0);
+    ws.receive({ type: 'update', seq: 44, topics: { 'core.status': {} } });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(records(fetchMock).filter((r) => r.code === 'ui.ws.gap')).toHaveLength(1);
+  });
+
+  test('rate-limited is retried with backoff, requeued and never disables diagnostics', async () => {
+    let calls = 0;
+    fetchMock.mockImplementation(async (url: string) => {
+      if (!String(url).endsWith('app.diagnostics')) return { ok: true, status: 200, json: async () => ({}) };
+      calls += 1;
+      return calls <= 7
+        ? { ok: false, status: 400, json: async () => ({ error: 'rate-limited' }) }
+        : { ok: true, status: 200, json: async () => ({ accepted: 1 }) };
+    });
+    const ws = hello({ diagnostics: true });
+    ws.receive({ type: 'update', seq: 1, topics: { 'core.status': {} } });
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(calls).toBeGreaterThan(7);
+    expect(diagEnabled()).toBe(true);
+    const last = JSON.parse(diagCalls(fetchMock).at(-1)!) as Rec[];
+    expect(last.some((r) => r.code === 'ui.ws.update')).toBe(true); // el lote se reencoló
+  });
+
+  test('coalesces state codes and drops identical consecutive payloads', async () => {
+    hello({ diagnostics: true });
+    diag('ui.topbar.state', { connected: false });
+    diag('ui.topbar.state', { connected: true });
+    diag('ui.topbar.state', { connected: true });
+    await vi.advanceTimersByTimeAsync(0);
+    const recs = records(fetchMock).filter((r) => r.code === 'ui.topbar.state');
+    expect(recs).toHaveLength(1);
+    expect(recs[0].payload).toEqual({ connected: true });
+    diag('ui.topbar.state', { connected: true }); // idéntico al último: no se encola
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(records(fetchMock).filter((r) => r.code === 'ui.topbar.state')).toHaveLength(1);
+  });
+
+  test('a late response from a previous enable cycle is ignored', async () => {
+    let resolve!: (v: unknown) => void;
+    fetchMock.mockImplementationOnce(() => new Promise((r) => (resolve = r)));
+    hello({ diagnostics: true });
+    await vi.advanceTimersByTimeAsync(0); // fetch en vuelo
+    disableDiagnostics();
+    setDiagnosticsCapability(true);
+    resolve({ ok: false, status: 404, json: async () => ({}) }); // 404 tardío del ciclo anterior
+    await vi.advanceTimersByTimeAsync(0);
+    expect(diagEnabled()).toBe(true);
+  });
+
+  test('Rust UI value sets stay in sync with the UI sources', () => {
+    const titleKeys = new Set<string>();
+    for (const src of Object.values(svelteSources)) {
+      for (const m of src.matchAll(/titleKey="([a-z0-9-]+)"/g)) titleKeys.add(m[1]);
+    }
+    expect([...titleKeys].sort()).toEqual(rustList('UI_PANELS'));
+    const slots = [...layoutsSrc.matchAll(/\{ id: '([a-z-]+)', panel:/g)].map((m) => m[1]).sort();
+    expect(slots).toEqual(rustList('UI_SLOTS'));
+    const layoutIds = [...layoutsSrc.matchAll(/^\s{2}id: '([a-z-]+)',/gm)].map((m) => m[1]);
+    expect(rustList('UI_LAYOUTS')).toEqual(['none', ...layoutIds].sort());
   });
 });

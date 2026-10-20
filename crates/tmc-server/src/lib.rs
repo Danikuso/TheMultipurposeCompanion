@@ -610,6 +610,45 @@ mod tests {
         srv.shutdown();
     }
 
+    #[cfg(debug_assertions)]
+    #[tokio::test]
+    async fn diagnostics_action_checks_origin_and_accepts_valid_batch() {
+        let (app, _core, _store) = test_router(false, "");
+        let body = r#"[{"code":"ui.ws.update","ts":1,"payload":{"seq":1}}]"#;
+        let post = |origin: Option<&str>| {
+            let mut b = Request::builder()
+                .method("POST")
+                .uri("/api/actions/app.diagnostics")
+                .header(header::HOST, "127.0.0.1:47320")
+                .header(header::CONTENT_TYPE, "application/json");
+            if let Some(o) = origin {
+                b = b.header(header::ORIGIN, o);
+            }
+            with_peer(b.body(Body::from(body)).unwrap(), "127.0.0.77:55000")
+        };
+        let resp = app
+            .clone()
+            .oneshot(post(Some("http://evil.example")))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+        let resp = app
+            .clone()
+            .oneshot(post(Some("http://127.0.0.1:47320")))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let bytes = axum::body::to_bytes(resp.into_body(), 1024).await.unwrap();
+        let json: Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["accepted"], 1);
+        // Mismo cliente dentro del intervalo: 400 rate-limited.
+        let resp = app
+            .oneshot(post(Some("http://127.0.0.1:47320")))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
     #[tokio::test]
     async fn action_endpoint_calls_host() {
         let (app, _core, _store) = test_router(false, "");
