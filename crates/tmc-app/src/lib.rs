@@ -357,6 +357,8 @@ mining_threshold_cr = 2000000
             "trade.route_request",
             "trade.search",
             "missions.dismiss_alert",
+            "missions.to_route",
+            "missions.reset_session",
         ] {
             let out = actions.run_action_with(name, &json!({}), &snap);
             assert!(out.is_ok(), "{name}: {out:?}");
@@ -364,7 +366,7 @@ mining_threshold_cr = 2000000
         let mut seen = Value::Null;
         for _ in 0..50 {
             seen = core.snapshot().await["actionprobe.actions"].clone();
-            if seen.as_array().is_some_and(|a| a.len() == 6) {
+            if seen.as_array().is_some_and(|a| a.len() == 8) {
                 break;
             }
             tokio::time::sleep(Duration::from_millis(50)).await;
@@ -377,7 +379,9 @@ mining_threshold_cr = 2000000
                 "trade.reset_session",
                 "trade.route_request",
                 "trade.search",
-                "missions.dismiss_alert"
+                "missions.dismiss_alert",
+                "missions.to_route",
+                "missions.reset_session"
             ])
         );
     }
