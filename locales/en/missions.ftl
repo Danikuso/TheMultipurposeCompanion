@@ -59,3 +59,23 @@ missions-cg-tier = Tier: { $tier }
 missions-cg-percentile = Percentile: { $percentile } %
 missions-cg-remaining = Time remaining: { $remaining }
 missions-cg-reward = Expected reward: { $reward }
+
+missions-kind-massacre = Massacre
+missions-kind-sightseeing = Sightseeing
+missions-kind-passenger = Passengers
+missions-kind-delivery = Delivery
+missions-kind-collect = Collection
+missions-kind-courier = Courier
+missions-kind-other = Other
+missions-details-missing = Details not available
+missions-redirected = NEW DESTINATION
+missions-massacre-missing = { $kills ->
+    [one] 1 kill to go
+   *[other] { $kills } kills to go
+}
+missions-massacre-target = Target: { $faction }
+missions-massacre-none = No active massacre missions
+missions-issuer-unknown = Unknown issuer
+missions-dismiss = Dismiss
+missions-no-destination = No known destination
+missions-no-alerts = No alerts
