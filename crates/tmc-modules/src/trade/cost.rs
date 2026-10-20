@@ -83,6 +83,15 @@ impl CostBasis {
             .filter(|e| e.known_tons > 0.0)
             .map(|e| e.average.round() as u64)
     }
+    /// Coste exacto (sin redondear la media) de `count` toneladas vendidas; se
+    /// redondea una sola vez al final. `None` sin parte conocida. Limitación: la
+    /// carga robada de mercado negro se mezcla con la legal en la misma media.
+    pub fn sale_cost(&self, commodity: &str, count: u32) -> Option<u64> {
+        self.entries
+            .get(&commodity_key(commodity))
+            .filter(|e| e.known_tons > 0.0)
+            .map(|e| (e.average * f64::from(count)).round() as u64)
+    }
     pub fn is_partial(&self, commodity: &str) -> bool {
         self.entries
             .get(&commodity_key(commodity))

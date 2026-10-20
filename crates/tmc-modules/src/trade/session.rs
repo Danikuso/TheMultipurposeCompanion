@@ -24,36 +24,49 @@ pub struct TradeSession {
     pub operations: u32,
     /// Mercancía y beneficio de la mejor venta individual.
     pub best_trade: Option<(String, i64)>,
+    /// Toneladas vendidas sin coste conocido (ventas neutras).
+    pub unknown_cost_tons: u32,
+    /// Rango y progreso de comercio del último `Rank`/`Progress` (sobreviven al reinicio).
+    pub rank: Option<u32>,
+    pub progress: Option<u32>,
 }
 
 impl TradeSession {
     pub fn reset(&mut self, at: DateTime<Utc>) {
         *self = Self {
             started_at: Some(at),
+            rank: self.rank,
+            progress: self.progress,
             ..Self::default()
         };
     }
 
     /// Aplica un evento; devuelve `true` si cambió la sesión. Debe llamarse
     /// ANTES de `CostBasis::apply_event` con el mismo evento.
+    ///
+    /// Coste de lo vendido: `AvgPricePaid` del evento si existe (lo calcula el
+    /// juego); si no, el coste exacto de `CostBasis`. Limitación: la carga robada
+    /// de mercado negro se mezcla con la legal en la misma media.
     pub fn apply_event(&mut self, ev: &EventKind, basis: &CostBasis, at: DateTime<Utc>) -> bool {
         match ev {
             EventKind::LoadGame(_) => {
                 self.reset(at);
                 true
             }
+            EventKind::Rank(r) => self.rank.replace(r.trade.unwrap_or_default()) != r.trade,
+            EventKind::Progress(r) => self.progress.replace(r.trade.unwrap_or_default()) != r.trade,
             EventKind::MarketBuy(m) if m.count > 0 => {
                 self.tons_bought = self.tons_bought.saturating_add(m.count);
                 self.operations = self.operations.saturating_add(1);
                 true
             }
             EventKind::MarketSell(m) if m.count > 0 => {
-                let avg = basis.avg_paid(&m.type_).or(m.avg_price_paid);
-                // Sin coste conocido la venta no aporta beneficio (ni pérdida).
-                let cost = match avg {
-                    Some(a) => a.saturating_mul(u64::from(m.count)),
-                    None => m.total_sale,
-                };
+                let known = m
+                    .avg_price_paid
+                    .map(|a| a.saturating_mul(u64::from(m.count)))
+                    .or_else(|| basis.sale_cost(&m.type_, m.count));
+                // Sin coste conocido la venta es neutra (coste = ingreso) pero se cuenta.
+                let cost = known.unwrap_or(m.total_sale);
                 let sale_profit = (i128::from(m.total_sale) - i128::from(cost))
                     .clamp(i128::from(i64::MIN), i128::from(i64::MAX))
                     as i64;
@@ -62,7 +75,9 @@ impl TradeSession {
                 self.profit = self.profit.saturating_add(sale_profit);
                 self.tons_sold = self.tons_sold.saturating_add(m.count);
                 self.operations = self.operations.saturating_add(1);
-                if self
+                if known.is_none() {
+                    self.unknown_cost_tons = self.unknown_cost_tons.saturating_add(m.count);
+                } else if self
                     .best_trade
                     .as_ref()
                     .is_none_or(|(_, p)| sale_profit > *p)
@@ -71,7 +86,7 @@ impl TradeSession {
                 }
                 decide!("trade.session.sale", {
                     "tons": m.count,
-                    "cost_known": avg.is_some(),
+                    "cost_known": known.is_some(),
                     "profit_positive": sale_profit > 0,
                 });
                 true
@@ -154,7 +169,7 @@ mod tests {
         feed(&mut s2, &mut b2, &buy(10, 9000));
         b2.apply_event(&sale);
         s2.apply_event(&sale, &b2, t0());
-        assert_ne!(s2.profit, 20_000);
+        assert_eq!(s2.profit, 0);
     }
     #[test]
     fn session_uses_avg_price_paid_when_no_basis() {
@@ -167,6 +182,7 @@ mod tests {
         let (mut s, mut b) = started();
         feed(&mut s, &mut b, &sell(10, 11000, None));
         assert_eq!((s.profit, s.tons_sold, s.operations), (0, 10, 1));
+        assert_eq!((s.unknown_cost_tons, s.best_trade.clone()), (10, None));
     }
     #[test]
     fn load_game_resets_session() {
@@ -191,5 +207,48 @@ mod tests {
         );
         assert_eq!(s.credits_per_hour(t0() + Duration::seconds(30)), None);
         assert_eq!(TradeSession::default().credits_per_hour(t0()), None);
+    }
+    #[test]
+    fn non_integer_average_cost_is_exact() {
+        let (mut s, mut b) = started();
+        feed(&mut s, &mut b, &buy(1, 100));
+        feed(&mut s, &mut b, &buy(1, 101));
+        feed(&mut s, &mut b, &sell(2, 150, None));
+        assert_eq!(s.cost_of_sold, 201);
+        assert_eq!(s.profit, 99);
+    }
+    #[test]
+    fn avg_price_paid_wins_over_partial_basis() {
+        let (mut s, mut b) = started();
+        feed(&mut s, &mut b, &buy(10, 9000));
+        b.reconcile(&[tmc_model::events::CargoItem {
+            name: "Gold".into(),
+            count: 20,
+            ..Default::default()
+        }]);
+        assert!(b.is_partial("gold"));
+        feed(&mut s, &mut b, &sell(10, 11000, Some(8000)));
+        assert_eq!(s.cost_of_sold, 80_000);
+        assert_eq!(s.unknown_cost_tons, 0);
+    }
+    #[test]
+    fn rank_and_progress_survive_reset() {
+        use tmc_model::events::Rank;
+        let (mut s, b) = started();
+        let r = Rank {
+            trade: Some(5),
+            ..Default::default()
+        };
+        s.apply_event(&EventKind::Rank(r.clone()), &b, t0());
+        s.apply_event(
+            &EventKind::Progress(Rank {
+                trade: Some(40),
+                ..r
+            }),
+            &b,
+            t0(),
+        );
+        s.reset(t0());
+        assert_eq!((s.rank, s.progress), (Some(5), Some(40)));
     }
 }

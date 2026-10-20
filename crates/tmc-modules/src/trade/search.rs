@@ -192,7 +192,8 @@ pub fn merge_buys(
     rows
 }
 
-/// Lectura para `trade.search` (el llamador la etiqueta así). Ventana de 7 días.
+/// Lectura para `trade.search` (el llamador la etiqueta así). Ventana de 7 días
+/// hasta `now` (reloj del diario aportado por el llamador).
 /// Devuelve `{cmdr, commodity, center, radius_ly, since, candidates, ship_pad,
 /// rows: [PricedMarket]}`. Las mejores compras locales compatibles se limitan
 /// tras filtrar plataformas; los candidatos remotos se consultan por identidad
@@ -204,10 +205,11 @@ pub fn search_task(
     radius_ly: f64,
     candidates: Vec<MarketIdentity>,
     ship_pad: Option<PadSize>,
+    now: DateTime<Utc>,
 ) -> StoreTask {
+    let since = now - Duration::days(WINDOW_DAYS);
     Box::new(move |store| {
         let key = tmc_model::events::commodity_key(&commodity);
-        let since = Utc::now() - Duration::days(WINDOW_DAYS);
         let mut rows = store.best_prices_for_ship(
             &key,
             Side::Buy,
@@ -318,7 +320,7 @@ mod tests {
             star_pos: Some([0.0; 3]),
             max_pad: pad,
             station_type: None,
-            updated_at: Utc::now(),
+            updated_at: t(0),
             origin: PriceOrigin::Eddn,
             prices: vec![CommodityPrice {
                 commodity: "gold".into(),
@@ -347,6 +349,7 @@ mod tests {
             50.0,
             vec![ident],
             Some(PadSize::Large),
+            t(60),
         )(&store)
         .unwrap();
         let rows: Vec<PricedMarket> = serde_json::from_value(payload["rows"].clone()).unwrap();
@@ -354,5 +357,21 @@ mod tests {
         assert!(rows.iter().any(|r| r.market_id == 1601 && r.price == 0));
         assert!(rows.iter().all(|r| !(1000..1502).contains(&r.market_id)));
         assert_eq!(payload["commodity"], "gold");
+    }
+    #[test]
+    fn local_rows_without_distance_are_dropped() {
+        let mut far = local(1, 9000, t(0));
+        far.distance_ly = None;
+        assert!(merge_buys(&[far], &[], None, 5).is_empty());
+    }
+    #[test]
+    fn missing_id_resolved_by_name_dedups() {
+        let mut idless = export(2, 9000, t(3));
+        idless.market_id = None;
+        idless.station_name = "PORT 2".into();
+        let rows = merge_buys(&[local(2, 9500, t(1))], &[idless], None, 5);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].buy_price, 9000);
+        assert_eq!(rows[0].updated_at, Some(t(3)));
     }
 }
