@@ -10,9 +10,9 @@
 
 ## Puntero actual
 
-- **Tarea:** F3 en ejecución con subagentes (en curso: Task 21). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
+- **Tarea:** F3 en ejecución con subagentes (en curso: Task 23). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
 - **Último paso completado:** Task 17 ✅ (08aacf3), revisión aprobada.
-- **Siguiente acción:** Tasks 21–22 (UI de comercio); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Siguiente acción:** Task 23 (missions: libro de misiones y reconstrucción); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Tareas de diagnóstico debug
 
@@ -69,9 +69,9 @@
 | 18 | `trade` — sesión de comercio y buscar mercancía | ✅ hecha | 79ebd2b, a3de1d5 | Sesión de comercio (coste exacto/AvgPricePaid, sin coste contado, rango) y búsqueda con reloj inyectado |
 | 19 | `trade` — módulo, topics, relevancia, red, almacén y registro | ✅ hecha | 1d90c65, 7dcb996 | Módulo trade: 6 topics sin reloj, relevancia, red, almacén, registro, trade. en MODULE_PREFIXES; Market.json antes de Docked |
 | 20 | `mining` — «Dónde vender» con la tabla de precios | ✅ hecha | 7c54960, b63686f | Dónde vender con tabla de precios + EDDN; sesión de minería sin tasas dependientes del reloj (UI calcula) |
-| 21 | UI — «Mercado actual» y «Mi carga» | 🔄 en curso | — |  |
-| 22 | UI — «Ruta comercial», «Sesión» y «Buscar mercancía» | ⬜ pendiente | — |  |
-| 23 | `missions` — libro de misiones y reconstrucción | ⬜ pendiente | — |  |
+| 21 | UI — «Mercado actual» y «Mi carga» | ✅ hecha | 05a0667, 155a727 | Mercado actual y Mi carga; formato común de créditos |
+| 22 | UI — «Ruta comercial», «Sesión» y «Buscar mercancía» | ✅ hecha | 1b8a522, 155a727, 01c347a | Ruta (saltos, aviso de copiado), Sesión y Buscar; test de minería determinista |
+| 23 | `missions` — libro de misiones y reconstrucción | 🔄 en curso | — |  |
 | 24 | `missions` — pila de masacre | ⬜ pendiente | — |  |
 | 25 | `missions` — avisos, recompensas de la sesión y objetivos comunitarios | ⬜ pendiente | — |  |
 | 26 | `missions` — pasajeros y cabinas | ⬜ pendiente | — |  |
