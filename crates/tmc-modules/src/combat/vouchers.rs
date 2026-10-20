@@ -123,6 +123,10 @@ impl VoucherLedger {
 
     fn redeem(&mut self, r: &RedeemVoucher) -> bool {
         let Some(kind) = redeem_kind(r) else {
+            decide!(
+                "combat.vouchers.redeem.ignored",
+                tmc_model::diagnostics::json!({"factions": r.factions.len()})
+            );
             return false;
         };
         if !r.factions.is_empty() {
@@ -139,6 +143,10 @@ impl VoucherLedger {
                 }
             }
         }
+        decide!(
+            "combat.vouchers.redeem.applied",
+            tmc_model::diagnostics::json!({"factions": r.factions.len(), "declared": declared_amount(r)})
+        );
         true
     }
 

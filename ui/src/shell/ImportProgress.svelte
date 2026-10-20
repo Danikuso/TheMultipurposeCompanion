@@ -1,12 +1,17 @@
 <script lang="ts">
   import { t } from '../lib/i18n';
   import { live } from '../lib/ws.svelte';
+  import { diag, diagOn } from '../lib/diag.svelte';
 
   const progress = $derived(live.importProgress);
   const visible = $derived(progress != null && progress.total > 0 && progress.done < progress.total);
   const widthPct = $derived(
     progress && progress.total > 0 ? Math.min(100, Math.round((progress.done / progress.total) * 100)) : 0,
   );
+  $effect(() => {
+    if (!diagOn()) return;
+    diag('ui.import.progress', { visible, done: progress?.done ?? 0, total: progress?.total ?? 0, width_pct: widthPct });
+  });
 </script>
 
 {#if visible && progress}

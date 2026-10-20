@@ -189,6 +189,10 @@ impl Navigation {
             return;
         }
         self.visits.reset(name.clone(), at);
+        decide!(
+            "navigation.visits.reset.requested",
+            tmc_model::diagnostics::json!({})
+        );
         let cut = at.to_rfc3339_opts(SecondsFormat::Nanos, true);
         ctx.store_task(
             VISITS_TAG,
@@ -217,20 +221,32 @@ impl Navigation {
                 self.supercharged = None;
                 self.politics = LocalPolitics::from_location(l).map(|p| (l.system_address, p));
                 self.visits.on_jump(l.system_address, je.timestamp);
+                decide!("navigation.jump.consumed", {"has_plan": self.plan.is_some()});
                 if let Some(plan) = &mut self.plan {
                     plan.on_jump(&l.star_system, l.system_address);
                     self.plan_dirty = true;
+                    decide!("navigation.plan.advanced", {"index": plan.current_index,
+                        "hops": plan.hops.len(), "off_route": plan.off_route,
+                        "completed": plan.arrived()});
                 }
                 // Navigation decide: solo salto en vivo con la copia automática activa.
                 if !ctx.replaying && self.settings.auto_copy_next_system {
                     self.copy_seq += 1;
                     // El plan ya avanzó: el destino es el siguiente de la tira.
                     if let Some(next) = build_strip(self.plan.as_ref(), state).upcoming.first() {
+                        decide!(
+                            "navigation.auto_copy.alert",
+                            tmc_model::diagnostics::json!({"copy_seq": self.copy_seq})
+                        );
                         ctx.alert(
                             Alert::new(Severity::Info, "nav-auto-copied")
                                 .arg("system", next.name.clone()),
                         );
+                    } else {
+                        decide!("navigation.auto_copy.skipped", {"reason": 1});
                     }
+                } else if !ctx.replaying {
+                    decide!("navigation.auto_copy.skipped", {"reason": 0});
                 }
             }
             EventKind::Location(l) | EventKind::CarrierJump(l) => {
@@ -242,6 +258,10 @@ impl Navigation {
                         (l.system_address != 0).then_some(l.system_address),
                     );
                     self.plan_dirty |= before != (plan.current_index, plan.off_route);
+                    decide_if!(before != (plan.current_index, plan.off_route),
+                        "navigation.plan.reconciled",
+                        {"index": plan.current_index, "off_route": plan.off_route,
+                         "became_off_route": plan.off_route && !before.1});
                 }
             }
             EventKind::JetConeBoost(j) => self.supercharged = j.boost_value,
@@ -258,6 +278,7 @@ impl Navigation {
             .visible()
             .any(|e| e.id64.is_some_and(|id| system_key(id) == r.key))
         {
+            decide!("navigation.remote.response.not_visible", {});
             return;
         }
         if self
@@ -266,6 +287,7 @@ impl Navigation {
             .and_then(|s| s.fetched_at)
             .is_some_and(|applied| r.fetched_at < applied)
         {
+            decide!("navigation.remote.response.stale", {});
             return;
         }
         let (status, data) = match &r.outcome {
@@ -275,6 +297,14 @@ impl Navigation {
             NetOutcome::Failed(_) => (RemoteStatus::Failed, None),
             _ => return,
         };
+        decide!("navigation.remote.response.applied", {"status": match status {
+            RemoteStatus::Ok => 0,
+            RemoteStatus::NoData => 1,
+            RemoteStatus::Disabled => 2,
+            RemoteStatus::Failed => 3,
+            #[allow(unreachable_patterns)]
+            _ => 4,
+        }});
         self.remote.insert(
             r.key.clone(),
             RemoteState {
@@ -303,19 +333,30 @@ impl Navigation {
                 .retain(|_, (_, sent)| (now - *sent).num_seconds() <= INFLIGHT_TTL_S);
         }
         if !self.online(state) {
+            decide!(
+                "navigation.remote.request.skipped_offline",
+                tmc_model::diagnostics::json!({})
+            );
             return;
         }
         for e in strip.visible() {
             let Some(id64) = e.id64 else { continue };
             let key = system_key(id64);
             if self.remote.contains_key(&key) || self.inflight.contains_key(&key) {
+                decide_if!(!ctx.replaying, "navigation.remote.request.avoided",
+                    {"cached": self.remote.contains_key(&key)});
                 continue;
             }
             let query = NetQuery::System {
                 id64,
                 name: e.name.clone(),
             };
-            if let Some(id) = ctx.request(key.clone(), query) {
+            let requested = ctx.request(key.clone(), query);
+            decide!(
+                "navigation.remote.request.sent",
+                tmc_model::diagnostics::json!({"accepted": requested.is_some()})
+            );
+            if let Some(id) = requested {
                 self.inflight
                     .insert(key, (id, self.now.unwrap_or(DateTime::UNIX_EPOCH)));
             }
@@ -528,6 +569,10 @@ impl Module for Navigation {
                 self.apply_loaded_plan(value, state);
             }
             SourceEvent::Action { name, args } if name.starts_with("navigation.") => {
+                decide!(
+                    "navigation.plan.action.received",
+                    tmc_model::diagnostics::json!({"args": args.is_object()})
+                );
                 self.on_plan_action(name, args, state, ctx);
             }
             _ => {}

@@ -14,6 +14,9 @@ use tmc_store::StoredEvent;
 use tmc_store::{EventWriter, Store};
 use tokio::sync::{broadcast, mpsc, oneshot};
 
+#[cfg(debug_assertions)]
+mod diag;
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum CoreMessage {
@@ -113,7 +116,20 @@ fn store_worker(
     stored: mpsc::Sender<SourceEvent>,
 ) {
     while let Ok((module, tag, task)) = jobs.recv() {
-        match catch_unwind(AssertUnwindSafe(|| task(&store))) {
+        #[cfg(debug_assertions)]
+        let started = std::time::Instant::now();
+        let outcome = catch_unwind(AssertUnwindSafe(|| task(&store)));
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "actor.store_task.finished",
+            tmc_model::diagnostics::json!({
+                "module": module,
+                "ok": matches!(outcome, Ok(Ok(_))),
+                "panicked": outcome.is_err(),
+                "duration_us": started.elapsed().as_micros() as u64,
+            })
+        );
+        match outcome {
             Ok(Ok(value)) => {
                 // Si el actor ya cerró el receptor, `blocking_send` falla y no bloquea.
                 let _ = stored.blocking_send(SourceEvent::Stored {
@@ -152,6 +168,8 @@ struct Actor {
     next_request_id: u64,
     // Último instante del diario publicado en `core.clock`.
     clock_published: Option<chrono::DateTime<chrono::Utc>>,
+    #[cfg(debug_assertions)]
+    diag: diag::ActorDiag,
 }
 
 impl Actor {
@@ -174,6 +192,8 @@ impl Actor {
             task_tx: None,
             next_request_id: 1,
             clock_published: None,
+            #[cfg(debug_assertions)]
+            diag: diag::ActorDiag::default(),
         };
         actor.update_core(Changes::all());
         actor.set_topic("core.theme", value(&actor.theme));
@@ -211,11 +231,18 @@ impl Actor {
         }
         actor.update_modules();
         actor.dirty.clear();
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "actor.started",
+            tmc_model::diagnostics::json!({"modules": actor.modules.len(), "topics": actor.topics.len()})
+        );
         actor
     }
 
     fn set_topic(&mut self, topic: &str, value: Value) {
         if self.topics.get(topic) != Some(&value) {
+            #[cfg(debug_assertions)]
+            self.diag_topic(topic, &value);
             self.topics.insert(topic.to_owned(), value);
             self.dirty.insert(topic.to_owned());
         }
@@ -306,6 +333,11 @@ impl Actor {
 
     fn crashed(&self, id: &str, replaying: bool) {
         tracing::error!(module = id, "module disabled after panic");
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "actor.module.crashed",
+            tmc_model::diagnostics::json!({"module": id, "replaying": replaying})
+        );
         if !replaying {
             let _ = self.updates.send(CoreMessage::Alert(
                 Alert::new(Severity::Critical, "alert-module-crashed").arg("module", id),
@@ -317,10 +349,20 @@ impl Actor {
         for request in requests {
             let Some(net) = &self.net else {
                 tracing::debug!(key = %request.key, "network request dropped: no network channel");
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::State,
+                    "actor.request.dropped_no_channel",
+                    tmc_model::diagnostics::json!({"id": request.id})
+                );
                 continue;
             };
             if let Err(error) = net.try_send(request) {
                 tracing::warn!(%error, "network request dropped");
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::State,
+                    "actor.request.dropped_queue_full",
+                    tmc_model::diagnostics::json!({})
+                );
             }
         }
     }
@@ -329,15 +371,27 @@ impl Actor {
         for (tag, task) in tasks {
             let Some(queue) = &self.task_tx else {
                 tracing::debug!(module, tag, "store task dropped: no store");
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::State,
+                    "actor.store_task.dropped_no_store",
+                    tmc_model::diagnostics::json!({"module": module})
+                );
                 continue;
             };
             if queue.send((module, tag, task)).is_err() {
                 tracing::warn!(module, "store task dropped: worker stopped");
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::State,
+                    "actor.store_task.dropped_worker_stopped",
+                    tmc_model::diagnostics::json!({"module": module})
+                );
             }
         }
     }
 
     fn apply(&mut self, event: SourceEvent) {
+        #[cfg(debug_assertions)]
+        let diag = self.diag_begin(&event);
         let replaying = matches!(
             &event,
             SourceEvent::Journal {
@@ -396,6 +450,10 @@ impl Actor {
         while index < self.modules.len() {
             let slot = &mut self.modules[index];
             let mut context = ModuleCtx::new(slot.id, replaying, self.next_request_id);
+            #[cfg(debug_assertions)]
+            let module_started = std::time::Instant::now();
+            #[cfg(debug_assertions)]
+            let previous_relevance = slot.relevance;
             let processed = catch_unwind(AssertUnwindSafe(|| {
                 let dirty = slot.module.on_event(&event, &self.state, &mut context);
                 let declared: TopicSet = slot.module.topics().into_iter().collect();
@@ -415,15 +473,31 @@ impl Actor {
                     }
                     slot.topics = declared;
                     slot.relevance = relevance;
+                    #[cfg(debug_assertions)]
+                    let refreshed = values.len();
                     for (topic, value) in values {
                         self.set_topic(&topic, value);
                     }
-                    for alert in context.drain_alerts() {
+                    let alerts = context.drain_alerts();
+                    #[cfg(debug_assertions)]
+                    let alert_count = alerts.len();
+                    for alert in alerts {
                         let _ = self.updates.send(CoreMessage::Alert(alert));
                     }
                     let (requests, tasks, next_id) = context.take_outputs();
                     self.next_request_id = next_id;
                     let id = self.modules[index].id;
+                    #[cfg(debug_assertions)]
+                    self.diag_module(
+                        id,
+                        module_started,
+                        previous_relevance,
+                        relevance,
+                        refreshed,
+                        requests.len(),
+                        tasks.len(),
+                        alert_count,
+                    );
                     self.dispatch_requests(requests);
                     self.spawn_store_tasks(id, tasks);
                     index += 1;
@@ -439,17 +513,24 @@ impl Actor {
             }
         }
         self.update_modules();
+        #[cfg(debug_assertions)]
+        self.diag_end(&event, diag);
     }
 
     fn flush(&mut self) {
         if self.dirty.is_empty() {
             return;
         }
-        let topics = std::mem::take(&mut self.dirty)
+        let topics: BTreeMap<String, Value> = std::mem::take(&mut self.dirty)
             .into_iter()
             .filter_map(|topic| self.topics.get(&topic).cloned().map(|value| (topic, value)))
             .collect();
         self.seq += 1;
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "actor.flush",
+            tmc_model::diagnostics::json!({"seq": self.seq, "topics": topics.len()})
+        );
         let _ = self.updates.send(CoreMessage::Update {
             seq: self.seq,
             topics,
@@ -473,6 +554,11 @@ impl Actor {
             if snapshots_open && events_since_control >= 32 {
                 match snapshots.try_recv() {
                     Ok(reply) => {
+                        tmc_model::diagnostic!(
+                            tmc_model::diagnostics::DiagnosticContext::State,
+                            "actor.snapshot.served",
+                            tmc_model::diagnostics::json!({"topics": self.topics.len(), "forced_turn": true})
+                        );
                         let _ = reply.send(self.topics.clone());
                     }
                     Err(mpsc::error::TryRecvError::Disconnected) => snapshots_open = false,
@@ -489,10 +575,19 @@ impl Actor {
                     Some(event)=>{self.apply(event); if snapshots_open { events_since_control += 1; }}, None=>events_open=false,
                 },
                 request = snapshots.recv(), if snapshots_open => match request {
-                    Some(reply)=>{let _ = reply.send(self.topics.clone()); events_since_control = 0;}, None=>snapshots_open=false,
+                    Some(reply)=>{
+                        tmc_model::diagnostic!(
+                            tmc_model::diagnostics::DiagnosticContext::State,
+                            "actor.snapshot.served",
+                            tmc_model::diagnostics::json!({"topics": self.topics.len(), "forced_turn": false})
+                        );
+                        let _ = reply.send(self.topics.clone()); events_since_control = 0;
+                    }, None=>snapshots_open=false,
                 },
             }
         }
+        #[cfg(debug_assertions)]
+        self.diag_replay_finished();
         // Cerrar ya el receptor y la cola evita que el worker se quede en `blocking_send`
         // durante el volcado final y termina al acabar su tarea en curso.
         drop(stored);

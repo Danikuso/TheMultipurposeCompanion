@@ -37,6 +37,19 @@ pub struct CachedEntry {
     pub fetched_at: DateTime<Utc>,
 }
 
+impl StoreError {
+    /// Safe for logs: Display/Debug may contain parameters, paths or trigger text.
+    pub fn diagnostic_class(&self) -> &'static str {
+        match self {
+            Self::Sql(_) => "sqlite",
+            Self::Io(_) => "io",
+            Self::Poisoned => "poisoned",
+            Self::IntegerRange(_) => "integer_range",
+            Self::Unsupported(_) => "unsupported",
+        }
+    }
+}
+
 fn to_sql(value: &serde_json::Value) -> Result<rusqlite::types::Value, StoreError> {
     use rusqlite::types::Value as Sql;
     Ok(match value {
@@ -83,35 +96,81 @@ pub struct Store {
 
 impl Store {
     pub fn open(path: &Path) -> Result<Self, StoreError> {
-        Self::initialize(Connection::open(path)?)
+        Self::initialize(Connection::open(path).inspect_err(|_| {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "store.connection.failed",
+                serde_json::json!({"failure_class":"sqlite","in_memory":false})
+            );
+        })?)
     }
     pub fn open_in_memory() -> Result<Self, StoreError> {
-        Self::initialize(Connection::open_in_memory()?)
+        Self::initialize(Connection::open_in_memory().inspect_err(|_| {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "store.connection.failed",
+                serde_json::json!({"failure_class":"sqlite","in_memory":true})
+            );
+        })?)
     }
     fn initialize(connection: Connection) -> Result<Self, StoreError> {
-        connection.busy_timeout(std::time::Duration::from_secs(5))?;
-        connection.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA foreign_keys=ON; CREATE TABLE IF NOT EXISTS schema_version (id TEXT PRIMARY KEY, applied_at TEXT NOT NULL);")?;
-        let store = Self {
-            connection: Arc::new(Mutex::new(connection)),
-        };
-        store.apply_migrations(&[
-            Migration {
-                id: "core-f0-1",
-                sql: migrations::BASE_SCHEMA,
-            },
-            Migration {
-                id: "f3_prices",
-                sql: migrations::PRICES_SCHEMA,
-            },
-            Migration {
-                id: "f3_market_full_snapshots",
-                sql: migrations::FULL_SNAPSHOTS_SCHEMA,
-            },
-        ])?;
-        Ok(store)
+        #[cfg(debug_assertions)]
+        let diagnostic_started = std::time::Instant::now();
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::Sql,
+            "store.initialize.started",
+            serde_json::json!({"started":true})
+        );
+        let result: Result<_, StoreError> = (|| {
+            connection.busy_timeout(std::time::Duration::from_secs(5))?;
+            connection.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA foreign_keys=ON; CREATE TABLE IF NOT EXISTS schema_version (id TEXT PRIMARY KEY, applied_at TEXT NOT NULL);")?;
+            let store = Self {
+                connection: Arc::new(Mutex::new(connection)),
+            };
+            store.apply_migrations(&[
+                Migration {
+                    id: "core-f0-1",
+                    sql: migrations::BASE_SCHEMA,
+                },
+                Migration {
+                    id: "f3_prices",
+                    sql: migrations::PRICES_SCHEMA,
+                },
+                Migration {
+                    id: "f3_market_full_snapshots",
+                    sql: migrations::FULL_SNAPSHOTS_SCHEMA,
+                },
+            ])?;
+            Ok(store)
+        })();
+        #[cfg(debug_assertions)]
+        match &result {
+            Ok(_value) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.initialize.completed",
+                    serde_json::json!({"elapsed_us":diagnostic_started.elapsed().as_micros()})
+                );
+            }
+            Err(_error) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.initialize.failed",
+                    serde_json::json!({"failure_class":_error.diagnostic_class(),"elapsed_us":diagnostic_started.elapsed().as_micros()})
+                );
+            }
+        }
+        result
     }
     pub(crate) fn lock(&self) -> Result<MutexGuard<'_, Connection>, StoreError> {
-        self.connection.lock().map_err(|_| StoreError::Poisoned)
+        self.connection.lock().map_err(|_| {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "store.connection.poisoned",
+                serde_json::json!({"failure_class":"poisoned"})
+            );
+            StoreError::Poisoned
+        })
     }
     /// Ejecuta una consulta y devuelve cada fila como array JSON.
     /// INTEGER/REAL -> número, TEXT -> cadena, NULL -> null; una columna BLOB es un error.
@@ -121,45 +180,134 @@ impl Store {
         sql: &str,
         params: &[serde_json::Value],
     ) -> Result<Vec<serde_json::Value>, StoreError> {
-        let params = params.iter().map(to_sql).collect::<Result<Vec<_>, _>>()?;
-        let conn = self.lock()?;
-        let mut stmt = conn.prepare(sql)?;
-        let columns = stmt.column_count();
-        let mut rows = stmt.query(rusqlite::params_from_iter(params))?;
-        let mut out = Vec::new();
-        while let Some(row) = rows.next()? {
-            let cells = (0..columns)
-                .map(|i| from_sql(row.get_ref(i)?))
-                .collect::<Result<Vec<_>, _>>()?;
-            out.push(serde_json::Value::Array(cells));
+        #[cfg(debug_assertions)]
+        let diagnostic_started = std::time::Instant::now();
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::Sql,
+            "store.query.started",
+            serde_json::json!({"sql_bytes":sql.len(),"sql_fingerprint":tmc_model::diagnostics::sql_fingerprint(sql),"sql_template":tmc_model::diagnostics::sql_template(sql),"parameter_types":tmc_model::diagnostics::value_types(params)})
+        );
+        let result: Result<_, StoreError> = (|| {
+            let params = params.iter().map(to_sql).collect::<Result<Vec<_>, _>>()?;
+            let conn = self.lock()?;
+            let mut stmt = conn.prepare(sql)?;
+            let columns = stmt.column_count();
+            let mut rows = stmt.query(rusqlite::params_from_iter(params))?;
+            let mut out = Vec::new();
+            while let Some(row) = rows.next()? {
+                let cells = (0..columns)
+                    .map(|i| from_sql(row.get_ref(i)?))
+                    .collect::<Result<Vec<_>, _>>()?;
+                out.push(serde_json::Value::Array(cells));
+            }
+            Ok(out)
+        })();
+        #[cfg(debug_assertions)]
+        match &result {
+            Ok(_value) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.query.completed",
+                    serde_json::json!({"rows":_value.len(),"bytes":_value.iter().map(tmc_model::diagnostics::value_bytes).sum::<usize>(),"columns":_value.first().and_then(|r|r.as_array()).map_or(0,Vec::len),"cell_types":_value.first().and_then(|r|r.as_array()).map(|r|tmc_model::diagnostics::value_types(r)),"elapsed_us":diagnostic_started.elapsed().as_micros()})
+                );
+            }
+            Err(_error) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.query.failed",
+                    serde_json::json!({"failure_class":_error.diagnostic_class(),"elapsed_us":diagnostic_started.elapsed().as_micros()})
+                );
+            }
         }
-        Ok(out)
+        result
     }
     /// Ejecuta una sentencia y devuelve las filas afectadas.
     pub fn exec_json(&self, sql: &str, params: &[serde_json::Value]) -> Result<usize, StoreError> {
-        let params = params.iter().map(to_sql).collect::<Result<Vec<_>, _>>()?;
-        let conn = self.lock()?;
-        Ok(conn.execute(sql, rusqlite::params_from_iter(params))?)
+        #[cfg(debug_assertions)]
+        let diagnostic_started = std::time::Instant::now();
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::Sql,
+            "store.exec.started",
+            serde_json::json!({"sql_bytes":sql.len(),"sql_fingerprint":tmc_model::diagnostics::sql_fingerprint(sql),"sql_template":tmc_model::diagnostics::sql_template(sql),"parameter_types":tmc_model::diagnostics::value_types(params)})
+        );
+        let result: Result<_, StoreError> = (|| {
+            let params = params.iter().map(to_sql).collect::<Result<Vec<_>, _>>()?;
+            let conn = self.lock()?;
+            Ok(conn.execute(sql, rusqlite::params_from_iter(params))?)
+        })();
+        #[cfg(debug_assertions)]
+        match &result {
+            Ok(_value) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.exec.completed",
+                    serde_json::json!({"rows":_value,"elapsed_us":diagnostic_started.elapsed().as_micros()})
+                );
+            }
+            Err(_error) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.exec.failed",
+                    serde_json::json!({"failure_class":_error.diagnostic_class(),"elapsed_us":diagnostic_started.elapsed().as_micros()})
+                );
+            }
+        }
+        result
     }
     pub fn api_cache_get(&self, key: &str) -> Result<Option<CachedEntry>, StoreError> {
-        let conn = self.lock()?;
-        let row = conn
-            .query_row(
-                "SELECT body, fetched_at FROM api_cache WHERE key=?1",
-                [key],
-                |r| Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, String>(1)?)),
-            )
-            .optional()?;
-        let Some((body, fetched_at)) = row else {
-            return Ok(None);
-        };
-        let fetched_at = DateTime::parse_from_rfc3339(&fetched_at)
-            .map_err(|e| StoreError::Unsupported(format!("bad fetched_at: {e}")))?
-            .with_timezone(&Utc);
-        Ok(Some(CachedEntry {
-            value: String::from_utf8_lossy(&body).into_owned(),
-            fetched_at,
-        }))
+        #[cfg(debug_assertions)]
+        let diagnostic_started = std::time::Instant::now();
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::Sql,
+            "store.cache.get",
+            serde_json::json!({"key_bytes":key.len()})
+        );
+        let result: Result<_, StoreError> = (|| {
+            let conn = self.lock()?;
+            let row = conn
+                .query_row(
+                    "SELECT body, fetched_at FROM api_cache WHERE key=?1",
+                    [key],
+                    |r| Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, String>(1)?)),
+                )
+                .optional()?;
+            let Some((body, fetched_at)) = row else {
+                return Ok(None);
+            };
+            let fetched_at = DateTime::parse_from_rfc3339(&fetched_at)
+                .map_err(|e| StoreError::Unsupported(format!("bad fetched_at: {e}")))?
+                .with_timezone(&Utc);
+            Ok(Some(CachedEntry {
+                value: String::from_utf8_lossy(&body).into_owned(),
+                fetched_at,
+            }))
+        })();
+        #[cfg(debug_assertions)]
+        match &result {
+            Ok(_value) => {
+                if let Some(_entry) = _value {
+                    tmc_model::diagnostic!(
+                        tmc_model::diagnostics::DiagnosticContext::Sql,
+                        "store.cache.hit",
+                        serde_json::json!({"bytes":_entry.value.len(),"elapsed_us":diagnostic_started.elapsed().as_micros()})
+                    );
+                } else {
+                    tmc_model::diagnostic!(
+                        tmc_model::diagnostics::DiagnosticContext::Sql,
+                        "store.cache.miss",
+                        serde_json::json!({"elapsed_us":diagnostic_started.elapsed().as_micros()})
+                    );
+                }
+            }
+            Err(_error) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.cache.get_failed",
+                    serde_json::json!({"failure_class":_error.diagnostic_class(),"elapsed_us":diagnostic_started.elapsed().as_micros()})
+                );
+            }
+        }
+        result
     }
     /// Guarda el cuerpo con `ttl_s = 0`; la política de frescura es de la capa de red.
     pub fn api_cache_put(
@@ -168,12 +316,39 @@ impl Store {
         value: &str,
         fetched_at: DateTime<Utc>,
     ) -> Result<(), StoreError> {
-        let conn = self.lock()?;
-        conn.execute(
+        #[cfg(debug_assertions)]
+        let diagnostic_started = std::time::Instant::now();
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::Sql,
+            "store.cache.put",
+            serde_json::json!({"key_bytes":key.len(),"bytes":value.len()})
+        );
+        let result: Result<_, StoreError> = (|| {
+            let conn = self.lock()?;
+            conn.execute(
             "INSERT INTO api_cache(key,fetched_at,ttl_s,body) VALUES(?1,?2,0,?3) ON CONFLICT(key) DO UPDATE SET fetched_at=excluded.fetched_at, ttl_s=0, body=excluded.body",
             rusqlite::params![key, fetched_at.to_rfc3339(), value.as_bytes()],
         )?;
-        Ok(())
+            Ok(())
+        })();
+        #[cfg(debug_assertions)]
+        match &result {
+            Ok(_value) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.cache.put_completed",
+                    serde_json::json!({"elapsed_us":diagnostic_started.elapsed().as_micros()})
+                );
+            }
+            Err(_error) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.cache.put_failed",
+                    serde_json::json!({"failure_class":_error.diagnostic_class(),"elapsed_us":diagnostic_started.elapsed().as_micros()})
+                );
+            }
+        }
+        result
     }
     pub fn kv_get(&self, key: &str) -> Option<String> {
         let result = self.lock().and_then(|conn| {
@@ -182,9 +357,24 @@ impl Store {
                 .optional()?)
         });
         match result {
-            Ok(value) => value,
+            Ok(value) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.kv.get",
+                    serde_json::json!({"found":value.is_some(),"bytes":value.as_ref().map_or(0,String::len)})
+                );
+                value
+            }
             Err(error) => {
-                tracing::warn!(%error, "could not read stored setting");
+                tracing::warn!(
+                    failure_class = error.diagnostic_class(),
+                    "could not read stored setting"
+                );
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.kv.get_failed",
+                    serde_json::json!({"failure_class":error.diagnostic_class()})
+                );
                 None
             }
         }
@@ -194,8 +384,21 @@ impl Store {
             conn.execute("INSERT INTO kv(key,value) VALUES(?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value", [key,value])?;
             Ok(())
         });
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::Sql,
+            "store.kv.set",
+            serde_json::json!({"succeeded":result.is_ok(),"bytes":value.len()})
+        );
         if let Err(error) = result {
-            tracing::warn!(%error, "could not write stored setting");
+            tracing::warn!(
+                failure_class = error.diagnostic_class(),
+                "could not write stored setting"
+            );
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "store.kv.set_failed",
+                serde_json::json!({"failure_class":error.diagnostic_class()})
+            );
         }
     }
 }

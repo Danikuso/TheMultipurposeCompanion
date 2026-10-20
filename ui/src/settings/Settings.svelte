@@ -4,6 +4,7 @@
   import { applyTheme, type HudThemeInput } from '../lib/theme';
   import { topic } from '../lib/ws.svelte';
   import Panel from '../shell/Panel.svelte';
+  import { diag } from '../lib/diag.svelte';
   import Pairing from './Pairing.svelte';
 
   const DEFAULT_MINERALS = ['platinum', 'painite', 'lowtemperaturediamond', 'opal', 'alexandrite',
@@ -76,6 +77,7 @@
   onMount(async () => {
     try {
       const res = await fetch('/api/config');
+      diag('ui.fetch.result', { kind: 'config-get', ok: res.ok, status: res.status });
       if (res.ok) {
         const cfg = (await res.json()) as ConfigDto;
         fullConfig = cfg;
@@ -102,6 +104,7 @@
       }
     } catch {
       // Offline or unconfigured
+      diag('ui.fetch.result', { kind: 'config-get', ok: false, status: 0 });
     }
   });
 
@@ -176,10 +179,13 @@
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify(updated),
         });
+        // Nunca se vuelca la configuración: contiene el token LAN en `server`.
+        diag('ui.fetch.result', { kind: 'config-put', ok: res.ok, status: res.status, lan: lanEnabled });
         if (!res.ok) throw new Error('config-save-failed');
         fullConfig = (await res.json()) as ConfigDto;
         if (revision === saveRevision) restoreSavedConfig();
       } catch {
+        diag('ui.fetch.result', { kind: 'config-put', ok: false, status: 0, lan: lanEnabled });
         if (revision === saveRevision) {
           restoreSavedConfig();
           saveError = true;
