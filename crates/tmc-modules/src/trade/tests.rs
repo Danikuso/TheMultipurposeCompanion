@@ -700,6 +700,12 @@ fn copy_seq_is_monotonic_across_clear_and_new_plan() {
 fn market_json_before_docked_and_when_starting_docked() {
     let mut h = H::new();
     h.fixture();
+    // La fixture termina atracada en Synthetic Port: se desatraca antes del caso a probar.
+    h.journal(
+        -1,
+        "Undocked",
+        r#","StationName":"Synthetic Port","MarketID":128000001"#,
+    );
     h.journal(
         0,
         "Location",
@@ -780,4 +786,74 @@ fn offline_writes_market_but_no_ardent_and_legacy_writes_neither() {
     ));
     assert_eq!(h.count_tag("trade.market.write"), 0);
     assert_eq!(h.count_tag("trade.ardent.write"), 0);
+}
+
+/// Criterio 3: coste medio pagado y beneficio estimado de la carga; misión y robada, fuera.
+#[test]
+fn trade_fixture_cargo_avg_and_profit() {
+    let mut h = H::with_store();
+    seed_buyer(&h.store, 2, "Other", 100, t(-3600));
+    h.dock_with_market();
+    let cargo = h.val("trade.cargo");
+    let lines = cargo["lines"].as_array().unwrap();
+    let gold = lines.iter().find(|l| l["commodity"] == "gold").unwrap();
+    // (100 × 9400 + 50 × 9700) / 150 = 9500.
+    assert_eq!(gold["paid_avg"], json!(9500));
+    assert_eq!(gold["kind"], json!("Trade"));
+    // 90 t × (11000 − 9500).
+    assert_eq!(gold["est_profit"], json!(135_000));
+    for l in lines.iter().filter(|l| l["commodity"] != "gold") {
+        assert_ne!(l["kind"], json!("Trade"), "{l}");
+        assert!(l["est_profit"].is_null(), "{l}");
+    }
+    assert_eq!(lines.len(), 3);
+}
+
+/// Criterio 5: Σ MarketSell − coste medio de lo vendido == beneficio de la sesión (±0).
+#[test]
+fn trade_session_profit_matches_fixture() {
+    let mut h = H::new();
+    h.fixture();
+    let session = h.val("trade.session");
+    let sold: i64 = 660_000;
+    let cost = 60 * 9_500;
+    assert_eq!(session["profit"], json!(sold - cost));
+    assert_eq!(session["profit"], json!(90_000));
+    assert_eq!(session["tons_sold"], json!(60));
+}
+
+fn contract_snapshot() -> Value {
+    let mut h = H::with_store();
+    seed_buyer(&h.store, 2, "Other", 100, t(-3600));
+    h.dock_with_market();
+    h.ship();
+    h.action("trade.route_request", json!({"max_hops": 3}));
+    let key = h.requests_with("route:")[0].key.clone();
+    h.send(net(&key, NetOutcome::TradeRoute(plan())));
+    json!({
+        "trade.market": h.val("trade.market"),
+        "trade.cargo": h.val("trade.cargo"),
+        "trade.session": h.val("trade.session"),
+        "trade.route": h.val("trade.route"),
+        "trade.search": h.val("trade.search"),
+        "trade.commodities": h.val("trade.commodities"),
+    })
+}
+
+#[test]
+fn ui_contract_snapshot_is_up_to_date() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../ui/tests/fixtures/trade-topics.json");
+    let text = serde_json::to_string_pretty(&contract_snapshot()).unwrap() + "\n";
+    if std::env::var_os("UPDATE_CONTRACTS").is_some() {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, &text).unwrap();
+        return;
+    }
+    let current = std::fs::read_to_string(&path).unwrap_or_default();
+    assert_eq!(
+        current.replace("\r\n", "\n"),
+        text,
+        "el contrato JSON de trade.* cambió: regenéralo con UPDATE_CONTRACTS=1 cargo test -p tmc-modules ui_contract_snapshot"
+    );
 }

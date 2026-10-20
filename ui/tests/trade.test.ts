@@ -312,3 +312,22 @@ test('session reset failure uses the trade message', async () => {
   (q('session-reset') as HTMLButtonElement).click();
   await vi.waitFor(() => { flushSync(); expect(target.querySelector('[role="alert"]')!.textContent).toContain('sesión'); });
 });
+
+// Contrato generado desde Rust (`UPDATE_CONTRACTS=1 cargo test -p tmc-modules ui_contract`).
+import tradeSnapshot from './fixtures/trade-topics.json';
+const tsnap = tradeSnapshot as Record<string, any>;
+
+test('contract: trade panels render from the Rust snapshot', () => {
+  mountWith(MarketPanel, { 'trade.market': tsnap['trade.market'] });
+  expect(qa('market-row').length).toBe(tsnap['trade.market'].rows.length);
+  unmount(mounted!); mounted = undefined;
+  mountWith(CargoPanel, { 'trade.cargo': tsnap['trade.cargo'] });
+  expect(qa('cargo-line').length).toBe(3);
+  expect(q('cargo-profit')!.textContent).toMatch(/135\D?000/);
+  unmount(mounted!); mounted = undefined;
+  mountWith(TradeSessionPanel, { 'trade.session': tsnap['trade.session'] });
+  expect(q('session-profit')!.textContent).toMatch(/90\D?000/);
+  unmount(mounted!); mounted = undefined;
+  mountWith(RoutePanel, { 'trade.route': tsnap['trade.route'] });
+  expect(qa('route-stop').length).toBe(tsnap['trade.route'].plan.stops.length);
+});

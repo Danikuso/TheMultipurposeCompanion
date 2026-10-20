@@ -195,7 +195,8 @@ fn missions_fixture_matches_missions_event_after_restart() {
     let mut h = H::with_store();
     write_events(&h.store, first);
     h.lines(second);
-    assert_eq!(active_ids(&h), vec![65000101, 65000102, 65000103]);
+    // Tras el reinicio: 103 fallida, 105 aceptada, 101 redirigida a Alpha Base.
+    assert_eq!(active_ids(&h), vec![65000101, 65000102, 65000105]);
     let groups = h.val(TOPIC_ACTIVE)["groups"].as_array().unwrap().clone();
     assert_eq!(groups.len(), 2);
     let beta = groups.iter().find(|g| g["system"] == "Beta Reach").unwrap();
