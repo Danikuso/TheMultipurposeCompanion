@@ -374,6 +374,7 @@ impl Store {
             false,
             None,
             None,
+            false,
         )
     }
 
@@ -401,6 +402,7 @@ impl Store {
             false,
             None,
             ship_pad,
+            true,
         )
     }
 
@@ -429,6 +431,7 @@ impl Store {
             true,
             None,
             None,
+            false,
         )
     }
 
@@ -462,6 +465,7 @@ impl Store {
             true,
             Some(identities),
             None,
+            false,
         )
     }
 
@@ -478,6 +482,7 @@ impl Store {
         include_closed: bool,
         identities: Option<&[MarketIdentity]>,
         ship_pad: Option<PadSize>,
+        positive_buy_price: bool,
     ) -> Result<Vec<PricedMarket>, StoreError> {
         let (raw_price_col, raw_vol_col, order) = match side {
             Side::Sell => ("p.sell_price", "p.demand", "DESC"),
@@ -485,6 +490,9 @@ impl Store {
         };
         let cond = if include_closed {
             "1".to_owned()
+        } else if positive_buy_price && side == Side::Buy {
+            // Un precio de compra cero no es una oferta: no debe consumir el límite.
+            format!("{raw_vol_col} > 0 AND {raw_price_col} > 0")
         } else {
             format!("{raw_vol_col} > 0")
         };
@@ -869,6 +877,32 @@ mod tests {
                 .market_id,
             1
         );
+    }
+    #[test]
+    fn compatible_buy_query_skips_zero_price_rows_before_limit() {
+        let store = Store::open_in_memory().unwrap();
+        let mut snaps = Vec::new();
+        for id in 1..=3u64 {
+            let mut p = price("gold", None, 0, 0);
+            p.buy_price = 0;
+            p.stock = 100;
+            snaps.push(snap(id, 0.0, t(10), vec![p]));
+        }
+        let mut valid = price("gold", None, 0, 0);
+        valid.buy_price = 9400;
+        valid.stock = 50;
+        snaps.push(snap(4, 0.0, t(10), vec![valid]));
+        store.replace_markets(&snaps).unwrap();
+        let ship = |side| {
+            store
+                .best_prices_for_ship("gold", side, [0.0; 3], 100.0, t(0), None, 1, None)
+                .unwrap()
+        };
+        let buys = ship(Side::Buy);
+        assert_eq!(buys.len(), 1);
+        assert_eq!((buys[0].market_id, buys[0].price), (4, 9400));
+        // El método legado conserva su comportamiento.
+        assert_eq!(near(&store, Side::Buy, t(0)).len(), 4);
     }
     #[test]
     fn empty_complete_snapshot_rejects_older_complete_and_partial_prices() {
