@@ -71,8 +71,8 @@ async fn send_json(socket: &mut WebSocket, val: &Value) -> Option<usize> {
 #[cfg(debug_assertions)]
 struct Stats {
     id: u64,
-    opened: std::time::Instant,
-    window: std::time::Instant,
+    opened: tokio::time::Instant,
+    window: tokio::time::Instant,
     updates: u64,
     alerts: u64,
     filtered: u64,
@@ -84,7 +84,7 @@ impl Stats {
     fn new() -> Self {
         use std::sync::atomic::{AtomicU64, Ordering};
         static NEXT: AtomicU64 = AtomicU64::new(1);
-        let now = std::time::Instant::now();
+        let now = tokio::time::Instant::now();
         Self {
             id: NEXT.fetch_add(1, Ordering::Relaxed),
             opened: now,
@@ -94,6 +94,12 @@ impl Stats {
             filtered: 0,
             bytes: 0,
         }
+    }
+
+    /// Instante en que debe volcarse la ventana si hay eventos pendientes.
+    fn deadline(&self) -> Option<tokio::time::Instant> {
+        (self.updates + self.alerts + self.filtered > 0)
+            .then(|| self.window + std::time::Duration::from_secs(1))
     }
 
     fn flush(&mut self, force: bool) {
@@ -110,7 +116,7 @@ impl Stats {
                 "alerts": self.alerts, "filtered_out": self.filtered, "bytes": self.bytes,
                 "window_ms": elapsed.as_millis() as u64})
         );
-        self.window = std::time::Instant::now();
+        self.window = tokio::time::Instant::now();
         self.updates = 0;
         self.alerts = 0;
         self.filtered = 0;
@@ -197,7 +203,16 @@ async fn run_socket(
     loop {
         #[cfg(debug_assertions)]
         stats.flush(false);
+        #[cfg(debug_assertions)]
+        let flush_at = stats.deadline();
+        #[cfg(not(debug_assertions))]
+        let flush_at = std::hint::black_box(None::<tokio::time::Instant>);
         tokio::select! {
+            () = tokio::time::sleep_until(flush_at.unwrap_or_else(tokio::time::Instant::now)),
+                if flush_at.is_some() => {
+                #[cfg(debug_assertions)]
+                stats.flush(false);
+            }
             incoming = socket.recv() => {
                 let Some(Ok(msg)) = incoming else {
                     break (0, 0);

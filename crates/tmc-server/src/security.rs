@@ -217,8 +217,11 @@ pub async fn enforce_security(
             "attempts": crate::diag::rejected_attempts()});
         return Err(StatusCode::FORBIDDEN);
     }
-    crate::diag::auth_event!("auth.lan.accepted", {"via_query": matched_query,
-        "via_cookie": matched_cookie, "ws": is_ws});
+    // Los estáticos no se registran: solo la API y el WebSocket.
+    if is_ws || req.uri().path().starts_with("/api/") {
+        crate::diag::auth_event!("auth.lan.accepted", {"via_query": matched_query,
+            "via_cookie": matched_cookie, "ws": is_ws});
+    }
 
     req.extensions_mut()
         .insert(ClientTrust { is_loopback: false });

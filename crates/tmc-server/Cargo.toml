@@ -25,6 +25,7 @@ rust-embed = { workspace = true, optional = true }
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }
+tokio = { workspace = true, features = ["test-util"] }
 tokio-tungstenite.workspace = true
 futures-util = "0.3"
 tempfile.workspace = true
