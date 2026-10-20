@@ -1891,6 +1891,61 @@ mod tests {
         assert_eq!(others, expected);
     }
 
+    #[test]
+    fn every_line_of_f3_fixtures_is_typed() {
+        // Eventos que los fixtures de F3 contienen sin tipar a propósito: ninguno.
+        const EXPECTED_OTHER: [&str; 0] = [];
+        let fixtures = [
+            (
+                "trade",
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../../tests/fixtures/journal/trade_session.log"
+                )),
+                10,
+            ),
+            (
+                "missions",
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../../tests/fixtures/journal/missions_session.log"
+                )),
+                16,
+            ),
+            (
+                "massacre",
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../../tests/fixtures/journal/massacre_session.log"
+                )),
+                24,
+            ),
+            (
+                "tourism",
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../../tests/fixtures/journal/tourism_session.log"
+                )),
+                5,
+            ),
+        ];
+        let mut others = std::collections::BTreeSet::new();
+        for (name, text, expected_lines) in fixtures {
+            let mut n = 0;
+            for line in text.lines() {
+                let ev = parse_line(line).unwrap_or_else(|e| panic!("{name}: {line}: {e}"));
+                if ev.kind == EventKind::Other {
+                    others.insert(ev.name.clone());
+                }
+                n += 1;
+            }
+            assert_eq!(n, expected_lines, "líneas de {name}");
+        }
+        let expected: std::collections::BTreeSet<String> =
+            EXPECTED_OTHER.iter().map(|s| s.to_string()).collect();
+        assert_eq!(others, expected);
+    }
+
     fn loadout_with_modifier(modifier: &str) -> EventKind {
         ev(&format!(
             r#"{{"timestamp":"2026-04-10T20:00:00Z","event":"Loadout","Ship":"python","Modules":[{{"Slot":"FrameShiftDrive","Item":"int_hyperdrive_size5_class5","Health":1.0,"Engineering":{{"BlueprintName":"FSD_LongRange","Level":5,"Quality":0.9,"ExperimentalEffect":"special_fsd_fuelcapacity","Modifiers":[{modifier}]}}}}]}}"#

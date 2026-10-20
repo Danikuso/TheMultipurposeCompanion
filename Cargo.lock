@@ -5022,6 +5022,7 @@ dependencies = [
  "tracing-appender",
  "tracing-subscriber",
  "uuid",
+ "zeromq",
 ]
 
 [[package]]

@@ -1,6 +1,8 @@
 //! Pruebas de extremo a extremo con `start()` (F1, criterios 2 y 5).
 
-use crate::{Config, Running, ServerSection, start, start_custom, start_with_transport};
+use crate::{
+    Config, Running, ServerSection, start, start_custom, start_full, start_with_transport,
+};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::io::Write;
@@ -381,5 +383,141 @@ async fn burst_of_1000_combat_events_stays_under_10hz_and_500ms() {
             .count();
         assert!(n <= 11, "{n} difusiones en 1 s");
     }
+    running.server.shutdown();
+}
+
+/// Relay EDDN falso en proceso: re-publica `burst.jsonl` (500 `commodity/3` + 20 corruptos) cada segundo.
+async fn spawn_fake_relay() -> (String, tokio::task::JoinHandle<()>) {
+    use std::io::Write as _;
+    use zeromq::{PubSocket, Socket, SocketSend, ZmqMessage};
+    let mut sock = PubSocket::new();
+    let ep = sock.bind("tcp://127.0.0.1:0").await.unwrap();
+    let zeromq::Endpoint::Tcp(_, port) = ep else {
+        panic!("endpoint inesperado")
+    };
+    let text = include_str!("../../../tests/fixtures/eddn/burst.jsonl");
+    let handle = tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        loop {
+            let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+            for line in text.lines().filter(|l| !l.trim().is_empty()) {
+                let mut e =
+                    flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+                e.write_all(line.replace("@NOW@", &now).as_bytes()).unwrap();
+                if sock
+                    .send(ZmqMessage::from(e.finish().unwrap()))
+                    .await
+                    .is_err()
+                {
+                    return;
+                }
+            }
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+    });
+    (format!("tcp://127.0.0.1:{port}"), handle)
+}
+
+#[tokio::test]
+async fn burst_of_500_eddn_markets_keeps_10hz_and_one_requery() {
+    let (jdir, ddir) = (tempdir().unwrap(), tempdir().unwrap());
+    let journal = jdir.path().join("Journal.2026-10-19T120000.01.log");
+    // Se empieza con la cabecera y el resto de la fixture llega en vivo (si no, sería reproducción).
+    let fixture = include_str!("../../../tests/fixtures/journal/trade_session.log");
+    let mut lines = fixture.lines();
+    std::fs::write(
+        &journal,
+        format!(
+            "{}
+{}
+",
+            HEAD.lines().next().unwrap(),
+            lines.next().unwrap()
+        ),
+    )
+    .unwrap();
+    let (url, relay) = spawn_fake_relay().await;
+    // Sin juego instalado: el sondeo de procesos (solo depuración) simula EliteDangerous64.
+    tmc_journal::process::force_game_running_for_e2e(true);
+    let running = start_full(
+        config(jdir.path(), ddir.path(), true),
+        Arc::new(FakeTransport),
+        Some(Duration::from_millis(100)),
+        Some(url),
+    )
+    .await
+    .unwrap();
+    wait_for(&running, "start", |s| s.contains_key("trade.market")).await;
+    for l in lines {
+        append(&journal, l);
+    }
+    std::fs::write(
+        jdir.path().join("Market.json"),
+        include_str!("../../../tests/fixtures/companion/market_trade.json"),
+    )
+    .unwrap();
+    append(
+        &journal,
+        r#"{"timestamp":"2026-10-19T12:01:30Z","event":"Market","MarketID":128000001,"StationName":"Synthetic Port","StationType":"Coriolis","StarSystem":"Synthetic System"}"#,
+    );
+    wait_for(&running, "trade market", |s| {
+        s.get("trade.market")
+            .is_some_and(|m| m["station"] == "Synthetic Port")
+    })
+    .await;
+    let mut rx = running.core.subscribe();
+    // La conexión al relay y la ráfaga llegan por su cuenta; mientras, ráfagas de eventos de diario.
+    let deadline = Instant::now() + Duration::from_secs(8);
+    let mut arrivals = Vec::new();
+    let mut latencies = Vec::new();
+    let mut n = 0u32;
+    while Instant::now() < deadline {
+        n += 1;
+        let marker = 100 + n;
+        let ts = format!("2026-10-19T12:{:02}:{:02}Z", 2 + n / 60, n % 60);
+        append(
+            &journal,
+            &format!(
+                r#"{{"timestamp":"{ts}","event":"Cargo","Count":{marker},"Inventory":[{{"Name":"Gold","Count":{marker},"Stolen":0}}]}}"#
+            ),
+        );
+        let t0 = Instant::now();
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if let Ok(CoreMessage::Update { topics, .. }) = rx.recv().await {
+                    arrivals.push(Instant::now());
+                    if topics
+                        .get("trade.cargo")
+                        .is_some_and(|c| c["used"] == marker)
+                    {
+                        return;
+                    }
+                }
+            }
+        })
+        .await
+        .unwrap_or_else(|_| panic!("cargo {marker} not reflected"));
+        latencies.push(t0.elapsed());
+        tokio::time::sleep(Duration::from_millis(300)).await;
+    }
+    latencies.sort();
+    let p95 = latencies[(latencies.len() * 95).div_ceil(100) - 1];
+    eprintln!("eddn burst lat = {latencies:?}");
+    eprintln!("eddn burst p95 = {p95:?}, updates = {}", arrivals.len());
+    assert!(p95 < Duration::from_millis(500), "p95 = {p95:?}");
+    for (i, a) in arrivals.iter().enumerate() {
+        let c = arrivals[i..]
+            .iter()
+            .take_while(|b| b.duration_since(*a) < Duration::from_secs(1))
+            .count();
+        assert!(c <= 11, "{c} difusiones en 1 s");
+    }
+    // El suscriptor llegó a conectarse y descartó los 20 mensajes corruptos.
+    wait_for(&running, "eddn connected", |s| {
+        s.get("trade.market")
+            .is_some_and(|m| m["eddn_connected"] == true)
+    })
+    .await;
+    relay.abort();
     running.server.shutdown();
 }
