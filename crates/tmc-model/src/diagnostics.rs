@@ -683,6 +683,8 @@ const UI_PANELS: &[&str] = &[
     "panel-ship",
     "panel-status",
     "panel-system-bodies",
+    "panel-trade-cargo",
+    "panel-trade-market",
 ];
 const UI_RELEVANCE: &[&str] = &["hidden", "normal", "active", "urgent"];
 const UI_STATES: &[&str] = &[
