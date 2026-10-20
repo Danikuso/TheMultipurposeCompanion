@@ -68,6 +68,7 @@ impl MassacreStack {
                     .filter(|m| m.kind == MissionKind::Massacre)
                 {
                     let short = self.kills_for(r.mission_id) < needed(m);
+                    let _ = short; // solo lo lee el diagnóstico (decide!)
                     self.complete.insert(r.mission_id);
                     decide!("missions.massacre.redirected_complete", {
                         "mission": r.mission_id,
