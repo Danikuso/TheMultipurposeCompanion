@@ -24,7 +24,7 @@
             <div class="bar" data-testid="massacre-bar">
               <div
                 role="progressbar"
-                aria-label={s.faction}
+                aria-label={s.faction === '?' ? t('missions-issuer-unknown') : s.faction}
                 aria-valuemin="0"
                 aria-valuemax={s.needed}
                 aria-valuenow={s.kills}

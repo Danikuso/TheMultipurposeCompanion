@@ -46,11 +46,11 @@
               {p.cr_per_ly == null ? '—' : t('missions-tourism-cr-ly', { crly: integer(Math.round(p.cr_per_ly)) })}
               {#if p.cr_per_hour != null}· {t('missions-tourism-rate', { credits: integer(Math.round(p.cr_per_hour)) })}{/if}
             </div>
-            <div class="muted small">{t('missions-tourism-reference', { crly: integer(Math.round(p.reference_cr_ly)) })}</div>
-            <div class="verdict" class:bad={p.verdict === 'NotWorth'} data-testid="missions-tourism-verdict">
-              {p.verdict === 'Profitable' ? '✔ ' + t('missions-tourism-profitable') : '✖ ' + t('missions-tourism-not-worth')}
+            <div class="muted small">{t(p.reference_is_own ? 'missions-tourism-reference' : 'missions-tourism-reference-default', { crly: integer(Math.round(p.reference_cr_ly)) })}</div>
+            <div class="verdict" class:bad={p.verdict === 'not_worth'} data-testid="missions-tourism-verdict">
+              {p.verdict === 'profitable' ? '✔ ' + t('missions-tourism-profitable') : '✖ ' + t('missions-tourism-not-worth')}
             </div>
-            {#if p.verdict === 'NotWorth' && p.can_abandon_now}
+            {#if p.verdict === 'not_worth' && p.can_abandon_now}
               <div class="warn" role="status" data-testid="missions-tourism-abandon">{t('missions-tourism-abandon-now')}</div>
             {/if}
           </div>

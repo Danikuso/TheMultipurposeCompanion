@@ -31,7 +31,11 @@
     {#if factions.length > 0}
       <table data-testid="rewards-factions">
         <thead>
-          <tr><th></th><th class="n">{t('missions-rewards-reputation')}</th><th class="n">{t('missions-rewards-influence')}</th></tr>
+          <tr>
+            <th>{t('missions-col-faction')}</th>
+            <th class="n" title={t('missions-rewards-reputation')}>{t('missions-rewards-reputation-short')}</th>
+            <th class="n" title={t('missions-rewards-influence')}>{t('missions-rewards-influence-short')}</th>
+          </tr>
         </thead>
         <tbody>
           {#each factions as [name, f] (name)}

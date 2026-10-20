@@ -130,7 +130,7 @@ export interface TourismPlan {
   estimates_verified: boolean;
   reference_cr_ly: number;
   reference_is_own: boolean;
-  verdict: 'Profitable' | 'NotWorth';
+  verdict: 'profitable' | 'not_worth';
   can_abandon_now: boolean;
 }
 

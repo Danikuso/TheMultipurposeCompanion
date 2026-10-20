@@ -89,3 +89,7 @@ missions-tourism-loading = Route wird berechnet…
 missions-tourism-no-coords = Die Koordinaten der Haltepunkte sind nicht verfügbar
 missions-cg-none = Keine aktiven Community-Ziele
 missions-cg-complete = ABGESCHLOSSEN
+
+missions-tourism-reference-default = Referenz: { $crly } Cr/Lj
+missions-rewards-reputation-short = Ruf
+missions-rewards-influence-short = Einfl.
