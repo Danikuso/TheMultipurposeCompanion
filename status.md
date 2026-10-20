@@ -10,9 +10,9 @@
 
 ## Puntero actual
 
-- **Tarea:** F3 en ejecución con subagentes (en curso: Task 24). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
+- **Tarea:** F3 en ejecución con subagentes (en curso: Task 25). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
 - **Último paso completado:** Task 17 ✅ (08aacf3), revisión aprobada.
-- **Siguiente acción:** Task 24 (missions: pila de masacre); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Siguiente acción:** Task 25 (missions: avisos, recompensas y objetivos comunitarios); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Tareas de diagnóstico debug
 
@@ -72,8 +72,8 @@
 | 21 | UI — «Mercado actual» y «Mi carga» | ✅ hecha | 05a0667, 155a727 | Mercado actual y Mi carga; formato común de créditos |
 | 22 | UI — «Ruta comercial», «Sesión» y «Buscar mercancía» | ✅ hecha | 1b8a522, 155a727, 01c347a | Ruta (saltos, aviso de copiado), Sesión y Buscar; test de minería determinista |
 | 23 | `missions` — libro de misiones y reconstrucción | ✅ hecha | c7bd6bd, ae8fbc6 | Libro de misiones y reconstrucción desde historial; fallidas/completadas al reconciliar |
-| 24 | `missions` — pila de masacre | 🔄 en curso | — |  |
-| 25 | `missions` — avisos, recompensas de la sesión y objetivos comunitarios | ⬜ pendiente | — |  |
+| 24 | `missions` — pila de masacre | ✅ hecha | d654f97, 10f49af | Pila de masacre con la regla exacta de §10.10; fixture massacre_session.log |
+| 25 | `missions` — avisos, recompensas de la sesión y objetivos comunitarios | 🔄 en curso | — |  |
 | 26 | `missions` — pasajeros y cabinas | ⬜ pendiente | — |  |
 | 27 | `missions` — turismo: ruta óptima, cr/al y veredicto | ⬜ pendiente | — |  |
 | 28 | `missions` — módulo, coordenadas, topics, relevancia y registro | ⬜ pendiente | — |  |
