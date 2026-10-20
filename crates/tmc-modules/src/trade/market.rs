@@ -75,6 +75,11 @@ impl CurrentMarket {
                 .then(a.commodity.cmp(&b.commodity))
         });
         rows.truncate(5);
+        decide!("trade.market.built", {
+            "offers": snapshot.prices.len(),
+            "rows": rows.len(),
+            "with_sell": rows.iter().filter(|r| r.best_sell.is_some()).count(),
+        });
         Self {
             station: snapshot.station_name.clone(),
             system: snapshot.system_name.clone(),
@@ -175,11 +180,16 @@ pub fn best_sells(
     ship_pad: Option<PadSize>,
     top: usize,
 ) -> Vec<SellOption> {
-    crate::mining::sell::rank_markets(
-        &crate::mining::sell::merge_sources(rows, ardent),
-        ship_pad,
-        top,
-    )
+    let merged = crate::mining::sell::merge_sources(rows, ardent);
+    let ranked = crate::mining::sell::rank_markets(&merged, ship_pad, top);
+    decide!("trade.market.best_sells", {
+        "local": rows.len(),
+        "remote": ardent.len(),
+        "merged": merged.len(),
+        "returned": ranked.len(),
+        "top": top,
+    });
+    ranked
 }
 /// Lectura para `trade.best_sells`. Devuelve `{cmdr, commodities, center,
 /// radius_ly, since, exclude_market, candidates, ship_pad, rows: {commodity: [PricedMarket]}}`.

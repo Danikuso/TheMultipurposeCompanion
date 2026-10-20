@@ -225,6 +225,7 @@ const MODULES: &[&str] = &[
     "exobiology",
     "combat",
     "mining",
+    "trade",
 ];
 const ACTIONS: &[&str] = &[
     "clipboard.copy-next-system",
@@ -497,6 +498,27 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
     {
         return true;
     }
+    // Etiquetas de `NetOutcome::diag_summary` (resumen de `net.query.finished`).
+    if matches!(context, DiagnosticContext::NetOutcome)
+        && path == "outcome"
+        && matches!(
+            text,
+            "system"
+                | "route"
+                | "autocomplete"
+                | "body_bio"
+                | "markets"
+                | "stations"
+                | "trade_route"
+                | "exports"
+                | "coords"
+                | "no_data"
+                | "disabled"
+                | "failed"
+        )
+    {
+        return true;
+    }
     if matches!(
         context,
         DiagnosticContext::Topic {
@@ -545,6 +567,17 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
         | "context" | "manualcontext" => {
             matches!(context, DiagnosticContext::Ui) && ui_value(key, text)
         }
+        "reason" => matches!(
+            text,
+            "enabled"
+                | "stale"
+                | "game_not_running"
+                | "replay"
+                | "no_center"
+                | "legacy"
+                | "offline"
+                | "inactive"
+        ),
         "language" => matches!(text, "es" | "en" | "fr" | "de" | "pt"),
         "galaxy" => matches!(text, "Live" | "Legacy" | "Unknown"),
         "mode" => matches!(
@@ -589,6 +622,10 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
                     | "canonn.system_poi"
                     | "ardent.nearby.imports"
                     | "ardent.nearest.service"
+                    | "spansh.trade.job"
+                    | "ardent.nearby.exports"
+                    | "ardent.system.coords"
+                    | "edsm.coords"
                     | "unknown"
             )
         }
@@ -1136,6 +1173,33 @@ mod tests {
             DiagnosticContext::Journal { event: "Scan" }.schema(),
             "Scan"
         );
+    }
+    #[test]
+    fn f3_labels_are_closed_sets() {
+        let ctx = DiagnosticContext::NetOutcome;
+        let safe = redact_diagnostic(
+            &json!({"outcome":"trade_route","endpoint":"ardent.nearby.exports"}),
+            ctx,
+        );
+        assert_eq!(safe["outcome"], "trade_route");
+        assert_eq!(safe["endpoint"], "ardent.nearby.exports");
+        let safe = redact_diagnostic(&json!({"outcome":"CANARY","endpoint":"CANARY"}), ctx);
+        assert_eq!(safe["outcome"], REDACTED);
+        assert_eq!(safe["endpoint"], REDACTED);
+        let state = DiagnosticContext::State;
+        assert_eq!(
+            redact_diagnostic(&json!({"reason":"legacy"}), state)["reason"],
+            "legacy"
+        );
+        assert_eq!(
+            redact_diagnostic(&json!({"reason":"CANARY"}), state)["reason"],
+            REDACTED
+        );
+        let query = redact_diagnostic(
+            &json!({"SystemCoordsByName":{"name":"CANARY"}}),
+            DiagnosticContext::NetQuery,
+        );
+        assert_eq!(query["SystemCoordsByName"]["name"], REDACTED);
     }
     #[test]
     fn network_outcomes_keep_finite_statuses_and_cache_source() {

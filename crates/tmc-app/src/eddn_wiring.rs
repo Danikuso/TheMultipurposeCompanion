@@ -63,6 +63,28 @@ impl EddnView {
         }
     }
 
+    /// Motivo fijo del estado del filtro (solo diagnóstico, sin datos del jugador).
+    #[cfg(debug_assertions)]
+    fn reason(&self, filter: &EddnFilter) -> &'static str {
+        if filter.enabled {
+            "enabled"
+        } else if self.stale {
+            "stale"
+        } else if !self.game_running {
+            "game_not_running"
+        } else if self.replaying {
+            "replay"
+        } else if filter.center.is_none() {
+            "no_center"
+        } else if self.galaxy != Galaxy::Live {
+            "legacy"
+        } else if !self.settings.online_services {
+            "offline"
+        } else {
+            "inactive"
+        }
+    }
+
     fn center(&self) -> Option<[f64; 3]> {
         (!self.system.is_empty() && self.system_address != 0).then_some(self.star_pos)
     }
@@ -161,6 +183,11 @@ pub(crate) fn spawn_eddn_wiring(
             Arc::new(Utc::now),
         ),
         Err(error) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "eddn.transport.failed",
+                serde_json::json!({"failed":true})
+            );
             tracing::warn!(%error, "EDDN unavailable: could not create transport");
             // Sin transporte solo se mantienen las coordenadas propias.
             let view = EddnView::new(settings_rx.borrow().clone());
@@ -227,6 +254,11 @@ fn spawn_coords_writer(store: Store) -> watch::Sender<Option<OwnSystem>> {
                 let _ = tokio::task::spawn_blocking(move || {
                     if let Err(error) = st.upsert_coords(&[(name, Some(address), pos)], Utc::now())
                     {
+                        tmc_model::diagnostic!(
+                            tmc_model::diagnostics::DiagnosticContext::State,
+                            "eddn.coords.write_failed",
+                            serde_json::json!({"failure_class":error.diagnostic_class()})
+                        );
                         tracing::warn!(%error, "own system coords write failed");
                     }
                 })
@@ -242,6 +274,11 @@ fn publish(view: &EddnView, tx: &watch::Sender<EddnFilter>, now: DateTime<Utc>) 
     tx.send_if_modified(|f| {
         let changed = *f != filter;
         if changed {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "eddn.filter.changed",
+                serde_json::json!({"enabled":filter.enabled,"radius_ly":filter.radius_ly,"center_known":filter.center.is_some(),"reason":view.reason(&filter)})
+            );
             *f = filter;
         }
         changed
