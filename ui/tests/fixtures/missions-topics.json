@@ -1,0 +1,412 @@
+{
+  "missions.active": {
+    "as_of": "2026-10-20T12:40:00Z",
+    "copy_seq": 0,
+    "copy_target": null,
+    "count": 5,
+    "groups": [
+      {
+        "distance_ly": null,
+        "expiry": "2026-10-27T12:00:00Z",
+        "missions": [
+          {
+            "accepted_at": "2026-10-20T12:03:00Z",
+            "commodity": null,
+            "destination_station": "Home Port",
+            "destination_system": "Home",
+            "details_missing": false,
+            "expiry": "2026-10-27T12:00:00Z",
+            "faction": "Gamma Party",
+            "id": 65000004,
+            "kind": "Massacre",
+            "name_localised": "Massacre",
+            "progress": {
+              "collected": 0,
+              "delivered": 0,
+              "kills_needed": 10,
+              "passengers": null,
+              "total": null
+            },
+            "redirected": true,
+            "reward": 100000,
+            "stops": [],
+            "target_faction": "Pirate Clan X",
+            "wing": false
+          }
+        ],
+        "next": true,
+        "station": "Home Port",
+        "system": "Home"
+      },
+      {
+        "distance_ly": null,
+        "expiry": "2026-10-27T12:00:00Z",
+        "missions": [
+          {
+            "accepted_at": "2026-10-20T12:00:00Z",
+            "commodity": null,
+            "destination_station": "Test Port",
+            "destination_system": "Test System",
+            "details_missing": false,
+            "expiry": "2026-10-27T12:00:00Z",
+            "faction": "Alpha Union",
+            "id": 65000001,
+            "kind": "Massacre",
+            "name_localised": "Massacre",
+            "progress": {
+              "collected": 0,
+              "delivered": 0,
+              "kills_needed": 10,
+              "passengers": null,
+              "total": null
+            },
+            "redirected": false,
+            "reward": 100000,
+            "stops": [],
+            "target_faction": "Pirate Clan X",
+            "wing": false
+          },
+          {
+            "accepted_at": "2026-10-20T12:01:00Z",
+            "commodity": null,
+            "destination_station": "Test Port",
+            "destination_system": "Test System",
+            "details_missing": false,
+            "expiry": "2026-10-27T12:00:00Z",
+            "faction": "Alpha Union",
+            "id": 65000002,
+            "kind": "Massacre",
+            "name_localised": "Massacre",
+            "progress": {
+              "collected": 0,
+              "delivered": 0,
+              "kills_needed": 5,
+              "passengers": null,
+              "total": null
+            },
+            "redirected": false,
+            "reward": 50000,
+            "stops": [],
+            "target_faction": "Pirate Clan X",
+            "wing": false
+          },
+          {
+            "accepted_at": "2026-10-20T12:02:00Z",
+            "commodity": null,
+            "destination_station": "Test Port",
+            "destination_system": "Test System",
+            "details_missing": false,
+            "expiry": "2026-10-27T12:00:00Z",
+            "faction": "Beta Corp",
+            "id": 65000003,
+            "kind": "Massacre",
+            "name_localised": "Massacre",
+            "progress": {
+              "collected": 0,
+              "delivered": 0,
+              "kills_needed": 8,
+              "passengers": null,
+              "total": null
+            },
+            "redirected": false,
+            "reward": 80000,
+            "stops": [],
+            "target_faction": "Pirate Clan X",
+            "wing": false
+          },
+          {
+            "accepted_at": "2026-10-20T12:04:00Z",
+            "commodity": null,
+            "destination_station": "Test Port",
+            "destination_system": "Test System",
+            "details_missing": false,
+            "expiry": "2026-10-27T12:00:00Z",
+            "faction": "Gamma Party",
+            "id": 65000005,
+            "kind": "Massacre",
+            "name_localised": "Massacre",
+            "progress": {
+              "collected": 0,
+              "delivered": 0,
+              "kills_needed": 4,
+              "passengers": null,
+              "total": null
+            },
+            "redirected": false,
+            "reward": 40000,
+            "stops": [],
+            "target_faction": "Pirate Clan Y",
+            "wing": false
+          }
+        ],
+        "next": false,
+        "station": "Test Port",
+        "system": "Test System"
+      }
+    ],
+    "next_system": "Home"
+  },
+  "missions.alerts": {
+    "alerts": [
+      {
+        "at": "2026-10-20T12:40:00Z",
+        "bucket": 0,
+        "kind": {
+          "Redirected": {
+            "station": "Home Port",
+            "system": "Home"
+          }
+        },
+        "mission_id": 65000004,
+        "mission_kind": "Massacre",
+        "name": "Massacre"
+      },
+      {
+        "at": "2026-10-20T12:40:00Z",
+        "bucket": 0,
+        "kind": "ExpiringSoon",
+        "mission_id": 65000001,
+        "mission_kind": "Massacre",
+        "name": "Massacre"
+      },
+      {
+        "at": "2026-10-20T12:40:00Z",
+        "bucket": 1,
+        "kind": {
+          "Redirected": {
+            "station": "Redirected Port",
+            "system": "Redirected System"
+          }
+        },
+        "mission_id": 65000002,
+        "mission_kind": "Massacre",
+        "name": "Massacre"
+      },
+      {
+        "at": "2026-10-20T12:40:00Z",
+        "bucket": 2,
+        "kind": "Failed",
+        "mission_id": 65000003,
+        "mission_kind": "Massacre",
+        "name": "Massacre"
+      },
+      {
+        "at": "2026-10-20T12:40:00Z",
+        "bucket": 3,
+        "kind": {
+          "CargoMissing": {
+            "commodity": "gold",
+            "missing": 14
+          }
+        },
+        "mission_id": 65000004,
+        "mission_kind": "Massacre",
+        "name": "Massacre"
+      }
+    ],
+    "as_of": "2026-10-20T12:40:00Z"
+  },
+  "missions.community_goals": {
+    "as_of": "2026-10-20T12:40:00Z",
+    "goals": [
+      {
+        "bonus": 1000000,
+        "cgid": 1,
+        "complete": false,
+        "contribution": 5000,
+        "expiry": "2026-10-20T12:40:00Z",
+        "percentile": 25,
+        "station": null,
+        "system": "Sol",
+        "tier": "Tier 2",
+        "title": "Goal"
+      }
+    ]
+  },
+  "missions.massacre": {
+    "as_of": "2026-10-20T12:40:00Z",
+    "piles": [
+      {
+        "details_missing": false,
+        "issuers": [
+          {
+            "faction": "Alpha Union",
+            "kills": 12,
+            "missions": 2,
+            "needed": 15
+          },
+          {
+            "faction": "Beta Corp",
+            "kills": 8,
+            "missions": 1,
+            "needed": 8
+          },
+          {
+            "faction": "Gamma Party",
+            "kills": 10,
+            "missions": 1,
+            "needed": 10
+          }
+        ],
+        "kills_remaining": 3,
+        "target_faction": "Pirate Clan X",
+        "total_reward": 330000
+      },
+      {
+        "details_missing": false,
+        "issuers": [
+          {
+            "faction": "Gamma Party",
+            "kills": 3,
+            "missions": 1,
+            "needed": 4
+          }
+        ],
+        "kills_remaining": 1,
+        "target_faction": "Pirate Clan Y",
+        "total_reward": 40000
+      }
+    ]
+  },
+  "missions.passengers": {
+    "as_of": "2026-10-20T12:40:00Z",
+    "cabins": {
+      "by_class": {
+        "Business": {
+          "occupied": null,
+          "seats": 22
+        },
+        "Economy": {
+          "occupied": 12,
+          "seats": 16
+        }
+      },
+      "occupied_total": 12,
+      "seats_total": 38
+    },
+    "groups": [
+      {
+        "count": 12,
+        "destination": "Sol",
+        "mission_id": 1,
+        "vip": false,
+        "wanted": true
+      },
+      {
+        "count": 4,
+        "destination": null,
+        "mission_id": 2,
+        "vip": true,
+        "wanted": false
+      }
+    ],
+    "wanted": true
+  },
+  "missions.rewards": {
+    "abandoned": 2,
+    "as_of": "2026-10-20T12:40:00Z",
+    "completed": 7,
+    "credits": 6300000,
+    "factions": {
+      "Liberty Party": {
+        "influence": "Down",
+        "influence_score": -1,
+        "reputation": "UpGood",
+        "reputation_score": 2
+      }
+    },
+    "failed": 1,
+    "materials": {
+      "Modular Terminals": 3
+    },
+    "since": "2026-10-20T11:00:00Z"
+  },
+  "missions.tourism": {
+    "as_of": "2026-10-20T14:05:00Z",
+    "trips": [
+      {
+        "mission_id": 65000201,
+        "name": "Sightseeing tour",
+        "plan": {
+          "board_order_ly": 51.0,
+          "can_abandon_now": true,
+          "cr_per_hour": 1305263.1578947369,
+          "cr_per_ly": 10000.0,
+          "estimates_verified": false,
+          "jumps": 3,
+          "mission_id": 65000201,
+          "optimal_ly": 31.0,
+          "order": [
+            "Tour B",
+            "Tour A",
+            "Tour C"
+          ],
+          "reference_cr_ly": 100000.0,
+          "reference_is_own": false,
+          "verdict": "not_worth"
+        },
+        "status": "ok",
+        "stops": [
+          "Tour A",
+          "Tour B",
+          "Tour C"
+        ]
+      },
+      {
+        "mission_id": 99,
+        "name": "Sightseeing tour",
+        "plan": {
+          "board_order_ly": 51.0,
+          "can_abandon_now": false,
+          "cr_per_hour": 1305263.1578947369,
+          "cr_per_ly": 10000.0,
+          "estimates_verified": false,
+          "jumps": 3,
+          "mission_id": 65000201,
+          "optimal_ly": 31.0,
+          "order": [
+            "Tour B",
+            "Tour A",
+            "Tour C"
+          ],
+          "reference_cr_ly": 100000.0,
+          "reference_is_own": false,
+          "verdict": "profitable"
+        },
+        "status": "ok",
+        "stops": [
+          "Tour A",
+          "Tour B",
+          "Tour C"
+        ]
+      },
+      {
+        "mission_id": 100,
+        "name": "Tour",
+        "plan": null,
+        "status": "loading",
+        "stops": [
+          "Tour A"
+        ]
+      },
+      {
+        "mission_id": 101,
+        "name": "Tour",
+        "plan": null,
+        "status": "no_coords",
+        "stops": [
+          "Tour A"
+        ]
+      },
+      {
+        "mission_id": 102,
+        "name": "Tour",
+        "plan": null,
+        "status": "stops_unavailable",
+        "stops": [
+          "Tour A"
+        ]
+      }
+    ]
+  }
+}
