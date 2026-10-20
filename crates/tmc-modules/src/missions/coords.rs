@@ -99,6 +99,13 @@ impl CoordResolver {
         self.known.get(&coord_key(name)).copied()
     }
 
+    /// Permite volver a preguntar al almacén por estos nombres (resultado descartado).
+    pub fn forget_asked(&mut self, names: &[String]) {
+        for n in names {
+            self.asked_local.remove(&coord_key(n));
+        }
+    }
+
     /// Olvida lo preguntado (cambio de comandante); las coordenadas siguen valiendo.
     pub fn reset_requests(&mut self) {
         self.asked_local.clear();
