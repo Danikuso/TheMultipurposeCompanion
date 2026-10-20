@@ -242,3 +242,44 @@ describe('app pin behaviour', () => {
     expect(slot('target')).not.toBeNull();
   });
 });
+
+describe('trade and missions layouts', () => {
+  beforeEach(() => { disconnect(); });
+  afterEach(() => { disconnect(); });
+  const m = (id: string, relevance: string) => ({ id, relevance });
+  const slotIds = (id: string) => layouts.find((l) => l.id === id)!.slots
+    .filter((s) => !s.when || s.when({ modules: [], manual: null })).map((s) => s.id);
+
+  test('missions beats trade', () => {
+    expect(autoLayout([m('missions', 'active'), m('trade', 'active')], null)).toBe('missions');
+  });
+  test('mining beats missions', () => {
+    expect(autoLayout([m('mining', 'active'), m('missions', 'active')], null)).toBe('mining');
+  });
+  test('combat beats everything automatic', () => {
+    expect(autoLayout([m('combat', 'urgent'), m('mining', 'active'), m('missions', 'active'), m('trade', 'active')], null)).toBe('combat');
+  });
+  test('trade beats exploration', () => {
+    expect(autoLayout([m('trade', 'active'), m('exploration', 'active')], null)).toBe('trade');
+  });
+  test('manual pin lasts until auto changes', () => {
+    expect(autoLayout([m('missions', 'active')], 'trade')).toBe('trade');
+    expect(nextPin('missions', 'missions', 'layout:trade')).toBe('layout:trade');
+    expect(nextPin('missions', 'combat', 'layout:trade')).toBeNull();
+  });
+  test('trade layout slots', () => {
+    expect(slotIds('trade')).toEqual(['market', 'cargo', 'trade-session', 'trade-route', 'search']);
+  });
+  test('missions optional slots follow topics', () => {
+    expect(slotIds('missions')).toEqual(['missions', 'mission-alerts', 'rewards']);
+    live.topics['missions.massacre'] = { piles: [{}] };
+    live.topics['missions.passengers'] = { cabins: { seats_total: 4 }, groups: [] };
+    live.topics['missions.tourism'] = { trips: [{}] };
+    live.topics['missions.community_goals'] = { goals: [{}] };
+    expect(slotIds('missions')).toEqual(['missions', 'mission-alerts', 'massacre', 'passengers', 'tourism', 'rewards', 'community-goals']);
+    live.topics['missions.massacre'] = { piles: [] };
+    live.topics['missions.passengers'] = { cabins: { seats_total: 0 }, groups: [{}] };
+    live.topics['missions.tourism'] = { trips: [] };
+    expect(slotIds('missions')).toEqual(['missions', 'mission-alerts', 'passengers', 'rewards', 'community-goals']);
+  });
+});
