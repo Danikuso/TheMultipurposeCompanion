@@ -4,6 +4,15 @@ import SystemBodiesPanel from '../modules/exploration/SystemBodiesPanel.svelte';
 import ExobiologyPanel from '../modules/exobiology/ExobiologyPanel.svelte';
 import { TargetPanel, ShipPanel, HuntingPanel, ConflictZonePanel, AxPanel } from '../modules/combat';
 import { ProspectorPanel, MiningSessionPanel, SellPanel } from '../modules/mining';
+import {
+  MarketPanel, CargoPanel, RoutePanel as TradeRoutePanel, TradeSessionPanel, SearchPanel,
+} from '../modules/trade';
+import {
+  MissionsPanel, MassacrePanel, MissionAlerts, PassengersPanel, TourismPanel, RewardsPanel, CommunityGoalsPanel,
+} from '../modules/missions';
+import type {
+  MassacreTopic, PassengersTopic, TourismTopic, CommunityGoalsTopic,
+} from '../modules/missions/types';
 import { topic } from '../lib/ws.svelte';
 
 export interface LayoutCtx {
@@ -42,16 +51,28 @@ const axVisible = () => {
   const ax = topic<{ active?: boolean; presence?: boolean } | null>('combat.ax');
   return ax?.active === true || ax?.presence === true;
 };
+const massacreVisible = () => (topic<MassacreTopic>('missions.massacre')?.piles?.length ?? 0) > 0;
+const passengersVisible = () => {
+  const p = topic<PassengersTopic>('missions.passengers');
+  return (p?.cabins?.seats_total ?? 0) > 0 || (p?.groups?.length ?? 0) > 0;
+};
+const tourismVisible = () => (topic<TourismTopic>('missions.tourism')?.trips?.length ?? 0) > 0;
+const cgVisible = () => (topic<CommunityGoalsTopic>('missions.community_goals')?.goals?.length ?? 0) > 0;
 const czVisible = () => (topic<unknown>('combat.conflict_zone') ?? null) !== null;
 
-/** Disposición elegida por relevancia: manual > combate > minería > exploración > null. */
+type AutoLayout = 'exploration' | 'combat' | 'mining' | 'missions' | 'trade';
+const MANUAL: string[] = ['exploration', 'combat', 'mining', 'missions', 'trade'];
+
+/** Disposición elegida por relevancia: manual > combate > minería > misiones > comercio > exploración > null. */
 export function autoLayout(
   mods: { id: string; relevance: string }[],
   manual: string | null,
-): 'exploration' | 'combat' | 'mining' | null {
-  if (manual === 'exploration' || manual === 'combat' || manual === 'mining') return manual;
+): AutoLayout | null {
+  if (manual !== null && MANUAL.includes(manual)) return manual as AutoLayout;
   if (isActive(rel(mods, 'combat'))) return 'combat';
   if (rel(mods, 'mining') === 'active') return 'mining';
+  if (isActive(rel(mods, 'missions'))) return 'missions';
+  if (isActive(rel(mods, 'trade'))) return 'trade';
   if (isActive(rel(mods, 'exploration')) || isActive(rel(mods, 'exobiology'))) return 'exploration';
   return null;
 }
@@ -93,5 +114,29 @@ export const layouts: LayoutDef[] = [{
     { id: 'prospector', panel: ProspectorPanel, span: 2 },
     { id: 'mining-session', panel: MiningSessionPanel, span: 1 },
     { id: 'sell', panel: SellPanel, span: 1 },
+  ],
+}, {
+  id: 'trade',
+  titleKey: 'layout-trade',
+  icon: 'scale',
+  slots: [
+    { id: 'market', panel: MarketPanel, span: 2 },
+    { id: 'cargo', panel: CargoPanel, span: 1 },
+    { id: 'trade-session', panel: TradeSessionPanel, span: 1 },
+    { id: 'trade-route', panel: TradeRoutePanel, span: 'full' },
+    { id: 'search', panel: SearchPanel, span: 2 },
+  ],
+}, {
+  id: 'missions',
+  titleKey: 'layout-missions',
+  icon: 'clipboard',
+  slots: [
+    { id: 'missions', panel: MissionsPanel, span: 2 },
+    { id: 'mission-alerts', panel: MissionAlerts, span: 1 },
+    { id: 'massacre', panel: MassacrePanel, span: 1, when: massacreVisible },
+    { id: 'passengers', panel: PassengersPanel, span: 1, when: passengersVisible },
+    { id: 'tourism', panel: TourismPanel, span: 2, when: tourismVisible },
+    { id: 'rewards', panel: RewardsPanel, span: 1 },
+    { id: 'community-goals', panel: CommunityGoalsPanel, span: 1, when: cgVisible },
   ],
 }];

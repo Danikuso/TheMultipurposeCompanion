@@ -654,7 +654,14 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
     }
 }
 /// Disposiciones de la UI (`ui/src/shell/layouts.ts`); `none` cuando no hay ninguna activa.
-const UI_LAYOUTS: &[&str] = &["none", "exploration", "combat", "mining"];
+const UI_LAYOUTS: &[&str] = &[
+    "none",
+    "exploration",
+    "combat",
+    "mining",
+    "trade",
+    "missions",
+];
 /// Ranuras de las disposiciones (`ui/src/shell/layouts.ts`).
 const UI_SLOTS: &[&str] = &[
     "route",
@@ -670,6 +677,18 @@ const UI_SLOTS: &[&str] = &[
     "prospector",
     "mining-session",
     "sell",
+    "market",
+    "cargo",
+    "trade-session",
+    "trade-route",
+    "search",
+    "missions",
+    "mission-alerts",
+    "massacre",
+    "passengers",
+    "tourism",
+    "rewards",
+    "community-goals",
 ];
 /// Claves de título de los paneles (`titleKey` en `ui/src`); un test de la UI las mantiene sincronizadas.
 const UI_PANELS: &[&str] = &[
