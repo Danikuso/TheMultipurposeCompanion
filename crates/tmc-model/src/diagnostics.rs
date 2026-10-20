@@ -232,6 +232,7 @@ const MODULES: &[&str] = &[
     "combat",
     "mining",
     "trade",
+    "missions",
 ];
 const ACTIONS: &[&str] = &[
     "clipboard.copy-next-system",
@@ -1183,6 +1184,16 @@ mod tests {
             DiagnosticContext::State,
         );
         assert_eq!(safe["module"], "trade");
+        assert!(!safe.to_string().contains("CANARY"));
+    }
+
+    #[test]
+    fn missions_module_is_allowlisted_and_canary_is_redacted() {
+        let safe = redact_diagnostic(
+            &json!({"module":"missions","view":"missions","other":{"module":"missions.CANARY"}}),
+            DiagnosticContext::State,
+        );
+        assert_eq!(safe["module"], "missions");
         assert!(!safe.to_string().contains("CANARY"));
     }
 

@@ -41,6 +41,7 @@ pub mod exploration;
 pub mod history;
 pub mod inflight;
 pub mod mining;
+pub mod missions;
 pub mod navigation;
 pub mod registry;
 pub(crate) mod topicx;
