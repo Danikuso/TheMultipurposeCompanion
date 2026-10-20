@@ -31,6 +31,11 @@ impl ServiceHealth {
         }
     }
 
+    /// Fallos consecutivos acumulados (para diagnóstico).
+    pub fn failures(&self) -> u32 {
+        self.failures
+    }
+
     /// Cuándo reintentar la petición fallida (consumidor: `NetService`).
     pub fn retry_at(&self) -> Option<Instant> {
         self.retry_at

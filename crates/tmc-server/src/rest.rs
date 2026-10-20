@@ -80,6 +80,11 @@ pub async fn post_action(
         match serde_json::from_slice(&body) {
             Ok(v) => v,
             Err(_) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Http,
+                    "http.action.invalid_json",
+                    tmc_model::diagnostics::json!({"body_bytes": body.len()})
+                );
                 return (
                     StatusCode::BAD_REQUEST,
                     Json(json!({ "error": "invalid-json" })),
@@ -89,7 +94,7 @@ pub async fn post_action(
         }
     };
     let snapshot = state.core.snapshot().await;
-    match state.host.run_action_with(&name, &args, &snapshot) {
+    match crate::diag::run_action(state.host.as_ref(), &name, &args, &snapshot, false) {
         Ok(value) => (StatusCode::OK, Json(value)).into_response(),
         Err(ActionError::NotFound) => {
             (StatusCode::NOT_FOUND, Json(json!({ "error": "not-found" }))).into_response()
@@ -152,11 +157,23 @@ pub async fn get_config(State(state): State<AppState>) -> Json<Value> {
 
 pub async fn put_config(State(state): State<AppState>, Json(payload): Json<Value>) -> Response {
     match state.host.put_config(payload) {
-        Ok(value) => (StatusCode::OK, Json(value)).into_response(),
+        Ok(value) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Http,
+                "http.config.updated",
+                tmc_model::diagnostics::json!({"ok": true})
+            );
+            (StatusCode::OK, Json(value)).into_response()
+        }
         Err(ActionError::NotFound) => {
             (StatusCode::NOT_FOUND, Json(json!({ "error": "not-found" }))).into_response()
         }
         Err(ActionError::Failed(reason)) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Http,
+                "http.config.rejected",
+                tmc_model::diagnostics::json!({"reason_bytes": reason.len()})
+            );
             (StatusCode::BAD_REQUEST, Json(json!({ "error": reason }))).into_response()
         }
     }

@@ -35,12 +35,31 @@ impl Clipboard {
     /// sesión. El aviso refleja la petición de copia: la alerta
     /// `nav-auto-copied` no distingue si el sistema aceptó el texto.
     pub fn set_text(&self, text: &str) -> Result<CopyMethod, String> {
+        // Solo longitudes: el texto (nombre de sistema, dato público) no se registra.
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "clipboard.copy.requested",
+            serde_json::json!({"chars": text.chars().count(), "bytes": text.len()})
+        );
         if let Ok(mut guard) = self.last.lock() {
             *guard = Some(text.to_owned());
         }
         match arboard::Clipboard::new().and_then(|mut cb| cb.set_text(text.to_owned())) {
-            Ok(()) => Ok(CopyMethod::System),
+            Ok(()) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::State,
+                    "clipboard.copy.succeeded",
+                    serde_json::json!({"system": true})
+                );
+                Ok(CopyMethod::System)
+            }
             Err(err) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::State,
+                    "clipboard.copy.fallback",
+                    serde_json::json!({"system": false, "first_warning":
+                        !self.warned.load(Ordering::Relaxed)})
+                );
                 if !self.warned.swap(true, Ordering::Relaxed) {
                     tracing::warn!(%err, "system clipboard unavailable; stored in memory fallback");
                 }
@@ -232,7 +251,14 @@ impl ActionHost for AppActions {
                 };
                 let next = pick("navigation.route", "copy_target")
                     .or_else(|| pick("core.route", "next_system"))
-                    .ok_or_else(|| ActionError::Failed("no-next-system".into()))?;
+                    .ok_or_else(|| {
+                        tmc_model::diagnostic!(
+                            tmc_model::diagnostics::DiagnosticContext::State,
+                            "clipboard.copy.no_target",
+                            serde_json::json!({"has_navigation_target": false})
+                        );
+                        ActionError::Failed("no-next-system".into())
+                    })?;
                 self.clipboard.set_text(next).map_err(ActionError::Failed)?;
                 Ok(json!({ "system": next }))
             }
@@ -304,3 +330,29 @@ const MODULE_PREFIXES: [&str; 5] = [
     "combat.",
     "mining.",
 ];
+
+#[cfg(test)]
+mod tests {
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn copy_diagnostics_never_include_the_text() {
+        use tmc_model::diagnostics::capture::capture;
+        let (_, records) = capture(|| {
+            let _ = super::Clipboard::new().set_text("CANARYCOPY");
+        });
+        let all: String = records
+            .iter()
+            .map(|r| {
+                format!(
+                    "{} {}
+",
+                    r.code, r.payload
+                )
+            })
+            .collect();
+        assert!(!all.contains("CANARYCOPY"), "{all}");
+        assert!(all.contains("clipboard.copy.requested"));
+        assert!(all.contains("\"chars\":10"));
+    }
+}
