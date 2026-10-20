@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-20 (Europe/Madrid) · Claude Opus 5.5
+- **Última actualización:** 2026-10-20 (Europe/Madrid) · Claude Opus 5.5 (D7b)
 - **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (🔄 en ejecución). F2 ✅ fusionada en `main` (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversal: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md).
 - **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 17/35 hechas (aprobado al ordenar «escribe el plan y ejecútalo»). Diagnóstico: [plan](docs/plans/2026-10-20-diagnostico-debug.md) D1–D7b. Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
@@ -10,8 +10,9 @@
 
 ## Puntero actual
 
-- **Tarea:** D7b — integración de `codex/diagnostico-logs` en F3 (merge en curso).
-- **Siguiente acción:** cablear EDDN/comercio en el diagnóstico, verificar y retomar F3 Task 17 desde el WIP preservado.
+- **Tarea:** diagnóstico debug integrado en F3 (D7b ✅, merge 6e5e97a + cableado a1c2bb3). F3 Task 17 🔄 reanudable.
+- **Último paso completado:** D7b verificado: fmt/clippy (debug y release) PASS, 999 Rust PASS ×2 (2 ignorados), UI 160 PASS, check/build OK, hash del release intacto.
+- **Siguiente acción:** retomar F3 Task 17 (ruta comercial con avance automático) desde el WIP preservado sin commit: `crates/tmc-modules/src/trade/route.rs` (tests/stubs) y `crates/tmc-modules/src/trade/mod.rs` (`mod route;` + `pub use`). Primer paso: confirmar el RED de sus tests. Regla nueva: todo topic/acción/consulta/endpoint/ajuste nuevo se registra en las listas de diagnóstico con test canario (spec de diagnóstico, «Cobertura»). `.claude/` y `.tmp/` locales no se incluyen.
 
 ## Tareas de diagnóstico debug
 
@@ -25,7 +26,7 @@
 | D5 | Red, HTTP, WS, auth y acciones | ✅ hecha | b6e139b | 824 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS; sin test WS dedicado |
 | D6 | UI | ✅ hecha | 5a81eff | 834 Rust PASS/1 ignorado, 155 UI PASS |
 | D7a | Verificación previa (checks, replay, build debug) | ✅ hecha | 713a8f4 | 6 ejecuciones workspace verdes |
-| D7b | Integración en F3 | ⬜ pendiente | — | Retomar F3 después |
+| D7b | Integración en F3 | ✅ hecha | 6e5e97a (merge) + a1c2bb3 | EDDN/comercio/endpoints F3 en diagnóstico; 999 Rust PASS ×2, clippy release PASS, 160 UI PASS |
 
 ## Fases
 
@@ -64,7 +65,7 @@
 | 14 | i18n — `trade.ftl` y `missions.ftl` | ✅ hecha | 7f6a9a9 | 125 claves de paneles por idioma y ajustes/disposiciones; rangos ingleses; spec/calidad aprobadas; 880 Rust y 144 UI PASS |
 | 15 | `trade` — coste pagado y «Mi carga» | ✅ hecha | 28e205b | Media ponderada, coste parcial, exclusión misión/robada, SRV protegido y reconstrucción paginada; spec/calidad aprobadas; 893 Rust PASS |
 | 16 | `trade` — «Mercado actual» y mejor venta en 48 h | ✅ hecha | 3a33097 | Top5, mezcla fresca, consultas acotadas compatibles y marcador de catálogo completo; spec/calidad aprobadas, 924 Rust PASS |
-| 17 | `trade` — ruta comercial con avance automático | 🔄 en curso | — | PAUSADA por prioridad de logs del propietario; route.rs con tests/stubs y mod.rs sin commit; RED aún sin confirmar |
+| 17 | `trade` — ruta comercial con avance automático | 🔄 en curso | — | Reanudable tras D7b; route.rs con tests/stubs y mod.rs sin commit; RED aún sin confirmar |
 | 18 | `trade` — sesión de comercio y buscar mercancía | ⬜ pendiente | — |  |
 | 19 | `trade` — módulo, topics, relevancia, red, almacén y registro | ⬜ pendiente | — |  |
 | 20 | `mining` — «Dónde vender» con la tabla de precios | ⬜ pendiente | — |  |
@@ -218,6 +219,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Decisiones tomadas
 
+- 2026-10-20 · D7b: regla global en la spec de diagnóstico — todo topic, acción, variante NetQuery/NetOutcome, endpoint o campo de configuración nuevo se registra en las listas permitidas de diagnóstico y se cubre con un test canario.
+
 - 2026-10-20 00:03 · Corregidas las tablas históricas F0/F1/F2: una sustitución sin acotar a F3 había sobrescrito sus tareas 16 y 17. Restauradas sus secciones completas desde HEAD y verificadas por igualdad exacta normalizando saltos de línea. Los logs serán VERBOSE de toda la app, exclusivamente debug_assertions y en debug_logs junto al ejecutable, por instrucción del propietario.
 
 - 2026-10-19 23:58 · Propietario prioriza logs exhaustivos de TODA la app para reportes de pruebas; exploración añade contexto específico, pero el alcance es general. F3 Task17 se pausa; se preserva TDD parcial. Se corrige tabla16 que seguía en curso pese a cierre real 3a33097 (spec/calidad y 924 Rust PASS ya verificados).
@@ -249,6 +252,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
+- 2026-10-20 · Claude Opus 5.5 · D7b: `codex/diagnostico-logs` fusionada en F3 (6e5e97a, 6 conflictos resueltos) y cableado de EDDN/comercio/endpoints F3 (a1c2bb3). fmt/clippy/clippy release PASS, 999 Rust PASS ×2, 160 UI PASS. WIP de Task 17 preservado en stash y restaurado sin commit. Siguiente: Task 17.
 - 2026-10-20 · Claude Opus 5.5 · D7a cerrada: captura de tests estable (713a8f4), checks y replay sintético OK, hash release intacto. Siguiente: D7b.
 - 2026-10-20 · Claude Sonnet 5.5 · D6 5a81eff cerrada: UI con capacidad `diagnostics` solo en backend debug, acción `app.diagnostics`; 834 Rust PASS/1 ignorado, 155 UI PASS, fmt/clippy/clippy release PASS. Siguiente: D7.
 - 2026-10-20 · Claude Sonnet 5.5 · D5 b6e139b cerrada: red (tmc-net/net_service), HTTP/WS, auth, acciones y portapapeles; 824 Rust PASS/1 ignorado, fmt/clippy/clippy release PASS. Siguiente: D6.
