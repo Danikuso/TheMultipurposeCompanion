@@ -5,12 +5,12 @@
 - **Última actualización:** 2026-10-20 00:37 (Europe/Madrid) · Codex
 - **Fase actual:** extensión autorizada de diagnóstico debug; F3 se retoma después. Historial F0/F1/F2 conservado.
 - **Spec activa:** [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md) — autorizada por el propietario.
-- **Plan activo:** [diagnóstico debug](docs/plans/2026-10-20-diagnostico-debug.md) — D1–D6 y D2b ✅; D7 siguiente.
+- **Plan activo:** [diagnóstico debug](docs/plans/2026-10-20-diagnostico-debug.md) — D1–D6, D2b y D7a ✅; D7b siguiente.
 - **Rama de trabajo:** codex/diagnostico-logs (checkout aislado; principal conserva F3 parcial).
 
 ## Puntero actual
 
-- **Tarea:** D7 ⬜ siguiente — checks, consumo, build e integración; D6 cerrada.
+- **Tarea:** D7b ⬜ siguiente — integración en F3 y diagnóstico de EddnService; D7a ✅ (checks, replay sintético, hash release y build debug verificados).
 - **Último paso completado:** D2 ed0611e con ambas revisiones, 14 tests de writer/795 Rust PASS (1 ignorado), fmt/clippy workspace y clippy release tmc-app PASS; UI sin cambios desde D1 (144/check/build PASS). Release de prueba intacto.
 - **Siguiente acción:** instrumentar Journal/Status/companion/config y fronteras de SQLite; después D4 actor/módulos, D5 red/HTTP/auth/acciones, D6 UI, D7 validación/build e integración. Retomar F3 Task17 preservada al terminar logs.
 
@@ -25,7 +25,8 @@
 | D2b | Escritor SQLite por apartados | ✅ hecha | 58696b7 + fix de revisión | Sustituye JSONL (decisión propietario 2026-10-20); 75 tests tmc-app, 815 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS |
 | D5 | Red, HTTP, WS, auth y acciones | ✅ hecha | b6e139b | 824 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS; sin test WS dedicado |
 | D6 | UI | ✅ hecha | 5a81eff | 834 Rust PASS/1 ignorado, 155 UI PASS |
-| D7 | Checks, consumo, build e integración | ⬜ pendiente | — | Retomar F3 después |
+| D7a | Verificación previa (checks, replay, build debug) | ✅ hecha | 713a8f4 | 6 ejecuciones workspace verdes |
+| D7b | Integración en F3 | ⬜ pendiente | — | Retomar F3 después |
 
 ## Fases
 
@@ -201,6 +202,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
+- 2026-10-20 · Claude Opus 5.5 · D7a cerrada: captura de tests estable (713a8f4), checks y replay sintético OK, hash release intacto. Siguiente: D7b.
 - 2026-10-20 · Claude Sonnet 5.5 · D6 5a81eff cerrada: UI con capacidad `diagnostics` solo en backend debug, acción `app.diagnostics`; 834 Rust PASS/1 ignorado, 155 UI PASS, fmt/clippy/clippy release PASS. Siguiente: D7.
 - 2026-10-20 · Claude Sonnet 5.5 · D5 b6e139b cerrada: red (tmc-net/net_service), HTTP/WS, auth, acciones y portapapeles; 824 Rust PASS/1 ignorado, fmt/clippy/clippy release PASS. Siguiente: D6.
 - 2026-10-20 · Claude Sonnet 5.5 · D2b 58696b7: escritor SQLite separado `debug_logs/diagnostics.sqlite` por apartados (spec/plan/desviación en b325a2e); fmt/clippy/clippy release PASS. Siguiente: D5.
