@@ -28,6 +28,7 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 tracing-appender.workspace = true
 anyhow.workspace = true
 uuid.workspace = true
+rusqlite.workspace = true
 
 [dev-dependencies]
 flate2.workspace = true

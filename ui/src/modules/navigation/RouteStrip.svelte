@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
+  import { diag, diagOn } from '../../lib/diag.svelte';
   import { action, topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
   import SystemCard from './SystemCard.svelte';
@@ -13,6 +14,20 @@
   const currentStarClasses = $derived(
     expSystem && expSystem.system === route?.current?.name ? expSystem.star_classes : null,
   );
+
+  $effect(() => {
+    if (!diagOn()) return;
+    diag('ui.card.route_strip', {
+      has_route: route !== undefined,
+      has_main: main !== null && main !== undefined,
+      has_next: route?.next != null,
+      kind: route?.source ?? 'none',
+      off_route: route?.off_route === true,
+      following: route?.following?.length ?? 0,
+      remaining_jumps: route?.remaining_jumps ?? -1,
+      current_system_matches: currentStarClasses !== null,
+    });
+  });
 
   async function recalculate() {
     try {

@@ -2,16 +2,30 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-20 00:39 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-20 (Europe/Madrid) · Claude Opus 5.5
 - **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (🔄 en ejecución). F2 ✅ fusionada en `main` (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
-- **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
-- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 17/35 hechas (aprobado al ordenar «escribe el plan y ejecútalo»). Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
+- **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversal: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md).
+- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — 🔄 17/35 hechas (aprobado al ordenar «escribe el plan y ejecútalo»). Diagnóstico: [plan](docs/plans/2026-10-20-diagnostico-debug.md) D1–D7b. Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
 - **Rama de trabajo:** `fase/f3-comercio-misiones`
 
 ## Puntero actual
 
-- **Tarea:** prioridad del propietario: diagnóstico VERBOSE de TODA la aplicación, solo debug. D1–D2 cerradas (e6c5d09, ed0611e); D3 fuentes y persistencia en implementación; F3 Task 17 pausada con tests/stubs sin commit.
-- **Siguiente acción:** ejecutar D3 con TDD y sus dos revisiones, después actor/módulos, red/auth/acciones y UI según `docs/plans/2026-10-20-diagnostico-debug.md` del checkout `C:/Users/danik/.codex/worktrees/prueba-main/EDPyCompanion` (rama `codex/diagnostico-logs`). Diagnóstico exclusivamente `debug_assertions`, en `current_exe().parent()/debug_logs`, sin telemetría. Conservar release de prueba y datos reales. Tablas históricas restauradas y verificadas en 88bd448. Después integrar en F3 y retomar exactamente Task17; código parcial `trade/{route.rs,mod.rs}` intacto. `.claude/` y `.tmp/` locales no incluir.
+- **Tarea:** D7b — integración de `codex/diagnostico-logs` en F3 (merge en curso).
+- **Siguiente acción:** cablear EDDN/comercio en el diagnóstico, verificar y retomar F3 Task 17 desde el WIP preservado.
+
+## Tareas de diagnóstico debug
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| D1 | Contrato y redacción | ✅ hecha | e6c5d09 | 13 diagnósticos TDD; ambas revisiones; 781 Rust, 144 UI, release noeval, fmt/clippy/check/build PASS |
+| D2 | Writer circular y lifecycle | ✅ hecha | ed0611e | 14 pruebas; ambas revisiones; 795 Rust, fmt/clippy y clippy release PASS |
+| D3 | Fuentes y persistencia | ✅ hecha | 44e8a9e + 91cc1dc (fix volumen) | 804 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS |
+| D4 | Actor y módulos | ✅ hecha | 42c1ccc | 811 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS |
+| D2b | Escritor SQLite por apartados | ✅ hecha | 58696b7 + fix de revisión | Sustituye JSONL (decisión propietario 2026-10-20); 75 tests tmc-app, 815 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS |
+| D5 | Red, HTTP, WS, auth y acciones | ✅ hecha | b6e139b | 824 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS; sin test WS dedicado |
+| D6 | UI | ✅ hecha | 5a81eff | 834 Rust PASS/1 ignorado, 155 UI PASS |
+| D7a | Verificación previa (checks, replay, build debug) | ✅ hecha | 713a8f4 | 6 ejecuciones workspace verdes |
+| D7b | Integración en F3 | ⬜ pendiente | — | Retomar F3 después |
 
 ## Fases
 
@@ -234,6 +248,18 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-20 · Claude Opus 5.5 · D7a cerrada: captura de tests estable (713a8f4), checks y replay sintético OK, hash release intacto. Siguiente: D7b.
+- 2026-10-20 · Claude Sonnet 5.5 · D6 5a81eff cerrada: UI con capacidad `diagnostics` solo en backend debug, acción `app.diagnostics`; 834 Rust PASS/1 ignorado, 155 UI PASS, fmt/clippy/clippy release PASS. Siguiente: D7.
+- 2026-10-20 · Claude Sonnet 5.5 · D5 b6e139b cerrada: red (tmc-net/net_service), HTTP/WS, auth, acciones y portapapeles; 824 Rust PASS/1 ignorado, fmt/clippy/clippy release PASS. Siguiente: D6.
+- 2026-10-20 · Claude Sonnet 5.5 · D2b 58696b7: escritor SQLite separado `debug_logs/diagnostics.sqlite` por apartados (spec/plan/desviación en b325a2e); fmt/clippy/clippy release PASS. Siguiente: D5.
+- 2026-10-20 · Claude Sonnet 5.5 · D4 42c1ccc cerrada: actor (evento, transición de estado, topics redactados, efectos) y decisiones de los seis módulos; 811 Rust PASS/1 ignorado, fmt/clippy/clippy release PASS. Siguiente: D5.
+- 2026-10-20 · Claude Sonnet 5.5 · D3 44e8a9e cerrada: fuentes locales y persistencia instrumentadas; 804 Rust PASS/1 ignorado, fmt/clippy/clippy release PASS. Siguiente: D4.
+- 2026-10-20 00:37 (Europe/Madrid) · Codex · D2 ed0611e cerrada con writer DEBUG acotado y 14 pruebas. Correcciones de escape JSON, limpieza bajo bloqueo Windows y orden de cierre revisadas. 795 Rust PASS/1 ignorado, fmt/clippy y clippy release PASS; empieza D3.
+
+- 2026-10-20 00:21 (Europe/Madrid) · Codex · D1 e6c5d09 revisada y verificada: 781 Rust/144 UI PASS, release sin evaluación, fmt/clippy/check/build correctos. Inicia D2. Se reconcilia solo el resumen de fases con merges reales; tablas históricas completas intactas.
+
+- 2026-10-20 · Codex · D1 diagnóstico debug iniciado en checkout aislado; spec y plan autorizados por instrucción expresa del propietario. Sin tocar tablas históricas F0/F1/F2. Contrato/redacción y docs sin commit; GREEN 91 tmc-model + release noeval. Revisión y checks globales pendientes. Dos expectativas UI de rango Maestro→Master sincronizadas con decisión del propietario de 2026-10-19 (baseline RED 142 PASS/2 FAIL).
 
 - 2026-10-19 23:58 (Europe/Madrid) · Codex · Propietario pide instrumentación diagnóstica de toda la app tras detectar cuerpos ausentes en exploración. Pausado implementadorTask17; código parcial preservado. Análisis con deep-plan/architect-opus dentro del logging aprobado F0§9, antes de implementar.
 

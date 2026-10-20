@@ -204,6 +204,7 @@ impl Combat {
             return;
         }
         let switched = self.cmdr.is_some();
+        decide!("combat.cmdr.changed", {"switched": switched, "ledger_discarded": true});
         self.cmdr = Some(name);
         if switched {
             // Otro comandante: sesión, rango, objetivo, avisos, CZ y AX no sirven.
@@ -233,6 +234,10 @@ impl Combat {
             return;
         }
         ctx.store_task(TAG_VOUCHERS, session::rebuild_task(cmdr));
+        decide!(
+            "combat.ledger.rebuild.requested",
+            tmc_model::diagnostics::json!({})
+        );
     }
 
     fn on_journal(&mut self, je: &JournalEvent, file: &str, line: u64, state: &GameState) {
@@ -245,15 +250,23 @@ impl Combat {
         }
         match &je.kind {
             EventKind::ShipTargeted(t) => {
-                self.target.apply(t, now);
+                let changed = self.target.apply(t, now);
+                decide_if!(changed, "combat.target.changed", {"locked": t.target_locked});
             }
-            EventKind::Died => self.target = TargetTracker::default(),
+            EventKind::Died => {
+                self.target = TargetTracker::default();
+                decide!("combat.target.cleared_on_death", {});
+            }
             _ => {}
         }
-        self.ax.apply_event(&je.kind, now);
-        self.cz.apply_event(&je.kind, &self.system, now);
-        self.session.apply_event(&je.kind, now);
-        self.ship.on_event(&je.kind, now);
+        let ax = self.ax.apply_event(&je.kind, now);
+        decide_if!(ax, "combat.ax.changed", {"active": self.ax.active(now)});
+        let cz = self.cz.apply_event(&je.kind, &self.system, now);
+        decide_if!(cz, "combat.cz.changed", {"present": self.cz.view().is_some()});
+        let session = self.session.apply_event(&je.kind, now);
+        decide_if!(session, "combat.session.updated", {});
+        let ship = self.ship.on_event(&je.kind, now);
+        decide_if!(ship, "combat.ship.changed", {});
         let relevant = matches!(
             je.kind,
             EventKind::Bounty(_)
@@ -264,8 +277,17 @@ impl Combat {
         );
         if relevant {
             self.ledger.apply_event(&je.kind, &self.system, now);
+            #[cfg(debug_assertions)]
+            let credit = match &je.kind {
+                EventKind::Bounty(_) => 0,
+                EventKind::FactionKillBond(_) | EventKind::CapShipBond(_) => 1,
+                EventKind::RedeemVoucher(_) => 2,
+                _ => 3,
+            };
+            decide!("combat.ledger.event_applied", {"class": credit, "loaded": self.ledger_loaded});
             if !self.ledger_loaded {
                 if self.pending.len() >= PENDING_CAP {
+                    decide!("combat.ledger.pending_dropped_cap", {"cap": PENDING_CAP});
                     self.pending.pop_front();
                 }
                 self.pending.push_back(Pending {
@@ -287,10 +309,12 @@ impl Combat {
             || value.get("cmdr").and_then(Value::as_str) != self.cmdr.as_deref()
             || self.ledger_loaded
         {
+            decide!("combat.ledger.stored.discarded", {"loaded": self.ledger_loaded});
             return;
         }
         let Ok(ledger) = serde_json::from_value::<VoucherLedger>(value["ledger"].clone()) else {
             tracing::warn!("libro de vales del almacén ilegible");
+            decide!("combat.ledger.stored.unreadable", {});
             return;
         };
         let cut_pos: Option<Pos> = value.get("cut_pos").and_then(|p| {
@@ -308,6 +332,7 @@ impl Combat {
         }
         self.inflight.finish(LEDGER_KEY);
         self.ledger_loaded = true;
+        decide!("combat.ledger.stored.applied", {"cut_pos": cut_pos.is_some()});
     }
 
     fn unredeemed_total(&self) -> u64 {
@@ -319,7 +344,14 @@ impl Combat {
     /// Busca el Interstellar Factors más cercano al sistema actual si hay vales.
     fn maybe_request_if(&mut self, state: &GameState, ctx: &mut ModuleCtx) {
         let addr = state.location.system_address;
-        if ctx.replaying || addr == 0 || !self.online(state) || self.unredeemed_total() == 0 {
+        if ctx.replaying || addr == 0 || self.unredeemed_total() == 0 {
+            return;
+        }
+        if !self.online(state) {
+            decide!(
+                "combat.if.request.skipped_offline",
+                tmc_model::diagnostics::json!({"unredeemed": self.unredeemed_total()})
+            );
             return;
         }
         match &self.if_state {
@@ -347,9 +379,14 @@ impl Combat {
             service: NearbyService::InterstellarFactors,
             min_pad,
         };
-        if ctx.request(key.clone(), query).is_none() {
+        let accepted = ctx.request(key.clone(), query).is_some();
+        if !accepted {
             self.inflight.finish(&key);
         }
+        decide!(
+            "combat.if.request.sent",
+            tmc_model::diagnostics::json!({"accepted": accepted})
+        );
     }
 
     fn apply_response(&mut self, r: &NetResponse, state: &GameState) {
@@ -363,6 +400,7 @@ impl Combat {
         };
         self.inflight.finish(&r.key);
         if addr != state.location.system_address {
+            decide!("combat.if.response.stale", {});
             return;
         }
         let st = match &r.outcome {
@@ -373,8 +411,18 @@ impl Combat {
                 .map_or(IfState::NoData, IfState::Found),
             NetOutcome::NoData => IfState::NoData,
             NetOutcome::Failed(_) => IfState::Failed(self.clock()),
-            _ => return,
+            _ => {
+                decide!("combat.if.response.ignored", {});
+                return;
+            }
         };
+        #[cfg(debug_assertions)]
+        let outcome = match &st {
+            IfState::Found(_) => 0,
+            IfState::NoData => 1,
+            IfState::Failed(_) => 2,
+        };
+        decide!("combat.if.response.applied", {"outcome": outcome});
         self.if_state = Some((addr, st));
     }
 
@@ -437,6 +485,11 @@ impl Combat {
     fn emit_alerts(&mut self, ctx: &mut ModuleCtx, view: &ship::ShipView, baseline: bool) {
         for a in &view.alerts {
             if baseline || self.prev_alerts.contains(a) || !self.settings.alerts_enabled {
+                decide_if!(
+                    !ctx.replaying && !baseline && self.prev_alerts.contains(a),
+                    "combat.alert.deduplicated",
+                    {}
+                );
                 continue;
             }
             let (sev, key) = match a {
@@ -454,6 +507,10 @@ impl Combat {
             if !ctx.replaying {
                 self.emitted.push(key);
             }
+            decide!(
+                "combat.alert.emitted",
+                tmc_model::diagnostics::json!({"replaying": ctx.replaying})
+            );
             ctx.alert(alert);
         }
         self.prev_alerts = view.alerts.clone();
@@ -537,6 +594,10 @@ impl Module for Combat {
             SourceEvent::Action { name, .. } if name == ACTION_RESET => {
                 let now = self.clock();
                 self.session.reset(now);
+                decide!(
+                    "combat.session.reset.applied",
+                    tmc_model::diagnostics::json!({})
+                );
             }
             _ => return TopicSet::new(),
         }

@@ -53,6 +53,71 @@ const POI_TTL: Duration = Duration::from_secs(5 * 60);
 /// Canonn tarda 2-4 s por respuesta: tiempo máximo propio (el resto, el del transporte).
 pub const CANONN_TIMEOUT: Duration = Duration::from_secs(15);
 
+#[cfg(debug_assertions)]
+tokio::task_local! {
+    /// Identificador de correlación de la consulta en curso (solo diagnóstico).
+    static REQUEST_ID: u64;
+}
+
+#[cfg(debug_assertions)]
+static NEXT_REQUEST_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+
+#[cfg(debug_assertions)]
+fn request_id() -> u64 {
+    REQUEST_ID.try_with(|id| *id).unwrap_or(0)
+}
+
+/// Huella de la consulta para correlacionar con `NetService` sin exponer su contenido.
+#[cfg(debug_assertions)]
+pub fn query_fingerprint(q: &NetQuery) -> u64 {
+    tmc_model::diagnostics::sql_fingerprint(&serde_json::to_string(q).unwrap_or_default())
+}
+
+/// Plantilla de endpoint (nunca URL ni query string) para los registros de diagnóstico.
+#[cfg(debug_assertions)]
+fn endpoint_of(req: &Req) -> &'static str {
+    let (Req::Get(url) | Req::Post(url, _)) = req;
+    let path = url.split('?').next().unwrap_or("");
+    if let Some(rest) = path.strip_prefix(spansh::BASE) {
+        return match rest {
+            r if r.starts_with("/system/") => "spansh.system",
+            "/route" | "/generic/route" => "spansh.route.job",
+            r if r.starts_with("/results/") => "spansh.route.results",
+            r if r.starts_with("/systems/") => "spansh.autocomplete",
+            _ => "unknown",
+        };
+    }
+    if path.starts_with(edsm::BASE) {
+        return "edsm.system";
+    }
+    if path.starts_with(canonn::BASE) {
+        return if path.ends_with("/codex/ref") {
+            "canonn.codex_ref"
+        } else {
+            "canonn.system_poi"
+        };
+    }
+    if path.starts_with(ardent::BASE) {
+        return if path.contains("/nearby/imports") {
+            "ardent.nearby.imports"
+        } else {
+            "ardent.nearest.service"
+        };
+    }
+    "unknown"
+}
+
+/// Evento de red redactado; añade siempre el identificador de correlación.
+macro_rules! net_event {
+    ($code:literal, { $($payload:tt)* }) => {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::NetOutcome,
+            $code,
+            tmc_model::diagnostics::json!({ "request_id": request_id(), $($payload)* })
+        )
+    };
+}
+
 /// Almacén persistente del `codex/ref` compacto (lo implementa la app sobre `api_cache`).
 pub trait RefPersist: Send + Sync {
     fn load(&self) -> Option<(DateTime<Utc>, String)>;
@@ -188,7 +253,52 @@ impl NetClient {
         q: &NetQuery,
         online: Option<&AtomicBool>,
     ) -> (NetSource, NetOutcome) {
+        #[cfg(debug_assertions)]
+        {
+            let id = NEXT_REQUEST_ID.fetch_add(1, Ordering::Relaxed);
+            REQUEST_ID
+                .scope(id, async {
+                    let started = std::time::Instant::now();
+                    tmc_model::diagnostic!(
+                        tmc_model::diagnostics::DiagnosticContext::NetQuery,
+                        "net.query.started",
+                        tmc_model::diagnostics::json!({
+                            "request_id": id,
+                            "query_fp": query_fingerprint(q),
+                            "query": q,
+                            "online_guard": online.is_some(),
+                        })
+                    );
+                    let result = self.execute_query(q, online).await;
+                    tmc_model::diagnostic!(
+                        tmc_model::diagnostics::DiagnosticContext::NetOutcome,
+                        "net.query.finished",
+                        tmc_model::diagnostics::json!({
+                            "request_id": id,
+                            "query_fp": query_fingerprint(q),
+                            "source": result.0,
+                            "outcome": result.1.diag_summary().0,
+                            "items": result.1.diag_summary().1,
+                            "duration_ms": started.elapsed().as_millis() as u64,
+                        })
+                    );
+                    result
+                })
+                .await
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            self.execute_query(q, online).await
+        }
+    }
+
+    async fn execute_query(
+        &self,
+        q: &NetQuery,
+        online: Option<&AtomicBool>,
+    ) -> (NetSource, NetOutcome) {
         if !online_allowed(online) {
+            net_event!("net.optout.blocked", {"stage": 0});
             return (NetSource::Cache, NetOutcome::Disabled);
         }
         match q {
@@ -343,8 +453,10 @@ impl NetClient {
             return (NetSource::Spansh, out);
         }
         if self.is_down(Service::Edsm) {
+            net_event!("net.health.skipped_down", {"source": NetSource::Edsm});
             return (NetSource::Edsm, NetOutcome::Failed(NetFailure::Down));
         }
+        net_event!("net.fallback.edsm", {"spansh_down": true});
         let req = Req::Get(edsm::system_url(name));
         let out = self
             .fetch(Service::Edsm, req, online, |b| {
@@ -366,6 +478,7 @@ impl NetClient {
             return NetOutcome::Disabled;
         }
         if self.is_down(service) {
+            net_event!("net.health.skipped_down", {"source": source_of(service)});
             return NetOutcome::Failed(NetFailure::Down);
         }
         let reference = match self.codex_ref(online).await {
@@ -380,12 +493,19 @@ impl NetClient {
                 .map(|(_, _, body)| body.clone())
         };
         let body = match cached(&system_key) {
-            Some(body) => body,
+            Some(body) => {
+                net_event!("net.cache.poi.hit", {"bytes": body.len()});
+                body
+            }
             None => {
                 let _one_download = self.poi_lock.lock().await;
                 match cached(&system_key) {
-                    Some(body) => body,
+                    Some(body) => {
+                        net_event!("net.coalesced.poi", {"bytes": body.len()});
+                        body
+                    }
                     None => {
+                        net_event!("net.cache.poi.miss", {});
                         let req = Req::Get(canonn::body_url(star_system));
                         match self.call(service, req, online).await {
                             Ok(body) => {
@@ -432,10 +552,12 @@ impl NetClient {
 
     async fn codex_ref(&self, online: Option<&AtomicBool>) -> Result<Arc<CodexRef>, Miss> {
         if let Some(r) = self.memory_ref() {
+            net_event!("net.cache.codex_ref.memory_hit", {"entries": r.len()});
             return Ok(r);
         }
         let _one_download = self.ref_lock.lock().await;
         if let Some(r) = self.memory_ref() {
+            net_event!("net.coalesced.codex_ref", {"entries": r.len()});
             return Ok(r);
         }
         if let Some(persist) = self.persist.clone() {
@@ -454,10 +576,13 @@ impl NetClient {
                         .checked_sub(age)
                         .unwrap_or_else(std::time::Instant::now);
                     *self.codex_ref.lock().unwrap() = Some((seen, r.clone()));
+                    net_event!("net.cache.codex_ref.persisted_hit", {"entries": r.len(),
+                        "age_s": age.as_secs()});
                     return Ok(r);
                 }
             }
         }
+        net_event!("net.cache.codex_ref.miss", {"persisted": self.persist.is_some()});
         let req = Req::Get(canonn::codex_ref_url());
         let body = self.call(Service::Canonn, req, online).await?;
         match canonn::parse_codex_ref(&body) {
@@ -492,6 +617,7 @@ impl NetClient {
             return NetOutcome::Disabled;
         }
         if self.is_down(service) {
+            net_event!("net.health.skipped_down", {"source": source_of(service)});
             return NetOutcome::Failed(NetFailure::Down);
         }
         let body = match self.call(service, req, online).await {
@@ -543,9 +669,11 @@ impl NetClient {
     ) -> NetOutcome {
         let service = Service::Spansh;
         if self.is_down(service) {
+            net_event!("net.health.skipped_down", {"source": source_of(service)});
             return NetOutcome::Failed(NetFailure::Down);
         }
         let _one_at_a_time = self.route_lock.lock().await;
+        net_event!("net.route.lock_acquired", {});
         let job = match self.call(service, post, online).await {
             Ok(body) => match spansh::parse_job(&body) {
                 Ok(job) => job,
@@ -573,6 +701,8 @@ impl NetClient {
                     f @ (NetFailure::Timeout | NetFailure::RateLimited | NetFailure::Http(500..)),
                 )) => {
                     transient += 1;
+                    net_event!("net.route.poll.transient", {"transient": transient,
+                        "max": MAX_TRANSIENT_POLL_FAILURES});
                     if transient > MAX_TRANSIENT_POLL_FAILURES
                         || tokio::time::Instant::now() >= deadline
                     {
@@ -589,17 +719,22 @@ impl NetClient {
                     return *out;
                 }
                 Ok(Step::Failed(msg)) => {
+                    net_event!("net.route.job_failed", {"message_bytes": msg.len()});
                     tracing::warn!(%msg, "Spansh no pudo calcular la ruta");
                     self.succeed(service);
                     return NetOutcome::NoData;
                 }
-                Ok(Step::Pending) => self.succeed(service),
+                Ok(Step::Pending) => {
+                    net_event!("net.route.poll.pending", {});
+                    self.succeed(service)
+                }
                 Err(e) => {
                     self.fail(service);
                     return NetOutcome::Failed(e);
                 }
             }
             if tokio::time::Instant::now() >= deadline {
+                net_event!("net.route.deadline", {"limit_s": POLL_LIMIT.as_secs()});
                 return NetOutcome::Failed(NetFailure::Timeout);
             }
             tokio::time::sleep(POLL_EVERY).await;
@@ -615,12 +750,18 @@ impl NetClient {
         online: Option<&AtomicBool>,
     ) -> Result<String, Miss> {
         if !online_allowed(online) {
+            net_event!("net.optout.blocked", {"stage": 1, "source": source_of(service)});
             return Err(Miss::Disabled);
         }
         self.wait_turn(service).await;
         if !online_allowed(online) {
+            net_event!("net.optout.blocked", {"stage": 2, "source": source_of(service)});
             return Err(Miss::Disabled);
         }
+        #[cfg(debug_assertions)]
+        let (endpoint, sent_at) = (endpoint_of(&req), std::time::Instant::now());
+        net_event!("net.http.request", {"endpoint": endpoint, "source": source_of(service),
+            "method": if matches!(req, Req::Get(_)) { "GET" } else { "POST" }});
         let reply = match &req {
             Req::Get(url) if service == Service::Canonn => {
                 self.transport.get_with_timeout(url, CANONN_TIMEOUT).await
@@ -628,6 +769,15 @@ impl NetClient {
             Req::Get(url) => self.transport.get(url).await,
             Req::Post(url, form) => self.transport.post_form(url, form).await,
         };
+        net_event!("net.http.response", {"endpoint": endpoint, "source": source_of(service),
+            "duration_ms": sent_at.elapsed().as_millis() as u64,
+            "class": match &reply {
+                Err(TransportError::Timeout) => 1,
+                Err(TransportError::Connect(_)) => 2,
+                Ok(r) => i64::from(r.status / 100) * 100,
+            },
+            "status": reply.as_ref().map_or(0, |r| r.status),
+            "bytes": reply.as_ref().map_or(0, |r| r.body.len())});
         match reply {
             Err(TransportError::Timeout) => {
                 self.fail(service);
@@ -662,6 +812,8 @@ impl NetClient {
     }
 
     async fn wait_turn(&self, service: Service) {
+        #[cfg(debug_assertions)]
+        let (started, mut waits) = (std::time::Instant::now(), 0u32);
         loop {
             let wait = {
                 let mut st = self.state.lock().unwrap();
@@ -669,8 +821,20 @@ impl NetClient {
                 limiter.try_acquire(now())
             };
             match wait {
-                Ok(()) => return,
-                Err(d) => tokio::time::sleep(d).await,
+                Ok(()) => {
+                    net_event!("net.limiter.acquired", {"source": source_of(service),
+                        "waits": waits, "waited_ms": started.elapsed().as_millis() as u64});
+                    return;
+                }
+                Err(d) => {
+                    #[cfg(debug_assertions)]
+                    {
+                        waits += 1;
+                    }
+                    net_event!("net.limiter.wait", {"source": source_of(service),
+                        "delay_ms": d.as_millis() as u64});
+                    tokio::time::sleep(d).await
+                }
             }
         }
     }
@@ -729,6 +893,10 @@ impl NetClient {
         let mut st = self.state.lock().unwrap();
         if let Some(h) = st.health.get_mut(&service) {
             h.record_failure(now());
+            net_event!("net.health.failure", {"source": source_of(service),
+                "failures": h.failures(), "down": h.is_down(now()),
+                "backoff_ms": h.retry_at().map_or(0, |at|
+                    at.saturating_duration_since(now()).as_millis() as u64)});
         }
         tracing::debug!(source = ?source_of(service), "fallo registrado");
     }
@@ -736,6 +904,8 @@ impl NetClient {
     fn succeed(&self, service: Service) {
         let mut st = self.state.lock().unwrap();
         if let Some(h) = st.health.get_mut(&service) {
+            net_event!("net.health.success", {"source": source_of(service),
+                "recovered_from": h.failures()});
             h.record_success();
         }
     }
@@ -1895,6 +2065,91 @@ mod tests {
             let (src, out) = c.execute(&coords_query("Origin")).await;
             assert_eq!(src, NetSource::Edsm);
             assert!(matches!(out, NetOutcome::Coords(_)));
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    mod diagnostics {
+        use super::*;
+        use tmc_model::diagnostics::capture::capture;
+
+        fn run(
+            t: &Arc<FakeTransport>,
+            q: NetQuery,
+        ) -> Vec<tmc_model::diagnostics::capture::Record> {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_time()
+                .start_paused(true)
+                .build()
+                .unwrap();
+            let c = client(t);
+            capture(|| rt.block_on(c.execute(&q))).1
+        }
+
+        #[test]
+        fn query_and_outcome_use_templates_never_urls_or_raw_errors() {
+            let t = FakeTransport::new();
+            t.script(
+                "field_values",
+                vec![Err(TransportError::Connect(
+                    "https://spansh.co.uk/x?token=CANARYERR".into(),
+                ))],
+            );
+            let q = NetQuery::Autocomplete {
+                prefix: "Sol?token=CANARYQ".into(),
+            };
+            let records = run(&t, q);
+            let all: String = records
+                .iter()
+                .map(|r| {
+                    format!(
+                        "{} {} {}
+",
+                        r.code, r.context, r.payload
+                    )
+                })
+                .collect();
+            for canary in ["CANARYQ", "CANARYERR", "https://", "spansh.co.uk", "?token"] {
+                assert!(!all.contains(canary), "{canary} leaked in {all}");
+            }
+            let codes: Vec<&str> = records.iter().map(|r| r.code.as_str()).collect();
+            for code in [
+                "net.query.started",
+                "net.limiter.acquired",
+                "net.http.request",
+                "net.http.response",
+                "net.health.failure",
+                "net.query.finished",
+            ] {
+                assert!(codes.contains(&code), "falta {code}: {codes:?}");
+            }
+            assert!(all.contains("spansh.autocomplete"));
+            let ids: std::collections::HashSet<_> = records
+                .iter()
+                .map(|r| {
+                    serde_json::from_str::<serde_json::Value>(&r.payload).unwrap()["request_id"]
+                        .clone()
+                })
+                .collect();
+            assert_eq!(ids.len(), 1, "todos comparten el mismo request_id");
+        }
+
+        #[test]
+        fn http_status_is_numeric_class_with_route_template() {
+            let t = FakeTransport::new();
+            t.script("/api/route", vec![ok(503, "CANARYBODY")]);
+            let records = run(&t, neutron_query());
+            let all: String = records.iter().map(|r| r.payload.clone()).collect();
+            assert!(!all.contains("CANARYBODY"));
+            assert!(all.contains("spansh.route.job"));
+            let resp = records
+                .iter()
+                .find(|r| r.code == "net.http.response")
+                .unwrap();
+            let v: serde_json::Value = serde_json::from_str(&resp.payload).unwrap();
+            assert_eq!(v["status"], 503);
+            assert_eq!(v["class"], 500);
+            assert_eq!(v["bytes"], 10);
         }
     }
 }

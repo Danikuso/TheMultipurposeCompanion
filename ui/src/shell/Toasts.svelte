@@ -1,5 +1,6 @@
 <script lang="ts" module>
   import type { Alert } from '../lib/ws.svelte';
+  import { diag } from '../lib/diag.svelte';
 
   export interface ToastItem {
     id: string;
@@ -12,6 +13,7 @@
   export function pushToast(text: string, level: Alert['level'] = 'Info', id?: string): void {
     const itemId = id ?? `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const existingIdx = toastItems.findIndex((x) => x.id === itemId);
+    diag('ui.toast.shown', { level: level.toLowerCase(), replaced: existingIdx !== -1, count: toastItems.length });
     if (existingIdx !== -1) {
       toastItems[existingIdx] = { id: itemId, level, text };
     } else {
@@ -26,6 +28,7 @@
 
   export function dismissToast(id: string): void {
     const idx = toastItems.findIndex((x) => x.id === id);
+    diag('ui.toast.dismissed', { found: idx !== -1 });
     if (idx !== -1) {
       toastItems.splice(idx, 1);
     }

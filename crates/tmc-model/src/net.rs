@@ -163,6 +163,26 @@ pub enum NetOutcome {
     Failed(NetFailure),
 }
 
+impl NetOutcome {
+    /// Resumen para diagnóstico: variante y número de elementos, sin contenido.
+    pub fn diag_summary(&self) -> (&'static str, usize) {
+        match self {
+            Self::System(_) => ("system", 1),
+            Self::Route(_) => ("route", 1),
+            Self::Autocomplete(v) => ("autocomplete", v.len()),
+            Self::BodyBio(_) => ("body_bio", 1),
+            Self::Markets(v) => ("markets", v.len()),
+            Self::Stations(v) => ("stations", v.len()),
+            Self::TradeRoute(plan) => ("trade_route", plan.stops.len()),
+            Self::Exports(v) => ("exports", v.len()),
+            Self::Coords(_) => ("coords", 1),
+            Self::NoData => ("no_data", 0),
+            Self::Disabled => ("disabled", 0),
+            Self::Failed(_) => ("failed", 0),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NetFailure {
     Timeout,

@@ -72,14 +72,29 @@ pub async fn get_history_events(
 pub async fn post_action(
     State(state): State<AppState>,
     Path(name): Path<String>,
+    peer: Option<axum::Extension<axum::extract::ConnectInfo<std::net::SocketAddr>>>,
+    headers: axum::http::HeaderMap,
     body: Bytes,
 ) -> Response {
+    let origin = headers
+        .get(axum::http::header::ORIGIN)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    let client = format!(
+        "rest:{}:{origin}",
+        peer.map_or_else(|| "?".to_owned(), |p| p.0.0.ip().to_string())
+    );
     let args: Value = if body.iter().all(u8::is_ascii_whitespace) {
         Value::Null
     } else {
         match serde_json::from_slice(&body) {
             Ok(v) => v,
             Err(_) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Http,
+                    "http.action.invalid_json",
+                    tmc_model::diagnostics::json!({"body_bytes": body.len()})
+                );
                 return (
                     StatusCode::BAD_REQUEST,
                     Json(json!({ "error": "invalid-json" })),
@@ -89,7 +104,7 @@ pub async fn post_action(
         }
     };
     let snapshot = state.core.snapshot().await;
-    match state.host.run_action_with(&name, &args, &snapshot) {
+    match crate::diag::run_action(state.host.as_ref(), &name, &args, &snapshot, false, &client) {
         Ok(value) => (StatusCode::OK, Json(value)).into_response(),
         Err(ActionError::NotFound) => {
             (StatusCode::NOT_FOUND, Json(json!({ "error": "not-found" }))).into_response()
@@ -152,11 +167,23 @@ pub async fn get_config(State(state): State<AppState>) -> Json<Value> {
 
 pub async fn put_config(State(state): State<AppState>, Json(payload): Json<Value>) -> Response {
     match state.host.put_config(payload) {
-        Ok(value) => (StatusCode::OK, Json(value)).into_response(),
+        Ok(value) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Http,
+                "http.config.updated",
+                tmc_model::diagnostics::json!({"ok": true})
+            );
+            (StatusCode::OK, Json(value)).into_response()
+        }
         Err(ActionError::NotFound) => {
             (StatusCode::NOT_FOUND, Json(json!({ "error": "not-found" }))).into_response()
         }
         Err(ActionError::Failed(reason)) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Http,
+                "http.config.rejected",
+                tmc_model::diagnostics::json!({"reason_bytes": reason.len()})
+            );
             (StatusCode::BAD_REQUEST, Json(json!({ "error": reason }))).into_response()
         }
     }

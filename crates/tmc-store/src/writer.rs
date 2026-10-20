@@ -33,36 +33,72 @@ impl EventWriter {
         let worker = thread::Builder::new()
             .name("tmc-event-writer".into())
             .spawn(move || run_writer(store, receiver))
-            .map_err(|error| tracing::error!(%error, "failed to spawn event writer"))
+            .map_err(|error| tracing::error!(failure_class = ?error.kind(), "failed to spawn event writer"))
             .ok();
         Self { sender, worker }
     }
 
     pub fn send(&self, ev: StoredEvent) {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::Sql,
+            "store.writer.enqueue",
+            serde_json::json!({"file":tmc_model::diagnostics::source_file(std::path::Path::new(&ev.file_name)),"line":ev.line,"event":ev.name,"bytes":ev.json.len()})
+        );
         if self.sender.send(Command::Event(ev)).is_err() {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "store.writer.enqueue_failed",
+                serde_json::json!({"failure_class":"broken_pipe"})
+            );
             tracing::error!("event writer is no longer running");
         }
     }
 
     pub fn flush_blocking(&self) -> Result<(), StoreError> {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::Sql,
+            "store.writer.flush_requested",
+            serde_json::json!({"requested":true})
+        );
         let (sender, receiver) = mpsc::channel();
         self.sender.send(Command::Flush(sender)).map_err(|_| {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "store.writer.flush_send_failed",
+                serde_json::json!({"failure_class":"broken_pipe"})
+            );
             std::io::Error::new(
                 std::io::ErrorKind::BrokenPipe,
                 "event writer is no longer running",
             )
         })?;
-        receiver.recv().map_err(|_| {
+        let result = receiver.recv().map_err(|_| {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "store.writer.flush_ack_failed",
+                serde_json::json!({"failure_class":"broken_pipe"})
+            );
             std::io::Error::new(
                 std::io::ErrorKind::BrokenPipe,
                 "event writer closed before acknowledging flush",
             )
-        })?
+        })?;
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::Sql,
+            "store.writer.flush_confirmed",
+            serde_json::json!({"succeeded":result.is_ok()})
+        );
+        result
     }
 }
 
 impl Drop for EventWriter {
     fn drop(&mut self) {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::Sql,
+            "store.writer.shutdown_requested",
+            serde_json::json!({"requested":true})
+        );
         let _ = self.sender.send(Command::Shutdown);
         if let Some(worker) = self.worker.take()
             && worker.join().is_err()
@@ -72,7 +108,8 @@ impl Drop for EventWriter {
     }
 }
 
-pub(crate) fn insert_event(conn: &Connection, ev: &StoredEvent) -> Result<usize, StoreError> {
+/// Inserta sin diagnostico por evento (importacion historica: se resume por lote).
+pub(crate) fn insert_event_quiet(conn: &Connection, ev: &StoredEvent) -> Result<usize, StoreError> {
     let line = i64::try_from(ev.line)
         .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))?;
     conn.execute(
@@ -98,10 +135,48 @@ pub(crate) fn insert_event(conn: &Connection, ev: &StoredEvent) -> Result<usize,
     )?)
 }
 
+/// Insercion en vivo: un registro compacto (insertado/deduplicado). El payload completo
+/// lo registra solo el lector (`journal.reader.payload`).
+pub(crate) fn insert_event(conn: &Connection, ev: &StoredEvent) -> Result<usize, StoreError> {
+    let result = insert_event_quiet(conn, ev);
+    #[cfg(debug_assertions)]
+    match &result {
+        Ok(inserted) if *inserted > 0 => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "store.event.inserted",
+                serde_json::json!({"line":ev.line,"event":ev.name,"file":tmc_model::diagnostics::source_file(std::path::Path::new(&ev.file_name)),"bytes":ev.json.len()})
+            );
+        }
+        Ok(_) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "store.event.deduplicated",
+                serde_json::json!({"line":ev.line,"event":ev.name,"file":tmc_model::diagnostics::source_file(std::path::Path::new(&ev.file_name))})
+            );
+        }
+        Err(error) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "store.event.failed",
+                serde_json::json!({"line":ev.line,"failure_class":error.diagnostic_class()})
+            );
+        }
+    }
+    result
+}
+
 fn commit_batch(store: &Store, pending: &mut Vec<StoredEvent>) -> Result<(), StoreError> {
     if pending.is_empty() {
         return Ok(());
     }
+    #[cfg(debug_assertions)]
+    let diagnostic_started = Instant::now();
+    tmc_model::diagnostic!(
+        tmc_model::diagnostics::DiagnosticContext::Sql,
+        "store.writer.batch_started",
+        serde_json::json!({"events":pending.len()})
+    );
     let result = (|| -> Result<(), StoreError> {
         let mut conn = store.lock()?;
         let transaction = conn.transaction()?;
@@ -112,13 +187,35 @@ fn commit_batch(store: &Store, pending: &mut Vec<StoredEvent>) -> Result<(), Sto
         Ok(())
     })();
     match &result {
-        Ok(()) => pending.clear(),
-        Err(error) => tracing::error!(%error, "failed to commit event batch"),
+        Ok(()) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "store.writer.committed",
+                serde_json::json!({"events":pending.len(),"elapsed_us":diagnostic_started.elapsed().as_micros()})
+            );
+            pending.clear();
+        }
+        Err(error) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "store.writer.rollback",
+                serde_json::json!({"events":pending.len(),"failure_class":error.diagnostic_class(),"elapsed_us":diagnostic_started.elapsed().as_micros()})
+            );
+            tracing::error!(
+                failure_class = error.diagnostic_class(),
+                "failed to commit event batch"
+            );
+        }
     }
     result
 }
 
 fn run_writer(store: Store, receiver: Receiver<Command>) {
+    tmc_model::diagnostic!(
+        tmc_model::diagnostics::DiagnosticContext::Sql,
+        "store.writer.started",
+        serde_json::json!({"batch_limit":500,"interval_ms":500})
+    );
     let interval = Duration::from_millis(500);
     let mut pending = Vec::with_capacity(500);
     let mut deadline = Instant::now() + interval;
@@ -147,11 +244,16 @@ fn run_writer(store: Store, receiver: Receiver<Command>) {
             Ok(Command::Shutdown) | Err(RecvTimeoutError::Disconnected) => {
                 if let Err(error) = commit_batch(&store, &mut pending) {
                     tracing::error!(
-                        %error,
+                        failure_class = error.diagnostic_class(),
                         pending_events = pending.len(),
                         "event writer stopped with uncommitted events; original journals and unchanged import offsets allow recovery"
                     );
                 }
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.writer.stopped",
+                    serde_json::json!({"pending_events":pending.len()})
+                );
                 break;
             }
             Err(RecvTimeoutError::Timeout) => {

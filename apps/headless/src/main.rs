@@ -41,6 +41,7 @@ async fn main() -> anyhow::Result<()> {
 
     let log_dir = config.data_dir.clone().unwrap_or_else(data_dir);
     let _guard = init_logging(&log_dir);
+    _guard.application_started();
 
     #[cfg(debug_assertions)]
     let running = {

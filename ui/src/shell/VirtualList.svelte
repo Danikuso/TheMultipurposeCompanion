@@ -1,5 +1,6 @@
 <script lang="ts" generics="T">
   import type { Snippet } from 'svelte';
+  import { diag, diagOn } from '../lib/diag.svelte';
   let { items, rowHeight, height, row, label }: {
     items: T[]; rowHeight: number; height: number; row: Snippet<[T, number]>; label?: string;
   } = $props();
@@ -9,6 +10,10 @@
   const anchor = $derived(Math.min(Math.floor(scrollTop / rowHeight), Math.max(0, items.length - count)));
   const start = $derived(Math.max(0, anchor - 5));
   const end = $derived(Math.min(items.length, anchor + count + 5));
+  $effect(() => {
+    if (!diagOn()) return;
+    diag('ui.list.render', { items: items.length, row_height: rowHeight, height, start, end });
+  });
   $effect(() => {
     const maximum = Math.max(0, items.length * rowHeight - height);
     if (scrollTop > maximum) {
