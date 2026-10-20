@@ -43,6 +43,7 @@ pub use book::{
 pub use coords::{
     CoordResolver, MAX_COORDS_INFLIGHT, TAG_COORDS, coord_key, coords_from_result, coords_task,
 };
+pub(crate) use massacre::needed as massacre_needed;
 pub use massacre::{IssuerBar, MASSACRE_COUNTS_KILL_BONDS, MassacrePile, MassacreStack};
 pub use passengers::{CabinOccupancy, Cabins, PassengerGroup, groups, wanted_aboard};
 pub use rewards::{CgView, CommunityGoals, FactionDelta, SessionRewards};

@@ -44,7 +44,7 @@ fn norm(s: &str) -> String {
     s.trim().to_lowercase()
 }
 
-fn needed(m: &Mission) -> u32 {
+pub(crate) fn needed(m: &Mission) -> u32 {
     m.progress.kills_needed.unwrap_or(0)
 }
 

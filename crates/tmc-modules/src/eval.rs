@@ -12,7 +12,7 @@ use crate::exobiology::species::SpeciesTable;
 use crate::exploration::unsold::UnsoldLedger;
 use crate::exploration::value::{body_kind, estimate_probes};
 use crate::mining::session::MiningSession;
-use crate::missions::{MassacreStack, MissionBook, MissionKind};
+use crate::missions::{MassacreStack, MissionBook, MissionKind, massacre_needed};
 use crate::navigation::jump::{RangeSource, ShipMass, build_jump_model, jump_range_with};
 use crate::trade::CostBasis;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
@@ -452,7 +452,7 @@ impl<'a> Run<'a> {
                 {
                     Some(m) => {
                         let local = self.massacre_stack.kills_for(r.mission_id);
-                        let needed = m.progress.kills_needed.unwrap_or(0);
+                        let needed = massacre_needed(m);
                         match local.cmp(&needed) {
                             std::cmp::Ordering::Equal => self.massacre.matched += 1,
                             std::cmp::Ordering::Less => self.massacre.short += 1,
