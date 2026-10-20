@@ -72,8 +72,18 @@ pub async fn get_history_events(
 pub async fn post_action(
     State(state): State<AppState>,
     Path(name): Path<String>,
+    peer: Option<axum::Extension<axum::extract::ConnectInfo<std::net::SocketAddr>>>,
+    headers: axum::http::HeaderMap,
     body: Bytes,
 ) -> Response {
+    let origin = headers
+        .get(axum::http::header::ORIGIN)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    let client = format!(
+        "rest:{}:{origin}",
+        peer.map_or_else(|| "?".to_owned(), |p| p.0.0.ip().to_string())
+    );
     let args: Value = if body.iter().all(u8::is_ascii_whitespace) {
         Value::Null
     } else {
@@ -94,7 +104,7 @@ pub async fn post_action(
         }
     };
     let snapshot = state.core.snapshot().await;
-    match crate::diag::run_action(state.host.as_ref(), &name, &args, &snapshot, false) {
+    match crate::diag::run_action(state.host.as_ref(), &name, &args, &snapshot, false, &client) {
         Ok(value) => (StatusCode::OK, Json(value)).into_response(),
         Err(ActionError::NotFound) => {
             (StatusCode::NOT_FOUND, Json(json!({ "error": "not-found" }))).into_response()

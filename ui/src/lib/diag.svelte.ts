@@ -37,6 +37,9 @@ export const MAX_BATCH_RECORDS = 50;
 export const MAX_BATCH_BYTES = 6 * 1024;
 export const MAX_PAYLOAD_BYTES = 1024;
 export const MIN_INTERVAL_MS = 1000;
+export const MAX_BACKOFF_MS = 8000;
+/** Estado reflejado, no eventos: solo interesa el último valor por vaciado y sin repetidos. */
+const COALESCED: ReadonlySet<DiagCode> = new Set<DiagCode>(['ui.list.render', 'ui.topbar.state', 'ui.app.layout']);
 const ENDPOINT = '/api/actions/app.diagnostics';
 const MAX_DEPTH = 4;
 const MAX_ARRAY = 32;
@@ -60,6 +63,10 @@ let inflight = false;
 let lastSent = -Infinity;
 let failures = 0;
 let listening = false;
+// Se incrementa al activar o desactivar: una respuesta de un ciclo anterior se ignora.
+let generation = 0;
+let backoff = MIN_INTERVAL_MS;
+const lastJson = new Map<DiagCode, string>();
 
 export function diagEnabled(): boolean {
   return enabled;
@@ -97,11 +104,23 @@ function cleanPayload(payload: Record<string, unknown>): Record<string, unknown>
 export function diag(code: DiagCode, payload: Record<string, unknown> = {}): void {
   if (!enabled) return;
   try {
+    const clean = cleanPayload(payload);
+    if (COALESCED.has(code)) {
+      const json = JSON.stringify(clean);
+      if (lastJson.get(code) === json) return;
+      lastJson.set(code, json);
+      const at = queue.findIndex((p) => p.code === code);
+      if (at !== -1) {
+        queue[at] = { code, ts: Date.now(), payload: clean };
+        schedule();
+        return;
+      }
+    }
     if (queue.length >= MAX_QUEUE) {
       dropped += 1;
       return;
     }
-    queue.push({ code, ts: Date.now(), payload: cleanPayload(payload) });
+    queue.push({ code, ts: Date.now(), payload: clean });
     schedule();
   } catch {
     // El diagnóstico nunca afecta a la aplicación.
@@ -110,7 +129,7 @@ export function diag(code: DiagCode, payload: Record<string, unknown> = {}): voi
 
 function schedule(): void {
   if (!enabled || timer !== null || inflight || queue.length === 0) return;
-  const wait = Math.max(0, lastSent + MIN_INTERVAL_MS - Date.now());
+  const wait = Math.max(0, lastSent + backoff - Date.now());
   timer = setTimeout(() => {
     timer = null;
     void flush();
@@ -138,23 +157,43 @@ async function flush(): Promise<void> {
   if (!enabled || inflight || queue.length === 0) return;
   inflight = true;
   lastSent = Date.now();
+  const gen = generation;
   const batch = takeBatch();
+  let limited = false;
   try {
     const res = await fetch(ENDPOINT, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(batch),
     });
+    if (gen !== generation) return;
     if (res.status === 404) {
       disableDiagnostics();
       return;
     }
-    failures = res.ok ? 0 : failures + 1;
+    if (res.status === 400) {
+      const body = (await res.json().catch(() => ({}))) as { error?: unknown };
+      limited = body.error === 'rate-limited';
+    }
+    if (gen !== generation) return;
+    if (limited) {
+      // Límite de tasa del servidor: no es un fallo. Reencola (acotado) y espera más.
+      backoff = Math.min(backoff * 2, MAX_BACKOFF_MS);
+      const room = Math.max(0, MAX_QUEUE - queue.length);
+      const keep = batch.filter((p) => p.code !== 'ui.queue.dropped');
+      dropped += keep.length - Math.min(keep.length, room);
+      queue = keep.slice(0, room).concat(queue);
+    } else {
+      backoff = MIN_INTERVAL_MS;
+      failures = res.ok ? 0 : failures + 1;
+    }
   } catch {
+    if (gen !== generation) return;
     failures += 1;
   } finally {
-    inflight = false;
+    if (gen === generation) inflight = false;
   }
+  if (gen !== generation) return;
   if (failures >= 5) {
     disableDiagnostics();
     return;
@@ -173,6 +212,7 @@ function onRejection(): void {
 /** Activa o desactiva el diagnóstico según la capacidad anunciada por `hello`. */
 export function setDiagnosticsCapability(capable: boolean): void {
   if (capable === enabled) return;
+  generation += 1;
   if (!capable) {
     disableDiagnostics();
     return;
@@ -188,6 +228,7 @@ export function setDiagnosticsCapability(capable: boolean): void {
 }
 
 export function disableDiagnostics(): void {
+  generation += 1;
   enabled = false;
   gate.on = false;
   queue = [];
@@ -195,6 +236,8 @@ export function disableDiagnostics(): void {
   failures = 0;
   inflight = false;
   lastSent = -Infinity;
+  backoff = MIN_INTERVAL_MS;
+  lastJson.clear();
   if (timer !== null) {
     clearTimeout(timer);
     timer = null;

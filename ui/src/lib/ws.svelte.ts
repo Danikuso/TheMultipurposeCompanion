@@ -27,6 +27,9 @@ let targetUrl = '';
 let visibilityHandler: (() => void) | null = null;
 // Última secuencia fiable; `null` tras un snapshot sin `seq` (no hay referencia para huecos).
 let lastSeq: number | null = null;
+// Con una suscripción filtrada (pestaña oculta) el servidor omite las secuencias sin temas
+// suscritos: los saltos son legítimos y solo se comprueban huecos con la suscripción completa.
+let filteredSub = false;
 const alertListeners = new Set<(a: Alert) => void>();
 
 function defaultWsUrl(): string {
@@ -73,6 +76,7 @@ function openSocket(): void {
     attemptIndex = 0;
     live.connected = true;
     lastSeq = null;
+    filteredSub = typeof document !== 'undefined' && document.hidden;
     diag('ui.ws.connection', { state: 'open', hidden: typeof document !== 'undefined' && document.hidden });
     if (typeof document !== 'undefined' && document.hidden) {
       ws.send(JSON.stringify({ type: 'subscribe', topics: ['core.game'] }));
@@ -135,7 +139,7 @@ function handleMessage(msg: Record<string, unknown>): void {
       }
       case 'update': {
         if (typeof msg.seq === 'number') {
-          if (lastSeq !== null && msg.seq !== lastSeq + 1) {
+          if (!filteredSub && lastSeq !== null && msg.seq !== lastSeq + 1) {
             diag('ui.ws.gap', { expected: lastSeq + 1, got: msg.seq });
           }
           lastSeq = msg.seq;
@@ -181,6 +185,8 @@ export function connect(url?: string): void {
     visibilityHandler = () => {
       if (!currentSocket || currentSocket.readyState !== 1) return;
       const topics = document.hidden ? ['core.game'] : ['*'];
+      filteredSub = document.hidden;
+      lastSeq = null;
       diag('ui.ws.subscribe', { hidden: document.hidden, patterns: topics.length });
       currentSocket.send(JSON.stringify({ type: 'subscribe', topics }));
     };

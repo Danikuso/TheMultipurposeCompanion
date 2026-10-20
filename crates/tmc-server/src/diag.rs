@@ -79,11 +79,12 @@ pub(crate) fn run_action(
     args: &Value,
     snapshot: &BTreeMap<String, Value>,
     over_ws: bool,
+    client: &str,
 ) -> Result<Value, ActionError> {
     #[cfg(debug_assertions)]
     if name == crate::diag_ui::ACTION {
         // Lote de la UI: no se registra como acción (evita ruido y recursión).
-        return crate::diag_ui::handle(args);
+        return crate::diag_ui::handle(client, args);
     }
     #[cfg(debug_assertions)]
     let started = std::time::Instant::now();

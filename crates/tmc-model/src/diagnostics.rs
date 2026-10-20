@@ -541,9 +541,9 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
             text,
             "null" | "boolean" | "number" | "string" | "array" | "object"
         ),
-        "tab" | "slot" | "panel" | "view" | "relevance" | "state" | "kind" | "layout"
-        | "component" | "outcome" | "phase" | "level" | "context" => {
-            matches!(context, DiagnosticContext::Ui) && ui_identifier(text)
+        "tab" | "slot" | "panel" | "view" | "relevance" | "state" | "kind" | "layout" | "level"
+        | "context" | "manualcontext" => {
+            matches!(context, DiagnosticContext::Ui) && ui_value(key, text)
         }
         "language" => matches!(text, "es" | "en" | "fr" | "de" | "pt"),
         "galaxy" => matches!(text, "Live" | "Legacy" | "Unknown"),
@@ -595,12 +595,100 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
         _ => false,
     }
 }
-/// Identificador de interfaz (`panel-route-strip`, `layout:combat`): corto, minúsculas y sin separadores de ruta.
-fn ui_identifier(text: &str) -> bool {
-    (1..=48).contains(&text.len())
-        && text.bytes().all(|b| {
-            b.is_ascii_lowercase() || b.is_ascii_digit() || matches!(b, b'_' | b'-' | b':' | b'.')
-        })
+/// Disposiciones de la UI (`ui/src/shell/layouts.ts`); `none` cuando no hay ninguna activa.
+const UI_LAYOUTS: &[&str] = &["none", "exploration", "combat", "mining"];
+/// Ranuras de las disposiciones (`ui/src/shell/layouts.ts`).
+const UI_SLOTS: &[&str] = &[
+    "route",
+    "context-bodies",
+    "context-exobiology",
+    "planner",
+    "jump",
+    "target",
+    "hunting",
+    "ship",
+    "ax",
+    "cz",
+    "prospector",
+    "mining-session",
+    "sell",
+];
+/// Claves de título de los paneles (`titleKey` en `ui/src`); un test de la UI las mantiene sincronizadas.
+const UI_PANELS: &[&str] = &[
+    "combat-target",
+    "nav-settings",
+    "panel-alerts",
+    "panel-cmdr",
+    "panel-combat-ax",
+    "panel-combat-hunting",
+    "panel-combat-ship",
+    "panel-combat-zone",
+    "panel-exobiology",
+    "panel-jump",
+    "panel-location",
+    "panel-mining-prospector",
+    "panel-mining-sell",
+    "panel-mining-session",
+    "panel-planner",
+    "panel-route",
+    "panel-route-strip",
+    "panel-session",
+    "panel-ship",
+    "panel-status",
+    "panel-system-bodies",
+];
+const UI_RELEVANCE: &[&str] = &["hidden", "normal", "active", "urgent"];
+const UI_STATES: &[&str] = &[
+    "pending",
+    "ok",
+    "no-data",
+    "disabled",
+    "failed",
+    "reconnect",
+    "open",
+    "closed",
+];
+const UI_KINDS: &[&str] = &[
+    "error",
+    "rejection",
+    "socket",
+    "parse",
+    "handler",
+    "pairing-get",
+    "config-get",
+    "config-put",
+    "plan",
+    "nav-route",
+    "current",
+    "neutron",
+    "white_dwarf",
+    "none",
+];
+const UI_LEVELS: &[&str] = &["info", "warning", "critical"];
+const UI_CONTEXTS: &[&str] = &["exploration", "exobiology", "none"];
+
+/// Valores de interfaz admitidos: conjuntos cerrados por clave, nunca texto libre.
+fn ui_value(key: &str, text: &str) -> bool {
+    let set = |list: &[&str]| list.contains(&text);
+    match key {
+        "layout" => set(UI_LAYOUTS),
+        "tab" => {
+            set(MODULES)
+                || text == "settings"
+                || text
+                    .strip_prefix("layout:")
+                    .is_some_and(|id| id != "none" && UI_LAYOUTS.contains(&id))
+        }
+        "view" => set(MODULES) || text == "settings",
+        "slot" => set(UI_SLOTS),
+        "panel" => set(UI_PANELS),
+        "relevance" => set(UI_RELEVANCE),
+        "state" => set(UI_STATES),
+        "kind" => set(UI_KINDS),
+        "level" => set(UI_LEVELS),
+        "context" | "manualcontext" => set(UI_CONTEXTS),
+        _ => false,
+    }
 }
 
 fn unsafe_text(value: &str) -> bool {
@@ -1123,5 +1211,42 @@ mod tests {
         let safe = serialize_diagnostic(&Fails, DiagnosticContext::Sql);
         assert_eq!(safe, json!({"serialization_failed":true}));
         assert!(!safe.to_string().contains("CANARY"));
+    }
+
+    #[test]
+    fn ui_values_are_closed_sets_per_key() {
+        let keys = [
+            "tab",
+            "slot",
+            "panel",
+            "view",
+            "relevance",
+            "state",
+            "kind",
+            "layout",
+            "level",
+            "context",
+            "manual_context",
+        ];
+        for key in keys {
+            for canary in ["danikuso", "colonia", "layout:danikuso", "ok-id", "x"] {
+                let out = redact_diagnostic(
+                    &json!({ key: canary, "n": [canary] }),
+                    DiagnosticContext::Ui,
+                );
+                assert_eq!(out[key], REDACTED, "{key}={canary}");
+                assert_eq!(out["n"][0], REDACTED);
+            }
+        }
+        let known = json!({
+            "tab": "layout:combat", "slot": ["route", "cz"], "panel": "panel-route-strip",
+            "view": "navigation", "relevance": ["active", "urgent"], "state": "no-data",
+            "kind": "white_dwarf", "layout": "none", "level": "warning",
+            "context": "exobiology", "manual_context": "none"
+        });
+        assert_eq!(redact_diagnostic(&known, DiagnosticContext::Ui), known);
+        // Fuera del contexto UI el mismo valor no se relaja.
+        let other = redact_diagnostic(&json!({"tab": "layout:combat"}), DiagnosticContext::Http);
+        assert_eq!(other["tab"], REDACTED);
     }
 }
