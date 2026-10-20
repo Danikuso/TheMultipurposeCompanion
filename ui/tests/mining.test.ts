@@ -88,7 +88,7 @@ function sessionTopic(extra: Record<string, unknown> = {}) {
   return {
     as_of: '2030-01-01T00:47:00Z', started_at: '2030-01-01T00:00:00Z', refined: { platinum: 29, palladium: 7 },
     limpets_launched: { Prospector: 9, Collection: 33 }, limpets_left: 18, cargo: 38, capacity: 256,
-    asteroids_prospected: 4, cracked: 3, tons_per_hour: 24, est_credits: 9100000, credits_per_hour: 11600000,
+    asteroids_prospected: 4, cracked: 3, est_credits: 9100000,
     refinery_bins: [{ key: 'platinum', tons: 3 }, { key: 'palladium', tons: 1 }], ...extra,
   };
 }
@@ -143,12 +143,13 @@ test('loading status shows loading text', () => {
   expect(q('sell-empty')!.textContent).toContain('consultando');
 });
 
-test('session shows tons per hour', () => {
-  mountWith(MiningSessionPanel, { 'mining.session': sessionTopic() });
-  expect(q('tons-hour')!.textContent).toContain('24 t/h');
+test('session shows rates computed from the journal clock', () => {
+  // 36 t y 9,1 M cr en 1 h de diario (core.clock manda sobre el as_of del topic).
+  mountWith(MiningSessionPanel, { 'core.clock': { as_of: '2030-01-01T01:00:00Z' }, 'mining.session': sessionTopic() });
+  expect(q('tons-hour')!.textContent).toContain('36 t/h');
   expect(q('credits-total')!.textContent).toContain('≈');
   expect(q('credits-total')!.textContent).toContain('9.100.000');
-  expect(q('credits-hour')!.textContent).toContain('11.600.000');
+  expect(q('credits-hour')!.textContent).toContain('9.100.000');
   expect(target.querySelectorAll('[data-testid="refined-row"]').length).toBe(2);
   expect(q('limpets-left')!.textContent).toContain('18');
   expect(q('limpets-launched')!.textContent).toContain('42');
@@ -160,8 +161,14 @@ test('session shows tons per hour', () => {
 });
 
 test('session without rates shows dashes', () => {
-  mountWith(MiningSessionPanel, { 'mining.session': sessionTopic({ tons_per_hour: null, est_credits: null, credits_per_hour: null }) });
+  mountWith(MiningSessionPanel, { 'mining.session': sessionTopic({ est_credits: null }) });
+  expect(q('credits-hour')!.textContent).toContain('—');
+});
+
+test('rates are dashes under 60 s of session', () => {
+  mountWith(MiningSessionPanel, { 'mining.session': sessionTopic({ as_of: '2030-01-01T00:00:30Z' }) });
   expect(q('tons-hour')!.textContent).toContain('—');
+  expect(q('credits-hour')!.textContent).toContain('—');
 });
 
 test('reset posts json action', async () => {

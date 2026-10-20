@@ -25,12 +25,18 @@
     return () => clearInterval(id);
   });
 
-  const elapsed = $derived.by(() => {
+  const elapsedMs = $derived.by(() => {
     const ts = s?.started_at ? Date.parse(s.started_at) : NaN;
-    return Number.isNaN(ts) || now == null ? null : duration(Math.max(0, now - ts));
+    return Number.isNaN(ts) || now == null ? null : Math.max(0, now - ts);
   });
+  const elapsed = $derived(elapsedMs == null ? null : duration(elapsedMs));
   const refined = $derived(Object.entries(s?.refined ?? {}).sort((a, b) => b[1] - a[1]));
   const totalTons = $derived(refined.reduce((n, [, tons]) => n + tons, 0));
+  // Las tasas se calculan aquí con el reloj del diario (el topic no depende del tiempo);
+  // con menos de 60 s de sesión no se muestran.
+  const hours = $derived(elapsedMs != null && elapsedMs >= 60_000 ? elapsedMs / 3_600_000 : null);
+  const tonsPerHour = $derived(hours == null ? null : totalTons / hours);
+  const creditsPerHour = $derived(hours == null || s?.est_credits == null ? null : s.est_credits / hours);
   const maxBin = $derived(Math.max(1, ...(s?.refinery_bins ?? []).map((b) => b.tons)));
   const launchedTotal = $derived(Object.values(s?.limpets_launched ?? {}).reduce((n, v) => n + v, 0));
   const launchedDetail = $derived.by(() => {
@@ -69,11 +75,11 @@
     {#if elapsed}<p class="muted" data-testid="session-time">{t('mining-session-time', { time: elapsed })}</p>{/if}
     <div class="big">
       <strong data-testid="tons-total">{t('mining-tons', { tons: decimal(totalTons, 0) })}</strong>
-      <span class="muted" data-testid="tons-hour">· {s.tons_per_hour == null ? '—' : t('mining-tons-per-hour', { rate: decimal(s.tons_per_hour, 1) })}</span>
+      <span class="muted" data-testid="tons-hour">· {tonsPerHour == null ? '—' : t('mining-tons-per-hour', { rate: decimal(tonsPerHour, 1) })}</span>
     </div>
     <div>
       <span data-testid="credits-total">{s.est_credits == null ? '—' : t('mining-credits-total', { credits: credits(s.est_credits) })}</span>
-      <span class="muted" data-testid="credits-hour">· {s.credits_per_hour == null ? '—' : t('mining-credits-per-hour', { credits: credits(s.credits_per_hour) })}</span>
+      <span class="muted" data-testid="credits-hour">· {creditsPerHour == null ? '—' : t('mining-credits-per-hour', { credits: credits(Math.round(creditsPerHour)) })}</span>
     </div>
 
     <table>
