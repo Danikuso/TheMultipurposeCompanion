@@ -10,9 +10,9 @@
 
 ## Puntero actual
 
-- **Tarea:** F3 en ejecución con subagentes (en curso: Task 18). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
+- **Tarea:** F3 en ejecución con subagentes (en curso: Task 19). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
 - **Último paso completado:** Task 17 ✅ (08aacf3), revisión aprobada.
-- **Siguiente acción:** Task 18 (sesión de comercio y buscar mercancía); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
+- **Siguiente acción:** Task 19 (módulo trade: topics, relevancia, red, almacén y registro); ledger en `.superpowers/sdd/2026-10-19-tmc-f3-comercio-misiones/progress.md`.
 
 ## Tareas de diagnóstico debug
 
@@ -66,8 +66,8 @@
 | 15 | `trade` — coste pagado y «Mi carga» | ✅ hecha | 28e205b | Media ponderada, coste parcial, exclusión misión/robada, SRV protegido y reconstrucción paginada; spec/calidad aprobadas; 893 Rust PASS |
 | 16 | `trade` — «Mercado actual» y mejor venta en 48 h | ✅ hecha | 3a33097 | Top5, mezcla fresca, consultas acotadas compatibles y marcador de catálogo completo; spec/calidad aprobadas, 924 Rust PASS |
 | 17 | `trade` — ruta comercial con avance automático | ✅ hecha | 08aacf3 | Ruta comercial: avance al atracar en la parada, completada, portapapeles; decide! numéricos |
-| 18 | `trade` — sesión de comercio y buscar mercancía | 🔄 en curso | — |  |
-| 19 | `trade` — módulo, topics, relevancia, red, almacén y registro | ⬜ pendiente | — |  |
+| 18 | `trade` — sesión de comercio y buscar mercancía | ✅ hecha | 79ebd2b, a3de1d5 | Sesión de comercio (coste exacto/AvgPricePaid, sin coste contado, rango) y búsqueda con reloj inyectado |
+| 19 | `trade` — módulo, topics, relevancia, red, almacén y registro | 🔄 en curso | — |  |
 | 20 | `mining` — «Dónde vender» con la tabla de precios | ⬜ pendiente | — |  |
 | 21 | UI — «Mercado actual» y «Mi carga» | ⬜ pendiente | — |  |
 | 22 | UI — «Ruta comercial», «Sesión» y «Buscar mercancía» | ⬜ pendiente | — |  |
