@@ -23,7 +23,7 @@ use crate::inflight::Inflight;
 use chrono::{DateTime, Duration, Utc};
 use prices::{PriceBook, price_rebuild_task};
 use prospector::ProspectorTracker;
-use sell::{SellPlan, filter_compatible};
+use sell::{SellPlan, filter_compatible, local_sells_task, merge_sources};
 use serde::Serialize;
 use serde_json::{Value, json};
 use session::MiningSession;
@@ -31,9 +31,10 @@ use std::collections::{BTreeMap, HashMap};
 use tmc_core::{Module, ModuleCtx, Relevance, TopicSet};
 use tmc_model::companion::{CompanionFile, CompanionKind};
 use tmc_model::events::{EventKind, JournalEvent, commodity_key};
+use tmc_model::market::{MarketIdentity, PriceOrigin, PricedMarket};
 use tmc_model::net::{NetOutcome, NetQuery, NetResponse, PadSize, RemoteMarket};
 use tmc_model::settings::ModuleSettings;
-use tmc_model::source::SourceEvent;
+use tmc_model::source::{EddnNotice, SourceEvent};
 use tmc_model::state::{Galaxy, GameState};
 
 const TOPIC_PROSPECTOR: &str = "mining.prospector";
@@ -42,6 +43,15 @@ const TOPIC_SELL: &str = "mining.sell";
 const TOPICS: [&str; 3] = [TOPIC_PROSPECTOR, TOPIC_SESSION, TOPIC_SELL];
 
 const TAG_PRICES: &str = "mining.prices";
+const TAG_LOCAL: &str = "mining.local_sells";
+/// Antigüedad máxima de una cotización (tabla o Ardent) para el plan de venta.
+const QUOTE_MAX_AGE_H: i64 = 48;
+/// Ofertas de la tabla leídas por mineral.
+const LOCAL_LIMIT: usize = 100;
+/// Candidatos de Ardent reconciliados por mineral contra la tabla.
+const MAX_CANDIDATES: usize = 50;
+/// Mínimo entre relecturas provocadas por EDDN.
+const EDDN_REQUERY_MIN_S: i64 = 10;
 const PRICES_KEY: &str = "prices";
 const ACTION_RESET: &str = "mining.reset_session";
 /// Minerales de la carga consultados (y mostrados) como máximo.
@@ -96,6 +106,11 @@ pub struct Mining {
     pad: Option<PadSize>,
     last_session_render: Option<DateTime<Utc>>,
     results: BTreeMap<String, Vec<RemoteMarket>>,
+    /// Ofertas de la tabla de precios compartida (por mineral).
+    local_rows: BTreeMap<String, Vec<PricedMarket>>,
+    /// Parámetros de la última lectura pedida a la tabla.
+    local_sent: Option<Value>,
+    last_eddn_query: Option<DateTime<Utc>>,
     answered: HashMap<String, DateTime<Utc>>,
     failed: HashMap<String, DateTime<Utc>>,
     fetched_at: Option<DateTime<Utc>>,
@@ -122,6 +137,9 @@ impl Mining {
             pad: None,
             last_session_render: None,
             results: BTreeMap::new(),
+            local_rows: BTreeMap::new(),
+            local_sent: None,
+            last_eddn_query: None,
             answered: HashMap::new(),
             failed: HashMap::new(),
             fetched_at: None,
@@ -180,6 +198,8 @@ impl Mining {
             self.answered.clear();
             self.failed.clear();
             self.fetched_at = None;
+            self.local_rows.clear();
+            self.local_sent = None;
         }
         // Una nave desconocida (p. ej. entre eventos) no cuenta como cambio.
         let pad = Self::ship_pad(state);
@@ -198,6 +218,8 @@ impl Mining {
         self.answered.clear();
         self.failed.clear();
         self.fetched_at = None;
+        self.local_rows.clear();
+        self.local_sent = None;
         self.inflight.finish_prefix("sell:");
     }
 
@@ -456,21 +478,25 @@ impl Mining {
             NetOutcome::Markets(ms) => {
                 let ms = filter_compatible(ms, self.cur_pad(state));
                 decide!("mining.sell.response.applied", {"candidates": ms.len(), "current": current});
-                self.prices.on_remote(&key, &ms, r.fetched_at);
                 if current {
                     self.results.insert(key.clone(), ms);
-                    self.answered.insert(key, now);
+                    self.answered.insert(key.clone(), now);
                     self.fetched_at = self.fetched_at.max(Some(r.fetched_at));
+                    self.refresh_book(&key, r.fetched_at);
+                } else {
+                    self.prices.on_remote(&key, &ms, r.fetched_at);
                 }
                 true
             }
             NetOutcome::NoData => {
                 decide!("mining.sell.response.no_data", {"current": current});
                 // Sin mercados: se olvida un precio remoto antiguo.
-                self.prices.on_remote(&key, &[], r.fetched_at);
                 if current {
                     self.results.insert(key.clone(), Vec::new());
-                    self.answered.insert(key, now);
+                    self.answered.insert(key.clone(), now);
+                    self.refresh_book(&key, r.fetched_at);
+                } else {
+                    self.prices.on_remote(&key, &[], r.fetched_at);
                 }
                 true
             }
@@ -484,6 +510,128 @@ impl Mining {
             }
             _ => false,
         }
+    }
+
+    /// Cotizaciones de Ardent del sistema actual con menos de 48 h (sin fecha: se
+    /// conservan, la fuente no la da).
+    fn fresh_ardent(&self, key: &str) -> Vec<RemoteMarket> {
+        let min = self.clock() - Duration::hours(QUOTE_MAX_AGE_H);
+        self.results
+            .get(key)
+            .map(|v| {
+                v.iter()
+                    .filter(|m| m.updated_at.is_none_or(|at| at >= min))
+                    .cloned()
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// Mercados de una materia uniendo la tabla compartida y Ardent.
+    fn merged(&self, key: &str, with_ardent: bool) -> Vec<RemoteMarket> {
+        let local = self.local_rows.get(key).map(Vec::as_slice).unwrap_or(&[]);
+        let ardent = if with_ardent {
+            self.fresh_ardent(key)
+        } else {
+            Vec::new()
+        };
+        merge_sources(local, &ardent)
+    }
+
+    /// Alimenta el libro de precios con la unión de fuentes. Lo propio y de EDDN
+    /// entra como remoto con su fecha; Ardent con la de su consulta.
+    fn refresh_book(&mut self, key: &str, fetched_at: DateTime<Utc>) {
+        let ms = filter_compatible(&self.merged(key, true), self.pad);
+        let at = ms
+            .iter()
+            .max_by_key(|m| m.sell_price)
+            .filter(|m| matches!(m.origin, Some(PriceOrigin::Local | PriceOrigin::Eddn)))
+            .and_then(|m| m.updated_at)
+            .unwrap_or(fetched_at);
+        self.prices.on_remote(key, &ms, at);
+    }
+
+    /// Pide a la tabla las mejores ofertas de venta (y los candidatos de Ardent).
+    fn sync_local(&mut self, state: &GameState, ctx: &mut ModuleCtx, force: bool) {
+        if ctx.replaying || state.galaxy == Galaxy::Legacy {
+            return;
+        }
+        let Some(cmdr) = self.cmdr.clone() else {
+            return;
+        };
+        let center = state.location.star_pos;
+        let keys = self.plan_keys();
+        if keys.is_empty() || !center.iter().all(|c| c.is_finite()) {
+            self.local_sent = None;
+            return;
+        }
+        let radius = f64::from(self.settings.sell_search_radius_ly);
+        let ship_pad = self.cur_pad(state);
+        let candidates: BTreeMap<String, Vec<MarketIdentity>> = keys
+            .iter()
+            .filter_map(|k| {
+                let ids: Vec<MarketIdentity> = self
+                    .fresh_ardent(k)
+                    .into_iter()
+                    .take(MAX_CANDIDATES)
+                    .map(|m| MarketIdentity {
+                        market_id: m.market_id,
+                        station_name: m.station_name,
+                        system_name: m.system_name,
+                    })
+                    .collect();
+                (!ids.is_empty()).then(|| (k.clone(), ids))
+            })
+            .collect();
+        let sent = json!({
+            "cmdr": cmdr, "commodities": keys, "center": center,
+            "radius_ly": radius, "ship_pad": ship_pad, "candidates": candidates,
+        });
+        if !force && self.local_sent.as_ref() == Some(&sent) {
+            return;
+        }
+        self.local_sent = Some(sent);
+        let since = self.clock() - Duration::hours(QUOTE_MAX_AGE_H);
+        ctx.store_task(
+            TAG_LOCAL,
+            local_sells_task(
+                cmdr,
+                keys.clone(),
+                center,
+                radius,
+                since,
+                candidates,
+                ship_pad,
+                LOCAL_LIMIT,
+            ),
+        );
+        decide!("mining.local_sells.requested", {"commodities": keys.len()});
+    }
+
+    /// Aplica la lectura de la tabla. `true` si se aplicó.
+    fn on_local_stored(&mut self, value: &Value) -> bool {
+        let Some(sent) = self.local_sent.as_ref().and_then(Value::as_object) else {
+            decide!("mining.local_sells.stored.discarded", {"reason": 0});
+            return false;
+        };
+        if self.cmdr.is_none() || sent.iter().any(|(k, v)| value.get(k) != Some(v)) {
+            decide!("mining.local_sells.stored.discarded", {"reason": 1});
+            return false;
+        }
+        let Ok(rows) =
+            serde_json::from_value::<BTreeMap<String, Vec<PricedMarket>>>(value["rows"].clone())
+        else {
+            decide!("mining.local_sells.stored.discarded", {"reason": 2});
+            return false;
+        };
+        decide!("mining.local_sells.stored.applied", {"commodities": rows.len()});
+        let fetched = self.fetched_at.unwrap_or_else(|| self.clock());
+        self.local_rows = rows;
+        let keys: Vec<String> = self.local_rows.keys().cloned().collect();
+        for k in keys {
+            self.refresh_book(&k, fetched);
+        }
+        true
     }
 
     /// Aplica el resultado de la reconstrucción de precios. `true` si se aplicó.
@@ -524,15 +672,7 @@ impl Mining {
         if let Some(o) = v.as_object_mut() {
             o.insert("as_of".into(), json!(self.now));
             o.insert("names".into(), json!(self.names));
-            o.insert(
-                "tons_per_hour".into(),
-                json!(self.session.tons_per_hour(now)),
-            );
             o.insert("est_credits".into(), json!(self.session.est_credits(&f)));
-            o.insert(
-                "credits_per_hour".into(),
-                json!(self.session.credits_per_hour(now, &f)),
-            );
             o.insert(
                 "refinery_bins".into(),
                 self.session
@@ -546,17 +686,22 @@ impl Mining {
     }
 
     fn render_sell(&self, state: &GameState) -> Value {
-        if !self.online(state) {
+        let online = self.online(state);
+        let keys = self.plan_keys();
+        let results: BTreeMap<String, Vec<RemoteMarket>> = if state.galaxy == Galaxy::Legacy {
+            BTreeMap::new()
+        } else {
+            keys.iter()
+                .filter(|k| {
+                    (online && self.answered.contains_key(*k)) || self.local_rows.contains_key(*k)
+                })
+                .map(|k| (k.clone(), self.merged(k, online)))
+                .collect()
+        };
+        let any = results.values().any(|v| !v.is_empty());
+        if !any && !online {
             return json!({"status": "disabled", "as_of": self.now, "names": self.names});
         }
-        let keys = self.plan_keys();
-        let results: BTreeMap<String, Vec<RemoteMarket>> = self
-            .results
-            .iter()
-            .filter(|(k, _)| keys.contains(k))
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect();
-        let any = results.values().any(|v| !v.is_empty());
         let pending = keys
             .iter()
             .any(|k| !self.answered.contains_key(k) && !self.failed.contains_key(k));
@@ -578,6 +723,30 @@ impl Mining {
             plan: plan.as_ref(),
         })
         .unwrap_or_default()
+    }
+
+    /// Un aviso de EDDN sobre materias del plan relanza la lectura de la tabla.
+    fn on_eddn(&mut self, n: &EddnNotice, state: &GameState, ctx: &mut ModuleCtx) {
+        if ctx.replaying {
+            return;
+        }
+        let keys = self.plan_keys();
+        if !n
+            .commodities
+            .iter()
+            .any(|c| keys.contains(&commodity_key(c)))
+        {
+            return;
+        }
+        if self
+            .last_eddn_query
+            .is_some_and(|t| (n.at - t).num_seconds() < EDDN_REQUERY_MIN_S)
+        {
+            decide!("mining.eddn.throttled", {});
+            return;
+        }
+        self.last_eddn_query = Some(n.at);
+        self.sync_local(state, ctx, true);
     }
 
     fn set(&mut self, topic: &'static str, v: Value, dirty: &mut TopicSet) {
@@ -682,13 +851,22 @@ impl Module for Mining {
                 session_dirty = true;
             }
             SourceEvent::Stored { module, tag, value } if module == "mining" => {
-                if ctx.replaying || tag != TAG_PRICES {
+                if ctx.replaying {
                     return TopicSet::new();
                 }
-                if !self.on_stored(value) {
+                let applied = match tag.as_str() {
+                    TAG_PRICES => self.on_stored(value),
+                    TAG_LOCAL => self.on_local_stored(value),
+                    _ => false,
+                };
+                if !applied {
                     return TopicSet::new();
                 }
                 recompute = true;
+            }
+            SourceEvent::Eddn(n) => {
+                self.on_eddn(n, state, ctx);
+                return TopicSet::new();
             }
             SourceEvent::Net(r) if r.module == "mining" => {
                 recompute |= self.apply_response(r, state);
@@ -709,6 +887,7 @@ impl Module for Mining {
         }
         if request || recompute {
             self.maybe_request(state, ctx);
+            self.sync_local(state, ctx, false);
         }
         let mut dirty = TopicSet::new();
         let v = self.render_prospector();

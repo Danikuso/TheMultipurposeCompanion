@@ -18,6 +18,7 @@ struct H {
     tags: Vec<String>,
     next_id: u64,
     line_no: u64,
+    store: Option<tmc_core::Store>,
 }
 
 impl H {
@@ -30,6 +31,15 @@ impl H {
             tags: Vec::new(),
             next_id: 1,
             line_no: 0,
+            store: None,
+        }
+    }
+
+    /// Ejecuta las tareas de almacén contra una base en memoria.
+    fn with_store() -> Self {
+        Self {
+            store: Some(tmc_core::Store::open_in_memory().unwrap()),
+            ..Self::new()
         }
     }
 
@@ -37,12 +47,31 @@ impl H {
         if let SourceEvent::Journal { ev, .. } = &ev {
             self.state.apply_event(ev);
         }
+        self.dispatch(ev)
+    }
+
+    fn dispatch(&mut self, ev: SourceEvent) -> TopicSet {
         let mut ctx = ModuleCtx::new("mining", self.replaying, self.next_id);
-        let dirty = self.m.on_event(&ev, &self.state, &mut ctx);
+        let mut dirty = self.m.on_event(&ev, &self.state, &mut ctx);
         let (requests, tasks, next) = ctx.take_outputs();
         self.next_id = next;
         self.requests.extend(requests);
-        self.tags.extend(tasks.into_iter().map(|(tag, _)| tag));
+        let mut follow = Vec::new();
+        for (tag, task) in tasks {
+            if let Some(store) = &self.store
+                && let Ok(value) = task(store)
+            {
+                follow.push(SourceEvent::Stored {
+                    module: "mining".into(),
+                    tag: tag.clone(),
+                    value,
+                });
+            }
+            self.tags.push(tag);
+        }
+        for f in follow {
+            dirty.extend(self.dispatch(f));
+        }
         dirty
     }
 
@@ -162,11 +191,10 @@ fn mining_session_fixture_matches_refined_and_tph() {
     );
     assert_eq!(s["limpets_left"], json!(2));
     // Sesión desde LoadGame (13:00:00) hasta el último evento (13:12:00): 720 s = 0,2 h.
-    let tph = s["tons_per_hour"].as_f64().unwrap();
-    assert!((tph - 7.0 / 0.2).abs() < 1e-9, "{tph}");
-    // Solo la bauxita tiene precio (MarketSell 450): 450 cr en 0,2 h = 2250 cr/h.
+    assert_eq!(s["started_at"], json!("2026-10-18T13:00:00Z"));
+    assert!(s.get("tons_per_hour").is_none() && s.get("credits_per_hour").is_none());
+    // Solo la bauxita tiene precio (MarketSell 450).
     assert_eq!(s["est_credits"], json!(450));
-    assert_eq!(s["credits_per_hour"], json!(2250));
 }
 
 #[test]
@@ -484,8 +512,9 @@ fn session_topic_not_dirty_on_unrelated_events_until_30_s() {
     h.journal(5, "MiningRefined", REFINED);
     let d = h.journal(10, "Music", r#","MusicTrack":"Exploration""#);
     assert!(!d.contains("mining.session"));
+    // Sin campos dependientes del reloj, el paso del tiempo no ensucia nada.
     let d = h.journal(100, "Music", r#","MusicTrack":"Exploration""#);
-    assert!(d.contains("mining.session"));
+    assert!(d.is_empty(), "{d:?}");
 }
 
 #[test]
@@ -515,4 +544,177 @@ fn as_of_is_null_before_any_event() {
     let ev = SourceEvent::Settings(ModuleSettings::default());
     h.send(ev);
     assert_eq!(h.val("mining.sell")["as_of"], json!(null));
+}
+
+fn eddn_seed(store: &tmc_core::Store, id: u64, price: u64, demand: u64, at: DateTime<Utc>) {
+    use tmc_model::market::{CommodityPrice, MarketSnapshot, PriceOrigin};
+    store
+        .replace_markets(&[MarketSnapshot {
+            market_id: id,
+            station_name: format!("Buyer {id}"),
+            system_name: format!("Buyer {id} System"),
+            system_address: Some(900 + id),
+            star_pos: Some([3.0, 0.0, 0.0]),
+            max_pad: Some(PadSize::Large),
+            station_type: Some("Coriolis".into()),
+            updated_at: at,
+            origin: PriceOrigin::Eddn,
+            prices: vec![CommodityPrice {
+                commodity: "platinum".into(),
+                name_localised: None,
+                buy_price: 0,
+                sell_price: price,
+                stock: 0,
+                demand,
+            }],
+        }])
+        .unwrap();
+}
+
+fn offline() -> H {
+    let mut h = H::with_store();
+    h.send(SourceEvent::Settings(ModuleSettings {
+        online_services: false,
+        ..ModuleSettings::default()
+    }));
+    h
+}
+
+#[test]
+fn irrelevant_event_dirties_no_mining_topic() {
+    let mut h = H::with_store();
+    h.start();
+    h.cargo(3, &[("platinum", 5)]);
+    h.journal(5, "MiningRefined", REFINED);
+    for at in [100, 2000, 90_000] {
+        let d = h.journal(at, "Music", r#","MusicTrack":"Exploration""#);
+        assert!(d.is_empty(), "{at}: {d:?}");
+    }
+}
+
+#[test]
+fn sell_plan_includes_eddn_prices_when_ardent_disabled() {
+    let mut h = offline();
+    eddn_seed(h.store.as_ref().unwrap(), 5, 230_000, 100, t(-3600));
+    h.start();
+    h.cargo(3, &[("platinum", 5)]);
+    assert!(h.requests.is_empty());
+    assert!(h.tags.iter().any(|t| t == "mining.local_sells"));
+    let sell = h.val("mining.sell");
+    assert_eq!(sell["status"], json!("ok"));
+    let opts = sell["by_commodity"]["platinum"].as_array().unwrap();
+    assert_eq!(opts.len(), 1);
+    assert_eq!(opts[0]["origin"], json!("Eddn"));
+    assert_eq!(opts[0]["sell_price"], json!(230_000));
+    assert!(opts[0].get("age_s").is_none());
+}
+
+#[test]
+fn eddn_and_ardent_same_market_newest_wins_even_if_cheaper() {
+    let mut h = H::with_store();
+    eddn_seed(h.store.as_ref().unwrap(), 5, 225_000, 100, t(-60));
+    h.start();
+    h.cargo(3, &[("platinum", 5)]);
+    let key = h.sell_requests()[0].key.clone();
+    let mut a = market("Buyer 5", 240_000);
+    a.station_name = "Buyer 5".into();
+    a.system_name = "Buyer 5 System".into();
+    a.market_id = Some(5);
+    a.updated_at = Some(t(-3600));
+    h.send(markets_response(&key, vec![a]));
+    let sell = h.val("mining.sell");
+    let opts = sell["by_commodity"]["platinum"].as_array().unwrap();
+    assert_eq!(opts.len(), 1, "{sell}");
+    assert_eq!(opts[0]["sell_price"], json!(225_000));
+    assert_eq!(opts[0]["origin"], json!("Eddn"));
+}
+
+#[test]
+fn ardent_quote_older_than_48h_is_dropped() {
+    let mut h = H::with_store();
+    h.start();
+    h.cargo(3, &[("platinum", 5)]);
+    let key = h.sell_requests()[0].key.clone();
+    let mut old = market("Old", 240_000);
+    old.updated_at = Some(t(3) - Duration::hours(49));
+    let mut fresh = market("Fresh", 100_000);
+    fresh.updated_at = Some(t(3) - Duration::hours(47));
+    h.send(markets_response(&key, vec![old, fresh]));
+    let sell = h.val("mining.sell");
+    let opts = sell["by_commodity"]["platinum"].as_array().unwrap();
+    assert_eq!(opts.len(), 1);
+    assert_eq!(opts[0]["station_name"], json!("Fresh Station"));
+}
+
+#[test]
+fn eddn_notice_requeries_at_most_every_10_s() {
+    let mut h = H::with_store();
+    h.start();
+    h.cargo(3, &[("platinum", 5)]);
+    let n = |s: i64| {
+        SourceEvent::Eddn(tmc_model::source::EddnNotice {
+            markets: vec![5],
+            commodities: vec!["platinum".into()],
+            connected: true,
+            at: t(s),
+        })
+    };
+    let count = |h: &H| h.tags.iter().filter(|t| *t == "mining.local_sells").count();
+    let base = count(&h);
+    h.send(n(10));
+    assert_eq!(count(&h), base + 1);
+    h.send(n(15));
+    assert_eq!(count(&h), base + 1);
+    h.send(n(25));
+    assert_eq!(count(&h), base + 2);
+}
+
+#[test]
+fn sell_topic_with_two_sources_stays_under_16_kib() {
+    use tmc_model::market::{CommodityPrice, MarketSnapshot, PriceOrigin};
+    let mut h = H::with_store();
+    h.start();
+    let names: Vec<String> = (0..10).map(|i| format!("mineral{i}")).collect();
+    for (m, n) in names.iter().enumerate() {
+        for i in 0..50u64 {
+            h.store
+                .as_ref()
+                .unwrap()
+                .replace_markets(&[MarketSnapshot {
+                    market_id: 1000 + (m as u64) * 100 + i,
+                    station_name: format!("T{m} {i}"),
+                    system_name: format!("T{m} {i} Sys"),
+                    system_address: Some(5000 + i),
+                    star_pos: Some([3.0, 0.0, 0.0]),
+                    max_pad: Some(PadSize::Large),
+                    station_type: Some("Coriolis".into()),
+                    updated_at: t(-60),
+                    origin: PriceOrigin::Eddn,
+                    prices: vec![CommodityPrice {
+                        commodity: n.clone(),
+                        name_localised: None,
+                        buy_price: 0,
+                        sell_price: 100_000 + i,
+                        stock: 0,
+                        demand: 10,
+                    }],
+                }])
+                .unwrap();
+        }
+    }
+    let items: Vec<(&str, u32)> = names.iter().map(|n| (n.as_str(), 10)).collect();
+    h.cargo(3, &items);
+    let keys: Vec<String> = h.sell_requests().iter().map(|r| r.key.clone()).collect();
+    for key in keys {
+        let ms: Vec<RemoteMarket> = (0..50)
+            .map(|i| market(&format!("{key} n{i}"), 100_000 + i))
+            .collect();
+        h.send(markets_response(&key, ms));
+    }
+    let sell = h.val("mining.sell");
+    let bytes = serde_json::to_vec(&sell).unwrap().len();
+    assert!(bytes < 16_384, "{bytes}");
+    let by = sell["by_commodity"].as_object().unwrap();
+    assert_eq!(by.len(), 10);
+    assert!(by.values().all(|v| v.as_array().unwrap().len() == 5));
 }

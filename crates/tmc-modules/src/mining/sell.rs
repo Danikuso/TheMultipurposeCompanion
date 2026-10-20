@@ -4,7 +4,8 @@ use std::collections::BTreeMap;
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use tmc_model::market::{PriceOrigin, PricedMarket};
+use tmc_core::StoreTask;
+use tmc_model::market::{MarketIdentity, PriceOrigin, PricedMarket, Side};
 use tmc_model::net::{PadSize, RemoteMarket};
 
 use super::prices::PriceSource;
@@ -124,6 +125,56 @@ pub fn merge_sources(local: &[PricedMarket], remote: &[RemoteMarket]) -> Vec<Rem
         .into_values()
         .filter(|m| m.sell_price > 0 && m.demand.is_some_and(|d| d > 0))
         .collect()
+}
+
+/// Lectura de la tabla de precios para «Dónde vender». Devuelve `{cmdr, commodities,
+/// center, radius_ly, ship_pad, candidates, since, rows: {materia: [PricedMarket]}}`:
+/// las mejores ofertas compatibles (plataforma filtrada antes del límite) más las
+/// observaciones dirigidas de los candidatos de Ardent, incluidas las cerradas.
+#[allow(clippy::too_many_arguments)]
+pub fn local_sells_task(
+    cmdr: String,
+    commodities: Vec<String>,
+    center: [f64; 3],
+    radius_ly: f64,
+    since: DateTime<Utc>,
+    candidates: BTreeMap<String, Vec<MarketIdentity>>,
+    ship_pad: Option<PadSize>,
+    limit: usize,
+) -> StoreTask {
+    Box::new(move |store| {
+        let mut rows = BTreeMap::new();
+        for commodity in &commodities {
+            let key = tmc_model::events::commodity_key(commodity);
+            let mut prices = store.best_prices_for_ship(
+                &key,
+                Side::Sell,
+                center,
+                radius_ly,
+                since,
+                None,
+                limit,
+                ship_pad,
+            )?;
+            if let Some(identities) = candidates.get(&key) {
+                prices.extend(store.price_observations_for_markets(
+                    &key,
+                    Side::Sell,
+                    identities,
+                    center,
+                    radius_ly,
+                    since,
+                    None,
+                )?);
+            }
+            rows.insert(key, prices);
+        }
+        Ok(serde_json::json!({
+            "cmdr": cmdr, "commodities": commodities, "center": center,
+            "radius_ly": radius_ly, "ship_pad": ship_pad, "candidates": candidates,
+            "since": since, "rows": rows,
+        }))
+    })
 }
 
 fn pad_ok(m: &RemoteMarket, ship_pad: Option<PadSize>) -> Option<bool> {
