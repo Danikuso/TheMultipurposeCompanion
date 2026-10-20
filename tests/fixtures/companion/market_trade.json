@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-10-19T18:00:00Z",
+  "event": "Market",
+  "MarketID": 128000001,
+  "StationName": "Synthetic Port",
+  "StationType": "Coriolis",
+  "StarSystem": "Synthetic System",
+  "Items": [
+    {"Name":"gold", "Name_Localised":"Oro", "BuyPrice":9400, "SellPrice":9000, "Stock":5000, "Demand":100},
+    {"Name":"silver", "BuyPrice":4000, "SellPrice":3900, "Stock":2000, "Demand":100},
+    {"Name":"palladium", "BuyPrice":13000, "SellPrice":12000, "Stock":2000, "Demand":100},
+    {"Name":"cobalt", "BuyPrice":1000, "SellPrice":900, "Stock":2000, "Demand":100},
+    {"Name":"copper", "BuyPrice":2000, "SellPrice":1900, "Stock":2000, "Demand":100},
+    {"Name":"aluminium", "BuyPrice":500, "SellPrice":400, "Stock":2000, "Demand":100},
+    {"Name":"lavianbrandy", "BuyPrice":3000, "SellPrice":2900, "Stock":10, "Demand":0}
+  ]
+}

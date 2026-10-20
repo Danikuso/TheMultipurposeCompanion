@@ -2,8 +2,14 @@ import { getLocale, t } from './i18n';
 
 export function credits(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
-  const fmt = new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 0 });
-  return `${fmt.format(n)} CR`;
+  return `${integer(n)} CR`;
+}
+
+/** Entero con separador de miles siempre (es no agrupa por defecto los de 4 cifras). */
+export function integer(n: number): string {
+  // `'always'` es válido en runtime pero aún falta en los tipos de lib.
+  const opts = { maximumFractionDigits: 0, useGrouping: 'always' } as unknown as Intl.NumberFormatOptions;
+  return new Intl.NumberFormat(getLocale(), opts).format(n);
 }
 
 export function ly(n: number | null | undefined): string {

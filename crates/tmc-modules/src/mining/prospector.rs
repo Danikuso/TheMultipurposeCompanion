@@ -157,6 +157,7 @@ impl ProspectorTracker {
         }
         self.current = Some(view);
         self.last_event = Some(ev.clone());
+        decide!("mining.prospector.applied", {"history": self.history.len()});
         true
     }
 

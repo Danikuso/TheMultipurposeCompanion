@@ -3,6 +3,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::market::PriceOrigin;
+
 /// Consulta de red emitida por un módulo.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum NetQuery {
@@ -37,6 +39,19 @@ pub enum NetQuery {
         system_address: u64,
         service: NearbyService,
         min_pad: PadSize,
+    },
+    /// Ruta comercial multi-salto (Spansh). Los portaaviones se excluyen siempre.
+    TradeRoute(TradeRouteParams),
+    /// Estaciones cercanas que exportan una materia (Ardent).
+    CommodityExportsNearby {
+        system_address: u64,
+        commodity: String,
+        max_distance_ly: u32,
+        min_pad: PadSize,
+    },
+    /// Coordenadas de un sistema por nombre (no encontrado: `NoData`).
+    SystemCoordsByName {
+        name: String,
     },
 }
 
@@ -140,9 +155,32 @@ pub enum NetOutcome {
     BodyBio(RemoteBodyBio),
     Markets(Vec<RemoteMarket>),
     Stations(Vec<RemoteStation>),
+    TradeRoute(TradeRoutePlan),
+    Exports(Vec<RemoteExport>),
+    Coords(SystemCoords),
     NoData,
     Disabled,
     Failed(NetFailure),
+}
+
+impl NetOutcome {
+    /// Resumen para diagnóstico: variante y número de elementos, sin contenido.
+    pub fn diag_summary(&self) -> (&'static str, usize) {
+        match self {
+            Self::System(_) => ("system", 1),
+            Self::Route(_) => ("route", 1),
+            Self::Autocomplete(v) => ("autocomplete", v.len()),
+            Self::BodyBio(_) => ("body_bio", 1),
+            Self::Markets(v) => ("markets", v.len()),
+            Self::Stations(v) => ("stations", v.len()),
+            Self::TradeRoute(plan) => ("trade_route", plan.stops.len()),
+            Self::Exports(v) => ("exports", v.len()),
+            Self::Coords(_) => ("coords", 1),
+            Self::NoData => ("no_data", 0),
+            Self::Disabled => ("disabled", 0),
+            Self::Failed(_) => ("failed", 0),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -237,6 +275,74 @@ pub struct RemoteMarket {
     pub max_pad: Option<PadSize>,
     pub station_type: Option<String>,
     pub updated_at: Option<DateTime<Utc>>,
+    /// Procedencia del precio; `None` si el constructor no la informa.
+    pub origin: Option<PriceOrigin>,
+}
+
+/// Parametros de la ruta comercial (carriers siempre excluidos).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TradeRouteParams {
+    pub system: String,
+    pub station: String,
+    pub starting_capital: u64,
+    pub max_cargo: u32,
+    pub max_hops: u8,
+    pub max_hop_distance_ly: f64,
+    pub min_pad: PadSize,
+    pub max_price_age_days: u32,
+    pub allow_planetary: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TradeCommodity {
+    pub commodity: String,
+    pub name_localised: Option<String>,
+    pub amount: u32,
+    pub buy_price: u64,
+    pub sell_price: u64,
+    pub profit_per_ton: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TradeStop {
+    pub from_system: String,
+    pub from_station: String,
+    pub to_system: String,
+    pub to_station: String,
+    pub from_market_id: Option<u64>,
+    pub to_market_id: Option<u64>,
+    pub commodities: Vec<TradeCommodity>,
+    pub stop_profit: i64,
+    pub distance_ly: f64,
+    pub data_updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TradeRoutePlan {
+    pub stops: Vec<TradeStop>,
+    pub total_profit: i64,
+}
+
+/// Mercado remoto que vende (exporta) una materia (`buy_price` = lo que paga el jugador).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RemoteExport {
+    pub station_name: String,
+    pub system_name: String,
+    pub market_id: Option<u64>,
+    pub distance_ly: f64,
+    pub distance_to_arrival_ls: Option<f64>,
+    pub buy_price: u64,
+    pub stock: Option<u64>,
+    pub max_pad: Option<PadSize>,
+    pub station_type: Option<String>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SystemCoords {
+    pub name: String,
+    pub id64: Option<u64>,
+    pub star_pos: [f64; 3],
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -342,6 +448,7 @@ mod tests {
             max_pad: Some(PadSize::Medium),
             station_type: None,
             updated_at: Some("2026-10-17T12:00:00Z".parse().unwrap()),
+            origin: Some(PriceOrigin::Ardent),
         }]));
         r.source = NetSource::Ardent;
         let back: NetResponse = serde_json::from_str(&serde_json::to_string(&r).unwrap()).unwrap();
@@ -377,5 +484,87 @@ mod tests {
             serde_json::from_str::<NetFailure>(&text).unwrap(),
             NetFailure::Http(503)
         );
+    }
+
+    #[test]
+    fn trade_route_query_roundtrips() {
+        let q = NetQuery::TradeRoute(TradeRouteParams {
+            system: "Lave".into(),
+            station: "Lave Station".into(),
+            starting_capital: 5_000_000,
+            max_cargo: 256,
+            max_hops: 5,
+            max_hop_distance_ly: 30.0,
+            min_pad: PadSize::Large,
+            max_price_age_days: 2,
+            allow_planetary: true,
+        });
+        let back: NetQuery = serde_json::from_str(&serde_json::to_string(&q).unwrap()).unwrap();
+        assert_eq!(back, q);
+        let e = NetQuery::CommodityExportsNearby {
+            system_address: 1,
+            commodity: "gold".into(),
+            max_distance_ly: 50,
+            min_pad: PadSize::Small,
+        };
+        let back: NetQuery = serde_json::from_str(&serde_json::to_string(&e).unwrap()).unwrap();
+        assert_eq!(back, e);
+        let c = NetQuery::SystemCoordsByName { name: "Sol".into() };
+        let back: NetQuery = serde_json::from_str(&serde_json::to_string(&c).unwrap()).unwrap();
+        assert_eq!(back, c);
+    }
+
+    #[test]
+    fn trade_route_outcome_roundtrips() {
+        let stop = |from: &str, to: &str| TradeStop {
+            from_system: from.into(),
+            from_station: format!("{from} Station"),
+            to_system: to.into(),
+            to_station: format!("{to} Station"),
+            from_market_id: Some(1),
+            to_market_id: None,
+            commodities: vec![TradeCommodity {
+                commodity: "gold".into(),
+                name_localised: Some("Oro".into()),
+                amount: 256,
+                buy_price: 9_000,
+                sell_price: 15_000,
+                profit_per_ton: 6_000,
+            }],
+            stop_profit: 1_600_000,
+            distance_ly: 12.5,
+            data_updated_at: Some("2026-10-17T12:00:00Z".parse().unwrap()),
+        };
+        let r = response(NetOutcome::TradeRoute(TradeRoutePlan {
+            stops: vec![stop("Lave", "Leesti"), stop("Leesti", "Lave")],
+            total_profit: 3_200_000,
+        }));
+        let back: NetResponse = serde_json::from_str(&serde_json::to_string(&r).unwrap()).unwrap();
+        assert_eq!(back, r);
+        let ex = response(NetOutcome::Exports(vec![RemoteExport {
+            station_name: "A".into(),
+            system_name: "B".into(),
+            market_id: None,
+            distance_ly: 1.0,
+            distance_to_arrival_ls: None,
+            buy_price: 10,
+            stock: Some(5),
+            max_pad: Some(PadSize::Large),
+            station_type: None,
+            updated_at: None,
+        }]));
+        let back: NetResponse = serde_json::from_str(&serde_json::to_string(&ex).unwrap()).unwrap();
+        assert_eq!(back, ex);
+    }
+
+    #[test]
+    fn coords_outcome_roundtrips() {
+        let r = response(NetOutcome::Coords(SystemCoords {
+            name: "Sol".into(),
+            id64: Some(10477373803),
+            star_pos: [0.0, 0.0, 0.0],
+        }));
+        let back: NetResponse = serde_json::from_str(&serde_json::to_string(&r).unwrap()).unwrap();
+        assert_eq!(back, r);
     }
 }

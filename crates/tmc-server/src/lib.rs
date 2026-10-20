@@ -2,6 +2,9 @@
 #![forbid(unsafe_code)]
 
 pub mod assets;
+mod diag;
+#[cfg(debug_assertions)]
+mod diag_ui;
 pub mod pairing;
 pub mod rest;
 pub mod security;
@@ -143,7 +146,7 @@ pub fn build_router(
         store,
         host,
     };
-    Router::new()
+    let router = Router::new()
         .route("/ws", axum::routing::get(ws::ws_handler))
         .route("/api/health", axum::routing::get(rest::get_health))
         .route(
@@ -168,7 +171,10 @@ pub fn build_router(
             state.clone(),
             security::enforce_security,
         ))
-        .with_state(state)
+        .with_state(state);
+    #[cfg(debug_assertions)]
+    let router = router.layer(axum::middleware::from_fn(diag::trace_http));
+    router
 }
 
 async fn bind_with_fallback(
@@ -495,6 +501,10 @@ mod tests {
         assert_eq!(hello["type"], "hello");
         assert_eq!(hello["version"], 1);
         assert_eq!(hello["locale"], "es");
+        #[cfg(debug_assertions)]
+        assert_eq!(hello["capabilities"]["diagnostics"], true);
+        #[cfg(not(debug_assertions))]
+        assert!(hello["capabilities"]["diagnostics"].is_null());
         assert!(hello["topics"].as_array().unwrap().len() >= 8);
 
         let snap: Value = serde_json::from_str(&ws.next_text().await).unwrap();
@@ -601,6 +611,45 @@ mod tests {
         assert!(!updated.contains_key("core.location"));
         assert_eq!(updated["core.status"]["Flags"], 9);
         srv.shutdown();
+    }
+
+    #[cfg(debug_assertions)]
+    #[tokio::test]
+    async fn diagnostics_action_checks_origin_and_accepts_valid_batch() {
+        let (app, _core, _store) = test_router(false, "");
+        let body = r#"[{"code":"ui.ws.update","ts":1,"payload":{"seq":1}}]"#;
+        let post = |origin: Option<&str>| {
+            let mut b = Request::builder()
+                .method("POST")
+                .uri("/api/actions/app.diagnostics")
+                .header(header::HOST, "127.0.0.1:47320")
+                .header(header::CONTENT_TYPE, "application/json");
+            if let Some(o) = origin {
+                b = b.header(header::ORIGIN, o);
+            }
+            with_peer(b.body(Body::from(body)).unwrap(), "127.0.0.77:55000")
+        };
+        let resp = app
+            .clone()
+            .oneshot(post(Some("http://evil.example")))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+        let resp = app
+            .clone()
+            .oneshot(post(Some("http://127.0.0.1:47320")))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let bytes = axum::body::to_bytes(resp.into_body(), 1024).await.unwrap();
+        let json: Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["accepted"], 1);
+        // Mismo cliente dentro del intervalo: 400 rate-limited.
+        let resp = app
+            .oneshot(post(Some("http://127.0.0.1:47320")))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]
@@ -1143,5 +1192,412 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(&body[..], b"<h1>TMC UI</h1>");
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn diagnostics_use_templates_and_never_credentials() {
+        use tmc_model::diagnostics::capture::capture;
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let (_, records) = capture(|| {
+            rt.block_on(async {
+                let (app, _core, _store) = test_router(true, "secret-token-123456");
+                let lan = |uri: &str| {
+                    with_peer(
+                        Request::builder()
+                            .uri(uri)
+                            .header(header::HOST, "192.168.1.50:47320")
+                            .header(header::COOKIE, "tmc_token=CANARYCOOKIE")
+                            .header(header::AUTHORIZATION, "Bearer CANARYBEARER")
+                            .body(Body::empty())
+                            .unwrap(),
+                        "192.168.1.99:55000",
+                    )
+                };
+                let r = app
+                    .clone()
+                    .oneshot(lan("/api/health?token=CANARYTOKEN"))
+                    .await;
+                assert_eq!(r.unwrap().status(), StatusCode::FORBIDDEN);
+                let r = app
+                    .clone()
+                    .oneshot(lan("/api/health?token=secret-token-123456"))
+                    .await;
+                assert_eq!(r.unwrap().status(), StatusCode::OK);
+                let local = |method: &str, uri: &str| {
+                    with_peer(
+                        Request::builder()
+                            .method(method)
+                            .uri(uri)
+                            .header(header::HOST, "127.0.0.1:47320")
+                            .body(Body::empty())
+                            .unwrap(),
+                        "127.0.0.1:55000",
+                    )
+                };
+                for req in [
+                    local("POST", "/api/actions/clipboard.copy-next-system"),
+                    local("POST", "/api/actions/fail"),
+                    local("GET", "/api/health?x=CANARYQUERY"),
+                    local("GET", "/api/zzz?q=CANARYQUERY"),
+                ] {
+                    let _ = app.clone().oneshot(req).await.unwrap();
+                }
+            })
+        });
+        let all: String = records
+            .iter()
+            .filter(|r| !r.code.starts_with("actor.") && !r.code.starts_with("core."))
+            .map(|r| {
+                format!(
+                    "{} {} {}
+",
+                    r.code, r.context, r.payload
+                )
+            })
+            .collect();
+        for canary in [
+            "CANARYTOKEN",
+            "secret-token-123456",
+            "CANARYCOOKIE",
+            "CANARYBEARER",
+            "CANARYQUERY",
+            "boom",
+            "?token",
+        ] {
+            assert!(!all.contains(canary), "{canary} leaked: {all}");
+        }
+        let codes: Vec<&str> = records.iter().map(|r| r.code.as_str()).collect();
+        for code in [
+            "auth.lan.token_rejected",
+            "auth.lan.accepted",
+            "auth.guard.loopback_accepted",
+            "action.requested",
+            "action.succeeded",
+            "action.failed",
+            "http.request",
+        ] {
+            assert!(codes.contains(&code), "falta {code}: {codes:?}");
+        }
+        for route in ["/api/actions/{name}", "/api/health", "<unmatched>"] {
+            assert!(all.contains(route), "falta ruta {route}: {all}");
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    fn dump(records: &[tmc_model::diagnostics::capture::Record]) -> String {
+        records
+            .iter()
+            .filter(|r| !r.code.starts_with("actor.") && !r.code.starts_with("core."))
+            .map(|r| format!("{} {} {}\n", r.code, r.context, r.payload))
+            .collect()
+    }
+
+    #[cfg(debug_assertions)]
+    fn codes(records: &[tmc_model::diagnostics::capture::Record]) -> Vec<&str> {
+        records.iter().map(|r| r.code.as_str()).collect()
+    }
+
+    #[cfg(debug_assertions)]
+    fn paused_rt() -> tokio::runtime::Runtime {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .start_paused(true)
+            .build()
+            .unwrap()
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn pairing_diagnostics_never_include_url_qr_or_token() {
+        use tmc_model::diagnostics::capture::capture;
+        let (_, records) = capture(|| {
+            paused_rt().block_on(async {
+                let (app, _core, _store) = test_router(true, "CANARYLANTOKEN987");
+                let local = with_peer(
+                    Request::builder()
+                        .uri("/api/pairing")
+                        .header(header::HOST, "127.0.0.1:47320")
+                        .body(Body::empty())
+                        .unwrap(),
+                    "127.0.0.1:55000",
+                );
+                let resp = app.clone().oneshot(local).await.unwrap();
+                assert_eq!(resp.status(), StatusCode::OK);
+                let lan = with_peer(
+                    Request::builder()
+                        .uri("/api/pairing?token=CANARYLANTOKEN987")
+                        .header(header::HOST, "192.168.1.50:47320")
+                        .body(Body::empty())
+                        .unwrap(),
+                    "192.168.1.99:55000",
+                );
+                let resp = app.oneshot(lan).await.unwrap();
+                assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+            });
+        });
+        let all = dump(&records);
+        let c = codes(&records);
+        assert!(c.contains(&"auth.pairing.issued"), "{all}");
+        assert!(c.contains(&"auth.pairing.rejected"), "{all}");
+        for canary in [
+            "CANARYLANTOKEN987",
+            "token=",
+            "<svg",
+            "192.168.1.50",
+            "http://",
+        ] {
+            assert!(!all.contains(canary), "{canary} leaked: {all}");
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn origin_and_csrf_rejections_are_logged_without_headers() {
+        use tmc_model::diagnostics::capture::capture;
+        let (_, records) = capture(|| {
+            paused_rt().block_on(async {
+                let (app, _core, _store) = test_router(true, "CANARYLANTOKEN987");
+                for (host, peer, query) in [
+                    ("127.0.0.1:47320", "127.0.0.1:55000", ""),
+                    (
+                        "192.168.1.50:47320",
+                        "192.168.1.99:55000",
+                        "?token=CANARYLANTOKEN987",
+                    ),
+                ] {
+                    let ws = with_peer(
+                        Request::builder()
+                            .uri(format!("/ws{query}"))
+                            .header(header::HOST, host)
+                            .header(header::ORIGIN, "http://CANARYORIGIN.example")
+                            .header(header::COOKIE, "tmc_token=CANARYCOOKIE")
+                            .header(header::CONNECTION, "Upgrade")
+                            .header(header::UPGRADE, "websocket")
+                            .header("Sec-WebSocket-Version", "13")
+                            .header("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+                            .body(Body::empty())
+                            .unwrap(),
+                        peer,
+                    );
+                    let resp = app.clone().oneshot(ws).await.unwrap();
+                    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+                    let post = with_peer(
+                        Request::builder()
+                            .method("POST")
+                            .uri(format!("/api/actions/x{query}"))
+                            .header(header::HOST, host)
+                            .header(header::ORIGIN, "http://CANARYORIGIN.example")
+                            .header(header::CONTENT_TYPE, "application/json")
+                            .body(Body::from("{}"))
+                            .unwrap(),
+                        peer,
+                    );
+                    let resp = app.clone().oneshot(post).await.unwrap();
+                    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+                }
+            });
+        });
+        let all = dump(&records);
+        let c = codes(&records);
+        for code in ["auth.guard.origin_rejected", "auth.guard.csrf_rejected"] {
+            assert_eq!(c.iter().filter(|x| **x == code).count(), 2, "{code}: {all}");
+        }
+        for canary in ["CANARYORIGIN", "CANARYCOOKIE", "CANARYLANTOKEN987"] {
+            assert!(!all.contains(canary), "{canary} leaked: {all}");
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    struct FailingConfigHost;
+
+    #[cfg(debug_assertions)]
+    impl ActionHost for FailingConfigHost {
+        fn run_action(
+            &self,
+            _name: &str,
+            _snapshot: &BTreeMap<String, Value>,
+        ) -> Result<Value, ActionError> {
+            Err(ActionError::NotFound)
+        }
+
+        fn put_config(&self, _v: Value) -> Result<Value, ActionError> {
+            Err(ActionError::Failed("CANARYREASON".into()))
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn invalid_json_and_config_failures_log_only_sizes() {
+        use tmc_model::diagnostics::capture::capture;
+        let (_, records) = capture(|| {
+            paused_rt().block_on(async {
+                let (app, _core) = router_with_host(Arc::new(FailingConfigHost), false, "");
+                let json = [("content-type", "application/json")];
+                let status =
+                    send_req(&app, "POST", "/api/actions/x", &json, r#"{"CANARYJSON":"#).await;
+                assert_eq!(status, StatusCode::BAD_REQUEST);
+                let status = send_req(&app, "PUT", "/api/config", &json, "{}").await;
+                assert_eq!(status, StatusCode::BAD_REQUEST);
+            });
+        });
+        let all = dump(&records);
+        assert!(!all.contains("CANARYJSON"), "{all}");
+        assert!(!all.contains("CANARYREASON"), "{all}");
+        let invalid = records
+            .iter()
+            .find(|r| r.code == "http.action.invalid_json")
+            .expect("invalid_json");
+        assert!(invalid.payload.contains("body_bytes"), "{all}");
+        assert!(invalid.payload.contains("14"), "{all}");
+        let rejected = records
+            .iter()
+            .find(|r| r.code == "http.config.rejected")
+            .expect("config rejected");
+        assert!(rejected.payload.contains("reason_bytes"), "{all}");
+        assert!(rejected.payload.contains("12"), "{all}");
+    }
+
+    #[cfg(debug_assertions)]
+    async fn duplex_ws(
+        router: Router,
+        buffer: usize,
+    ) -> tokio_tungstenite::WebSocketStream<tokio::io::DuplexStream> {
+        let (client_io, server_io) = tokio::io::duplex(buffer);
+        tokio::spawn(async move {
+            let io = hyper_util::rt::TokioIo::new(server_io);
+            let svc = hyper_util::service::TowerToHyperService::new(router);
+            let _ = hyper::server::conn::http1::Builder::new()
+                .serve_connection(io, svc)
+                .with_upgrades()
+                .await;
+        });
+        let req = "ws://127.0.0.1:47320/ws".into_client_request().unwrap();
+        tokio_tungstenite::client_async(req, client_io)
+            .await
+            .unwrap()
+            .0
+    }
+
+    #[cfg(debug_assertions)]
+    async fn push_status(core: &CoreHandle, flags: u32) {
+        let line = format!(r#"{{"timestamp":"2026-10-17T18:00:00Z","Flags":{flags}}}"#);
+        core.events
+            .send(SourceEvent::Status(Status::parse(&line).unwrap()))
+            .await
+            .unwrap();
+        tokio::time::sleep(Duration::from_millis(150)).await;
+    }
+
+    #[cfg(debug_assertions)]
+    fn summaries(records: &[tmc_model::diagnostics::capture::Record]) -> Vec<Value> {
+        records
+            .iter()
+            .filter(|r| r.code == "ws.broadcast.summary")
+            .map(|r| serde_json::from_str(&r.payload).unwrap())
+            .collect()
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn ws_summary_is_flushed_on_timer_and_resets_window() {
+        use tmc_model::diagnostics::capture::capture;
+        let (_, records) = capture(|| {
+            paused_rt().block_on(async {
+                let (app, core, _store) = test_router(false, "");
+                let mut ws = duplex_ws(app, 65536).await;
+                let _ = ws.next().await; // hello
+                let _ = ws.next().await; // snapshot
+                for flags in 1..=3 {
+                    push_status(&core, flags).await;
+                    let _ = ws.next().await.unwrap().unwrap();
+                }
+                // Sin mas eventos: el temporizador vuelca la ventana (<= 1/s).
+                tokio::time::sleep(Duration::from_millis(1500)).await;
+                push_status(&core, 4).await;
+                let _ = ws.next().await.unwrap().unwrap();
+                ws.send(WsMessage::Text("CANARYWS not json".into()))
+                    .await
+                    .unwrap();
+                tokio::time::sleep(Duration::from_millis(50)).await;
+                ws.close(None).await.unwrap();
+                tokio::time::sleep(Duration::from_millis(50)).await;
+            });
+        });
+        let all = dump(&records);
+        let sums = summaries(&records);
+        assert_eq!(sums.len(), 2, "{all}");
+        assert_eq!(sums[0]["updates"], 3, "{all}");
+        assert_eq!(sums[0]["alerts"], 0);
+        assert_eq!(sums[0]["filtered_out"], 0);
+        assert!(sums[0]["bytes"].as_u64().unwrap() > 0);
+        assert_eq!(sums[1]["updates"], 1, "ventana reiniciada: {all}");
+        let c = codes(&records);
+        let last_summary = c
+            .iter()
+            .rposition(|x| *x == "ws.broadcast.summary")
+            .unwrap();
+        let closed = c.iter().position(|x| *x == "ws.closed").expect("ws.closed");
+        assert!(last_summary < closed, "{c:?}");
+        let invalid = records
+            .iter()
+            .find(|r| r.code == "ws.client.invalid_message")
+            .expect("invalid_message");
+        assert!(invalid.payload.contains("bytes"));
+        assert!(!all.contains("CANARYWS"), "{all}");
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn ws_summary_is_flushed_when_the_socket_closes_inside_the_window() {
+        use tmc_model::diagnostics::capture::capture;
+        let (_, records) = capture(|| {
+            paused_rt().block_on(async {
+                let (app, core, _store) = test_router(false, "");
+                let mut ws = duplex_ws(app, 65536).await;
+                let _ = ws.next().await;
+                let _ = ws.next().await;
+                for flags in 1..=3 {
+                    push_status(&core, flags).await;
+                    let _ = ws.next().await.unwrap().unwrap();
+                }
+                ws.close(None).await.unwrap();
+                tokio::time::sleep(Duration::from_millis(50)).await;
+            });
+        });
+        let all = dump(&records);
+        let sums = summaries(&records);
+        assert_eq!(sums.len(), 1, "{all}");
+        assert_eq!(sums[0]["updates"], 3, "{all}");
+        let c = codes(&records);
+        let summary = c.iter().position(|x| *x == "ws.broadcast.summary").unwrap();
+        assert!(summary < c.iter().position(|x| *x == "ws.closed").unwrap());
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn ws_lagging_client_is_resynchronised_and_logged() {
+        use tmc_model::diagnostics::capture::capture;
+        let (_, records) = capture(|| {
+            paused_rt().block_on(async {
+                let (app, core, _store) = test_router(false, "");
+                // Buffer minusculo: el servidor se bloquea enviando y el canal se desborda.
+                let mut ws = duplex_ws(app, 64).await;
+                for flags in 1..=300 {
+                    push_status(&core, flags).await;
+                }
+                let drain = async { while let Some(Ok(_)) = ws.next().await {} };
+                let _ = timeout(Duration::from_secs(5), drain).await;
+            });
+        });
+        let all = dump(&records);
+        let lagged = records
+            .iter()
+            .find(|r| r.code == "ws.backpressure.lagged")
+            .unwrap_or_else(|| panic!("sin lagged: {all}"));
+        assert!(lagged.payload.contains("skipped"));
     }
 }

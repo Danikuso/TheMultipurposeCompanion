@@ -3,17 +3,19 @@
 
 pub mod clipboard;
 pub mod config;
+pub mod eddn_service;
+mod eddn_wiring;
 pub mod logging;
 pub mod net_service;
 pub mod wiring;
 
 pub use clipboard::{AppActions, Clipboard};
 pub use config::{Config, ServerSection, config_path, data_dir};
-pub use logging::init_logging;
+pub use logging::{LoggingGuards, init_logging};
 pub use net_service::{NetServiceHandle, spawn_net_service};
-pub use wiring::{Running, start, start_custom, start_with_transport};
+pub use wiring::{Running, start, start_custom, start_full, start_with_transport};
 
-#[cfg(test)]
+#[cfg(all(test, debug_assertions))]
 mod e2e_tests;
 
 #[cfg(test)]
@@ -171,6 +173,48 @@ mining_interest = [{}]
         );
     }
 
+    #[test]
+    fn f2_config_without_f3_fields_loads_with_defaults() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(
+            &path,
+            "language = \"en\"
+sell_search_radius_ly = 120
+mining_threshold_cr = 2000000
+",
+        )
+        .unwrap();
+        let cfg = Config::load_from_or_default(&path);
+        assert_eq!(cfg.sell_search_radius_ly, 120);
+        assert_eq!(cfg.eddn_radius_ly, 200);
+        assert_eq!(cfg.tourism_reference_cr_ly, 100_000);
+    }
+
+    #[tokio::test]
+    async fn put_config_rejects_eddn_radius_out_of_range() {
+        let dir = tempdir().unwrap();
+        let (actions, _core, _online) = runtime_actions(dir.path());
+        let before = actions.get_config();
+        for (field, value) in [
+            ("eddn_radius_ly", json!(600)),
+            ("eddn_radius_ly", json!(19)),
+            ("tourism_reference_cr_ly", json!(999)),
+            ("tourism_reference_cr_ly", json!(10_000_001u64)),
+        ] {
+            let mut cfg = before.clone();
+            cfg[field] = value;
+            assert!(
+                matches!(actions.put_config(cfg), Err(ActionError::Failed(_))),
+                "{field}"
+            );
+        }
+        assert_eq!(actions.get_config(), before);
+        let mut ok = before.clone();
+        ok["eddn_radius_ly"] = json!(500);
+        assert_eq!(actions.put_config(ok).unwrap()["eddn_radius_ly"], 500);
+    }
+
     #[tokio::test]
     async fn put_config_normalizes_interest_list() {
         let dir = tempdir().unwrap();
@@ -306,22 +350,67 @@ mining_interest = [{}]
         let actions = AppActions::with_runtime(Config::default(), core.events.clone(), online, net)
             .with_save_path(dir.path().join("config.toml"));
         let snap = BTreeMap::new();
-        for name in ["combat.reset_session", "mining.reset_session"] {
+        for name in [
+            "combat.reset_session",
+            "mining.reset_session",
+            "trade.reset_session",
+            "trade.route_request",
+            "trade.search",
+            "missions.dismiss_alert",
+            "missions.to_route",
+            "missions.reset_session",
+        ] {
             let out = actions.run_action_with(name, &json!({}), &snap);
             assert!(out.is_ok(), "{name}: {out:?}");
         }
         let mut seen = Value::Null;
         for _ in 0..50 {
             seen = core.snapshot().await["actionprobe.actions"].clone();
-            if seen.as_array().is_some_and(|a| a.len() == 2) {
+            if seen.as_array().is_some_and(|a| a.len() == 8) {
                 break;
             }
             tokio::time::sleep(Duration::from_millis(50)).await;
         }
         assert_eq!(
             seen,
-            json!(["combat.reset_session", "mining.reset_session"])
+            json!([
+                "combat.reset_session",
+                "mining.reset_session",
+                "trade.reset_session",
+                "trade.route_request",
+                "trade.search",
+                "missions.dismiss_alert",
+                "missions.to_route",
+                "missions.reset_session"
+            ])
         );
+    }
+
+    #[test]
+    fn trade_route_copy_target_reaches_clipboard() {
+        let actions = AppActions::new();
+        let mut snapshot = BTreeMap::new();
+        snapshot.insert(
+            "trade.route".into(),
+            json!({ "copy_target": "C", "copy_seq": 2 }),
+        );
+        let out = actions
+            .run_action("clipboard.copy-next-system", &snapshot)
+            .unwrap();
+        assert_eq!(out["system"], "C");
+        assert_eq!(actions.clipboard().last_copied().as_deref(), Some("C"));
+        // Sin destino (ajuste desactivado o ruta acabada) no se copia nada.
+        let actions = AppActions::new();
+        snapshot.insert(
+            "trade.route".into(),
+            json!({ "copy_target": null, "copy_seq": 2 }),
+        );
+        assert!(
+            actions
+                .run_action("clipboard.copy-next-system", &snapshot)
+                .is_err()
+        );
+        assert_eq!(actions.clipboard().last_copied(), None);
     }
 
     #[tokio::test]

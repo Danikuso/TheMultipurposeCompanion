@@ -3,21 +3,62 @@ use tmc_model::theme::{HudTheme, Rgb};
 
 pub fn read_hud_theme(path: Option<&Path>) -> HudTheme {
     let base = HudTheme::default();
-    let Some(text) = path.and_then(|path| std::fs::read_to_string(path).ok()) else {
+    let Some(path) = path else {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "source.hud.not_configured",
+            tmc_model::diagnostics::json!({"is_default":true})
+        );
         return base;
     };
+    let text = match std::fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(_error) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "source.hud.read_failed",
+                tmc_model::diagnostics::json!({"is_default":true,"failure_class":tmc_model::diagnostics::io_class(&_error)})
+            );
+            return base;
+        }
+    };
     let Ok(document) = roxmltree::Document::parse(&text) else {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "source.hud.invalid_xml",
+            tmc_model::diagnostics::json!({"is_default":true,"bytes":text.len()})
+        );
         return base;
     };
     let Some(red) = read_matrix(&document, "MatrixRed") else {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "source.hud.invalid_red",
+            tmc_model::diagnostics::json!({"is_default":true})
+        );
         return base;
     };
     let Some(green) = read_matrix(&document, "MatrixGreen") else {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "source.hud.invalid_green",
+            tmc_model::diagnostics::json!({"is_default":true})
+        );
         return base;
     };
     let Some(blue) = read_matrix(&document, "MatrixBlue") else {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "source.hud.invalid_blue",
+            tmc_model::diagnostics::json!({"is_default":true})
+        );
         return base;
     };
+    tmc_model::diagnostic!(
+        tmc_model::diagnostics::DiagnosticContext::State,
+        "source.hud.accepted",
+        tmc_model::diagnostics::json!({"red":red,"green":green,"blue":blue})
+    );
     let transform = |Rgb(r, g, b): Rgb| {
         let channel = |index: usize| {
             (f64::from(r) * red[index] + f64::from(g) * green[index] + f64::from(b) * blue[index])

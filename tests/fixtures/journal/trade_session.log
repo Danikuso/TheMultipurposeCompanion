@@ -1,0 +1,10 @@
+{"timestamp":"2026-10-19T12:00:00Z","event":"LoadGame","Commander":"TESTER","Ship":"type9","GameMode":"Solo","gameversion":"4.1.0.0","Credits":5000000}
+{"timestamp":"2026-10-19T12:00:01Z","event":"Loadout","Ship":"type9","ShipID":3,"MaxJumpRange":22.5,"CargoCapacity":256,"Modules":[]}
+{"timestamp":"2026-10-19T12:00:02Z","event":"Docked","StationName":"Origin Port","StationType":"Coriolis","MarketID":128000002,"StarSystem":"Origin Start","SystemAddress":4,"StationServices":["commodities"],"LandingPads":{"Small":4,"Medium":4,"Large":2}}
+{"timestamp":"2026-10-19T12:00:03Z","event":"MarketBuy","Type":"Gold","Count":100,"BuyPrice":9400,"TotalCost":940000}
+{"timestamp":"2026-10-19T12:00:04Z","event":"MarketBuy","Type":"Gold","Count":50,"BuyPrice":9700,"TotalCost":485000}
+{"timestamp":"2026-10-19T12:00:05Z","event":"Cargo","Count":150,"Inventory":[{"Name":"Gold","Name_Localised":"Oro","Count":150,"Stolen":0}]}
+{"timestamp":"2026-10-19T12:00:30Z","event":"FSDJump","StarSystem":"Synthetic System","SystemAddress":5,"StarPos":[0.0,0.0,0.0],"JumpDist":18.5,"FuelUsed":2.1,"FuelLevel":29.0}
+{"timestamp":"2026-10-19T12:00:50Z","event":"Docked","StationName":"Synthetic Port","StationType":"Coriolis","MarketID":128000001,"StarSystem":"Synthetic System","SystemAddress":5,"StationServices":["commodities"],"LandingPads":{"Small":4,"Medium":4,"Large":2}}
+{"timestamp":"2026-10-19T12:01:00Z","event":"MarketSell","Type":"Gold","Count":60,"SellPrice":11000,"TotalSale":660000,"AvgPricePaid":9500}
+{"timestamp":"2026-10-19T12:01:01Z","event":"Cargo","Count":103,"Inventory":[{"Name":"Gold","Name_Localised":"Oro","Count":90,"Stolen":0},{"Name":"Silver","Count":10,"MissionID":123},{"Name":"Palladium","Count":3,"Stolen":3}]}

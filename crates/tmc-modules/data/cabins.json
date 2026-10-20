@@ -1,0 +1,36 @@
+{
+  "source": "Redacción propia de TMC: casos de cabinas definidos en el plan F3 Task 13, sin importar tablas de terceros",
+  "license": "Datos propios del proyecto (PolyForm NC)",
+  "version": 1,
+  "entries": [
+    {
+      "symbol": "int_passengercabin_size2_class1",
+      "class": "Economy",
+      "seats": 2,
+      "source": "Ficha propia de TMC, 2026-10-19: cabina económica de tamaño 2, 2 plazas (caso de referencia del plan F3 Task 13); pendiente de comprobación en el juego.",
+      "verified": false
+    },
+    {
+      "symbol": "int_passengercabin_size4_class1",
+      "class": "Economy",
+      "seats": 8,
+      "source": "Ficha propia de TMC, 2026-10-19: cabina económica de tamaño 4, 8 plazas (caso de referencia del plan F3 Task 13); pendiente de comprobación en el juego.",
+      "verified": false
+    },
+    {
+      "symbol": "int_passengercabin_size5_class4",
+      "class": "Luxury",
+      "seats": 4,
+      "source": "Ficha propia de TMC, 2026-10-19: cabina de lujo de tamaño 5, 4 plazas (caso de referencia del plan F3 Task 13); pendiente de comprobación en el juego.",
+      "verified": false
+    },
+    {
+      "symbol": "int_passengercabin_size6_class3",
+      "class": "First",
+      "seats": 12,
+      "source": "Ficha propia de TMC, 2026-10-19: cabina de primera de tamaño 6, 12 plazas (caso de referencia del plan F3 Task 13); pendiente de comprobación en el juego.",
+      "verified": false
+    }
+  ],
+  "note": "Selección inicial incompleta. No se extrapolan plazas a otros tamaños o clases; un símbolo desconocido no tiene dato. Sin verificación en el juego."
+}

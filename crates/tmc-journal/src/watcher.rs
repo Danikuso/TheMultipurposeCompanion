@@ -50,10 +50,15 @@ impl JournalReader {
         let tail = match list_journals(&dir) {
             Ok(paths) => paths.last().and_then(|p| Self::open(p)),
             Err(error) => {
-                tracing::warn!(path = %dir.display(), %error, "could not list journals");
+                tracing::warn!(failure_class = ?error.kind(), "could not list journals");
                 None
             }
         };
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "journal.reader.started",
+            tmc_model::diagnostics::json!({"selected":tail.is_some(),"file":tail.as_ref().map(|t|tmc_model::diagnostics::source_file(t.path()))})
+        );
         Self { dir, tail }
     }
 
@@ -61,7 +66,7 @@ impl JournalReader {
         match LineTailer::open(path, 0) {
             Ok(tail) => Some(tail),
             Err(error) => {
-                tracing::warn!(path = %path.display(), %error, "could not open journal");
+                tracing::warn!(failure_class = ?error.kind(), "could not open journal");
                 None
             }
         }
@@ -74,7 +79,7 @@ impl JournalReader {
         let lines = match tail.read_new_lines() {
             Ok(lines) => lines,
             Err(error) => {
-                tracing::warn!(path = %tail.path().display(), %error, "could not read journal");
+                tracing::warn!(failure_class = ?error.kind(), "could not read journal");
                 return false;
             }
         };
@@ -84,15 +89,42 @@ impl JournalReader {
             .unwrap_or_default()
             .to_string_lossy()
             .into_owned();
+        #[cfg(debug_assertions)]
+        if !lines.is_empty() {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "journal.reader.batch",
+                tmc_model::diagnostics::json!({"file":tmc_model::diagnostics::source_file(tail.path()),"lines":lines.len(),"replaying":replaying,"offset":tail.offset()})
+            );
+        }
         for (line, text) in lines {
             match parse_line(&text) {
-                Ok(ev) => events.push(SourceEvent::Journal {
-                    ev,
-                    file: file.clone(),
-                    line,
-                    replaying,
-                }),
-                Err(error) => tracing::warn!(%file, line, %error, "invalid journal line skipped"),
+                Ok(ev) => {
+                    tmc_model::diagnostic!(
+                        tmc_model::diagnostics::DiagnosticContext::Journal { event: &ev.name },
+                        "journal.reader.parsed",
+                        tmc_model::diagnostics::json!({"event":ev.name,"line":line,"replaying":replaying,"is_other":matches!(ev.kind,EventKind::Other),"file":tmc_model::diagnostics::source_file(tail.path())})
+                    );
+                    tmc_model::diagnostic!(
+                        tmc_model::diagnostics::DiagnosticContext::Journal { event: &ev.name },
+                        "journal.reader.payload",
+                        &ev.raw
+                    );
+                    events.push(SourceEvent::Journal {
+                        ev,
+                        file: file.clone(),
+                        line,
+                        replaying,
+                    });
+                }
+                Err(_error) => {
+                    tmc_model::diagnostic!(
+                        tmc_model::diagnostics::DiagnosticContext::State,
+                        "journal.reader.invalid",
+                        tmc_model::diagnostics::json!({"file":tmc_model::diagnostics::source_file(tail.path()),"line":line,"bytes":text.len(),"failure_class":match _error {tmc_model::ParseError::Empty=>"empty",tmc_model::ParseError::Json(_)=>"json",tmc_model::ParseError::MissingField(_)=>"missing_field"}})
+                    );
+                    tracing::warn!(line, "invalid journal line skipped");
+                }
             }
         }
         true
@@ -106,7 +138,7 @@ impl JournalReader {
         let paths = match list_journals(&self.dir) {
             Ok(paths) => paths,
             Err(error) => {
-                tracing::warn!(path = %self.dir.display(), %error, "could not list journals");
+                tracing::warn!(failure_class = ?error.kind(), "could not list journals");
                 return events;
             }
         };
@@ -120,6 +152,11 @@ impl JournalReader {
         if let Some(path) = candidate
             && let Some(tail) = Self::open(&path)
         {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "journal.reader.switched",
+                tmc_model::diagnostics::json!({"file":tmc_model::diagnostics::source_file(&path)})
+            );
             self.tail = Some(tail);
             self.drain(false, &mut events);
         }
@@ -138,6 +175,14 @@ async fn emit_journals(
     tx: &mpsc::Sender<SourceEvent>,
     running: &mut bool,
 ) -> bool {
+    #[cfg(debug_assertions)]
+    if !events.is_empty() {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "journal.emit.batch",
+            tmc_model::diagnostics::json!({"events":events.len()})
+        );
+    }
     for event in events {
         let companion = if let SourceEvent::Journal { ev, .. } = &event {
             match ev.kind {
@@ -145,11 +190,21 @@ async fn emit_journals(
                 EventKind::Shutdown => *running = false,
                 _ => {}
             }
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Journal { event: &ev.name },
+                "journal.emit.selected",
+                tmc_model::diagnostics::json!({"event":ev.name,"running":running,"companion_selected":CompanionKind::for_event(&ev.name).is_some()})
+            );
             CompanionKind::for_event(&ev.name)
         } else {
             None
         };
         if tx.send(event).await.is_err() {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "journal.emit.channel_closed",
+                tmc_model::diagnostics::json!({"closed":true})
+            );
             return false;
         }
         if let Some(kind) = companion {
@@ -159,6 +214,11 @@ async fn emit_journals(
                 _ = tx.closed() => return false,
                 result = tokio::task::spawn_blocking(move || read_companion(&dir, kind)) => result,
             };
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "journal.emit.companion_result",
+                tmc_model::diagnostics::json!({"joined":result.is_ok(),"accepted":matches!(&result,Ok(Some(_)))})
+            );
             if let Ok(Some(file)) = result
                 && tx.send(SourceEvent::Companion(file)).await.is_err()
             {
@@ -183,6 +243,11 @@ async fn poll_status(mut poller: StatusPoller, tx: mpsc::Sender<SourceEvent>) {
             }) => result,
         };
         let Ok((returned, status)) = result else {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "source.status.worker_failed",
+                tmc_model::diagnostics::json!({"failed":true})
+            );
             return;
         };
         poller = returned;
@@ -210,9 +275,19 @@ async fn poll_process(
             result = tokio::task::spawn_blocking(is_game_running) => result,
         };
         let Ok(value) = result else {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "source.process.worker_failed",
+                tmc_model::diagnostics::json!({"failed":true})
+            );
             return;
         };
         if last != Some(value) {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "source.process.transition",
+                tmc_model::diagnostics::json!({"previous":last,"running":value})
+            );
             last = Some(value);
             let _ = running.send(value);
             if tx
@@ -231,19 +306,64 @@ fn nonzero(duration: Duration) -> Duration {
 }
 
 async fn run(opts: WatchOptions, tx: mpsc::Sender<SourceEvent>) {
+    #[cfg(debug_assertions)]
+    struct Shutdown;
+    #[cfg(debug_assertions)]
+    impl Drop for Shutdown {
+        fn drop(&mut self) {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "journal.watcher.stopped",
+                tmc_model::diagnostics::json!({"stopped":true})
+            );
+        }
+    }
+    #[cfg(debug_assertions)]
+    let _shutdown = Shutdown;
+    tmc_model::diagnostic!(
+        tmc_model::diagnostics::DiagnosticContext::State,
+        "journal.watcher.started",
+        tmc_model::diagnostics::json!({"poll_active_ms":opts.poll_active.as_millis(),"poll_idle_ms":opts.poll_idle.as_millis(),"process_check_ms":opts.process_check.as_millis(),"new_file_check_ms":opts.new_file_check.as_millis()})
+    );
     let (notify_tx, mut notify_rx) = mpsc::channel(1);
     let mut notifier = notify::recommended_watcher(move |result: notify::Result<notify::Event>| {
+        #[cfg(debug_assertions)]
+        if result.is_err() {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "journal.notify.callback_failed",
+                tmc_model::diagnostics::json!({"polling":true})
+            );
+        }
         if let Ok(event) = result
             && matches!(event.kind, NotifyKind::Create(_))
         {
-            let _ = notify_tx.try_send(());
+            let _sent = notify_tx.try_send(());
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "journal.notify.signal",
+                tmc_model::diagnostics::json!({"sent":_sent.is_ok()})
+            );
         }
     })
     .ok();
+    #[cfg(debug_assertions)]
+    if notifier.is_none() {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "journal.notify.unavailable",
+            tmc_model::diagnostics::json!({"polling":true})
+        );
+    }
     if let Some(watcher) = &mut notifier
-        && let Err(error) = watcher.watch(&opts.journal_dir, RecursiveMode::NonRecursive)
+        && let Err(_error) = watcher.watch(&opts.journal_dir, RecursiveMode::NonRecursive)
     {
-        tracing::warn!(%error, "notify unavailable; using journal polling");
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "journal.notify.watch_failed",
+            tmc_model::diagnostics::json!({"polling":true})
+        );
+        tracing::warn!("notify unavailable; using journal polling");
     }
 
     let dir = opts.journal_dir.clone();
@@ -257,6 +377,11 @@ async fn run(opts: WatchOptions, tx: mpsc::Sender<SourceEvent>) {
         }) => result,
     };
     let Ok((mut reader, events)) = startup else {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "journal.watcher.startup_failed",
+            tmc_model::diagnostics::json!({"failed":true})
+        );
         return;
     };
     let mut running = false;
@@ -285,6 +410,11 @@ async fn run(opts: WatchOptions, tx: mpsc::Sender<SourceEvent>) {
         }) => result,
     };
     let Ok((poller, initial_status)) = initial_status else {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "source.status.startup_failed",
+            tmc_model::diagnostics::json!({"failed":true})
+        );
         return;
     };
     if let Some(status) = initial_status
@@ -329,6 +459,11 @@ async fn run(opts: WatchOptions, tx: mpsc::Sender<SourceEvent>) {
             }) => result,
         };
         let Ok((returned, events)) = result else {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "journal.reader.worker_failed",
+                tmc_model::diagnostics::json!({"failed":true})
+            );
             return;
         };
         reader = returned;

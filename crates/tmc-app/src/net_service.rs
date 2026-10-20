@@ -44,6 +44,23 @@ use tmc_model::source::SourceEvent;
 use tmc_net::{CacheKind, NetClient, cache_keys, ttl_for};
 use tokio::sync::{Semaphore, mpsc};
 
+/// Evento de diagnóstico del servicio de red (solo debug; sin URLs ni texto de errores).
+macro_rules! svc_event {
+    ($code:literal, { $($payload:tt)* }) => {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::NetOutcome,
+            $code,
+            tmc_model::diagnostics::json!({ $($payload)* })
+        )
+    };
+}
+
+/// Huella estable de la consulta (la misma que usa `NetClient`).
+#[cfg(debug_assertions)]
+fn fp(query: &NetQuery) -> u64 {
+    tmc_net::client::query_fingerprint(query)
+}
+
 /// Mínimo de caracteres para consultar el autocompletado.
 const AUTOCOMPLETE_MIN_CHARS: usize = 3;
 /// Llamadas simultáneas máximas al cliente de red.
@@ -61,6 +78,9 @@ impl NetServiceHandle {
     /// Autocompletado para REST (sin pasar por el actor).
     pub async fn autocomplete(&self, prefix: &str) -> Result<Vec<SystemSuggestion>, NetFailure> {
         if prefix.chars().count() < AUTOCOMPLETE_MIN_CHARS || !self.online.load(Ordering::Relaxed) {
+            svc_event!("net.service.autocomplete_skipped", {
+                "too_short": prefix.chars().count() < AUTOCOMPLETE_MIN_CHARS,
+                "online": self.online.load(Ordering::Relaxed)});
             return Ok(Vec::new());
         }
         let query = NetQuery::Autocomplete {
@@ -147,6 +167,10 @@ async fn send_all(
     at: DateTime<Utc>,
     outcome: &NetOutcome,
 ) {
+    svc_event!("net.service.responded", {"waiters": waiters.len(),
+        "ids": waiters.iter().map(|w| w.id).collect::<Vec<_>>(),
+        "source": source, "outcome": outcome.diag_summary().0,
+        "items": outcome.diag_summary().1});
     for w in waiters {
         let ev = SourceEvent::Net(response(w, source, at, outcome.clone()));
         if ctx.events.send(ev).await.is_err() {
@@ -161,7 +185,9 @@ async fn handle(ctx: Arc<Ctx>, req: NetRequest) {
         module: req.module,
         key: req.key,
     };
+    svc_event!("net.service.received", {"id": waiter.id, "query_fp": fp(&req.query)});
     if !ctx.online.load(Ordering::Relaxed) {
+        svc_event!("net.optout.blocked", {"stage": 3, "id": waiter.id});
         send_all(
             &ctx,
             &[waiter],
@@ -176,9 +202,12 @@ async fn handle(ctx: Arc<Ctx>, req: NetRequest) {
     {
         let mut shared = ctx.shared.lock().unwrap();
         if let Some(group) = shared.inflight.get_mut(&qkey) {
+            svc_event!("net.coalesced.joined", {"id": waiter.id, "query_fp": fp(&req.query),
+                "waiters": group.len() + 1});
             group.push(waiter);
             return;
         }
+        svc_event!("net.coalesced.leader", {"id": waiter.id, "query_fp": fp(&req.query)});
         shared.inflight.insert(qkey.clone(), vec![waiter]);
     }
     lead(ctx, qkey, req.query).await;
@@ -201,8 +230,15 @@ async fn run(ctx: &Ctx, query: &NetQuery) -> Option<(NetSource, NetOutcome)> {
         NetQuery::BodyBio { .. } => &ctx.canonn_permits,
         _ => &ctx.permits,
     };
+    #[cfg(debug_assertions)]
+    let waited_since = std::time::Instant::now();
+    svc_event!("net.service.permit_wait", {"canonn_pool": matches!(query, NetQuery::BodyBio { .. }),
+        "available": permits.available_permits(), "query_fp": fp(query)});
     let _permit = permits.acquire().await.ok()?;
+    svc_event!("net.service.permit_acquired", {"canonn_pool": matches!(query, NetQuery::BodyBio { .. }),
+        "waited_ms": waited_since.elapsed().as_millis() as u64, "query_fp": fp(query)});
     if !ctx.online.load(Ordering::Relaxed) {
+        svc_event!("net.optout.blocked", {"stage": 4, "query_fp": fp(query)});
         return None;
     }
     let result = ctx.client.execute_with_online(query, &ctx.online).await;
@@ -236,6 +272,7 @@ fn take_group(ctx: &Ctx, qkey: &str) -> Vec<Waiter> {
 
 async fn lead(ctx: Arc<Ctx>, qkey: String, query: NetQuery) {
     if let Some((outcome, at)) = read_api_cache(&ctx.store, &query).await {
+        svc_event!("net.cache.api.hit", {"query_fp": fp(&query), "age_s": age(at).as_secs()});
         let waiters = take_group(&ctx, &qkey);
         send_all(&ctx, &waiters, NetSource::Cache, at, &outcome).await;
         return;
@@ -247,6 +284,9 @@ async fn lead(ctx: Arc<Ctx>, qkey: String, query: NetQuery) {
             && age_ok(CacheKind::SystemPolitics, hit.politics_at);
         let usable = age(hit.card_at) < ttl_for(CacheKind::SystemCard).max_stale
             && age(hit.politics_at) < ttl_for(CacheKind::SystemPolitics).max_stale;
+        svc_event!("net.cache.system.entry", {"query_fp": fp(&query), "fresh": fresh,
+            "usable": usable, "card_age_s": age(hit.card_at).as_secs(),
+            "politics_age_s": age(hit.politics_at).as_secs()});
         if fresh || usable {
             let waiters = take_group(&ctx, &qkey);
             let at = hit.card_at.min(hit.politics_at);
@@ -263,12 +303,15 @@ async fn lead(ctx: Arc<Ctx>, qkey: String, query: NetQuery) {
             }
             // Una sola actualización en segundo plano por consulta.
             if !ctx.shared.lock().unwrap().refreshing.insert(qkey.clone()) {
+                svc_event!("net.cache.refresh.already_running", {"query_fp": fp(&query)});
                 return;
             }
+            svc_event!("net.cache.refresh.started", {"query_fp": fp(&query)});
             refresh(ctx, qkey, query, waiters).await;
             return;
         }
     }
+    svc_event!("net.cache.miss", {"query_fp": fp(&query)});
     let Some((source, outcome)) = run(&ctx, &query).await else {
         disabled(&ctx, &qkey).await;
         return;
@@ -295,8 +338,11 @@ async fn refresh(ctx: Arc<Ctx>, qkey: String, query: NetQuery, waiters: Vec<Wait
     let result = run(&ctx, &query).await;
     ctx.shared.lock().unwrap().refreshing.remove(&qkey);
     let Some((source, outcome)) = result else {
+        svc_event!("net.cache.refresh.aborted", {"query_fp": fp(&query)});
         return;
     };
+    svc_event!("net.cache.refresh.finished", {"query_fp": fp(&query),
+        "replaced": matches!(outcome, NetOutcome::System(_))});
     if matches!(outcome, NetOutcome::System(_)) {
         finish(&ctx, &query, &waiters, source, &outcome).await;
     }
@@ -322,6 +368,8 @@ async fn retry(ctx: Arc<Ctx>, qkey: String, query: NetQuery, first: NetOutcome) 
     let mut last = first;
     loop {
         let Some(at) = ctx.client.retry_at(&query) else {
+            svc_event!("net.retry.stopped", {"query_fp": fp(&query),
+                "down": ctx.client.is_down_for(&query)});
             let waiters = take_group(&ctx, &qkey);
             if ctx.client.is_down_for(&query) && last != NetOutcome::Failed(NetFailure::Down) {
                 let down = NetOutcome::Failed(NetFailure::Down);
@@ -329,6 +377,8 @@ async fn retry(ctx: Arc<Ctx>, qkey: String, query: NetQuery, first: NetOutcome) 
             }
             return;
         };
+        svc_event!("net.retry.scheduled", {"query_fp": fp(&query),
+            "delay_ms": at.saturating_duration_since(tokio::time::Instant::now()).as_millis() as u64});
         tokio::time::sleep_until(at).await;
         let Some((source, outcome)) = run(&ctx, &query).await else {
             disabled(&ctx, &qkey).await;
@@ -376,6 +426,7 @@ async fn read_cache(store: &Store, query: &NetQuery) -> Option<CacheHit> {
     let (card, politics) = match result {
         Ok(Ok((Some(card), Some(politics)))) => (card, politics),
         Ok(Err(error)) => {
+            svc_event!("net.cache.read_failed", {"table_kind": 0});
             tracing::warn!(%error, "api_cache read failed");
             return None;
         }
@@ -421,6 +472,7 @@ async fn write_cache(store: &Store, query: &NetQuery, system: &RemoteSystem, at:
     })
     .await;
     if let Ok(Err(error)) = result {
+        svc_event!("net.cache.write_failed", {"table_kind": 0});
         tracing::warn!(%error, "api_cache write failed");
     }
 }
@@ -430,6 +482,9 @@ fn api_cache_key(query: &NetQuery) -> Option<(CacheKind, String)> {
     match query {
         NetQuery::CommodityImportsNearby { .. }
         | NetQuery::NearestService { .. }
+        | NetQuery::TradeRoute(_)
+        | NetQuery::CommodityExportsNearby { .. }
+        | NetQuery::SystemCoordsByName { .. }
         | NetQuery::BodyBio { .. } => cache_keys(query).into_iter().next(),
         _ => None,
     }
@@ -450,6 +505,9 @@ async fn read_api_cache(store: &Store, query: &NetQuery) -> Option<(NetOutcome, 
     let outcome = match kind {
         CacheKind::ArdentImports => NetOutcome::Markets(serde_json::from_str(&entry.value).ok()?),
         CacheKind::BodyBio => NetOutcome::BodyBio(serde_json::from_str(&entry.value).ok()?),
+        CacheKind::SpanshTrade => NetOutcome::TradeRoute(serde_json::from_str(&entry.value).ok()?),
+        CacheKind::ArdentExports => NetOutcome::Exports(serde_json::from_str(&entry.value).ok()?),
+        CacheKind::SystemCoords => NetOutcome::Coords(serde_json::from_str(&entry.value).ok()?),
         _ => NetOutcome::Stations(serde_json::from_str(&entry.value).ok()?),
     };
     Some((outcome, entry.fetched_at))
@@ -463,6 +521,9 @@ async fn write_api_cache(store: &Store, query: &NetQuery, outcome: &NetOutcome, 
         NetOutcome::Markets(items) => serde_json::to_string(items),
         NetOutcome::Stations(items) => serde_json::to_string(items),
         NetOutcome::BodyBio(bio) => serde_json::to_string(bio),
+        NetOutcome::TradeRoute(plan) => serde_json::to_string(plan),
+        NetOutcome::Exports(items) => serde_json::to_string(items),
+        NetOutcome::Coords(coords) => serde_json::to_string(coords),
         _ => return,
     };
     let Ok(json) = json else {
@@ -968,6 +1029,7 @@ mod tests {
             max_pad: Some(tmc_model::net::PadSize::Large),
             station_type: None,
             updated_at: None,
+            origin: None,
         }];
         rig.store
             .api_cache_put(
@@ -1003,6 +1065,44 @@ mod tests {
         let again = next_response(&mut rig).await;
         assert_eq!(again.source, NetSource::Cache);
         assert_eq!(rig.fake.calls(), 1);
+    }
+
+    #[tokio::test]
+    async fn coords_cached_for_30_days() {
+        let coords = r#"{"systemAddress":9000000000001,"systemName":"Origin","systemX":0.5,"systemY":-1.25,"systemZ":3.75}"#;
+        let mut rig = rig(vec![ok(200, coords)]);
+        let request = |id| NetRequest {
+            id,
+            module: "trade".into(),
+            key: "coords:origin".into(),
+            query: NetQuery::SystemCoordsByName {
+                name: "Origin".into(),
+            },
+        };
+        rig.handle.tx.send(request(1)).await.unwrap();
+        let first = next_response(&mut rig).await;
+        assert_eq!(first.source, NetSource::Ardent);
+        assert!(matches!(first.outcome, NetOutcome::Coords(_)));
+        rig.handle.tx.send(request(2)).await.unwrap();
+        let again = next_response(&mut rig).await;
+        assert_eq!(again.source, NetSource::Cache);
+        assert_eq!(again.outcome, first.outcome);
+        assert_eq!(rig.fake.calls(), 1);
+        // A los 29 días sigue vigente; a los 31 se vuelve a pedir.
+        rig.store
+            .api_cache_put(
+                "coords:origin",
+                &serde_json::to_string(&match &first.outcome {
+                    NetOutcome::Coords(c) => c.clone(),
+                    _ => unreachable!(),
+                })
+                .unwrap(),
+                Utc::now() - chrono::Duration::days(31),
+            )
+            .unwrap();
+        rig.handle.tx.send(request(3)).await.unwrap();
+        assert_eq!(next_response(&mut rig).await.source, NetSource::Ardent);
+        assert_eq!(rig.fake.calls(), 2);
     }
 
     #[tokio::test]
@@ -1194,5 +1294,49 @@ mod tests {
         rig.online.store(false, Ordering::Relaxed);
         assert_eq!(rig.handle.autocomplete("Sol").await, Ok(vec![]));
         assert_eq!(rig.fake.calls(), 1);
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn diagnostics_cover_service_decisions_without_error_text() {
+        use tmc_model::diagnostics::capture::capture;
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .start_paused(true)
+            .build()
+            .unwrap();
+        let (_, records) = capture(|| {
+            rt.block_on(async {
+                let mut rig = rig(vec![Err(TransportError::Connect(
+                    "https://spansh.co.uk/api?token=CANARYERR".into(),
+                ))]);
+                rig.handle.tx.send(request(7)).await.unwrap();
+                let first = next_response(&mut rig).await;
+                assert_eq!(first.id, 7);
+            })
+        });
+        let all: String = records
+            .iter()
+            .map(|r| {
+                format!(
+                    "{} {}
+",
+                    r.code, r.payload
+                )
+            })
+            .collect();
+        for canary in ["CANARYERR", "https://", "spansh.co.uk", "token="] {
+            assert!(!all.contains(canary), "{canary} leaked: {all}");
+        }
+        let codes: Vec<&str> = records.iter().map(|r| r.code.as_str()).collect();
+        for code in [
+            "net.service.received",
+            "net.coalesced.leader",
+            "net.cache.miss",
+            "net.service.permit_acquired",
+            "net.service.responded",
+        ] {
+            assert!(codes.contains(&code), "falta {code}: {codes:?}");
+        }
     }
 }

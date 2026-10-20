@@ -26,3 +26,7 @@ Thumbs.db
 
 # Maquetas de brainstorming
 .superpowers/
+
+debug_logs/
+target-f3/
+target-f2/

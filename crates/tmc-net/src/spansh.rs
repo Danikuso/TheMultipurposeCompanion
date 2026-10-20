@@ -2,10 +2,12 @@
 
 use crate::jsonx;
 use crate::transport::url_encode;
+use chrono::{DateTime, Utc};
 use serde_json::Value;
+use tmc_model::market::is_fleet_carrier;
 use tmc_model::net::{
-    GalaxyRouteParams, NetFailure, NeutronRouteParams, PlannedHop, PlannedRoute, RemoteSystem,
-    SystemSuggestion,
+    GalaxyRouteParams, NetFailure, NeutronRouteParams, PadSize, PlannedHop, PlannedRoute,
+    RemoteSystem, SystemSuggestion, TradeCommodity, TradeRouteParams, TradeRoutePlan, TradeStop,
 };
 
 pub const BASE: &str = "https://spansh.co.uk/api";
@@ -15,6 +17,14 @@ pub const BASE: &str = "https://spansh.co.uk/api";
 pub enum RoutePoll {
     Pending,
     Done(PlannedRoute),
+    Failed(String),
+}
+
+/// Estado de un trabajo de ruta comercial.
+#[derive(Debug, Clone, PartialEq)]
+pub enum TradePoll {
+    Pending,
+    Done(TradeRoutePlan),
     Failed(String),
 }
 
@@ -31,6 +41,11 @@ pub fn neutron_url() -> String {
 /// Alta de ruta de galaxia (`POST`, formulario).
 pub fn galaxy_url() -> String {
     format!("{BASE}/generic/route")
+}
+
+/// Alta de ruta comercial (`POST`, formulario).
+pub fn trade_url() -> String {
+    format!("{BASE}/trade/route")
 }
 
 /// Sondeo de un trabajo de ruta.
@@ -158,6 +173,35 @@ pub fn galaxy_form(p: &GalaxyRouteParams) -> Vec<(String, String)> {
     ]
 }
 
+/// Formulario de la ruta comercial.
+///
+/// Limitaciones conocidas: no se envía `max_system_distance` (`TradeRouteParams`
+/// no lo tiene; Spansh usa su valor por defecto, 1000 en las pruebas) y Spansh
+/// solo distingue plataforma grande: con `Medium`/`Small` se envía
+/// `requires_large_pad=0` y la respuesta no trae el tamaño, así que no hay filtro fino.
+/// Spansh solo distingue plataforma grande
+/// (`requires_large_pad`); `max_price_age` va en segundos; los portaaviones
+/// se excluyen siempre (`allow_player_owned=0`).
+pub fn trade_form(p: &TradeRouteParams) -> Vec<(String, String)> {
+    vec![
+        pair("system", p.system.clone()),
+        pair("station", p.station.clone()),
+        pair("starting_capital", p.starting_capital.to_string()),
+        pair("max_cargo", p.max_cargo.to_string()),
+        pair("max_hops", p.max_hops.to_string()),
+        pair("max_hop_distance", num(p.max_hop_distance_ly)),
+        pair(
+            "max_price_age",
+            (u64::from(p.max_price_age_days) * 86_400).to_string(),
+        ),
+        pair("requires_large_pad", flag(p.min_pad == PadSize::Large)),
+        pair("allow_planetary", flag(p.allow_planetary)),
+        pair("allow_player_owned", flag(false)),
+        pair("permit", flag(false)),
+        pair("unique", flag(true)),
+    ]
+}
+
 pub fn parse_job(body: &str) -> Result<String, NetFailure> {
     let v = jsonx::parse(body)?;
     jsonx::req_str(jsonx::as_obj(&v)?, "job")
@@ -186,6 +230,118 @@ pub fn parse_route_result(body: &str) -> Result<RoutePoll, NetFailure> {
     } else {
         Err(NetFailure::Malformed)
     }
+}
+
+fn endpoint_is_carrier(e: &jsonx::Obj) -> bool {
+    let name = e.get("station").and_then(Value::as_str);
+    let id = e.get("market_id").and_then(Value::as_u64);
+    // Sin `market_id` no se excluye por el nombre (se conservaría una estación real).
+    id.is_some() && is_fleet_carrier(id.unwrap_or(0), None, name)
+}
+
+fn hop_is_carrier(h: &Value) -> bool {
+    ["source", "destination"].iter().any(|k| {
+        h.get(k)
+            .and_then(Value::as_object)
+            .is_some_and(endpoint_is_carrier)
+    })
+}
+
+/// Un salto; `Ok(None)` si toca un portaaviones. Las mercancías corruptas se
+/// saltan y un salto sin ninguna válida se descarta (`Err`).
+fn parse_hop(h: &Value) -> Result<Option<TradeStop>, NetFailure> {
+    let h = jsonx::as_obj(h)?;
+    let (src, dst) = (
+        jsonx::as_obj(h.get("source").ok_or(NetFailure::Malformed)?)?,
+        jsonx::as_obj(h.get("destination").ok_or(NetFailure::Malformed)?)?,
+    );
+    if endpoint_is_carrier(src) || endpoint_is_carrier(dst) {
+        return Ok(None);
+    }
+    let from_station = jsonx::req_str(src, "station")?;
+    let to_station = jsonx::req_str(dst, "station")?;
+    let raw = jsonx::req_array(h, "commodities")?;
+    let commodities: Vec<TradeCommodity> =
+        raw.iter().filter_map(|c| parse_commodity(c).ok()).collect();
+    if !raw.is_empty() && commodities.is_empty() {
+        return Err(NetFailure::Malformed);
+    }
+    let updated = |o: &jsonx::Obj| -> Option<DateTime<Utc>> {
+        o.get("market_updated_at")
+            .and_then(Value::as_i64)
+            .and_then(|t| DateTime::from_timestamp(t, 0))
+    };
+    let data_updated_at = match (updated(src), updated(dst)) {
+        (Some(a), Some(b)) => Some(a.min(b)),
+        (a, b) => a.or(b),
+    };
+    Ok(Some(TradeStop {
+        from_system: jsonx::req_str(src, "system")?,
+        from_station,
+        to_system: jsonx::req_str(dst, "system")?,
+        to_station,
+        from_market_id: jsonx::opt_u64(src, "market_id")?,
+        to_market_id: jsonx::opt_u64(dst, "market_id")?,
+        commodities,
+        stop_profit: h
+            .get("total_profit")
+            .and_then(Value::as_i64)
+            .ok_or(NetFailure::Malformed)?,
+        distance_ly: jsonx::req_f64(h, "distance")?,
+        data_updated_at,
+    }))
+}
+
+fn parse_commodity(c: &Value) -> Result<TradeCommodity, NetFailure> {
+    let c = jsonx::as_obj(c)?;
+    let section = |k: &str| -> Result<&jsonx::Obj, NetFailure> {
+        jsonx::as_obj(c.get(k).ok_or(NetFailure::Malformed)?)
+    };
+    let buy_price = jsonx::req_u64(section("source_commodity")?, "buy_price")?;
+    let sell_price = jsonx::req_u64(section("destination_commodity")?, "sell_price")?;
+    Ok(TradeCommodity {
+        commodity: jsonx::req_str(c, "name")?,
+        name_localised: None,
+        amount: jsonx::opt_u32(c, "amount")?.ok_or(NetFailure::Malformed)?,
+        buy_price,
+        sell_price,
+        profit_per_ton: i64::try_from(sell_price).map_err(|_| NetFailure::Malformed)?
+            - i64::try_from(buy_price).map_err(|_| NetFailure::Malformed)?,
+    })
+}
+
+/// Interpreta el sondeo de una ruta comercial: `result` es un array de saltos.
+/// Se descartan los saltos con origen o destino en un portaaviones (por el
+/// nombre `XXX-NNN`; Spansh no da el tipo de estación).
+pub fn parse_trade_result(body: &str) -> Result<TradePoll, NetFailure> {
+    let v = jsonx::parse(body)?;
+    let root = jsonx::as_obj(&v)?;
+    let error = jsonx::opt_str(root, "error")?;
+    let status = jsonx::opt_str(root, "status")?;
+    if status.as_deref() == Some("failed") || error.is_some() {
+        return Ok(TradePoll::Failed(
+            error.unwrap_or_else(|| "failed".to_string()),
+        ));
+    }
+    let hops = match root.get("result") {
+        None | Some(Value::Null) => return Ok(TradePoll::Pending),
+        Some(Value::Array(a)) => a,
+        Some(_) => return Err(NetFailure::Malformed),
+    };
+    let mut stops = Vec::new();
+    for h in hops {
+        if let Ok(Some(stop)) = parse_hop(h) {
+            stops.push(stop);
+        }
+    }
+    if !hops.is_empty() && stops.is_empty() && !hops.iter().any(hop_is_carrier) {
+        return Err(NetFailure::Malformed);
+    }
+    let total_profit = stops.iter().map(|s| s.stop_profit).sum();
+    Ok(TradePoll::Done(TradeRoutePlan {
+        stops,
+        total_profit,
+    }))
 }
 
 fn position(o: &jsonx::Obj) -> Result<Option<[f64; 3]>, NetFailure> {
@@ -536,5 +692,116 @@ mod tests {
         assert_eq!(form_get(&f, "use_injections"), Some("0"));
         assert_eq!(form_get(&f, "refuel_every_scoopable"), Some("1"));
         assert_eq!(form_get(&f, "supercharge_multiplier"), Some("4"));
+    }
+
+    const TRADE: &str = include_str!("../../../tests/fixtures/net/spansh_trade_result.json");
+
+    fn trade_params(pad: PadSize) -> TradeRouteParams {
+        TradeRouteParams {
+            system: "Sol".into(),
+            station: "Abraham Lincoln".into(),
+            starting_capital: 5_000_000,
+            max_cargo: 256,
+            max_hops: 3,
+            max_hop_distance_ly: 30.5,
+            min_pad: pad,
+            max_price_age_days: 2,
+            allow_planetary: false,
+        }
+    }
+
+    #[test]
+    fn trade_form_has_real_params() {
+        let large = trade_form(&trade_params(PadSize::Large));
+        let get = |f: &[(String, String)], k: &str| {
+            f.iter().find(|(a, _)| a == k).map(|(_, v)| v.clone())
+        };
+        assert_eq!(get(&large, "max_cargo").as_deref(), Some("256"));
+        assert_eq!(get(&large, "starting_capital").as_deref(), Some("5000000"));
+        assert_eq!(get(&large, "requires_large_pad").as_deref(), Some("1"));
+        assert_eq!(get(&large, "max_price_age").as_deref(), Some("172800"));
+        assert_eq!(get(&large, "max_hop_distance").as_deref(), Some("30.5"));
+        assert_eq!(get(&large, "allow_player_owned").as_deref(), Some("0"));
+        let medium = trade_form(&trade_params(PadSize::Medium));
+        assert_eq!(get(&medium, "requires_large_pad").as_deref(), Some("0"));
+        assert_eq!(trade_url(), "https://spansh.co.uk/api/trade/route");
+    }
+
+    #[test]
+    fn parses_trade_result_fixture() {
+        let TradePoll::Done(plan) = parse_trade_result(TRADE).unwrap() else {
+            panic!("se esperaba Done");
+        };
+        assert_eq!(plan.stops.len(), 2);
+        let c = &plan.stops[0].commodities[0];
+        assert_eq!(c.commodity, "Biowaste");
+        assert_eq!((c.buy_price, c.sell_price, c.profit_per_ton), (54, 89, 35));
+        assert_eq!(plan.stops[0].from_station, "Fictional Port");
+        assert_eq!(plan.stops[0].from_market_id, Some(900000001));
+        assert_eq!(plan.stops[0].stop_profit, 15500);
+        assert_eq!(plan.total_profit, 15500 + 1_459_500);
+        assert_eq!(
+            plan.stops[0].data_updated_at.map(|t| t.timestamp()),
+            Some(1792240800)
+        );
+    }
+
+    #[test]
+    fn trade_result_pending_is_pending() {
+        assert_eq!(
+            parse_trade_result(r#"{"status":"queued"}"#),
+            Ok(TradePoll::Pending)
+        );
+        assert!(matches!(
+            parse_trade_result(r#"{"status":"failed","error":"x"}"#),
+            Ok(TradePoll::Failed(_))
+        ));
+        assert_eq!(parse_trade_result("[]"), Err(NetFailure::Malformed));
+    }
+
+    #[test]
+    fn trade_result_drops_carrier_stops() {
+        let body = TRADE
+            .replace("Fictional Dock", "ABC-123")
+            .replace("900000002", "3700000002");
+        let TradePoll::Done(plan) = parse_trade_result(&body).unwrap() else {
+            panic!("se esperaba Done");
+        };
+        assert!(plan.stops.is_empty());
+        assert_eq!(plan.total_profit, 0);
+    }
+
+    #[test]
+    fn trade_result_carrier_rule_and_partial_rows() {
+        // Sin market_id alto el nombre tipo callsign no excluye.
+        let body = TRADE.replace("Fictional Dock", "ABC-123");
+        let TradePoll::Done(plan) = parse_trade_result(&body).unwrap() else {
+            panic!();
+        };
+        assert_eq!(plan.stops.len(), 2);
+        // Salto corrupto: se salta, el otro se conserva.
+        let mut v: serde_json::Value = serde_json::from_str(TRADE).unwrap();
+        v["result"][0]["commodities"][0] = serde_json::json!({"junk": 1});
+        let TradePoll::Done(plan) = parse_trade_result(&v.to_string()).unwrap() else {
+            panic!();
+        };
+        assert_eq!(plan.stops[0].commodities.len(), 1);
+        v["result"][0] = serde_json::json!({"junk": 1});
+        let TradePoll::Done(plan) = parse_trade_result(&v.to_string()).unwrap() else {
+            panic!();
+        };
+        assert_eq!(plan.stops.len(), 1);
+        v["result"][1] = serde_json::json!(5);
+        assert_eq!(
+            parse_trade_result(&v.to_string()),
+            Err(NetFailure::Malformed)
+        );
+        assert_eq!(
+            parse_trade_result(r#"{"status":"ok","result":[]}"#),
+            Ok(TradePoll::Done(TradeRoutePlan {
+                stops: vec![],
+                total_profit: 0
+            }))
+        );
     }
 }
