@@ -268,7 +268,8 @@ impl NetClient {
                             "request_id": id,
                             "query_fp": query_fingerprint(q),
                             "source": result.0,
-                            "outcome": &result.1,
+                            "outcome": result.1.diag_summary().0,
+                            "items": result.1.diag_summary().1,
                             "duration_ms": started.elapsed().as_millis() as u64,
                         })
                     );

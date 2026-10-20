@@ -169,7 +169,8 @@ async fn send_all(
 ) {
     svc_event!("net.service.responded", {"waiters": waiters.len(),
         "ids": waiters.iter().map(|w| w.id).collect::<Vec<_>>(),
-        "source": source, "outcome": outcome});
+        "source": source, "outcome": outcome.diag_summary().0,
+        "items": outcome.diag_summary().1});
     for w in waiters {
         let ev = SourceEvent::Net(response(w, source, at, outcome.clone()));
         if ctx.events.send(ev).await.is_err() {
