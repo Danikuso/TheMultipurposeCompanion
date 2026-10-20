@@ -258,6 +258,8 @@ pub fn render(
 
     render_vouchers(&mut out, &report.vouchers);
     render_yield(&mut out, &report.mining);
+    render_cost(&mut out, &report.cost);
+    render_massacre(&mut out, &report.massacre);
 
     if let Some(t) = timings {
         let _ = writeln!(
@@ -305,6 +307,60 @@ fn render_vouchers(out: &mut String, v: &tmc_modules::eval::VoucherReport) {
     let _ = writeln!(
         out,
         "  nota: diferencia = ganado - perdido - canjeado - pendiente; negativa si se canjearon vales anteriores al historial; la atribución de refinados solo se reinicia en LoadGame"
+    );
+}
+
+/// Con menos de `MIN_CASES` ventas comparables no hay veredicto.
+fn cost_verdict(c: &tmc_modules::eval::CostReport) -> Verdict {
+    if c.sales < MIN_CASES {
+        Verdict::Insufficient
+    } else if c.exact < c.sales {
+        Verdict::Fail
+    } else {
+        Verdict::Pass
+    }
+}
+
+fn massacre_verdict(m: &tmc_modules::eval::MassacreReport) -> Verdict {
+    let known = m.matched + m.short + m.over;
+    if known < MIN_CASES {
+        Verdict::Insufficient
+    } else if m.matched < known {
+        Verdict::Fail
+    } else {
+        Verdict::Pass
+    }
+}
+
+fn render_cost(out: &mut String, c: &tmc_modules::eval::CostReport) {
+    let _ = writeln!(
+        out,
+        "\nF3, coste pagado frente a AvgPricePaid del juego: {}",
+        cost_verdict(c).label(c.sales)
+    );
+    let _ = writeln!(
+        out,
+        "  ventas_comparables={} exactas={} diferencia_media={:.2} diferencia_max={} no_comparables={}",
+        c.sales, c.exact, c.mean_abs_diff, c.max_abs_diff, c.skipped
+    );
+}
+
+fn render_massacre(out: &mut String, m: &tmc_modules::eval::MassacreReport) {
+    let known = m.matched + m.short + m.over;
+    let pct = if known == 0 {
+        0.0
+    } else {
+        f64::from(m.matched) * 100.0 / f64::from(known)
+    };
+    let _ = writeln!(
+        out,
+        "\nF3, masacre: recuento local al redirigir: {}",
+        massacre_verdict(m).label(known)
+    );
+    let _ = writeln!(
+        out,
+        "  redirigidas={} con_masacre_conocida={} cuadran={} ({pct:.1} %) por_debajo={} por_encima={} sin_libro={}",
+        m.redirected, known, m.matched, m.short, m.over, m.unknown
     );
 }
 
@@ -516,6 +572,32 @@ mod tests {
         assert_eq!(m.unattributed_tons, 0);
         let text = render(&report, (1, 0, 0), None);
         assert!(text.contains("INSUFICIENTE (3 casos)"), "{text}");
+    }
+
+    #[test]
+    fn eval_cost_basis_matches_avg_price_paid_on_fixture() {
+        let report = fixture_report("trade_session.log");
+        let c = &report.cost;
+        assert_eq!((c.sales, c.exact, c.max_abs_diff), (1, 1, 0));
+        assert!(c.mean_abs_diff.abs() < 1e-12);
+        let text = render(&report, (1, 0, 0), None);
+        assert!(text.contains("coste pagado"), "{text}");
+        assert!(text.contains("INSUFICIENTE (1 casos)"), "{text}");
+    }
+
+    #[test]
+    fn eval_massacre_counts_match_on_fixture() {
+        let report = fixture_report("massacre_session.log");
+        let m = &report.massacre;
+        assert_eq!(
+            (m.redirected, m.matched, m.short, m.over, m.unknown),
+            (1, 1, 0, 0, 0)
+        );
+        let text = render(&report, (1, 0, 0), None);
+        assert!(text.contains("cuadran=1 (100.0 %)"), "{text}");
+        for forbidden in ["Alpha Union", "Pirate Clan", "Home Port"] {
+            assert!(!text.contains(forbidden), "{forbidden} in:\n{text}");
+        }
     }
 
     #[test]
