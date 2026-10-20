@@ -89,8 +89,22 @@ async fn purge(store: &Store) {
     })
     .await;
     match r {
-        Some(Ok(c)) => tracing::debug!(?c, "EDDN purge done"),
-        Some(Err(error)) => tracing::warn!(%error, "EDDN purge failed"),
+        Some(Ok(c)) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "eddn.purge.completed",
+                serde_json::json!({"prices":c.prices,"stations":c.stations,"coords":c.coords})
+            );
+            tracing::debug!(?c, "EDDN purge done");
+        }
+        Some(Err(error)) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "eddn.purge.failed",
+                serde_json::json!({"failure_class":error.diagnostic_class()})
+            );
+            tracing::warn!(%error, "EDDN purge failed");
+        }
         None => {}
     }
 }
@@ -167,6 +181,11 @@ async fn run(
         _ => Vec::new(),
     };
     tracing::debug!(?mode, seeds = seed.len(), "EDDN service starting");
+    tmc_model::diagnostic!(
+        tmc_model::diagnostics::DiagnosticContext::State,
+        "eddn.service.started",
+        serde_json::json!({"on_demand":matches!(mode, EddnMode::OnDemand),"seeds":seed.len(),"center_known":area.is_some()})
+    );
 
     let (tx, mut rx) = mpsc::channel::<EddnOutput>(32);
     // El hilo termina solo al cerrarse `rx` (se suelta al acabar esta tarea).
@@ -195,6 +214,11 @@ async fn run(
                             Ok(())
                         })
                         .await;
+                        tmc_model::diagnostic!(
+                            tmc_model::diagnostics::DiagnosticContext::State,
+                            "eddn.batch.received",
+                            serde_json::json!({"markets":ids.len(),"commodities":keys.len(),"written":matches!(written, Some(Ok(())))})
+                        );
                         match written {
                             Some(Ok(())) => Some(EddnNotice {
                                 markets: ids,
@@ -206,6 +230,11 @@ async fn run(
                                 at: now,
                             }),
                             Some(Err(error)) => {
+                                tmc_model::diagnostic!(
+                                    tmc_model::diagnostics::DiagnosticContext::State,
+                                    "eddn.batch.write_failed",
+                                    serde_json::json!({"failure_class":error.diagnostic_class()})
+                                );
                                 tracing::warn!(%error, "EDDN batch write failed");
                                 None
                             }
@@ -214,6 +243,11 @@ async fn run(
                     }
                     EddnOutput::Status(s) if s.connected != connected => {
                         connected = s.connected;
+                        tmc_model::diagnostic!(
+                            tmc_model::diagnostics::DiagnosticContext::State,
+                            "eddn.connection.changed",
+                            serde_json::json!({"connected":connected})
+                        );
                         Some(EddnNotice {
                             markets: Vec::new(),
                             commodities: Vec::new(),

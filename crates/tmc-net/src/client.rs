@@ -82,13 +82,18 @@ fn endpoint_of(req: &Req) -> &'static str {
         return match rest {
             r if r.starts_with("/system/") => "spansh.system",
             "/route" | "/generic/route" => "spansh.route.job",
+            "/trade/route" => "spansh.trade.job",
             r if r.starts_with("/results/") => "spansh.route.results",
             r if r.starts_with("/systems/") => "spansh.autocomplete",
             _ => "unknown",
         };
     }
     if path.starts_with(edsm::BASE) {
-        return "edsm.system";
+        return if url.contains("showCoordinates=1") {
+            "edsm.coords"
+        } else {
+            "edsm.system"
+        };
     }
     if path.starts_with(canonn::BASE) {
         return if path.ends_with("/codex/ref") {
@@ -100,6 +105,10 @@ fn endpoint_of(req: &Req) -> &'static str {
     if path.starts_with(ardent::BASE) {
         return if path.contains("/nearby/imports") {
             "ardent.nearby.imports"
+        } else if path.contains("/nearby/exports") {
+            "ardent.nearby.exports"
+        } else if path.contains("/system/name/") {
+            "ardent.system.coords"
         } else {
             "ardent.nearest.service"
         };
@@ -2132,6 +2141,39 @@ mod tests {
                 })
                 .collect();
             assert_eq!(ids.len(), 1, "todos comparten el mismo request_id");
+        }
+
+        #[test]
+        fn f3_queries_use_new_endpoint_templates_without_leaks() {
+            let t = FakeTransport::new();
+            t.script("/api/trade/route", vec![ok(503, "CANARYBODY")]);
+            let records = run(&t, trade_query());
+            let all: String = records.iter().map(|r| r.payload.clone()).collect();
+            assert!(all.contains("spansh.trade.job"), "{all}");
+            assert!(!all.contains("CANARYBODY"));
+
+            let t = FakeTransport::new();
+            t.script("nearby/exports", vec![ok(200, EXPORTS)]);
+            let records = run(&t, exports_query());
+            let all: String = records.iter().map(|r| r.payload.clone()).collect();
+            assert!(all.contains("ardent.nearby.exports"), "{all}");
+            let finished = records
+                .iter()
+                .find(|r| r.code == "net.query.finished")
+                .unwrap();
+            let v: serde_json::Value = serde_json::from_str(&finished.payload).unwrap();
+            assert_eq!(v["outcome"], "exports");
+
+            let t = FakeTransport::new();
+            t.script("ardent-insight", vec![ok(404, "{}")]);
+            t.script("edsm.net", vec![ok(200, "{}")]);
+            let records = run(&t, coords_query("CANARYCOORD?token=CANARYQ"));
+            let all: String = records.iter().map(|r| r.payload.clone()).collect();
+            for canary in ["CANARYCOORD", "CANARYQ", "https://", "?token"] {
+                assert!(!all.contains(canary), "{canary} leaked in {all}");
+            }
+            assert!(all.contains("ardent.system.coords"), "{all}");
+            assert!(all.contains("edsm.coords"), "{all}");
         }
 
         #[test]

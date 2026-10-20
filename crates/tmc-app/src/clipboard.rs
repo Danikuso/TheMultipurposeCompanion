@@ -49,7 +49,7 @@ impl Clipboard {
     }
 
     /// Portapapeles con un backend propio (pruebas).
-    #[cfg(test)]
+    #[cfg(all(test, debug_assertions))]
     fn with_backend(backend: Backend) -> Self {
         Self {
             backend,

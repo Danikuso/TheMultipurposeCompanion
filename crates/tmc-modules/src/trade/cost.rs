@@ -71,6 +71,10 @@ impl CostBasis {
             }
             e.tons = tons;
         }
+        decide!("trade.cost.reconciled", {
+            "commodities": self.entries.len(),
+            "partial": self.entries.values().filter(|e| e.known_tons + 1e-9 < f64::from(e.tons)).count(),
+        });
     }
     /// Redondea al crédito más próximo, sin alterar la media interna.
     pub fn avg_paid(&self, commodity: &str) -> Option<u64> {
@@ -189,6 +193,14 @@ impl CargoView {
                 });
             }
         }
+        decide!("trade.cargo.built", {
+            "lines": view.lines.len(),
+            "used": view.used,
+            "partial": view.lines.iter().filter(|l| l.paid_partial).count(),
+            "mission": view.lines.iter().filter(|l| l.kind == CargoKind::Mission).count(),
+            "stolen": view.lines.iter().filter(|l| l.kind == CargoKind::Stolen).count(),
+            "with_best": view.lines.iter().filter(|l| l.best_nearby.is_some()).count(),
+        });
         view
     }
 }

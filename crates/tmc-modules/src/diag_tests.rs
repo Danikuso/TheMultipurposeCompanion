@@ -60,6 +60,42 @@ fn run() -> Vec<(String, String)> {
 }
 
 #[test]
+fn trade_decisions_are_counts_only() {
+    use crate::trade::{CargoView, CostBasis};
+    use std::collections::HashMap;
+    use tmc_model::events::CargoItem;
+    let inventory = vec![CargoItem {
+        name: "Gold".into(),
+        name_localised: Some("CANARY-LOCALISED".into()),
+        count: 4,
+        stolen: Some(1),
+        ..Default::default()
+    }];
+    let ((), records) = capture(|| {
+        let mut basis = CostBasis::default();
+        basis.reconcile(&inventory);
+        let _view = CargoView::build(&inventory, &basis, &HashMap::new(), &HashMap::new(), None);
+        let _sells = crate::trade::market::best_sells(&[], &[], None, 5);
+    });
+    let codes: Vec<&str> = records.iter().map(|r| r.code.as_str()).collect();
+    for expected in [
+        "trade.cost.reconciled",
+        "trade.cargo.built",
+        "trade.market.best_sells",
+    ] {
+        assert!(codes.contains(&expected), "{expected} missing in {codes:?}");
+    }
+    assert!(records.iter().all(|r| !r.payload.contains("CANARY")));
+    let built = records
+        .iter()
+        .find(|r| r.code == "trade.cargo.built")
+        .unwrap();
+    let v: serde_json::Value = serde_json::from_str(&built.payload).unwrap();
+    assert_eq!(v["lines"], 2);
+    assert_eq!(v["stolen"], 1);
+}
+
+#[test]
 fn module_decisions_are_reproducible_and_private() {
     let first = run();
     let codes: Vec<&str> = first.iter().map(|(c, _)| c.as_str()).collect();
