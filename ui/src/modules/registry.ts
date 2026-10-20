@@ -6,6 +6,7 @@ import { exobiologyPanels } from './exobiology';
 import { combatPanels } from './combat';
 import { miningPanels } from './mining';
 import { tradePanels } from './trade';
+import { missionsPanels } from './missions';
 
 export interface UiModuleDef {
   id: string;
@@ -56,5 +57,11 @@ export const modules: UiModuleDef[] = [
     icon: 'coins',
     titleKey: 'nav-trade',
     panels: tradePanels,
+  },
+  {
+    id: 'missions',
+    icon: 'clipboard-list',
+    titleKey: 'nav-missions',
+    panels: missionsPanels,
   },
 ];
