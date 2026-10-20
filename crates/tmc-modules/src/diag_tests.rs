@@ -38,6 +38,7 @@ fn run() -> Vec<(String, String)> {
         action("combat.reset_session"),
         action("mining.reset_session"),
         action("trade.reset_session"),
+        action("missions.reset_session"),
         journal(
             "ShipTargeted",
             r#","TargetLocked":true,"Ship":"anaconda","ScanStage":3"#,
@@ -104,6 +105,7 @@ fn module_decisions_are_reproducible_and_private() {
         "combat.session.reset.applied",
         "mining.session.reset.applied",
         "trade.session.reset.applied",
+        "missions.session.reset.applied",
         "dashboard.session.reset",
         "combat.target.changed",
         "mining.prospector.verdict",

@@ -310,6 +310,7 @@ async fn start_inner(
             // El replay nunca incrementa `copy_seq`: arranca en 0 y solo suben los saltos en vivo.
             let mut last_seq: u64 = 0;
             let mut last_trade_seq: u64 = 0;
+            let mut last_missions_seq: u64 = 0;
             loop {
                 // Si el canal se retrasa se descartan mensajes pero se sigue:
                 // `copy_seq` es acumulativo, la siguiente actualización lo recupera.
@@ -363,6 +364,20 @@ async fn start_inner(
                             let _ = task_clipboard.set_text(target);
                         }
                         last_trade_seq = seq;
+                    }
+                    // «A la ruta» de misiones: copia el sistema pedido en cada acción nueva.
+                    if let Some(active) = topics.get("missions.active")
+                        && let Some(seq) = active.get("copy_seq").and_then(|v| v.as_u64())
+                    {
+                        if seq > last_missions_seq
+                            && let Some(target) = active
+                                .get("copy_target")
+                                .and_then(|v| v.as_str())
+                                .filter(|s| !s.is_empty())
+                        {
+                            let _ = task_clipboard.set_text(target);
+                        }
+                        last_missions_seq = seq;
                     }
                 }
             }

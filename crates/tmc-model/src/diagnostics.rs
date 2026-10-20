@@ -223,6 +223,13 @@ const TOPICS: &[&str] = &[
     "trade.session",
     "trade.search",
     "trade.commodities",
+    "missions.active",
+    "missions.massacre",
+    "missions.alerts",
+    "missions.rewards",
+    "missions.passengers",
+    "missions.tourism",
+    "missions.community_goals",
 ];
 const MODULES: &[&str] = &[
     "dashboard",
@@ -246,6 +253,9 @@ const ACTIONS: &[&str] = &[
     "trade.route_request",
     "trade.route_clear",
     "trade.search",
+    "missions.to_route",
+    "missions.dismiss_alert",
+    "missions.reset_session",
 ];
 const EVENTS: &[&str] = &[
     "Fileheader",
@@ -1184,6 +1194,34 @@ mod tests {
             DiagnosticContext::State,
         );
         assert_eq!(safe["module"], "trade");
+        assert!(!safe.to_string().contains("CANARY"));
+    }
+
+    #[test]
+    fn missions_topics_and_actions_are_registered_and_unknown_ones_redacted() {
+        for topic in [
+            "missions.active",
+            "missions.massacre",
+            "missions.alerts",
+            "missions.rewards",
+            "missions.passengers",
+            "missions.tourism",
+            "missions.community_goals",
+        ] {
+            assert_eq!(DiagnosticContext::Topic { name: topic }.schema(), topic);
+        }
+        for action in [
+            "missions.to_route",
+            "missions.dismiss_alert",
+            "missions.reset_session",
+        ] {
+            assert_eq!(DiagnosticContext::Action { name: action }.schema(), action);
+        }
+        let safe = redact_diagnostic(
+            &json!({"topic":"missions.CANARY","action":"missions.CANARY","module":"missions"}),
+            DiagnosticContext::State,
+        );
+        assert_eq!(safe["module"], "missions");
         assert!(!safe.to_string().contains("CANARY"));
     }
 

@@ -3,6 +3,7 @@ use crate::dashboard::Dashboard;
 use crate::exobiology::Exobiology;
 use crate::exploration::Exploration;
 use crate::mining::Mining;
+use crate::missions::Missions;
 use crate::navigation::Navigation;
 use crate::trade::Trade;
 use tmc_core::Module;
@@ -16,5 +17,6 @@ pub fn all_modules() -> Vec<Box<dyn Module>> {
         Box::new(Combat::new()),
         Box::new(Mining::new()),
         Box::new(Trade::new()),
+        Box::new(Missions::new()),
     ]
 }
