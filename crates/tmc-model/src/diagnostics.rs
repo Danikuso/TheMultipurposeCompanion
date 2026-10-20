@@ -685,6 +685,9 @@ const UI_PANELS: &[&str] = &[
     "panel-system-bodies",
     "panel-trade-cargo",
     "panel-trade-market",
+    "panel-trade-route",
+    "panel-trade-search",
+    "panel-trade-session",
 ];
 const UI_RELEVANCE: &[&str] = &["hidden", "normal", "active", "urgent"];
 const UI_STATES: &[&str] = &[
