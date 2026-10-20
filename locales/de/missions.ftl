@@ -79,3 +79,13 @@ missions-issuer-unknown = Unbekannter Auftraggeber
 missions-dismiss = Verwerfen
 missions-no-destination = Kein bekanntes Ziel
 missions-no-alerts = Keine Warnungen
+
+missions-col-passengers = Passagiere
+missions-passengers-none = Keine Passagiere an Bord
+missions-passenger-unknown-destination = Unbekanntes Ziel
+missions-rewards-abandoned = Abgebrochen: { $count }
+missions-tourism-none = Keine aktiven Rundflug-Missionen
+missions-tourism-loading = Route wird berechnet…
+missions-tourism-no-coords = Die Koordinaten der Haltepunkte sind nicht verfügbar
+missions-cg-none = Keine aktiven Community-Ziele
+missions-cg-complete = ABGESCHLOSSEN

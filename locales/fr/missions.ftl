@@ -79,3 +79,13 @@ missions-issuer-unknown = Émetteur inconnu
 missions-dismiss = Ignorer
 missions-no-destination = Aucune destination connue
 missions-no-alerts = Aucune alerte
+
+missions-col-passengers = Passagers
+missions-passengers-none = Aucun passager à bord
+missions-passenger-unknown-destination = Destination inconnue
+missions-rewards-abandoned = Abandonnées : { $count }
+missions-tourism-none = Aucune mission de tourisme active
+missions-tourism-loading = Calcul de l’itinéraire…
+missions-tourism-no-coords = Impossible d’obtenir les coordonnées des étapes
+missions-cg-none = Aucun objectif communautaire actif
+missions-cg-complete = TERMINÉ

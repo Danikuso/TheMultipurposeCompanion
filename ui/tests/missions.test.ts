@@ -6,6 +6,10 @@ import { setLocale } from '../src/lib/i18n';
 import MissionsPanel from '../src/modules/missions/MissionsPanel.svelte';
 import MassacrePanel from '../src/modules/missions/MassacrePanel.svelte';
 import MissionAlerts from '../src/modules/missions/MissionAlerts.svelte';
+import PassengersPanel from '../src/modules/missions/PassengersPanel.svelte';
+import TourismPanel from '../src/modules/missions/TourismPanel.svelte';
+import RewardsPanel from '../src/modules/missions/RewardsPanel.svelte';
+import CommunityGoalsPanel from '../src/modules/missions/CommunityGoalsPanel.svelte';
 import { isExpiringSoon } from '../src/modules/missions/time';
 
 const CLOCK = '2030-01-01T12:00:00Z';
@@ -138,4 +142,107 @@ test('alerts show localized text and dismiss', async () => {
   await Promise.resolve();
   const call = fetchMock.mock.calls.find((c) => String(c[0]).endsWith('/api/actions/missions.dismiss_alert'))!;
   expect(JSON.parse((call[1] as RequestInit).body as string)).toEqual({ mission_id: 7 });
+});
+
+function pax(extra: Record<string, unknown> = {}) {
+  return {
+    as_of: CLOCK,
+    cabins: {
+      by_class: { Economy: { occupied: 12, seats: 16 }, Business: { occupied: null, seats: 22 } },
+      occupied_total: 12, seats_total: 38,
+    },
+    groups: [
+      { destination: 'Sol', count: 12, vip: false, wanted: true, mission_id: 1 },
+      { destination: null, count: 4, vip: true, wanted: false, mission_id: 2 },
+    ],
+    wanted: true, ...extra,
+  };
+}
+
+test('wanted passenger shows warning', () => {
+  mountWith(PassengersPanel, { 'missions.passengers': pax() });
+  expect(q('missions-wanted-warning')!.textContent).toContain('Pasajero buscado a bordo');
+  expect(qa('passenger-group').length).toBe(2);
+  expect(qa('passenger-group')[0].textContent).toContain('BUSCADO');
+  expect(qa('passenger-group')[1].textContent).toContain('VIP');
+  expect(qa('passenger-group')[1].textContent).toContain('Destino desconocido');
+  expect(q('cabin-Economy')!.textContent).toContain('12');
+  expect(q('cabin-Business')!.textContent).toContain('?');
+});
+
+test('no wanted warning when clean', () => {
+  mountWith(PassengersPanel, { 'missions.passengers': pax({ wanted: false }) });
+  expect(q('missions-wanted-warning')).toBeNull();
+});
+
+function plan(extra: Record<string, unknown> = {}) {
+  return {
+    mission_id: 3, order: ['Sol', 'Alpha Centauri'], board_order_ly: 51, optimal_ly: 32, jumps: 4,
+    cr_per_ly: 100000, cr_per_hour: 6000000, estimates_verified: false, reference_cr_ly: 150000,
+    reference_is_own: true, verdict: 'Profitable', can_abandon_now: false, ...extra,
+  };
+}
+function tourism(status: string, p: unknown) {
+  return { as_of: CLOCK, trips: [{ mission_id: 3, name: 'Tour', stops: ['Alpha Centauri', 'Sol'], status, plan: p }] };
+}
+
+test('tourism not worth shows abandon hint', () => {
+  mountWith(TourismPanel, {
+    'missions.tourism': tourism('ok', plan({ verdict: 'NotWorth', can_abandon_now: true })),
+  });
+  expect(q('missions-tourism-abandon')!.textContent).toContain('abandonarla');
+  expect(q('missions-tourism-verdict')!.textContent).toContain('NO COMPENSA');
+});
+
+test('tourism profitable has no abandon hint', () => {
+  mountWith(TourismPanel, { 'missions.tourism': tourism('ok', plan()) });
+  expect(q('missions-tourism-abandon')).toBeNull();
+  expect(q('missions-tourism-verdict')!.textContent).toContain('RENTABLE');
+});
+
+test('tourism shows both distances and crly', () => {
+  mountWith(TourismPanel, { 'missions.tourism': tourism('ok', plan()) });
+  const txt = q('missions-tourism-plan')!.textContent!;
+  expect(txt).toContain('51 al');
+  expect(txt).toContain('32 al');
+  expect(txt).toContain('100.000');
+  expect(txt).toContain('≈');
+});
+
+test('stops unavailable message', () => {
+  mountWith(TourismPanel, { 'missions.tourism': tourism('stops_unavailable', null) });
+  expect(q('missions-tourism-no-stops')!.textContent).toContain('Paradas no disponibles');
+});
+
+test('community goal remaining time', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2031-06-01T00:00:00Z'));
+  mountWith(CommunityGoalsPanel, {
+    'missions.community_goals': {
+      as_of: CLOCK,
+      goals: [{
+        cgid: 1, title: 'Goal', system: 'Sol', station: null, contribution: 5000, percentile: 25, tier: 'Tier 2',
+        expiry: '2030-01-03T12:00:00Z', bonus: 1000000, complete: false,
+      }],
+    },
+  });
+  expect(q('missions-cg-remaining')!.textContent).toContain('2 d');
+  expect(q('cg-goal')!.textContent).toContain('1.000.000');
+});
+
+test('rewards show signed faction scores', () => {
+  mountWith(RewardsPanel, {
+    'missions.rewards': {
+      as_of: CLOCK, credits: 6300000, completed: 7, failed: 1, abandoned: 2,
+      materials: { 'Modular Terminals': 3 },
+      factions: { 'Liberty Party': { reputation: 'UpGood', influence: 'Down', reputation_score: 2, influence_score: -1 } },
+      since: CLOCK,
+    },
+  });
+  const t = q('rewards-factions')!.textContent!;
+  expect(t).toContain('Liberty Party');
+  expect(t).toContain('+2');
+  expect(t).toContain('-1');
+  expect(q('rewards-summary')!.textContent).toContain('6.300.000');
+  expect(q('rewards-materials')!.textContent).toContain('Modular Terminals');
 });
