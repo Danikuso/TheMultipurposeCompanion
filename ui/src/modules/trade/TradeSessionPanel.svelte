@@ -1,10 +1,9 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
-  import { cssPct, decimal, duration } from '../../lib/format';
+  import { credits, cssPct, decimal, duration, integer } from '../../lib/format';
   import { journalSkew } from '../../lib/clock.svelte';
   import { action, topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
-  import { cr, grp } from './labels';
   import { commodityName, type TradeSessionTopic } from './types';
 
   const s = $derived(topic<TradeSessionTopic>('trade.session'));
@@ -50,16 +49,16 @@
   {:else}
     {#if elapsedMs != null}<p class="muted" data-testid="session-time">{t('trade-session-duration', { time: duration(elapsedMs) })}</p>{/if}
     <div class="big">
-      <strong data-testid="session-profit">{cr(s.profit)}</strong>
-      <span class="muted" data-testid="session-rate">· {perHour == null ? '—' : t('trade-session-rate', { credits: cr(Math.round(perHour)) })}</span>
+      <strong data-testid="session-profit">{credits(s.profit)}</strong>
+      <span class="muted" data-testid="session-rate">· {perHour == null ? '—' : t('trade-session-rate', { credits: credits(Math.round(perHour)) })}</span>
     </div>
     <div data-testid="session-tons">
-      {t('trade-session-bought', { tons: grp(s.tons_bought) })} · {t('trade-session-sold', { tons: grp(s.tons_sold) })}
+      {t('trade-session-bought', { tons: integer(s.tons_bought) })} · {t('trade-session-sold', { tons: integer(s.tons_sold) })}
       · {t('trade-session-operations', { count: s.operations })}
     </div>
     {#if s.best_trade}
       <div class="muted" data-testid="session-best">
-        {t('trade-session-best', { profit: cr(s.best_trade[1]) })} · {commodityName(s.best_trade[0], null)}
+        {t('trade-session-best', { profit: credits(s.best_trade[1]) })} · {commodityName(s.best_trade[0], null)}
       </div>
     {/if}
     {#if rankName && s.progress != null}
@@ -77,7 +76,7 @@
       <div class="sub" data-testid="session-rank">{rankName}</div>
     {/if}
     <button type="button" data-testid="session-reset" onclick={reset}>{t('trade-reset')}</button>
-    {#if failed}<p class="err" role="alert">{t('mining-reset-failed')}</p>{/if}
+    {#if failed}<p class="err" role="alert">{t('trade-reset-failed')}</p>{/if}
   {/if}
 </Panel>
 

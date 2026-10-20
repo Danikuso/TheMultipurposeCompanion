@@ -214,7 +214,7 @@ test('vouchers grouped by faction and kind with IF fee', () => {
   expect(rows[0].getAttribute('data-kind')).toBe('Bounty');
   expect(rows[1].textContent).toContain('Federation');
   expect(rows[1].textContent).not.toContain('$faction');
-  expect(rows[1].querySelector('[data-testid="voucher-fee"]')!.textContent).toContain('7500');
+  expect(rows[1].querySelector('[data-testid="voucher-fee"]')!.textContent).toContain('7.500');
   expect(rows[2].textContent).toContain('facción desconocida');
   expect(target.querySelector('[data-testid="if-station"]')!.textContent).toContain('Hutton Orbital');
   expect(target.querySelector('[data-testid="if-age"]')!.textContent).toContain('2h');

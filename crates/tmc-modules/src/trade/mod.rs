@@ -143,6 +143,8 @@ pub struct Trade {
     route: TradeRouteState,
     route_status: &'static str,
     route_blocker: Option<RouteBlocker>,
+    /// Alcance de salto usado en la última petición (para calcular saltos por parada).
+    route_hop_range: Option<f64>,
     route_key: Option<String>,
     /// Último `Docked` propio: `LocationState` no lo conserva.
     docked: Option<Docked>,
@@ -189,6 +191,7 @@ impl Trade {
             route: TradeRouteState::default(),
             route_status: "idle",
             route_blocker: None,
+            route_hop_range: None,
             route_key: None,
             docked: None,
             raw_market: None,
@@ -282,6 +285,7 @@ impl Trade {
         self.route.copy_seq = seq;
         self.route_status = "idle";
         self.route_blocker = None;
+        self.route_hop_range = None;
         self.route_key = None;
         self.inflight.finish_prefix("route:");
     }
@@ -960,6 +964,7 @@ impl Trade {
             }
             Ok(params) => {
                 self.route_blocker = None;
+                let hop_range = params.max_hop_distance_ly;
                 let tag = pad_tag(pad.unwrap_or(PadSize::Large));
                 let rk = format!("route:{}:{tag}", state.location.system_address);
                 self.inflight.finish_prefix("route:");
@@ -969,6 +974,7 @@ impl Trade {
                     .is_some();
                 if accepted {
                     self.route_key = Some(rk);
+                    self.route_hop_range = Some(hop_range);
                     self.route_status = "loading";
                     self.route.requested_at = Some(self.clock());
                 } else {
@@ -1057,6 +1063,14 @@ impl Trade {
             .and_then(Value::as_array_mut)
         {
             for stop in stops {
+                let jumps = stop
+                    .get("distance_ly")
+                    .and_then(Value::as_f64)
+                    .zip(self.route_hop_range)
+                    .map(|(d, r)| (d / r).ceil().max(1.0) as u32);
+                if let Some(o) = stop.as_object_mut() {
+                    o.insert("jumps".into(), json!(jumps));
+                }
                 if let Some(c) = stop.get_mut("commodities").and_then(Value::as_array_mut) {
                     c.truncate(MAX_STOP_COMMODITIES);
                 }

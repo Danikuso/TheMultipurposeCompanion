@@ -1,10 +1,10 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
-  import { decimal, relativeAge } from '../../lib/format';
+  import { credits, decimal, relativeAge } from '../../lib/format';
   import { journalSkew } from '../../lib/clock.svelte';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
-  import { cr, padLabel, originLabel } from './labels';
+  import { padLabel, originLabel } from './labels';
   import { commodityName, type MarketTopic } from './types';
 
   const m = $derived(topic<MarketTopic>('trade.market'));
@@ -48,22 +48,22 @@
               <b class:best={i === 0}>{commodityName(r.commodity, r.name_localised)}</b>
               {#if r.rare != null}<span class="tag" data-testid="rare-badge">{t('trade-rare')}</span>{/if}
             </td>
-            <td class="n mono">{cr(r.buy_price)}</td>
+            <td class="n mono">{credits(r.buy_price)}</td>
             <td class="n mono">{decimal(r.stock, 0)} t</td>
             {#if b}
               <td>
-                {b.station_name} · {b.system_name} · {padLabel(b.pad)}
+                {b.station_name} · {b.system_name} · <span data-testid="pad-label">{padLabel(b.pad)}</span>
                 {#if b.pad_ok === null}<span class="warn" data-testid="pad-warning" role="img" aria-label={t('trade-pad-unknown')} title={t('trade-pad-unknown')}>⚠</span>{/if}
                 <span class="muted small" data-testid="market-origin">{originLabel(b.origin)}</span>
               </td>
               <td class="n mono">{t('mining-distance', { distance: decimal(b.distance_ly, 1) })}</td>
             {:else if r.rare != null}
               <td class="muted">{t('trade-rare-distance', { distance: decimal(r.rare, 0) })}</td>
-              <td class="n mono">{t('mining-distance', { distance: decimal(r.rare, 0) })}</td>
+              <td class="n mono">—</td>
             {:else}
               <td class="muted">—</td><td class="n mono">—</td>
             {/if}
-            <td class="n mono ok" data-testid="market-profit">{r.profit_per_ton == null ? '—' : cr(r.profit_per_ton)}</td>
+            <td class="n mono ok" data-testid="market-profit">{r.profit_per_ton == null ? '—' : credits(r.profit_per_ton)}</td>
             <td class="mono muted">{b ? relativeAge(b.updated_at, now) : '—'}</td>
           </tr>
         {/each}
