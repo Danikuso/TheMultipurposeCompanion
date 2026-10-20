@@ -217,6 +217,12 @@ const TOPICS: &[&str] = &[
     "mining.prospector",
     "mining.session",
     "mining.sell",
+    "trade.market",
+    "trade.cargo",
+    "trade.route",
+    "trade.session",
+    "trade.search",
+    "trade.commodities",
 ];
 const MODULES: &[&str] = &[
     "dashboard",
@@ -235,6 +241,10 @@ const ACTIONS: &[&str] = &[
     "navigation.clear-plan",
     "combat.reset_session",
     "mining.reset_session",
+    "trade.reset_session",
+    "trade.route_request",
+    "trade.route_clear",
+    "trade.search",
 ];
 const EVENTS: &[&str] = &[
     "Fileheader",
@@ -1143,6 +1153,34 @@ mod tests {
         assert_eq!(safe["remote"]["data"]["name"], "Sol");
         assert!(!safe.to_string().contains("CANARY"));
     }
+    #[test]
+    fn trade_topics_and_actions_are_registered_and_unknown_ones_redacted() {
+        for topic in [
+            "trade.market",
+            "trade.cargo",
+            "trade.route",
+            "trade.session",
+            "trade.search",
+            "trade.commodities",
+        ] {
+            assert_eq!(DiagnosticContext::Topic { name: topic }.schema(), topic);
+        }
+        for action in [
+            "trade.reset_session",
+            "trade.route_request",
+            "trade.route_clear",
+            "trade.search",
+        ] {
+            assert_eq!(DiagnosticContext::Action { name: action }.schema(), action);
+        }
+        let safe = redact_diagnostic(
+            &json!({"topic":"trade.CANARY","action":"trade.CANARY","module":"trade"}),
+            DiagnosticContext::State,
+        );
+        assert_eq!(safe["module"], "trade");
+        assert!(!safe.to_string().contains("CANARY"));
+    }
+
     #[test]
     fn ship_identifiers_and_known_schema_names_have_explicit_policy() {
         let safe = redact_diagnostic(

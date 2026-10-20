@@ -582,21 +582,13 @@ impl Mining {
 
     fn set(&mut self, topic: &'static str, v: Value, dirty: &mut TopicSet) {
         // `as_of` avanza con cada evento: no cuenta para detectar cambios.
-        if strip_as_of(self.values.get(topic)) != strip_as_of(Some(&v)) {
+        if crate::topicx::strip_as_of(self.values.get(topic))
+            != crate::topicx::strip_as_of(Some(&v))
+        {
             self.values.insert(topic, v);
             dirty.insert(topic.to_owned());
         }
     }
-}
-
-fn strip_as_of(v: Option<&Value>) -> Option<Value> {
-    v.map(|v| {
-        let mut v = v.clone();
-        if let Some(o) = v.as_object_mut() {
-            o.remove("as_of");
-        }
-        v
-    })
 }
 
 fn inventory_of<'a>(items: impl Iterator<Item = (&'a str, u32)>) -> BTreeMap<String, u32> {

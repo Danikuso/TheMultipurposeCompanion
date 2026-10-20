@@ -350,22 +350,63 @@ mining_threshold_cr = 2000000
         let actions = AppActions::with_runtime(Config::default(), core.events.clone(), online, net)
             .with_save_path(dir.path().join("config.toml"));
         let snap = BTreeMap::new();
-        for name in ["combat.reset_session", "mining.reset_session"] {
+        for name in [
+            "combat.reset_session",
+            "mining.reset_session",
+            "trade.reset_session",
+            "trade.route_request",
+            "trade.search",
+            "missions.dismiss_alert",
+        ] {
             let out = actions.run_action_with(name, &json!({}), &snap);
             assert!(out.is_ok(), "{name}: {out:?}");
         }
         let mut seen = Value::Null;
         for _ in 0..50 {
             seen = core.snapshot().await["actionprobe.actions"].clone();
-            if seen.as_array().is_some_and(|a| a.len() == 2) {
+            if seen.as_array().is_some_and(|a| a.len() == 6) {
                 break;
             }
             tokio::time::sleep(Duration::from_millis(50)).await;
         }
         assert_eq!(
             seen,
-            json!(["combat.reset_session", "mining.reset_session"])
+            json!([
+                "combat.reset_session",
+                "mining.reset_session",
+                "trade.reset_session",
+                "trade.route_request",
+                "trade.search",
+                "missions.dismiss_alert"
+            ])
         );
+    }
+
+    #[test]
+    fn trade_route_copy_target_reaches_clipboard() {
+        let actions = AppActions::new();
+        let mut snapshot = BTreeMap::new();
+        snapshot.insert(
+            "trade.route".into(),
+            json!({ "copy_target": "C", "copy_seq": 2 }),
+        );
+        let out = actions
+            .run_action("clipboard.copy-next-system", &snapshot)
+            .unwrap();
+        assert_eq!(out["system"], "C");
+        assert_eq!(actions.clipboard().last_copied().as_deref(), Some("C"));
+        // Sin destino (ajuste desactivado o ruta acabada) no se copia nada.
+        let actions = AppActions::new();
+        snapshot.insert(
+            "trade.route".into(),
+            json!({ "copy_target": null, "copy_seq": 2 }),
+        );
+        assert!(
+            actions
+                .run_action("clipboard.copy-next-system", &snapshot)
+                .is_err()
+        );
+        assert_eq!(actions.clipboard().last_copied(), None);
     }
 
     #[tokio::test]
