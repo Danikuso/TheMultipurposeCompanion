@@ -378,6 +378,18 @@ fn no_requests_in_legacy_or_offline() {
 }
 
 #[test]
+fn trade_legacy_does_not_query_live_prices() {
+    let mut h = H::with_store();
+    h.fixture();
+    h.state.galaxy = Galaxy::Legacy;
+    h.dock_with_market();
+    h.action("trade.search", json!({"commodity": "gold"}));
+    assert_eq!(h.count_tag("trade.best_sells"), 0);
+    assert_eq!(h.count_tag("trade.search"), 0);
+    assert!(h.requests.is_empty());
+}
+
+#[test]
 fn stored_result_for_other_cmdr_is_ignored() {
     let mut h = H::new();
     h.dock_with_market();

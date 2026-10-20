@@ -330,7 +330,11 @@ async fn run_loop(
                 }
             } => {}
         }
-        if let Some(o) = own {
+        // Sin coordenadas propias de replay ni de Legacy (otro espacio de coordenadas).
+        if let Some(o) = own
+            && !view.replaying
+            && view.galaxy != Galaxy::Legacy
+        {
             own_tx.send_replace(Some(o));
         }
         publish(&view, &filter_tx, now_fn());
@@ -519,6 +523,45 @@ mod tests {
             result.is_ok(),
             "unfinished import froze own coordinates (lag={lag})"
         );
+    }
+
+    #[tokio::test]
+    async fn own_coords_not_written_when_replaying() {
+        for (replaying, galaxy) in [(true, "Live"), (false, "Legacy")] {
+            let store = Store::open_in_memory().unwrap();
+            let settings = ModuleSettings::default();
+            let view = EddnView::new(settings.clone());
+            let (btx, brx) = broadcast::channel(8);
+            let (_stx, srx) = watch::channel(settings);
+            let (ftx, _frx) = watch::channel(view.filter(Utc::now()));
+            let own_tx = spawn_coords_writer(store.clone());
+            let snapshot: Snapshot = Arc::new(|| Box::pin(async { topics(live_active()) }));
+            let task = tokio::spawn(run_loop(
+                view,
+                brx,
+                srx,
+                snapshot,
+                Arc::new(Utc::now),
+                ftx,
+                own_tx,
+            ));
+            let mut v = live_active();
+            v["core.game"]["replaying"] = json!(replaying);
+            v["core.game"]["galaxy"] = json!(galaxy);
+            btx.send(CoreMessage::Update {
+                seq: 1,
+                topics: topics(v),
+            })
+            .unwrap();
+            until("update not consumed", || btx.is_empty()).await;
+            tokio::time::sleep(Duration::from_millis(200)).await;
+            task.abort();
+            let coords = store.coords_by_names(&["lave".into()]).unwrap();
+            assert!(
+                coords.is_empty(),
+                "wrote own coords (replaying={replaying}, {galaxy})"
+            );
+        }
     }
 
     #[tokio::test]

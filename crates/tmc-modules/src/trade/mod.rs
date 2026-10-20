@@ -572,7 +572,7 @@ impl Trade {
 
     /// Pide al almacén las mejores ventas conocidas de las mercancías de interés.
     fn request_sells(&mut self, state: &GameState, ctx: &mut ModuleCtx) {
-        if ctx.replaying {
+        if ctx.replaying || state.galaxy == Galaxy::Legacy {
             return;
         }
         let (Some(cmdr), Some(market_id)) =
@@ -628,7 +628,7 @@ impl Trade {
 
     /// Repite la lectura si cambió el conjunto de mercancías de interés.
     fn sync_sells(&mut self, state: &GameState, ctx: &mut ModuleCtx) {
-        if ctx.replaying || self.market.is_none() {
+        if ctx.replaying || state.galaxy == Galaxy::Legacy || self.market.is_none() {
             return;
         }
         let current = self.view_commodities();
@@ -798,7 +798,7 @@ impl Trade {
         else {
             return;
         };
-        if ctx.replaying {
+        if ctx.replaying || state.galaxy == Galaxy::Legacy {
             return;
         }
         let center = state.location.star_pos;
@@ -835,7 +835,7 @@ impl Trade {
         let Some(commodity) = self.search_commodity.clone() else {
             return;
         };
-        if ctx.replaying || addr == 0 {
+        if ctx.replaying || state.galaxy == Galaxy::Legacy || addr == 0 {
             return;
         }
         if !self.online(state) {
