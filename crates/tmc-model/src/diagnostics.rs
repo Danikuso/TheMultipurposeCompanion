@@ -541,6 +541,10 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
             text,
             "null" | "boolean" | "number" | "string" | "array" | "object"
         ),
+        "tab" | "slot" | "panel" | "view" | "relevance" | "state" | "kind" | "layout"
+        | "component" | "outcome" | "phase" | "level" | "context" => {
+            matches!(context, DiagnosticContext::Ui) && ui_identifier(text)
+        }
         "language" => matches!(text, "es" | "en" | "fr" | "de" | "pt"),
         "galaxy" => matches!(text, "Live" | "Legacy" | "Unknown"),
         "mode" => matches!(
@@ -591,6 +595,14 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
         _ => false,
     }
 }
+/// Identificador de interfaz (`panel-route-strip`, `layout:combat`): corto, minúsculas y sin separadores de ruta.
+fn ui_identifier(text: &str) -> bool {
+    (1..=48).contains(&text.len())
+        && text.bytes().all(|b| {
+            b.is_ascii_lowercase() || b.is_ascii_digit() || matches!(b, b'_' | b'-' | b':' | b'.')
+        })
+}
+
 fn unsafe_text(value: &str) -> bool {
     // Public text is still not an escape hatch for URLs, query strings or local paths.
     value.contains("://")

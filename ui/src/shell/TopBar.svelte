@@ -2,6 +2,7 @@
   import { credits, pct } from '../lib/format';
   import { t } from '../lib/i18n';
   import { live, topic } from '../lib/ws.svelte';
+  import { diag, diagOn } from '../lib/diag.svelte';
 
   interface LocationTopic {
     system?: string;
@@ -58,6 +59,20 @@
         ? String(ship.cargo_count)
         : '—',
   );
+
+  $effect(() => {
+    if (!diagOn()) return;
+    diag('ui.topbar.state', {
+      connected: live.connected,
+      has_location: loc !== undefined,
+      has_ship: ship !== undefined,
+      has_cmdr: cmdr !== undefined,
+      game_running: game?.running === true,
+      galaxy: game?.galaxy === 'Legacy' ? 'Legacy' : 'Live',
+      mode: loc?.mode ?? 'Unknown',
+      fuel_ratio: fuelRatio === null ? -1 : Math.round(fuelRatio * 100) / 100,
+    });
+  });
 </script>
 
 <header class="hud-topbar">

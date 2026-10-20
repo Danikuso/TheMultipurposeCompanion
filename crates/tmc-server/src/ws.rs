@@ -169,12 +169,18 @@ async fn run_socket(
         .unwrap_or_else(|| "es".to_owned());
     let topic_names: Vec<String> = initial_snapshot.keys().cloned().collect();
 
-    let hello = json!({
+    #[allow(unused_mut)]
+    let mut hello = json!({
         "type": "hello",
         "version": 1,
         "locale": locale,
         "topics": topic_names,
     });
+    // Solo un backend de depuración anuncia la capacidad: la UI decide por ella.
+    #[cfg(debug_assertions)]
+    {
+        hello["capabilities"] = json!({"diagnostics": true});
+    }
     let Some(_hello_bytes) = send_json(socket, &hello).await else {
         return (2, 0);
     };

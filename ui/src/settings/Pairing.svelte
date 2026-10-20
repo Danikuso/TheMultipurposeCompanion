@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { t } from '../lib/i18n';
+  import { diag } from '../lib/diag.svelte';
 
   let pairingData = $state<{ url: string; qr_svg: string } | null>(null);
 
@@ -10,8 +11,11 @@
       if (res.ok) {
         pairingData = (await res.json()) as { url: string; qr_svg: string };
       }
+      // Solo resultado y forma: nunca la URL de emparejamiento ni el SVG del QR.
+      diag('ui.fetch.result', { kind: 'pairing-get', ok: res.ok, status: res.status, rendered: pairingData !== null });
     } catch {
       pairingData = null;
+      diag('ui.fetch.result', { kind: 'pairing-get', ok: false, status: 0, rendered: false });
     }
   });
 </script>
