@@ -1,6 +1,8 @@
 //! Pruebas de extremo a extremo con `start()` (F1, criterios 2 y 5).
 
-use crate::{Config, Running, ServerSection, start, start_custom, start_with_transport};
+use crate::{
+    Config, Running, ServerSection, start, start_custom, start_full, start_with_transport,
+};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::io::Write;
@@ -10,6 +12,22 @@ use std::time::{Duration, Instant};
 use tempfile::tempdir;
 use tmc_core::CoreMessage;
 use tmc_net::{BoxFut, HttpReply, Transport, TransportError};
+
+/// Serializa las pruebas e2e del archivo: comparten el interruptor global de «juego en marcha».
+static E2E_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+/// Simula el proceso del juego mientras vive y restaura el valor anterior al soltarse.
+struct GameRunning(bool);
+impl GameRunning {
+    fn on() -> Self {
+        Self(tmc_journal::process::force_game_running_for_e2e(true))
+    }
+}
+impl Drop for GameRunning {
+    fn drop(&mut self) {
+        tmc_journal::process::force_game_running_for_e2e(self.0);
+    }
+}
 
 const HEAD: &str = concat!(
     r#"{"timestamp":"2026-10-18T10:00:00Z","event":"Fileheader","part":1,"language":"English/UK","Odyssey":true,"gameversion":"4.1.0.0","build":"r1"}"#,
@@ -63,6 +81,7 @@ async fn wait_for<F: Fn(&BTreeMap<String, Value>) -> bool>(
 
 #[tokio::test]
 async fn route_strip_updates_within_500ms_p95() {
+    let _serial = E2E_LOCK.lock().await;
     let (jdir, ddir) = (tempdir().unwrap(), tempdir().unwrap());
     let journal = jdir.path().join("Journal.2026-10-18T100000.01.log");
     std::fs::write(&journal, HEAD).unwrap();
@@ -135,6 +154,7 @@ impl Transport for FakeTransport {
 
 #[tokio::test]
 async fn strip_shows_remote_when_fake_service_answers() {
+    let _serial = E2E_LOCK.lock().await;
     let (jdir, ddir) = (tempdir().unwrap(), tempdir().unwrap());
     let journal = jdir.path().join("Journal.2026-10-18T100000.01.log");
     std::fs::write(&journal, HEAD).unwrap();
@@ -175,6 +195,7 @@ fn haversine_m(a: (f64, f64), b: (f64, f64), r: f64) -> f64 {
 
 #[tokio::test]
 async fn exobiology_fixture_end_to_end() {
+    let _serial = E2E_LOCK.lock().await;
     // Desviación (plan T30): fixture sintético hasta tener una sesión real de exobiología.
     let log = include_str!("../../../tests/fixtures/journal/exobiology_session.log");
     let lines: Vec<&str> = log.lines().collect();
@@ -271,6 +292,7 @@ async fn exobiology_fixture_end_to_end() {
 
 #[tokio::test]
 async fn real_exploration_fixture_replays_end_to_end() {
+    let _serial = E2E_LOCK.lock().await;
     let log = include_str!("../../../tests/fixtures/journal/real_explo_01.log");
     let jumps = log
         .lines()
@@ -305,6 +327,7 @@ async fn real_exploration_fixture_replays_end_to_end() {
 
 #[tokio::test]
 async fn burst_of_1000_combat_events_stays_under_10hz_and_500ms() {
+    let _serial = E2E_LOCK.lock().await;
     let (jdir, ddir) = (tempdir().unwrap(), tempdir().unwrap());
     let journal = jdir.path().join("Journal.2026-10-18T100000.01.log");
     std::fs::write(&journal, HEAD).unwrap();
@@ -381,5 +404,187 @@ async fn burst_of_1000_combat_events_stays_under_10hz_and_500ms() {
             .count();
         assert!(n <= 11, "{n} difusiones en 1 s");
     }
+    running.server.shutdown();
+}
+
+/// Relay EDDN falso en proceso: re-publica `burst.jsonl` (500 `commodity/3` + 20 corruptos) cada segundo.
+async fn spawn_fake_relay(
+    stop: Arc<std::sync::atomic::AtomicBool>,
+) -> (String, tokio::task::JoinHandle<()>) {
+    use std::io::Write as _;
+    use zeromq::{PubSocket, Socket, SocketSend, ZmqMessage};
+    let mut sock = PubSocket::new();
+    let ep = sock.bind("tcp://127.0.0.1:0").await.unwrap();
+    let zeromq::Endpoint::Tcp(_, port) = ep else {
+        panic!("endpoint inesperado")
+    };
+    let text = include_str!("../../../tests/fixtures/eddn/burst.jsonl");
+    let handle = tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        // Termina siempre al final de una pasada completa (el recuento de corruptos es múltiplo de 20).
+        while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+            let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+            for line in text.lines().filter(|l| !l.trim().is_empty()) {
+                let mut e =
+                    flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+                e.write_all(line.replace("@NOW@", &now).as_bytes()).unwrap();
+                if sock
+                    .send(ZmqMessage::from(e.finish().unwrap()))
+                    .await
+                    .is_err()
+                {
+                    return;
+                }
+            }
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+    });
+    (format!("tcp://127.0.0.1:{port}"), handle)
+}
+
+#[tokio::test]
+async fn burst_of_500_eddn_markets_keeps_10hz_and_one_requery() {
+    let _serial = E2E_LOCK.lock().await;
+    let (jdir, ddir) = (tempdir().unwrap(), tempdir().unwrap());
+    let journal = jdir.path().join("Journal.2026-10-19T120000.01.log");
+    // Se empieza con la cabecera y el resto de la fixture llega en vivo (si no, sería reproducción).
+    let fixture = include_str!("../../../tests/fixtures/journal/trade_session.log");
+    let mut lines = fixture.lines();
+    std::fs::write(
+        &journal,
+        format!(
+            "{}
+{}
+",
+            HEAD.lines().next().unwrap(),
+            lines.next().unwrap()
+        ),
+    )
+    .unwrap();
+    let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    // Coordenadas de `Sistema Burst i` (como las de un diario previo) para que el filtro acepte mercados.
+    {
+        let store = tmc_store::Store::open(&ddir.path().join("tmc.db")).unwrap();
+        let coords: Vec<(String, Option<u64>, [f64; 3])> = (0..500)
+            .map(|i| {
+                (
+                    format!("sistema burst {i}"),
+                    None,
+                    [f64::from(i % 20), 0.0, 0.0],
+                )
+            })
+            .collect();
+        store.upsert_coords(&coords, chrono::Utc::now()).unwrap();
+    }
+    let (url, relay) = spawn_fake_relay(stop.clone()).await;
+    // Sin juego instalado: el sondeo de procesos (solo depuración) simula EliteDangerous64.
+    let _game = GameRunning::on();
+    crate::eddn_service::E2E_CORRUPT_DROPS.store(0, std::sync::atomic::Ordering::Relaxed);
+    let running = start_full(
+        config(jdir.path(), ddir.path(), true),
+        Arc::new(FakeTransport),
+        Some(Duration::from_millis(100)),
+        Some(url),
+    )
+    .await
+    .unwrap();
+    wait_for(&running, "start", |s| s.contains_key("trade.market")).await;
+    for l in lines {
+        append(&journal, l);
+    }
+    std::fs::write(
+        jdir.path().join("Market.json"),
+        include_str!("../../../tests/fixtures/companion/market_trade.json"),
+    )
+    .unwrap();
+    append(
+        &journal,
+        r#"{"timestamp":"2026-10-19T12:01:30Z","event":"Market","MarketID":128000001,"StationName":"Synthetic Port","StationType":"Coriolis","StarSystem":"Synthetic System"}"#,
+    );
+    wait_for(&running, "trade market", |s| {
+        s.get("trade.market")
+            .is_some_and(|m| m["station"] == "Synthetic Port")
+    })
+    .await;
+    let mut rx = running.core.subscribe();
+    // La lectura inicial por el `Market` ya ocurrió: se cuentan solo las motivadas por EDDN.
+    let t_start = Instant::now();
+    // La conexión al relay y la ráfaga llegan por su cuenta; mientras, ráfagas de eventos de diario.
+    let deadline = Instant::now() + Duration::from_secs(90);
+    let mut arrivals = Vec::new();
+    let mut latencies = Vec::new();
+    let mut n = 0u32;
+    while latencies.len() < 120 && Instant::now() < deadline {
+        n += 1;
+        let marker = 100 + n;
+        let ts = format!("2026-10-19T12:{:02}:{:02}Z", 2 + n / 60, n % 60);
+        append(
+            &journal,
+            &format!(
+                r#"{{"timestamp":"{ts}","event":"Cargo","Count":{marker},"Inventory":[{{"Name":"Gold","Count":{marker},"Stolen":0}}]}}"#
+            ),
+        );
+        let t0 = Instant::now();
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if let Ok(CoreMessage::Update { topics, .. }) = rx.recv().await {
+                    arrivals.push(Instant::now());
+                    if topics
+                        .get("trade.cargo")
+                        .is_some_and(|c| c["used"] == marker)
+                    {
+                        return;
+                    }
+                }
+            }
+        })
+        .await
+        .unwrap_or_else(|_| panic!("cargo {marker} not reflected"));
+        latencies.push(t0.elapsed());
+        tokio::time::sleep(Duration::from_millis(300)).await;
+    }
+    assert!(latencies.len() >= 100, "solo {} muestras", latencies.len());
+    latencies.sort();
+    let p95 = latencies[(latencies.len() * 95).div_ceil(100) - 1];
+    eprintln!("eddn burst lat = {latencies:?}");
+    eprintln!("eddn burst p95 = {p95:?}, updates = {}", arrivals.len());
+    assert!(p95 < Duration::from_millis(500), "p95 = {p95:?}");
+    for (i, a) in arrivals.iter().enumerate() {
+        let c = arrivals[i..]
+            .iter()
+            .take_while(|b| b.duration_since(*a) < Duration::from_secs(1))
+            .count();
+        assert!(c <= 11, "{c} difusiones en 1 s");
+    }
+    // A lo sumo una relectura `trade.best_sells` por ventana de 10 s desde que empieza la ráfaga.
+    let queries: Vec<Instant> = tmc_core::debug_hooks::store_task_times("trade.best_sells")
+        .into_iter()
+        .filter(|t| *t >= t_start)
+        .collect();
+    eprintln!("eddn burst best_sells tasks = {}", queries.len());
+    for (i, a) in queries.iter().enumerate() {
+        let c = queries[i..]
+            .iter()
+            .take_while(|b| b.duration_since(*a) < Duration::from_secs(10))
+            .count();
+        assert!(c <= 1, "{c} relecturas best_sells en 10 s");
+    }
+    // Se detiene el relay al final de una pasada y se espera al último lote (≤ 5 s): el estado
+    // final cuenta todos los corruptos recibidos, siempre de 20 en 20.
+    stop.store(true, std::sync::atomic::Ordering::Relaxed);
+    let _ = relay.await;
+    tokio::time::sleep(Duration::from_secs(7)).await;
+    let corrupt = crate::eddn_service::E2E_CORRUPT_DROPS.load(std::sync::atomic::Ordering::Relaxed);
+    eprintln!("eddn burst corrupt drops = {corrupt}");
+    assert!(
+        corrupt >= 20 && corrupt.is_multiple_of(20),
+        "corrupt = {corrupt}"
+    );
+    // El suscriptor llegó a conectarse.
+    wait_for(&running, "eddn connected", |s| {
+        s.get("trade.market")
+            .is_some_and(|m| m["eddn_connected"] == true)
+    })
+    .await;
     running.server.shutdown();
 }

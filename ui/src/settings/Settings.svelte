@@ -4,6 +4,7 @@
   import { applyTheme, type HudThemeInput } from '../lib/theme';
   import { topic } from '../lib/ws.svelte';
   import Panel from '../shell/Panel.svelte';
+  import { diag } from '../lib/diag.svelte';
   import Pairing from './Pairing.svelte';
 
   const DEFAULT_MINERALS = ['platinum', 'painite', 'lowtemperaturediamond', 'opal', 'alexandrite',
@@ -24,6 +25,8 @@
     mining_interest?: string[];
     mining_threshold_cr?: number;
     sell_search_radius_ly?: number;
+    eddn_radius_ly?: number;
+    tourism_reference_cr_ly?: number;
     server?: {
       port?: number;
       lan?: boolean;
@@ -38,6 +41,8 @@
   let plannerEfficiency = $state<number | undefined>(60);
   let lanEnabled = $state(false);
   let miningInterest = $state<string[]>([...DEFAULT_MINERALS]);
+  let eddnRadius = $state<number | undefined>(200);
+  let tourismReference = $state<number | undefined>(100000);
   let miningThreshold = $state<number | undefined>(1000000);
   let sellRadius = $state<number | undefined>(100);
   let extraMineral = $state('');
@@ -76,6 +81,7 @@
   onMount(async () => {
     try {
       const res = await fetch('/api/config');
+      diag('ui.fetch.result', { kind: 'config-get', ok: res.ok, status: res.status });
       if (res.ok) {
         const cfg = (await res.json()) as ConfigDto;
         fullConfig = cfg;
@@ -85,6 +91,8 @@
         miningInterest = cfg.mining_interest ?? [...DEFAULT_MINERALS];
         miningThreshold = cfg.mining_threshold_cr ?? 1000000;
         sellRadius = cfg.sell_search_radius_ly ?? 100;
+        eddnRadius = cfg.eddn_radius_ly ?? 200;
+        tourismReference = cfg.tourism_reference_cr_ly ?? 100000;
         if (cfg.language) {
           language = cfg.language;
           setLocale(cfg.language);
@@ -102,6 +110,7 @@
       }
     } catch {
       // Offline or unconfigured
+      diag('ui.fetch.result', { kind: 'config-get', ok: false, status: 0 });
     }
   });
 
@@ -115,6 +124,8 @@
     miningInterest = fullConfig.mining_interest ?? [...DEFAULT_MINERALS];
     miningThreshold = fullConfig.mining_threshold_cr ?? 1000000;
     sellRadius = fullConfig.sell_search_radius_ly ?? 100;
+    eddnRadius = fullConfig.eddn_radius_ly ?? 200;
+    tourismReference = fullConfig.tourism_reference_cr_ly ?? 100000;
     themeMode = fullConfig.theme_mode === 'classic' || fullConfig.theme_mode === 'contrast' ? fullConfig.theme_mode : 'hud';
     setLocale(language);
     applySelectedTheme(themeMode);
@@ -150,7 +161,9 @@
       || plannerEfficiency < 0 || plannerEfficiency > 100
       || miningThreshold === undefined || !Number.isSafeInteger(miningThreshold) || miningThreshold < 0 || miningThreshold > MAX_THRESHOLD
       || miningInterest.length > MAX_KEYS || miningInterest.some((k) => k.length > MAX_KEY_LEN)
-      || sellRadius === undefined || !Number.isInteger(sellRadius) || sellRadius < 10 || sellRadius > 500) { validationError = true; return; }
+      || sellRadius === undefined || !Number.isInteger(sellRadius) || sellRadius < 10 || sellRadius > 500
+      || eddnRadius === undefined || !Number.isInteger(eddnRadius) || eddnRadius < 20 || eddnRadius > 500
+      || tourismReference === undefined || !Number.isInteger(tourismReference) || tourismReference < 1000 || tourismReference > 10_000_000) { validationError = true; return; }
     saveError = false;
     const revision = ++saveRevision;
     const updated: ConfigDto = {
@@ -164,6 +177,8 @@
       mining_interest: miningInterest,
       mining_threshold_cr: miningThreshold,
       sell_search_radius_ly: sellRadius,
+      eddn_radius_ly: eddnRadius,
+      tourism_reference_cr_ly: tourismReference,
       server: {
         ...(fullConfig.server ?? {}),
         lan: lanEnabled,
@@ -176,10 +191,13 @@
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify(updated),
         });
+        // Nunca se vuelca la configuración: contiene el token LAN en `server`.
+        diag('ui.fetch.result', { kind: 'config-put', ok: res.ok, status: res.status, lan: lanEnabled });
         if (!res.ok) throw new Error('config-save-failed');
         fullConfig = (await res.json()) as ConfigDto;
         if (revision === saveRevision) restoreSavedConfig();
       } catch {
+        diag('ui.fetch.result', { kind: 'config-put', ok: false, status: 0, lan: lanEnabled });
         if (revision === saveRevision) {
           restoreSavedConfig();
           saveError = true;
@@ -261,6 +279,14 @@
     <label class="field-row">
       <span>{t('settings-sell-radius')}</span>
       <input type="number" min="10" max="500" step="1" bind:value={sellRadius} onchange={saveConfig} data-testid="sell-radius" />
+    </label>
+    <label class="field-row">
+      <span>{t('settings-eddn-radius')}</span>
+      <input type="number" min="20" max="500" step="1" bind:value={eddnRadius} onchange={saveConfig} data-testid="eddn-radius" />
+    </label>
+    <label class="field-row">
+      <span>{t('settings-tourism-reference')}</span>
+      <input type="number" min="1000" max="10000000" step="1" bind:value={tourismReference} onchange={saveConfig} data-testid="tourism-reference" />
     </label>
 
     <Pairing />

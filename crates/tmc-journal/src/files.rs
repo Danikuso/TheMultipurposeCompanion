@@ -28,20 +28,42 @@ pub fn is_journal_name(name: &str) -> bool {
 }
 
 pub fn list_journals(dir: &Path) -> io::Result<Vec<PathBuf>> {
-    let mut files = Vec::new();
-    for entry in std::fs::read_dir(dir)? {
-        let entry = entry?;
-        if entry.file_type()?.is_file() && entry.file_name().to_str().is_some_and(is_journal_name) {
-            files.push(entry.path());
+    let result: io::Result<Vec<PathBuf>> = (|| {
+        let mut files = Vec::new();
+        for entry in std::fs::read_dir(dir)? {
+            let entry = entry?;
+            if entry.file_type()?.is_file()
+                && entry.file_name().to_str().is_some_and(is_journal_name)
+            {
+                files.push(entry.path());
+            }
+        }
+        // La fecha de dos dígitos del formato antiguo no es comparable con YYYY-MM-DD.
+        files.sort_by(|a, b| {
+            let a = a.file_name().unwrap();
+            let b = b.file_name().unwrap();
+            a.len().cmp(&b.len()).then_with(|| a.cmp(b))
+        });
+        Ok(files)
+    })();
+    #[cfg(debug_assertions)]
+    match &result {
+        Ok(_files) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "source.files.listed",
+                tmc_model::diagnostics::json!({"files":_files.len()})
+            );
+        }
+        Err(_error) => {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "source.files.list_failed",
+                tmc_model::diagnostics::json!({"failure_class":tmc_model::diagnostics::io_class(_error)})
+            );
         }
     }
-    // La fecha de dos dígitos del formato antiguo no es comparable con YYYY-MM-DD.
-    files.sort_by(|a, b| {
-        let a = a.file_name().unwrap();
-        let b = b.file_name().unwrap();
-        a.len().cmp(&b.len()).then_with(|| a.cmp(b))
-    });
-    Ok(files)
+    result
 }
 
 #[cfg(test)]

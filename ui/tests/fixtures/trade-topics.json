@@ -1,0 +1,305 @@
+{
+  "trade.cargo": {
+    "as_of": "2026-10-19T18:00:01Z",
+    "capacity": 256,
+    "lines": [
+      {
+        "advice": "Carry",
+        "best_nearby": {
+          "demand": 100,
+          "distance_ly": 3.0,
+          "origin": "Eddn",
+          "pad": "Large",
+          "pad_ok": true,
+          "sell_price": 11000,
+          "station_name": "Buyer 2",
+          "system_name": "Other",
+          "updated_at": "2026-10-19T17:00:00Z"
+        },
+        "commodity": "gold",
+        "est_profit": 135000,
+        "kind": "Trade",
+        "name_localised": "Oro",
+        "paid_avg": 9500,
+        "paid_partial": false,
+        "price_here": 9000,
+        "tons": 90
+      },
+      {
+        "advice": null,
+        "best_nearby": null,
+        "commodity": "silver",
+        "est_profit": null,
+        "kind": "Mission",
+        "name_localised": null,
+        "paid_avg": null,
+        "paid_partial": false,
+        "price_here": null,
+        "tons": 10
+      },
+      {
+        "advice": null,
+        "best_nearby": null,
+        "commodity": "palladium",
+        "est_profit": null,
+        "kind": "Stolen",
+        "name_localised": null,
+        "paid_avg": null,
+        "paid_partial": false,
+        "price_here": null,
+        "tons": 3
+      }
+    ],
+    "used": 103
+  },
+  "trade.commodities": {
+    "as_of": "2026-10-19T18:00:01Z",
+    "items": [
+      [
+        "aluminium",
+        null
+      ],
+      [
+        "cobalt",
+        null
+      ],
+      [
+        "copper",
+        null
+      ],
+      [
+        "gold",
+        "Oro"
+      ],
+      [
+        "lavianbrandy",
+        null
+      ],
+      [
+        "palladium",
+        null
+      ],
+      [
+        "silver",
+        null
+      ]
+    ]
+  },
+  "trade.market": {
+    "as_of": "2026-10-19T18:00:01Z",
+    "eddn_connected": false,
+    "rows": [
+      {
+        "best_sell": {
+          "demand": 100,
+          "distance_ly": 3.0,
+          "origin": "Eddn",
+          "pad": "Large",
+          "pad_ok": true,
+          "sell_price": 11000,
+          "station_name": "Buyer 2",
+          "system_name": "Other",
+          "updated_at": "2026-10-19T17:00:00Z"
+        },
+        "buy_price": 9400,
+        "commodity": "gold",
+        "name_localised": "Oro",
+        "profit_per_ton": 1600,
+        "rare": null,
+        "stock": 5000
+      },
+      {
+        "best_sell": {
+          "demand": 100,
+          "distance_ly": 3.0,
+          "origin": "Eddn",
+          "pad": "Large",
+          "pad_ok": true,
+          "sell_price": 5000,
+          "station_name": "Buyer 2",
+          "system_name": "Other",
+          "updated_at": "2026-10-19T17:00:00Z"
+        },
+        "buy_price": 4000,
+        "commodity": "silver",
+        "name_localised": null,
+        "profit_per_ton": 1000,
+        "rare": null,
+        "stock": 2000
+      },
+      {
+        "best_sell": {
+          "demand": 100,
+          "distance_ly": 3.0,
+          "origin": "Eddn",
+          "pad": "Large",
+          "pad_ok": true,
+          "sell_price": 13900,
+          "station_name": "Buyer 2",
+          "system_name": "Other",
+          "updated_at": "2026-10-19T17:00:00Z"
+        },
+        "buy_price": 13000,
+        "commodity": "palladium",
+        "name_localised": null,
+        "profit_per_ton": 900,
+        "rare": null,
+        "stock": 2000
+      },
+      {
+        "best_sell": {
+          "demand": 100,
+          "distance_ly": 3.0,
+          "origin": "Eddn",
+          "pad": "Large",
+          "pad_ok": true,
+          "sell_price": 1800,
+          "station_name": "Buyer 2",
+          "system_name": "Other",
+          "updated_at": "2026-10-19T17:00:00Z"
+        },
+        "buy_price": 1000,
+        "commodity": "cobalt",
+        "name_localised": null,
+        "profit_per_ton": 800,
+        "rare": null,
+        "stock": 2000
+      },
+      {
+        "best_sell": {
+          "demand": 100,
+          "distance_ly": 3.0,
+          "origin": "Eddn",
+          "pad": "Large",
+          "pad_ok": true,
+          "sell_price": 2700,
+          "station_name": "Buyer 2",
+          "system_name": "Other",
+          "updated_at": "2026-10-19T17:00:00Z"
+        },
+        "buy_price": 2000,
+        "commodity": "copper",
+        "name_localised": null,
+        "profit_per_ton": 700,
+        "rare": null,
+        "stock": 2000
+      }
+    ],
+    "station": "Synthetic Port",
+    "system": "Synthetic System"
+  },
+  "trade.route": {
+    "as_of": "2026-10-19T18:00:01Z",
+    "blocker": null,
+    "completed": false,
+    "copy_seq": 1,
+    "copy_target": "B",
+    "current": 0,
+    "plan": {
+      "stops": [
+        {
+          "commodities": [
+            {
+              "amount": 10,
+              "buy_price": 100,
+              "commodity": "c0",
+              "name_localised": "Commodity 0",
+              "profit_per_ton": 100,
+              "sell_price": 200
+            },
+            {
+              "amount": 10,
+              "buy_price": 100,
+              "commodity": "c1",
+              "name_localised": "Commodity 1",
+              "profit_per_ton": 100,
+              "sell_price": 200
+            },
+            {
+              "amount": 10,
+              "buy_price": 100,
+              "commodity": "c2",
+              "name_localised": "Commodity 2",
+              "profit_per_ton": 100,
+              "sell_price": 200
+            }
+          ],
+          "data_updated_at": null,
+          "distance_ly": 20.0,
+          "from_market_id": null,
+          "from_station": "Port Synthetic System",
+          "from_system": "Synthetic System",
+          "jumps": 1,
+          "stop_profit": 1000,
+          "to_market_id": null,
+          "to_station": "Port B",
+          "to_system": "B"
+        },
+        {
+          "commodities": [
+            {
+              "amount": 10,
+              "buy_price": 100,
+              "commodity": "c0",
+              "name_localised": "Commodity 0",
+              "profit_per_ton": 100,
+              "sell_price": 200
+            },
+            {
+              "amount": 10,
+              "buy_price": 100,
+              "commodity": "c1",
+              "name_localised": "Commodity 1",
+              "profit_per_ton": 100,
+              "sell_price": 200
+            },
+            {
+              "amount": 10,
+              "buy_price": 100,
+              "commodity": "c2",
+              "name_localised": "Commodity 2",
+              "profit_per_ton": 100,
+              "sell_price": 200
+            }
+          ],
+          "data_updated_at": null,
+          "distance_ly": 20.0,
+          "from_market_id": null,
+          "from_station": "Port B",
+          "from_system": "B",
+          "jumps": 1,
+          "stop_profit": 1000,
+          "to_market_id": null,
+          "to_station": "Port C",
+          "to_system": "C"
+        }
+      ],
+      "total_profit": 2000
+    },
+    "requested_at": null,
+    "status": "ok"
+  },
+  "trade.search": {
+    "as_of": "2026-10-19T12:00:00Z",
+    "commodity": null,
+    "rows": [],
+    "status": "idle"
+  },
+  "trade.session": {
+    "as_of": "2026-10-19T12:01:00Z",
+    "best_trade": [
+      "gold",
+      90000
+    ],
+    "cost_of_sold": 570000,
+    "operations": 3,
+    "profit": 90000,
+    "progress": null,
+    "rank": null,
+    "revenue": 660000,
+    "started_at": "2026-10-19T12:00:00Z",
+    "tons_bought": 150,
+    "tons_sold": 60,
+    "unknown_cost_tons": 0
+  }
+}

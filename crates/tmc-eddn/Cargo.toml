@@ -1,0 +1,18 @@
+[package]
+name = "tmc-eddn"
+description = "Decodificación y filtro de mensajes EDDN (lógica pura)"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[dependencies]
+tmc-model = { path = "../tmc-model" }
+flate2 = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+tokio = { workspace = true }
+zeromq = { workspace = true }
+thiserror = { workspace = true }
+

@@ -12,6 +12,7 @@ repository = "https://github.com/Danikuso/TheMultipurposeCompanion"
 [workspace.dependencies]
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["raw_value"] }
+flate2 = "1.1.9"
 chrono = { version = "0.4.45", features = ["serde"] }
 bitflags = "2.13.2"
 thiserror = "2.0.21"
@@ -36,6 +37,7 @@ anyhow = "1.0.104"
 tempfile = "3.27.0"
 insta = { version = "1.49.0", features = ["json"] }
 tokio-tungstenite = "0.30.0"
+zeromq = "0.6.0"
 tauri = { version = "2.12.4", features = ["tray-icon", "wry"] }
 tauri-build = "2.7.3"
 tauri-plugin-single-instance = "2.5.4"

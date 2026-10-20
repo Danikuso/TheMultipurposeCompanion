@@ -38,7 +38,7 @@ use crate::canonn;
 use crate::edsm;
 use crate::health::ServiceHealth;
 use crate::limiter::{RateLimiter, Service};
-use crate::spansh::{self, RoutePoll};
+use crate::spansh::{self, RoutePoll, TradePoll};
 use crate::transport::{HttpReply, Transport, TransportError};
 use chrono::{DateTime, Utc};
 use tmc_model::net::{NetFailure, NetOutcome, NetQuery, NetSource};
@@ -46,10 +46,86 @@ use tmc_model::net::{NetFailure, NetOutcome, NetQuery, NetSource};
 const POLL_EVERY: Duration = Duration::from_secs(2);
 const MAX_TRANSIENT_POLL_FAILURES: u32 = 2;
 const POLL_LIMIT: Duration = Duration::from_secs(120);
+/// Las rutas comerciales tardan 15-20 s: se espera como máximo 60 s.
+const TRADE_POLL_LIMIT: Duration = Duration::from_secs(60);
 const CODEX_REF_TTL: Duration = Duration::from_secs(7 * 24 * 3600);
 const POI_TTL: Duration = Duration::from_secs(5 * 60);
 /// Canonn tarda 2-4 s por respuesta: tiempo máximo propio (el resto, el del transporte).
 pub const CANONN_TIMEOUT: Duration = Duration::from_secs(15);
+
+#[cfg(debug_assertions)]
+tokio::task_local! {
+    /// Identificador de correlación de la consulta en curso (solo diagnóstico).
+    static REQUEST_ID: u64;
+}
+
+#[cfg(debug_assertions)]
+static NEXT_REQUEST_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+
+#[cfg(debug_assertions)]
+fn request_id() -> u64 {
+    REQUEST_ID.try_with(|id| *id).unwrap_or(0)
+}
+
+/// Huella de la consulta para correlacionar con `NetService` sin exponer su contenido.
+#[cfg(debug_assertions)]
+pub fn query_fingerprint(q: &NetQuery) -> u64 {
+    tmc_model::diagnostics::sql_fingerprint(&serde_json::to_string(q).unwrap_or_default())
+}
+
+/// Plantilla de endpoint (nunca URL ni query string) para los registros de diagnóstico.
+#[cfg(debug_assertions)]
+fn endpoint_of(req: &Req) -> &'static str {
+    let (Req::Get(url) | Req::Post(url, _)) = req;
+    let path = url.split('?').next().unwrap_or("");
+    if let Some(rest) = path.strip_prefix(spansh::BASE) {
+        return match rest {
+            r if r.starts_with("/system/") => "spansh.system",
+            "/route" | "/generic/route" => "spansh.route.job",
+            "/trade/route" => "spansh.trade.job",
+            r if r.starts_with("/results/") => "spansh.route.results",
+            r if r.starts_with("/systems/") => "spansh.autocomplete",
+            _ => "unknown",
+        };
+    }
+    if path.starts_with(edsm::BASE) {
+        return if url.contains("showCoordinates=1") {
+            "edsm.coords"
+        } else {
+            "edsm.system"
+        };
+    }
+    if path.starts_with(canonn::BASE) {
+        return if path.ends_with("/codex/ref") {
+            "canonn.codex_ref"
+        } else {
+            "canonn.system_poi"
+        };
+    }
+    if path.starts_with(ardent::BASE) {
+        return if path.contains("/nearby/imports") {
+            "ardent.nearby.imports"
+        } else if path.contains("/nearby/exports") {
+            "ardent.nearby.exports"
+        } else if path.contains("/system/name/") {
+            "ardent.system.coords"
+        } else {
+            "ardent.nearest.service"
+        };
+    }
+    "unknown"
+}
+
+/// Evento de red redactado; añade siempre el identificador de correlación.
+macro_rules! net_event {
+    ($code:literal, { $($payload:tt)* }) => {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::NetOutcome,
+            $code,
+            tmc_model::diagnostics::json!({ "request_id": request_id(), $($payload)* })
+        )
+    };
+}
 
 /// Almacén persistente del `codex/ref` compacto (lo implementa la app sobre `api_cache`).
 pub trait RefPersist: Send + Sync {
@@ -74,6 +150,13 @@ impl From<Miss> for NetOutcome {
             Miss::Fail(f) => NetOutcome::Failed(f),
         }
     }
+}
+
+/// Estado de un trabajo sondeado, ya traducido al resultado final.
+enum Step {
+    Pending,
+    Done(Box<NetOutcome>),
+    Failed(String),
 }
 
 enum Req {
@@ -179,7 +262,52 @@ impl NetClient {
         q: &NetQuery,
         online: Option<&AtomicBool>,
     ) -> (NetSource, NetOutcome) {
+        #[cfg(debug_assertions)]
+        {
+            let id = NEXT_REQUEST_ID.fetch_add(1, Ordering::Relaxed);
+            REQUEST_ID
+                .scope(id, async {
+                    let started = std::time::Instant::now();
+                    tmc_model::diagnostic!(
+                        tmc_model::diagnostics::DiagnosticContext::NetQuery,
+                        "net.query.started",
+                        tmc_model::diagnostics::json!({
+                            "request_id": id,
+                            "query_fp": query_fingerprint(q),
+                            "query": q,
+                            "online_guard": online.is_some(),
+                        })
+                    );
+                    let result = self.execute_query(q, online).await;
+                    tmc_model::diagnostic!(
+                        tmc_model::diagnostics::DiagnosticContext::NetOutcome,
+                        "net.query.finished",
+                        tmc_model::diagnostics::json!({
+                            "request_id": id,
+                            "query_fp": query_fingerprint(q),
+                            "source": result.0,
+                            "outcome": result.1.diag_summary().0,
+                            "items": result.1.diag_summary().1,
+                            "duration_ms": started.elapsed().as_millis() as u64,
+                        })
+                    );
+                    result
+                })
+                .await
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            self.execute_query(q, online).await
+        }
+    }
+
+    async fn execute_query(
+        &self,
+        q: &NetQuery,
+        online: Option<&AtomicBool>,
+    ) -> (NetSource, NetOutcome) {
         if !online_allowed(online) {
+            net_event!("net.optout.blocked", {"stage": 0});
             return (NetSource::Cache, NetOutcome::Disabled);
         }
         match q {
@@ -243,6 +371,78 @@ impl NetClient {
                     .await;
                 (NetSource::Ardent, out)
             }
+            NetQuery::TradeRoute(p) => {
+                let req = Req::Post(spansh::trade_url(), spansh::trade_form(p));
+                let out = self
+                    .run_job(req, online, TRADE_POLL_LIMIT, |b| {
+                        Ok(match spansh::parse_trade_result(b)? {
+                            TradePoll::Pending => Step::Pending,
+                            TradePoll::Done(plan) => {
+                                Step::Done(Box::new(NetOutcome::TradeRoute(plan)))
+                            }
+                            TradePoll::Failed(msg) => Step::Failed(msg),
+                        })
+                    })
+                    .await;
+                (NetSource::Spansh, out)
+            }
+            NetQuery::CommodityExportsNearby {
+                system_address,
+                commodity,
+                max_distance_ly,
+                min_pad,
+            } => {
+                let url = ardent::exports_nearby_url(
+                    *system_address,
+                    &ardent::ardent_commodity(commodity),
+                    *max_distance_ly,
+                );
+                let pad = *min_pad;
+                let out = self
+                    .fetch(Service::Ardent, Req::Get(url), online, |b| {
+                        ardent::parse_exports_for(b, pad).map(|e| Some(NetOutcome::Exports(e)))
+                    })
+                    .await;
+                (NetSource::Ardent, out)
+            }
+            NetQuery::SystemCoordsByName { name } => self.coords(name, online).await,
+        }
+    }
+
+    /// Coordenadas por nombre: Ardent y, solo si está caído, EDSM.
+    async fn coords(&self, name: &str, online: Option<&AtomicBool>) -> (NetSource, NetOutcome) {
+        let mut first = None;
+        if !self.is_down(Service::Ardent) {
+            let req = Req::Get(ardent::system_name_url(name));
+            let out = self
+                .fetch(Service::Ardent, req, online, |b| {
+                    ardent::parse_coords(b).map(|c| c.map(NetOutcome::Coords))
+                })
+                .await;
+            match out {
+                NetOutcome::Coords(_) | NetOutcome::Disabled => {
+                    return (NetSource::Ardent, out);
+                }
+                // 404, fallo o cuerpo corrupto: se prueba EDSM.
+                other => first = Some(other),
+            }
+        }
+        if self.is_down(Service::Edsm) {
+            return match first {
+                Some(out) => (NetSource::Ardent, out),
+                None => (NetSource::Edsm, NetOutcome::Failed(NetFailure::Down)),
+            };
+        }
+        let req = Req::Get(edsm::coords_url(name));
+        let out = self
+            .fetch(Service::Edsm, req, online, |b| {
+                edsm::parse_coords(b).map(|c| c.map(NetOutcome::Coords))
+            })
+            .await;
+        match (out, first) {
+            // EDSM sin datos: si Ardent falló, se informa su fallo.
+            (NetOutcome::NoData, Some(f @ NetOutcome::Failed(_))) => (NetSource::Ardent, f),
+            (out, _) => (NetSource::Edsm, out),
         }
     }
 
@@ -262,8 +462,10 @@ impl NetClient {
             return (NetSource::Spansh, out);
         }
         if self.is_down(Service::Edsm) {
+            net_event!("net.health.skipped_down", {"source": NetSource::Edsm});
             return (NetSource::Edsm, NetOutcome::Failed(NetFailure::Down));
         }
+        net_event!("net.fallback.edsm", {"spansh_down": true});
         let req = Req::Get(edsm::system_url(name));
         let out = self
             .fetch(Service::Edsm, req, online, |b| {
@@ -285,6 +487,7 @@ impl NetClient {
             return NetOutcome::Disabled;
         }
         if self.is_down(service) {
+            net_event!("net.health.skipped_down", {"source": source_of(service)});
             return NetOutcome::Failed(NetFailure::Down);
         }
         let reference = match self.codex_ref(online).await {
@@ -299,12 +502,19 @@ impl NetClient {
                 .map(|(_, _, body)| body.clone())
         };
         let body = match cached(&system_key) {
-            Some(body) => body,
+            Some(body) => {
+                net_event!("net.cache.poi.hit", {"bytes": body.len()});
+                body
+            }
             None => {
                 let _one_download = self.poi_lock.lock().await;
                 match cached(&system_key) {
-                    Some(body) => body,
+                    Some(body) => {
+                        net_event!("net.coalesced.poi", {"bytes": body.len()});
+                        body
+                    }
                     None => {
+                        net_event!("net.cache.poi.miss", {});
                         let req = Req::Get(canonn::body_url(star_system));
                         match self.call(service, req, online).await {
                             Ok(body) => {
@@ -351,10 +561,12 @@ impl NetClient {
 
     async fn codex_ref(&self, online: Option<&AtomicBool>) -> Result<Arc<CodexRef>, Miss> {
         if let Some(r) = self.memory_ref() {
+            net_event!("net.cache.codex_ref.memory_hit", {"entries": r.len()});
             return Ok(r);
         }
         let _one_download = self.ref_lock.lock().await;
         if let Some(r) = self.memory_ref() {
+            net_event!("net.coalesced.codex_ref", {"entries": r.len()});
             return Ok(r);
         }
         if let Some(persist) = self.persist.clone() {
@@ -373,10 +585,13 @@ impl NetClient {
                         .checked_sub(age)
                         .unwrap_or_else(std::time::Instant::now);
                     *self.codex_ref.lock().unwrap() = Some((seen, r.clone()));
+                    net_event!("net.cache.codex_ref.persisted_hit", {"entries": r.len(),
+                        "age_s": age.as_secs()});
                     return Ok(r);
                 }
             }
         }
+        net_event!("net.cache.codex_ref.miss", {"persisted": self.persist.is_some()});
         let req = Req::Get(canonn::codex_ref_url());
         let body = self.call(Service::Canonn, req, online).await?;
         match canonn::parse_codex_ref(&body) {
@@ -411,6 +626,7 @@ impl NetClient {
             return NetOutcome::Disabled;
         }
         if self.is_down(service) {
+            net_event!("net.health.skipped_down", {"source": source_of(service)});
             return NetOutcome::Failed(NetFailure::Down);
         }
         let body = match self.call(service, req, online).await {
@@ -441,11 +657,32 @@ impl NetClient {
     /// del cerrojo). Se toleran hasta 2 fallos transitorios consecutivos de
     /// sondeo (5xx, tiempo agotado, 429); el 3.º se devuelve.
     async fn route(&self, post: Req, online: Option<&AtomicBool>) -> NetOutcome {
+        self.run_job(post, online, POLL_LIMIT, |b| {
+            Ok(match spansh::parse_route_result(b)? {
+                RoutePoll::Pending => Step::Pending,
+                RoutePoll::Done(route) => Step::Done(Box::new(NetOutcome::Route(route))),
+                RoutePoll::Failed(msg) => Step::Failed(msg),
+            })
+        })
+        .await
+    }
+
+    /// Alta + sondeo de un trabajo de Spansh (rutas y comercio comparten
+    /// cerrojo: un solo trabajo a la vez).
+    async fn run_job(
+        &self,
+        post: Req,
+        online: Option<&AtomicBool>,
+        limit: Duration,
+        parse: impl Fn(&str) -> Result<Step, NetFailure>,
+    ) -> NetOutcome {
         let service = Service::Spansh;
         if self.is_down(service) {
+            net_event!("net.health.skipped_down", {"source": source_of(service)});
             return NetOutcome::Failed(NetFailure::Down);
         }
         let _one_at_a_time = self.route_lock.lock().await;
+        net_event!("net.route.lock_acquired", {});
         let job = match self.call(service, post, online).await {
             Ok(body) => match spansh::parse_job(&body) {
                 Ok(job) => job,
@@ -459,7 +696,7 @@ impl NetClient {
         // El alta fue correcta: cuenta como éxito para la salud (solo cuentan fallos consecutivos).
         self.succeed(service);
         let mut transient = 0u32;
-        let deadline = tokio::time::Instant::now() + POLL_LIMIT;
+        let deadline = tokio::time::Instant::now() + limit;
         loop {
             let body = match self
                 .call(service, Req::Get(spansh::results_url(&job)), online)
@@ -473,6 +710,8 @@ impl NetClient {
                     f @ (NetFailure::Timeout | NetFailure::RateLimited | NetFailure::Http(500..)),
                 )) => {
                     transient += 1;
+                    net_event!("net.route.poll.transient", {"transient": transient,
+                        "max": MAX_TRANSIENT_POLL_FAILURES});
                     if transient > MAX_TRANSIENT_POLL_FAILURES
                         || tokio::time::Instant::now() >= deadline
                     {
@@ -483,23 +722,28 @@ impl NetClient {
                 }
                 Err(miss) => return miss.into(),
             };
-            match spansh::parse_route_result(&body) {
-                Ok(RoutePoll::Done(route)) => {
+            match parse(&body) {
+                Ok(Step::Done(out)) => {
                     self.succeed(service);
-                    return NetOutcome::Route(route);
+                    return *out;
                 }
-                Ok(RoutePoll::Failed(msg)) => {
+                Ok(Step::Failed(msg)) => {
+                    net_event!("net.route.job_failed", {"message_bytes": msg.len()});
                     tracing::warn!(%msg, "Spansh no pudo calcular la ruta");
                     self.succeed(service);
                     return NetOutcome::NoData;
                 }
-                Ok(RoutePoll::Pending) => self.succeed(service),
+                Ok(Step::Pending) => {
+                    net_event!("net.route.poll.pending", {});
+                    self.succeed(service)
+                }
                 Err(e) => {
                     self.fail(service);
                     return NetOutcome::Failed(e);
                 }
             }
             if tokio::time::Instant::now() >= deadline {
+                net_event!("net.route.deadline", {"limit_s": POLL_LIMIT.as_secs()});
                 return NetOutcome::Failed(NetFailure::Timeout);
             }
             tokio::time::sleep(POLL_EVERY).await;
@@ -515,12 +759,18 @@ impl NetClient {
         online: Option<&AtomicBool>,
     ) -> Result<String, Miss> {
         if !online_allowed(online) {
+            net_event!("net.optout.blocked", {"stage": 1, "source": source_of(service)});
             return Err(Miss::Disabled);
         }
         self.wait_turn(service).await;
         if !online_allowed(online) {
+            net_event!("net.optout.blocked", {"stage": 2, "source": source_of(service)});
             return Err(Miss::Disabled);
         }
+        #[cfg(debug_assertions)]
+        let (endpoint, sent_at) = (endpoint_of(&req), std::time::Instant::now());
+        net_event!("net.http.request", {"endpoint": endpoint, "source": source_of(service),
+            "method": if matches!(req, Req::Get(_)) { "GET" } else { "POST" }});
         let reply = match &req {
             Req::Get(url) if service == Service::Canonn => {
                 self.transport.get_with_timeout(url, CANONN_TIMEOUT).await
@@ -528,6 +778,15 @@ impl NetClient {
             Req::Get(url) => self.transport.get(url).await,
             Req::Post(url, form) => self.transport.post_form(url, form).await,
         };
+        net_event!("net.http.response", {"endpoint": endpoint, "source": source_of(service),
+            "duration_ms": sent_at.elapsed().as_millis() as u64,
+            "class": match &reply {
+                Err(TransportError::Timeout) => 1,
+                Err(TransportError::Connect(_)) => 2,
+                Ok(r) => i64::from(r.status / 100) * 100,
+            },
+            "status": reply.as_ref().map_or(0, |r| r.status),
+            "bytes": reply.as_ref().map_or(0, |r| r.body.len())});
         match reply {
             Err(TransportError::Timeout) => {
                 self.fail(service);
@@ -562,6 +821,8 @@ impl NetClient {
     }
 
     async fn wait_turn(&self, service: Service) {
+        #[cfg(debug_assertions)]
+        let (started, mut waits) = (std::time::Instant::now(), 0u32);
         loop {
             let wait = {
                 let mut st = self.state.lock().unwrap();
@@ -569,8 +830,20 @@ impl NetClient {
                 limiter.try_acquire(now())
             };
             match wait {
-                Ok(()) => return,
-                Err(d) => tokio::time::sleep(d).await,
+                Ok(()) => {
+                    net_event!("net.limiter.acquired", {"source": source_of(service),
+                        "waits": waits, "waited_ms": started.elapsed().as_millis() as u64});
+                    return;
+                }
+                Err(d) => {
+                    #[cfg(debug_assertions)]
+                    {
+                        waits += 1;
+                    }
+                    net_event!("net.limiter.wait", {"source": source_of(service),
+                        "delay_ms": d.as_millis() as u64});
+                    tokio::time::sleep(d).await
+                }
             }
         }
     }
@@ -587,10 +860,12 @@ impl NetClient {
         let down = |s: Service| st.health.get(&s).is_none_or(|h| h.is_down(t));
         let (service, fallback) = match q {
             NetQuery::BodyBio { .. } => (Service::Canonn, false),
-            NetQuery::CommodityImportsNearby { .. } | NetQuery::NearestService { .. } => {
-                (Service::Ardent, false)
-            }
+            NetQuery::CommodityImportsNearby { .. }
+            | NetQuery::NearestService { .. }
+            | NetQuery::CommodityExportsNearby { .. } => (Service::Ardent, false),
             NetQuery::System { .. } if down(Service::Spansh) => (Service::Edsm, true),
+            NetQuery::SystemCoordsByName { .. } if down(Service::Ardent) => (Service::Edsm, true),
+            NetQuery::SystemCoordsByName { .. } => (Service::Ardent, false),
             _ => (Service::Spansh, false),
         };
         if down(service) {
@@ -608,9 +883,12 @@ impl NetClient {
         match q {
             NetQuery::BodyBio { .. } => self.is_down(Service::Canonn),
             NetQuery::System { .. } => self.is_down(Service::Spansh) && self.is_down(Service::Edsm),
-            NetQuery::CommodityImportsNearby { .. } | NetQuery::NearestService { .. } => {
-                self.is_down(Service::Ardent)
+            NetQuery::SystemCoordsByName { .. } => {
+                self.is_down(Service::Ardent) && self.is_down(Service::Edsm)
             }
+            NetQuery::CommodityImportsNearby { .. }
+            | NetQuery::NearestService { .. }
+            | NetQuery::CommodityExportsNearby { .. } => self.is_down(Service::Ardent),
             _ => self.is_down(Service::Spansh),
         }
     }
@@ -624,6 +902,10 @@ impl NetClient {
         let mut st = self.state.lock().unwrap();
         if let Some(h) = st.health.get_mut(&service) {
             h.record_failure(now());
+            net_event!("net.health.failure", {"source": source_of(service),
+                "failures": h.failures(), "down": h.is_down(now()),
+                "backoff_ms": h.retry_at().map_or(0, |at|
+                    at.saturating_duration_since(now()).as_millis() as u64)});
         }
         tracing::debug!(source = ?source_of(service), "fallo registrado");
     }
@@ -631,6 +913,8 @@ impl NetClient {
     fn succeed(&self, service: Service) {
         let mut st = self.state.lock().unwrap();
         if let Some(h) = st.health.get_mut(&service) {
+            net_event!("net.health.success", {"source": source_of(service),
+                "recovered_from": h.failures()});
             h.record_success();
         }
     }
@@ -1637,5 +1921,277 @@ mod tests {
             c.retry_at(&q),
             Some(tokio::time::Instant::now() + Duration::from_secs(30))
         );
+    }
+
+    const TRADE_JOB: &str = include_str!("../../../tests/fixtures/net/spansh_trade_job.json");
+    const TRADE_RESULT: &str = include_str!("../../../tests/fixtures/net/spansh_trade_result.json");
+    const EXPORTS: &str =
+        include_str!("../../../tests/fixtures/net/ardent_nearby_exports_gold.json");
+    const COORDS: &str = include_str!("../../../tests/fixtures/net/coords_by_name.json");
+
+    fn coords_part(k: &str) -> String {
+        let v: serde_json::Value = serde_json::from_str(COORDS).unwrap();
+        v[k].to_string()
+    }
+
+    fn trade_query() -> NetQuery {
+        NetQuery::TradeRoute(tmc_model::net::TradeRouteParams {
+            system: "Sol".into(),
+            station: "Abraham Lincoln".into(),
+            starting_capital: 5_000_000,
+            max_cargo: 256,
+            max_hops: 3,
+            max_hop_distance_ly: 30.0,
+            min_pad: PadSize::Large,
+            max_price_age_days: 1,
+            allow_planetary: false,
+        })
+    }
+
+    fn exports_query() -> NetQuery {
+        NetQuery::CommodityExportsNearby {
+            system_address: 10477373803,
+            commodity: "Gold".into(),
+            max_distance_ly: 100,
+            min_pad: PadSize::Large,
+        }
+    }
+
+    fn coords_query(name: &str) -> NetQuery {
+        NetQuery::SystemCoordsByName { name: name.into() }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn trade_route_polls_and_returns_plan() {
+        let t = FakeTransport::new();
+        t.script("/api/trade/route", vec![ok(202, TRADE_JOB)]);
+        t.script(
+            "/api/results/",
+            vec![ok(202, r#"{"status":"queued"}"#), ok(200, TRADE_RESULT)],
+        );
+        let c = client(&t);
+        let (src, out) = c.execute(&trade_query()).await;
+        assert_eq!(src, NetSource::Spansh);
+        let NetOutcome::TradeRoute(plan) = out else {
+            panic!("se esperaba TradeRoute");
+        };
+        assert_eq!(plan.stops.len(), 2);
+        let forms = t.forms.lock().unwrap();
+        assert!(
+            forms[0]
+                .iter()
+                .any(|(k, v)| k == "requires_large_pad" && v == "1")
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn trade_route_times_out_after_60_seconds() {
+        let t = FakeTransport::new();
+        t.script("/api/trade/route", vec![ok(202, TRADE_JOB)]);
+        t.script("/api/results/", vec![ok(202, r#"{"status":"queued"}"#)]);
+        let c = client(&t);
+        let start = tokio::time::Instant::now();
+        let (_, out) = c.execute(&trade_query()).await;
+        assert_eq!(out, NetOutcome::Failed(NetFailure::Timeout));
+        assert!(start.elapsed() >= Duration::from_secs(60));
+        assert!(start.elapsed() < Duration::from_secs(70));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn trade_route_disabled_offline_never_reaches_transport() {
+        let t = FakeTransport::new();
+        t.script("spansh", vec![ok(202, TRADE_JOB)]);
+        let c = client(&t);
+        let online = AtomicBool::new(false);
+        for q in [trade_query(), exports_query(), coords_query("Sol")] {
+            assert_eq!(
+                c.execute_with_online(&q, &online).await.1,
+                NetOutcome::Disabled
+            );
+        }
+        assert_eq!(t.total(), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn exports_share_ardent_one_per_second_limit() {
+        let t = FakeTransport::new();
+        t.script("nearby/imports", vec![ok(200, "[]")]);
+        t.script("nearby/exports", vec![ok(200, EXPORTS)]);
+        let c = ardent_client(&t);
+        let start = tokio::time::Instant::now();
+        c.execute(&imports_query("gold")).await;
+        let (src, out) = c.execute(&exports_query()).await;
+        assert_eq!(start.elapsed(), Duration::from_secs(1));
+        assert_eq!(src, NetSource::Ardent);
+        let NetOutcome::Exports(e) = out else {
+            panic!("se esperaba Exports");
+        };
+        assert_eq!(e[0].buy_price, 41000);
+        assert!(e.iter().all(|x| x.max_pad == Some(PadSize::Large)));
+        assert!(t.log().iter().any(|l| l.contains("/commodity/name/gold/")));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn coords_use_ardent_then_edsm_when_down() {
+        let t = FakeTransport::new();
+        t.script("ardent-insight", vec![ok(200, &coords_part("ardent"))]);
+        let c = client(&t);
+        let (src, out) = c.execute(&coords_query("Hip 1+2")).await;
+        assert_eq!(src, NetSource::Ardent);
+        assert!(matches!(out, NetOutcome::Coords(ref s) if s.star_pos == [0.5, -1.25, 3.75]));
+        assert!(t.log()[0].ends_with("/system/name/Hip%201%2B2"));
+
+        let t = FakeTransport::new();
+        t.script("ardent-insight", vec![ok(500, "")]);
+        t.script("edsm.net", vec![ok(200, &coords_part("edsm"))]);
+        let c = client(&t);
+        for _ in 0..3 {
+            c.execute(&coords_query("Origin")).await;
+        }
+        assert!(!c.is_down_for(&coords_query("Origin")));
+        let (src, out) = c.execute(&coords_query("Origin")).await;
+        assert_eq!(src, NetSource::Edsm);
+        assert!(matches!(out, NetOutcome::Coords(_)));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn coords_unknown_is_no_data() {
+        let t = FakeTransport::new();
+        t.script("ardent-insight", vec![ok(404, "{}")]);
+        t.script("edsm.net", vec![ok(200, "{}")]);
+        let c = client(&t);
+        assert_eq!(c.execute(&coords_query("Zzz")).await.1, NetOutcome::NoData);
+        assert_eq!(t.count("edsm.net"), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn coords_ardent_404_or_failure_falls_back_to_edsm() {
+        for ardent_reply in [ok(404, "{}"), ok(500, ""), ok(200, "not json")] {
+            let t = FakeTransport::new();
+            t.script("ardent-insight", vec![ardent_reply]);
+            t.script("edsm.net", vec![ok(200, &coords_part("edsm"))]);
+            let c = client(&t);
+            let (src, out) = c.execute(&coords_query("Origin")).await;
+            assert_eq!(src, NetSource::Edsm);
+            assert!(matches!(out, NetOutcome::Coords(_)));
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    mod diagnostics {
+        use super::*;
+        use tmc_model::diagnostics::capture::capture;
+
+        fn run(
+            t: &Arc<FakeTransport>,
+            q: NetQuery,
+        ) -> Vec<tmc_model::diagnostics::capture::Record> {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_time()
+                .start_paused(true)
+                .build()
+                .unwrap();
+            let c = client(t);
+            capture(|| rt.block_on(c.execute(&q))).1
+        }
+
+        #[test]
+        fn query_and_outcome_use_templates_never_urls_or_raw_errors() {
+            let t = FakeTransport::new();
+            t.script(
+                "field_values",
+                vec![Err(TransportError::Connect(
+                    "https://spansh.co.uk/x?token=CANARYERR".into(),
+                ))],
+            );
+            let q = NetQuery::Autocomplete {
+                prefix: "Sol?token=CANARYQ".into(),
+            };
+            let records = run(&t, q);
+            let all: String = records
+                .iter()
+                .map(|r| {
+                    format!(
+                        "{} {} {}
+",
+                        r.code, r.context, r.payload
+                    )
+                })
+                .collect();
+            for canary in ["CANARYQ", "CANARYERR", "https://", "spansh.co.uk", "?token"] {
+                assert!(!all.contains(canary), "{canary} leaked in {all}");
+            }
+            let codes: Vec<&str> = records.iter().map(|r| r.code.as_str()).collect();
+            for code in [
+                "net.query.started",
+                "net.limiter.acquired",
+                "net.http.request",
+                "net.http.response",
+                "net.health.failure",
+                "net.query.finished",
+            ] {
+                assert!(codes.contains(&code), "falta {code}: {codes:?}");
+            }
+            assert!(all.contains("spansh.autocomplete"));
+            let ids: std::collections::HashSet<_> = records
+                .iter()
+                .map(|r| {
+                    serde_json::from_str::<serde_json::Value>(&r.payload).unwrap()["request_id"]
+                        .clone()
+                })
+                .collect();
+            assert_eq!(ids.len(), 1, "todos comparten el mismo request_id");
+        }
+
+        #[test]
+        fn f3_queries_use_new_endpoint_templates_without_leaks() {
+            let t = FakeTransport::new();
+            t.script("/api/trade/route", vec![ok(503, "CANARYBODY")]);
+            let records = run(&t, trade_query());
+            let all: String = records.iter().map(|r| r.payload.clone()).collect();
+            assert!(all.contains("spansh.trade.job"), "{all}");
+            assert!(!all.contains("CANARYBODY"));
+
+            let t = FakeTransport::new();
+            t.script("nearby/exports", vec![ok(200, EXPORTS)]);
+            let records = run(&t, exports_query());
+            let all: String = records.iter().map(|r| r.payload.clone()).collect();
+            assert!(all.contains("ardent.nearby.exports"), "{all}");
+            let finished = records
+                .iter()
+                .find(|r| r.code == "net.query.finished")
+                .unwrap();
+            let v: serde_json::Value = serde_json::from_str(&finished.payload).unwrap();
+            assert_eq!(v["outcome"], "exports");
+
+            let t = FakeTransport::new();
+            t.script("ardent-insight", vec![ok(404, "{}")]);
+            t.script("edsm.net", vec![ok(200, "{}")]);
+            let records = run(&t, coords_query("CANARYCOORD?token=CANARYQ"));
+            let all: String = records.iter().map(|r| r.payload.clone()).collect();
+            for canary in ["CANARYCOORD", "CANARYQ", "https://", "?token"] {
+                assert!(!all.contains(canary), "{canary} leaked in {all}");
+            }
+            assert!(all.contains("ardent.system.coords"), "{all}");
+            assert!(all.contains("edsm.coords"), "{all}");
+        }
+
+        #[test]
+        fn http_status_is_numeric_class_with_route_template() {
+            let t = FakeTransport::new();
+            t.script("/api/route", vec![ok(503, "CANARYBODY")]);
+            let records = run(&t, neutron_query());
+            let all: String = records.iter().map(|r| r.payload.clone()).collect();
+            assert!(!all.contains("CANARYBODY"));
+            assert!(all.contains("spansh.route.job"));
+            let resp = records
+                .iter()
+                .find(|r| r.code == "net.http.response")
+                .unwrap();
+            let v: serde_json::Value = serde_json::from_str(&resp.payload).unwrap();
+            assert_eq!(v["status"], 503);
+            assert_eq!(v["class"], 500);
+            assert_eq!(v["bytes"], 10);
+        }
     }
 }

@@ -17,9 +17,26 @@ pub enum CopyMethod {
     MemoryFallback,
 }
 
+/// Escritura en el portapapeles del sistema (sustituible en pruebas).
+type Backend = Box<dyn Fn(&str) -> Result<(), String> + Send + Sync>;
+
+#[cfg(not(test))]
+fn system_backend(text: &str) -> Result<(), String> {
+    arboard::Clipboard::new()
+        .and_then(|mut cb| cb.set_text(text.to_owned()))
+        .map_err(|e| e.to_string())
+}
+
+/// En pruebas nunca se toca el portapapeles real.
+#[cfg(test)]
+fn system_backend(_text: &str) -> Result<(), String> {
+    Ok(())
+}
+
 pub struct Clipboard {
     last: Mutex<Option<String>>,
     warned: AtomicBool,
+    backend: Backend,
 }
 
 impl Clipboard {
@@ -27,6 +44,16 @@ impl Clipboard {
         Self {
             last: Mutex::new(None),
             warned: AtomicBool::new(false),
+            backend: Box::new(system_backend),
+        }
+    }
+
+    /// Portapapeles con un backend propio (pruebas).
+    #[cfg(all(test, debug_assertions))]
+    fn with_backend(backend: Backend) -> Self {
+        Self {
+            backend,
+            ..Self::new()
         }
     }
 
@@ -35,12 +62,31 @@ impl Clipboard {
     /// sesión. El aviso refleja la petición de copia: la alerta
     /// `nav-auto-copied` no distingue si el sistema aceptó el texto.
     pub fn set_text(&self, text: &str) -> Result<CopyMethod, String> {
+        // Solo longitudes: el texto (nombre de sistema, dato público) no se registra.
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "clipboard.copy.requested",
+            serde_json::json!({"chars": text.chars().count(), "bytes": text.len()})
+        );
         if let Ok(mut guard) = self.last.lock() {
             *guard = Some(text.to_owned());
         }
-        match arboard::Clipboard::new().and_then(|mut cb| cb.set_text(text.to_owned())) {
-            Ok(()) => Ok(CopyMethod::System),
+        match (self.backend)(text) {
+            Ok(()) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::State,
+                    "clipboard.copy.succeeded",
+                    serde_json::json!({"system": true})
+                );
+                Ok(CopyMethod::System)
+            }
             Err(err) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::State,
+                    "clipboard.copy.fallback",
+                    serde_json::json!({"system": false, "first_warning":
+                        !self.warned.load(Ordering::Relaxed)})
+                );
                 if !self.warned.swap(true, Ordering::Relaxed) {
                     tracing::warn!(%err, "system clipboard unavailable; stored in memory fallback");
                 }
@@ -72,15 +118,26 @@ pub struct AppActions {
     config: Mutex<Config>,
     runtime: Option<Runtime>,
     save_path: Option<PathBuf>,
+    settings_watch: Option<tokio::sync::watch::Sender<tmc_model::settings::ModuleSettings>>,
 }
 
 impl AppActions {
+    /// Publica los ajustes tras cada `put_config` (el cableado de EDDN los observa).
+    pub fn with_settings_watch(
+        mut self,
+        tx: tokio::sync::watch::Sender<tmc_model::settings::ModuleSettings>,
+    ) -> Self {
+        self.settings_watch = Some(tx);
+        self
+    }
+
     pub fn new() -> Self {
         Self {
             clipboard: Arc::new(Clipboard::new()),
             config: Mutex::new(Config::default()),
             runtime: None,
             save_path: None,
+            settings_watch: None,
         }
     }
 
@@ -90,6 +147,7 @@ impl AppActions {
             config: Mutex::new(cfg),
             runtime: None,
             save_path: None,
+            settings_watch: None,
         }
     }
 
@@ -176,6 +234,9 @@ impl ConfigHost for AppActions {
         updated
             .validate_f2()
             .map_err(|e| ActionError::Failed(e.into()))?;
+        updated
+            .validate_f3()
+            .map_err(|e| ActionError::Failed(e.into()))?;
         if updated.server.lan {
             updated.ensure_lan_token();
         }
@@ -183,6 +244,9 @@ impl ConfigHost for AppActions {
             Some(path) => updated.save_to(path),
             None => updated.save(),
         };
+        if let Some(tx) = &self.settings_watch {
+            tx.send_replace(updated.module_settings());
+        }
         if let Some(runtime) = &self.runtime {
             runtime
                 .online
@@ -231,8 +295,16 @@ impl ActionHost for AppActions {
                         .filter(|s| !s.is_empty())
                 };
                 let next = pick("navigation.route", "copy_target")
+                    .or_else(|| pick("trade.route", "copy_target"))
                     .or_else(|| pick("core.route", "next_system"))
-                    .ok_or_else(|| ActionError::Failed("no-next-system".into()))?;
+                    .ok_or_else(|| {
+                        tmc_model::diagnostic!(
+                            tmc_model::diagnostics::DiagnosticContext::State,
+                            "clipboard.copy.no_target",
+                            serde_json::json!({})
+                        );
+                        ActionError::Failed("no-next-system".into())
+                    })?;
                 self.clipboard.set_text(next).map_err(ActionError::Failed)?;
                 Ok(json!({ "system": next }))
             }
@@ -297,10 +369,51 @@ impl ActionHost for AppActions {
     }
 }
 
-const MODULE_PREFIXES: [&str; 5] = [
+const MODULE_PREFIXES: [&str; 7] = [
     "navigation.",
     "exploration.",
     "exobiology.",
     "combat.",
     "mining.",
+    "trade.",
+    "missions.",
 ];
+
+#[cfg(test)]
+mod tests {
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn copy_diagnostics_never_include_the_text() {
+        use tmc_model::diagnostics::capture::capture;
+        let (_, records) = capture(|| {
+            let ok = super::Clipboard::with_backend(Box::new(|_| Ok(())));
+            let _ = ok.set_text("CANARYCOPY");
+            let failing = super::Clipboard::with_backend(Box::new(|_| Err("CANARYERR".into())));
+            let _ = failing.set_text("CANARYCOPY");
+        });
+        let all: String = records
+            .iter()
+            .map(|r| {
+                format!(
+                    "{} {}
+",
+                    r.code, r.payload
+                )
+            })
+            .collect();
+        assert!(!all.contains("CANARYCOPY"), "{all}");
+        assert!(!all.contains("CANARYERR"), "{all}");
+        let codes: Vec<&str> = records.iter().map(|r| r.code.as_str()).collect();
+        assert_eq!(
+            codes,
+            [
+                "clipboard.copy.requested",
+                "clipboard.copy.succeeded",
+                "clipboard.copy.requested",
+                "clipboard.copy.fallback"
+            ]
+        );
+        assert!(all.contains("\"chars\":10"));
+    }
+}

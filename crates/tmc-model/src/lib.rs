@@ -3,6 +3,7 @@
 
 pub mod companion;
 pub mod events;
+pub mod market;
 pub mod net;
 pub mod settings;
 pub mod source;
@@ -19,4 +20,20 @@ pub enum ParseError {
     Json(String),
     #[error("falta el campo obligatorio {0}")]
     MissingField(&'static str),
+}
+#[cfg(debug_assertions)]
+pub mod diagnostics;
+
+#[cfg(debug_assertions)]
+#[macro_export]
+macro_rules! diagnostic {
+    ($context:expr, $code:literal, $payload:expr $(,)?) => {
+        $crate::diagnostics::emit($context, $code, &$payload)
+    };
+}
+
+#[cfg(not(debug_assertions))]
+#[macro_export]
+macro_rules! diagnostic {
+    ($context:expr, $code:literal, $payload:expr $(,)?) => {{}};
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { t } from '../lib/i18n';
+  import { diag, diagOn } from '../lib/diag.svelte';
 
   let {
     titleKey,
@@ -13,6 +14,13 @@
     size?: 'normal' | 'large';
     children?: Snippet;
   } = $props();
+
+  $effect(() => {
+    if (!diagOn()) return;
+    const shape = { panel: titleKey, span: span === 'full' ? 0 : (span ?? 1), large: size === 'large', has_children: children !== undefined };
+    diag('ui.panel.mounted', shape);
+    return () => diag('ui.panel.unmounted', { panel: shape.panel });
+  });
 
   const gridColumn = $derived(
     span === 'full' ? '1 / -1' : span === 1 || span === 2 ? `span ${span}` : undefined,

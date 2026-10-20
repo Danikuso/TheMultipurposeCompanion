@@ -2,16 +2,31 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-19 17:45 (Europe/Madrid) · Claude Opus 5.5
-- **Fase actual:** F2 — Combate y minería (✅ completada y fusionada en `main` en `e069a14`). F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
-- **Spec activa:** [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) — ✅ aprobada (2026-10-18); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md)
-- **Plan activo:** [`docs/plans/2026-10-18-tmc-f2-combate-mineria.md`](docs/plans/2026-10-18-tmc-f2-combate-mineria.md) — ✅ 29/29 tareas. Anteriores: F1 ✅ 33/33, F0 ✅ 19/19
-- **Rama de trabajo:** `main` (F2 fusionada; la siguiente fase abrirá `fase/f3-…`)
+- **Última actualización:** 2026-10-20 18:50 (Europe/Madrid) · Claude Opus 5.5
+- **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (✅ 35/35 tareas; criterio 10 pendiente de medición con ventana). F2 ✅ fusionada en `main` (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversal: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md).
+- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — ✅ 35/35 hechas (criterio 10 parcial) (aprobado al ordenar «escribe el plan y ejecútalo»). Diagnóstico: [plan](docs/plans/2026-10-20-diagnostico-debug.md) D1–D7b. Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
+- **Rama de trabajo:** `fase/f3-comercio-misiones`
 
 ## Puntero actual
 
-- **Tarea:** F2 — spec ✅ aprobada (2026-10-18): [`docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md`](docs/specs/2026-10-18-tmc-f2-combate-mineria-design.md) (diseñada con el propietario con maquetas; revisada por builder). Rama `fase/f2-combate-mineria`.
-- **Siguiente acción:** preparar la spec de F3 según la hoja de ruta (spec de arquitectura §13) con el propietario. Cuentas de CAPI/Inara/EDSM en proceso de aprobación (necesarias en F6).
+- **Tarea:** F3 en ejecución con subagentes (en curso: Task -). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
+- **Último paso completado:** Task 17 ✅ (08aacf3), revisión aprobada.
+- **Siguiente acción:** revisión final de rama hecha y corregida (`7a99bfd`). Falta solo el criterio 10 con ventana (y, si es posible, con EDDN real durante una sesión de juego atracado en un mercado); después, fusionar `fase/f3-comercio-misiones` en `main` con autorización del propietario.
+
+## Tareas de diagnóstico debug
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| D1 | Contrato y redacción | ✅ hecha | e6c5d09 | 13 diagnósticos TDD; ambas revisiones; 781 Rust, 144 UI, release noeval, fmt/clippy/check/build PASS |
+| D2 | Writer circular y lifecycle | ✅ hecha | ed0611e | 14 pruebas; ambas revisiones; 795 Rust, fmt/clippy y clippy release PASS |
+| D3 | Fuentes y persistencia | ✅ hecha | 44e8a9e + 91cc1dc (fix volumen) | 804 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS |
+| D4 | Actor y módulos | ✅ hecha | 42c1ccc | 811 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS |
+| D2b | Escritor SQLite por apartados | ✅ hecha | 58696b7 + fix de revisión | Sustituye JSONL (decisión propietario 2026-10-20); 75 tests tmc-app, 815 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS |
+| D5 | Red, HTTP, WS, auth y acciones | ✅ hecha | b6e139b | 824 Rust PASS (1 ignorado), fmt/clippy y clippy release PASS; sin test WS dedicado |
+| D6 | UI | ✅ hecha | 5a81eff | 834 Rust PASS/1 ignorado, 155 UI PASS |
+| D7a | Verificación previa (checks, replay, build debug) | ✅ hecha | 713a8f4 | 6 ejecuciones workspace verdes |
+| D7b | Integración en F3 | ✅ hecha | 6e5e97a (merge) + a1c2bb3 | EDDN/comercio/endpoints F3 en diagnóstico; 999 Rust PASS ×2, clippy release PASS, 160 UI PASS |
 
 ## Fases
 
@@ -19,8 +34,8 @@
 |---|---|---|
 | F0 | Cimientos (lectura, estado, SQLite, servidor, UI base, panel general, instalador) | ✅ completada y fusionada (2b953e6) |
 | F1 | Navegación, exploración, exobiología | ✅ completada y fusionada (b96fecf) |
-| F2 | Cazarrecompensas/combate (incl. AX), minería | 🔄 en ejecución |
-| F3 | Comercio, misiones y pasajeros, recepción EDDN | ⬜ |
+| F2 | Cazarrecompensas/combate (incl. AX), minería | ✅ completada y fusionada (e069a14) |
+| F3 | Comercio, misiones y pasajeros, recepción EDDN | 🔄 en ejecución |
 | F4 | Ingenieros y materiales | ⬜ |
 | F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | ⬜ |
 | F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | ⬜ |
@@ -28,6 +43,46 @@
 | F8 | Overlay ligero e integrado | ⬜ |
 | F9 | Crimen y piratería (Law & Disorder, dic. 2026) | ⬜ |
 | F10 | Atajos, Stream Deck, VoiceAttack, build Linux | ⬜ |
+
+## Tareas de F3
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 0 | Spike EDDN | ✅ hecha | 26d7da8 | EDDN OnDemand (0,38 % de un núcleo); zeromq MIT; carriers; coords 91,8 % |
+| 1 | Spike red — Spansh trade, Ardent exports, coordenadas | ✅ hecha | 1786893 | Spansh trade (requires_large_pad), Ardent exports, coords Ardent+EDSM |
+| 2 | Spike misiones | ✅ hecha | 61f06c6 | Turismo verificado; masacre; cabinas agregadas |
+| 3 | Aprobaciones del propietario tras los spikes | ✅ hecha | (este commit) | Resultados de spikes como rulings del controlador en Desviaciones |
+| 4 | `tmc-model` — eventos de comercio | ✅ hecha | 299fc8c, ad46673 | Eventos de comercio tolerantes; max_pad, has_market |
+| 5 | `tmc-model` — eventos de misiones, pasajeros y objetivos comunitarios | ✅ hecha | 0463c11, ad46673 | Eventos de misiones/pasajeros/CG tolerantes; destinos múltiples |
+| 6 | `tmc-model::market` y `tmc-store` — tabla de precios, estaciones y coordenadas | ✅ hecha | b510911, c1214e2 | Tablas de precios/estaciones/coords; marcas de tiempo explícitas; retención 7/30 d |
+| 7 | `tmc-model` — consultas de red nuevas y ajustes de F3 | ✅ hecha | b89c415 | NetQuery/NetOutcome nuevas y ajustes eddn_radius_ly/tourism_reference_cr_ly |
+| 8 | `tmc-net` — ruta comercial de Spansh y coordenadas por nombre | ✅ hecha | 84131b6, 5580336 | Spansh trade (requires_large_pad), coords Ardent→EDSM, filas parciales |
+| 9 | `tmc-net` — exportaciones cercanas de Ardent | ✅ hecha | 84131b6, 5580336 | Ardent exports; regla de carriers común (también en F2) |
+| 10 | `tmc-eddn` — decodificación y filtro | ✅ hecha | 9d058d5, 63feee3 | tmc-eddn: decodificación acotada (1 MiB), prefiltro, carriers en decode, índice de coords |
+| 11 | `tmc-eddn` — suscriptor, reconexión y lotes | ✅ hecha | 273f12b, ea0616f | Suscriptor EDDN: OnDemand, retroceso, vigilancia 60 s, tope 256 KiB, lotes sin bloqueo; PUB/SUB probado en Windows |
+| 12 | `tmc-app` — servicio EDDN, `SourceEvent::Eddn`, limpieza y configuración | ✅ hecha | c7840f5, 3334f69 | Replay explícito; recuperación tras lag; coords tras importar y offline sin congelación; spec/calidad aprobadas; 874 Rust y 144 UI PASS |
+| 13 | datos estáticos `rare_goods.json` y `cabins.json` | ✅ hecha | 440c5d9 | OnceLock, parser tolerante con avisos y recuperación por fila; catálogo inicial 1 rara/4 cabinas; spec/calidad aprobadas; 878 Rust PASS |
+| 14 | i18n — `trade.ftl` y `missions.ftl` | ✅ hecha | 7f6a9a9 | 125 claves de paneles por idioma y ajustes/disposiciones; rangos ingleses; spec/calidad aprobadas; 880 Rust y 144 UI PASS |
+| 15 | `trade` — coste pagado y «Mi carga» | ✅ hecha | 28e205b | Media ponderada, coste parcial, exclusión misión/robada, SRV protegido y reconstrucción paginada; spec/calidad aprobadas; 893 Rust PASS |
+| 16 | `trade` — «Mercado actual» y mejor venta en 48 h | ✅ hecha | 3a33097 | Top5, mezcla fresca, consultas acotadas compatibles y marcador de catálogo completo; spec/calidad aprobadas, 924 Rust PASS |
+| 17 | `trade` — ruta comercial con avance automático | ✅ hecha | 08aacf3 | Ruta comercial: avance al atracar en la parada, completada, portapapeles; decide! numéricos |
+| 18 | `trade` — sesión de comercio y buscar mercancía | ✅ hecha | 79ebd2b, a3de1d5 | Sesión de comercio (coste exacto/AvgPricePaid, sin coste contado, rango) y búsqueda con reloj inyectado |
+| 19 | `trade` — módulo, topics, relevancia, red, almacén y registro | ✅ hecha | 1d90c65, 7dcb996 | Módulo trade: 6 topics sin reloj, relevancia, red, almacén, registro, trade. en MODULE_PREFIXES; Market.json antes de Docked |
+| 20 | `mining` — «Dónde vender» con la tabla de precios | ✅ hecha | 7c54960, b63686f | Dónde vender con tabla de precios + EDDN; sesión de minería sin tasas dependientes del reloj (UI calcula) |
+| 21 | UI — «Mercado actual» y «Mi carga» | ✅ hecha | 05a0667, 155a727 | Mercado actual y Mi carga; formato común de créditos |
+| 22 | UI — «Ruta comercial», «Sesión» y «Buscar mercancía» | ✅ hecha | 1b8a522, 155a727, 01c347a | Ruta (saltos, aviso de copiado), Sesión y Buscar; test de minería determinista |
+| 23 | `missions` — libro de misiones y reconstrucción | ✅ hecha | c7bd6bd, ae8fbc6 | Libro de misiones y reconstrucción desde historial; fallidas/completadas al reconciliar |
+| 24 | `missions` — pila de masacre | ✅ hecha | d654f97, 10f49af | Pila de masacre con la regla exacta de §10.10; fixture massacre_session.log |
+| 25 | `missions` — avisos, recompensas de la sesión y objetivos comunitarios | ✅ hecha | 70645b6, 250119f | Avisos (caducidad, carga al llegar al destino), recompensas acumuladas, objetivos comunitarios |
+| 26 | `missions` — pasajeros y cabinas | ✅ hecha | 88df42a, 250119f | Pasajeros por destino (VIP/buscado) y cabinas por clase (ocupación agregada) |
+| 27 | `missions` — turismo: ruta óptima, cr/al y veredicto | ✅ hecha | 4cfa8cd, 6a2627e | Turismo: ruta óptima (exacta ≤8, heurística), cr/al, veredicto; robusto ante datos inválidos |
+| 28 | `missions` — módulo, coordenadas, topics, relevancia y registro | ✅ hecha | b0a340c, 7d37024 | Módulo de misiones: libro+masacre+avisos+pasajeros+turismo cableados; turismo tras reiniciar; coordenadas con reintento |
+| 29 | UI — «Misiones activas», «Masacre» y «Avisos» | ✅ hecha | 17fd079, fd69ee4 | Misiones activas por destino, masacre (vista de pila), avisos |
+| 30 | UI — «Pasajeros», «Turismo», «Recompensas» y «Objetivos comunitarios» | ✅ hecha | abaf317, fd69ee4, cda1014 | Pasajeros, turismo (veredicto con contrato real), recompensas, objetivos comunitarios; contrato JSON Rust→UI |
+| 31 | UI — disposiciones «Comercio» y «Misiones», prioridad y ajustes | ✅ hecha | 2d449e9, b6dbdde | Disposiciones Comercio/Misiones con prioridad; ajustes EDDN/turismo; relevancia solo con carga comercial |
+| 32 | fixtures sintéticos y pruebas de extremo a extremo | ✅ hecha | 502804f, 69f83c5, 7fc00e0 | Fixtures F3, contratos trade/missions, ráfaga EDDN (p95 299 ms, ≤1 consulta/10 s, corruptos), 14 Playwright; hooks e2e solo debug y estrictos |
+| 33 | `tmc-headless eval` — conciliación de coste pagado y de masacre | ✅ hecha | f262180, 0bda26e, 939de0b | Eval coste pagado y masacre (historial: 2/2 y 4/4, INSUFICIENTE por n<5); release sin avisos |
+| 34 | avisos, consumo con EDDN, verificación de los 11 criterios y cierre | ✅ hecha | 55c5407 | 10/11 criterios PASS; 10 PARCIAL (núcleo con EDDN 34 MB/0,05 % CPU; ventana pendiente del propietario) |
 
 ## Tareas de F2
 
@@ -132,6 +187,11 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 18 | Presupuesto de consumo y cierre de F0 | ✅ hecha | fe99cd6 | `measure-footprint.ps1` (`max_mb=144.91` < 150, `avg_cpu_idle=0.09%` < 1% PASS), `README.md` y 9/9 criterios §15 verificados. |
 
 ## Bloqueos y pendientes del propietario
+- [x] **F3 · Criterio 10:** ✅ medido 2026-10-20 con ventana (106,4 / 111,5 MB, 0 % CPU). Recomendado: comprobar con EDDN real durante una sesión de juego. Antes: cierra TMC.exe y ejecuta `CARGO_TARGET_DIR=target-f3 cargo build --release -p tmc-desktop` y `pwsh scripts/measure-footprint.ps1 -Exe target-f3/release/TMC.exe -JournalDir .tmp/footprint-f3-trade -FixturePath tests/fixtures/journal/trade_session.log -ShowWindow -Seconds 120` (y con `missions_session.log`); o autoriza al agente a hacerlo. Límite < 150 MB y < 1 % CPU.
+
+- [x] **F3 · Task 16:** corregidos cierres SQL, mercancías ausentes/catálogos vacíos y compatibilidad antes del límite. Consulta dirigida acotada, marcador completo con migración aditiva y purga. APIs y Tasks 18/19/20 sincronizadas en el plan. Revisiones spec/calidad aprobadas; 924 Rust PASS, fmt/clippy OK.
+
+- [x] **F3 · Task 12:** corregidos helper de siembra tras importación, guardia replay explícita, recuperación tras lag y bloqueo de coordenadas por importación incompleta. Dos expectativas UI heredadas alineadas con rangos ingleses aprobados. Revisiones spec/calidad aprobadas y checks completos correctos (874 Rust/144 UI).
 - [x] **F2 · Criterio 9 (consumo con ventana):** ✅ medido 2026-10-19 (112,7 MB / 0 % CPU). Antes: cierra tu TMC.exe (PID 3808 ocupa 47320 y la instancia única impide otra) y ejecuta `pwsh scripts/measure-footprint.ps1 -Exe target-f2/release/TMC.exe -JournalDir .tmp/footprint-f2 -FixturePath tests/fixtures/journal/combat_session.log -ShowWindow -Seconds 120` y lo mismo con `mining_session.log`; o autoriza al agente a cerrarlo y medir. Límite < 150 MB y < 1 % CPU.
 - [ ] **F2 · Eval sobre tu historial:** vales INSUFICIENTE (el único canje incluye vales ganados antes del primer diario) y minería sin datos (n=0). `tmc-headless eval` queda listo para validar con futuras sesiones de caza/minería.
 
@@ -160,6 +220,12 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Decisiones tomadas
 
+- 2026-10-20 · D7b: regla global en la spec de diagnóstico — todo topic, acción, variante NetQuery/NetOutcome, endpoint o campo de configuración nuevo se registra en las listas permitidas de diagnóstico y se cubre con un test canario.
+
+- 2026-10-20 00:03 · Corregidas las tablas históricas F0/F1/F2: una sustitución sin acotar a F3 había sobrescrito sus tareas 16 y 17. Restauradas sus secciones completas desde HEAD y verificadas por igualdad exacta normalizando saltos de línea. Los logs serán VERBOSE de toda la app, exclusivamente debug_assertions y en debug_logs junto al ejecutable, por instrucción del propietario.
+
+- 2026-10-19 23:58 · Propietario prioriza logs exhaustivos de TODA la app para reportes de pruebas; exploración añade contexto específico, pero el alcance es general. F3 Task17 se pausa; se preserva TDD parcial. Se corrige tabla16 que seguía en curso pese a cierre real 3a33097 (spec/calidad y 924 Rust PASS ya verificados).
+
 - 2026-10-18 · Propietario: spec de F2 aprobada; plan y ejecución con subagentes autorizados.
 
 - 2026-10-18 · Propietario: F2 sin Rhino ni Law & Disorder, con AX; maquetas de combate y minería v2 aprobadas; calor como indicador de 3 estados y casco por escalones (el juego no expone calor % ni casco en vivo).
@@ -187,6 +253,41 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
+- 2026-10-20 19:05 (Europe/Madrid) · Claude Opus 5.5 · F3 ejecutada hasta la Task 34 con subagentes (Tasks 17–34 tras integrar el diagnóstico debug D1–D7b y logs en SQLite). Revisión final de rama (Opus): sin críticos; corregido comercio en Legacy y coordenadas propias en replay (`7a99bfd`). 1154+ Rust, 228 UI, 14 Playwright, clippy release PASS. Pendiente: criterio 10 con ventana (propietario) y fusión en `main`.
+- 2026-10-20 16:14 (Europe/Madrid) · Codex · Limpieza solicitada por el propietario: eliminados 103,771 GiB de artefactos regenerables de Cargo entre el checkout principal y prueba-main (incremental, deps, build y fingerprints). Sin compilaciones activas; 22 ejecutables, instaladores y símbolos conservados con SHA256 idéntico. Logs, datos, código y cambios pendientes de missions intactos. Inventario local: `.tmp/cleanup-build-artifacts.json`. Puntero de desarrollo sin cambios; la próxima compilación regenerará dependencias.
+
+- 2026-10-20 · Claude Opus 5.5 · D7b: `codex/diagnostico-logs` fusionada en F3 (6e5e97a, 6 conflictos resueltos) y cableado de EDDN/comercio/endpoints F3 (a1c2bb3). fmt/clippy/clippy release PASS, 999 Rust PASS ×2, 160 UI PASS. WIP de Task 17 preservado en stash y restaurado sin commit. Siguiente: Task 17.
+- 2026-10-20 · Claude Opus 5.5 · D7a cerrada: captura de tests estable (713a8f4), checks y replay sintético OK, hash release intacto. Siguiente: D7b.
+- 2026-10-20 · Claude Sonnet 5.5 · D6 5a81eff cerrada: UI con capacidad `diagnostics` solo en backend debug, acción `app.diagnostics`; 834 Rust PASS/1 ignorado, 155 UI PASS, fmt/clippy/clippy release PASS. Siguiente: D7.
+- 2026-10-20 · Claude Sonnet 5.5 · D5 b6e139b cerrada: red (tmc-net/net_service), HTTP/WS, auth, acciones y portapapeles; 824 Rust PASS/1 ignorado, fmt/clippy/clippy release PASS. Siguiente: D6.
+- 2026-10-20 · Claude Sonnet 5.5 · D2b 58696b7: escritor SQLite separado `debug_logs/diagnostics.sqlite` por apartados (spec/plan/desviación en b325a2e); fmt/clippy/clippy release PASS. Siguiente: D5.
+- 2026-10-20 · Claude Sonnet 5.5 · D4 42c1ccc cerrada: actor (evento, transición de estado, topics redactados, efectos) y decisiones de los seis módulos; 811 Rust PASS/1 ignorado, fmt/clippy/clippy release PASS. Siguiente: D5.
+- 2026-10-20 · Claude Sonnet 5.5 · D3 44e8a9e cerrada: fuentes locales y persistencia instrumentadas; 804 Rust PASS/1 ignorado, fmt/clippy/clippy release PASS. Siguiente: D4.
+- 2026-10-20 00:37 (Europe/Madrid) · Codex · D2 ed0611e cerrada con writer DEBUG acotado y 14 pruebas. Correcciones de escape JSON, limpieza bajo bloqueo Windows y orden de cierre revisadas. 795 Rust PASS/1 ignorado, fmt/clippy y clippy release PASS; empieza D3.
+
+- 2026-10-20 00:21 (Europe/Madrid) · Codex · D1 e6c5d09 revisada y verificada: 781 Rust/144 UI PASS, release sin evaluación, fmt/clippy/check/build correctos. Inicia D2. Se reconcilia solo el resumen de fases con merges reales; tablas históricas completas intactas.
+
+- 2026-10-20 · Codex · D1 diagnóstico debug iniciado en checkout aislado; spec y plan autorizados por instrucción expresa del propietario. Sin tocar tablas históricas F0/F1/F2. Contrato/redacción y docs sin commit; GREEN 91 tmc-model + release noeval. Revisión y checks globales pendientes. Dos expectativas UI de rango Maestro→Master sincronizadas con decisión del propietario de 2026-10-19 (baseline RED 142 PASS/2 FAIL).
+
+- 2026-10-19 23:58 (Europe/Madrid) · Codex · Propietario pide instrumentación diagnóstica de toda la app tras detectar cuerpos ausentes en exploración. Pausado implementadorTask17; código parcial preservado. Análisis con deep-plan/architect-opus dentro del logging aprobado F0§9, antes de implementar.
+
+- 2026-10-19 23:52 (Europe/Madrid) · Codex · Task 16 cerrada con top5, snapshots locales, mezcla por frescura y origen; revisión detectó y corrigió resurrección de ofertas, ausencia de mercancías y límite antes de pad. Migración aditiva f3_market_full_snapshots y consultas bounded; spec/calidad aprobadas, 924 Rust PASS (2 ignorados), fmt/clippy OK.
+
+- 2026-10-19 22:09 (Europe/Madrid) · Codex · Task 15 cerrada con 13 tests RED→GREEN: coste medio, inventario parcial, misión/robado, guardia SRV y reconstrucción por comandante/fecha. Revisiones aprobadas, fmt/clippy OK, 893 Rust PASS (2 ignorados); UI sin cambios.
+
+- 2026-10-19 22:02 (Europe/Madrid) · Codex · Task 14 cerrada: comercio/misiones en 5 idiomas, cobertura de rangos y argumentos de formato; RED→GREEN, spec/calidad aprobadas, 880 Rust y 144 UI PASS, fmt/clippy/check/build OK.
+
+- 2026-10-19 21:58 (Europe/Madrid) · Codex · Task 13: datos propios provisionales (1 rara/4 cabinas), carga embebida tolerante y tests RED→GREEN; spec/calidad aprobadas; fmt/clippy OK, 878 Rust PASS (2 ignorados); UI sin cambios.
+
+- 2026-10-19 21:54 (Europe/Madrid) · Codex · Task 12 cerrada con TDD y dos revisiones: guardia replay explícita, siembra tras importación y coords sin dependencia del progreso. fmt/clippy OK, 874 Rust PASS (2 ignorados), 144 UI PASS, Svelte check/build OK; binario main de prueba intacto.
+
+- 2026-10-19 21:47 (Europe/Madrid) · Codex · Propietario reanuda F3 mientras prueba main. Retomadas correcciones Task 12 con subagente; checks en debug y datos temporales, binario de prueba target/release preservado.
+
+- 2026-10-19 21:46 (Europe/Madrid) · Codex · Propietario pide PAUSAR desarrollo y compilar main para juego real. Compilado checkout aislado `main@9154d41`: UI build OK; `cargo tauri build -- --offline` release e instalador NSIS OK (6,02 MiB). Copias estables en `target/prueba-main-9154d41/{TMC.exe,TMC_0.1.0_x64-setup.exe}`. F3 permanece sin commit con correcciones parciales de Task 12.
+
+- 2026-10-19 21:43 (Europe/Madrid) · Codex · Retomada Task 12 desde c7840f5 y correcciones pendientes. RED de compilación E0425 por helper incompleto; revisión detecta guardia replay insuficiente. Correcciones con subagente y revisiones secuenciales en curso; sin push.
+
+- 2026-10-19 19:45 (Europe/Madrid) · Claude Opus 5.5 · Spec de F3 diseñada con el propietario (propuesta, maquetas, turismo opción B), revisada por builder y aprobada; rama `fase/f3-comercio-misiones`.
 - 2026-10-19 17:45 (Europe/Madrid) · Claude Opus 5.5 · Respuestas del propietario: rangos de combate en inglés (`4e75386`); permiso de Canonn obtenido → capa 3 activada y revisada (`4f33956`, `7c35289`, `0ff96f1`; 768 tests Rust PASS); cuentas CAPI/Inara/EDSM en aprobación.
 - 2026-10-19 17:25 (Europe/Madrid) · Claude Opus 5.5 · Propietario autoriza la fusión: `fase/f2-combate-mineria` fusionada en `main` (`e069a14`, --no-ff). Sobre `main`: fmt/clippy limpios, 755 tests Rust PASS, svelte-check 0 errores, 144 vitest PASS, build OK. `main` subida a GitHub privado.
 - 2026-10-19 14:35 (Europe/Madrid) · Claude Opus 5.5 · F2 ejecutada con subagentes (Tasks 19–28) y cerrada: 10/10 criterios PASS con evidencias en el plan; footprint con ventana 112,7 MB / 0 % CPU; revisión final de rama (Opus) con 1 crítico corregido (acciones reset de combate/minería no llegaban al núcleo, `c54a541`) y robustez (`cb484d8`); `core.clock` para la hora del diario en paneles. Rama `fase/f2-combate-mineria` subida; falta fusionar en `main` con autorización del propietario.

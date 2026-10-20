@@ -15,7 +15,10 @@ use crate::jsonx;
 use crate::transport::url_encode;
 use chrono::{DateTime, Duration, Utc};
 use serde_json::Value;
-use tmc_model::net::{NearbyService, NetFailure, PadSize, RemoteMarket, RemoteStation};
+use tmc_model::market::{PriceOrigin, is_fleet_carrier};
+use tmc_model::net::{
+    NearbyService, NetFailure, PadSize, RemoteExport, RemoteMarket, RemoteStation, SystemCoords,
+};
 
 pub const BASE: &str = "https://api.ardent-insight.com/v2";
 /// Volumen mínimo de demanda que se pide al servidor.
@@ -65,6 +68,19 @@ pub fn imports_nearby_url(
     )
 }
 
+/// Vendedores cercanos de una materia (`min_pad` se filtra en local).
+pub fn exports_nearby_url(system_address: u64, commodity: &str, max_distance_ly: u32) -> String {
+    format!(
+        "{BASE}/system/address/{system_address}/commodity/name/{}/nearby/exports?maxDistance={max_distance_ly}&fleetCarriers=false&minVolume={MIN_VOLUME}&maxDaysAgo={MAX_DAYS_AGO}",
+        url_encode(commodity)
+    )
+}
+
+/// Coordenadas de un sistema por nombre (404 = desconocido).
+pub fn system_name_url(name: &str) -> String {
+    format!("{BASE}/system/name/{}", url_encode(name))
+}
+
 /// Estaciones más cercanas con un servicio; el servidor filtra por plataforma.
 pub fn nearest_url(system_address: u64, service: NearbyService, min_pad: PadSize) -> String {
     let svc = match service {
@@ -76,23 +92,16 @@ pub fn nearest_url(system_address: u64, service: NearbyService, min_pad: PadSize
     )
 }
 
-fn is_carrier_name(name: &str) -> bool {
-    let b = name.as_bytes();
-    b.len() == 7
-        && b[3] == b'-'
-        && b.iter()
-            .enumerate()
-            .all(|(i, c)| i == 3 || c.is_ascii_uppercase() || c.is_ascii_digit())
-}
-
-/// Obras de construcción/colonización, carriers y asentamientos a pie.
-fn excluded(name: &str, station_type: Option<&str>) -> bool {
+/// Obras de construcción/colonización, portaaviones (regla común de
+/// `tmc_model::market::is_fleet_carrier`) y asentamientos a pie. Sin `marketId`
+/// ni tipo de estación no se excluye por el nombre (no se pierden estaciones reales).
+pub(crate) fn excluded(name: &str, station_type: Option<&str>, market_id: Option<u64>) -> bool {
     let lower = name.to_lowercase();
     lower.contains("construction site")
         || lower.contains("colonisationship")
         || lower.contains("colonisation ship")
-        || matches!(station_type, Some("FleetCarrier" | "OnFootSettlement"))
-        || is_carrier_name(name)
+        || matches!(station_type, Some("OnFootSettlement"))
+        || is_fleet_carrier(market_id.unwrap_or(0), station_type, Some(name))
 }
 
 fn opt_f64(o: &jsonx::Obj, k: &str) -> Result<Option<f64>, NetFailure> {
@@ -133,26 +142,42 @@ pub fn parse_markets(
 ) -> Result<Vec<RemoteMarket>, NetFailure> {
     let cutoff = now - Duration::days(MAX_DAYS_AGO);
     let mut out = Vec::new();
-    for o in rows(body)? {
-        let station_type = jsonx::opt_str(&o, "stationType")?;
-        let name = jsonx::req_str(&o, "stationName")?;
-        let market = RemoteMarket {
-            system_name: jsonx::req_str(&o, "systemName")?,
-            market_id: jsonx::opt_u64(&o, "marketId")?,
-            distance_ly: jsonx::req_f64(&o, "distance")?,
-            distance_to_arrival_ls: opt_f64(&o, "distanceToArrival")?,
-            sell_price: jsonx::req_u64(&o, "sellPrice")?,
-            demand: jsonx::opt_u64(&o, "demand")?,
-            max_pad: opt_pad(&o)?,
-            updated_at: opt_time(&o)?,
-            station_name: name,
-            station_type,
-        };
-        let fresh = market.updated_at.is_some_and(|t| t >= cutoff);
-        let fits = market.max_pad.is_some_and(|p| p.fits(min_pad));
-        if !excluded(&market.station_name, market.station_type.as_deref()) && fresh && fits {
-            out.push(market);
+    let all = rows(body)?;
+    let (total, mut bad) = (all.len(), 0);
+    for o in all {
+        let parsed = (|| -> Result<Option<RemoteMarket>, NetFailure> {
+            let station_type = jsonx::opt_str(&o, "stationType")?;
+            let name = jsonx::req_str(&o, "stationName")?;
+            let market = RemoteMarket {
+                system_name: jsonx::req_str(&o, "systemName")?,
+                market_id: jsonx::opt_u64(&o, "marketId")?,
+                distance_ly: jsonx::req_f64(&o, "distance")?,
+                distance_to_arrival_ls: opt_f64(&o, "distanceToArrival")?,
+                sell_price: jsonx::req_u64(&o, "sellPrice")?,
+                demand: jsonx::opt_u64(&o, "demand")?,
+                max_pad: opt_pad(&o)?,
+                updated_at: opt_time(&o)?,
+                station_name: name,
+                station_type,
+                origin: Some(PriceOrigin::Ardent),
+            };
+            let fresh = market.updated_at.is_some_and(|t| t >= cutoff);
+            let fits = market.max_pad.is_some_and(|p| p.fits(min_pad));
+            let skip = excluded(
+                &market.station_name,
+                market.station_type.as_deref(),
+                market.market_id,
+            );
+            Ok((!skip && fresh && fits).then_some(market))
+        })();
+        match parsed {
+            Ok(Some(m)) => out.push(m),
+            Ok(None) => {}
+            Err(_) => bad += 1,
         }
+    }
+    if total > 0 && bad == total {
+        return Err(NetFailure::Malformed);
     }
     out.sort_by(|a, b| {
         b.sell_price
@@ -163,24 +188,101 @@ pub fn parse_markets(
     Ok(out)
 }
 
+/// Vendedores ordenados por precio asc (máx. 50), sin obras ni carriers y con `stock > 0`.
+pub fn parse_exports(body: &str) -> Result<Vec<RemoteExport>, NetFailure> {
+    parse_exports_for(body, PadSize::Small)
+}
+
+/// Como [`parse_exports`] y además descarta lo que no admite `min_pad` (filtro local).
+pub fn parse_exports_for(body: &str, min_pad: PadSize) -> Result<Vec<RemoteExport>, NetFailure> {
+    let mut out = Vec::new();
+    let all = rows(body)?;
+    let (total, mut bad) = (all.len(), 0);
+    for o in all {
+        let parsed = (|| -> Result<Option<RemoteExport>, NetFailure> {
+            let station_type = jsonx::opt_str(&o, "stationType")?;
+            let export = RemoteExport {
+                station_name: jsonx::req_str(&o, "stationName")?,
+                system_name: jsonx::req_str(&o, "systemName")?,
+                market_id: jsonx::opt_u64(&o, "marketId")?,
+                distance_ly: jsonx::req_f64(&o, "distance")?,
+                distance_to_arrival_ls: opt_f64(&o, "distanceToArrival")?,
+                buy_price: jsonx::req_u64(&o, "buyPrice")?,
+                stock: jsonx::opt_u64(&o, "stock")?,
+                max_pad: opt_pad(&o)?,
+                station_type,
+                updated_at: opt_time(&o)?,
+            };
+            let keep = !excluded(
+                &export.station_name,
+                export.station_type.as_deref(),
+                export.market_id,
+            ) && export.stock.is_some_and(|s| s > 0)
+                && export.max_pad.is_some_and(|p| p.fits(min_pad));
+            Ok(keep.then_some(export))
+        })();
+        match parsed {
+            Ok(Some(e)) => out.push(e),
+            Ok(None) => {}
+            Err(_) => bad += 1,
+        }
+    }
+    if total > 0 && bad == total {
+        return Err(NetFailure::Malformed);
+    }
+    out.sort_by(|a, b| {
+        a.buy_price
+            .cmp(&b.buy_price)
+            .then(a.distance_ly.total_cmp(&b.distance_ly))
+    });
+    out.truncate(MAX_MARKETS);
+    Ok(out)
+}
+
+/// Ficha de sistema por nombre: solo las coordenadas.
+pub fn parse_coords(body: &str) -> Result<Option<SystemCoords>, NetFailure> {
+    let v = jsonx::parse(body)?;
+    let o = jsonx::as_obj(&v)?;
+    Ok(Some(SystemCoords {
+        name: jsonx::req_str(o, "systemName")?,
+        id64: jsonx::opt_u64(o, "systemAddress")?,
+        star_pos: [
+            jsonx::req_f64(o, "systemX")?,
+            jsonx::req_f64(o, "systemY")?,
+            jsonx::req_f64(o, "systemZ")?,
+        ],
+    }))
+}
+
 /// Estaciones más cercanas (máx. 5) que admiten `min_pad` (re-comprobado en local).
 pub fn parse_stations(body: &str, min_pad: PadSize) -> Result<Vec<RemoteStation>, NetFailure> {
     let mut out = Vec::new();
-    for o in rows(body)? {
-        let station_type = jsonx::opt_str(&o, "stationType")?;
-        let st = RemoteStation {
-            station_name: jsonx::req_str(&o, "stationName")?,
-            system_name: jsonx::req_str(&o, "systemName")?,
-            distance_ly: jsonx::req_f64(&o, "distance")?,
-            distance_to_arrival_ls: opt_f64(&o, "distanceToArrival")?,
-            max_pad: opt_pad(&o)?,
-            updated_at: opt_time(&o)?,
-        };
-        if !excluded(&st.station_name, station_type.as_deref())
-            && st.max_pad.is_some_and(|p| p.fits(min_pad))
-        {
-            out.push(st);
+    let all = rows(body)?;
+    let (total, mut bad) = (all.len(), 0);
+    for o in all {
+        let parsed = (|| -> Result<Option<RemoteStation>, NetFailure> {
+            let station_type = jsonx::opt_str(&o, "stationType")?;
+            let market_id = jsonx::opt_u64(&o, "marketId")?;
+            let st = RemoteStation {
+                station_name: jsonx::req_str(&o, "stationName")?,
+                system_name: jsonx::req_str(&o, "systemName")?,
+                distance_ly: jsonx::req_f64(&o, "distance")?,
+                distance_to_arrival_ls: opt_f64(&o, "distanceToArrival")?,
+                max_pad: opt_pad(&o)?,
+                updated_at: opt_time(&o)?,
+            };
+            let keep = !excluded(&st.station_name, station_type.as_deref(), market_id)
+                && st.max_pad.is_some_and(|p| p.fits(min_pad));
+            Ok(keep.then_some(st))
+        })();
+        match parsed {
+            Ok(Some(st)) => out.push(st),
+            Ok(None) => {}
+            Err(_) => bad += 1,
         }
+    }
+    if total > 0 && bad == total {
+        return Err(NetFailure::Malformed);
     }
     out.sort_by(|a, b| a.distance_ly.total_cmp(&b.distance_ly));
     out.truncate(MAX_STATIONS);
@@ -210,6 +312,16 @@ mod tests {
 
     fn ts(s: &str) -> String {
         format!("\"{s}\"")
+    }
+
+    #[test]
+    fn ardent_markets_carry_ardent_origin() {
+        let m = parse_markets(PLATINUM, now(), PadSize::Small).unwrap();
+        assert!(!m.is_empty());
+        assert!(
+            m.iter()
+                .all(|x| x.origin == Some(tmc_model::market::PriceOrigin::Ardent))
+        );
     }
 
     #[test]
@@ -295,16 +407,18 @@ mod tests {
         assert_eq!(names, ["Ficticia Hub", "Prueba Outpost"]);
         let t = ts("2026-10-18T11:00:00Z");
         let body = format!(
-            "[{},{},{},{},{}]",
+            "[{},{},{},{},{},{}]",
             row("Ship ColonisationShip Alpha", "null", 500, "1", &t),
-            row("AB1-9Z9", "null", 400, "1", &t),
+            row("AB1-9Z9", "null", 400, "1", &t)
+                .replace("\"marketId\":1", "\"marketId\":3700000001"),
+            row("AB2-9Z9", "null", 350, "1", &t),
             row("Real Port", "\"Coriolis\"", 300, "1", &t),
             row("Dock", "\"FleetCarrier\"", 600, "1", &t),
             row("Nombre-Largo", "\"Outpost\"", 100, "1", &t),
         );
         let m = parse_markets(&body, now(), PadSize::Small).unwrap();
         let names: Vec<&str> = m.iter().map(|m| m.station_name.as_str()).collect();
-        assert_eq!(names, ["Real Port", "Nombre-Largo"]);
+        assert_eq!(names, ["AB2-9Z9", "Real Port", "Nombre-Largo"]);
     }
 
     #[test]
@@ -433,5 +547,87 @@ mod tests {
         assert_eq!(s.len(), 5);
         assert_eq!(s[0].distance_ly, 13.0);
         assert_eq!(s[4].distance_ly, 17.0);
+    }
+
+    const EXPORTS: &str =
+        include_str!("../../../tests/fixtures/net/ardent_nearby_exports_gold.json");
+    const COORDS: &str = include_str!("../../../tests/fixtures/net/coords_by_name.json");
+
+    #[test]
+    fn exports_url_has_filters() {
+        let u = exports_nearby_url(10477373803, "gold", 100);
+        assert!(u.contains("/commodity/name/gold/nearby/exports"), "{u}");
+        assert!(u.contains("maxDistance=100"));
+        assert!(u.contains("fleetCarriers=false"));
+        assert_eq!(
+            system_name_url("Hip's 1+2"),
+            "https://api.ardent-insight.com/v2/system/name/Hip%27s%201%2B2"
+        );
+    }
+
+    #[test]
+    fn parses_exports_fixture_sorted_by_price() {
+        let e = parse_exports(EXPORTS).unwrap();
+        assert!(!e.is_empty());
+        assert_eq!(e[0].buy_price, 41000);
+        assert!(e.windows(2).all(|w| w[0].buy_price <= w[1].buy_price));
+        assert!(e.iter().all(|x| x.stock.is_some_and(|s| s > 0)));
+        // El asentamiento a pie queda fuera.
+        assert!(e.iter().all(|x| x.station_name != "Fictional Settlement"));
+        // Filtro local de plataforma.
+        let large = parse_exports_for(EXPORTS, PadSize::Large).unwrap();
+        assert!(large.iter().all(|x| x.max_pad == Some(PadSize::Large)));
+    }
+
+    #[test]
+    fn exports_drop_zero_stock_and_carriers() {
+        let row = |name: &str, stock: u64| {
+            format!(
+                r#"{{"marketId":1,"stationName":"{name}","stationType":"Coriolis","maxLandingPadSize":3,"systemName":"S","buyPrice":10,"stock":{stock},"distance":1}}"#
+            )
+        };
+        let body = format!(
+            "[{},{},{}]",
+            row("A", 0),
+            row("ABC-123", 5).replace("Coriolis", "FleetCarrier"),
+            row("B", 5)
+        );
+        let e = parse_exports(&body).unwrap();
+        assert_eq!(e.len(), 1);
+        assert_eq!(e[0].station_name, "B");
+    }
+
+    #[test]
+    fn parses_ardent_coords() {
+        let v: serde_json::Value = serde_json::from_str(COORDS).unwrap();
+        let c = parse_coords(&v["ardent"].to_string()).unwrap().unwrap();
+        assert_eq!(c.name, "Origin");
+        assert_eq!(c.star_pos, [0.5, -1.25, 3.75]);
+        assert_eq!(c.id64, Some(9000000000001));
+    }
+
+    #[test]
+    fn exports_carrier_rule_and_partial_rows() {
+        let row = |name: &str, id: Option<u64>, stype: &str| {
+            let id = id
+                .map(|i| format!(r#""marketId":{i},"#))
+                .unwrap_or_default();
+            format!(
+                r#"{{{id}"stationName":"{name}","stationType":{stype},"maxLandingPadSize":3,"systemName":"S","buyPrice":10,"stock":5,"distance":1}}"#
+            )
+        };
+        let body = format!(
+            "[{},{},{},{},{},{{\"junk\":1}}]",
+            row("ABC-123", Some(1), "null"),
+            row("DEF-456", Some(3_700_000_001), "null"),
+            row("GHI-789", None, "null"),
+            row("Real", Some(5), "\"FleetCarrier\""),
+            row("Ok", Some(6), "\"Coriolis\""),
+        );
+        let e = parse_exports(&body).unwrap();
+        let names: Vec<&str> = e.iter().map(|x| x.station_name.as_str()).collect();
+        assert_eq!(names, ["ABC-123", "GHI-789", "Ok"]);
+        assert_eq!(parse_exports(r#"[{"junk":1}]"#), Err(NetFailure::Malformed));
+        assert_eq!(parse_exports("[]"), Ok(vec![]));
     }
 }

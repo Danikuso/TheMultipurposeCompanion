@@ -44,9 +44,7 @@ export interface MiningSessionTopic {
   capacity: number | null;
   asteroids_prospected: number;
   cracked: number;
-  tons_per_hour: number | null;
   est_credits: number | null;
-  credits_per_hour: number | null;
   /** Más reciente primero. */
   refinery_bins: { key: string; tons: number }[];
 }
@@ -62,6 +60,8 @@ export interface SellOption {
   pad: PadSize | null;
   /** `null`: nave o plataforma desconocidas. */
   pad_ok: boolean | null;
+  /** Procedencia del precio; `null` si no se conoce. */
+  origin?: 'Local' | 'Eddn' | 'Ardent' | null;
   updated_at: string | null;
 }
 

@@ -12,6 +12,7 @@ tmc-journal = { path = "../tmc-journal" }
 tmc-store = { path = "../tmc-store" }
 tmc-core = { path = "../tmc-core" }
 tmc-net = { path = "../tmc-net" }
+tmc-eddn = { path = "../tmc-eddn" }
 tmc-modules = { path = "../tmc-modules" }
 tmc-i18n = { path = "../tmc-i18n" }
 tmc-server = { path = "../tmc-server", features = ["embed-ui"] }
@@ -27,8 +28,11 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 tracing-appender.workspace = true
 anyhow.workspace = true
 uuid.workspace = true
+rusqlite.workspace = true
 
 [dev-dependencies]
+zeromq.workspace = true
+flate2.workspace = true
 tempfile.workspace = true
 tokio = { workspace = true, features = ["test-util"] }
 tower = { workspace = true, features = ["util"] }

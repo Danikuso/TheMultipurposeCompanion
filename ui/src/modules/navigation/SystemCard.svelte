@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
+  import { diag, diagOn } from '../../lib/diag.svelte';
   import { ageShort, ly, pct, starClassLabel } from '../../lib/format';
   import { getLocale } from '../../lib/i18n';
   import type { Card, Politics } from './types';
@@ -52,6 +53,25 @@
     pol?.population == null ? null : new Intl.NumberFormat(getLocale()).format(pol.population),
   );
   const jumpLy = $derived(ly(card.jump_ly));
+
+  $effect(() => {
+    if (!diagOn()) return;
+    diag('ui.card.system', {
+      system: card.name,
+      big,
+      state: card.remote.status,
+      remote_ok: remoteOk,
+      cache: isCache,
+      stale_known: cacheAge !== null,
+      has_politics: pol !== null,
+      danger,
+      kind: card.special ?? 'none',
+      scoopable: card.scoopable,
+      reachable: card.reachable,
+      has_label: label !== null,
+      has_star_classes: (starClasses?.length ?? 0) > 0,
+    });
+  });
 </script>
 
 {#snippet scoopTag()}

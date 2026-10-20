@@ -321,3 +321,45 @@ Versión 1, licencia de datos propios del proyecto **PolyForm Noncommercial 1.0.
 | `crates/tmc-modules/data/mining_yield.json` | Estimación propia de toneladas por asteroide según contenido (Low/Medium/High). | Estimación de TMC, no datos de terceros; contraste en `eval` (sin casos en el historial del propietario: INSUFICIENTE). |
 
 La constante de naves thargoides de `tmc-model` (AX) es una lista pequeña **no verificada** escrita por TMC (ver «Desviaciones» del plan de F2).
+
+### flate2
+- Versión: 1.1.9
+- Licencia: MIT OR Apache-2.0
+- Usada por: tmc-eddn
+
+### zeromq (zmq.rs)
+- Versión: 0.6.0
+- Licencia: MIT
+- Usada por: tmc-eddn (suscriptor SUB al relay EDDN y relay falso de pruebas; Rust puro, sin libzmq)
+
+## Servicios de red y datos de F3 (comercio y misiones)
+
+Revisión de cierre (2026-10-20): `git diff main -- Cargo.lock` añade `tmc-eddn` (propio) y los paquetes externos siguientes, con la licencia leída de `cargo metadata`; `ui/package.json` no cambia. Ninguno es GPL/AGPL.
+
+| Paquete | Versión | Licencia | Origen |
+|---|---|---|---|
+| zeromq | 0.6.0 | MIT | directa (tmc-eddn) |
+| flate2 | 1.1.10 | MIT OR Apache-2.0 | directa (tmc-eddn); ya transitiva de reqwest |
+| asynchronous-codec | 0.7.0 | MIT | transitiva de zeromq |
+| crossbeam-queue | 0.3.14 | MIT OR Apache-2.0 | transitiva de zeromq |
+| futures | 0.3.34 | MIT OR Apache-2.0 | transitiva de zeromq |
+| scc / saa / sdd | 3.8.8 / 5.6.2 / 4.8.11 | Apache-2.0 | transitivas de zeromq |
+| win_uds | 0.2.2 | Unlicense (dominio público) | transitiva de zeromq (solo Windows) |
+
+(La versión de `flate2` de la sección de F2 más arriba, 1.1.9, se corrige a la fijada en `Cargo.lock`: 1.1.10.)
+
+### EDDN (recepción, servicio de red)
+- Uso: TMC es **solo receptor** (suscriptor ZeroMQ SUB) del relay público de EDDN (`tcp://eddn.edcd.io:9500`), para precios de mercado (`commodity/3`, `journal/1`) de comandantes de la galaxia Live. **No envía nada** a EDDN.
+- Los mensajes se descartan por `$schemaRef` antes de parsear, con tope de 256 KiB; solo se guardan los mercados dentro del radio configurado, con caducidad de 7 días. Los fixtures de pruebas son sintéticos (relay falso local).
+- Conexión bajo demanda (módulos «Comercio»/«Minería» activos) y con el opt-out de servicios en línea; sin conexión con el juego parado, durante el replay ni en Legacy. Riesgo residual de la biblioteca: ver «Desviaciones» del plan de F3.
+
+### Spansh (ruta comercial), Ardent y EDSM (servicios de red, no incorporados)
+- Spansh (`/api/trade/route`): consulta de solo lectura con parámetros de la ruta (sistema/estación de origen, capital, bodega, alcance); sin datos del comandante. Ardent (AGPL, solo por red; precios de importación/exportación y coordenadas por nombre de sistema) y EDSM (respaldo de coordenadas) con las mismas condiciones descritas en F1/F2: **sin copiar ni enlazar código ni incorporar datos**; respuestas solo en caché local con caducidad; opt-out con los servicios en línea; nada de Legacy. Respetan los límites de cada API.
+
+### Datos estáticos propios de F3
+Versión 1, licencia de datos propios del proyecto **PolyForm Noncommercial 1.0.0**; sin datasets de terceros (ni GPL/AGPL).
+
+| Archivo | Contenido y procedencia declarada | Verificación |
+|---|---|---|
+| `crates/tmc-modules/data/rare_goods.json` | Selección inicial incompleta de mercancías raras (origen y distancia de venta recomendada); redacción propia de TMC. | `verified: false`; símbolos desconocidos devuelven «sin dato». |
+| `crates/tmc-modules/data/cabins.json` | Cuatro cabinas de referencia (clase y plazas); redacción propia de TMC. | `verified: false`; pendiente de comprobación en el juego. |

@@ -226,6 +226,7 @@ impl Exobiology {
             return;
         }
         self.system = Some(address);
+        decide!("exobiology.system.entered", {});
         self.status_body = None;
         self.system_discovered = None;
         self.star_class = None;
@@ -263,6 +264,7 @@ impl Exobiology {
         self.discarded = None;
         self.last_reset = None;
         self.accuracy = (0, 0);
+        decide!("exobiology.cmdr.changed", tmc_model::diagnostics::json!({}));
         ctx.store_task(TAG_OPEN, persist::load_open_samples(name.clone()));
         self.request_history(ctx);
     }
@@ -273,6 +275,10 @@ impl Exobiology {
         };
         self.history_generation = self.history_generation.wrapping_add(1);
         let generation = self.history_generation;
+        decide!(
+            "exobiology.history.requested",
+            tmc_model::diagnostics::json!({"generation": generation})
+        );
         for (tag, task) in [
             (TAG_HISTORY, predict::load_history(cmdr.clone())),
             (TAG_UNSOLD, persist::load_unsold(cmdr.clone())),
@@ -388,6 +394,7 @@ impl Exobiology {
         let (Some(address), Some(body), Some(species)) =
             (ev.system_address, ev.body, ev.species.as_deref())
         else {
+            decide!("exobiology.sampling.skipped_incomplete_event", {});
             return;
         };
         let key = (address, body);
@@ -401,7 +408,15 @@ impl Exobiology {
             .filter(|_| self.status_body == Some(key))
             .and_then(|s| Some((s.latitude?, s.longitude?)));
         let cmdr = self.cmdr.clone().unwrap_or_default();
-        match self.tracker.handle_scan(ev, &cmdr, at, pos, ctx) {
+        let change = self.tracker.handle_scan(ev, &cmdr, at, pos, ctx);
+        decide!("exobiology.sampling.stage", {"stage": match &change {
+            SamplingChange::Discarded { .. } => 0,
+            SamplingChange::Started => 1,
+            SamplingChange::Completed => 2,
+            SamplingChange::Progressed(n) => 10 + i64::from(*n),
+            SamplingChange::Ignored => 3,
+        }, "has_position": pos.is_some()});
+        match change {
             SamplingChange::Discarded { previous_species } => {
                 self.discarded = Some(previous_species);
             }
@@ -446,6 +461,8 @@ impl Exobiology {
         self.infos.clear();
         self.live_completed.clear();
         self.last_reset = Some(at);
+        decide!("exobiology.sold.applied", {"items": sale.bio_data.len(),
+            "estimate_hits": self.accuracy.0, "estimate_total": self.accuracy.1});
         let cmdr = self.cmdr.clone().unwrap_or_default();
         self.tracker.handle_sold(&cmdr, ctx);
     }
@@ -455,6 +472,7 @@ impl Exobiology {
         self.live_completed.clear();
         self.discarded = None;
         self.last_reset = Some(at);
+        decide!("exobiology.died.applied", {});
         let cmdr = self.cmdr.clone().unwrap_or_default();
         self.tracker.handle_died(&cmdr, ctx);
     }
@@ -502,14 +520,22 @@ impl Exobiology {
 
     fn on_stored(&mut self, tag: &str, value: &Value) {
         if value.get("cmdr").and_then(Value::as_str) != self.cmdr.as_deref() {
+            decide!("exobiology.stored.discarded_cmdr", {});
             return;
         }
         if matches!(tag, TAG_HISTORY | TAG_UNSOLD)
             && value.get("generation").and_then(Value::as_u64).unwrap_or(1)
                 != self.history_generation
         {
+            decide!("exobiology.stored.discarded_stale_generation", {"current": self.history_generation});
             return;
         }
+        decide!("exobiology.stored.applied", {"tag": match tag {
+            TAG_OPEN => 0,
+            TAG_HISTORY => 1,
+            TAG_UNSOLD => 2,
+            _ => 3,
+        }});
         match tag {
             TAG_OPEN => {
                 let rows: Vec<ExoSampleRow> =
@@ -595,8 +621,16 @@ impl Exobiology {
         }
         self.inflight.remove(&r.key);
         let Some(key) = parse_key(&r.key).filter(|k| self.targets().contains(k)) else {
+            decide!("exobiology.canonn.response.discarded", {});
             return;
         };
+        decide!("exobiology.canonn.response.applied", {"outcome": match &r.outcome {
+            NetOutcome::BodyBio(_) => 0,
+            NetOutcome::NoData => 1,
+            NetOutcome::Disabled => 2,
+            NetOutcome::Failed(_) => 3,
+            _ => 4,
+        }});
         match &r.outcome {
             NetOutcome::BodyBio(bio) => {
                 self.canonn.insert(key, bio.clone());
@@ -635,6 +669,7 @@ impl Exobiology {
                 .retain(|_, (_, sent)| (now - *sent).num_seconds() <= INFLIGHT_TTL_S);
         }
         if !self.online(state) {
+            decide!("exobiology.canonn.request.skipped_offline", {"targets": targets.len()});
             return;
         }
         for key in targets {
@@ -642,6 +677,11 @@ impl Exobiology {
                 || (self.current == Some(key) && landed_like(state));
             let text = key_string(key);
             if !wanted || self.net.contains_key(&key) || self.inflight.contains_key(&text) {
+                decide_if!(
+                    wanted && !ctx.replaying,
+                    "exobiology.canonn.request.deduplicated",
+                    {"answered": self.net.contains_key(&key)}
+                );
                 continue;
             }
             let Some(scan) = self.scans.get(&key) else {
@@ -658,7 +698,12 @@ impl Exobiology {
                 body_name: scan.body_name.clone(),
                 profile: body_profile(scan, self.star_class.as_deref()),
             };
-            if let Some(id) = ctx.request(text.clone(), query) {
+            let requested = ctx.request(text.clone(), query);
+            decide!(
+                "exobiology.canonn.request.sent",
+                tmc_model::diagnostics::json!({"accepted": requested.is_some()})
+            );
+            if let Some(id) = requested {
                 self.inflight
                     .insert(text, (id, self.now.unwrap_or(DateTime::UNIX_EPOCH)));
             }
@@ -743,6 +788,13 @@ impl Exobiology {
             }
         }
         candidates.sort_by_key(|c| std::cmp::Reverse(c.value));
+        decide!("exobiology.prediction.computed", {
+            "candidates": candidates.len(),
+            "table_species": table.genera.iter().map(|g| g.species.len()).sum::<usize>(),
+            "confirmed_genera": confirmed.as_ref().map(Vec::len),
+            "canonn": self.canonn.contains_key(&key),
+            "empty": candidates.is_empty(),
+        });
         candidates
     }
 

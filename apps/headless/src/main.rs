@@ -41,11 +41,22 @@ async fn main() -> anyhow::Result<()> {
 
     let log_dir = config.data_dir.clone().unwrap_or_else(data_dir);
     let _guard = init_logging(&log_dir);
+    _guard.application_started();
 
     #[cfg(debug_assertions)]
-    let running = match e2e_transport()? {
-        Some(t) => tmc_app::start_with_transport(config, t).await?,
-        None => start(config).await?,
+    let running = {
+        let transport = e2e_transport()?;
+        let relay = e2e_eddn_relay()?;
+        if transport.is_none() && relay.is_none() {
+            start(config).await?
+        } else {
+            let transport = match transport {
+                Some(t) => t,
+                // Solo relay falso: ninguna petición HTTP real sale de la prueba.
+                None => std::sync::Arc::new(DenyAll),
+            };
+            tmc_app::start_full(config, transport, None, relay).await?
+        }
     };
     #[cfg(not(debug_assertions))]
     let running = start(config).await?;
@@ -59,30 +70,71 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Transporte que rechaza toda petición (e2e con relay falso y sin servidor HTTP falso).
+#[cfg(debug_assertions)]
+struct DenyAll;
+
+#[cfg(debug_assertions)]
+impl tmc_net::Transport for DenyAll {
+    fn get(
+        &self,
+        _url: &str,
+    ) -> tmc_net::BoxFut<'_, Result<tmc_net::HttpReply, tmc_net::TransportError>> {
+        Box::pin(async { Err(tmc_net::TransportError::Connect("blocked in e2e".into())) })
+    }
+    fn post_form(
+        &self,
+        _url: &str,
+        _form: &[(String, String)],
+    ) -> tmc_net::BoxFut<'_, Result<tmc_net::HttpReply, tmc_net::TransportError>> {
+        self.get("")
+    }
+}
+
 /// Solo en compilaciones de depuración (pruebas e2e de la UI): con
 /// `TMC_E2E_ARDENT_BASE=http://127.0.0.1:<puerto>` las peticiones a Ardent van a ese
 /// servidor falso local y cualquier otra petición de red se rechaza.
 #[cfg(debug_assertions)]
 fn e2e_transport() -> anyhow::Result<Option<std::sync::Arc<dyn tmc_net::Transport>>> {
     use tmc_net::{BoxFut, HttpReply, ReqwestTransport, Transport, TransportError};
-    const ARDENT: &str = "https://api.ardent-insight.com";
+    // Solo estos servicios se redirigen al servidor falso local (Ardent, Spansh y EDSM).
+    const HOSTS: [&str; 3] = [
+        "https://api.ardent-insight.com",
+        "https://spansh.co.uk",
+        "https://www.edsm.net",
+    ];
+    const SPANSH: &str = "https://spansh.co.uk";
     struct Redirect {
         base: String,
         inner: ReqwestTransport,
     }
+    impl Redirect {
+        fn map(&self, url: &str) -> Option<String> {
+            // Falla cerrado: tras el host solo cabe el fin, una ruta o una consulta
+            // (evita `https://spansh.co.uk.evil.com` o `...@host`).
+            HOSTS
+                .iter()
+                .find_map(|h| url.strip_prefix(h))
+                .filter(|rest| rest.is_empty() || rest.starts_with('/') || rest.starts_with('?'))
+                .map(|rest| format!("{}{rest}", self.base))
+        }
+    }
     impl Transport for Redirect {
         fn get(&self, url: &str) -> BoxFut<'_, Result<HttpReply, TransportError>> {
-            match url.strip_prefix(ARDENT) {
-                Some(rest) => self.inner.get(&format!("{}{rest}", self.base)),
+            match self.map(url) {
+                Some(target) => self.inner.get(&target),
                 None => Box::pin(async { Err(TransportError::Connect("blocked in e2e".into())) }),
             }
         }
         fn post_form(
             &self,
-            _url: &str,
-            _form: &[(String, String)],
+            url: &str,
+            form: &[(String, String)],
         ) -> BoxFut<'_, Result<HttpReply, TransportError>> {
-            Box::pin(async { Err(TransportError::Connect("blocked in e2e".into())) })
+            match url.strip_prefix(SPANSH) {
+                Some(rest) => self.inner.post_form(&format!("{}{rest}", self.base), form),
+                None => Box::pin(async { Err(TransportError::Connect("blocked in e2e".into())) }),
+            }
         }
     }
     let base = match std::env::var("TMC_E2E_ARDENT_BASE") {
@@ -105,4 +157,54 @@ fn e2e_transport() -> anyhow::Result<Option<std::sync::Arc<dyn tmc_net::Transpor
         base: format!("http://127.0.0.1:{port}"),
         inner,
     })))
+}
+
+/// Solo en depuración: `TMC_E2E_EDDN_RELAY=tcp://127.0.0.1:<puerto>` sustituye el relay de EDDN.
+/// Si está definida pero no es válida, falla cerrado con un error.
+#[cfg(debug_assertions)]
+fn e2e_eddn_relay() -> anyhow::Result<Option<String>> {
+    match std::env::var("TMC_E2E_EDDN_RELAY") {
+        Ok(url) => parse_e2e_relay(&url).map(Some),
+        Err(std::env::VarError::NotPresent) => Ok(None),
+        Err(e) => anyhow::bail!("TMC_E2E_EDDN_RELAY inválida: {e}"),
+    }
+}
+
+/// Estricto: `tcp://127.0.0.1:<puerto>` y nada más.
+#[cfg(debug_assertions)]
+fn parse_e2e_relay(url: &str) -> anyhow::Result<String> {
+    let port = url
+        .strip_prefix("tcp://127.0.0.1:")
+        .filter(|p| !p.is_empty() && p.len() <= 5 && p.bytes().all(|b| b.is_ascii_digit()))
+        .and_then(|p| p.parse::<u16>().ok())
+        .filter(|p| *p > 0);
+    match port {
+        Some(port) => Ok(format!("tcp://127.0.0.1:{port}")),
+        None => anyhow::bail!("TMC_E2E_EDDN_RELAY debe ser tcp://127.0.0.1:<puerto>, no {url:?}"),
+    }
+}
+
+#[cfg(all(test, debug_assertions))]
+mod tests {
+    use super::parse_e2e_relay;
+
+    #[test]
+    fn e2e_relay_override_only_loopback() {
+        for bad in [
+            "tcp://10.0.0.1:1",
+            "tcp://127.0.0.1:",
+            "tcp://127.0.0.1:0",
+            "tcp://127.0.0.1:5555/x",
+            "tcp://127.0.0.1:70000",
+            "tcp://127.0.0.1.evil.com:5555",
+            "tcp://eddn.edcd.io:9500",
+            "",
+        ] {
+            assert!(parse_e2e_relay(bad).is_err(), "{bad}");
+        }
+        assert_eq!(
+            parse_e2e_relay("tcp://127.0.0.1:5555").unwrap(),
+            "tcp://127.0.0.1:5555"
+        );
+    }
 }

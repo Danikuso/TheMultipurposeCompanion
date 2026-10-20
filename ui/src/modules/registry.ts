@@ -5,6 +5,8 @@ import { explorationPanels } from './exploration';
 import { exobiologyPanels } from './exobiology';
 import { combatPanels } from './combat';
 import { miningPanels } from './mining';
+import { tradePanels } from './trade';
+import { missionsPanels } from './missions';
 
 export interface UiModuleDef {
   id: string;
@@ -49,5 +51,17 @@ export const modules: UiModuleDef[] = [
     icon: 'pickaxe',
     titleKey: 'nav-mining',
     panels: miningPanels,
+  },
+  {
+    id: 'trade',
+    icon: 'coins',
+    titleKey: 'nav-trade',
+    panels: tradePanels,
+  },
+  {
+    id: 'missions',
+    icon: 'clipboard-list',
+    titleKey: 'nav-missions',
+    panels: missionsPanels,
   },
 ];
