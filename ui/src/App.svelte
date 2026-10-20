@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
   import { connect, topic } from './lib/ws.svelte';
+  import { diag, diagOn } from './lib/diag.svelte';
   import { t } from './lib/i18n';
   import { modules } from './modules/registry';
   import Settings from './settings/Settings.svelte';
@@ -39,6 +40,26 @@
     const next = nextPin(lastAuto, a, current);
     lastAuto = a;
     if (next !== current) pin = next;
+  });
+
+  $effect(() => {
+    if (!diagOn()) return;
+    const ax = topic<{ active?: boolean; presence?: boolean } | null>('combat.ax');
+    diag('ui.app.layout', {
+      tab: activeTab,
+      layout: activeLayout?.id ?? 'none',
+      auto: auto ?? 'none',
+      pinned: pin !== null,
+      slot: visibleSlots.map((s) => s.id),
+      defined_slots: activeLayout?.slots.length ?? 0,
+      module: liveModules.map((m) => m.id),
+      relevance: liveModules.map((m) => String(m.relevance).toLowerCase()),
+      context: selectedContext,
+      manual_context: layoutContext.manual ?? 'none',
+      ax_active: ax?.active === true,
+      ax_presence: ax?.presence === true,
+      cz_present: (topic<unknown>('combat.conflict_zone') ?? null) !== null,
+    });
   });
 
   function selectTab(id: string) {

@@ -81,6 +81,11 @@ pub(crate) fn run_action(
     over_ws: bool,
 ) -> Result<Value, ActionError> {
     #[cfg(debug_assertions)]
+    if name == crate::diag_ui::ACTION {
+        // Lote de la UI: no se registra como acción (evita ruido y recursión).
+        return crate::diag_ui::handle(args);
+    }
+    #[cfg(debug_assertions)]
     let started = std::time::Instant::now();
     tmc_model::diagnostic!(
         tmc_model::diagnostics::DiagnosticContext::Action { name },

@@ -3,6 +3,8 @@
 
 pub mod assets;
 mod diag;
+#[cfg(debug_assertions)]
+mod diag_ui;
 pub mod pairing;
 pub mod rest;
 pub mod security;
@@ -499,6 +501,7 @@ mod tests {
         assert_eq!(hello["type"], "hello");
         assert_eq!(hello["version"], 1);
         assert_eq!(hello["locale"], "es");
+        assert_eq!(hello["capabilities"]["diagnostics"], true);
         assert!(hello["topics"].as_array().unwrap().len() >= 8);
 
         let snap: Value = serde_json::from_str(&ws.next_text().await).unwrap();
