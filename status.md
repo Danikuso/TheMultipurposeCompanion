@@ -2,17 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-22 01:26 (Europe/Madrid) · Codex
-- **Fase actual:** F4 — Ingenieros y materiales (🔄 ejecución: Tasks 0–19 registradas; Task 20 completada; Tasks 21–23 completadas; Task 24 en curso). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Última actualización:** 2026-10-22 01:37 (Europe/Madrid) · Codex
+- **Fase actual:** F4 — Ingenieros y materiales (🔄 ejecución: Tasks 0–19 registradas; Task 20 completada; Tasks 21–24 completadas; Task 25 en curso). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
-- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 24/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
+- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 25/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** Task 24 🔄 en curso — Step 1: tests de objetivos, intercambios, fuentes y avisos
-- **Último paso completado:** Task 23 cerrada en `d644a6d`: 19 tests nuevos; ambas revisiones aprobadas tras dos rondas; 293 UI/1.356 Rust PASS (2 ignoradas previas), fmt/clippy/check/build y QA visual de cuatro acciones a 2560/800 PASS.
-- **Siguiente acción:** implementar Task 24 con TDD y el lector de páginas existente: lista de la compra y agregados por revisión, intercambios, fuentes y avisos; descartar respuestas anteriores al cambiar revisión/comandante y no consultar ocultos.
+- **Tarea:** Task 25 🔄 en curso — Step 1: tests de disposición, prioridad y ajustes de tiradas
+- **Último paso completado:** Task 24 cerrada en `65784b6`: ambas revisiones aprobadas; 16 tests nuevos, 309 UI/1.356 Rust PASS (2 ignoradas previas), fmt/clippy/check/build y QA de 19 páginas/3 acciones a 2560/800 PASS.
+- **Siguiente acción:** implementar Task 25 con TDD. La condición del flujo se adapta a la interfaz real: mostrar si slot no es null (status idle también identifica un módulo elegido antes de su primer cálculo); decisión y prueba documentadas en Desviaciones del plan. Catálogos completos B pendientes de datos del propietario.
 
 ## Tareas de F4
 
@@ -44,8 +44,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 21 | UI — «Materiales» | ✅ hecha | 04e5ea4 | 20 tests nuevos; 258 UI/1.356 Rust PASS; ambas revisiones y QA visual |
 | 22 | UI — «Ingenieros» | ✅ hecha | 88836b7 | 16 tests nuevos; 274 UI/1.356 Rust PASS; ambas revisiones y QA visual |
 | 23 | UI — «Mi nave» e «Ingenierizar un módulo» | ✅ hecha | d644a6d | 19 tests nuevos; 293 UI/1.356 Rust PASS; ambas revisiones y QA visual |
-| 24 | UI — «Lista de la compra», «Intercambios», «Dónde conseguirlo» y avisos | 🔄 en curso | — | Step 1: TDD y paginación de objetivos |
-| 25 | UI — disposición «Ingeniería», prioridad, Auto-companion y tiradas | ⬜ pendiente | — | |
+| 24 | UI — «Lista de la compra», «Intercambios», «Dónde conseguirlo» y avisos | ✅ hecha | 65784b6 | 16 tests nuevos; 309 UI/1.356 Rust PASS; ambas revisiones y QA visual |
+| 25 | UI — disposición «Ingeniería», prioridad, Auto-companion y tiradas | 🔄 en curso | — | Step 1: TDD; flujo visible por slot seleccionado |
 | 26 | Fixtures sintéticos y pruebas de extremo a extremo | ⬜ pendiente | — | |
 | 27 | `tmc-headless eval` — conciliación del inventario | ⬜ pendiente | — | |
 | 28 | Avisos de terceros, consumo, verificación de los 10 criterios y cierre | ⬜ pendiente | — | |
@@ -72,7 +72,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | F1 | Navegación, exploración, exobiología | ✅ completada y fusionada (b96fecf) |
 | F2 | Cazarrecompensas/combate (incl. AX), minería | ✅ completada y fusionada (e069a14) |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ✅ completada y fusionada (6dc09d9) |
-| F4 | Ingenieros y materiales | 🔄 ejecución; Task 20 completada; Tasks 21–23 completadas; Task 24 en curso |
+| F4 | Ingenieros y materiales | 🔄 ejecución; Task 20 completada; Tasks 21–24 completadas; Task 25 en curso |
 | F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | ⬜ |
 | F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | ⬜ |
 | F7 | Voz (KokoroTTS; alemán sin voz) | ⬜ |
@@ -224,6 +224,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Bloqueos y pendientes del propietario
 
+- [ ] **F4 · Catálogos completos de fuente B (consulta 2026-10-22):** Tasks 9/10 solo completaron el conjunto provisional: 2 blueprints, 1 experimental y 5 ingenieros. La spec §10.1 exige todos los blueprints/experimentales de nave; el plan exige todos los ingenieros. La fuente B aprobada requiere recopilación propia desde el juego/diario, y `docs/research/notes/spike_datos_f4.md` excluye copiar tablas de Coriolis/EDEngineer para recetas. No se ha localizado una recopilación completa en la documentación del proyecto. Pregunta al propietario: **¿dónde están las recetas y datos completos de ingenieros recopilados como fuente B?** No se inventan cantidades ni requisitos. La UI y las verificaciones restantes pueden avanzar; F4 no se declarará completa con estos catálogos provisionales.
+
 - [x] **F4 · Task 20 — contrato excede el límite aprobado; solución autorizada (2026-10-21):** revisión y prueba real demuestran `engineering.goals` de **41.116 bytes** con 20 objetivos `engine_dirty` G5 + experimental, tiradas `[10;5]`, excedentes de materiales ajenos a la receta y 215 propuestas; el plan exige `<16.384`. También `engineering.locker` ocupa **16.832 bytes** con 200 recursos localizados (50 por sección). Sin experimental: 30.986 bytes; FSD: 35.084. Resuelto en `a4c5f3d`: summaries objetivos 2.471 B y taquilla 110 B; páginas de objetivos hasta 16.234 B y taquilla 4.439 B, todas las filas/propuestas preservadas. Ambos probes reactivados PASS; Task 20 cerrada tras revisiones/checks. **Decisión aprobada:** resumen WS con revisión y detalle REST paginado por bytes, arquitectura §7; interfaces de Tasks 20/21/24/26 sincronizadas. El propietario confirma «Sí, hazlo y continúa»: se aprueba resumen WS con detalles REST paginados por bytes. Implementación completada y verificada; no hace falta otra aprobación para esta solución. Evidencia y propuesta en Desviaciones del plan activo.
 
 
@@ -298,6 +300,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-22 01:37 (Europe/Madrid) · Codex · Task 24 cerrada `65784b6`: ambas revisiones, 309 UI/1.356 Rust PASS, fmt/clippy/check/build y QA visual PASS. Continúa Task 25; visibilidad del flujo adaptada a slot seleccionado para permitir primer preview desde Ingeniería. Pregunta de fuente B pendiente, sin bloquear UI.
 
 - 2026-10-22 01:26 (Europe/Madrid) · Codex · Task 23 cerrada `d644a6d`: spec y calidad aprobadas tras corregir experimental null, reselección y esperas entre clientes/contextos; 293 UI y 1.356 Rust PASS (2 ignoradas previas), fmt/clippy/check/build y QA visual PASS. Continúa Task 24. Catálogos completos de blueprints/ingenieros siguen pendientes antes del cierre F4.
 

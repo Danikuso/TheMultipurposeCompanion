@@ -697,7 +697,7 @@ test('nearest trader shows distance and pad', /* "8,2 al", L */);
 
 **Files:** Modify `ui/src/shell/layouts.ts`, `ui/src/settings/Settings.svelte`, `locales/*/main.ftl`, `ui/tests/layouts.test.ts`; Create `ui/tests/settings-f4.test.ts`; Modify `crates/tmc-model/src/diagnostics.rs` (`UI_LAYOUTS` + `"engineering"`, `UI_SLOTS`).
 
-**Interfaces:** `layouts` + `{ id: 'engineering', titleKey: 'layout-engineering', icon: 'wrench', slots: [materials 2, engineers 1, eng-alerts 1, eng-ship 1, eng-flow 2 when flow.status != 'idle', shopping 2, trades 1, sources 1] }`; `AutoLayout`/`MANUAL` + `'engineering'`; `autoLayout`: manual > `combat` Active/Urgent > `mining` Active > **`engineering` Active/Urgent** > `missions` > `trade` > exploración; `nextPin` sin cambios; el cambio automático solo con `prefs.autoCompanion` (lógica existente de `App.svelte`, sin tocarla salvo el tipo). Ajustes: tiradas G1–G5 (1–10) → `PUT /api/config` JSON con `engineering_rolls`; error revierte.
+**Interfaces:** `layouts` + `{ id: 'engineering', titleKey: 'layout-engineering', icon: 'wrench', slots: [materials 2, engineers 1, eng-alerts 1, eng-ship 1, eng-flow 2 when flow.slot != null, shopping 2, trades 1, sources 1] }`; `AutoLayout`/`MANUAL` + `'engineering'`; `autoLayout`: manual > `combat` Active/Urgent > `mining` Active > **`engineering` Active/Urgent** > `missions` > `trade` > exploración; `nextPin` sin cambios; el cambio automático solo con `prefs.autoCompanion` (lógica existente de `App.svelte`, sin tocarla salvo el tipo). Ajustes: tiradas G1–G5 (1–10) → `PUT /api/config` JSON con `engineering_rolls`; error revierte.
 
 - [ ] **Step 1: Tests:**
 
@@ -707,7 +707,7 @@ test('mining beats engineering', /* mining active + engineering active → 'mini
 test('combat beats engineering', /* combat urgent + engineering active → 'combat' */);
 test('engineering beats trade and exploration', /* → 'engineering' */);
 test('auto companion OFF keeps layout when engineering becomes active', /* OFF + engineering active → disposición sin cambio */);
-test('engineering slots and flow visibility', /* flow idle → sin eng-flow; ok → visible */);
+test('engineering slots and flow visibility', /* idle sin slot → oculto; idle con slot elegido → visible para preparar preview; ok con slot → visible */);
 test('settings put rolls and reverts on 400', /* [1,1,1,1,11] → 400 → valor anterior */);
 ```
 
@@ -793,6 +793,8 @@ test('settings put rolls and reverts on 400', /* [1,1,1,1,11] → 400 → valor 
 (Se completa en Task 28 con comando + salida por criterio.)
 
 ## Desviaciones
+
+- 2026-10-22 · **Task 25: visibilidad del borrador seleccionado.** La interfaz real de Task 20 usa `status:idle` tanto sin selección como tras `select_module`, antes de calcular. Se determina la visibilidad del flujo por `slot != null` para poder elegir blueprint/tiradas y realizar el primer preview desde la disposición Ingeniería (spec §3.4). Se añade el caso de prueba `idle` con ranura seleccionada; sin ranura sigue oculto. Es una adaptación de la condición de UI a la interfaz existente, sin cambiar el protocolo ni el alcance de la spec.
 
 - 2026-10-22 · **Task 22: nombres y traducciones de contribuciones.** Se añade el helper compartido `translationPending` en `ui/src/lib/i18n.ts` y se amplía el mapa de argumentos de tests Rust para `progress`, sin alterar contratos. Revisión de calidad detectó que una contribución de mercancía sin existencias mostraba la clave interna; ahora usa `core.ship.cargo` (campos PascalCase del diario), `trade.cargo` como respaldo opcional y FTL para el nombre inglés de Soontill Relics, marcado `.pending = 1` en idiomas sin traducción confirmada. El nombre es un hecho aislado del juego contrastado en [Frontier Forums](https://forums.frontier.co.uk/threads/soontill-relics-not-on-the-market-in-ngurii.555561/) y [la ficha de Inara](https://inara.cz/elite/commodity/10127); no se copian tablas ni descripciones. El panel funciona con la bodega principal aunque el módulo de comercio esté inactivo.
 
