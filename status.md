@@ -2,17 +2,53 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-21 13:30 (Europe/Madrid) · Claude Opus 5.5
-- **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (✅ completada y fusionada en `main` en `6dc09d9`). F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
-- **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversal: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md).
-- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — ✅ 35/35 hechas (criterio 10 parcial) (aprobado al ordenar «escribe el plan y ejecútalo»). Diagnóstico: [plan](docs/plans/2026-10-20-diagnostico-debug.md) D1–D7b. Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
-- **Rama de trabajo:** `main` (F3 fusionada; la siguiente fase abrirá `fase/f4-…`)
+- **Última actualización:** 2026-10-21 (Europe/Madrid) · Claude Opus 5.5 (architect-opus)
+- **Fase actual:** F4 — Ingenieros y materiales (🔄 plan escrito; ejecución sin empezar). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
+- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 0/29 hechas (pendiente de revisión del propietario). Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
+- **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** F3 en ejecución con subagentes (en curso: Task -). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
-- **Último paso completado:** Task 17 ✅ (08aacf3), revisión aprobada.
-- **Siguiente acción:** escribir la spec de F4 (ingenieros y materiales) a partir de la propuesta y las maquetas aprobadas (`f4-ingenieria.html`, `f4-materiales.html`) y pedir su aprobación.
+- **Tarea:** Task 0 (spike de datos) ⬜
+- **Último paso completado:** plan de F4 escrito (29 tareas, bloques 0–5).
+- **Siguiente acción:** ejecutar el bloque 0 (Tasks 0–2: spikes de datos/licencias, diario y red) y después Task 3 (aprobaciones del propietario).
+
+## Tareas de F4
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 0 | Spike de datos y licencias (A→B) y traducciones oficiales | ⬜ pendiente | — | |
+| 1 | Spike de diario — formatos en diarios del propietario (agregados) | ⬜ pendiente | — | |
+| 2 | Spike de red — Ardent comerciantes de materiales y broker; respaldo Spansh | ⬜ pendiente | — | |
+| 3 | Aprobaciones del propietario tras los spikes | ⬜ pendiente | — | |
+| 4 | `tmc-model` — eventos de materiales | ⬜ pendiente | — | |
+| 5 | `tmc-model` — eventos de ingenieros, `Loadout` ampliado, taquilla y mochila | ⬜ pendiente | — | |
+| 6 | `tmc-model` + `tmc-app` — servicios cercanos nuevos y tiradas por defecto | ⬜ pendiente | — | |
+| 7 | `tmc-net` — comerciantes de materiales y broker | ⬜ pendiente | — | |
+| 8 | Datos estáticos `materials.json` y `trader_rules.json` | ⬜ pendiente | — | |
+| 9 | Datos estáticos `blueprints.json` | ⬜ pendiente | — | |
+| 10 | Datos estáticos `engineers.json` | ⬜ pendiente | — | |
+| 11 | i18n — `engineering.ftl` y `engineering-data.ftl` | ⬜ pendiente | — | |
+| 12 | `engineering` — inventario de materiales y cambios de la sesión | ⬜ pendiente | — | |
+| 13 | `engineering` — taquilla de a pie | ⬜ pendiente | — | |
+| 14 | `engineering` — ingenieros | ⬜ pendiente | — | |
+| 15 | `engineering` — mi nave modificada | ⬜ pendiente | — | |
+| 16 | `engineering` — cálculo de ingenierizar | ⬜ pendiente | — | |
+| 17 | `engineering` — planificador de intercambios | ⬜ pendiente | — | |
+| 18 | `engineering` — lista de la compra, reservas y persistencia | ⬜ pendiente | — | |
+| 19 | `engineering` — dónde conseguirlo, ingeniero recomendado y avisos | ⬜ pendiente | — | |
+| 20 | `engineering` — módulo, topics, relevancia, red, almacén y registro | ⬜ pendiente | — | |
+| 21 | UI — «Materiales» | ⬜ pendiente | — | |
+| 22 | UI — «Ingenieros» | ⬜ pendiente | — | |
+| 23 | UI — «Mi nave» e «Ingenierizar un módulo» | ⬜ pendiente | — | |
+| 24 | UI — «Lista de la compra», «Intercambios», «Dónde conseguirlo» y avisos | ⬜ pendiente | — | |
+| 25 | UI — disposición «Ingeniería», prioridad, Auto-companion y tiradas | ⬜ pendiente | — | |
+| 26 | Fixtures sintéticos y pruebas de extremo a extremo | ⬜ pendiente | — | |
+| 27 | `tmc-headless eval` — conciliación del inventario | ⬜ pendiente | — | |
+| 28 | Avisos de terceros, consumo, verificación de los 10 criterios y cierre | ⬜ pendiente | — | |
 
 ## Tareas de diagnóstico debug
 
@@ -36,7 +72,7 @@
 | F1 | Navegación, exploración, exobiología | ✅ completada y fusionada (b96fecf) |
 | F2 | Cazarrecompensas/combate (incl. AX), minería | ✅ completada y fusionada (e069a14) |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ✅ completada y fusionada (6dc09d9) |
-| F4 | Ingenieros y materiales | ⬜ |
+| F4 | Ingenieros y materiales | 🔄 spec ✅ (b3f1d1f), plan escrito |
 | F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | ⬜ |
 | F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | ⬜ |
 | F7 | Voz (KokoroTTS; alemán sin voz) | ⬜ |
@@ -254,6 +290,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
+- 2026-10-21 (Europe/Madrid) · Claude Opus 5.5 (architect-opus) · Plan de F4 escrito (`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`, 29 tareas en 6 bloques) en `fase/f4-ingenieros-materiales`; siguiente: bloque 0 (spikes).
 - 2026-10-21 13:30 (Europe/Madrid) · Claude Opus 5.5 · Interruptor Auto-companion (c986387, 09e5dab) revisado y fusionado en `main`. Propuesta y maquetas de F4 aprobadas en principio por el propietario; siguiente: spec de F4.
 - 2026-10-20 21:30 (Europe/Madrid) · Claude Opus 5.5 · Criterio 10 medido con ventana (106,4 / 111,5 MB, 0 % CPU) tras cerrar el propietario su TMC.exe. `fase/f3-comercio-misiones` fusionada en `main` (`6dc09d9`, --no-ff) con autorización del propietario. Sobre `main`: fmt/clippy limpios, 1158 Rust PASS, svelte-check 0 errores, 228 vitest PASS, build OK. `main` subida.
 - 2026-10-20 19:05 (Europe/Madrid) · Claude Opus 5.5 · F3 ejecutada hasta la Task 34 con subagentes (Tasks 17–34 tras integrar el diagnóstico debug D1–D7b y logs en SQLite). Revisión final de rama (Opus): sin críticos; corregido comercio en Legacy y coordenadas propias en replay (`7a99bfd`). 1154+ Rust, 228 UI, 14 Playwright, clippy release PASS. Pendiente: criterio 10 con ventana (propietario) y fusión en `main`.
