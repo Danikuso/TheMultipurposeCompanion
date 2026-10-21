@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-20 21:30 (Europe/Madrid) · Claude Opus 5.5
+- **Última actualización:** 2026-10-21 13:30 (Europe/Madrid) · Claude Opus 5.5
 - **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (✅ completada y fusionada en `main` en `6dc09d9`). F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversal: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md).
 - **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — ✅ 35/35 hechas (criterio 10 parcial) (aprobado al ordenar «escribe el plan y ejecútalo»). Diagnóstico: [plan](docs/plans/2026-10-20-diagnostico-debug.md) D1–D7b. Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
@@ -12,7 +12,7 @@
 
 - **Tarea:** F3 en ejecución con subagentes (en curso: Task -). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
 - **Último paso completado:** Task 17 ✅ (08aacf3), revisión aprobada.
-- **Siguiente acción:** preparar con el propietario la spec de F4 (ingenieros y materiales) según la hoja de ruta (spec de arquitectura §13). Deuda menor anotada en «Desviaciones» del plan de F3.
+- **Siguiente acción:** escribir la spec de F4 (ingenieros y materiales) a partir de la propuesta y las maquetas aprobadas (`f4-ingenieria.html`, `f4-materiales.html`) y pedir su aprobación.
 
 ## Tareas de diagnóstico debug
 
@@ -219,6 +219,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
 
 ## Decisiones tomadas
+- 2026-10-21 · Propietario: interruptor «Auto-companion» (encendido por defecto). Apagado, la app no cambia sola de disposición ni de tarjeta de contexto y recuerda la última elegida; spec `docs/specs/2026-10-21-tmc-auto-companion-design.md`, fusionado en `main`.
 
 - 2026-10-20 · D7b: regla global en la spec de diagnóstico — todo topic, acción, variante NetQuery/NetOutcome, endpoint o campo de configuración nuevo se registra en las listas permitidas de diagnóstico y se cubre con un test canario.
 
@@ -253,6 +254,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
+- 2026-10-21 13:30 (Europe/Madrid) · Claude Opus 5.5 · Interruptor Auto-companion (c986387, 09e5dab) revisado y fusionado en `main`. Propuesta y maquetas de F4 aprobadas en principio por el propietario; siguiente: spec de F4.
 - 2026-10-20 21:30 (Europe/Madrid) · Claude Opus 5.5 · Criterio 10 medido con ventana (106,4 / 111,5 MB, 0 % CPU) tras cerrar el propietario su TMC.exe. `fase/f3-comercio-misiones` fusionada en `main` (`6dc09d9`, --no-ff) con autorización del propietario. Sobre `main`: fmt/clippy limpios, 1158 Rust PASS, svelte-check 0 errores, 228 vitest PASS, build OK. `main` subida.
 - 2026-10-20 19:05 (Europe/Madrid) · Claude Opus 5.5 · F3 ejecutada hasta la Task 34 con subagentes (Tasks 17–34 tras integrar el diagnóstico debug D1–D7b y logs en SQLite). Revisión final de rama (Opus): sin críticos; corregido comercio en Legacy y coordenadas propias en replay (`7a99bfd`). 1154+ Rust, 228 UI, 14 Playwright, clippy release PASS. Pendiente: criterio 10 con ventana (propietario) y fusión en `main`.
 - 2026-10-20 16:14 (Europe/Madrid) · Codex · Limpieza solicitada por el propietario: eliminados 103,771 GiB de artefactos regenerables de Cargo entre el checkout principal y prueba-main (incremental, deps, build y fingerprints). Sin compilaciones activas; 22 ejecutables, instaladores y símbolos conservados con SHA256 idéntico. Logs, datos, código y cambios pendientes de missions intactos. Inventario local: `.tmp/cleanup-build-artifacts.json`. Puntero de desarrollo sin cambios; la próxima compilación regenerará dependencias.
