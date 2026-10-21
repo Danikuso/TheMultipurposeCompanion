@@ -5,14 +5,14 @@
 - **Última actualización:** 2026-10-21 (Europe/Madrid) · Claude Opus 5.5 (architect-opus)
 - **Fase actual:** F4 — Ingenieros y materiales (🔄 plan escrito; ejecución sin empezar). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
-- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 19/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
+- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 20/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** Task 19 🔄
+- **Tarea:** Task 20 🔄
 - **Último paso completado:** spikes (Tasks 0–2) y Task 4 hechos; preflight aplicado al plan (b0e0028).
-- **Siguiente acción:** Task 19 (dónde conseguirlo, ingeniero recomendado y avisos).
+- **Siguiente acción:** Task 20 (módulo engineering: topics, relevancia, red, almacén y registro).
 
 ## Tareas de F4
 
@@ -39,8 +39,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 16 | `engineering` — cálculo de ingenierizar | ✅ hecha | 672dd97 | Revisión aprobada; números comprobados a mano |
 | 17 | `engineering` — planificador de intercambios | ✅ hecha | ae0081a | Revisión aprobada; tasas del juego |
 | 18 | `engineering` — lista de la compra, reservas y persistencia | ✅ hecha | 6646975, 47f910d, 7f71e31 | Revisión aprobada tras 2 rondas (escritura atómica en tmc-store) |
-| 19 | `engineering` — dónde conseguirlo, ingeniero recomendado y avisos | 🔄 en curso | — | |
-| 20 | `engineering` — módulo, topics, relevancia, red, almacén y registro | ⬜ pendiente | — | |
+| 19 | `engineering` — dónde conseguirlo, ingeniero recomendado y avisos | ✅ hecha | 4672cdc | Revisión aprobada |
+| 20 | `engineering` — módulo, topics, relevancia, red, almacén y registro | 🔄 en curso | — | |
 | 21 | UI — «Materiales» | ⬜ pendiente | — | |
 | 22 | UI — «Ingenieros» | ⬜ pendiente | — | |
 | 23 | UI — «Mi nave» e «Ingenierizar un módulo» | ⬜ pendiente | — | |
