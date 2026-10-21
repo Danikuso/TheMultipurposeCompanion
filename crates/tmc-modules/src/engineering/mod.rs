@@ -1,0 +1,5 @@
+//! Módulo `engineering`: materiales, ingenieros y planificación de mejoras (F4).
+//!
+//! Esqueleto de la Task 12; las tareas siguientes añaden el resto de submódulos.
+
+pub mod inventory;
