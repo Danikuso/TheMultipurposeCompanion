@@ -111,7 +111,6 @@
   <div class="topbar-status">
     <label class="auto-switch" title={t('auto-companion-tooltip')}>
       <input type="checkbox" role="switch" data-testid="auto-companion" checked={prefs.autoCompanion}
-        aria-checked={prefs.autoCompanion}
         onchange={(e) => { void setAutoCompanion(e.currentTarget.checked); }} />
       <span>{t('auto-companion')}</span>
     </label>

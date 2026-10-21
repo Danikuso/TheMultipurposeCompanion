@@ -242,7 +242,7 @@
 
     <label class="field-row" title={t('auto-companion-tooltip')}>
       <span>{t('auto-companion')}</span>
-      <input type="checkbox" data-testid="settings-auto-companion" checked={prefs.autoCompanion}
+      <input type="checkbox" role="switch" data-testid="settings-auto-companion" checked={prefs.autoCompanion}
         onchange={(e) => { void setAutoCompanion(e.currentTarget.checked); }} />
     </label>
     <p class="help-text">{t('auto-companion-tooltip')}</p>
