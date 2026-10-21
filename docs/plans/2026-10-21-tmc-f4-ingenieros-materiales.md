@@ -15,7 +15,7 @@
 - Código e identificadores en inglés; documentación, commits y textos de referencia (`es`) en español.
 - Presupuesto (requisito): **< 150 MB** RAM del árbol de procesos y **< 1 %** CPU en reposo con la disposición «Ingeniería» visible; difusión **máx. 10 Hz**; latencia evento→UI **p95 < 500 ms**. Sin animaciones infinitas, sin `requestAnimationFrame`, sin `setInterval` (F4 no tiene cuentas atrás).
 - **Todo test afirma un valor concreto; no hay tests vacíos.** Los `/* … */` describen entrada y valor esperado; el test real los escribe como datos y `assert_eq!`. Los `<valor>` de tests que dependen de los datos curados (`blueprints.json`) o de un fixture se sustituyen por el número concreto en el mismo commit en que se fija el dato. Literales de structs con todos los campos (`..Default::default()` solo si el tipo implementa `Default`).
-- **Cada tarea compila y prueba lo suyo:** Task 12 añade `pub mod engineering;` a `crates/tmc-modules/src/lib.rs` y el `mod.rs` esqueleto; cada tarea siguiente declara su `mod x;`. **Cada tarea crea el fixture que usan sus tests**; Task 26 solo los completa.
+- **Cada tarea compila y prueba lo suyo:** Task 12 añade `pub mod engineering;` a `crates/tmc-modules/src/lib.rs` y el `mod.rs` esqueleto; cada tarea siguiente declara su `mod x;`. **Cada tarea crea el fixture que usan sus tests**: Task 12 crea `tests/fixtures/journal/engineering_session.log` con **todos** los eventos que necesitan Tasks 12–20 (lista en Task 12); toda tarea posterior que lo amplíe lo lista en *Files* y actualiza en el mismo commit los valores de tests y del contrato que cambien. Task 27 usa su propio `engineering_eval.log`. Task 26 no cambia el fixture salvo para e2e (y entonces actualiza también los tests de UI 21–24).
 - Tipos: variantes grandes en `Box` (clippy `large_enum_variant`). Eventos nuevos siguen el patrón de `classify` (`de(name, raw).map(...)`; lo que no deserializa cae en `Other`, nunca error) y los ayudantes tolerantes `lo`/`ld`/`lv` de `events.rs`: un campo mal formado nunca tira la línea entera.
 - **Módulo `engineering`** (lecciones F1–F3, obligatorias):
   - nunca emite `NetQuery` ni `StoreTask` de **escritura** en replay ni con `Galaxy::Legacy`. Convención: toda `StoreTask` que escribe lleva tag terminado en `.write` (`engineering.goals.write`); las de lectura, no. Test de replay: 0 `NetRequest` y 0 tags `*.write`;
@@ -40,9 +40,9 @@
 
 Fallos reales que la spec implica y que los tests «felices» no cubrirían. Cada uno tiene su test en la tarea dueña:
 
-1. **Inventario que deriva** (cambios con la app cerrada, evento consumidor no tipado, recompensa de misión sin categoría, recogida por encima del máximo, material no catalogado, instantánea `Materials` nueva que debe mandar) → `snapshot_resyncs_after_drift`, `mission_reward_category_from_catalog`, `collected_beyond_cap_is_clamped_and_flagged`, `unknown_material_kept_with_journal_name` (Task 12), `eval_inventory_reconciles_on_fixture` (Task 27).
-2. **Cálculo de ingenierizar engañoso** (módulo a medias en su grado, otro blueprint ya aplicado, objetivo menor que el actual, experimental ya aplicado, blueprint o módulo sin datos, receta `verified:false`) → `partial_grade_counts_remaining_rolls`, `other_blueprint_restarts_at_g1_with_warning`, `target_below_current_costs_nothing`, `same_experimental_not_counted_twice`, `unknown_blueprint_is_no_data` (Task 16).
-3. **Intercambios que roban o desbordan** (material reservado por otro objetivo, excedente del propio objetivo, recibir por encima del máximo del grado, cruzar tipo de comerciante, Guardian/Thargoid no intercambiables) → `reserved_by_other_goal_never_offered`, `trade_never_exceeds_grade_cap`, `never_crosses_trader_type`, `non_tradeable_materials_skipped` (Task 17), `reservations_follow_pinned_order` (Task 18).
+1. **Inventario que deriva** (cambios con la app cerrada, evento consumidor no tipado, recompensa de misión sin categoría, recogida por encima del máximo, material no catalogado, instantánea `Materials` nueva que debe mandar) → `snapshot_resyncs_after_drift`, `mission_reward_category_from_catalog`, `collected_beyond_cap_is_clamped_and_flagged`, `unknown_material_kept_with_journal_name` (Task 12), `eval_inventory_reconciles_on_fixture` (Task 27, fixture propio `engineering_eval.log`).
+2. **Cálculo de ingenierizar engañoso** (módulo a medias en su grado, otro blueprint ya aplicado, objetivo menor que el actual, experimental ya aplicado, blueprint o módulo sin datos, receta `verified:false`) → `partial_grade_counts_remaining_rolls`, `other_blueprint_restarts_at_g1_with_warning`, `target_below_current_costs_nothing`, `same_experimental_not_counted_twice` (Task 16), `unknown_blueprint_is_no_data` (Task 20).
+3. **Intercambios que roban o desbordan** (material reservado por otro objetivo, excedente del propio objetivo, recibir por encima del máximo del grado, cruzar tipo de comerciante, Guardian/Thargoid no intercambiables) → `reserved_by_other_goal_never_offered`, `trade_never_exceeds_grade_cap`, `never_crosses_trader_type`, `non_tradeable_materials_skipped`, `trade_never_exceeds_grade_cap` (Task 17), `reservations_follow_pinned_order`, `reserved_by_other_goal_never_offered` (Task 18).
 4. **Avisos en ráfaga o falsos** (instantáneas de arranque, replay, `EngineerProgress` inicial con lista, material que ya estaba al máximo, objetivo que ya era completable) → `startup_snapshots_raise_no_alerts`, `alert_only_on_transition` (Task 19), `startup_engineer_list_does_not_activate_layout` (Task 20).
 5. **Cambio de comandante, Legacy, replay y respuestas tardías** (lista de la compra de otro CMDR, comerciante del sistema anterior, peticiones en Legacy/replay) → `commander_switch_clears_and_reloads_goals`, `stored_goals_for_other_cmdr_ignored`, `late_trader_for_previous_system_not_applied`, `replay_emits_no_requests_or_store_writes`, `no_requests_in_legacy_or_offline` (Task 20).
 
@@ -147,7 +147,7 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 **Files:** Modify `status.md` («Bloqueos»), este plan («Desviaciones»).
 
 - [ ] **Step 1:** Pedir aprobación solo de lo que cambie alcance o licencia: fuente A/B por archivo y su licencia, fuente de traducciones, servicios «sin datos», resoluciones del redactor (ver «Desviaciones»).
-- [ ] **Step 2:** Tasks 4–7 y 12–15 avanzan mientras tanto (no dependen de la fuente); Tasks 8–11 esperan la decisión A/B. **Step 3: Commit** `docs(status): aprobaciones pendientes tras los spikes de F4`
+- [ ] **Step 2:** Tasks 4–7 avanzan mientras tanto. Tasks 8–10 escriben ya **el código** (cargadores, structs, tipos y tests) con un **conjunto provisional mínimo** de datos (`verified:false`, pocas entradas, siempre `Engine_Dirty` G1–G5 + Drag Drives del criterio 4 y los materiales que usan); solo el **contenido completo** de los JSON y de `engineering-data.ftl` espera la decisión del propietario sobre la fuente. Tasks 12–15 avanzan en cuanto está el código de 8–10. **Step 3: Commit** `docs(status): aprobaciones pendientes tras los spikes de F4`
 
 ---
 
@@ -160,12 +160,13 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 **Interfaces:**
 - Consumes: `lo`/`ld`/`lv`, `MaterialReward` (F3).
 - Produces (todo tolerante, `serde(default, rename_all = "PascalCase")`):
-  - `enum MaterialCategory { Raw, Manufactured, Encoded }` con `fn from_journal(s: &str) -> Option<Self>` (acepta `"Raw"`, `"Manufactured"`, `"Encoded"` y `"$MICRORESOURCE_CATEGORY_Encoded;"`, sin distinguir mayúsculas).
-  - `MaterialCount { name: String, name_localised: Option<String>, count: u32 }`; `Materials { raw: Vec<MaterialCount>, manufactured: Vec<..>, encoded: Vec<..> }`.
+  - `#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)] enum MaterialCategory { Raw, Manufactured, Encoded }` con `fn from_journal(s: &str) -> Option<Self>` (acepta `"Raw"`, `"Manufactured"`, `"Encoded"` y `"$MICRORESOURCE_CATEGORY_Encoded;"`, sin distinguir mayúsculas).
+  - `MaterialCount { name: String, name_localised: Option<String> /* falta en algunas entradas Raw */, count: u32 /* estricto: un Count no numérico invalida la entrada */ }` (listas con `lv`: la entrada inválida se omite); `Materials { raw: Vec<MaterialCount>, manufactured: Vec<..>, encoded: Vec<..> }`.
   - `MaterialCollected { category: String, name: String, name_localised: Option<String>, count: u32 }`; `MaterialDiscarded` (misma forma).
   - `MaterialTradeSide { material: String, material_localised: Option<String>, category: String, quantity: u32 }`; `MaterialTrade { market_id: Option<u64> (rename "MarketID"), trader_type: String, paid: MaterialTradeSide, received: MaterialTradeSide }`.
   - `MaterialUse { name: String, count: u32 }` (alias `"Material"`→`name` si el spike lo ve); `Synthesis { name: String, materials: Vec<MaterialUse> }`.
   - `pub fn material_key(name: &str) -> String` (minúsculas, sin espacios: clave única en todo F4).
+  - `MaterialReward` (F3) + `category: Option<String>` (tolerante, `lo`) y `pub fn reward_category(r: &MaterialReward) -> Option<MaterialCategory>` (normaliza `$MICRORESOURCE_CATEGORY_<X>;` con `MaterialCategory::from_journal`; ausente o desconocida → `None` y Task 12 usa `materials.json`).
   - `EventKind` + `Materials(Box<Materials>)`, `MaterialCollected(..)`, `MaterialDiscarded(..)`, `MaterialTrade(Box<MaterialTrade>)`, `Synthesis(..)`.
 
 - [ ] **Step 1: Tests:**
@@ -173,7 +174,9 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 ```rust
 #[test] fn materials_snapshot_parses_three_categories() { /* Raw [{Name:"iron",Count:120}], Manufactured [{Name:"conductiveceramics",Name_Localised:"Cerámica conductora",Count:30}], Encoded [{Name:"shieldpatternanalysis",Count:12}] → raw[0].count 120, manufactured[0].name_localised Some("Cerámica conductora") */ }
 #[test] fn material_trade_parses_paid_and_received() { /* TraderType "encoded", Paid{Material:"scandatabanks",Category:"Encoded",Quantity:6}, Received{Material:"encodedscandata",Quantity:1} → paid.quantity 6, received.material "encodedscandata" */ }
-#[test] fn malformed_material_entry_is_skipped_not_fatal() { /* Raw [{Name:"iron",Count:"x"},{Name:"nickel",Count:5}] → kind Materials, raw.len()==1 o count 0 para iron; nunca Other */ }
+#[test] fn malformed_material_entry_is_skipped_not_fatal() { /* Raw [{Name:"iron",Count:"x"},{Name:"nickel",Count:5}] → kind Materials, raw.len()==1, raw[0].name=="nickel" */ }
+#[test] fn material_key_normalizes() { /* "Iron" → "iron"; " Conductive Ceramics " → "conductiveceramics" */ }
+#[test] fn materials_reward_category_normalized() { /* Category "$MICRORESOURCE_CATEGORY_Manufactured;" → reward_category Some(Manufactured); sin Category → None */ }
 #[test] fn category_from_journal_variants() { /* "Raw"→Raw, "$MICRORESOURCE_CATEGORY_Encoded;"→Encoded, "foo"→None */ }
 #[test] fn synthesis_and_collected_parse() { /* Synthesis{Name:"FSD Basic",Materials:[{Name:"carbon",Count:1}]}; MaterialCollected{Category:"Raw",Name:"iron",Count:3} */ }
 ```
@@ -189,22 +192,23 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 - Consumes: `Engineering`, `LoadoutModule`, `Loadout` (F1), unit variants `EventKind::ShipLocker`/`Backpack` y `CompanionKind::ShipLocker` (F0).
 - Produces:
   - `Engineering` + `engineer: Option<String>`, `engineer_id: Option<u64> (rename "EngineerID")`, `blueprint_id: Option<u64> (rename "BlueprintID")`, `experimental_effect_localised: Option<String> (rename "ExperimentalEffect_Localised")` (aditivo; tests de F1 sin cambios).
-  - `enum EngineerStatus { Known, Invited, Acquainted, Unlocked, Barred, Unknown }` con `fn from_journal(&str) -> Self`.
-  - `EngineerEntry { engineer: String, engineer_id: u64, progress: EngineerStatus, rank: Option<u8>, rank_progress: Option<u8> }`; `EngineerProgress { engineers: Vec<EngineerEntry> /* lista de arranque */, engineer: Option<String>, engineer_id: Option<u64>, progress: Option<String>, rank: Option<u8>, rank_progress: Option<u8> }` con `fn entries(&self) -> Vec<EngineerEntry>` (lista o la actualización suelta) y `fn is_startup_list(&self) -> bool`.
+  - `#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)] enum EngineerStatus { Known, Invited, Acquainted, Unlocked, Barred, Unknown }` con `fn from_journal(&str) -> Self`.
+  - `EngineerEntry { engineer: String, engineer_id: u64, progress: EngineerStatus /* Unknown si falta Progress */, rank: Option<u8>, rank_progress: Option<u8> }`; `EngineerProgress { engineers: Vec<EngineerEntry> /* lista de arranque */, engineer: Option<String>, engineer_id: Option<u64>, progress: Option<String>, rank: Option<u8>, rank_progress: Option<u8> }` con `fn entries(&self) -> Vec<EngineerEntry>` (lista o la actualización suelta) y `fn is_startup_list(&self) -> bool`. Spike: en la actualización suelta **todos** los campos salvo `Engineer`/`EngineerID` son opcionales (puede traer solo `Rank` o solo `Progress`); sin `Progress` sale `Unknown` y el módulo conserva el estado previo de ese ingeniero.
   - `EngineerCraft { engineer, engineer_id, blueprint_name: String, blueprint_id: Option<u64>, level: u8, quality: Option<f64>, apply_experimental_effect: Option<String>, experimental_effect: Option<String>, ingredients: Vec<MaterialUse>, slot: Option<String>, module: Option<String> }`.
   - `EngineerContribution { engineer, engineer_id, type_: String (rename "Type"), commodity: Option<String>, material: Option<String>, quantity: u32, total_quantity: u32 }`.
   - `TechnologyBroker { broker_type: String, market_id: Option<u64>, commodities: Vec<MaterialUse>, materials: Vec<MaterialUse> }`.
   - `LockerItem { name: String, name_localised: Option<String>, count: u32, mission_id: Option<u64>, owner_id: Option<u64> }`; `ShipLockerContents { items, components, consumables, data: Vec<LockerItem> }` con `fn is_stub(&self) -> bool` y `fn from_value(v: &Value) -> Option<Self>` (para `ShipLocker.json`); `BackpackChange { added: Vec<LockerChange>, removed: Vec<LockerChange> }`, `LockerChange { name, name_localised, count: u32, type_: String /* Item|Component|Consumable|Data */ }`.
-  - `EventKind::ShipLocker` pasa de unidad a `ShipLocker(Box<ShipLockerContents>)` (el stub deserializa vacío); + `EngineerProgress(Box<..>)`, `EngineerCraft(Box<..>)`, `EngineerContribution(..)`, `TechnologyBroker(..)`, `BackpackChange(..)`. Brazos que usaban `EventKind::ShipLocker` se actualizan (verificar en código al ejecutar: grep solo encontró `classify`).
+  - `EventKind::ShipLocker` pasa de unidad a `ShipLocker(Box<ShipLockerContents>)`. Stub (solo `timestamp` y `event`; 8 % en el spike): `is_stub() == true` y el consumidor **relee `ShipLocker.json`**; un stub nunca vacía la taquilla. `ExperimentalEffect`/`ApplyExperimentalEffect` no aparecen en los diarios del propietario: sus fixtures salen del manual del diario; + `EngineerProgress(Box<..>)`, `EngineerCraft(Box<..>)`, `EngineerContribution(..)`, `TechnologyBroker(..)`, `BackpackChange(..)`. Brazos que usaban `EventKind::ShipLocker` se actualizan (verificar en código al ejecutar: grep solo encontró `classify`).
 
 - [ ] **Step 1: Tests:**
 
 ```rust
 #[test] fn engineer_progress_startup_list() { /* Engineers [{Engineer:"Felicity Farseer",EngineerID:300100,Progress:"Unlocked",Rank:5,RankProgress:0},{...,"Invited"}] → entries().len()==2, is_startup_list true */ }
 #[test] fn engineer_progress_single_update() { /* {Engineer:"Elvira Martuuk",EngineerID:300160,Progress:"Unlocked"} → entries()==[Unlocked, rank None], is_startup_list false */ }
+#[test] fn engineer_progress_loose_rank_only() { /* {Engineer:"Felicity Farseer",EngineerID:300100,Rank:4} → entries()[0].progress Unknown, rank Some(4) */ }
 #[test] fn engineer_craft_parses_ingredients_and_experimental() { /* BlueprintName "Engine_Dirty", Level 5, Quality 0.42, ApplyExperimentalEffect "special_engine_overloaded", Ingredients [{Name:"pharmaceuticalisolators",Count:1}] → level 5, ingredients[0].count 1 */ }
 #[test] fn loadout_engineering_extra_fields_are_additive() { /* módulo con Engineer/EngineerID/BlueprintID/ExperimentalEffect_Localised → campos Some; Loadout de F1 sin ellos → igual que antes */ }
-#[test] fn ship_locker_stub_and_full() { /* {"event":"ShipLocker"} → ShipLocker(is_stub true); con Items [{Name:"healthpack"... Count:2}] → items.len()==1 */ }
+#[test] fn ship_locker_stub_and_full() { /* {timestamp, event:"ShipLocker"} → ShipLocker(is_stub true); con Items [{Name:"healthpack"... Count:2}] → is_stub false, items.len()==1 */ }
 #[test] fn backpack_change_added_and_removed() { /* Added [{Name:"graphene",Count:3,Type:"Component"}] → added[0].count 3 */ }
 ```
 
@@ -216,7 +220,7 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 
 **Interfaces:**
 - Produces:
-  - `NearbyService` + `MaterialTrader(TraderKind)`, `TechnologyBroker(BrokerKind)`; `enum TraderKind { Raw, Manufactured, Encoded }` (con `From<MaterialCategory>`), `enum BrokerKind { Human, Guardian }` (en `tmc-model::net`, `Copy + Eq + Hash + Serialize`). Los `match` exhaustivos sobre `NearbyService` (`ardent::nearest_url`, `cache_policy::cache_keys`, `client.rs`) reciben aquí brazos que responden `NetOutcome::NoData` (ningún módulo los pide todavía); Task 7 los sustituye por los adaptadores reales.
+  - `NearbyService` + `MaterialTrader(Option<TraderKind>)`, `TechnologyBroker(Option<BrokerKind>)` (`None` = cualquier tipo → Ardent; `Some` = tipo concreto → Spansh, spike de red); `enum TraderKind { Raw, Manufactured, Encoded }` (con `From<MaterialCategory>`), `enum BrokerKind { Human, Guardian }` (en `tmc-model::net`, ambos `#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]`). `NetQuery::NearestService` + `system_name: String` (Spansh busca por nombre; los usos de F2 pasan `state.location.system`). Los `match` exhaustivos sobre `NearbyService` (`ardent::nearest_url`, `cache_policy::cache_keys`, `client.rs`) reciben aquí brazos que responden `NetOutcome::NoData` (ningún módulo los pide todavía); Task 7 los sustituye por los adaptadores reales.
   - `ModuleSettings` + `engineering_rolls: [u8; 5]` (por defecto `[1, 1, 1, 1, 4]`, `serde(default)`); `Config` + `engineering_rolls` copiado a `ModuleSettings`; `Config::validate_f4(&self) -> Result<(), &'static str>` (cada valor `1..=10`, si no `"invalid-engineering-rolls"`); `diagnostic_snapshot` + `"engineering_rolls"`.
 
 - [ ] **Step 1: Tests:**
@@ -227,35 +231,44 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 #[test] fn put_config_rejects_rolls_out_of_range() { /* [1,1,1,1,0] y [1,1,1,1,11] → 400 "invalid-engineering-rolls" y sin cambios */ }
 #[test] fn trader_kind_from_category() { /* MaterialCategory::Encoded → TraderKind::Encoded */ }
 #[test] fn config_snapshot_includes_engineering_rolls() { /* diagnostic_snapshot()["engineering_rolls"] == [1,1,1,1,4] */ }
-#[test] fn nearby_service_variants_have_closed_diag_labels() { /* redact NetQuery {NearestService:{service:{MaterialTrader:"Raw"}}} conserva "Raw"; "CANARY" → [redacted] */ }
+#[test] fn nearby_service_variants_have_closed_diag_labels() { /* redact NetQuery {NearestService:{service:{MaterialTrader:"Raw"}}} conserva "Raw"; "CANARY" → [redacted]; system_name → [redacted] salvo la política pública de `system` */ }
 ```
 
 - [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(model): servicios de comerciante y broker; tiradas por defecto en ajustes`
 
 ### Task 7: `tmc-net` — comerciantes de materiales y broker
 
-**Files:** Modify `crates/tmc-net/src/{ardent.rs, spansh.rs (solo si el spike lo usa), client.rs, cache_policy.rs}`, `crates/tmc-app/src/net_service.rs` (caché 1 h), `crates/tmc-model/src/diagnostics.rs` (etiquetas de endpoint).
+**Files:** Modify `crates/tmc-net/src/{ardent.rs, spansh.rs, client.rs, cache_policy.rs}`, `crates/tmc-app/src/net_service.rs` (caché 1 h), `crates/tmc-model/src/diagnostics.rs` (lista cerrada de etiquetas `endpoint`, ≈ línea 655); usa los fixtures de Task 2 (`ardent_nearest_material_trader.json`, `ardent_nearest_tech_broker.json`, `spansh_stations_material_trader.json`).
 
-**Interfaces:**
-- Consumes: `ardent::{nearest_url, parse_stations}`, `RemoteStation`, `NetOutcome::Stations` (F2), fixtures de Task 2.
-- Produces: `nearest_url` con el segmento por servicio del spike; `parse_stations(body, min_pad)` reutilizado (máx. `MAX_STATIONS = 5`, carriers excluidos con `excluded()`); respaldo `spansh::station_search_request(addr_or_name, service) / parse_station_search(body, min_pad) -> Result<Vec<RemoteStation>, NetFailure>` solo para los servicios que el spike marque; `cache_keys` distinto por servicio y plataforma; política de caché **1 h** para `NearestService` de los servicios nuevos (la de IF de F2 no cambia); `endpoint_of` con una etiqueta cerrada por servicio (verificar en código al ejecutar si F2 usa una sola etiqueta `ardent.nearest`; si es así se conserva y se añade el servicio como campo de enumeración cerrada).
+**Interfaces (según el spike de red):**
+- Consumes: `ardent::{nearest_url, parse_stations}`, `RemoteStation`, `NetOutcome::Stations` (F2), `tmc_model::market::is_fleet_carrier`.
+- Produces:
+  - **Sin tipo** (`MaterialTrader(None)`, `TechnologyBroker(None)`): Ardent `nearest/material-trader` y `nearest/technology-broker` (segmentos exactos; Ardent no distingue tipos) con `parse_stations(body, min_pad)` (máx. `MAX_STATIONS = 5`, carriers fuera). Etiquetas: `"ardent.nearest.material_trader"`, `"ardent.nearest.technology_broker"`.
+  - **Con tipo** (`MaterialTrader(Some(k))`, `TechnologyBroker(Some(b))`): Spansh `POST https://spansh.co.uk/api/stations/search` con cuerpo `{"filters":{"material_trader":{"value":["Raw"|"Manufactured"|"Encoded"]}},"sort":[{"distance":{"direction":"asc"}}],"size":5,"page":0,"reference_system":"<system_name>"}` (o `"technology_broker":{"value":["Guardian"|"Human"]}`): `pub fn spansh::station_search_body(reference_system: &str, service: NearbyService) -> serde_json::Value`, `pub fn spansh::parse_station_search(body: &str, min_pad: PadSize) -> Result<Vec<RemoteStation>, NetFailure>` (ignora campos no usados; plataforma máxima desde `large_pads`/`medium_pads`/`small_pads`; carriers fuera; `min_pad` re-comprobado en local). Etiquetas: `"spansh.stations.material_trader"`, `"spansh.stations.technology_broker"`.
+  - Fallo de Spansh con tipo → `NetOutcome::NoData` (nunca se infiere el tipo por la economía ni se cae a Ardent sin tipo).
+  - `cache_keys` distinto por servicio, tipo y plataforma; política **1 h** para los servicios nuevos (IF de F2 sin cambios); `endpoint_of` devuelve las cuatro etiquetas nuevas, añadidas a la lista cerrada de `diagnostics.rs` junto a `ardent.nearest.service`.
 
 - [ ] **Step 1: Tests:**
 
 ```rust
-#[test] fn nearest_url_per_material_trader_kind() { /* Raw/Manufactured/Encoded, addr 10477373803, pad Medium → URL del spike con minLandingPadSize=2 */ }
-#[test] fn parses_material_trader_fixture() { /* ardent_nearest_material_trader.json → 1..=5 estaciones ordenadas por distance_ly, carriers fuera */ }
-#[test] fn parses_tech_broker_fixture() { /* ardent_nearest_tech_broker.json → station_name y max_pad del fixture */ }
-#[test] fn cache_key_differs_per_service_and_pad() { /* Raw/Medium ≠ Encoded/Medium ≠ Raw/Large */ }
+#[test] fn untyped_trader_uses_ardent_material_trader_segment() { /* MaterialTrader(None), addr 10477373803, Medium → "https://api.ardent-insight.com/v2/system/address/10477373803/nearest/material-trader?minLandingPadSize=2" */ }
+#[test] fn typed_trader_request_is_spansh_station_search() { /* MaterialTrader(Some(Raw)), "Sol" → POST /api/stations/search; filters.material_trader.value == ["Raw"], size 5, sort distance asc, reference_system "Sol" */ }
+#[test] fn typed_broker_request_is_spansh_station_search() { /* TechnologyBroker(Some(Guardian)) → filters.technology_broker.value == ["Guardian"] */ }
+#[test] fn parses_spansh_station_search_fixture() { /* spansh_stations_material_trader.json → distancia asc; large_pads>0 → max_pad Some(Large); carrier fuera */ }
+#[test] fn parses_ardent_trader_and_broker_fixtures() { /* ardent_nearest_material_trader.json / ardent_nearest_tech_broker.json → station_name y max_pad del fixture, len ≤ 5 */ }
+#[test] fn spansh_failure_for_typed_service_is_no_data() { /* HTTP 500 en la consulta con tipo → NetOutcome::NoData */ }
+#[test] fn cache_key_differs_per_service_kind_and_pad() { /* Some(Raw)/Medium ≠ Some(Encoded)/Medium ≠ Some(Raw)/Large ≠ None/Medium */ }
 #[test] fn material_trader_cached_one_hour() { /* política: 3600 s */ }
-#[test] fn unsupported_service_falls_back_or_no_data() { /* servicio sin Ardent → petición Spansh (si el spike la habilita) o NoData; nunca Failed permanente */ }
+#[test] fn new_endpoint_labels_are_closed_set() { /* las 4 etiquetas nuevas se conservan en NetOutcome; "spansh.stations.CANARY" → [redacted] */ }
 ```
 
-- [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(net): comerciantes de materiales y broker cercanos con caché de 1 h`
+- [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(net): comerciantes de materiales y broker (Spansh con tipo, Ardent sin tipo) con caché de 1 h`
 
 ### Task 8: Datos estáticos `materials.json` y `trader_rules.json`
 
 **Files:** Create `crates/tmc-modules/data/{materials.json, trader_rules.json}`; Modify `crates/tmc-modules/src/data.rs`, `THIRD_PARTY_NOTICES.md` (solo si la fuente es A).
+
+**Contenido (orden de Task 3):** código + conjunto **provisional mínimo** `verified:false` (materiales de `engine_dirty`, `special_engine_overloaded` y `fsd_longrange`, los del fixture y una familia completa por tipo de comerciante). **Step 6** (tras la decisión del propietario): contenido completo en un commit aparte `feat(modules): catálogo completo de materiales` con `materials_full_catalogue_size` (número exacto del dato, ≈ 170).
 
 **Interfaces:**
 - Produces: `MaterialDef { key: String /* material_key */, name_en: String, category: MaterialCategory, grade: u8 /* 1..=5 */, family: String /* p. ej. "raw-1", "chemical", "emission-data" */, tradeable: bool, hints: Vec<Hint>, source: String, verified: bool }`, `Hint { kind: HintKind, detail_key: Option<String> /* clave ftl */ }`, `enum HintKind { Mining, SurfaceProspecting, Hge, SignalSource, DataScan, MissionReward, Salvage, Broker, Site }`; `fn materials() -> &'static HashMap<String, MaterialDef>`; `fn grade_cap(grade: u8) -> u32` = `[300, 250, 200, 150, 100][grade-1]` (constante del juego `GRADE_CAPS`).
@@ -264,7 +277,7 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 - [ ] **Step 1: Tests:**
 
 ```rust
-#[test] fn materials_load_with_provenance_and_valid_grades() { /* len >= 100; todas con source no vacío y grade 1..=5; "iron" → Raw grado 1; "conductiveceramics" → Manufactured grado 3 (<del dato>) */ }
+#[test] fn materials_load_with_provenance_and_valid_grades() { /* todas con source no vacío y grade 1..=5; "iron" → Raw grado 1, name_en "Iron"; "conductiveceramics" → Manufactured grado 3 (<del dato>) */ }
 #[test] fn grade_caps_are_game_values() { /* grade_cap(1)==300 … grade_cap(5)==100 */ }
 #[test] fn families_have_one_material_per_grade_where_tradeable() { /* cada familia intercambiable: grados distintos sin repetir */ }
 #[test] fn trader_rules_default_rates() { /* same_family_up 6, same_family_down 3 */ }
@@ -277,6 +290,8 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 
 **Files:** Create `crates/tmc-modules/data/blueprints.json`; Modify `crates/tmc-modules/src/data.rs`, `THIRD_PARTY_NOTICES.md` (solo si A).
 
+**Contenido (orden de Task 3):** código + conjunto provisional `verified:false`: `engine_dirty` G1–G5, `special_engine_overloaded` (Drag Drives), `fsd_longrange` G1–G5, tipos `engine` y `fsd`. **Step 6** (tras la decisión): todos los blueprints y experimentales de módulos de nave en un commit aparte `feat(modules): catálogo completo de blueprints`.
+
 **Interfaces:**
 - Produces: `ModuleTypeDef { id: String /* "engine", "fsd", "shield_generator"… */, item_prefixes: Vec<String> /* "int_engine_" */ }`; `Blueprint { key: String /* BlueprintName del diario, minúsculas */, module_types: Vec<String>, grades: BTreeMap<u8, Vec<Ingredient>> /* receta por tirada */, source, verified }`; `Ingredient { material: String, count: u32 }`; `Experimental { key: String /* ExperimentalEffect del diario, minúsculas */, module_types: Vec<String>, ingredients: Vec<Ingredient>, source, verified }`; `fn blueprints() -> &'static BlueprintCatalog` con `fn module_type_of(&self, item: &str) -> Option<&str>`, `fn blueprints_for(&self, module_type: &str) -> Vec<&Blueprint>`, `fn experimentals_for(&self, module_type: &str) -> Vec<&Experimental>`, `fn blueprint(&self, key: &str) -> Option<&Blueprint>`, `fn experimental(&self, key: &str) -> Option<&Experimental>`. **Todos** los blueprints y experimentales de módulos de nave (spec §10.1.2), `verified:false` salvo comprobación.
 
@@ -286,15 +301,17 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 #[test] fn every_ingredient_is_a_catalogued_material() { /* toda Ingredient.material ∈ materials() */ }
 #[test] fn every_blueprint_has_contiguous_grades_from_1() { /* grados 1..=max sin huecos, max <= 5 */ }
 #[test] fn thrusters_have_dirty_drive_and_drag_drives() { /* module_type_of("int_engine_size3_class5")=="engine"; blueprint("engine_dirty") con grados 1..=5; experimental("special_engine_overloaded") (clave del spike) para "engine" */ }
-#[test] fn catalogue_covers_all_ship_module_types() { /* lista cerrada del spike (≈ 40 tipos) ⊆ tipos con algún blueprint; recuento de blueprints >= <n del spike> */ }
 #[test] fn corrupt_blueprint_row_skipped_with_warning() { /* ingrediente con count 0 o grado 0 → fila omitida */ }
 ```
 
 - [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(modules): blueprints y experimentales de módulos de nave con procedencia`
+- [ ] **Step 6 (tras Task 3):** contenido completo + `#[test] fn catalogue_covers_all_ship_module_types() { /* lista cerrada de tipos ⊆ tipos con algún blueprint; recuento == <n del dato> */ }`.
 
 ### Task 10: Datos estáticos `engineers.json`
 
 **Files:** Create `crates/tmc-modules/data/engineers.json`; Modify `crates/tmc-modules/src/data.rs`, `THIRD_PARTY_NOTICES.md` (solo si A).
+
+**Contenido (orden de Task 3):** código + conjunto provisional `verified:false` (Felicity Farseer 300100, Elvira Martuuk 300160, uno que aplique `engine_dirty` solo hasta G3 y uno a pie). **Step 6** (tras la decisión): todos, en un commit aparte, con `engineers_full_catalogue` (número exacto del dato).
 
 **Interfaces:**
 - Produces: `EngineerDef { id: u64 /* EngineerID */, name: String, system: String, star_pos: [f64; 3], workshop: String, market_id: Option<u64>, on_foot: bool, blueprints: Vec<EngineerBlueprint { blueprint: String, max_grade: u8 }>, unlock: UnlockSteps { requirement_key: String, invite_key: Option<String>, contribution: Option<Contribution { item: String, kind: String /* "commodity"|"material"|"credits" */, amount: u32 }> }, source, verified }`; `fn engineers() -> &'static Vec<EngineerDef>`; `fn engineer(id: u64) -> Option<&'static EngineerDef>`.
@@ -302,9 +319,8 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 - [ ] **Step 1: Tests:**
 
 ```rust
-#[test] fn engineers_load_with_coords_and_provenance() { /* ≥ 20 de nave y ≥ 1 a pie; todos con star_pos finito y source; 300100 → "Felicity Farseer", sistema "Deciat" */ }
+#[test] fn engineers_load_with_coords_and_provenance() { /* ≥ 1 a pie; todos con star_pos finito y source; 300100 → "Felicity Farseer", sistema "Deciat" */ }
 #[test] fn engineer_blueprints_exist_in_catalogue() { /* todo blueprint de no a pie ∈ blueprints(); max_grade 1..=5 */ }
-#[test] fn unlock_keys_exist_in_engineering_data_ftl() { /* (tras Task 11; si Task 11 aún no está, el test se añade allí) */ }
 #[test] fn corrupt_engineer_row_skipped_with_warning() { /* star_pos no numérico → omitido */ }
 ```
 
@@ -321,6 +337,8 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 ```rust
 #[test] fn every_catalogued_blueprint_and_experimental_has_a_name_in_all_languages() { /* ∀ clave de blueprints()/experimentals → bp-/exp- existe en es,en,fr,de,pt */ }
 #[test] fn pending_names_are_marked_and_english() { /* en fr/de/pt/es, mensaje con .pending == valor en en */ }
+#[test] fn unlock_keys_exist_in_engineering_data_ftl() { /* ∀ EngineerDef: unlock.requirement_key (e invite_key si hay) existen en los 5 idiomas */ }
+#[test] fn every_module_type_has_modtype_name() { /* ∀ ModuleTypeDef.id → modtype-<id> en los 5 idiomas */ }
 #[test] fn dirty_drive_spanish_name_is_official() { /* es bp-engine_dirty == <nombre oficial del spike, p. ej. «Motor sucio»> sin .pending */ }
 ```
 
@@ -332,11 +350,13 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 
 ### Task 12: `engineering` — inventario de materiales y cambios de la sesión
 
-**Files:** Create `crates/tmc-modules/src/engineering/{mod.rs (esqueleto con mod inventory;), inventory.rs}`, `tests/fixtures/journal/engineering_session.log` (base); Modify `crates/tmc-modules/src/lib.rs` (`pub mod engineering;`).
+**Files:** Create `crates/tmc-modules/src/engineering/{mod.rs (esqueleto con mod inventory;), inventory.rs}` (tests unitarios en `#[cfg(test)] mod tests` de cada archivo; los del módulo en `engineering/tests.rs`, Task 20), `tests/fixtures/journal/engineering_session.log`; Modify `crates/tmc-modules/src/lib.rs` (`pub mod engineering;`).
+
+**Fixture** (sintético, `CMDR TESTER`, sin FID real), en este orden: `Commander`, `Materials` (iron 120; un material G5 al máximo; uno no catalogado `foo_new`; codificados con excedente para un 6→1), `EngineerProgress` lista (Felicity 300100 Unlocked rango 5; Elvira 300160 Invited; uno Known), `LoadGame`, `Location` en un sistema sintético con `StarPos` = Deciat + [12.3, 0, 0], `Loadout` (ShipID 7; `MainEngines` de serie `int_engine_size5_class5`; `FrameShiftDrive` con `FSD_LongRange` L3 q 1.0), `ShipLocker` completo (graphene 5) y un stub, `BackpackChange` (+3 graphene), `MaterialCollected` ×3 (codificado +2; iron +3; uno por encima del máximo), `MaterialTrade` (paga iron 6, recibe 1), `Synthesis` (−1), `MissionCompleted` con `MaterialsReward` (`Category` `$MICRORESOURCE_CATEGORY_Manufactured;`), `FSDJump`, `Docked` en el taller de Felicity (`market_id` de `engineers.json`), `EngineerCraft` `FSD_LongRange` L4 q 1.0 en `FrameShiftDrive`, `EngineerProgress` suelto Elvira Invited→Unlocked, `Undocked`. Los valores finales (iron 117, graphene 8…) son los que afirman Tasks 12–24.
 
 **Interfaces:**
 - Consumes: eventos de Tasks 4–5, `MissionCompleted.materials_reward` (F3), `data::{materials, grade_cap}`.
-- Produces: `MaterialInventory { fn apply_event(&mut self, ev: &EventKind, at: DateTime<Utc>) -> Vec<MaterialChange>; fn count(&self, key: &str) -> u32; fn at_max(&self) -> Vec<String>; fn by_category(&self) -> BTreeMap<MaterialCategory, BTreeMap<u8, Vec<MaterialLine>>>; fn has_snapshot(&self) -> bool }`. `Materials` sustituye todo (resincroniza); `MaterialCollected` suma con tope `grade_cap` (lo que excede se cuenta como `lost`); `MaterialDiscarded`, `Synthesis`, `EngineerCraft.ingredients`, `EngineerContribution` (tipo material), `TechnologyBroker.materials` restan (nunca bajo 0); `MaterialTrade` resta y suma; `MissionCompleted.materials_reward` suma con categoría del catálogo. `MaterialLine { key, name_localised: Option<String>, grade: u8, count: u32, max: u32, at_max: bool, known: bool }`. `MaterialChange { key, delta: i32, origin: ChangeOrigin, lost: u32, at }`, `enum ChangeOrigin { Mission, Scan, Mining, Collected, Trade, Synthesis, Engineering, Discarded }` (`MaterialCollected`: Encoded→Scan, Raw→Mining, Manufactured→Collected). `SessionChanges { fn push(&mut self, c: &[MaterialChange]); fn totals(&self) -> BTreeMap<ChangeOrigin, (u32 /*in*/, u32 /*out*/)>; fn recent(&self) -> &[MaterialChange] /* últimos 50 */; fn reset(&mut self, at) }`.
+- Produces: `MaterialInventory { fn apply_event(&mut self, ev: &EventKind, at: DateTime<Utc>) -> Vec<MaterialChange>; fn count(&self, key: &str) -> u32; fn at_max(&self) -> Vec<String>; fn by_category(&self) -> BTreeMap<MaterialCategory, BTreeMap<u8, Vec<MaterialLine>>>; fn has_snapshot(&self) -> bool }`. `Materials` sustituye todo (resincroniza); `MaterialCollected` suma con tope `grade_cap` (lo que excede se cuenta como `lost`); `MaterialDiscarded`, `Synthesis`, `EngineerCraft.ingredients`, `EngineerContribution` (tipo material), `TechnologyBroker.materials` restan (nunca bajo 0); `MaterialTrade` resta y suma; `MissionCompleted.materials_reward` suma (categoría de `reward_category`; si no, de `materials.json`). `MaterialLine { key, name_localised: Option<String>, name_en: Option<String> /* respaldo de materials.json, spec §7 */, grade: u8 /* 0 si no catalogado */, count: u32, max: u32, at_max: bool, known: bool }`; nombre mostrado: `name_localised` → `name_en` → clave del diario. `ChangeOrigin` deriva `Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize`. `MaterialChange { key, delta: i32, origin: ChangeOrigin, lost: u32, at }`, `enum ChangeOrigin { Mission, Scan, Mining, Collected, Trade, Synthesis, Engineering, Discarded }` (`MaterialCollected`: Encoded→Scan, Raw→Mining, Manufactured→Collected). `SessionChanges { fn push(&mut self, c: &[MaterialChange]); fn totals(&self) -> BTreeMap<ChangeOrigin, (u32 /*in*/, u32 /*out*/)>; fn recent(&self) -> &[MaterialChange] /* últimos 50 */; fn reset(&mut self, at) }`.
 
 - [ ] **Step 1: Tests:**
 
@@ -346,7 +366,8 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 #[test] fn collected_beyond_cap_is_clamped_and_flagged() { /* iron (G1, 300) en 299 + Collected 3 → 300, change.lost 2, at_max contiene "iron" */ }
 #[test] fn mission_reward_category_from_catalog() { /* MissionCompleted MaterialsReward [{Name:"shieldpatternanalysis",Count:2}] sin Category → +2, origin Mission */ }
 #[test] fn engineer_craft_consumes_ingredients_not_below_zero() { /* ingrediente con 1 y receta 3 → 0 */ }
-#[test] fn unknown_material_kept_with_journal_name() { /* Materials con "foo_new" → línea known false, count conservado, sin pánico */ }
+#[test] fn unknown_material_kept_with_journal_name() { /* Materials con "foo_new" → línea known false, grade 0, count conservado, sin pánico */ }
+#[test] fn name_en_fallback_when_no_localised() { /* Raw iron sin Name_Localised → name_localised None, name_en Some("Iron") */ }
 #[test] fn session_totals_by_origin() { /* Collected encoded 2 + Trade + Synthesis → totals Scan (2,0), Trade (1,6), Synthesis (0,1) */ }
 ```
 
@@ -375,13 +396,15 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 **Files:** Create `crates/tmc-modules/src/engineering/engineers.rs`; Modify `engineering/mod.rs`.
 
 **Interfaces:**
-- Consumes: `EngineerProgress::entries`, `data::{engineers, engineer}`, `GameState.location.star_pos` (verificar en código al ejecutar), inventario (Task 12) y carga (`Cargo`) para el siguiente paso.
-- Produces: `EngineerBook { fn apply(&mut self, p: &EngineerProgress) -> Vec<EngineerStatusChange>; fn status(&self, id: u64) -> Option<&EngineerEntry> }` (la lista de arranque sustituye sin generar cambios); `EngineerStatusChange { id: u64, from: Option<EngineerStatus>, to: EngineerStatus }`; `fn engineer_rows(book: &EngineerBook, pos: Option<[f64;3]>) -> Vec<EngineerRow>` con `EngineerRow { id, name, system, distance_ly: Option<f64>, status: EngineerStatus /* Unknown si no aparece */, rank: Option<u8>, rank_progress: Option<u8>, on_foot: bool, verified: bool }` ordenadas: nave antes que a pie, luego distancia (sin posición, por nombre); `fn next_step(def: &EngineerDef, entry: Option<&EngineerEntry>, have: &dyn Fn(&str) -> u32) -> NextStep` con `enum NextStep { Done, Requirement { key: String }, Invite { key: String }, Contribute { item: String, kind: String, have: u32, need: u32 } }`.
+- Consumes: `EngineerProgress::entries`, `data::{engineers, engineer}`, inventario (Task 12) y carga (`Cargo`) para el siguiente paso.
+- Posición: `LocationState.star_pos` es `[f64; 3]` (no `Option`; por defecto `[0,0,0]` = Sol), así que el módulo guarda su `position: Option<[f64; 3]>`: `None` hasta el primer `Location`/`FSDJump`/`CarrierJump` y luego el `StarPos` de ese evento (`LocationInfo`; verificar en código al ejecutar el nombre del campo), mismo criterio de «posición conocida» que `missions::position`.
+- Produces: `EngineerBook { fn apply(&mut self, p: &EngineerProgress) -> Vec<EngineerStatusChange>; fn status(&self, id: u64) -> Option<&EngineerEntry> }` (la lista de arranque sustituye sin generar cambios); `EngineerStatusChange { id: u64, from: Option<EngineerStatus>, to: EngineerStatus }`; `fn engineer_rows(book: &EngineerBook, pos: Option<[f64;3]>) -> Vec<EngineerRow>` con `EngineerRow { id, name, system, distance_ly: Option<f64>, status: EngineerStatus /* Unknown si no aparece */, rank: Option<u8>, rank_progress: Option<u8>, on_foot: bool, verified: bool }` ordenadas: nave antes que a pie, luego distancia (sin posición, por nombre); `fn next_step(def: &EngineerDef, entry: Option<&EngineerEntry>, have_material: &dyn Fn(&str) -> u32, have_commodity: &dyn Fn(&str) -> u32) -> NextStep` con `enum NextStep { Done, Requirement { key: String }, Invite { key: String }, Contribute { item: String, kind: String, have: u32, need: u32 } }`.
 
 - [ ] **Step 1: Tests:**
 
 ```rust
 #[test] fn rows_from_fixture_progress() { /* engineering_session.log: Felicity Unlocked rank 5; Elvira Invited → status y rank (criterio 3) */ }
+#[test] fn no_position_until_first_location() { /* sin Location/FSDJump → distance_ly None y orden por nombre; tras Location → Some */ }
 #[test] fn distance_from_position() { /* pos [0,0,0], Deciat star_pos del json → distance_ly == norma (±0.01) */ }
 #[test] fn startup_list_creates_no_changes() { /* apply(lista) → vec![] ; apply(suelta Invited→Unlocked) → 1 cambio from Some(Invited) */ }
 #[test] fn next_step_contribution_uses_inventory() { /* contribución 10 de un material con 4 → Contribute{have:4, need:10} */ }
@@ -418,7 +441,8 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 
 **Interfaces:**
 - Consumes: `Blueprint`, `Experimental`, `CurrentEng`, `ModuleSettings.engineering_rolls`.
-- Produces: `PlanRequest { module_type: String, blueprint: String, experimental: Option<String>, target_grade: u8 /* por defecto 5 o el máximo del blueprint */, rolls: [u8; 5] }`; `fn start_grade(current: Option<&CurrentEng>, blueprint: &str) -> StartPoint` con `StartPoint { grade: u8, partial_rolls: Option<u8>, replaces: bool }`; `fn plan_cost(bp: &Blueprint, exp: Option<&Experimental>, current: Option<&CurrentEng>, req: &PlanRequest) -> PlanCost`; `PlanCost { per_grade: BTreeMap<u8, (u8 /* tiradas */, BTreeMap<String, u32>)>, experimental: Option<BTreeMap<String, u32>>, total: BTreeMap<String, u32>, replaces_blueprint: bool, verified: bool }`.
+- Produces: `PlanRequest { module_type: String, blueprint: String, experimental: Option<String>, target_grade: u8 /* por defecto 5 o el máximo del blueprint */, rolls: [u8; 5] }`; `fn start_grade(current: Option<&CurrentEng>, blueprint: &str, rolls: &[u8; 5]) -> StartPoint` con `StartPoint { grade: u8, partial_rolls: Option<u8>, replaces: bool }`; `fn plan_cost(bp: &Blueprint, exp: Option<&Experimental>, current: Option<&CurrentEng>, req: &PlanRequest) -> PlanCost`; `PlanCost { per_grade: BTreeMap<u8, (u8 /* tiradas */, BTreeMap<String, u32>)>, experimental: Option<BTreeMap<String, u32>>, total: BTreeMap<String, u32>, replaces_blueprint: bool, verified: bool }`.
+- Semántica del diario: `Level` = grado actual (`Option<u32>` → `u8` acotado a 0..=5 en `CurrentEng`), `Quality` 0..1 = progreso dentro de ese grado; `quality >= 0.999` → grado completo.
 - Reglas (spec §3.4.3 y §10.2.2–4): de serie → desde G1; mismo blueprint en G*n* con `quality >= 0.999` → desde G*n+1*; mismo blueprint en G*n* a medias → G*n* cuenta `max(1, ceil(rolls[n] × (1 − quality)))` tiradas y luego G*n+1*…; otro blueprint → desde G1 y `replaces_blueprint = true`; cada tirada consume la receta de su grado una vez; experimental una vez si difiere del actual; objetivo ≤ grado completo actual → sin grados; `verified` = AND de blueprint y experimental.
 
 - [ ] **Step 1: Tests:**
@@ -431,7 +455,6 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 #[test] fn target_below_current_costs_nothing() { /* L5 q 1.0, objetivo 3 → per_grade vacío, total vacío */ }
 #[test] fn same_experimental_not_counted_twice() { /* current experimental == pedido → experimental None */ }
 #[test] fn custom_rolls_change_totals() { /* rolls [2,1,1,1,6] → g1 receta×2, g5 receta×6 */ }
-#[test] fn unknown_blueprint_is_no_data() { /* clave inexistente → el módulo devuelve estado "no_data" (Task 20), plan_cost no se llama */ }
 ```
 
 - [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(engineering): cálculo de materiales por grado y tiradas desde el grado actual`
@@ -465,8 +488,9 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 
 **Interfaces:**
 - Consumes: `PlanRequest`, `plan_cost`, `plan_trades`, `Migration` (`tmc_core`), `StoreTask`, `Store::exec_json`/consultas JSON (verificar en código al ejecutar como en `missions::tourism`).
-- Produces: `Goal { id: String /* "{ship_id}:{slot}:{blueprint}" */, ship_id: Option<u64>, slot: String, item: String, request: PlanRequest, base: Option<CurrentEng> }`; `MAX_GOALS = 20`; `fn reserve(goals_needs: &[(String, BTreeMap<String, u32>)], have: &dyn Fn(&str) -> u32) -> Reservations` (en el orden de la lista: cada objetivo reserva `min(lo que queda, lo que necesita)`); `Reservations { by_goal: BTreeMap<String, BTreeMap<String, u32>>, fn surplus(&self, key: &str, have: u32) -> u32 /* have − Σ reservas de todos */ }`; `GoalView { id, percent: u8 /* Σ min(have_reservado, need) / Σ need */, missing: BTreeMap<String, u32>, trades: Vec<TradeProposal>, completable: bool /* missing vacío tras intercambios */ }`; `ShoppingView { goals: Vec<GoalView>, needs: BTreeMap<String, u32>, missing: BTreeMap<String, u32>, surplus: BTreeMap<String, u32> }`; `pub const ENGINEERING_MIGRATION: Migration` con id `"engineering-001"` (tabla `engineering_goals(cmdr TEXT, position INTEGER, id TEXT, json TEXT, PRIMARY KEY(cmdr, id))`); `fn goals_read_task(cmdr: String) -> StoreTask` (tag `engineering.goals`, lectura, devuelve `{cmdr, goals}`); `fn goals_write_task(cmdr: String, goals: Vec<Goal>) -> StoreTask` (tag `engineering.goals.write`, reemplaza todas las del comandante en una transacción).
+- Produces: `Goal { id: String /* "{ship_id}:{slot}:{blueprint}:{experimental|-}:{grade}" */, ship_id: Option<u64>, slot: String, item: String, request: PlanRequest, base: Option<CurrentEng> }`; `MAX_GOALS = 20`; `fn reserve(goals_needs: &[(String, BTreeMap<String, u32>)], have: &dyn Fn(&str) -> u32) -> Reservations` (en el orden de la lista: cada objetivo reserva `min(lo que queda, lo que necesita)`); `Reservations { by_goal: BTreeMap<String, BTreeMap<String, u32>>, fn surplus(&self, key: &str, have: u32) -> u32 /* have − Σ reservas de todos */ }`; `GoalView { id, percent: u8 /* Σ min(have_reservado, need) / Σ need */, missing: BTreeMap<String, u32>, trades: Vec<TradeProposal>, completable: bool /* missing vacío tras intercambios */ }`; `ShoppingView { goals: Vec<GoalView>, needs: BTreeMap<String, u32>, missing: BTreeMap<String, u32>, surplus: BTreeMap<String, u32> }`; `pub const ENGINEERING_MIGRATION: Migration` con id `"engineering-001"` (tabla `engineering_goals(cmdr TEXT, position INTEGER, id TEXT, json TEXT, PRIMARY KEY(cmdr, id))`); `fn goals_read_task(cmdr: String) -> StoreTask` (tag `engineering.goals`, lectura, devuelve `{cmdr, goals}`); `fn goals_write_task(cmdr: String, goals: Vec<Goal>) -> StoreTask` (tag `engineering.goals.write`, reemplaza todas las del comandante en una transacción).
 - El flujo abierto (sin fijar) se evalúa como un objetivo más **al final** (no reserva antes que los fijados).
+- `pin_goal` con un `id` ya presente **sustituye** ese objetivo en su posición; un 21.º distinto se rechaza y `ShoppingView.status = "too_many"` (si no, `"ok"`). `Goal`, `PlanRequest` y `CurrentEng` derivan `Serialize, Deserialize` (columna `json`).
 
 - [ ] **Step 1: Tests:**
 
@@ -477,7 +501,8 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 #[test] fn completable_when_trades_cover_missing() { /* missing cubierto por propuestas → completable true, percent < 100 */ }
 #[test] fn goals_persist_across_restart() { /* criterio 7: Store en memoria + migración; write_task con 2 objetivos → read_task devuelve los 2 en orden */ }
 #[test] fn reorder_changes_reservations() { /* mover B antes de A → B reserva primero */ }
-#[test] fn max_goals_enforced() { /* el 21.º se rechaza con estado "too_many" */ }
+#[test] fn max_goals_enforced() { /* el 21.º se rechaza con status "too_many" */ }
+#[test] fn pin_same_id_replaces() { /* fijar dos veces "7:MainEngines:engine_dirty:special_engine_overloaded:5" → 1 objetivo en la misma posición; con grado 4 → 2 objetivos */ }
 ```
 
 - [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(engineering): lista de la compra con reservas por orden y persistencia`
@@ -489,7 +514,7 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 **Interfaces:**
 - Consumes: `RemoteStation`, `TraderKind`, `BrokerKind`, `MaterialDef.hints`, `EngineerDef`, `EngineerBook`, `ShoppingView`, `MaterialChange`, `EngineerStatusChange`.
 - Produces:
-  - `SourcesState { fn needed_traders(missing: &BTreeMap<String,u32>, proposals: &[TradeProposal]) -> BTreeSet<TraderKind>; fn on_stations(&mut self, system_address: u64, service: NearbyService, rows: Vec<RemoteStation>) -> bool /* false si el sistema ya no es el actual */; fn view(&self) -> SourcesView }`; `SourcesView { traders: BTreeMap<TraderKind, SourceStatus>, brokers: BTreeMap<BrokerKind, SourceStatus>, hints: BTreeMap<String, Vec<Hint>> }`, `enum SourceStatus { Loading, Ok(RemoteStation), NoData, Disabled }`. Brokers solo si algún faltante tiene `HintKind::Broker`.
+  - `SourcesState { current_system: Option<u64>, fn set_current_system(&mut self, addr: Option<u64>) /* limpia resultados si cambia */; fn needed_traders(missing: &BTreeMap<String,u32>, proposals: &[TradeProposal]) -> BTreeSet<TraderKind>; fn on_stations(&mut self, system_address: u64, service: NearbyService, rows: Vec<RemoteStation>) -> bool /* false y sin cambios si system_address != current_system */; fn view(&self) -> SourcesView }`; `SourcesView { traders: BTreeMap<TraderKind, SourceStatus>, brokers: BTreeMap<BrokerKind, SourceStatus>, hints: BTreeMap<String, Vec<Hint>> }`, `enum SourceStatus { Loading, Ok(RemoteStation), NoData, Disabled }`. Peticiones: `MaterialTrader(Some(kind))` por tipo necesario; brokers con `TechnologyBroker(Some(..))`. Brokers solo si algún faltante tiene `HintKind::Broker`.
   - `fn pick_engineer(blueprint: &str, grade: u8, book: &EngineerBook, pos: Option<[f64;3]>) -> EngineerPick` con `EngineerPick { nearest_unlocked: Option<EngineerRow>, nearest_any: Option<EngineerRow>, next_step: Option<NextStep> /* del más cercano si no está desbloqueado */ }`.
   - `enum EngAlertKind { MaterialAtMax { key }, GoalCompletable { goal, engineer: Option<String> }, EngineerUnlocked { id }, EngineerInvited { id }, ScarceObtained { key, goal } }`; `fn alerts_from(changes: &[MaterialChange], at_max_before: &BTreeSet<String>, at_max_now: &BTreeSet<String>, completable_before: &BTreeSet<String>, view: &ShoppingView, status: &[EngineerStatusChange], missing_before: &BTreeMap<String,u32>) -> Vec<EngAlertKind>` (solo transiciones).
 
@@ -538,8 +563,10 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 #[test] fn relevance_active_docked_at_workshop() { /* Docked con market_id de engineers.json → Active */ }
 #[test] fn engineering_topics_stay_under_16_kib() { /* catálogo entero al máximo con nombres localizados, 40 ingenieros, 60 módulos, 20 objetivos, flujo con 30 líneas → cada topic < 16384 */ }
 #[test] fn topics_dirty_only_on_change() { /* mismo Materials dos veces → engineering.inventory sucio solo la primera */ }
-#[test] fn engineering_topics_contract_snapshot() { /* serializa los topics del fixture; con UPDATE_CONTRACTS=1 reescribe ui/tests/fixtures/engineering-topics.json; si no, compara igual */ }
+#[test] fn unknown_blueprint_is_no_data() { /* preview con blueprint "nope" → engineering.flow.status "no_data", sin cost */ }
+#[test] fn ui_contract_snapshot_is_up_to_date() { /* patrón de missions/trade: contract_snapshot() del escenario de abajo; con UPDATE_CONTRACTS=1 reescribe ui/tests/fixtures/engineering-topics.json; si no, compara (CRLF normalizado) */ }
 ```
+  **Escenario del contrato** (`fn contract_snapshot() -> Value` en `engineering/tests.rs`): `engineering_session.log` en vivo (no replay, online) + `Net` falsa de Spansh para `MaterialTrader(Some(Encoded))` con «Fake Port» a 8,2 al y plataforma L + acciones `pin_goal` del FSD (`fsd_longrange`, G5, sin experimental, tiradas por defecto) y después `select_module MainEngines` + `preview { blueprint: "engine_dirty", experimental: "special_engine_overloaded", grade: 5 }`. Valores que fija y que afirman Tasks 21–24: `engineering.inventory` iron 117/300 en G1 y un material en `at_max`; `engineering.locker` graphene 8; `engineering.session` Scan +2, Trade +1/−6; `engineering.engineers` Felicity Unlocked rango 5 a 12,3 al; `engineering.goals` objetivo del FSD `completable: true` con `engineer: "Felicity Farseer"` y una propuesta 6→1; `engineering.flow` con al menos una línea `missing` 2 (el conjunto provisional de Tasks 8–9 y el fixture se ajustan para que así sea); `engineering.sources` Encoded `Ok(«Fake Port», 8.2, Large)`. Si un valor no sale con los datos, se ajusta el fixture (no los tests de UI) y se anota.
   más en `crates/tmc-app/src/clipboard.rs`: `engineering_actions_reach_core` (`engineering.reset_session` llega como `SourceEvent::Action`); y en `diagnostics.rs`: `engineering_topics_actions_and_module_registered_and_canary_redacted` (topics y acciones de arriba registrados; `engineering.CANARY` → `[redacted]`; `{"cmdr":"CMDR TESTER"}` no aparece). El test de `registry.rs` pasa con las acciones nuevas.
 
 - [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(engineering): módulo de ingeniería con topics, relevancia, red, almacén y registro`
@@ -562,6 +589,7 @@ Todas las tareas de UI: tipos en `ui/src/modules/engineering/types.ts` derivados
 test('materials grouped by grade with count over max', /* contrato: iron 117/300 en G1 */);
 test('at max warning visible', /* at_max ["iron"] → engineering-at-max visible */);
 test('unknown material shows journal name and no data', /* known false → nombre del diario + engineering-no-data */);
+test('material name falls back to name_en', /* name_localised null, name_en "Iron" → "Iron" */);
 test('locker tab lists components', /* graphene 8 */);
 test('session totals by origin', /* Scan +2, Trade +1/−6 */);
 ```
@@ -581,6 +609,7 @@ test('engineer row shows status rank and distance', /* Felicity Unlocked, rango 
 test('select engineer posts json action', /* POST engineering.select_engineer {id:300100} */);
 test('next step contribution shows have and need', /* 4/10 */);
 test('on foot engineers in their own section', /* on_foot true → sección a pie */);
+test('engineer blueprints with max grade', /* Felicity → nombre bp-engine_dirty y «G5» */);
 ```
 
 - [ ] **Step 2–4:** FAIL → implementar → PASS; checks. **Step 5: Commit** `feat(ui): panel de ingenieros con estado y siguiente paso`
@@ -648,9 +677,9 @@ test('settings put rolls and reverts on 400', /* [1,1,1,1,11] → 400 → valor 
 
 ### Task 26: Fixtures sintéticos y pruebas de extremo a extremo
 
-**Files:** Modify/complete `tests/fixtures/journal/engineering_session.log` (creado en Task 12), fixtures de red (Task 2); Create `ui/tests/e2e/engineering.spec.ts`; Modify `crates/tmc-app/src/e2e_tests.rs`. Si completar el fixture cambia un `<valor>` de un test anterior, se actualiza en este commit (y el contrato con `UPDATE_CONTRACTS=1`).
+**Files:** usa `tests/fixtures/journal/engineering_session.log` (Task 12) y los fixtures de red (Task 2); Create `ui/tests/e2e/engineering.spec.ts`; Modify `crates/tmc-app/src/e2e_tests.rs`. Si hubiera que tocar el fixture, se actualizan en este commit los tests Rust, el contrato (`UPDATE_CONTRACTS=1`) y los tests de UI 21–24.
 
-**Interfaces:** fixture a mano, `CMDR TESTER`, sin FID real: `LoadGame`, `Materials` (con un material al máximo y uno no catalogado), `EngineerProgress` lista (Unlocked/Invited/Known), `Loadout` con propulsores de serie y un FSD `FSD_LongRange` G3 q 1.0, `ShipLocker` completo + stub, `BackpackChange`, `MaterialCollected` ×3 (uno por encima del máximo), `MaterialTrade`, `Synthesis`, `MissionCompleted` con `MaterialsReward`, `FSDJump` a sistema con comerciante, `Docked` en el taller de un ingeniero, `EngineerCraft` sobre el FSD (G4), `EngineerProgress` suelto Invited→Unlocked.
+**Interfaces:** el fixture de Task 12 (`CMDR TESTER`, sin FID real) ya contiene: `LoadGame`, `Materials` (con un material al máximo y uno no catalogado), `EngineerProgress` lista (Unlocked/Invited/Known), `Loadout` con propulsores de serie y un FSD `FSD_LongRange` G3 q 1.0, `ShipLocker` completo + stub, `BackpackChange`, `MaterialCollected` ×3 (uno por encima del máximo), `MaterialTrade`, `Synthesis`, `MissionCompleted` con `MaterialsReward`, `FSDJump` a sistema con comerciante, `Docked` en el taller de un ingeniero, `EngineerCraft` sobre el FSD (G4), `EngineerProgress` suelto Invited→Unlocked.
 
 - [ ] **Step 1: Tests:**
 
@@ -665,11 +694,11 @@ test('settings put rolls and reverts on 400', /* [1,1,1,1,11] → 400 → valor 
 
 ### Task 27: `tmc-headless eval` — conciliación del inventario de materiales
 
-**Files:** Modify `apps/headless/src/eval.rs`, `crates/tmc-modules/src/eval.rs`.
+**Files:** Modify `apps/headless/src/eval.rs`, `crates/tmc-modules/src/eval.rs`; Create `tests/fixtures/journal/engineering_eval.log` (`Materials` → cambios → `Materials` coherente; no toca `engineering_session.log`).
 
 **Interfaces:** informe agregado (sin nombres de comandante ni sistemas): para cada instantánea `Materials` posterior a otra en el historial, predicción = anterior + cambios con `MaterialInventory::apply_event`; métricas n, % de materiales exactos, diferencia absoluta media y máx., recuento de eventos entre medias no tipados (para «Desviaciones»). Veredicto `INSUFICIENTE` si n < 5 (como F2/F3).
 
-- [ ] **Step 1: Tests:** `eval_inventory_reconciles_on_fixture` (`engineering_session.log` con dos `Materials`: 100 % exactos, n == 1, `INSUFICIENTE`).
+- [ ] **Step 1: Tests:** `eval_inventory_reconciles_on_fixture` (`engineering_eval.log`: 100 % exactos, n == 1, `INSUFICIENTE`).
 - [ ] **Step 2–4:** FAIL → implementar → PASS; checks; ejecutar sobre el historial del propietario y anotar solo agregados en «Verificación F4».
 - [ ] **Step 5: Commit** `feat(headless): eval de conciliación del inventario de materiales`
 
@@ -726,6 +755,21 @@ test('settings put rolls and reverts on 400', /* [1,1,1,1,11] → 400 → valor 
 ## Desviaciones
 
 (Cambios respecto a este plan o a la spec, con fecha, motivo y tareas afectadas.)
+
+- 2026-10-21 · Resoluciones del controlador tras el preflight y los spikes (Tasks 0–2):
+  1. **Orden de Task 3:** Tasks 8–10 escriben código con un conjunto provisional mínimo `verified:false` (incluye `engine_dirty` G1–G5 + Drag Drives del criterio 4 y `fsd_longrange`); solo el contenido completo espera la decisión de fuente (spike de datos: B en todos los archivos, nada importado). Tasks 12–15 siguen tras el código de 8–10.
+  2. **Fixtures:** Task 12 crea `engineering_session.log` con todo lo que usan Tasks 12–20; quien lo amplíe lo lista en *Files*. Task 27 usa `engineering_eval.log` propio.
+  3. **Contrato UI:** Task 20 fija el escenario y los valores de `ui/tests/fixtures/engineering-topics.json` (test `ui_contract_snapshot_is_up_to_date`, como `missions`/`trade`), que afirman Tasks 21–24.
+  4. **Posición:** `LocationState.star_pos` no es `Option`; el módulo guarda `position: Option<[f64;3]>` desde el primer `Location`/`FSDJump`/`CarrierJump`.
+  5. **Grados:** `start_grade` recibe `rolls`; `Level` = grado actual, `Quality` 0..1 = progreso en ese grado; a medias = `max(1, ceil(rolls_g×(1−quality)))`; `quality >= 0.999` = completo.
+  6. **Intercambios solo dentro del tipo de comerciante** (§10.2.5): «entre categorías» de §3.6 significa «otra familia del mismo tipo de comerciante».
+  7. **`Goal.id`** = `{ship_id}:{slot}:{blueprint}:{experimental|-}:{grade}`; repetir `pin_goal` con el mismo id lo sustituye.
+  8. Task 11 añade `unlock_keys_exist_in_engineering_data_ftl` y `every_module_type_has_modtype_name`.
+  9. `Ord/PartialOrd` en `MaterialCategory`, `ChangeOrigin`, `TraderKind`, `BrokerKind`, `EngineerStatus` (claves de `BTreeMap`/`BTreeSet`).
+  10. `SourcesState.current_system` + `set_current_system`; `on_stations` rechaza otros sistemas.
+  11. Tests de valor único: Task 4 entrada mal formada → omitida (`len()==1`); Task 7 sin disyunciones (con tipo → Spansh; sin tipo → Ardent; fallo de Spansh → `NoData`).
+  12. **Red (spike):** con tipo → Spansh `POST /api/stations/search` (`material_trader` Raw/Manufactured/Encoded, `technology_broker` Guardian/Human, `size` 5, distancia asc., `reference_system`); sin tipo → Ardent `nearest/material-trader` y `nearest/technology-broker`; 4 etiquetas `endpoint` nuevas en la lista cerrada; `NearestService` gana `system_name` (cambio aditivo de la variante de F2). **Diario (spike):** stub de `ShipLocker` → releer `ShipLocker.json`, nunca vaciar; `EngineerProgress` suelto con campos opcionales; `MaterialsReward.Category` llega como `$MICRORESOURCE_CATEGORY_X;` → se normaliza, con `materials.json` de respaldo si falta o es desconocida; `ExperimentalEffect` no visto en los diarios del propietario → fixtures desde el manual del diario; `ScientificResearch` no se tipa: la siguiente instantánea `Materials` (en cada `LoadGame`) resincroniza.
+  13. Respaldo `name_en` de materiales (spec §7) en Task 12, con test de UI en Task 21; test de blueprints y grado máximo del ingeniero en Task 22.
 
 Ambigüedades de la spec resueltas por el redactor (2026-10-21; se someten al propietario en Task 3):
 
