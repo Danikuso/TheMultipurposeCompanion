@@ -19,6 +19,9 @@ pub use wiring::{Running, start, start_custom, start_full, start_with_transport}
 mod e2e_tests;
 
 #[cfg(test)]
+mod engineering_pages_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use axum::body::Body;

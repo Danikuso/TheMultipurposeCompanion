@@ -22,9 +22,63 @@ struct H {
     next_id: u64,
     line_no: u64,
     clock: i64,
+    max_page_size: std::cell::Cell<usize>,
 }
 
 impl H {
+    fn pages(&self, resource: &str, section: &str) -> Vec<Value> {
+        let mut rows = Vec::new();
+        let mut cursor = 0;
+        loop {
+            let page = self
+                .m
+                .query(
+                    resource,
+                    &ModulePageQuery {
+                        revision: self.m.revision,
+                        cursor,
+                        section: Some(section.into()),
+                    },
+                )
+                .unwrap();
+            let size = serde_json::to_vec(&page).unwrap().len();
+            self.max_page_size.set(self.max_page_size.get().max(size));
+            assert!(size < 16384, "{resource}/{section}: {size} bytes");
+            rows.extend(page["items"].as_array().unwrap().iter().cloned());
+            match page["next_cursor"].as_u64() {
+                Some(next) => {
+                    assert!(next as usize > cursor);
+                    cursor = next as usize;
+                }
+                None => {
+                    assert_eq!(rows.len(), page["total"].as_u64().unwrap() as usize);
+                    return rows;
+                }
+            }
+        }
+    }
+    fn details(&self, topic: &str) -> Value {
+        let mut value = self.val(topic);
+        let resource = topic.strip_prefix("engineering.").unwrap();
+        let sections: &[&str] = if resource == "goals" {
+            &["goals", "needs", "missing", "surplus"]
+        } else {
+            &["items", "components", "consumables", "data"]
+        };
+        for section in sections {
+            let rows = self.pages(resource, section);
+            value[*section] = if resource == "goals" && *section != "goals" {
+                Value::Object(
+                    rows.into_iter()
+                        .map(|r| (r["key"].as_str().unwrap().to_owned(), r["count"].clone()))
+                        .collect(),
+                )
+            } else {
+                json!(rows)
+            };
+        }
+        value
+    }
     fn new() -> Self {
         Self {
             m: Engineering::new(),
@@ -38,6 +92,7 @@ impl H {
             next_id: 1,
             line_no: 0,
             clock: 600,
+            max_page_size: std::cell::Cell::new(0),
         }
     }
 
@@ -482,7 +537,7 @@ fn fixture_inventory_matches_snapshot_plus_changes() {
 fn locker_and_session_from_fixture() {
     let mut h = H::new();
     h.fixture();
-    let locker = h.val("engineering.locker");
+    let locker = h.details("engineering.locker");
     assert_eq!(locker["components"][0]["key"], "graphene");
     assert_eq!(locker["components"][0]["count"], json!(8));
     let s = h.val("engineering.session");
@@ -501,7 +556,7 @@ fn ship_locker_companion_file_updates_the_locker() {
     let mut h = H::new();
     h.fixture();
     assert_eq!(
-        h.val("engineering.locker")["components"][0]["count"],
+        h.details("engineering.locker")["components"][0]["count"],
         json!(8)
     );
     let file = json!({
@@ -515,7 +570,7 @@ fn ship_locker_companion_file_updates_the_locker() {
         file,
     )));
     assert!(dirty.contains("engineering.locker"));
-    let locker = h.val("engineering.locker");
+    let locker = h.details("engineering.locker");
     assert_eq!(locker["components"][0]["count"], json!(11));
     assert_eq!(locker["items"][0]["key"], "healthpack");
     // El mismo archivo otra vez no cambia nada.
@@ -656,7 +711,7 @@ fn unknown_blueprint_is_no_data() {
     // Y no se puede fijar como objetivo.
     let dirty = h.action("engineering.pin_goal", json!({}));
     assert!(dirty.is_empty());
-    assert_eq!(h.val("engineering.goals")["goals"], json!([]));
+    assert_eq!(h.details("engineering.goals")["goals"], json!([]));
 }
 
 #[test]
@@ -722,7 +777,7 @@ fn replay_emits_no_requests_or_store_writes() {
     assert!(h.tags.is_empty(), "{:?}", h.tags);
     // El objetivo sí queda en memoria y las fuentes están desactivadas.
     assert_eq!(
-        h.val("engineering.goals")["goals"]
+        h.details("engineering.goals")["goals"]
             .as_array()
             .unwrap()
             .len(),
@@ -939,7 +994,7 @@ fn commander_switch_clears_and_reloads_goals() {
     h.fixture();
     h.pin_fsd();
     assert_eq!(
-        h.val("engineering.goals")["goals"]
+        h.details("engineering.goals")["goals"]
             .as_array()
             .unwrap()
             .len(),
@@ -948,9 +1003,9 @@ fn commander_switch_clears_and_reloads_goals() {
     assert!(h.count_tag("engineering.goals.write") >= 1);
     h.results.clear();
     h.journal("Commander", r#","Name":"B""#);
-    assert_eq!(h.val("engineering.goals")["goals"], json!([]));
+    assert_eq!(h.details("engineering.goals")["goals"], json!([]));
     assert_eq!(h.val("engineering.inventory")["at_max"], json!([]));
-    assert_eq!(h.val("engineering.locker")["components"], json!([]));
+    assert_eq!(h.details("engineering.locker")["components"], json!([]));
     assert_eq!(h.val("engineering.flow")["status"], "idle");
     assert_eq!(h.val("engineering.session")["totals"], json!({}));
     let read = h
@@ -966,7 +1021,7 @@ fn commander_switch_clears_and_reloads_goals() {
 fn stored_goals_for_other_cmdr_ignored() {
     let mut h = H::with_store();
     h.fixture();
-    let before = h.val("engineering.goals");
+    let before = h.details("engineering.goals");
     let dirty = h.send(SourceEvent::Stored {
         module: "engineering".into(),
         tag: "engineering.goals".into(),
@@ -978,7 +1033,7 @@ fn stored_goals_for_other_cmdr_ignored() {
         }]}),
     });
     assert!(dirty.is_empty());
-    assert_eq!(h.val("engineering.goals"), before);
+    assert_eq!(h.details("engineering.goals"), before);
 }
 
 /// Criterio 7: la lista sobrevive a un reinicio y avisa al poder completarse.
@@ -987,14 +1042,14 @@ fn goals_survive_restart_and_alert_completable() {
     let mut h = H::with_store();
     h.fixture();
     h.pin_fsd();
-    let goals = h.val("engineering.goals");
+    let goals = h.details("engineering.goals");
     assert_eq!(goals["goals"].as_array().unwrap().len(), 1);
     let writes = h.count_tag("engineering.goals.write");
     assert_eq!(writes, 1);
 
     let mut h2 = H::restart(&h);
     h2.fixture();
-    assert_eq!(h2.val("engineering.goals")["goals"], goals["goals"]);
+    assert_eq!(h2.details("engineering.goals")["goals"], goals["goals"]);
     // Releer no escribe nada.
     assert_eq!(h2.count_tag("engineering.goals.write"), 0);
 
@@ -1018,14 +1073,14 @@ fn goals_survive_restart_and_alert_completable() {
         r#","Ship":"asp","ShipID":7,"Modules":[{"Slot":"FrameShiftDrive","Item":"int_hyperdrive_size5_class5","On":true,"Priority":0,"Engineering":{"BlueprintName":"FSD_LongRange","Level":4,"Quality":1.0}}]"#,
     );
     h.pin_fsd();
-    let g = &h.val("engineering.goals")["goals"][0];
+    let g = &h.details("engineering.goals")["goals"][0];
     assert_eq!(g["completable"], json!(false));
     assert_eq!(h.val("engineering.alerts")["alerts"], json!([]));
     h.journal(
         "MaterialCollected",
         r#","Category":"Encoded","Name":"dataminedwake","Count":1"#,
     );
-    let g = &h.val("engineering.goals")["goals"][0];
+    let g = &h.details("engineering.goals")["goals"][0];
     assert_eq!(g["completable"], json!(true));
     assert_eq!(g["engineer"], "Felicity Farseer");
     let alerts = h.val("engineering.alerts");
@@ -1057,7 +1112,7 @@ fn unpin_and_move_goals_rewrite_the_list() {
         json!({"blueprint": "engine_dirty", "grade": 3}),
     );
     h.action("engineering.pin_goal", json!({}));
-    let ids: Vec<String> = h.val("engineering.goals")["goals"]
+    let ids: Vec<String> = h.details("engineering.goals")["goals"]
         .as_array()
         .unwrap()
         .iter()
@@ -1065,7 +1120,7 @@ fn unpin_and_move_goals_rewrite_the_list() {
         .collect();
     assert_eq!(ids.len(), 2);
     h.action("engineering.move_goal", json!({"id": ids[1], "to": 0}));
-    let moved: Vec<String> = h.val("engineering.goals")["goals"]
+    let moved: Vec<String> = h.details("engineering.goals")["goals"]
         .as_array()
         .unwrap()
         .iter()
@@ -1083,7 +1138,7 @@ fn unpin_and_move_goals_rewrite_the_list() {
     }
     h.action("engineering.unpin_goal", json!({"id": ids[1]}));
     assert_eq!(
-        h.val("engineering.goals")["goals"]
+        h.details("engineering.goals")["goals"]
             .as_array()
             .unwrap()
             .len(),
@@ -1124,7 +1179,7 @@ fn pin_too_many_is_reported_and_list_intact() {
         ));
     }
     h.pin_fsd();
-    let g = h.val("engineering.goals");
+    let g = h.details("engineering.goals");
     assert_eq!(g["status"], "too_many");
     assert_eq!(g["goals"].as_array().unwrap().len(), goals::MAX_GOALS);
 }
@@ -1489,7 +1544,6 @@ fn topics_dirty_only_on_change() {
 }
 
 #[test]
-#[ignore = "bloqueo de contrato Task 20: engineering.goals supera 16 KiB con 20 objetivos e intercambios"]
 fn worst_case_engine_goals_size() {
     let mut h = H::new();
     h.fixture();
@@ -1561,7 +1615,7 @@ fn worst_case_engine_goals_size() {
                         json!(cats["Encoded"])
                     ),
                 );
-                let v = h.val(TOPIC_GOALS);
+                let v = h.details(TOPIC_GOALS);
                 assert_eq!(v["goals"].as_array().unwrap().len(), 20);
                 let trades: usize = v["goals"]
                     .as_array()
@@ -1570,7 +1624,11 @@ fn worst_case_engine_goals_size() {
                     .map(|g| g["trades"].as_array().unwrap().len())
                     .sum();
                 max_trades = max_trades.max(trades);
-                let size = serde_json::to_vec(&v).unwrap().len();
+                let size = serde_json::to_vec(&h.val(TOPIC_GOALS)).unwrap().len();
+                assert_eq!(v["goals"], json!(h.m.goal_pages["goals"]));
+                for section in ["goals", "needs", "missing", "surplus"] {
+                    h.pages("goals", section);
+                }
                 maximum = maximum.max(size);
                 eprintln!(
                     "goals {} experimental={} surplus={surplus}: {size} B, {trades} trades",
@@ -1580,12 +1638,15 @@ fn worst_case_engine_goals_size() {
             }
         }
     }
-    assert!(max_trades > 0);
+    eprintln!(
+        "largest goals summary: {maximum} bytes; largest page: {} bytes; trades: {max_trades}",
+        h.max_page_size.get()
+    );
+    assert_eq!(max_trades, 215);
     assert!(maximum < 16384, "engineering.goals: {maximum} bytes");
 }
 
 #[test]
-#[ignore = "bloqueo de contrato Task 20: engineering.locker publica 16832 bytes con 200 recursos localizados"]
 fn engineering_topics_stay_under_16_kib() {
     let mut h = H::new();
     h.journal("Commander", r#","FID":"F1","Name":"CMDR TESTER""#);
@@ -1633,8 +1694,20 @@ fn engineering_topics_stay_under_16_kib() {
         ),
     );
     for section in ["items", "components", "consumables", "data"] {
-        assert_eq!(h.val(TOPIC_LOCKER)[section].as_array().unwrap().len(), 50);
+        assert_eq!(
+            h.details(TOPIC_LOCKER)[section].as_array().unwrap().len(),
+            50
+        );
     }
+    let expected = serde_json::to_value(h.m.locker.view()).unwrap();
+    for section in ["items", "components", "consumables", "data"] {
+        assert_eq!(json!(h.pages("locker", section)), expected[section]);
+    }
+    eprintln!(
+        "locker summary: {} bytes; largest locker page: {} bytes; 200 rows",
+        serde_json::to_vec(&h.val(TOPIC_LOCKER)).unwrap().len(),
+        h.max_page_size.get()
+    );
     for _ in 0..25 {
         h.journal(
             "MaterialDiscarded",
@@ -1772,6 +1845,7 @@ fn contract_snapshot() -> Value {
     ));
     h.preview_engines();
     json!({
+        "engineering.pages": {"goals":h.m.query("goals", &ModulePageQuery {revision:h.m.revision,cursor:0,section:None}).unwrap(), "locker_components":h.m.query("locker", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("components".into())}).unwrap()},
         "engineering.inventory": h.val("engineering.inventory"),
         "engineering.locker": h.val("engineering.locker"),
         "engineering.session": h.val("engineering.session"),
@@ -1789,7 +1863,7 @@ fn contract_snapshot() -> Value {
 #[test]
 fn fixture_topics_stay_under_16_kib() {
     let snapshot = contract_snapshot();
-    assert_eq!(snapshot.as_object().unwrap().len(), 9);
+    assert_eq!(snapshot.as_object().unwrap().len(), 10);
     for (topic, value) in snapshot.as_object().unwrap() {
         let size = serde_json::to_vec(value).unwrap().len();
         assert!(size < 16384, "{topic}: {size} B");
@@ -1804,8 +1878,11 @@ fn contract_snapshot_has_the_values_the_ui_asserts() {
         json!(117)
     );
     assert_eq!(c["engineering.inventory"]["at_max"], json!(["polonium"]));
-    assert_eq!(c["engineering.locker"]["components"][0]["count"], json!(8));
-    let goal = &c["engineering.goals"]["goals"][0];
+    assert_eq!(
+        c["engineering.pages"]["locker_components"]["items"][0]["count"],
+        json!(8)
+    );
+    let goal = &c["engineering.pages"]["goals"]["items"][0];
     assert_eq!(goal["completable"], json!(true));
     assert_eq!(goal["engineer"], "Felicity Farseer");
     assert_eq!(goal["trades"][0]["give"], json!(6));
@@ -1903,4 +1980,154 @@ fn unrelated_journal_events_do_not_recompute() {
     }
     let after: Vec<Value> = TOPICS.iter().map(|t| h.val(t)).collect();
     assert_eq!(before, after);
+}
+
+#[test]
+fn pagination_revisions_are_semantic_monotonic_and_queries_read_only() {
+    let mut h = H::new();
+    h.fixture();
+    let revision = h.m.revision;
+    let query = ModulePageQuery {
+        revision,
+        cursor: 0,
+        section: None,
+    };
+    let before = h.m.values.clone();
+    let relevance = h.m.relevance(&h.state);
+    let first = h.m.query("goals", &query).unwrap();
+    assert_eq!(first, h.m.query("goals", &query).unwrap());
+    h.pages("locker", "components");
+    assert_eq!(before, h.m.values);
+    assert_eq!(relevance, h.m.relevance(&h.state));
+    assert_eq!(revision, h.m.revision);
+    // The timestamp of an otherwise identical snapshot does not invalidate pages.
+    let snapshot = h.m.locker.view();
+    let contents = json!({"Items":snapshot.items.iter().map(|r|json!({"Name":r.key,"Name_Localised":r.name_localised,"Count":r.count})).collect::<Vec<_>>(),"Components":snapshot.components.iter().map(|r|json!({"Name":r.key,"Name_Localised":r.name_localised,"Count":r.count})).collect::<Vec<_>>(),"Consumables":[],"Data":[]});
+    let mut raw = contents.to_string();
+    raw.remove(0);
+    raw.pop();
+    h.journal("ShipLocker", &format!(",{raw}"));
+    assert_eq!(revision, h.m.revision);
+    h.journal(
+        "MaterialCollected",
+        r#", "Category":"Raw","Name":"iron","Count":1"#,
+    );
+    assert!(h.m.revision > revision);
+    assert_eq!(
+        h.m.query("goals", &query),
+        Err(ModuleQueryError::StaleRevision)
+    );
+    let before_engineer = h.m.revision;
+    h.journal("EngineerProgress", r#", "Engineer":"Felicity Farseer","EngineerID":300100,"Progress":"Unlocked","Rank":4,"RankProgress":50"#);
+    assert!(h.m.revision > before_engineer);
+    h.action(ACTION_SELECT_MODULE, json!({"slot":"MainEngines"}));
+    h.action(
+        ACTION_PREVIEW,
+        json!({"blueprint":"engine_dirty","grade":5,"rolls":[1,1,1,1,4]}),
+    );
+    let before_goal = h.m.revision;
+    h.action(ACTION_PIN_GOAL, json!({}));
+    assert!(h.m.revision > before_goal);
+    let before_switch = h.m.revision;
+    h.journal("Commander", r#", "Name":"B","FID":"F2""#);
+    assert!(h.m.revision > before_switch);
+    let empty_b = h.m.revision;
+    h.journal("Commander", r#", "Name":"CMDR TESTER","FID":"F1""#);
+    assert!(h.m.revision > empty_b);
+    let empty_a = h.m.revision;
+    h.journal("Commander", r#", "Name":"B","FID":"F2""#);
+    assert!(h.m.revision > empty_a);
+    assert_eq!(
+        h.m.query(
+            "locker",
+            &ModulePageQuery {
+                revision: empty_b,
+                cursor: 0,
+                section: None
+            }
+        ),
+        Err(ModuleQueryError::StaleRevision)
+    );
+}
+
+#[test]
+fn pagination_validates_sections_cursor_and_preserves_escaped_utf8() {
+    let mut h = H::new();
+    h.fixture();
+    let query = |cursor, section: &str| ModulePageQuery {
+        revision: h.m.revision,
+        cursor,
+        section: Some(section.into()),
+    };
+    assert_eq!(
+        h.m.query("missing", &query(0, "items")),
+        Err(ModuleQueryError::NotFound)
+    );
+    assert_eq!(
+        h.m.query("locker", &query(0, "CANARY")),
+        Err(ModuleQueryError::InvalidQuery)
+    );
+    assert_eq!(
+        h.m.query("locker", &query(usize::MAX, "items")),
+        Err(ModuleQueryError::InvalidQuery)
+    );
+    let rows: Vec<Value> = (0..200)
+        .map(|i| json!({"key":i,"name":"\u{e9}\u{6f22}\u{5b57}\"\n".repeat(10)}))
+        .collect();
+    let mut cursor = 0;
+    let mut actual = Vec::new();
+    let mut max_size = 0;
+    loop {
+        let page = pagination::page(
+            42,
+            "items",
+            &rows,
+            &ModulePageQuery {
+                revision: 42,
+                cursor,
+                section: None,
+            },
+        )
+        .unwrap();
+        let bytes = serde_json::to_vec(&page).unwrap();
+        max_size = max_size.max(bytes.len());
+        assert!(bytes.len() < 16384);
+        assert_eq!(serde_json::from_slice::<Value>(&bytes).unwrap(), page);
+        actual.extend(page["items"].as_array().unwrap().iter().cloned());
+        match page["next_cursor"].as_u64() {
+            Some(next) => {
+                assert!(next as usize > cursor);
+                cursor = next as usize;
+            }
+            None => break,
+        }
+    }
+    assert_eq!(actual, rows);
+    assert_eq!(
+        pagination::page(
+            42,
+            "items",
+            &[json!({"name":"\u{6f22}".repeat(6000)})],
+            &ModulePageQuery {
+                revision: 42,
+                cursor: 0,
+                section: None
+            }
+        ),
+        Err(ModuleQueryError::ItemTooLarge)
+    );
+    let end = pagination::page(
+        42,
+        "items",
+        &rows,
+        &ModulePageQuery {
+            revision: 42,
+            cursor: rows.len(),
+            section: None,
+        },
+    )
+    .unwrap();
+    assert_eq!(end["items"], json!([]));
+    assert!(end["next_cursor"].is_null());
+    eprintln!("largest escaped UTF8 page: {max_size} bytes");
 }

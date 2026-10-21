@@ -23,6 +23,7 @@ pub mod engineers;
 pub mod goals;
 pub mod inventory;
 pub mod locker;
+mod pagination;
 pub mod plan;
 pub mod ship;
 pub mod sources;
@@ -35,7 +36,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use serde_json::{Value, json};
-use tmc_core::{Alert, Migration, Module, ModuleCtx, Relevance, Severity, TopicSet};
+use tmc_core::{
+    Alert, Migration, Module, ModuleCtx, ModulePageQuery, ModuleQueryError, Relevance, Severity,
+    TopicSet,
+};
 use tmc_model::companion::{CompanionFile, CompanionKind};
 use tmc_model::events::{EngineerStatus, EventKind, JournalEvent};
 use tmc_model::net::{BrokerKind, NearbyService, NetOutcome, NetQuery, NetResponse, PadSize};
@@ -195,6 +199,9 @@ pub struct Engineering {
     missing_prev: BTreeMap<String, u32>,
     /// Último evento de taller (`EngineerCraft`, `EngineerProgress` suelto…) sin salir aún.
     workshop_activity: bool,
+    revision: u64,
+    goal_pages: BTreeMap<String, Vec<Value>>,
+    locker_pages: BTreeMap<String, Vec<Value>>,
     values: std::collections::HashMap<&'static str, Value>,
 }
 
@@ -224,6 +231,9 @@ impl Engineering {
             completable_prev: BTreeSet::new(),
             missing_prev: BTreeMap::new(),
             workshop_activity: false,
+            revision: 0,
+            goal_pages: BTreeMap::new(),
+            locker_pages: BTreeMap::new(),
             values: std::collections::HashMap::new(),
         }
     }
@@ -268,6 +278,7 @@ impl Engineering {
         }
         let switched = self.cmdr.is_some();
         self.cmdr = Some(name);
+        self.revision += 1;
         decide!("engineering.cmdr.changed", {"switched": switched});
         if !switched {
             return;
@@ -967,13 +978,13 @@ impl Engineering {
                 }))
             })
             .collect();
-        self.stamp(json!({
+        json!({
             "status": shopping.status,
             "goals": goals,
             "needs": shopping.needs,
             "missing": shopping.missing,
             "surplus": shopping.surplus,
-        }))
+        })
     }
 
     fn set(&mut self, topic: &'static str, v: Value, dirty: &mut TopicSet) {
@@ -989,19 +1000,76 @@ impl Engineering {
         verified: &BTreeMap<String, bool>,
     ) -> TopicSet {
         let mut dirty = TopicSet::new();
-        let v = self.render_inventory();
-        self.set(TOPIC_INVENTORY, v, &mut dirty);
-        let v = self.stamp(serde_json::to_value(self.locker.view()).unwrap_or_default());
+        let inventory = self.render_inventory();
+        let engineers = self.render_engineers(state);
+        let semantic_changed = |topic: &str, value: &Value| {
+            self.values.get(topic).is_none_or(|old| {
+                old.as_object().map(|o| {
+                    o.iter()
+                        .filter(|(k, _)| k.as_str() != "as_of")
+                        .collect::<BTreeMap<_, _>>()
+                }) != value.as_object().map(|o| {
+                    o.iter()
+                        .filter(|(k, _)| k.as_str() != "as_of")
+                        .collect::<BTreeMap<_, _>>()
+                })
+            })
+        };
+        let dependencies_changed = semantic_changed(TOPIC_INVENTORY, &inventory)
+            || semantic_changed(TOPIC_ENGINEERS, &engineers);
+        let mut details = self.render_goals(shopping, verified);
+        let mut goal_pages = BTreeMap::new();
+        goal_pages.insert(
+            "goals".to_owned(),
+            details["goals"]
+                .as_array_mut()
+                .map(std::mem::take)
+                .unwrap_or_default(),
+        );
+        for section in ["needs", "missing", "surplus"] {
+            let rows = details[section]
+                .as_object_mut()
+                .map(std::mem::take)
+                .unwrap_or_default()
+                .into_iter()
+                .map(|(key, count)| json!({"key":key,"count":count}))
+                .collect();
+            goal_pages.insert(section.to_owned(), rows);
+        }
+        let locker = serde_json::to_value(self.locker.view()).unwrap_or_default();
+        let locker_pages: BTreeMap<String, Vec<Value>> =
+            serde_json::from_value(locker).unwrap_or_default();
+        if dependencies_changed
+            || self
+                .values
+                .get(TOPIC_GOALS)
+                .is_none_or(|old| old["status"] != shopping.status)
+            || self.goal_pages != goal_pages
+            || self.locker_pages != locker_pages
+        {
+            self.revision += 1;
+        }
+        self.goal_pages = goal_pages;
+        self.locker_pages = locker_pages;
+        self.set(TOPIC_INVENTORY, inventory, &mut dirty);
+        let counts: BTreeMap<_, _> = self
+            .locker_pages
+            .iter()
+            .map(|(k, v)| (k, v.len()))
+            .collect();
+        let v = self.stamp(json!({"revision":self.revision,"counts":counts}));
         self.set(TOPIC_LOCKER, v, &mut dirty);
         let v = self.render_session();
         self.set(TOPIC_SESSION, v, &mut dirty);
-        let v = self.render_engineers(state);
-        self.set(TOPIC_ENGINEERS, v, &mut dirty);
+        self.set(TOPIC_ENGINEERS, engineers, &mut dirty);
         let v = self.stamp(serde_json::to_value(&self.ship).unwrap_or_default());
         self.set(TOPIC_SHIP, v, &mut dirty);
         let v = self.render_flow(state, all, flow_cost);
         self.set(TOPIC_FLOW, v, &mut dirty);
-        let v = self.render_goals(shopping, verified);
+        let goals: Vec<Value> = self.goal_pages["goals"].iter().map(|g| json!({
+            "id":g["id"], "percent":g["percent"], "completable":g["completable"], "engineer":g["engineer"],
+        })).collect();
+        let v = self.stamp(json!({"revision":self.revision,"status":shopping.status,"total":goals.len(),"goals":goals}));
         self.set(TOPIC_GOALS, v, &mut dirty);
         let v = self.stamp(serde_json::to_value(self.sources.view()).unwrap_or_default());
         self.set(TOPIC_SOURCES, v, &mut dirty);
@@ -1330,6 +1398,24 @@ impl Module for Engineering {
             _ => return TopicSet::new(),
         }
         self.refresh(state, ctx, &delta)
+    }
+
+    fn query(&self, resource: &str, query: &ModulePageQuery) -> Result<Value, ModuleQueryError> {
+        let (sections, default) = match resource {
+            "goals" => (&self.goal_pages, "goals"),
+            "locker" => (&self.locker_pages, "items"),
+            _ => return Err(ModuleQueryError::NotFound),
+        };
+        let section = query.section.as_deref().unwrap_or(default);
+        let valid = match resource {
+            "goals" => matches!(section, "goals" | "needs" | "missing" | "surplus"),
+            _ => matches!(section, "items" | "components" | "consumables" | "data"),
+        };
+        if !valid {
+            return Err(ModuleQueryError::InvalidQuery);
+        }
+        let rows = sections.get(section).ok_or(ModuleQueryError::Unavailable)?;
+        pagination::page(self.revision, section, rows, query)
     }
 
     fn topic_value(&self, topic: &str) -> Option<Value> {
