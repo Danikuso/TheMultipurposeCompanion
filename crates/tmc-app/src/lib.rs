@@ -84,6 +84,44 @@ lan = false
     }
 
     #[test]
+    fn auto_companion_defaults_true_and_old_config_keeps_it() {
+        assert!(Config::default().auto_companion);
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(
+            &path,
+            "language = \"en\"
+",
+        )
+        .unwrap();
+        let cfg = Config::load_from_or_default(&path);
+        assert!(cfg.auto_companion);
+        let mut off = cfg.clone();
+        off.auto_companion = false;
+        off.save_to(&path).unwrap();
+        assert!(!Config::load_from_or_default(&path).auto_companion);
+    }
+
+    #[tokio::test]
+    async fn put_config_persists_auto_companion_and_rejects_non_boolean() {
+        let dir = tempdir().unwrap();
+        let (actions, _core, _online) = runtime_actions(dir.path());
+        let before = actions.get_config();
+        assert_eq!(before["auto_companion"], true);
+        let mut bad = before.clone();
+        bad["auto_companion"] = json!("no");
+        assert!(matches!(
+            actions.put_config(bad),
+            Err(ActionError::Failed(_))
+        ));
+        assert_eq!(actions.get_config(), before);
+        let mut off = before.clone();
+        off["auto_companion"] = json!(false);
+        assert_eq!(actions.put_config(off).unwrap()["auto_companion"], false);
+        assert_eq!(actions.get_config()["auto_companion"], false);
+    }
+
+    #[test]
     fn f1_config_without_mining_fields_loads_with_defaults() {
         let dir = tempdir().unwrap();
         let path = dir.path().join("config.toml");

@@ -290,7 +290,7 @@ mod tests {
             (
                 "ui.app.layout",
                 json!({"tab": "layout:combat", "layout": "combat",
-                "pinned": false, "slot": ["target", "ax"], "defined_slots": 5,
+                "pinned": false, "auto_companion": true, "slot": ["target", "ax"], "defined_slots": 5,
                 "module": ["combat", "mining"], "relevance": ["active", "normal"],
                 "context": "exploration", "manual_context": "none",
                 "ax_active": false, "ax_presence": true, "cz_present": false}),
