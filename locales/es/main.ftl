@@ -111,3 +111,5 @@ eddn-radius = Radio de recepción EDDN (al)
 tourism-reference = Referencia inicial de turismo (cr/al)
 settings-eddn-radius = Radio de datos EDDN (al, 20–500)
 settings-tourism-reference = Referencia de turismo (cr/al, 1 000–10 000 000)
+auto-companion = Auto-companion
+auto-companion-tooltip = Activado, TMC cambia solo de disposición y de panel de contexto según la relevancia. Desactivado, se queda donde lo dejaste.

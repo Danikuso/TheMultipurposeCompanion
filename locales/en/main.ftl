@@ -111,3 +111,5 @@ eddn-radius = EDDN reception radius (ly)
 tourism-reference = Initial sightseeing reference (cr/ly)
 settings-eddn-radius = EDDN data radius (ly, 20–500)
 settings-tourism-reference = Tourism reference (cr/ly, 1,000–10,000,000)
+auto-companion = Auto-companion
+auto-companion-tooltip = On: TMC switches layout and context panel automatically by relevance. Off: it stays where you left it.

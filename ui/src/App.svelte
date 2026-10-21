@@ -3,6 +3,7 @@
   import { connect, topic } from './lib/ws.svelte';
   import { diag, diagOn } from './lib/diag.svelte';
   import { t } from './lib/i18n';
+  import { loadPrefs, prefs } from './lib/prefs.svelte';
   import { modules } from './modules/registry';
   import Settings from './settings/Settings.svelte';
   import Grid from './shell/Grid.svelte';
@@ -27,14 +28,31 @@
       : { name: location?.body ?? matchingExoBody?.body ?? null },
   ]));
   const auto = $derived(autoLayout(liveModules, null));
-  const activeTab = $derived(view ?? pin ?? `layout:${auto ?? 'exploration'}`);
+  // Auto-companion apagado: la disposición y el panel de contexto se quedan donde estaban.
+  let heldLayout = $state('exploration');
+  let heldContext = $state('exploration');
+  const shownLayout = $derived(prefs.autoCompanion ? (auto ?? 'exploration') : heldLayout);
+  const activeTab = $derived(view ?? pin ?? `layout:${shownLayout}`);
   const activeLayout = $derived(layouts.find((layout) => activeTab === `layout:${layout.id}`));
-  const layoutContext = $derived({ modules: liveModules, manual: manualBody === bodyIdentity ? manual : null });
+  const autoManual = $derived(manualBody === bodyIdentity ? manual : null);
+  const layoutContext = $derived({
+    modules: liveModules,
+    manual: prefs.autoCompanion ? autoManual : (manual ?? heldContext),
+  });
+  const autoContext = $derived(contextPanel(liveModules, autoManual));
   const visibleSlots = $derived(activeLayout?.slots.filter((slot) => !slot.when || slot.when(layoutContext)) ?? []);
-  const selectedContext = $derived(contextPanel(liveModules, layoutContext.manual));
+  const selectedContext = $derived(prefs.autoCompanion ? autoContext : contextPanel(liveModules, layoutContext.manual));
   const activeModule = $derived(modules.find((m) => m.id === activeTab) ?? modules[0]);
 
   $effect(() => {
+    if (prefs.autoCompanion) {
+      heldLayout = auto ?? 'exploration';
+      heldContext = autoContext;
+    }
+  });
+
+  $effect(() => {
+    if (!prefs.autoCompanion) return;
     const a = auto;
     const current = untrack(() => pin);
     const next = nextPin(lastAuto, a, current);
@@ -49,6 +67,7 @@
       tab: activeTab,
       layout: activeLayout?.id ?? 'none',
       pinned: pin !== null,
+      auto_companion: prefs.autoCompanion,
       slot: visibleSlots.map((s) => s.id),
       defined_slots: activeLayout?.slots.length ?? 0,
       module: liveModules.map((m) => m.id),
@@ -66,7 +85,7 @@
   }
 
   $effect(() => {
-    if (manualBody !== bodyIdentity) {
+    if (prefs.autoCompanion && manualBody !== bodyIdentity) {
       manual = null;
       manualBody = bodyIdentity;
     }
@@ -79,6 +98,9 @@
 
   onMount(() => {
     connect();
+    fetch('/api/config').then((res) => (res.ok ? res.json() : null)).then((cfg) => {
+      if (cfg) loadPrefs(cfg);
+    }).catch(() => {});
   });
 </script>
 

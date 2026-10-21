@@ -31,6 +31,8 @@ pub struct Config {
     pub language: String,
     pub server: ServerSection,
     pub auto_copy_next_system: bool,
+    /// Auto-companion: la UI cambia sola de disposición y de panel de contexto.
+    pub auto_companion: bool,
     pub alerts_enabled: bool,
     /// Consultas a servicios en línea (Spansh, EDSM, Canonn). Desactivarlo no envía nada.
     pub online_services: bool,
@@ -57,6 +59,7 @@ impl Default for Config {
             language: "es".to_owned(),
             server: ServerSection::default(),
             auto_copy_next_system: true,
+            auto_companion: true,
             alerts_enabled: true,
             online_services: true,
             map_value_threshold: 500_000,
@@ -156,7 +159,7 @@ impl Config {
 
     #[cfg(debug_assertions)]
     pub(crate) fn diagnostic_snapshot(&self) -> serde_json::Value {
-        serde_json::json!({"language":self.language,"port":self.server.port,"lan":self.server.lan,"online_services":self.online_services,"alerts_enabled":self.alerts_enabled,"auto_copy_next_system":self.auto_copy_next_system,"map_value_threshold":self.map_value_threshold,"default_neutron_efficiency":self.default_neutron_efficiency,"mining_interest_count":self.mining_interest.len(),"mining_threshold_cr":self.mining_threshold_cr,"sell_search_radius_ly":self.sell_search_radius_ly,"eddn_radius_ly":self.eddn_radius_ly,"tourism_reference_cr_ly":self.tourism_reference_cr_ly,"journal_configured":self.journal_dir.is_some(),"data_configured":self.data_dir.is_some(),"ui_configured":self.ui_dir.is_some()})
+        serde_json::json!({"language":self.language,"port":self.server.port,"lan":self.server.lan,"online_services":self.online_services,"alerts_enabled":self.alerts_enabled,"auto_copy_next_system":self.auto_copy_next_system,"auto_companion":self.auto_companion,"map_value_threshold":self.map_value_threshold,"default_neutron_efficiency":self.default_neutron_efficiency,"mining_interest_count":self.mining_interest.len(),"mining_threshold_cr":self.mining_threshold_cr,"sell_search_radius_ly":self.sell_search_radius_ly,"eddn_radius_ly":self.eddn_radius_ly,"tourism_reference_cr_ly":self.tourism_reference_cr_ly,"journal_configured":self.journal_dir.is_some(),"data_configured":self.data_dir.is_some(),"ui_configured":self.ui_dir.is_some()})
     }
 
     #[cfg(debug_assertions)]
