@@ -1,18 +1,17 @@
-# Procedencia de los nombres oficiales (hechos recopilados; sin copiar tablas):
-#   es/fr/de/pt: ED-Board (localizacion del juego por idioma), paginas de planos:
-#     https://ed-board.net/de/?m=engineer.modification&n=thrusters-dirty-drive-tuning
-#     https://ed-board.net/de/?m=engineer.modification&n=fsd-increased-fsd-range
-#     https://ed-board.net/de/?m=engineer.modification&n=thrusters-drive-distributors
-#   en: nombres ingleses del juego (ED-Board en, mismas paginas).
-#   es (contraste): la comunidad hispana abrevia el primero como «Motor sucio»
-#     (http://ingenieros.eliteesp.es/palin.php).
-#   Por verificar en el juego: special_engine_overloaded = Drive Distributors.
-# Un nombre sin confirmar se deja en ingles con el atributo `.pending = 1`.
+# Procedencia de los nombres oficiales de blueprints, experimentales y tipos de módulo:
+#   EDEngineer 2cadd66 (MIT), EDEngineer/Resources/Data/localization.json (traducciones del juego por idioma);
+#   ver THIRD_PARTY_NOTICES.md. Coinciden con los nombres que ya figuraban de ED-Board.
+#   Correspondencia con las claves del diario (por nombre inglés de EDEngineer):
+#     engine_dirty = «Dirty Drive Tuning»; fsd_longrange = «Increased FSD Range»;
+#     special_engine_overloaded = «Drag Drives» (EDEngineer no trae la clave del diario: se deduce de los efectos y se contrasta con coriolis-data, donde special_engine_haulage = «Drive Distributors»).
+#   La traducción al español de Dirty Drive Tuning es «Modificación de Motor Sucio».
+# Un nombre que EDEngineer no traduce se deja en inglés con el atributo `.pending = 1`.
+
 
 
 bp-engine_dirty = Aggressives Antriebstuning
 bp-fsd_longrange = Erhöhte FSA-Reichweite
-exp-special_engine_overloaded = Antriebsdistributoren
+exp-special_engine_overloaded = Drag-Antriebe
 modtype-engine = Schubdüsen
 modtype-fsd = Frameshiftantrieb
 
