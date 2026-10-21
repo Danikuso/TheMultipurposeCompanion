@@ -624,6 +624,16 @@ pub struct Contribution {
     pub amount: u32,
 }
 
+impl Contribution {
+    /// `kind` is one of commodity/material/credits (case-insensitive) and `amount > 0`.
+    pub fn is_valid(&self) -> bool {
+        self.amount > 0
+            && ["commodity", "material", "credits"]
+                .iter()
+                .any(|k| self.kind.eq_ignore_ascii_case(k))
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct UnlockSteps {
     pub requirement_key: String,
@@ -665,7 +675,22 @@ fn parse_engineers(json: &str) -> Vec<EngineerDef> {
     let mut out: Vec<EngineerDef> = Vec::new();
     for (index, value) in entries.into_iter().enumerate() {
         match serde_json::from_value::<EngineerDef>(value) {
-            Ok(e) if engineer_is_valid(&e) && !out.iter().any(|o| o.id == e.id) => out.push(e),
+            Ok(mut e) if engineer_is_valid(&e) && !out.iter().any(|o| o.id == e.id) => {
+                // An invalid contribution only drops that step; the engineer row stays.
+                if e.unlock
+                    .contribution
+                    .as_ref()
+                    .is_some_and(|c| !c.is_valid())
+                {
+                    tracing::warn!(
+                        file = "engineers.json",
+                        index,
+                        "invalid contribution; ignoring that unlock step"
+                    );
+                    e.unlock.contribution = None;
+                }
+                out.push(e);
+            }
             Ok(_) => tracing::warn!(
                 file = "engineers.json",
                 index,
@@ -1299,5 +1324,46 @@ mod tests {
         });
         assert_eq!(warnings.load(std::sync::atomic::Ordering::Relaxed), 2);
         assert!(parse_engineers("{oops").is_empty());
+    }
+
+    #[test]
+    fn duplicate_engineer_id_warns_and_first_wins() {
+        let row = |id: u64, name: &str| {
+            serde_json::json!({"id":id,"name":name,"system":"S","star_pos":[0.0,1.0,2.0],
+                "workshop":"W","on_foot":false,"blueprints":[],
+                "unlock":{"requirement_key":"unlock-a"},"source":"t","verified":false})
+        };
+        let warnings = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        tracing::subscriber::with_default(WarningCounter(warnings.clone()), || {
+            let json =
+                serde_json::json!({"entries":[row(1, "First"), row(1, "Second"), row(2, "Other")]})
+                    .to_string();
+            let parsed = parse_engineers(&json);
+            assert_eq!(parsed.len(), 2);
+            assert_eq!(parsed[0].name, "First");
+        });
+        assert_eq!(warnings.load(std::sync::atomic::Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn invalid_contribution_is_dropped_keeping_the_engineer() {
+        let row = |contribution: serde_json::Value| {
+            serde_json::json!({"id":1,"name":"A","system":"S","star_pos":[0.0,1.0,2.0],
+                "workshop":"W","on_foot":false,"blueprints":[],
+                "unlock":{"requirement_key":"unlock-a","contribution":contribution},
+                "source":"t","verified":false})
+        };
+        for bad in [
+            serde_json::json!({"item":"x","kind":"gold","amount":3}),
+            serde_json::json!({"item":"x","kind":"material","amount":0}),
+        ] {
+            let json = serde_json::json!({"entries":[row(bad)]}).to_string();
+            let parsed = parse_engineers(&json);
+            assert_eq!(parsed.len(), 1);
+            assert!(parsed[0].unlock.contribution.is_none());
+        }
+        let ok = serde_json::json!({"item":"x","kind":"Commodity","amount":3});
+        let json = serde_json::json!({"entries":[row(ok)]}).to_string();
+        assert!(parse_engineers(&json)[0].unlock.contribution.is_some());
     }
 }
