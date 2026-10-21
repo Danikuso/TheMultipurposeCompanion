@@ -1,0 +1,162 @@
+{
+  "module_types": [
+    {
+      "id": "engine",
+      "item_prefixes": [
+        "int_engine_"
+      ]
+    },
+    {
+      "id": "fsd",
+      "item_prefixes": [
+        "int_hyperdrive_"
+      ]
+    }
+  ],
+  "blueprints": [
+    {
+      "key": "engine_dirty",
+      "module_types": [
+        "engine"
+      ],
+      "grades": {
+        "1": [
+          {
+            "material": "carbon",
+            "count": 1
+          },
+          {
+            "material": "heatconductionwiring",
+            "count": 1
+          }
+        ],
+        "2": [
+          {
+            "material": "vanadium",
+            "count": 1
+          },
+          {
+            "material": "heatdispersionplate",
+            "count": 1
+          }
+        ],
+        "3": [
+          {
+            "material": "niobium",
+            "count": 1
+          },
+          {
+            "material": "heatexchangers",
+            "count": 1
+          }
+        ],
+        "4": [
+          {
+            "material": "yttrium",
+            "count": 1
+          },
+          {
+            "material": "heatvanes",
+            "count": 1
+          }
+        ],
+        "5": [
+          {
+            "material": "polonium",
+            "count": 1
+          },
+          {
+            "material": "protoheatradiators",
+            "count": 1
+          }
+        ]
+      },
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "fsd_longrange",
+      "module_types": [
+        "fsd"
+      ],
+      "grades": {
+        "1": [
+          {
+            "material": "disruptedwakeechoes",
+            "count": 1
+          },
+          {
+            "material": "basicconductors",
+            "count": 1
+          }
+        ],
+        "2": [
+          {
+            "material": "fsdtelemetry",
+            "count": 1
+          },
+          {
+            "material": "conductivecomponents",
+            "count": 1
+          }
+        ],
+        "3": [
+          {
+            "material": "wakesolutions",
+            "count": 1
+          },
+          {
+            "material": "conductiveceramics",
+            "count": 1
+          }
+        ],
+        "4": [
+          {
+            "material": "hyperspacetrajectories",
+            "count": 1
+          },
+          {
+            "material": "conductivepolymers",
+            "count": 1
+          }
+        ],
+        "5": [
+          {
+            "material": "dataminedwake",
+            "count": 1
+          },
+          {
+            "material": "biotechconductors",
+            "count": 1
+          }
+        ]
+      },
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    }
+  ],
+  "experimentals": [
+    {
+      "key": "special_engine_overloaded",
+      "module_types": [
+        "engine"
+      ],
+      "ingredients": [
+        {
+          "material": "pharmaceuticalisolators",
+          "count": 1
+        },
+        {
+          "material": "hybridcapacitors",
+          "count": 1
+        },
+        {
+          "material": "electrochemicalarrays",
+          "count": 1
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    }
+  ]
+}

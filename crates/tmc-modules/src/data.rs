@@ -3,7 +3,7 @@
 use crate::exobiology::predict::BioRules;
 use crate::exobiology::species::SpeciesTable;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::OnceLock;
 use tmc_model::events::{AsteroidContent, MaterialCategory};
 use tmc_model::net::PadSize;
@@ -451,6 +451,165 @@ pub fn trader_rules() -> &'static TraderRules {
     RULES.get_or_init(|| parse_trader_rules(include_str!("../data/trader_rules.json")))
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct Ingredient {
+    pub material: String,
+    pub count: u32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ModuleTypeDef {
+    pub id: String,
+    pub item_prefixes: Vec<String>,
+}
+
+/// Engineer blueprint (journal `BlueprintName`, lowercase) with a recipe per grade roll.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Blueprint {
+    pub key: String,
+    pub module_types: Vec<String>,
+    pub grades: BTreeMap<u8, Vec<Ingredient>>,
+    pub source: String,
+    pub verified: bool,
+}
+
+/// Experimental effect (journal `ExperimentalEffect`, lowercase).
+#[derive(Debug, Clone, Deserialize)]
+pub struct Experimental {
+    pub key: String,
+    pub module_types: Vec<String>,
+    pub ingredients: Vec<Ingredient>,
+    pub source: String,
+    pub verified: bool,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct BlueprintCatalog {
+    pub module_types: Vec<ModuleTypeDef>,
+    pub blueprints: Vec<Blueprint>,
+    pub experimentals: Vec<Experimental>,
+}
+
+fn valid_ingredients(list: &[Ingredient]) -> bool {
+    !list.is_empty()
+        && list
+            .iter()
+            .all(|i| !i.material.trim().is_empty() && i.count > 0)
+}
+
+fn parse_section<T: serde::de::DeserializeOwned>(
+    value: &serde_json::Value,
+    section: &str,
+    valid: fn(&T) -> bool,
+) -> Vec<T> {
+    let Some(rows) = value.get(section).and_then(serde_json::Value::as_array) else {
+        tracing::warn!(
+            file = "blueprints.json",
+            section,
+            "missing section; using empty"
+        );
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for (index, row) in rows.iter().enumerate() {
+        match serde_json::from_value::<T>(row.clone()) {
+            Ok(entry) if valid(&entry) => out.push(entry),
+            Ok(_) => {
+                tracing::warn!(
+                    file = "blueprints.json",
+                    section,
+                    index,
+                    "invalid row; skipping"
+                )
+            }
+            Err(error) => tracing::warn!(
+                file = "blueprints.json", section, index, %error, "invalid row; skipping"
+            ),
+        }
+    }
+    out
+}
+
+fn parse_blueprints(json: &str) -> BlueprintCatalog {
+    let value = match serde_json::from_str::<serde_json::Value>(json) {
+        Ok(value) => value,
+        Err(error) => {
+            tracing::warn!(file = "blueprints.json", %error, "invalid embedded static data; using empty catalogue");
+            return BlueprintCatalog::default();
+        }
+    };
+    let module_types = parse_section::<ModuleTypeDef>(&value, "module_types", |t| {
+        !t.id.trim().is_empty() && !t.item_prefixes.is_empty()
+    });
+    let mut blueprints = parse_section::<Blueprint>(&value, "blueprints", |b| {
+        !b.key.trim().is_empty()
+            && !b.module_types.is_empty()
+            && !b.source.trim().is_empty()
+            && !b.grades.is_empty()
+            && b.grades
+                .iter()
+                .all(|(g, list)| (1..=5).contains(g) && valid_ingredients(list))
+    });
+    let mut experimentals = parse_section::<Experimental>(&value, "experimentals", |e| {
+        !e.key.trim().is_empty()
+            && !e.module_types.is_empty()
+            && !e.source.trim().is_empty()
+            && valid_ingredients(&e.ingredients)
+    });
+    for b in &mut blueprints {
+        b.key = b.key.to_ascii_lowercase();
+    }
+    for e in &mut experimentals {
+        e.key = e.key.to_ascii_lowercase();
+    }
+    BlueprintCatalog {
+        module_types,
+        blueprints,
+        experimentals,
+    }
+}
+
+impl BlueprintCatalog {
+    /// Module type id for a journal item symbol (case-insensitive prefix match).
+    pub fn module_type_of(&self, item: &str) -> Option<&str> {
+        let item = item.to_ascii_lowercase();
+        self.module_types
+            .iter()
+            .find(|t| t.item_prefixes.iter().any(|p| item.starts_with(p.as_str())))
+            .map(|t| t.id.as_str())
+    }
+
+    pub fn blueprints_for(&self, module_type: &str) -> Vec<&Blueprint> {
+        self.blueprints
+            .iter()
+            .filter(|b| b.module_types.iter().any(|t| t == module_type))
+            .collect()
+    }
+
+    pub fn experimentals_for(&self, module_type: &str) -> Vec<&Experimental> {
+        self.experimentals
+            .iter()
+            .filter(|e| e.module_types.iter().any(|t| t == module_type))
+            .collect()
+    }
+
+    pub fn blueprint(&self, key: &str) -> Option<&Blueprint> {
+        let key = key.to_ascii_lowercase();
+        self.blueprints.iter().find(|b| b.key == key)
+    }
+
+    pub fn experimental(&self, key: &str) -> Option<&Experimental> {
+        let key = key.to_ascii_lowercase();
+        self.experimentals.iter().find(|e| e.key == key)
+    }
+}
+
+/// Blueprint and experimental catalogue (provisional minimal set, unverified).
+pub fn blueprints() -> &'static BlueprintCatalog {
+    static CATALOG: OnceLock<BlueprintCatalog> = OnceLock::new();
+    CATALOG.get_or_init(|| parse_blueprints(include_str!("../data/blueprints.json")))
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum StarSpecial {
@@ -868,6 +1027,93 @@ mod tests {
             assert_eq!(parse_materials(&json).len(), 2);
         });
         assert_eq!(warnings.load(std::sync::atomic::Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn every_ingredient_is_a_catalogued_material() {
+        let cat = blueprints();
+        let all = cat
+            .blueprints
+            .iter()
+            .flat_map(|b| b.grades.values().flatten())
+            .chain(cat.experimentals.iter().flat_map(|e| e.ingredients.iter()));
+        for i in all {
+            assert!(materials().contains_key(&i.material), "{}", i.material);
+            assert!(i.count > 0);
+        }
+    }
+
+    #[test]
+    fn every_blueprint_has_contiguous_grades_from_1() {
+        let cat = blueprints();
+        assert!(!cat.blueprints.is_empty());
+        for b in &cat.blueprints {
+            let grades: Vec<u8> = b.grades.keys().copied().collect();
+            let max = *grades.last().unwrap();
+            assert!(max <= 5, "{}", b.key);
+            assert_eq!(grades, (1..=max).collect::<Vec<_>>(), "{}", b.key);
+            assert!(!b.verified && !b.source.trim().is_empty());
+            for t in &b.module_types {
+                assert!(cat.module_types.iter().any(|m| &m.id == t), "{t}");
+            }
+        }
+        for e in &cat.experimentals {
+            assert!(!e.verified && !e.source.trim().is_empty());
+        }
+    }
+
+    #[test]
+    fn thrusters_have_dirty_drive_and_drag_drives() {
+        let cat = blueprints();
+        assert_eq!(
+            cat.module_type_of("int_engine_size3_class5"),
+            Some("engine")
+        );
+        assert_eq!(
+            cat.module_type_of("Int_Hyperdrive_Size5_Class5"),
+            Some("fsd")
+        );
+        assert_eq!(cat.module_type_of("int_shieldgenerator_size3_class5"), None);
+        let dirty = cat.blueprint("Engine_Dirty").unwrap();
+        assert_eq!(
+            dirty.grades.keys().copied().collect::<Vec<_>>(),
+            [1, 2, 3, 4, 5]
+        );
+        assert!(
+            cat.blueprints_for("engine")
+                .iter()
+                .any(|b| b.key == "engine_dirty")
+        );
+        assert!(cat.blueprint("fsd_longrange").is_some());
+        let drag = cat.experimental("special_engine_overloaded").unwrap();
+        assert!(
+            cat.experimentals_for("engine")
+                .iter()
+                .any(|e| e.key == drag.key)
+        );
+        assert!(cat.experimentals_for("fsd").is_empty());
+        assert!(cat.blueprint("nope").is_none());
+    }
+
+    #[test]
+    fn corrupt_blueprint_row_skipped_with_warning() {
+        let good = serde_json::json!({"key":"engine_dirty","module_types":["engine"],
+            "grades":{"1":[{"material":"carbon","count":1}]},"source":"t","verified":false});
+        let mut zero_count = good.clone();
+        zero_count["grades"] = serde_json::json!({"1":[{"material":"carbon","count":0}]});
+        let mut zero_grade = good.clone();
+        zero_grade["grades"] = serde_json::json!({"0":[{"material":"carbon","count":1}]});
+        let mut good2 = good.clone();
+        good2["key"] = "fsd_longrange".into();
+        let warnings = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        tracing::subscriber::with_default(WarningCounter(warnings.clone()), || {
+            let json = serde_json::json!({"module_types":[],"experimentals":[],
+                "blueprints":[good, zero_count, zero_grade, good2]})
+            .to_string();
+            assert_eq!(parse_blueprints(&json).blueprints.len(), 2);
+        });
+        assert_eq!(warnings.load(std::sync::atomic::Ordering::Relaxed), 2);
+        assert!(parse_blueprints("{oops").blueprints.is_empty());
     }
 
     #[test]
