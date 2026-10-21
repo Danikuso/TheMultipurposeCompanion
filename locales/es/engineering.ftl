@@ -95,3 +95,9 @@ engineering-contribution-credits = Créditos
 # Nombre del juego contrastado en Frontier Forums e Inara; traducciones pendientes.
 engineering-commodity-soontillrelics = Soontill Relics
     .pending = 1
+
+engineering-no-experimental = Sin experimental
+engineering-preview = Calcular materiales
+engineering-close-flow = Cerrar
+engineering-action-failed = No se pudo completar la acción
+engineering-recalculate = Calcula los materiales para estos ajustes.
