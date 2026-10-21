@@ -316,6 +316,44 @@ mod tests {
         format!("\"{s}\"")
     }
 
+    const TRADER: &str =
+        include_str!("../../../tests/fixtures/net/ardent_nearest_material_trader.json");
+    const BROKER: &str =
+        include_str!("../../../tests/fixtures/net/ardent_nearest_tech_broker.json");
+
+    #[test]
+    fn untyped_trader_and_broker_urls_use_exact_segments() {
+        assert_eq!(
+            nearest_url(
+                10477373803,
+                NearbyService::MaterialTrader(None),
+                PadSize::Medium
+            ),
+            "https://api.ardent-insight.com/v2/system/address/10477373803/nearest/material-trader?minLandingPadSize=2"
+        );
+        assert_eq!(
+            nearest_url(
+                10477373803,
+                NearbyService::TechnologyBroker(None),
+                PadSize::Large
+            ),
+            "https://api.ardent-insight.com/v2/system/address/10477373803/nearest/technology-broker?minLandingPadSize=3"
+        );
+    }
+
+    #[test]
+    fn parses_ardent_trader_and_broker_fixtures() {
+        for body in [TRADER, BROKER] {
+            let s = parse_stations(body, PadSize::Small).unwrap();
+            assert!(!s.is_empty() && s.len() <= MAX_STATIONS);
+            assert_eq!(s[0].station_name, "Mercader Ficticio");
+            assert_eq!(s[0].max_pad, Some(PadSize::Large));
+            assert_eq!(s[1].max_pad, Some(PadSize::Medium));
+            let l = parse_stations(body, PadSize::Large).unwrap();
+            assert!(l.iter().all(|x| x.max_pad == Some(PadSize::Large)));
+        }
+    }
+
     #[test]
     fn ardent_markets_carry_ardent_origin() {
         let m = parse_markets(PLATINUM, now(), PadSize::Small).unwrap();
