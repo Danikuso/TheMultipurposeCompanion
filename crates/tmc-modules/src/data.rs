@@ -5,7 +5,7 @@ use crate::exobiology::species::SpeciesTable;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::OnceLock;
-use tmc_model::events::AsteroidContent;
+use tmc_model::events::{AsteroidContent, MaterialCategory};
 use tmc_model::net::PadSize;
 
 /// Species and colony distances embedded once, without runtime file access.
@@ -349,6 +349,107 @@ pub fn cabin_spec(symbol: &str) -> Option<&'static CabinSpec> {
         .get(symbol)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HintKind {
+    Mining,
+    SurfaceProspecting,
+    Hge,
+    SignalSource,
+    DataScan,
+    MissionReward,
+    Salvage,
+    Broker,
+    Site,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Hint {
+    pub kind: HintKind,
+    /// Fluent key with extra detail, if any.
+    #[serde(default)]
+    pub detail_key: Option<String>,
+}
+
+/// Material facts (journal key lowercase), with provenance.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MaterialDef {
+    pub key: String,
+    pub name_en: String,
+    pub category: MaterialCategory,
+    pub grade: u8,
+    pub family: String,
+    pub tradeable: bool,
+    #[serde(default)]
+    pub hints: Vec<Hint>,
+    pub source: String,
+    pub verified: bool,
+}
+
+fn parse_materials(json: &str) -> HashMap<String, MaterialDef> {
+    parse_static_table(
+        json,
+        "materials.json",
+        |entry: &MaterialDef| &entry.key,
+        |entry| {
+            !entry.key.trim().is_empty()
+                && !entry.name_en.trim().is_empty()
+                && !entry.family.trim().is_empty()
+                && (1..=5).contains(&entry.grade)
+                && !entry.source.trim().is_empty()
+        },
+    )
+}
+
+/// Material catalogue indexed by lowercase journal key.
+pub fn materials() -> &'static HashMap<String, MaterialDef> {
+    static TABLE: OnceLock<HashMap<String, MaterialDef>> = OnceLock::new();
+    TABLE.get_or_init(|| parse_materials(include_str!("../data/materials.json")))
+}
+
+/// Storage cap per material grade (game constant `GRADE_CAPS`); out-of-range grades give 0.
+pub fn grade_cap(grade: u8) -> u32 {
+    const CAPS: [u32; 5] = [300, 250, 200, 150, 100];
+    usize::from(grade)
+        .checked_sub(1)
+        .and_then(|i| CAPS.get(i))
+        .copied()
+        .unwrap_or(0)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct TraderRules {
+    pub same_family_up: u32,
+    pub same_family_down: u32,
+    pub cross_family_factor: u32,
+    pub source: String,
+    pub verified: bool,
+}
+
+impl Default for TraderRules {
+    fn default() -> Self {
+        Self {
+            same_family_up: 6,
+            same_family_down: 3,
+            cross_family_factor: 6,
+            source: String::new(),
+            verified: false,
+        }
+    }
+}
+
+fn parse_trader_rules(json: &str) -> TraderRules {
+    serde_json::from_str(json).unwrap_or_else(|error| {
+        tracing::warn!(file = "trader_rules.json", %error, "invalid embedded static data; using defaults");
+        TraderRules::default()
+    })
+}
+
+pub fn trader_rules() -> &'static TraderRules {
+    static RULES: OnceLock<TraderRules> = OnceLock::new();
+    RULES.get_or_init(|| parse_trader_rules(include_str!("../data/trader_rules.json")))
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum StarSpecial {
@@ -684,5 +785,87 @@ mod tests {
             {"content":"High","tons_per_asteroid":1e999}]}"#,
         );
         assert_eq!(m.entries.len(), 0);
+    }
+
+    #[test]
+    fn materials_load_with_provenance_and_valid_grades() {
+        let table = materials();
+        assert_eq!(table.len(), 25);
+        for (key, m) in table {
+            assert_eq!(key, &m.key);
+            assert!(!m.source.trim().is_empty());
+            assert!((1..=5).contains(&m.grade), "{key}");
+            assert!(!m.verified);
+        }
+        let iron = &table["iron"];
+        assert_eq!(
+            (iron.category, iron.grade, iron.name_en.as_str()),
+            (MaterialCategory::Raw, 1, "Iron")
+        );
+        let ceramics = &table["conductiveceramics"];
+        assert_eq!(
+            (ceramics.category, ceramics.grade),
+            (MaterialCategory::Manufactured, 3)
+        );
+    }
+
+    #[test]
+    fn grade_caps_are_game_values() {
+        let caps: Vec<u32> = (1..=5).map(grade_cap).collect();
+        assert_eq!(caps, vec![300, 250, 200, 150, 100]);
+        assert_eq!((grade_cap(0), grade_cap(6)), (0, 0));
+    }
+
+    #[test]
+    fn families_have_one_material_per_grade_where_tradeable() {
+        let mut seen = std::collections::HashSet::new();
+        for m in materials().values().filter(|m| m.tradeable) {
+            assert!(
+                seen.insert((m.family.clone(), m.grade)),
+                "{} grade {}",
+                m.family,
+                m.grade
+            );
+        }
+        for family in ["raw-1", "heat", "wake-scans"] {
+            let mut grades: Vec<u8> = materials()
+                .values()
+                .filter(|m| m.family == family)
+                .map(|m| m.grade)
+                .collect();
+            grades.sort_unstable();
+            assert_eq!(grades, vec![1, 2, 3, 4, 5], "{family}");
+        }
+    }
+
+    #[test]
+    fn trader_rules_default_rates() {
+        let rules = trader_rules();
+        assert_eq!(
+            (
+                rules.same_family_up,
+                rules.same_family_down,
+                rules.cross_family_factor
+            ),
+            (6, 3, 6)
+        );
+        assert!(!rules.verified);
+        assert!(!rules.source.trim().is_empty());
+    }
+
+    #[test]
+    fn corrupt_material_row_skipped_with_warning() {
+        let good = serde_json::json!({"key":"iron","name_en":"Iron","category":"Raw","grade":1,
+            "family":"raw-4","tradeable":true,"hints":[],"source":"t","verified":false});
+        let mut bad = good.clone();
+        bad["grade"] = 9.into();
+        let mut good2 = good.clone();
+        good2["key"] = "carbon".into();
+        let warnings = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        tracing::subscriber::with_default(WarningCounter(warnings.clone()), || {
+            let json = serde_json::json!({"entries":[good, bad, good2]}).to_string();
+            assert_eq!(parse_materials(&json).len(), 2);
+        });
+        assert_eq!(warnings.load(std::sync::atomic::Ordering::Relaxed), 1);
     }
 }
