@@ -5,7 +5,7 @@
 - **Última actualización:** 2026-10-21 (Europe/Madrid) · Claude Opus 5.5 (architect-opus)
 - **Fase actual:** F4 — Ingenieros y materiales (🔄 plan escrito; ejecución sin empezar). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
-- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 16/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
+- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 18/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
@@ -37,7 +37,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 14 | `engineering` — ingenieros | ✅ hecha | 06e1fec | Revisión aprobada; posición None hasta salto |
 | 15 | `engineering` — mi nave modificada | ✅ hecha | 5b9d0a0 | Revisión aprobada |
 | 16 | `engineering` — cálculo de ingenierizar | ✅ hecha | 672dd97 | Revisión aprobada; números comprobados a mano |
-| 17 | `engineering` — planificador de intercambios | 🔄 en curso | — | |
+| 17 | `engineering` — planificador de intercambios | ✅ hecha | ae0081a | Revisión aprobada; tasas del juego |
 | 18 | `engineering` — lista de la compra, reservas y persistencia | ⬜ pendiente | — | |
 | 19 | `engineering` — dónde conseguirlo, ingeniero recomendado y avisos | ⬜ pendiente | — | |
 | 20 | `engineering` — módulo, topics, relevancia, red, almacén y registro | ⬜ pendiente | — | |
