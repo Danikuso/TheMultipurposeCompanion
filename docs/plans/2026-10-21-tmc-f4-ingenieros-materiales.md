@@ -628,11 +628,11 @@ test('session totals by origin', /* Scan +2, Trade +1/−6 */);
 
 ### Task 22: UI — «Ingenieros»
 
-**Files:** Create `ui/src/modules/engineering/EngineersPanel.svelte`; Modify `index.ts`, `locales/*/engineering.ftl`, `ui/tests/engineering.test.ts`, `diagnostics.rs` (`UI_PANELS`).
+**Files:** Create `ui/src/modules/engineering/EngineersPanel.svelte`; Modify `index.ts`, `types.ts`, `labels.ts`, `ui/src/lib/i18n.ts`, `locales/*/engineering.ftl`, `ui/tests/engineering.test.ts`, `diagnostics.rs` (`UI_PANELS`) y el mapa de argumentos de tests de `crates/tmc-i18n/src/lib.rs`.
 
 **Interfaces:** lista (nave y a pie) con estado, rango y progreso, sistema y distancia; al elegir → `engineering.select_engineer { id }` y siguiente paso con lo que tienes; blueprints y grado máximo del ingeniero.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```ts
 test('engineer row shows status rank and distance', /* Felicity Unlocked, rango 5, "12,3 al" (es) */);
@@ -642,7 +642,9 @@ test('on foot engineers in their own section', /* on_foot true → sección a pi
 test('engineer blueprints with max grade', /* Felicity → nombre bp-engine_dirty y «G5» */);
 ```
 
-- [ ] **Step 2–4:** FAIL → implementar → PASS; checks. **Step 5: Commit** `feat(ui): panel de ingenieros con estado y siguiente paso`
+- [x] **Step 2–4:** FAIL → implementar → PASS; checks. **Step 5: Commit** `feat(ui): panel de ingenieros con estado y siguiente paso`
+
+**Verificación (2026-10-22):** TDD y 16 tests nuevos (36 de ingeniería); UI 274/274 PASS, Svelte check sin errores/avisos, build PASS. Rust: fmt/clippy PASS y workspace final 1.356 PASS, 2 ignoradas previas. Ambas revisiones aprobadas tras corregir el P2 de nombres de mercancías con pruebas 0/3, 2/3, créditos y reactividad. QA visual sintética 2560/800 PASS, selección POST `{id:300100}` y detalle 4/10 sin errores ni desbordamiento. Se conserva evidencia del fallo temporal de latencia (p95 578,9 ms), repetición aislada PASS 307,3 ms y workspace completo posterior PASS; no se modifica el umbral.
 
 ### Task 23: UI — «Mi nave» e «Ingenierizar un módulo»
 
@@ -787,6 +789,8 @@ test('settings put rolls and reverts on 400', /* [1,1,1,1,11] → 400 → valor 
 (Se completa en Task 28 con comando + salida por criterio.)
 
 ## Desviaciones
+
+- 2026-10-22 · **Task 22: nombres y traducciones de contribuciones.** Se añade el helper compartido `translationPending` en `ui/src/lib/i18n.ts` y se amplía el mapa de argumentos de tests Rust para `progress`, sin alterar contratos. Revisión de calidad detectó que una contribución de mercancía sin existencias mostraba la clave interna; ahora usa `core.ship.cargo` (campos PascalCase del diario), `trade.cargo` como respaldo opcional y FTL para el nombre inglés de Soontill Relics, marcado `.pending = 1` en idiomas sin traducción confirmada. El nombre es un hecho aislado del juego contrastado en [Frontier Forums](https://forums.frontier.co.uk/threads/soontill-relics-not-on-the-market-in-ngurii.555561/) y [la ficha de Inara](https://inara.cz/elite/commodity/10127); no se copian tablas ni descripciones. El panel funciona con la bodega principal aunque el módulo de comercio esté inactivo.
 
 (Cambios respecto a este plan o a la spec, con fecha, motivo y tareas afectadas.)
 

@@ -809,6 +809,7 @@ const UI_SLOTS: &[&str] = &[
 /// Claves de título de los paneles (`titleKey` en `ui/src`); un test de la UI las mantiene sincronizadas.
 const UI_PANELS: &[&str] = &[
     "panel-engineering-materials",
+    "panel-engineering-engineers",
     "combat-target",
     "nav-settings",
     "panel-alerts",

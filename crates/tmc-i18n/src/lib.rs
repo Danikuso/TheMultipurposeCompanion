@@ -273,6 +273,7 @@ mod tests {
             let mut args = FluentArgs::new();
             for (name, value) in [
                 ("pct", FluentValue::from(25)),
+                ("progress", FluentValue::from("50 %")),
                 ("module", FluentValue::from("dashboard")),
                 ("system", FluentValue::from("Sol")),
                 ("done", FluentValue::from(3)),
