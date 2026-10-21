@@ -541,6 +541,8 @@ fn route_template(text: &str) -> bool {
             | "/api/history/events"
             | "/api/actions/{name}"
             | "/api/navigation/autocomplete"
+            | "/api/engineering/goals"
+            | "/api/engineering/locker"
             | "/api/pairing"
             | "<asset>"
             | "<unmatched>"
@@ -1701,5 +1703,23 @@ mod tests {
         // Fuera del contexto UI el mismo valor no se relaja.
         let other = redact_diagnostic(&json!({"tab": "layout:combat"}), DiagnosticContext::Http);
         assert_eq!(other["tab"], REDACTED);
+    }
+    #[test]
+    fn engineering_page_routes_are_finite_and_never_expose_queries() {
+        for route in ["/api/engineering/goals", "/api/engineering/locker"] {
+            let safe = redact_diagnostic(
+                &json!({"route":route,"url":format!("{route}?revision=1&section=CANARY"),"section":"CANARY","key":"CANARY","name":"CANARY"}),
+                DiagnosticContext::Http,
+            );
+            assert_eq!(safe["route"], route);
+            assert!(!safe.to_string().contains("CANARY"));
+        }
+        for route in [
+            "/api/engineering/CANARY",
+            "/api/engineering/goals?revision=1",
+        ] {
+            let safe = redact_diagnostic(&json!({"route":route}), DiagnosticContext::Http);
+            assert_eq!(safe["route"], REDACTED);
+        }
     }
 }

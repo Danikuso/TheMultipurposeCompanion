@@ -1,4 +1,6 @@
-use crate::{Alert, Module, ModuleCtx, Relevance, Severity, TopicSet};
+use crate::{
+    Alert, Module, ModuleCtx, ModulePageQuery, ModuleQueryError, Relevance, Severity, TopicSet,
+};
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -31,19 +33,52 @@ pub enum CoreMessage {
     },
 }
 
+enum ControlRequest {
+    Snapshot(oneshot::Sender<BTreeMap<String, Value>>),
+    ModuleQuery {
+        module: String,
+        resource: String,
+        query: ModulePageQuery,
+        reply: oneshot::Sender<Result<Value, ModuleQueryError>>,
+    },
+}
+
 #[derive(Clone)]
 pub struct CoreHandle {
     pub events: mpsc::Sender<SourceEvent>,
     updates: broadcast::Sender<CoreMessage>,
-    snapshots: mpsc::Sender<oneshot::Sender<BTreeMap<String, Value>>>,
+    snapshots: mpsc::Sender<ControlRequest>,
 }
 impl CoreHandle {
     pub fn subscribe(&self) -> broadcast::Receiver<CoreMessage> {
         self.updates.subscribe()
     }
+    pub async fn query_module(
+        &self,
+        module: &str,
+        resource: &str,
+        query: ModulePageQuery,
+    ) -> Result<Value, ModuleQueryError> {
+        let (reply, receive) = oneshot::channel();
+        self.snapshots
+            .send(ControlRequest::ModuleQuery {
+                module: module.to_owned(),
+                resource: resource.to_owned(),
+                query,
+                reply,
+            })
+            .await
+            .map_err(|_| ModuleQueryError::Unavailable)?;
+        receive.await.unwrap_or(Err(ModuleQueryError::Unavailable))
+    }
     pub async fn snapshot(&self) -> BTreeMap<String, Value> {
         let (sender, receiver) = oneshot::channel();
-        if self.snapshots.send(sender).await.is_err() {
+        if self
+            .snapshots
+            .send(ControlRequest::Snapshot(sender))
+            .await
+            .is_err()
+        {
             return BTreeMap::new();
         }
         receiver.await.unwrap_or_default()
@@ -539,10 +574,40 @@ impl Actor {
         });
     }
 
+    fn control(&self, request: ControlRequest, _forced_turn: bool) {
+        match request {
+            ControlRequest::Snapshot(reply) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::State,
+                    "actor.snapshot.served",
+                    tmc_model::diagnostics::json!({"topics": self.topics.len(), "forced_turn": _forced_turn})
+                );
+                let _ = reply.send(self.topics.clone());
+            }
+            ControlRequest::ModuleQuery {
+                module,
+                resource,
+                query,
+                reply,
+            } => {
+                let result = self
+                    .modules
+                    .iter()
+                    .find(|slot| slot.id == module)
+                    .ok_or(ModuleQueryError::NotFound)
+                    .and_then(|slot| {
+                        catch_unwind(AssertUnwindSafe(|| slot.module.query(&resource, &query)))
+                            .unwrap_or(Err(ModuleQueryError::Unavailable))
+                    });
+                let _ = reply.send(result);
+            }
+        }
+    }
+
     async fn run(
         &mut self,
         mut events: mpsc::Receiver<SourceEvent>,
-        mut snapshots: mpsc::Receiver<oneshot::Sender<BTreeMap<String, Value>>>,
+        mut snapshots: mpsc::Receiver<ControlRequest>,
         mut stored: mpsc::Receiver<SourceEvent>,
         period: Duration,
     ) {
@@ -556,12 +621,7 @@ impl Actor {
             if snapshots_open && events_since_control >= 32 {
                 match snapshots.try_recv() {
                     Ok(reply) => {
-                        tmc_model::diagnostic!(
-                            tmc_model::diagnostics::DiagnosticContext::State,
-                            "actor.snapshot.served",
-                            tmc_model::diagnostics::json!({"topics": self.topics.len(), "forced_turn": true})
-                        );
-                        let _ = reply.send(self.topics.clone());
+                        self.control(reply, true);
                     }
                     Err(mpsc::error::TryRecvError::Disconnected) => snapshots_open = false,
                     Err(mpsc::error::TryRecvError::Empty) => {}
@@ -572,18 +632,13 @@ impl Actor {
                 biased;
                 _ = tick.tick() => self.flush(),
                 // Antes que `events`: está acotado y lo alimenta trabajo ya terminado.
-                Some(event) = stored.recv() => self.apply(event),
+                Some(event) = stored.recv() => { self.apply(event); if snapshots_open { events_since_control += 1; } },
                 event = events.recv(), if events_open => match event {
                     Some(event)=>{self.apply(event); if snapshots_open { events_since_control += 1; }}, None=>events_open=false,
                 },
                 request = snapshots.recv(), if snapshots_open => match request {
                     Some(reply)=>{
-                        tmc_model::diagnostic!(
-                            tmc_model::diagnostics::DiagnosticContext::State,
-                            "actor.snapshot.served",
-                            tmc_model::diagnostics::json!({"topics": self.topics.len(), "forced_turn": false})
-                        );
-                        let _ = reply.send(self.topics.clone()); events_since_control = 0;
+                        self.control(reply, false); events_since_control = 0;
                     }, None=>snapshots_open=false,
                 },
             }
@@ -652,6 +707,102 @@ mod tests {
             .unwrap()
             .unwrap()
     }
+    struct QueryProbe;
+    impl Module for QueryProbe {
+        fn id(&self) -> &'static str {
+            "query"
+        }
+        fn on_event(&mut self, _: &SourceEvent, _: &GameState, _: &mut ModuleCtx) -> TopicSet {
+            TopicSet::new()
+        }
+        fn topics(&self) -> Vec<String> {
+            vec![]
+        }
+        fn topic_value(&self, _: &str) -> Option<Value> {
+            None
+        }
+        fn query(
+            &self,
+            resource: &str,
+            query: &ModulePageQuery,
+        ) -> Result<Value, ModuleQueryError> {
+            assert_ne!(resource, "panic", "synthetic query panic");
+            Ok(serde_json::json!({"cursor":query.cursor,"revision":query.revision}))
+        }
+    }
+    #[tokio::test(start_paused = true)]
+    async fn module_queries_are_read_only_isolated_and_survive_panics() {
+        let core = spawn_core(
+            vec![
+                Box::new(QueryProbe),
+                Box::new(Probe {
+                    count: Arc::default(),
+                    panic: false,
+                    alerts: false,
+                }),
+            ],
+            None,
+            Duration::from_millis(100),
+        );
+        let mut updates = core.subscribe();
+        let before = core.snapshot().await;
+        let query = ModulePageQuery {
+            revision: 7,
+            cursor: 3,
+            section: None,
+        };
+        assert_eq!(
+            core.query_module("query", "rows", query.clone())
+                .await
+                .unwrap(),
+            serde_json::json!({"cursor":3,"revision":7})
+        );
+        assert_eq!(
+            core.query_module("missing", "rows", query.clone()).await,
+            Err(ModuleQueryError::NotFound)
+        );
+        assert_eq!(
+            core.query_module("test", "rows", query.clone()).await,
+            Err(ModuleQueryError::NotFound)
+        );
+        assert_eq!(
+            core.query_module("query", "panic", query.clone()).await,
+            Err(ModuleQueryError::Unavailable)
+        );
+        assert!(core.query_module("query", "rows", query).await.is_ok());
+        assert_eq!(core.snapshot().await, before);
+        advance(Duration::from_millis(200)).await;
+        assert!(matches!(
+            updates.try_recv(),
+            Err(broadcast::error::TryRecvError::Empty)
+        ));
+    }
+    #[tokio::test]
+    async fn module_query_closed_actor_returns_unavailable() {
+        let (events, _) = mpsc::channel(1);
+        let (snapshots, receiver) = mpsc::channel(1);
+        drop(receiver);
+        let (updates, _) = broadcast::channel(1);
+        let core = CoreHandle {
+            events,
+            snapshots,
+            updates,
+        };
+        assert_eq!(
+            core.query_module(
+                "query",
+                "rows",
+                ModulePageQuery {
+                    revision: 0,
+                    cursor: 0,
+                    section: None
+                }
+            )
+            .await,
+            Err(ModuleQueryError::Unavailable)
+        );
+    }
+
     fn core() -> CoreHandle {
         spawn_core(vec![], None, Duration::from_millis(100))
     }
@@ -672,6 +823,13 @@ mod tests {
                 ctx.alert(Alert::new(Severity::Warn, "test-alert"));
             }
             ["test.count".into()].into()
+        }
+        fn query(&self, resource: &str, _: &ModulePageQuery) -> Result<Value, ModuleQueryError> {
+            if resource == "count" {
+                Ok(Value::from(self.count.load(Ordering::SeqCst)))
+            } else {
+                Err(ModuleQueryError::NotFound)
+            }
         }
         fn topic_value(&self, topic: &str) -> Option<Value> {
             (topic == "test.count").then(|| Value::from(self.count.load(Ordering::SeqCst)))
@@ -1090,6 +1248,20 @@ mod tests {
         // El productor llena la cola antes de que el actor empiece a consumir.
         std::thread::sleep(Duration::from_millis(20));
         let response = timeout(Duration::from_millis(150), core.snapshot()).await;
+        let query_response = timeout(
+            Duration::from_millis(150),
+            core.query_module(
+                "flood",
+                "rows",
+                ModulePageQuery {
+                    revision: 0,
+                    cursor: 0,
+                    section: None,
+                },
+            ),
+        )
+        .await;
+        assert_eq!(query_response.unwrap(), Err(ModuleQueryError::NotFound));
         let replied_while_producing = response.is_ok();
         keep_sending.store(false, Ordering::Relaxed);
         tokio::task::spawn_blocking(move || producer.join().unwrap())
@@ -1099,6 +1271,64 @@ mod tests {
             replied_while_producing,
             "snapshot starved behind a continuous event backlog"
         );
+    }
+
+    #[tokio::test]
+    async fn module_queries_get_control_turn_after_32_stored_events() {
+        let (event_tx, event_rx) = mpsc::channel(1);
+        let (control_tx, control_rx) = mpsc::channel(1);
+        let (stored_tx, stored_rx) = mpsc::channel(256);
+        let (updates, _) = broadcast::channel(1);
+        let mut actor = Actor::new(
+            vec![Box::new(Probe {
+                count: Arc::default(),
+                panic: false,
+                alerts: false,
+            })],
+            None,
+            updates,
+        );
+        for _ in 0..128 {
+            stored_tx
+                .send(SourceEvent::Stored {
+                    module: "test".into(),
+                    tag: "test".into(),
+                    value: Value::Null,
+                })
+                .await
+                .unwrap();
+        }
+        let (reply, receive) = oneshot::channel();
+        control_tx
+            .send(ControlRequest::ModuleQuery {
+                module: "test".into(),
+                resource: "count".into(),
+                query: ModulePageQuery {
+                    revision: 0,
+                    cursor: 0,
+                    section: None,
+                },
+                reply,
+            })
+            .await
+            .unwrap();
+        let task = tokio::spawn(async move {
+            actor
+                .run(event_rx, control_rx, stored_rx, Duration::from_secs(10))
+                .await;
+        });
+        assert_eq!(
+            timeout(Duration::from_secs(1), receive)
+                .await
+                .unwrap()
+                .unwrap()
+                .unwrap(),
+            Value::from(32)
+        );
+        drop(event_tx);
+        drop(control_tx);
+        drop(stored_tx);
+        task.await.unwrap();
     }
 
     type Script = Box<dyn FnMut(&SourceEvent, &mut ModuleCtx) + Send>;

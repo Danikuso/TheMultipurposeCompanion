@@ -377,57 +377,12 @@
         "completable": true,
         "engineer": "Felicity Farseer",
         "id": "7:FrameShiftDrive:fsd_longrange:-:5",
-        "item": "int_hyperdrive_size5_class5",
-        "missing": {
-          "dataminedwake": 1
-        },
-        "percent": 87,
-        "request": {
-          "blueprint": "fsd_longrange",
-          "experimental": null,
-          "module_type": "fsd",
-          "rolls": [
-            1,
-            1,
-            1,
-            1,
-            4
-          ],
-          "target_grade": 5
-        },
-        "slot": "FrameShiftDrive",
-        "trades": [
-          {
-            "get": 1,
-            "get_key": "dataminedwake",
-            "give": 6,
-            "give_key": "hyperspacetrajectories",
-            "same_family": true,
-            "trader": "Encoded"
-          }
-        ],
-        "verified": false
+        "percent": 87
       }
     ],
-    "missing": {
-      "dataminedwake": 1
-    },
-    "needs": {
-      "biotechconductors": 4,
-      "dataminedwake": 4
-    },
+    "revision": 17,
     "status": "ok",
-    "surplus": {
-      "carbon": 1,
-      "conductiveceramics": 26,
-      "heatvanes": 3,
-      "hyperspacetrajectories": 6,
-      "iron": 117,
-      "pharmaceuticalisolators": 8,
-      "polonium": 150,
-      "protoheatradiators": 2,
-      "shieldpatternanalysis": 14
-    }
+    "total": 1
   },
   "engineering.inventory": {
     "as_of": "2026-10-21T12:03:00Z",
@@ -528,17 +483,74 @@
     "snapshot": true
   },
   "engineering.locker": {
-    "as_of": "2026-10-21T12:00:06Z",
-    "components": [
-      {
-        "count": 8,
-        "key": "graphene",
-        "name_localised": "Graphene"
-      }
-    ],
-    "consumables": [],
-    "data": [],
-    "items": []
+    "as_of": "2026-10-21T12:05:00Z",
+    "counts": {
+      "components": 1,
+      "consumables": 0,
+      "data": 0,
+      "items": 0
+    },
+    "revision": 17
+  },
+  "engineering.pages": {
+    "goals": {
+      "cursor": 0,
+      "items": [
+        {
+          "completable": true,
+          "engineer": "Felicity Farseer",
+          "id": "7:FrameShiftDrive:fsd_longrange:-:5",
+          "item": "int_hyperdrive_size5_class5",
+          "missing": {
+            "dataminedwake": 1
+          },
+          "percent": 87,
+          "request": {
+            "blueprint": "fsd_longrange",
+            "experimental": null,
+            "module_type": "fsd",
+            "rolls": [
+              1,
+              1,
+              1,
+              1,
+              4
+            ],
+            "target_grade": 5
+          },
+          "slot": "FrameShiftDrive",
+          "trades": [
+            {
+              "get": 1,
+              "get_key": "dataminedwake",
+              "give": 6,
+              "give_key": "hyperspacetrajectories",
+              "same_family": true,
+              "trader": "Encoded"
+            }
+          ],
+          "verified": false
+        }
+      ],
+      "next_cursor": null,
+      "revision": 17,
+      "section": "goals",
+      "total": 1
+    },
+    "locker_components": {
+      "cursor": 0,
+      "items": [
+        {
+          "count": 8,
+          "key": "graphene",
+          "name_localised": "Graphene"
+        }
+      ],
+      "next_cursor": null,
+      "revision": 17,
+      "section": "components",
+      "total": 1
+    }
   },
   "engineering.session": {
     "as_of": "2026-10-21T12:03:00Z",
