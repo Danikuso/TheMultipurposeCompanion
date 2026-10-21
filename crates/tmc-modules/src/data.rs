@@ -879,7 +879,7 @@ mod tests {
             ("tellurium", MaterialCategory::Raw, 4),
             ("conductiveceramics", MaterialCategory::Manufactured, 3),
             ("pharmaceuticalisolators", MaterialCategory::Manufactured, 5),
-            ("shieldpatternanalysis", MaterialCategory::Encoded, 1),
+            ("shieldpatternanalysis", MaterialCategory::Encoded, 4),
         ] {
             let m = &materials()[key];
             assert_eq!((m.category, m.grade), (category, grade), "{key}");
