@@ -1,0 +1,110 @@
+{
+  "entries": [
+    {
+      "id": 300100,
+      "name": "Felicity Farseer",
+      "system": "Deciat",
+      "star_pos": [
+        122.625,
+        -0.8125,
+        -47.28125
+      ],
+      "workshop": "Farseer Inc",
+      "market_id": null,
+      "on_foot": false,
+      "blueprints": [
+        {
+          "blueprint": "engine_dirty",
+          "max_grade": 5
+        },
+        {
+          "blueprint": "fsd_longrange",
+          "max_grade": 5
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-felicity-farseer",
+        "invite_key": "unlock-invite-felicity-farseer",
+        "contribution": null
+      },
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "id": 300160,
+      "name": "Elvira Martuuk",
+      "system": "Khun",
+      "star_pos": [
+        66.34375,
+        6.3125,
+        -53.5
+      ],
+      "workshop": "Long Sight Base",
+      "market_id": null,
+      "on_foot": false,
+      "blueprints": [
+        {
+          "blueprint": "fsd_longrange",
+          "max_grade": 5
+        },
+        {
+          "blueprint": "engine_dirty",
+          "max_grade": 3
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-elvira-martuuk",
+        "invite_key": "unlock-invite-elvira-martuuk",
+        "contribution": {
+          "item": "soontillrelics",
+          "kind": "commodity",
+          "amount": 3
+        }
+      },
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "id": 300260,
+      "name": "Tod McQuinn",
+      "system": "Wolf 397",
+      "star_pos": [
+        40.5,
+        -6.0,
+        -9.0
+      ],
+      "workshop": "Trophy Camp",
+      "market_id": null,
+      "on_foot": false,
+      "blueprints": [],
+      "unlock": {
+        "requirement_key": "unlock-tod-mcquinn",
+        "invite_key": "unlock-invite-tod-mcquinn",
+        "contribution": null
+      },
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "id": 400002,
+      "name": "Domino Green",
+      "system": "Orishis",
+      "star_pos": [
+        -9.1875,
+        -1.8125,
+        -45.5
+      ],
+      "workshop": "The Jackson Hub",
+      "market_id": null,
+      "on_foot": true,
+      "blueprints": [],
+      "unlock": {
+        "requirement_key": "unlock-domino-green",
+        "invite_key": null,
+        "contribution": null
+      },
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    }
+  ]
+}
