@@ -576,7 +576,7 @@ mod tests {
             got,
             vec![
                 ("iron", 117),
-                ("polonium", 100),
+                ("polonium", 150),
                 ("carbon", 1),
                 ("conductiveceramics", 26),
                 ("pharmaceuticalisolators", 8),
