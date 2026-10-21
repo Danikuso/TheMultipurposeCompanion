@@ -5,14 +5,14 @@
 - **Última actualización:** 2026-10-21 (Europe/Madrid) · Claude Opus 5.5 (architect-opus)
 - **Fase actual:** F4 — Ingenieros y materiales (🔄 plan escrito; ejecución sin empezar). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
-- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 6/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
+- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 7/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** Task 7 🔄
+- **Tarea:** Task 8 🔄
 - **Último paso completado:** spikes (Tasks 0–2) y Task 4 hechos; preflight aplicado al plan (b0e0028).
-- **Siguiente acción:** Task 7 (adaptadores Ardent sin tipo y Spansh por tipo). Task 3 espera la decisión del propietario (B para todo vs. EDEngineer); Tasks 8–11 rellenan datos completos tras ella.
+- **Siguiente acción:** Task 8 (cargadores de materials.json y trader_rules.json con datos provisionales mínimos; contenido completo tras la decisión del propietario). Task 3 espera la decisión del propietario (B para todo vs. EDEngineer); Tasks 8–11 rellenan datos completos tras ella.
 
 ## Tareas de F4
 
@@ -27,8 +27,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 4 | `tmc-model` — eventos de materiales | ✅ hecha | ba60cb7 | Revisión aprobada (2 menores aparcados) |
 | 5 | `tmc-model` — eventos de ingenieros, `Loadout` ampliado, taquilla y mochila | ✅ hecha | 93a1019 | Revisión aprobada (bajas aparcadas a Tasks 13/14) |
 | 6 | `tmc-model` + `tmc-app` — servicios cercanos nuevos y tiradas por defecto | ✅ hecha | bb66321 | Revisión aprobada; F2 intacto |
-| 7 | `tmc-net` — comerciantes de materiales y broker | 🔄 en curso | — | |
-| 8 | Datos estáticos `materials.json` y `trader_rules.json` | ⬜ pendiente | — | |
+| 7 | `tmc-net` — comerciantes de materiales y broker | ✅ hecha | c24b770 | Revisión aprobada; Ardent sin tipo, Spansh por tipo |
+| 8 | Datos estáticos `materials.json` y `trader_rules.json` | 🔄 en curso | — | |
 | 9 | Datos estáticos `blueprints.json` | ⬜ pendiente | — | |
 | 10 | Datos estáticos `engineers.json` | ⬜ pendiente | — | |
 | 11 | i18n — `engineering.ftl` y `engineering-data.ftl` | ⬜ pendiente | — | |
