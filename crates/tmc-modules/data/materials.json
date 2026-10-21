@@ -766,7 +766,7 @@
       "tradeable": false,
       "hints": [],
       "source": "EDEngineer 2cadd66 (MIT)",
-      "verified": true
+      "verified": false
     },
     {
       "key": "guardian_sentinel_wreckagecomponents",
@@ -777,7 +777,7 @@
       "tradeable": false,
       "hints": [],
       "source": "EDEngineer 2cadd66 (MIT)",
-      "verified": true
+      "verified": false
     },
     {
       "key": "guardian_powerconduit",
@@ -788,7 +788,7 @@
       "tradeable": false,
       "hints": [],
       "source": "EDEngineer 2cadd66 (MIT)",
-      "verified": true
+      "verified": false
     },
     {
       "key": "guardian_sentinel_weaponparts",
@@ -799,7 +799,7 @@
       "tradeable": false,
       "hints": [],
       "source": "EDEngineer 2cadd66 (MIT)",
-      "verified": true
+      "verified": false
     },
     {
       "key": "guardian_techcomponent",
@@ -810,7 +810,7 @@
       "tradeable": false,
       "hints": [],
       "source": "EDEngineer 2cadd66 (MIT)",
-      "verified": true
+      "verified": false
     },
     {
       "key": "heatconductionwiring",
@@ -1405,7 +1405,7 @@
       "tradeable": false,
       "hints": [],
       "source": "EDEngineer 2cadd66 (MIT)",
-      "verified": true
+      "verified": false
     },
     {
       "key": "ancientculturaldata",
@@ -1416,7 +1416,7 @@
       "tradeable": false,
       "hints": [],
       "source": "EDEngineer 2cadd66 (MIT)",
-      "verified": true
+      "verified": false
     },
     {
       "key": "ancientbiologicaldata",
@@ -1427,7 +1427,7 @@
       "tradeable": false,
       "hints": [],
       "source": "EDEngineer 2cadd66 (MIT)",
-      "verified": true
+      "verified": false
     },
     {
       "key": "ancientlanguagedata",
@@ -1438,7 +1438,7 @@
       "tradeable": false,
       "hints": [],
       "source": "EDEngineer 2cadd66 (MIT)",
-      "verified": true
+      "verified": false
     },
     {
       "key": "ancienttechnologicaldata",
@@ -1449,7 +1449,7 @@
       "tradeable": false,
       "hints": [],
       "source": "EDEngineer 2cadd66 (MIT)",
-      "verified": true
+      "verified": false
     },
     {
       "key": "guardian_moduleblueprint",
@@ -1460,7 +1460,7 @@
       "tradeable": false,
       "hints": [],
       "source": "EDEngineer 2cadd66 (MIT)",
-      "verified": true
+      "verified": false
     },
     {
       "key": "guardian_vesselblueprint",
@@ -1471,7 +1471,7 @@
       "tradeable": false,
       "hints": [],
       "source": "EDEngineer 2cadd66 (MIT)",
-      "verified": true
+      "verified": false
     },
     {
       "key": "guardian_weaponblueprint",
@@ -1482,7 +1482,7 @@
       "tradeable": false,
       "hints": [],
       "source": "EDEngineer 2cadd66 (MIT)",
-      "verified": true
+      "verified": false
     },
     {
       "key": "shieldcyclerecordings",
