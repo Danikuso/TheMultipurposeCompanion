@@ -260,15 +260,42 @@ impl Store {
         &self,
         stmts: &[(&str, Vec<serde_json::Value>)],
     ) -> Result<usize, StoreError> {
-        let mut conn = self.lock()?;
-        let tx = conn.transaction()?;
-        let mut total = 0;
-        for (sql, params) in stmts {
-            let params = params.iter().map(to_sql).collect::<Result<Vec<_>, _>>()?;
-            total += tx.execute(sql, rusqlite::params_from_iter(params))?;
+        #[cfg(debug_assertions)]
+        let diagnostic_started = std::time::Instant::now();
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::Sql,
+            "store.exec_batch.started",
+            serde_json::json!({"statements":stmts.len()})
+        );
+        let result: Result<_, StoreError> = (|| {
+            let mut conn = self.lock()?;
+            let tx = conn.transaction()?;
+            let mut total = 0;
+            for (sql, params) in stmts {
+                let params = params.iter().map(to_sql).collect::<Result<Vec<_>, _>>()?;
+                total += tx.execute(sql, rusqlite::params_from_iter(params))?;
+            }
+            tx.commit()?;
+            Ok(total)
+        })();
+        #[cfg(debug_assertions)]
+        match &result {
+            Ok(_value) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.exec_batch.completed",
+                    serde_json::json!({"statements":stmts.len(),"rows":_value,"elapsed_us":diagnostic_started.elapsed().as_micros()})
+                );
+            }
+            Err(_error) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.exec_batch.failed",
+                    serde_json::json!({"statements":stmts.len(),"failure_class":_error.diagnostic_class(),"elapsed_us":diagnostic_started.elapsed().as_micros()})
+                );
+            }
         }
-        tx.commit()?;
-        Ok(total)
+        result
     }
     pub fn api_cache_get(&self, key: &str) -> Result<Option<CachedEntry>, StoreError> {
         #[cfg(debug_assertions)]
