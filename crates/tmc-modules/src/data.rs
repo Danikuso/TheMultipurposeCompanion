@@ -1068,7 +1068,9 @@ mod tests {
             assert_eq!(key, &m.key);
             assert!(!m.source.trim().is_empty());
             assert!((1..=5).contains(&m.grade), "{key}");
-            assert!(m.verified, "{key}");
+            // Guardian grades disagree between EDEngineer and FDevIDs: unverified.
+            let guardian = m.family.starts_with("guardian");
+            assert_eq!(m.verified, !guardian, "{key}");
             assert_eq!(m.source, "EDEngineer 2cadd66 (MIT)", "{key}");
         }
         let iron = &table["iron"];
