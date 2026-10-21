@@ -338,6 +338,11 @@ const EVENTS: &[&str] = &[
     "MaterialDiscarded",
     "MaterialTrade",
     "Synthesis",
+    "EngineerProgress",
+    "EngineerCraft",
+    "EngineerContribution",
+    "TechnologyBroker",
+    "BackpackChange",
 ];
 /// Indica si un tema está en el registro de diagnóstico (si no, su nombre se redacta).
 pub fn is_registered_topic(name: &str) -> bool {
@@ -1279,6 +1284,11 @@ mod tests {
             "MaterialCollected",
             "MaterialDiscarded",
             "Synthesis",
+            "EngineerProgress",
+            "EngineerCraft",
+            "EngineerContribution",
+            "TechnologyBroker",
+            "BackpackChange",
         ] {
             assert_eq!(DiagnosticContext::Journal { event: e }.schema(), e);
         }
