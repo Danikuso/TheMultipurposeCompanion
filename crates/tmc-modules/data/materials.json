@@ -1,0 +1,465 @@
+{
+  "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+  "entries": [
+    {
+      "key": "carbon",
+      "name_en": "Carbon",
+      "category": "Raw",
+      "grade": 1,
+      "family": "raw-1",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "surface_prospecting",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "vanadium",
+      "name_en": "Vanadium",
+      "category": "Raw",
+      "grade": 2,
+      "family": "raw-1",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "surface_prospecting",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "niobium",
+      "name_en": "Niobium",
+      "category": "Raw",
+      "grade": 3,
+      "family": "raw-1",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "surface_prospecting",
+          "detail_key": null
+        },
+        {
+          "kind": "mining",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "yttrium",
+      "name_en": "Yttrium",
+      "category": "Raw",
+      "grade": 4,
+      "family": "raw-1",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "surface_prospecting",
+          "detail_key": null
+        },
+        {
+          "kind": "mining",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "polonium",
+      "name_en": "Polonium",
+      "category": "Raw",
+      "grade": 5,
+      "family": "raw-1",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "surface_prospecting",
+          "detail_key": null
+        },
+        {
+          "kind": "mining",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "iron",
+      "name_en": "Iron",
+      "category": "Raw",
+      "grade": 1,
+      "family": "raw-4",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "surface_prospecting",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "heatconductionwiring",
+      "name_en": "Heat Conduction Wiring",
+      "category": "Manufactured",
+      "grade": 1,
+      "family": "heat",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        },
+        {
+          "kind": "mission_reward",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "heatdispersionplate",
+      "name_en": "Heat Dispersion Plate",
+      "category": "Manufactured",
+      "grade": 2,
+      "family": "heat",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        },
+        {
+          "kind": "mission_reward",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "heatexchangers",
+      "name_en": "Heat Exchangers",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "heat",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        },
+        {
+          "kind": "mission_reward",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "heatvanes",
+      "name_en": "Heat Vanes",
+      "category": "Manufactured",
+      "grade": 4,
+      "family": "heat",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "mission_reward",
+          "detail_key": null
+        },
+        {
+          "kind": "broker",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "protoheatradiators",
+      "name_en": "Proto Heat Radiators",
+      "category": "Manufactured",
+      "grade": 5,
+      "family": "heat",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "mission_reward",
+          "detail_key": null
+        },
+        {
+          "kind": "broker",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "basicconductors",
+      "name_en": "Basic Conductors",
+      "category": "Manufactured",
+      "grade": 1,
+      "family": "conductive",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "conductivecomponents",
+      "name_en": "Conductive Components",
+      "category": "Manufactured",
+      "grade": 2,
+      "family": "conductive",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "conductiveceramics",
+      "name_en": "Conductive Ceramics",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "conductive",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "conductivepolymers",
+      "name_en": "Conductive Polymers",
+      "category": "Manufactured",
+      "grade": 4,
+      "family": "conductive",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "mission_reward",
+          "detail_key": null
+        },
+        {
+          "kind": "broker",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "biotechconductors",
+      "name_en": "Biotech Conductors",
+      "category": "Manufactured",
+      "grade": 5,
+      "family": "conductive",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "mission_reward",
+          "detail_key": null
+        },
+        {
+          "kind": "broker",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "hybridcapacitors",
+      "name_en": "Hybrid Capacitors",
+      "category": "Manufactured",
+      "grade": 2,
+      "family": "capacitors",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "electrochemicalarrays",
+      "name_en": "Electrochemical Arrays",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "capacitors",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "polymercapacitors",
+      "name_en": "Polymer Capacitors",
+      "category": "Manufactured",
+      "grade": 4,
+      "family": "capacitors",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "militarysupercapacitors",
+      "name_en": "Military Supercapacitors",
+      "category": "Manufactured",
+      "grade": 5,
+      "family": "capacitors",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "disruptedwakeechoes",
+      "name_en": "Atypical Disrupted Wake Echoes",
+      "category": "Encoded",
+      "grade": 1,
+      "family": "wake-scans",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "data_scan",
+          "detail_key": null
+        },
+        {
+          "kind": "signal_source",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "fsdtelemetry",
+      "name_en": "Anomalous FSD Telemetry",
+      "category": "Encoded",
+      "grade": 2,
+      "family": "wake-scans",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "data_scan",
+          "detail_key": null
+        },
+        {
+          "kind": "signal_source",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "wakesolutions",
+      "name_en": "Strange Wake Solutions",
+      "category": "Encoded",
+      "grade": 3,
+      "family": "wake-scans",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "data_scan",
+          "detail_key": null
+        },
+        {
+          "kind": "signal_source",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "hyperspacetrajectories",
+      "name_en": "Eccentric Hyperspace Trajectories",
+      "category": "Encoded",
+      "grade": 4,
+      "family": "wake-scans",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "data_scan",
+          "detail_key": null
+        },
+        {
+          "kind": "signal_source",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "dataminedwake",
+      "name_en": "Datamined Wake Exceptions",
+      "category": "Encoded",
+      "grade": 5,
+      "family": "wake-scans",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "data_scan",
+          "detail_key": null
+        },
+        {
+          "kind": "signal_source",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    }
+  ]
+}
