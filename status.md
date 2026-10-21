@@ -5,14 +5,14 @@
 - **Última actualización:** 2026-10-21 (Europe/Madrid) · Claude Opus 5.5 (architect-opus)
 - **Fase actual:** F4 — Ingenieros y materiales (🔄 plan escrito; ejecución sin empezar). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
-- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 13/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
+- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 14/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** Task 14 🔄
+- **Tarea:** Task 15 🔄
 - **Último paso completado:** spikes (Tasks 0–2) y Task 4 hechos; preflight aplicado al plan (b0e0028).
-- **Siguiente acción:** Task 14 (ingenieros: estado, rango, distancia, desbloqueo).
+- **Siguiente acción:** Task 15 (mi nave modificada desde Loadout).
 
 ## Tareas de F4
 
@@ -34,8 +34,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 11 | i18n — `engineering.ftl` y `engineering-data.ftl` | ✅ hecha | 5b66a98 | Revisión aprobada; nombres ED-Board con procedencia; 2 dudas al propietario |
 | 12 | `engineering` — inventario de materiales y cambios de la sesión | ✅ hecha | 335edf6 | Revisión aprobada; fixture engineering_session.log |
 | 13 | `engineering` — taquilla de a pie | ✅ hecha | 35b98ab | Revisión aprobada; stub no vacía; listas parciales |
-| 14 | `engineering` — ingenieros | 🔄 en curso | — | |
-| 15 | `engineering` — mi nave modificada | ⬜ pendiente | — | |
+| 14 | `engineering` — ingenieros | ✅ hecha | 06e1fec | Revisión aprobada; posición None hasta salto |
+| 15 | `engineering` — mi nave modificada | 🔄 en curso | — | |
 | 16 | `engineering` — cálculo de ingenierizar | ⬜ pendiente | — | |
 | 17 | `engineering` — planificador de intercambios | ⬜ pendiente | — | |
 | 18 | `engineering` — lista de la compra, reservas y persistencia | ⬜ pendiente | — | |
