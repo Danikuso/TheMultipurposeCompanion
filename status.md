@@ -2,17 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-22 00:59 (Europe/Madrid) · Codex
-- **Fase actual:** F4 — Ingenieros y materiales (🔄 ejecución: Tasks 0–19 registradas; Task 20 completada; Task 21 completada; Task 22 en curso). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Última actualización:** 2026-10-22 01:12 (Europe/Madrid) · Codex
+- **Fase actual:** F4 — Ingenieros y materiales (🔄 ejecución: Tasks 0–19 registradas; Task 20 completada; Tasks 21–22 completadas; Task 23 en curso). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
-- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 22/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
+- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 23/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** Task 22 🔄 en curso — Step 1: tests del panel de ingenieros
-- **Último paso completado:** Task 21 cerrada en `04e5ea4`: ambas revisiones y QA visual aprobadas; 1.356 Rust PASS/2 ignoradas previas, 258 UI PASS, fmt/clippy/check/build correctos.
-- **Siguiente acción:** implementar Task 22 con TDD: lista de ingenieros de nave/a pie, selección, siguiente paso y blueprints/grado máximo.
+- **Tarea:** Task 23 🔄 en curso — Step 1: tests de Mi nave y flujo de ingenierizar
+- **Último paso completado:** Task 22 cerrada en `88836b7`: ambas revisiones y QA visual aprobadas tras corregir nombres de mercancías; 1.356 Rust PASS/2 ignoradas previas, 274 UI PASS, fmt/clippy/check/build correctos.
+- **Siguiente acción:** implementar Task 23 con TDD: módulos de nave, selección, blueprint/experimental/grado/tiradas, cálculo por grado y total, estados de materiales e ingeniero recomendado, fijar objetivo y cerrar flujo.
 
 ## Tareas de F4
 
@@ -28,10 +28,10 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 5 | `tmc-model` — eventos de ingenieros, `Loadout` ampliado, taquilla y mochila | ✅ hecha | 93a1019 | Revisión aprobada (bajas aparcadas a Tasks 13/14) |
 | 6 | `tmc-model` + `tmc-app` — servicios cercanos nuevos y tiradas por defecto | ✅ hecha | bb66321 | Revisión aprobada; F2 intacto |
 | 7 | `tmc-net` — comerciantes de materiales y broker | ✅ hecha | c24b770 | Revisión aprobada; Ardent sin tipo, Spansh por tipo |
-| 8 | Datos estáticos `materials.json` y `trader_rules.json` | ✅ hecha | 671fa03, 7f555d1, 198710b | Pasos 1–5; catálogo provisional (29, verified:false); Step 6 espera decisión |
+| 8 | Datos estáticos `materials.json` y `trader_rules.json` | ✅ hecha | 671fa03, 7f555d1, 198710b, a46dec9, dd35f8a, e0d46ef | Catálogo importado: 139 materiales; 13 Guardian sin verificar; tests globales PASS |
 | 9 | Datos estáticos `blueprints.json` | ✅ hecha | 35598f5 | Pasos 1–5; recetas provisionales (cantidades 1); Step 6 espera decisión |
 | 10 | Datos estáticos `engineers.json` | ✅ hecha | fa964e5, 6a8c626, f313f63 | Provisional (verified:false); Palin G5 para criterio 4 |
-| 11 | i18n — `engineering.ftl` y `engineering-data.ftl` | ✅ hecha | 5b66a98 | Revisión aprobada; nombres ED-Board con procedencia; 2 dudas al propietario |
+| 11 | i18n — `engineering.ftl` y `engineering-data.ftl` | ✅ hecha | 5b66a98, a84d82c | Nombres EDEngineer MIT; Motor Sucio e Impulsores de Arrastre resueltos; revisión aprobada |
 | 12 | `engineering` — inventario de materiales y cambios de la sesión | ✅ hecha | 335edf6 | Revisión aprobada; fixture engineering_session.log |
 | 13 | `engineering` — taquilla de a pie | ✅ hecha | 35b98ab | Revisión aprobada; stub no vacía; listas parciales |
 | 14 | `engineering` — ingenieros | ✅ hecha | 06e1fec | Revisión aprobada; posición None hasta salto |
@@ -42,8 +42,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 19 | `engineering` — dónde conseguirlo, ingeniero recomendado y avisos | ✅ hecha | 4672cdc | Revisión aprobada |
 | 20 | `engineering` — módulo, topics, relevancia, red, almacén y registro | ✅ hecha | 9904133, 1fc8b74, a4c5f3d | Paginación aprobada; 1.356 Rust/238 UI PASS, probes activos, ambas revisiones |
 | 21 | UI — «Materiales» | ✅ hecha | 04e5ea4 | 20 tests nuevos; 258 UI/1.356 Rust PASS; ambas revisiones y QA visual |
-| 22 | UI — «Ingenieros» | 🔄 en curso | — | Step 1: TDD del panel |
-| 23 | UI — «Mi nave» e «Ingenierizar un módulo» | ⬜ pendiente | — | |
+| 22 | UI — «Ingenieros» | ✅ hecha | 88836b7 | 16 tests nuevos; 274 UI/1.356 Rust PASS; ambas revisiones y QA visual |
+| 23 | UI — «Mi nave» e «Ingenierizar un módulo» | 🔄 en curso | — | Step 1: TDD |
 | 24 | UI — «Lista de la compra», «Intercambios», «Dónde conseguirlo» y avisos | ⬜ pendiente | — | |
 | 25 | UI — disposición «Ingeniería», prioridad, Auto-companion y tiradas | ⬜ pendiente | — | |
 | 26 | Fixtures sintéticos y pruebas de extremo a extremo | ⬜ pendiente | — | |
@@ -72,7 +72,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | F1 | Navegación, exploración, exobiología | ✅ completada y fusionada (b96fecf) |
 | F2 | Cazarrecompensas/combate (incl. AX), minería | ✅ completada y fusionada (e069a14) |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ✅ completada y fusionada (6dc09d9) |
-| F4 | Ingenieros y materiales | 🔄 ejecución; Task 20 completada; Task 21 completada; Task 22 en curso |
+| F4 | Ingenieros y materiales | 🔄 ejecución; Task 20 completada; Tasks 21–22 completadas; Task 23 en curso |
 | F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | ⬜ |
 | F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | ⬜ |
 | F7 | Voz (KokoroTTS; alemán sin voz) | ⬜ |
@@ -298,6 +298,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-22 01:12 (Europe/Madrid) · Codex · Task 22 cerrada `88836b7`: revisión spec aprobada, P2 de mercancías corregido y calidad aprobada; 274 UI/1.356 Rust PASS, fmt/clippy/check/build y QA visual PASS. Latencia combate falló una vez 578,9 ms; aislada PASS 307,3 ms y suite completa repetida PASS sin cambiar el umbral. Corregidas notas antiguas de importación de materiales/nombres con commits existentes. Continúa Task 23.
 
 - 2026-10-22 00:59 (Europe/Madrid) · Codex · Task 21 cerrada en `04e5ea4` tras revisiones spec/calidad, QA visual 2560/800 y checks globales: 1.356 Rust PASS/2 ignoradas previas y 258 UI PASS. Continúa Task 22 con TDD. Sin código pendiente de Task 21.
 
