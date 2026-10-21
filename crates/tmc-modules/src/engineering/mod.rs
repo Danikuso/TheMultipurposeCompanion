@@ -7,3 +7,4 @@ pub mod inventory;
 pub mod locker;
 pub mod plan;
 pub mod ship;
+pub mod trades;
