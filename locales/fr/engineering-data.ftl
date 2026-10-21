@@ -1,6 +1,6 @@
 # Procedencia de los nombres oficiales de blueprints, experimentales y tipos de módulo:
 #   EDEngineer 2cadd66 (MIT), EDEngineer/Resources/Data/localization.json (traducciones del juego por idioma);
-#   ver THIRD_PARTY_NOTICES.md. Coinciden con los nombres que ya figuraban de ED-Board.
+#   ver THIRD_PARTY_NOTICES.md.
 #   Correspondencia con las claves del diario (por nombre inglés de EDEngineer):
 #     engine_dirty = «Dirty Drive Tuning»; fsd_longrange = «Increased FSD Range»;
 #     special_engine_overloaded = «Drag Drives» (EDEngineer no trae la clave del diario: se deduce de los efectos y se contrasta con coriolis-data, donde special_engine_haulage = «Drive Distributors»).
