@@ -368,3 +368,106 @@ test.each(['commander', 'ship'])('selection wait is invalidated after %s changes
   expect(shipTarget.querySelector('[role="alert"]')).toBeNull();
  } finally { await unmount(ship); shipTarget.remove(); }
 });
+
+import ShoppingPanel from '../src/modules/engineering/ShoppingPanel.svelte';
+import TradesPanel from '../src/modules/engineering/TradesPanel.svelte';
+import SourcesPanel from '../src/modules/engineering/SourcesPanel.svelte';
+import EngineeringAlerts from '../src/modules/engineering/EngineeringAlerts.svelte';
+function goalFetch() {
+ vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+  if (url.startsWith('/api/actions/')) return new Response('{}');
+  const query = new URL(url, 'http://localhost').searchParams;
+  const section = query.get('section')!;
+  return new Response(JSON.stringify({ ...fixture['engineering.pages'].goals, revision: Number(query.get('revision')), section, items: section === 'goals' ? fixture['engineering.pages'].goals.items : [{ key: 'iron', count: 7 }] }));
+ }));
+}
+function panel(component: typeof ShoppingPanel) { mounted = mount(component, { target }); flushSync(); }
+test('goal shows percent blueprint grade missing and completable engineer', async () => {
+ goalFetch(); panel(ShoppingPanel); await settle();
+ expect(target.textContent).toContain('87 %'); expect(target.textContent).toContain('G5'); expect(target.textContent).toContain('Felicity Farseer'); expect(target.textContent).toContain('Sin verificar');
+ for (const section of ['needs', 'missing', 'surplus']) expect(target.querySelector(`[data-section="${section}"]`)?.textContent).toContain('7');
+});
+test('move and remove goals post exact json and localized errors', async () => {
+ goalFetch(); live.topics['engineering.goals']={...fixture['engineering.goals'],total:2}; panel(ShoppingPanel); await settle(); click('goal-down-0'); await settle();
+ expect(fetch).toHaveBeenCalledWith('/api/actions/engineering.move_goal', expect.objectContaining({ body: JSON.stringify({ id: fixture['engineering.pages'].goals.items[0].id, to: 1 }) }));
+ click('goal-remove-0'); await settle(); expect(fetch).toHaveBeenCalledWith('/api/actions/engineering.unpin_goal', expect.objectContaining({ body: JSON.stringify({ id: fixture['engineering.pages'].goals.items[0].id }) }));
+});
+test('trade shows give receive names and nearby typed trader', async () => {
+ goalFetch(); panel(TradesPanel); await settle(); expect(target.textContent).toContain('6'); expect(target.textContent).toContain('1'); expect(target.textContent).toContain('Eccentric Hyperspace Trajectories'); expect(target.textContent).toContain('Fake Port'); expect(target.textContent).toContain('Codificados');
+});
+test('sources show distance pad hints and applicable broker', () => {
+ panel(SourcesPanel); expect(target.textContent).toContain('8,2 al'); expect(target.textContent).toContain('Fake Port'); expect(target.textContent).toContain('Synthetic Neighbour'); expect(target.textContent).toContain('L'); expect(target.textContent).toContain('Escaneo de datos'); expect(target.textContent).toContain('Buscando'); expect(fetch).not.toHaveBeenCalled();
+});
+test('source disabled nodata loading and unknown states remain readable', () => {
+ live.topics['engineering.sources'] = { traders: { Raw: 'Disabled', Manufactured: 'NoData', Encoded: 'Future' }, brokers: {}, hints: { unknown: [{kind:'future',detail_key:'future-key'}] } }; panel(SourcesPanel);
+ expect(target.querySelector('[data-trader="Raw"]')?.textContent).toContain('Sin datos'); expect(target.textContent).toContain('Servicios online desactivados'); expect(target.textContent).not.toContain('future-key'); expect(target.textContent).not.toContain('Future');
+});
+test('alerts resolve engineer names dismiss by id and localize failures', async () => {
+ goalFetch(); panel(EngineeringAlerts); expect(target.textContent).toContain('Elvira Martuuk'); click('engineering-dismiss-0'); await settle();
+ expect(fetch).toHaveBeenCalledWith('/api/actions/engineering.dismiss_alert', expect.objectContaining({body:JSON.stringify({id:'unlocked:300160'})}));
+ vi.mocked(fetch).mockRejectedValue(new Error('secret')); click('engineering-dismiss-0'); await settle(); expect(target.textContent).toContain('No se pudo completar la acción'); expect(target.textContent).not.toContain('secret');
+});
+test('unknown alert and material remain readable', () => {
+ live.topics['engineering.alerts'] = { alerts: [{id:'x',kind:'future'}, {id:'y',kind:'material_at_max',key:'unknown',grade:0}] }; panel(EngineeringAlerts); expect(target.textContent).toContain('Sin datos'); expect(target.textContent).not.toContain('future');
+});
+test('shopping 409 waits for websocket revision without polling', async () => {
+ vi.stubGlobal('fetch', vi.fn(async () => new Response('',{status:409}))); panel(ShoppingPanel); await settle(); expect(target.textContent).toContain('Esperando'); expect(fetch).toHaveBeenCalledTimes(4);
+ await settle(); expect(fetch).toHaveBeenCalledTimes(4); live.topics['engineering.goals'] = {...fixture['engineering.goals'],revision:18}; flushSync(); await settle(); expect(fetch).toHaveBeenCalledTimes(8);
+});
+test('shopping as_of does not restart requests and commander changes invalidate rows', async () => {
+ goalFetch(); panel(ShoppingPanel); await settle(); vi.mocked(fetch).mockClear(); live.topics['engineering.goals'] = {...fixture['engineering.goals'],as_of:'2030-01-01'}; flushSync(); await settle(); expect(fetch).not.toHaveBeenCalled();
+ vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {}))); live.topics['core.cmdr']={name:'Other'}; flushSync(); expect(target.textContent).not.toContain('87 %'); expect(fetch).toHaveBeenCalledTimes(4);
+});
+test('shopping cancels hidden disconnected and unmounted consumers', async () => {
+ vi.stubGlobal('fetch',vi.fn(() => new Promise<Response>(() => {}))); panel(ShoppingPanel); const signal=vi.mocked(fetch).mock.calls[0][1]!.signal!;
+ live.connected=false; flushSync(); expect(signal.aborted).toBe(true); live.connected=true; flushSync(); const second=vi.mocked(fetch).mock.calls[4][1]!.signal!;
+ const hidden=vi.spyOn(document,'hidden','get').mockReturnValue(true); document.dispatchEvent(new Event('visibilitychange')); flushSync(); expect(second.aborted).toBe(true); hidden.mockReturnValue(false); document.dispatchEvent(new Event('visibilitychange')); flushSync(); hidden.mockRestore();
+ const last=vi.mocked(fetch).mock.calls.at(-1)![1]!.signal!; await unmount(mounted!); mounted=undefined; expect(last.aborted).toBe(true);
+});
+
+test('missing known materials use approved catalog names and unknown keys show no data', async () => {
+ live.topics['engineering.inventory']={by_category:{},caps:{},at_max:[],snapshot:true};
+ goalFetch(); panel(ShoppingPanel); await settle(); expect(target.textContent).toContain('Datamined Wake Exceptions'); expect(target.textContent).toContain('Iron');
+ live.topics['engineering.sources']={traders:{},brokers:{},hints:{new_material:[{kind:'data_scan',detail_key:null}]}};
+ await unmount(mounted!); mounted=undefined; panel(SourcesPanel); expect(target.textContent).toContain('new_material'); expect(target.textContent).toContain('Sin datos');
+});
+test('shopping publishes all sections atomically across multiple pages', async () => {
+ const goal=fixture['engineering.pages'].goals.items[0];
+ let finish!: (response:Response)=>void;
+ vi.stubGlobal('fetch',vi.fn(async (url:string) => {
+  const q=new URL(url,'http://localhost').searchParams; const section=q.get('section')!; const cursor=Number(q.get('cursor'));
+  if(section==='surplus') return new Promise<Response>(resolve=>{finish=resolve;});
+  return new Response(JSON.stringify({revision:17,section,cursor,total:section==='goals'?2:1,next_cursor:section==='goals' && cursor===0?1:null,items:section==='goals'?[{...goal,id:cursor?'second':goal.id}]:[{key:'iron',count:7}]}));
+ }));
+ panel(ShoppingPanel); await settle(); expect(target.textContent).not.toContain('87 %');
+ finish(new Response(JSON.stringify({revision:17,section:'surplus',cursor:0,next_cursor:null,total:1,items:[{key:'carbon',count:2}]}))); await settle();
+ expect(target.querySelectorAll('[data-goal-id]')).toHaveLength(2); expect(target.querySelector('[data-section="surplus"]')?.textContent).toContain('2');
+ click('goal-up-1'); await settle(); expect(fetch).toHaveBeenCalledWith('/api/actions/engineering.move_goal',expect.objectContaining({body:JSON.stringify({id:'second',to:0})}));
+});
+test('late goals JSON from old revision cannot replace current commander rows', async () => {
+ const goal=fixture['engineering.pages'].goals.items[0]; let finish!: (value:unknown)=>void;
+ vi.stubGlobal('fetch',vi.fn().mockResolvedValueOnce({ok:true,status:200,json:()=>new Promise(resolve=>{finish=resolve;})}));
+ panel(TradesPanel); await settle();
+ goalFetch(); live.topics['engineering.goals']={...fixture['engineering.goals'],revision:18}; live.topics['core.cmdr']={name:'Changed'}; flushSync(); await settle();
+ finish({...fixture['engineering.pages'].goals,items:[{...goal,trades:[{...goal.trades[0],give:999}]}]}); await settle(); expect(target.textContent).not.toContain('999'); expect(target.textContent).toContain('6');
+});
+test('shopping action and page failures are localized', async () => {
+ goalFetch(); panel(ShoppingPanel); await settle(); vi.mocked(fetch).mockRejectedValue(new Error('private')); click('goal-remove-0'); await settle(); expect(target.textContent).toContain('No se pudo completar la acción'); expect(target.textContent).not.toContain('private');
+ live.topics['engineering.goals']={...fixture['engineering.goals'],revision:18}; flushSync(); await settle(); expect(target.textContent).toContain('No se pudieron cargar los datos'); expect(target.textContent).not.toContain('87 %');
+});
+test('all known engineering alert kinds resolve readable names and goals', () => {
+ live.topics['engineering.alerts']={alerts:[{id:'max',kind:'material_at_max',key:'iron',grade:1},{id:'invite',kind:'engineer_invited',engineer_id:300100},{id:'scarce',kind:'scarce_obtained',key:'iron'},{id:'goal',kind:'goal_completable',goal:fixture['engineering.pages'].goals.items[0].id,engineer:'Felicity Farseer'}]};
+ panel(EngineeringAlerts); expect(target.textContent).toContain('Hierro al máximo'); expect(target.textContent).toContain('Invitación nueva de Felicity Farseer'); expect(target.textContent).toContain('Material escaso conseguido'); expect(target.textContent).toContain('G5'); expect(target.textContent).not.toContain('fsd_longrange');
+});
+
+test('late shopping and dismiss errors cannot cross commanders or release the HTTP lock early', async () => {
+ for (const component of [ShoppingPanel,EngineeringAlerts]) {
+  goalFetch(); panel(component); await settle();
+  let fail!: (error:Error)=>void; const pages=fetch; vi.stubGlobal('fetch',vi.fn((url:string,init?:RequestInit)=>url.startsWith('/api/actions/') ? new Promise<Response>((_,reject)=>{fail=reject;}) : pages(url,init)));
+  const id=component===ShoppingPanel ? 'goal-remove-0' : 'engineering-dismiss-0'; click(id);
+  live.topics['core.cmdr']={name:'Another context'}; flushSync(); await settle();
+  expect((target.querySelector(`[data-testid="${id}"]`) as HTMLButtonElement | null)?.disabled ?? true).toBe(true);
+  fail(new Error('old commander')); await settle(); expect(target.textContent).not.toContain('No se pudo completar la acción');
+  await unmount(mounted!); mounted=undefined; live.topics['core.cmdr']={name:'Synthetic'}; flushSync();
+ }
+});
