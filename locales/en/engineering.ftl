@@ -79,3 +79,8 @@ engineering-alert-engineer-invited = New invitation from { $engineer }
 engineering-alert-scarce-obtained = Scarce material obtained: { $material }
 engineering-alert-goal-completable = You can now complete { $goal }
 engineering-alert-goal-completable-with = You can now complete { $goal } with { $engineer }
+
+engineering-locker-section = Locker section
+engineering-page-loading = Loading…
+engineering-page-failed = Could not load the data
+engineering-page-stale = Waiting for updated inventory
