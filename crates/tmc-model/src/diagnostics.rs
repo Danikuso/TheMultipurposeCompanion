@@ -539,6 +539,16 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
     {
         return true;
     }
+    // Tipos cerrados de los servicios cercanos de F4 (comerciante / bróker).
+    if matches!(context, DiagnosticContext::NetQuery)
+        && match key {
+            "materialtrader" => matches!(text, "Raw" | "Manufactured" | "Encoded"),
+            "technologybroker" => matches!(text, "Human" | "Guardian"),
+            _ => false,
+        }
+    {
+        return true;
+    }
     // Etiquetas de `NetOutcome::diag_summary` (resumen de `net.query.finished`).
     if matches!(context, DiagnosticContext::NetOutcome)
         && path == "outcome"
@@ -1362,6 +1372,37 @@ mod tests {
         );
         assert_eq!(query["SystemCoordsByName"]["name"], REDACTED);
     }
+    #[test]
+    fn nearby_service_variants_have_closed_diag_labels() {
+        let ctx = DiagnosticContext::NetQuery;
+        let safe = redact_diagnostic(
+            &json!({"NearestService":{"service":{"MaterialTrader":"Raw"},"system_name":"Sol",
+                "service2":{"TechnologyBroker":"Guardian"}}}),
+            ctx,
+        );
+        assert_eq!(safe["NearestService"]["service"]["MaterialTrader"], "Raw");
+        assert_eq!(
+            safe["NearestService"]["service2"]["TechnologyBroker"],
+            "Guardian"
+        );
+        let safe = redact_diagnostic(
+            &json!({"NearestService":{"service":{"MaterialTrader":"CANARY"},
+                "service2":{"TechnologyBroker":"CANARY"}}}),
+            ctx,
+        );
+        assert_eq!(
+            safe["NearestService"]["service"]["MaterialTrader"],
+            REDACTED
+        );
+        assert_eq!(
+            safe["NearestService"]["service2"]["TechnologyBroker"],
+            REDACTED
+        );
+        // Un tipo de bróker no vale como tipo de comerciante.
+        let safe = redact_diagnostic(&json!({"MaterialTrader":"Guardian"}), ctx);
+        assert_eq!(safe["MaterialTrader"], REDACTED);
+    }
+
     #[test]
     fn network_outcomes_keep_finite_statuses_and_cache_source() {
         use crate::net::{NetFailure, NetOutcome, NetSource};

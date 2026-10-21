@@ -41,7 +41,7 @@ use crate::limiter::{RateLimiter, Service};
 use crate::spansh::{self, RoutePoll, TradePoll};
 use crate::transport::{HttpReply, Transport, TransportError};
 use chrono::{DateTime, Utc};
-use tmc_model::net::{NetFailure, NetOutcome, NetQuery, NetSource};
+use tmc_model::net::{NearbyService, NetFailure, NetOutcome, NetQuery, NetSource};
 
 const POLL_EVERY: Duration = Duration::from_secs(2);
 const MAX_TRANSIENT_POLL_FAILURES: u32 = 2;
@@ -358,9 +358,17 @@ impl NetClient {
                 (NetSource::Ardent, out)
             }
             NetQuery::NearestService {
+                service: NearbyService::MaterialTrader(_) | NearbyService::TechnologyBroker(_),
+                ..
+            } => {
+                // Task 7 sustituye este brazo por los adaptadores reales.
+                (NetSource::Ardent, NetOutcome::NoData)
+            }
+            NetQuery::NearestService {
                 system_address,
                 service,
                 min_pad,
+                ..
             } => {
                 let url = ardent::nearest_url(*system_address, *service, *min_pad);
                 let pad = *min_pad;
@@ -1795,6 +1803,7 @@ mod tests {
     fn nearest_query() -> NetQuery {
         NetQuery::NearestService {
             system_address: 10477373803,
+            system_name: "Sol".into(),
             service: NearbyService::InterstellarFactors,
             min_pad: PadSize::Large,
         }
