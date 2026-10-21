@@ -14,12 +14,18 @@ export function engineerStatusLabel(status: string): string {
 }
 
 export function blueprintLabel(key: string, english?: string): { name: string; pending: boolean } {
-  const fluentKey = `bp-${key}`;
+  const fluentKey = `bp-${key.toLowerCase()}`;
   const name = t(fluentKey);
   return {
     name: name === fluentKey ? (english ?? key) : name,
     pending: name === fluentKey || translationPending(fluentKey),
   };
+}
+
+export function engineeringDataLabel(prefix: 'exp' | 'modtype', key: string): { name: string; pending: boolean } {
+  const fluentKey = `${prefix}-${key.toLowerCase()}`;
+  const name = t(fluentKey);
+  return { name: name === fluentKey ? key : name, pending: name === fluentKey || translationPending(fluentKey) };
 }
 
 export function contributionCommodityLabel(key: string, journalName?: string | null): { name: string; pending: boolean } {

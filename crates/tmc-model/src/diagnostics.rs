@@ -810,6 +810,8 @@ const UI_SLOTS: &[&str] = &[
 const UI_PANELS: &[&str] = &[
     "panel-engineering-materials",
     "panel-engineering-engineers",
+    "panel-engineering-ship",
+    "panel-engineering-flow",
     "combat-target",
     "nav-settings",
     "panel-alerts",

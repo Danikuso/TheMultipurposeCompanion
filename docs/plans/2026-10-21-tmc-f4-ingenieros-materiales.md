@@ -648,11 +648,11 @@ test('engineer blueprints with max grade', /* Felicity → nombre bp-engine_dirt
 
 ### Task 23: UI — «Mi nave» e «Ingenierizar un módulo»
 
-**Files:** Create `ui/src/modules/engineering/{ShipPanel.svelte, EngineerFlow.svelte}`; Modify `index.ts`, `locales/*/engineering.ftl`, `ui/tests/engineering.test.ts`, `diagnostics.rs`.
+**Files:** Create `ui/src/modules/engineering/{ShipPanel.svelte, EngineerFlow.svelte, actions.svelte.ts}`; Modify `index.ts`, `types.ts`, `labels.ts`, `locales/*/engineering.ftl`, `ui/tests/engineering.test.ts`, `diagnostics.rs`.
 
 **Interfaces:** módulos con blueprint/grado/calidad/experimental o «de serie»; elegir → `engineering.select_module`; selector de blueprint y experimental (nombres oficiales), grado (G5 por defecto), tiradas por grado ajustables (por defecto de `engineering_rolls`) → `engineering.preview`; tabla por material (necesarios, tienes, estado OK / intercambio concreto / falta N), por grado y total, % listo; aviso de sustitución; ingeniero recomendado; «Añadir a la lista de la compra» → `engineering.pin_goal`; «Cerrar» → `engineering.close_flow`.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```ts
 test('stock module shows de serie', /* current null → engineering-stock */);
@@ -663,7 +663,9 @@ test('pending translation is marked', /* bp sin traducción → marca pending vi
 test('pin goal posts action', /* POST engineering.pin_goal {} */);
 ```
 
-- [ ] **Step 2–4:** FAIL → implementar → PASS; checks. **Step 5: Commit** `feat(ui): mi nave y flujo de ingenierizar un módulo`
+- [x] **Step 2–4:** FAIL → implementar → PASS; checks. **Step 5: Commit** `feat(ui): mi nave y flujo de ingenierizar un módulo`
+
+**Verificación (2026-10-22):** TDD con 19 tests nuevos; ingeniería 55/55 y UI 293/293 PASS; Svelte check 0 errores/avisos y build PASS. Rust: fmt/clippy sin avisos y workspace 1.356 PASS, 2 ignoradas previas. Revisión spec aprobada tras ajustar experimental nullable y evitar reselección de ranura actual; calidad aprobada tras consumir confirmaciones y aislar esperas por comandante/nave sin liberar prematuramente el bloqueo HTTP. Los fixes finales solo modifican UI. QA visual real con contrato sintético a 2560/800: elegir módulo, preview con tiradas `[1,1,1,1,4]`, fijar y cerrar envían sus cuatro acciones correctas; cero errores JS y sin desbordamiento horizontal. Borradores no pierden ediciones por inventario/as_of/config tardío y no permiten fijar cálculos anteriores.
 
 ### Task 24: UI — «Lista de la compra», «Intercambios», «Dónde conseguirlo» y avisos
 

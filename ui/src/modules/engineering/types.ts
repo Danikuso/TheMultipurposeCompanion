@@ -1,4 +1,4 @@
-﻿export type MaterialCategory = 'Raw' | 'Manufactured' | 'Encoded';
+export type MaterialCategory = 'Raw' | 'Manufactured' | 'Encoded';
 export interface MaterialRow { key: string; count: number; name_localised?: string | null; name_en?: string | null; known?: boolean }
 export interface InventoryTopic { by_category: Partial<Record<MaterialCategory, Record<string, MaterialRow[]>>>; caps: Record<string, number>; at_max: string[]; snapshot: boolean }
 export type LockerSection = 'items' | 'components' | 'consumables' | 'data';
@@ -35,4 +35,18 @@ export interface SelectedEngineer {
 export interface EngineersTopic {
   engineers: EngineerRow[];
   selected: SelectedEngineer | null;
+}
+
+export interface CurrentEngineering { blueprint: string; level: number; quality: number; experimental: string | null }
+export interface ShipModule { slot: string; item: string; module_type: string | null; current: CurrentEngineering | null; engineerable: boolean }
+export interface EngineeringShipTopic { ship: string | null; ship_id: number | null; modules: ShipModule[] }
+export interface EngineeringRequest { blueprint: string; experimental: string | null; target_grade: number; rolls: number[]; module_type: string }
+export interface EngineeringTrade { give: number; give_key: string; get: number; get_key: string; trader: MaterialCategory; same_family: boolean }
+export interface FlowLine { key: string; name_en: string | null; grade: number; need: number; have: number; state: string; missing: number; trade: EngineeringTrade | null }
+export interface FlowCost { per_grade: Record<string, [number, Record<string, number>]>; experimental: Record<string, number> | null; total: Record<string, number>; missing_grades: number[]; replaces_blueprint: boolean; verified: boolean }
+export interface EngineeringFlowTopic {
+  status: string; slot: string | null; module_type: string | null; item: string | null; current: CurrentEngineering | null;
+  options: { blueprints: string[]; experimentals: string[] }; request: EngineeringRequest | null; cost: FlowCost | null;
+  lines: FlowLine[]; percent: number;
+  engineer: { nearest_any: EngineerRow | null; nearest_unlocked: EngineerRow | null; next_step: EngineerNextStep | null } | null;
 }

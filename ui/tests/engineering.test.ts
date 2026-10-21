@@ -1,13 +1,17 @@
-﻿import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
 import { live, disconnect } from '../src/lib/ws.svelte';
 import { setLocale } from '../src/lib/i18n';
 import MaterialsPanel from '../src/modules/engineering/MaterialsPanel.svelte';
 import fixture from './fixtures/engineering-topics.json';
 import { createPageReader } from '../src/modules/engineering/pages.svelte';
+import ShipPanel from '../src/modules/engineering/ShipPanel.svelte';
+import EngineerFlow from '../src/modules/engineering/EngineerFlow.svelte';
+import { engineeringActions } from '../src/modules/engineering/actions.svelte';
 let target: HTMLDivElement;
 let mounted: ReturnType<typeof mount> | undefined;
 beforeEach(() => {
+ engineeringActions.pending = false; engineeringActions.selectedSlot = null;
  disconnect(); setLocale('es'); live.connected = true;
  for (const [key, value] of Object.entries(structuredClone(fixture))) if (key !== 'engineering.pages') live.topics[key] = value;
  live.topics['core.cmdr'] = { name: 'Synthetic' };
@@ -235,4 +239,132 @@ test('credit contribution uses localized credits and backend counts', () => {
  showEngineers();
  expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('Créditos');
  expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('4 / 10');
+});
+function showShip() { mounted = mount(ShipPanel, { target }); flushSync(); }
+function showFlow() { mounted = mount(EngineerFlow, { target }); flushSync(); }
+function change(id: string, value: string) { const input = target.querySelector(`[data-testid="${id}"]`) as HTMLInputElement; input.value = value; input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); flushSync(); }
+function actionBody(name: string) { return vi.mocked(fetch).mock.calls.find(([url]) => url === `/api/actions/engineering.${name}`)?.[1]?.body; }
+test('ship shows stock and official current engineering including unsupported modules', async () => {
+ const ship = structuredClone(fixture['engineering.ship']); ship.modules.push({ ...ship.modules[1], slot: 'Unsupported', engineerable: false }); live.topics['engineering.ship'] = ship;
+ showShip(); expect(target.textContent).toContain('De serie'); expect(target.textContent).toContain('Aumento de Alcance de MDD'); expect(target.textContent).toContain('100 %');
+ expect(target.querySelector('[data-slot="Unsupported"] button')).toBeNull();
+ vi.stubGlobal('fetch', vi.fn(async () => new Response('{}'))); click('module-FrameShiftDrive'); await settle(); expect(actionBody('select_module')).toBe(JSON.stringify({ slot: 'FrameShiftDrive' }));
+});
+test('preview posts exact request and pin and close post empty objects', async () => {
+ vi.stubGlobal('fetch', vi.fn(async () => new Response('{}'))); showFlow(); click('preview'); await settle();
+ expect(actionBody('preview')).toBe(JSON.stringify({ blueprint: 'engine_dirty', experimental: 'special_engine_overloaded', grade: 5, rolls: [1,1,1,1,4] }));
+ click('pin-goal'); await settle(); click('close-flow'); await settle(); expect(actionBody('pin_goal')).toBe('{}'); expect(actionBody('close_flow')).toBe('{}');
+});
+test('flow renders material statuses per grade experimental totals readiness and locked engineer', () => {
+ const flow = structuredClone(fixture['engineering.flow']); flow.lines[0] = { ...flow.lines[0], state: 'missing', missing: 2 }; flow.cost.replaces_blueprint = true; live.topics['engineering.flow'] = flow;
+ showFlow(); expect(target.textContent).toContain('Falta 2'); expect(target.textContent).toContain('Cubierto con intercambio'); expect(target.textContent).toContain('Se sustituye'); expect(target.textContent).toContain('47 % listo'); expect(target.textContent).toContain('Sin verificar'); expect(target.textContent).toContain('Professor Palin'); expect(target.textContent).toContain('G5'); expect(target.querySelector('[data-testid="cost-experimental"]')?.textContent).toContain('1'); expect(target.querySelector('[data-testid="flow-next-step"]')?.textContent).not.toContain('unlock-professor-palin');
+});
+test('flow defaults from config and resets only on slot changes', async () => {
+ const flow = { ...structuredClone(fixture['engineering.flow']), request: null, status: 'idle' }; live.topics['engineering.flow'] = flow;
+ vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ engineering_rolls: [2,3,4,5,6] })))); showFlow(); await settle();
+ expect((target.querySelector('[data-testid="rolls-5"]') as HTMLInputElement).value).toBe('6'); change('rolls-5', '9'); change('target-grade', '3');
+ live.topics['engineering.flow'] = { ...flow, as_of: 'later' }; flushSync(); expect((target.querySelector('[data-testid="rolls-5"]') as HTMLInputElement).value).toBe('9');
+ live.topics['engineering.flow'] = { ...flow, slot: 'Other' }; flushSync(); expect((target.querySelector('[data-testid="rolls-5"]') as HTMLInputElement).value).toBe('6'); expect((target.querySelector('[data-testid="target-grade"]') as HTMLSelectElement).value).toBe('5');
+});
+test('late config never overwrites an edited draft and rejects invalid rolls', async () => {
+ live.topics['engineering.flow'] = { ...fixture['engineering.flow'], request: null };
+ let finish!: (response: Response) => void; vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => { finish = resolve; }))); showFlow(); change('rolls-1', '7'); finish(new Response(JSON.stringify({ engineering_rolls: [2,2,2,2,2] }))); await settle(); expect((target.querySelector('[data-testid="rolls-1"]') as HTMLInputElement).value).toBe('7'); change('rolls-1', '11'); expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(true);
+});
+test('flow supports null slot no data missing grades pending names and action errors', async () => {
+ live.topics['engineering.flow'] = { ...fixture['engineering.flow'], slot: null, status: 'idle' }; showFlow(); expect(target.querySelector('[data-testid="preview"]')).toBeNull();
+ live.topics['engineering.flow'] = { ...fixture['engineering.flow'], status: 'no_data', cost: null }; flushSync(); expect(target.textContent).toContain('Sin datos');
+ live.topics['engineering.flow'] = { ...fixture['engineering.flow'], slot: 'Other', options: { blueprints: ['unknown'], experimentals: ['unknown'] }, request: null, cost: { ...fixture['engineering.flow'].cost, missing_grades: [4] } }; flushSync(); expect(target.textContent).toContain('Traducción pendiente');
+ vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); })); click('preview'); await settle(); expect(target.querySelector('[role="alert"]')?.textContent).toContain('No se pudo');
+});
+
+test('flow preview uses edited grade rolls and null experimental', async () => {
+ vi.stubGlobal('fetch', vi.fn(async () => new Response('{}'))); showFlow(); change('experimental', ''); change('target-grade', '3'); change('rolls-3', '7'); click('preview'); await settle(); expect(actionBody('preview')).toBe(JSON.stringify({ blueprint: 'engine_dirty', experimental: null, grade: 3, rolls: [1,1,7,1,4] }));
+});
+test('commander ship and close changes reset flow draft but inventory does not', () => {
+ live.topics['engineering.flow'] = { ...fixture['engineering.flow'], request: null }; showFlow(); change('rolls-1', '8'); live.topics['engineering.inventory'] = { ...fixture['engineering.inventory'], as_of: 'later' }; flushSync(); expect((target.querySelector('[data-testid="rolls-1"]') as HTMLInputElement).value).toBe('8');
+ live.topics['core.cmdr'] = { name: 'New' }; flushSync(); expect((target.querySelector('[data-testid="rolls-1"]') as HTMLInputElement).value).toBe('1'); change('rolls-1', '8'); live.topics['engineering.ship'] = { ...fixture['engineering.ship'], ship_id: 8 }; flushSync(); expect((target.querySelector('[data-testid="rolls-1"]') as HTMLInputElement).value).toBe('1');
+ live.topics['engineering.flow'] = { ...fixture['engineering.flow'], slot: null }; flushSync(); live.topics['engineering.flow'] = { ...fixture['engineering.flow'], request: null }; flushSync(); expect((target.querySelector('[data-testid="rolls-1"]') as HTMLInputElement).value).toBe('1');
+});
+test('pending preview disables duplicate posts and obsolete failures cannot cross modules', async () => {
+ showFlow(); let reject!: (error: Error) => void;
+ vi.stubGlobal('fetch', vi.fn(() => new Promise((_resolve, fail) => { reject = fail; }))); click('preview'); click('preview'); expect(fetch).toHaveBeenCalledTimes(1);
+ live.topics['engineering.flow'] = { ...fixture['engineering.flow'], slot: 'Other' }; flushSync(); reject(new Error('offline')); await settle(); expect(target.querySelector('[role="alert"]')).toBeNull(); expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(false);
+});
+test('edited draft cannot pin old preview while awaiting matching websocket request', async () => {
+ vi.stubGlobal('fetch', vi.fn(async () => new Response('{}'))); showFlow(); change('rolls-5', '9'); expect(target.querySelector('[data-testid="pin-goal"]')).toBeNull(); expect(target.querySelector('[data-material="carbon"]')).toBeNull(); click('preview'); await settle(); expect(target.querySelector('[data-testid="pin-goal"]')).toBeNull(); expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(true);
+ live.topics['engineering.flow'] = { ...fixture['engineering.flow'], request: { ...fixture['engineering.flow'].request, rolls: [1,1,1,1,9] } }; flushSync(); expect((target.querySelector('[data-testid="pin-goal"]') as HTMLButtonElement).disabled).toBe(false); click('pin-goal'); await settle(); expect(actionBody('pin_goal')).toBe('{}');
+});
+test('typing rolls protects draft from config before blur', async () => {
+ live.topics['engineering.flow'] = { ...fixture['engineering.flow'], request: null }; let finish!: (response: Response) => void; vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => { finish = resolve; }))); showFlow(); const input = target.querySelector('[data-testid="rolls-5"]') as HTMLInputElement; input.value = '8'; input.dispatchEvent(new Event('input', { bubbles: true })); flushSync(); finish(new Response(JSON.stringify({ engineering_rolls: [2,2,2,2,2] }))); await settle(); expect(input.value).toBe('8');
+});
+test('ship selection waits for preview request and flow waits for selected slot confirmation', async () => {
+ showFlow(); const shipTarget = document.createElement('div'); document.body.append(shipTarget); const ship = mount(ShipPanel, { target: shipTarget }); flushSync();
+ let finish!: (response: Response) => void; vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => { finish = resolve; })));
+ try {
+  click('preview'); const select = shipTarget.querySelector('[data-testid="module-FrameShiftDrive"]') as HTMLButtonElement; expect(select.disabled).toBe(true); select.click(); expect(fetch).toHaveBeenCalledTimes(1);
+  finish(new Response('{}')); await settle(); expect(select.disabled).toBe(false); select.click(); flushSync(); finish(new Response('{}')); await settle(); expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(true);
+  live.topics['engineering.flow'] = { ...fixture['engineering.flow'], slot: 'FrameShiftDrive' }; flushSync(); expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(false);
+ } finally { await unmount(ship); shipTarget.remove(); }
+});
+test('missing grade recipes remain visible with their concrete grades', () => {
+ live.topics['engineering.flow'] = { ...fixture['engineering.flow'], cost: { ...fixture['engineering.flow'].cost, missing_grades: [2,4] } }; showFlow(); expect(target.textContent).toContain('Sin datos: G2, G4');
+});
+test('invalid saved rolls use factory defaults and a missing request starts at grade five', async () => {
+ live.topics['engineering.flow'] = { ...fixture['engineering.flow'], request: null }; vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ engineering_rolls: [0,1,1,1,11] })))); showFlow(); await settle(); expect((target.querySelector('[data-testid="rolls-5"]') as HTMLInputElement).value).toBe('4'); expect((target.querySelector('[data-testid="target-grade"]') as HTMLSelectElement).value).toBe('5');
+});
+test('flow handles null experimental cost with no selected experimental or an already installed effect', async () => {
+ for (const current of [null, { blueprint: 'engine_dirty', level: 3, quality: 1, experimental: 'special_engine_overloaded' }]) {
+  live.topics['engineering.flow'] = { ...fixture['engineering.flow'], current, request: { ...fixture['engineering.flow'].request, experimental: current?.experimental ?? null }, cost: { ...fixture['engineering.flow'].cost, experimental: null } };
+  showFlow();
+  expect(target.querySelector('[data-testid="cost-experimental"]')).not.toBeNull();
+  expect(target.querySelector('[data-material="carbon"]')).not.toBeNull();
+  await unmount(mounted!); mounted = undefined;
+ }
+});
+test('reselecting the current module cannot reset a confirmed preview', async () => {
+ showFlow(); const shipTarget = document.createElement('div'); document.body.append(shipTarget); const ship = mount(ShipPanel, { target: shipTarget }); flushSync();
+ vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
+ try {
+  const selected = shipTarget.querySelector('[data-testid="module-MainEngines"]') as HTMLButtonElement;
+  expect(selected.disabled).toBe(true); selected.click(); await settle();
+  expect(fetch).not.toHaveBeenCalled();
+  expect((target.querySelector('[data-testid="pin-goal"]') as HTMLButtonElement).disabled).toBe(false);
+ } finally { await unmount(ship); shipTarget.remove(); }
+});
+test('acknowledged preview can be recalculated after another client updates the same slot', async () => {
+ showFlow(); let finish!: (response: Response) => void;
+ vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => { finish = resolve; })));
+ change('rolls-5', '8'); click('preview'); finish(new Response('{}')); await settle();
+ live.topics['engineering.flow'] = { ...fixture['engineering.flow'], request: { ...fixture['engineering.flow'].request, rolls: [1,1,1,1,8] } }; flushSync();
+ expect((target.querySelector('[data-testid="pin-goal"]') as HTMLButtonElement).disabled).toBe(false);
+ live.topics['engineering.flow'] = { ...fixture['engineering.flow'], request: { ...fixture['engineering.flow'].request, rolls: [1,1,1,1,6] } }; flushSync();
+ expect((target.querySelector('[data-testid="rolls-5"]') as HTMLInputElement).value).toBe('8');
+ expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(false);
+ click('preview'); finish(new Response('{}')); await settle(); expect(fetch).toHaveBeenCalledTimes(2);
+});
+test.each(['commander', 'ship'])('selection wait is invalidated after %s changes and ignores obsolete failure', async (changed) => {
+ showFlow(); const shipTarget = document.createElement('div'); document.body.append(shipTarget); const ship = mount(ShipPanel, { target: shipTarget }); flushSync();
+ const contextChange = () => {
+  if (changed === 'commander') live.topics['core.cmdr'] = { name: 'Other' };
+  else live.topics['engineering.ship'] = { ...fixture['engineering.ship'], ship_id: 9 };
+  live.topics['engineering.flow'] = structuredClone(fixture['engineering.flow']); flushSync();
+ };
+ try {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('{}')));
+  const select = shipTarget.querySelector('[data-testid="module-FrameShiftDrive"]') as HTMLButtonElement;
+  select.click(); await settle(); expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(true);
+  contextChange(); expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(false);
+  // La primera selección no se confirma por WS; el segundo POST guarda esa espera anterior.
+  select.click(); await settle();
+  let reject!: (error: Error) => void; vi.stubGlobal('fetch', vi.fn(() => new Promise((_resolve, fail) => { reject = fail; })));
+  select.click(); flushSync();
+  if (changed === 'commander') live.topics['core.cmdr'] = { name: 'Third' };
+  else live.topics['engineering.ship'] = { ...fixture['engineering.ship'], ship_id: 10 };
+  flushSync(); expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(true);
+  reject(new Error('obsolete')); await settle();
+  expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(false);
+  expect((target.querySelector('[data-testid="close-flow"]') as HTMLButtonElement).disabled).toBe(false);
+  expect((target.querySelector('[data-testid="pin-goal"]') as HTMLButtonElement).disabled).toBe(false);
+  expect(shipTarget.querySelector('[role="alert"]')).toBeNull();
+ } finally { await unmount(ship); shipTarget.remove(); }
 });
