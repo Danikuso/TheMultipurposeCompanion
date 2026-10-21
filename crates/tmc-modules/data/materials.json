@@ -521,7 +521,7 @@
       "key": "shieldpatternanalysis",
       "name_en": "Aberrant Shield Pattern Analysis",
       "category": "Encoded",
-      "grade": 1,
+      "grade": 4,
       "family": "shield-data",
       "tradeable": true,
       "hints": [
