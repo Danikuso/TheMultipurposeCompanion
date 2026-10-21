@@ -122,6 +122,13 @@ struct Flow {
     request: Option<PlanRequest>,
 }
 
+/// Intención del usuario mientras aún falta la lectura inicial.
+enum PendingGoalAction {
+    Pin(Goal),
+    Unpin(String),
+    Move(String, usize),
+}
+
 /// Cambios que un evento del diario aporta al cálculo de avisos.
 #[derive(Default)]
 struct EventDelta {
@@ -174,10 +181,13 @@ pub struct Engineering {
     goals: Vec<Goal>,
     goals_status: &'static str,
     goals_loaded: bool,
+    pending_goals: Vec<PendingGoalAction>,
     flow: Option<Flow>,
     selected_engineer: Option<u64>,
     sources: SourcesState,
     inflight: Inflight,
+    source_requests: BTreeMap<String, u64>,
+    source_pad: Option<PadSize>,
     alerts: Vec<Value>,
     /// Línea base para detectar transiciones de avisos.
     at_max_prev: BTreeSet<String>,
@@ -202,10 +212,13 @@ impl Engineering {
             goals: Vec::new(),
             goals_status: STATUS_OK,
             goals_loaded: false,
+            pending_goals: Vec::new(),
             flow: None,
             selected_engineer: None,
             sources: SourcesState::default(),
             inflight: Inflight::default(),
+            source_requests: BTreeMap::new(),
+            source_pad: None,
             alerts: Vec::new(),
             at_max_prev: BTreeSet::new(),
             completable_prev: BTreeSet::new(),
@@ -269,9 +282,12 @@ impl Engineering {
         self.goals.clear();
         self.goals_status = STATUS_OK;
         self.goals_loaded = false;
+        self.pending_goals.clear();
         self.flow = None;
         self.selected_engineer = None;
         self.sources = SourcesState::default();
+        self.source_requests.clear();
+        self.source_pad = None;
         self.alerts.clear();
         self.at_max_prev.clear();
         self.completable_prev.clear();
@@ -298,19 +314,29 @@ impl Engineering {
     }
 
     fn on_goals_stored(&mut self, value: &Value, state: &GameState, ctx: &mut ModuleCtx) -> bool {
-        if !self.stored_cmdr_ok(value) {
+        if !self.stored_cmdr_ok(value) || self.goals_loaded {
             decide!("engineering.goals.discarded", {});
             return false;
         }
         self.inflight.finish(GOALS_KEY);
         let mut merged = goals_from_result(value);
         let stored = merged.len();
-        // Lo fijado mientras se leía no se pierde.
-        let mut extra = false;
-        for g in self.goals.drain(..) {
-            if merged.len() < goals::MAX_GOALS && !merged.iter().any(|m| m.id == g.id) {
-                merged.push(g);
-                extra = true;
+        let extra = !self.pending_goals.is_empty();
+        for action in self.pending_goals.drain(..) {
+            match action {
+                PendingGoalAction::Pin(g) => {
+                    (merged, self.goals_status) = pin_goal(&merged, g);
+                }
+                PendingGoalAction::Unpin(id) => {
+                    merged.retain(|g| g.id != id);
+                    self.goals_status = STATUS_OK;
+                }
+                PendingGoalAction::Move(id, to) => {
+                    if let Some(from) = merged.iter().position(|g| g.id == id) {
+                        let g = merged.remove(from);
+                        merged.insert(to.min(merged.len()), g);
+                    }
+                }
             }
         }
         self.goals = merged;
@@ -368,12 +394,18 @@ impl Engineering {
         }
         match kind {
             EventKind::Loadout(l) => {
-                self.ship = ShipView::from_loadout(l);
-                if self
+                let previous_item = self
                     .flow
                     .as_ref()
-                    .is_some_and(|f| f.ship_id != self.ship.ship_id || self.row(&f.slot).is_none())
-                {
+                    .and_then(|f| self.row(&f.slot))
+                    .map(|r| r.item.clone());
+                self.ship = ShipView::from_loadout(l);
+                if self.flow.as_ref().is_some_and(|f| {
+                    f.ship_id != self.ship.ship_id
+                        || self.row(&f.slot).is_none_or(|r| {
+                            !r.engineerable || Some(&r.item) != previous_item.as_ref()
+                        })
+                }) {
                     self.flow = None;
                     decide!("engineering.flow.closed_ship_changed", {});
                 }
@@ -416,10 +448,18 @@ impl Engineering {
     fn cost_for(&self, req: &PlanRequest, current: Option<&CurrentEng>) -> Option<PlanCost> {
         let cat = blueprints();
         let bp = cat.blueprint(&req.blueprint)?;
+        if !bp.module_types.contains(&req.module_type) {
+            return None;
+        }
         let exp = req
             .experimental
             .as_deref()
             .and_then(|e| cat.experimental(e));
+        if req.experimental.is_some()
+            && exp.is_none_or(|e| !e.module_types.contains(&req.module_type))
+        {
+            return None;
+        }
         Some(plan_cost(bp, exp, current, req))
     }
 
@@ -516,8 +556,25 @@ impl Engineering {
 
     fn update_sources(&mut self, state: &GameState, ctx: &mut ModuleCtx, all: &ShoppingView) {
         let addr = (state.location.system_address != 0).then_some(state.location.system_address);
+        let pad = state
+            .ship
+            .as_ref()
+            .and_then(|s| ship_pads().pad_for(&s.ship_type))
+            .unwrap_or(PadSize::Small);
+        if self.source_pad != Some(pad) || self.sources.current_system() != addr {
+            self.sources = SourcesState::default();
+            self.source_pad = Some(pad);
+            self.source_requests.clear();
+            self.inflight.finish_prefix(TRADER_PREFIX);
+            self.inflight.finish_prefix(BROKER_PREFIX);
+        }
         self.sources.set_current_system(addr);
         let online = self.online(state, ctx);
+        if !online {
+            self.source_requests.clear();
+            self.inflight.finish_prefix(TRADER_PREFIX);
+            self.inflight.finish_prefix(BROKER_PREFIX);
+        }
         self.sources.set_disabled(!online);
         let proposals: Vec<TradeProposal> = all
             .goals
@@ -528,11 +585,6 @@ impl Engineering {
         if !online {
             return;
         }
-        let pad = state
-            .ship
-            .as_ref()
-            .and_then(|s| ship_pads().pad_for(&s.ship_type))
-            .unwrap_or(PadSize::Small);
         let now = self.clock();
         for q in self.sources.requests(&state.location.system, pad) {
             let NetQuery::NearestService {
@@ -555,7 +607,11 @@ impl Engineering {
             if !self.inflight.begin(&key, now) {
                 continue;
             }
-            let sent = ctx.request(key.clone(), q).is_some();
+            let id = ctx.request(key.clone(), q);
+            let sent = id.is_some();
+            if let Some(id) = id {
+                self.source_requests.insert(key.clone(), id);
+            }
             if !sent {
                 self.inflight.finish(&key);
             }
@@ -564,6 +620,10 @@ impl Engineering {
     }
 
     fn on_net(&mut self, r: &NetResponse) -> bool {
+        if self.source_requests.get(&r.key) != Some(&r.id) {
+            decide!("engineering.sources.discarded", {});
+            return false;
+        }
         let parts: Vec<&str> = r.key.split(':').collect();
         let [kind, name, addr] = parts[..] else {
             return false;
@@ -586,6 +646,10 @@ impl Engineering {
             _ => return false,
         };
         self.inflight.finish(&r.key);
+        // El servicio puede entregar primero Failed y después un reintento con el mismo id.
+        if !matches!(r.outcome, NetOutcome::Failed(_)) {
+            self.source_requests.remove(&r.key);
+        }
         // Cualquier resultado que no sea una lista de estaciones es «sin datos».
         let rows = match &r.outcome {
             NetOutcome::Stations(v) => v.clone(),
@@ -985,6 +1049,10 @@ impl Engineering {
                     return false;
                 };
                 self.goals.remove(pos);
+                if !self.goals_loaded {
+                    self.pending_goals
+                        .push(PendingGoalAction::Unpin(id.to_owned()));
+                }
                 self.goals_status = STATUS_OK;
                 true
             }
@@ -1008,6 +1076,10 @@ impl Engineering {
                 }
                 let g = self.goals.remove(from);
                 self.goals.insert(to, g);
+                if !self.goals_loaded {
+                    self.pending_goals
+                        .push(PendingGoalAction::Move(id.to_owned(), to));
+                }
                 true
             }
             ACTION_SELECT_ENGINEER => {
@@ -1068,6 +1140,13 @@ impl Engineering {
             return false;
         };
         let cat = blueprints();
+        if cat
+            .blueprint(blueprint)
+            .is_some_and(|b| !b.module_types.contains(&module_type))
+        {
+            decide!("engineering.preview.rejected_incompatible", {});
+            return false;
+        }
         let experimental = match args.get("experimental") {
             None | Some(Value::Null) => None,
             Some(Value::String(s)) if s.trim().is_empty() => None,
@@ -1135,13 +1214,17 @@ impl Engineering {
             decide!("engineering.pin.rejected_no_request", {});
             return false;
         };
-        if blueprints().blueprint(&req.blueprint).is_none() {
+        if self.cost_for(&req, None).is_none() {
             decide!("engineering.pin.rejected_no_data", {});
             return false;
         }
         let Some(row) = self.row(&flow.slot) else {
             return false;
         };
+        if row.module_type.as_deref() != Some(req.module_type.as_str()) || !row.engineerable {
+            decide!("engineering.pin.rejected_incompatible", {});
+            return false;
+        }
         let goal = Goal::new(
             flow.ship_id,
             row.slot.clone(),
@@ -1149,7 +1232,10 @@ impl Engineering {
             req,
             row.current.clone(),
         );
-        let (goals, status) = pin_goal(&self.goals, goal);
+        let (goals, status) = pin_goal(&self.goals, goal.clone());
+        if !self.goals_loaded && status == STATUS_OK {
+            self.pending_goals.push(PendingGoalAction::Pin(goal));
+        }
         let status = if status == STATUS_TOO_MANY {
             STATUS_TOO_MANY
         } else {

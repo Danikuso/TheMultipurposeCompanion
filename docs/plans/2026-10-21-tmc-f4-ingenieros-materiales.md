@@ -571,6 +571,21 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 
 - [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(engineering): módulo de ingeniería con topics, relevancia, red, almacén y registro`
 
+**Revisión de continuación (2026-10-21, Codex):** `9904133` es implementación parcial, no cierre. Correcciones con TDD: conservar operaciones de objetivos durante una lectura tardía; rechazar blueprints incompatibles y cerrar un flujo cuyo módulo se sustituye; invalidar estaciones y correlacionar respuestas al cambiar de plataforma; conservar reintentos del servicio común; diagnóstico con etiquetas finitas por ruta exacta y texto libre redactado. Contrato UI sin cambios. Revisión de spec del alcance corregido aprobada; el requisito de tamaño permanece bloqueado (véase «Desviaciones»).
+
+Evidencia reproducible del bloqueo (ambos comandos devuelven 101, **no PASS**):
+
+```text
+cargo test -p tmc-modules worst_case_engine_goals_size -- --ignored --nocapture
+engineering.goals: 41116 bytes; 20 objetivos, 215 intercambios
+cargo test -p tmc-modules engineering_topics_stay_under_16_kib -- --ignored --nocapture
+engineering.locker: 16832 B; 200 recursos localizados, 50 por sección
+```
+
+Estos dos probes se conservan ignorados con el incumplimiento explícito como motivo hasta resolver el contrato. El test de tamaño del escenario real del contrato sigue activo; pasar las demás pruebas no satisface el peor caso ni cierra esta tarea.
+
+Verificación del commit parcial: `cargo fmt --all --check` y `cargo clippy --workspace --all-targets -- -D warnings` PASS; `cargo test --workspace -- --test-threads=1` → **1.344 PASS / 4 ignoradas** (dos previas y los dos probes anteriores). Suite ejecutada con `TMP`/`TEMP` dentro de `.tmp/test-runtime` y permisos de sockets localhost fuera del sandbox; dentro del aislamiento ZeroMQ devuelve error 10013. El test del informe de arranque limpia su residuo global antes de preparar el caso, con RED→GREEN observado; la suite se serializa por el estado global compartido de esos tests. UI: `npm.cmd --prefix ui run check` (0 errores/avisos), `npm.cmd --prefix ui test -- --run` (**238 PASS**) y `npm.cmd --prefix ui run build` PASS. Revisiones independientes de spec y calidad aprueban el alcance parcial; **Task 20 no completa**. Sin nuevas dependencias, sin push y sin recompilar el release del propietario. La medición de consumo de F4 sigue en Task 28 tras resolver el contrato y completar la UI.
+
 ---
 
 ## Bloque 4 — UI
@@ -755,6 +770,9 @@ test('settings put rolls and reverts on 400', /* [1,1,1,1,11] → 400 → valor 
 ## Desviaciones
 
 (Cambios respecto a este plan o a la spec, con fecha, motivo y tareas afectadas.)
+
+- 2026-10-21 · **Task 20: revisión de cierre solicitada por el propietario; no completa.** El commit `9904133` no cerraba el seguimiento. La revisión encontró carreras al aplicar la lectura inicial de objetivos, blueprints conocidos incompatibles con el módulo, flujo obsoleto tras sustituir el módulo de una ranura, estaciones incompatibles tras cambiar de plataforma y cobertura insuficiente de tamaño/diagnóstico. Se corrigen con regresiones antes de avanzar a Task 21; las claves de red mantienen la interfaz del plan y se correlacionan además por ID de petición. Los reintentos de `Failed` ya los realiza `NetService::retry` mediante `NetClient::retry_at`; no se añade otro mecanismo.
+- 2026-10-21 · **Bloqueo del contrato de Task 20, pendiente de decisión del propietario.** Una medición con el serializador y evaluador reales, 20 objetivos de propulsores de serie `engine_dirty` G5 + `special_engine_overloaded`, tiradas `[10; 5]` y excedentes únicamente de materiales ajenos a la receta produce `engineering.goals` de **41.116 bytes** con **215 propuestas**. Sin experimental son 30.986 bytes/155 propuestas; FSD, 35.084 bytes/164 propuestas. Además, `engineering.locker` ocupa **16.832 bytes** con 200 recursos localizados (50 por cada una de las cuatro secciones); la sesión publicada con 50 cambios ocupa 4.242 bytes, la nave con 60 módulos 11.879 y 20 avisos 2.803. Incumple `< 16.384` bytes: el escenario anterior con inventario lleno y objetivos FSD ya modificados no acreditaba el peor caso. No se recortan objetivos ni intercambios, ni se aumenta el límite sin aprobación. Propuesta a aprobar: resumen y revisión por WebSocket con detalles paginados por bytes vía REST, siguiendo arquitectura §7; alternativa de menor implementación: excepciones explícitas de tamaño para objetivos y taquilla, sujeta a comprobar consumo y latencia. La primera opción afecta Task 20, tipos de Task 21, paneles de Task 24 y e2e de Task 26; las interfaces aprobadas actuales permanecen vigentes hasta la decisión. El probe reproducible se conserva como prueba ignorada con motivo explícito y se ejecuta manualmente para evidenciar el incumplimiento; no equivale a un PASS ni al cierre de Task 20.
 
 - 2026-10-21 · Resoluciones del controlador tras el preflight y los spikes (Tasks 0–2):
   1. **Orden de Task 3:** Tasks 8–10 escriben código con un conjunto provisional mínimo `verified:false` (incluye `engine_dirty` G1–G5 + Drag Drives del criterio 4 y `fsd_longrange`); solo el contenido completo espera la decisión de fuente (spike de datos: B en todos los archivos, nada importado). Tasks 12–15 siguen tras el código de 8–10.
