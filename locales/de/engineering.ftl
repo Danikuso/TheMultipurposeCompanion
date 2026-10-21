@@ -84,3 +84,14 @@ engineering-locker-section = Schrankbereich
 engineering-page-loading = Laden…
 engineering-page-failed = Daten konnten nicht geladen werden
 engineering-page-stale = Warte auf aktualisiertes Inventar
+
+engineering-engineer-ship = Schiffsingenieure
+engineering-distance-ly = { $distance } Lj
+engineering-engineer-rank-progress = Fortschritt: { $progress }
+engineering-select-engineer-failed = Ingenieur konnte nicht ausgewählt werden
+engineering-translation-pending = Übersetzung ausstehend
+engineering-contribution-credits = Credits
+
+# Nombre del juego contrastado en Frontier Forums e Inara; traducciones pendientes.
+engineering-commodity-soontillrelics = Soontill Relics
+    .pending = 1

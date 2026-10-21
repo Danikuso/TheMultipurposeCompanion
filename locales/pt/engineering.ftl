@@ -84,3 +84,14 @@ engineering-locker-section = Secção do armário
 engineering-page-loading = A carregar…
 engineering-page-failed = Não foi possível carregar os dados
 engineering-page-stale = A aguardar inventário atualizado
+
+engineering-engineer-ship = Engenheiros de nave
+engineering-distance-ly = { $distance } al
+engineering-engineer-rank-progress = Progresso: { $progress }
+engineering-select-engineer-failed = Não foi possível selecionar o engenheiro
+engineering-translation-pending = Tradução pendente
+engineering-contribution-credits = Créditos
+
+# Nombre del juego contrastado en Frontier Forums e Inara; traducciones pendientes.
+engineering-commodity-soontillrelics = Soontill Relics
+    .pending = 1
