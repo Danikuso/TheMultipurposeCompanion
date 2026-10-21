@@ -230,6 +230,15 @@ const TOPICS: &[&str] = &[
     "missions.passengers",
     "missions.tourism",
     "missions.community_goals",
+    "engineering.inventory",
+    "engineering.locker",
+    "engineering.session",
+    "engineering.engineers",
+    "engineering.ship",
+    "engineering.flow",
+    "engineering.goals",
+    "engineering.sources",
+    "engineering.alerts",
 ];
 const MODULES: &[&str] = &[
     "dashboard",
@@ -240,6 +249,7 @@ const MODULES: &[&str] = &[
     "mining",
     "trade",
     "missions",
+    "engineering",
 ];
 const ACTIONS: &[&str] = &[
     "clipboard.copy-next-system",
@@ -256,6 +266,15 @@ const ACTIONS: &[&str] = &[
     "missions.to_route",
     "missions.dismiss_alert",
     "missions.reset_session",
+    "engineering.select_module",
+    "engineering.preview",
+    "engineering.close_flow",
+    "engineering.pin_goal",
+    "engineering.unpin_goal",
+    "engineering.move_goal",
+    "engineering.select_engineer",
+    "engineering.dismiss_alert",
+    "engineering.reset_session",
 ];
 const EVENTS: &[&str] = &[
     "Fileheader",
@@ -1283,6 +1302,45 @@ mod tests {
         );
         assert_eq!(safe["module"], "missions");
         assert!(!safe.to_string().contains("CANARY"));
+    }
+
+    #[test]
+    fn engineering_topics_actions_and_module_registered_and_canary_redacted() {
+        for topic in [
+            "engineering.inventory",
+            "engineering.locker",
+            "engineering.session",
+            "engineering.engineers",
+            "engineering.ship",
+            "engineering.flow",
+            "engineering.goals",
+            "engineering.sources",
+            "engineering.alerts",
+        ] {
+            assert_eq!(DiagnosticContext::Topic { name: topic }.schema(), topic);
+        }
+        for action in [
+            "engineering.select_module",
+            "engineering.preview",
+            "engineering.close_flow",
+            "engineering.pin_goal",
+            "engineering.unpin_goal",
+            "engineering.move_goal",
+            "engineering.select_engineer",
+            "engineering.dismiss_alert",
+            "engineering.reset_session",
+        ] {
+            assert_eq!(DiagnosticContext::Action { name: action }.schema(), action);
+        }
+        let safe = redact_diagnostic(
+            &json!({"topic":"engineering.CANARY","action":"engineering.CANARY","module":"engineering","cmdr":"CMDR TESTER"}),
+            DiagnosticContext::State,
+        );
+        assert_eq!(safe["module"], "engineering");
+        assert_eq!(safe["topic"], REDACTED);
+        assert_eq!(safe["action"], REDACTED);
+        assert!(!safe.to_string().contains("CANARY"));
+        assert!(!safe.to_string().contains("CMDR TESTER"));
     }
 
     #[test]

@@ -472,6 +472,53 @@ tourism_reference_cr_ly = 200000
         );
     }
 
+    #[tokio::test]
+    async fn engineering_actions_reach_core() {
+        let dir = tempdir().unwrap();
+        let core = tmc_core::spawn_core(
+            vec![Box::new(ActionProbe(Vec::new()))],
+            None,
+            Duration::from_millis(100),
+        );
+        let online = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+        let (events, _rx) = tokio::sync::mpsc::channel(8);
+        let net = spawn_net_service(
+            std::sync::Arc::new(tmc_net::NetClient::new(std::sync::Arc::new(
+                tmc_net::ReqwestTransport::new().unwrap(),
+            ))),
+            tmc_core::Store::open_in_memory().unwrap(),
+            events,
+            online.clone(),
+        );
+        let actions = AppActions::with_runtime(Config::default(), core.events.clone(), online, net)
+            .with_save_path(dir.path().join("config.toml"));
+        let snap = BTreeMap::new();
+        let names = [
+            "engineering.select_module",
+            "engineering.preview",
+            "engineering.close_flow",
+            "engineering.pin_goal",
+            "engineering.unpin_goal",
+            "engineering.move_goal",
+            "engineering.select_engineer",
+            "engineering.dismiss_alert",
+            "engineering.reset_session",
+        ];
+        for name in names {
+            let out = actions.run_action_with(name, &json!({}), &snap);
+            assert!(out.is_ok(), "{name}: {out:?}");
+        }
+        let mut seen = Value::Null;
+        for _ in 0..50 {
+            seen = core.snapshot().await["actionprobe.actions"].clone();
+            if seen.as_array().is_some_and(|a| a.len() == names.len()) {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+        assert_eq!(seen, json!(names));
+    }
+
     #[test]
     fn trade_route_copy_target_reaches_clipboard() {
         let actions = AppActions::new();

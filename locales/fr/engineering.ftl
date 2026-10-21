@@ -77,3 +77,5 @@ engineering-alert-at-max = { $material } au maximum (G{ $grade }) : ce que vous 
 engineering-alert-engineer-unlocked = { $engineer } débloqué
 engineering-alert-engineer-invited = Nouvelle invitation de { $engineer }
 engineering-alert-scarce-obtained = Matériau rare obtenu : { $material }
+engineering-alert-goal-completable = Vous pouvez maintenant terminer { $goal }
+engineering-alert-goal-completable-with = Vous pouvez maintenant terminer { $goal } avec { $engineer }

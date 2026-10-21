@@ -239,6 +239,18 @@ pub fn pick_engineer(
     }
 }
 
+/// Nombre del ingeniero desbloqueado más cercano para `blueprint` hasta `grade`.
+pub fn engineer_for(
+    blueprint: &str,
+    grade: u8,
+    book: &EngineerBook,
+    pos: Option<[f64; 3]>,
+) -> Option<String> {
+    pick_engineer(blueprint, grade, book, pos)
+        .nearest_unlocked
+        .map(|r| r.name)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -390,5 +402,62 @@ mod tests {
         let pick3 = pick_engineer("engine_dirty", 3, &book, None);
         assert_eq!(pick3.nearest_unlocked.unwrap().id, 300100);
         assert_eq!(pick_engineer("nope", 1, &book, None).nearest_any, None);
+    }
+
+    #[test]
+    fn engineer_for_names_nearest_unlocked_and_skips_barred() {
+        let book = book_with(&[
+            (300100, "Felicity Farseer", "Unlocked"),
+            (300160, "Elvira Martuuk", "Barred"),
+        ]);
+        let near_elvira = Some(engineer(300160).unwrap().star_pos);
+        assert_eq!(
+            engineer_for("fsd_longrange", 5, &book, near_elvira).as_deref(),
+            Some("Felicity Farseer")
+        );
+        // Vetada: ni nearest_any ni siguiente paso.
+        let pick = pick_engineer("fsd_longrange", 5, &book, near_elvira);
+        assert_ne!(pick.nearest_any.as_ref().map(|r| r.id), Some(300160));
+        let only_barred = book_with(&[(300160, "Elvira Martuuk", "Barred")]);
+        assert_eq!(engineer_for("fsd_longrange", 5, &only_barred, None), None);
+        assert!(
+            pick_engineer("fsd_longrange", 5, &only_barred, None)
+                .nearest_any
+                .is_none_or(|r| r.id != 300160)
+        );
+        assert_eq!(engineer_for("nope", 1, &book, None), None);
+    }
+
+    #[test]
+    fn pick_without_position_orders_by_name() {
+        let book = book_with(&[
+            (300100, "Felicity Farseer", "Unlocked"),
+            (300160, "Elvira Martuuk", "Unlocked"),
+        ]);
+        let pick = pick_engineer("fsd_longrange", 1, &book, None);
+        let a = pick.nearest_any.unwrap();
+        let u = pick.nearest_unlocked.unwrap();
+        assert_eq!(a.id, u.id);
+        let names: Vec<String> = engineer_rows(&book, None)
+            .into_iter()
+            .filter(|r| r.status == EngineerStatus::Unlocked && !r.on_foot)
+            .map(|r| r.name)
+            .collect();
+        assert_eq!(a.name, names[0]);
+    }
+
+    #[test]
+    fn disabled_view_reports_disabled_for_every_needed_source() {
+        let mut s = SourcesState::default();
+        s.set_current_system(Some(2));
+        s.set_needs(
+            &BTreeMap::from([(key_of_category(MaterialCategory::Raw), 1)]),
+            &[],
+        );
+        s.set_disabled(true);
+        let v = s.view();
+        assert!(!v.traders.is_empty());
+        assert!(v.traders.values().all(|st| *st == SourceStatus::Disabled));
+        assert!(s.requests("Sol", PadSize::Small).is_empty());
     }
 }

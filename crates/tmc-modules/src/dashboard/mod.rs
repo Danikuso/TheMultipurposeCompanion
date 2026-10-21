@@ -396,8 +396,9 @@ mod tests {
     #[test]
     fn registry_contains_dashboard() {
         let modules = crate::all_modules();
-        assert_eq!(modules.len(), 8);
+        assert_eq!(modules.len(), 9);
         assert_eq!(modules[7].id(), "missions");
+        assert_eq!(modules[8].id(), "engineering");
         assert_eq!(modules[0].id(), "dashboard");
         assert_eq!(modules[0].topics(), vec!["dashboard.alerts"]);
         assert!(modules[0].topic_value("unknown").is_none());

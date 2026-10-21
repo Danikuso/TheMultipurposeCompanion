@@ -1,0 +1,774 @@
+{
+  "engineering.alerts": {
+    "alerts": [
+      {
+        "at": "2026-10-21T12:03:30Z",
+        "engineer_id": 300160,
+        "id": "unlocked:300160",
+        "kind": "engineer_unlocked"
+      }
+    ],
+    "as_of": "2026-10-21T12:03:30Z"
+  },
+  "engineering.engineers": {
+    "as_of": "2026-10-21T12:05:00Z",
+    "engineers": [
+      {
+        "distance_ly": 12.300000000000011,
+        "id": 300100,
+        "name": "Felicity Farseer",
+        "on_foot": false,
+        "rank": 5,
+        "rank_progress": 0,
+        "status": "Unlocked",
+        "system": "Deciat",
+        "verified": false
+      },
+      {
+        "distance_ly": 69.2302414276088,
+        "id": 300160,
+        "name": "Elvira Martuuk",
+        "on_foot": false,
+        "rank": null,
+        "rank_progress": null,
+        "status": "Unlocked",
+        "system": "Khun",
+        "verified": false
+      },
+      {
+        "distance_ly": 88.3683053068944,
+        "id": 300220,
+        "name": "Professor Palin",
+        "on_foot": false,
+        "rank": null,
+        "rank_progress": null,
+        "status": "Unknown",
+        "system": "Arque",
+        "verified": false
+      },
+      {
+        "distance_ly": 102.02178631455392,
+        "id": 300260,
+        "name": "Tod McQuinn",
+        "on_foot": false,
+        "rank": null,
+        "rank_progress": null,
+        "status": "Known",
+        "system": "Wolf 397",
+        "verified": false
+      },
+      {
+        "distance_ly": 144.12697703002203,
+        "id": 400002,
+        "name": "Domino Green",
+        "on_foot": true,
+        "rank": null,
+        "rank_progress": null,
+        "status": "Unknown",
+        "system": "Orishis",
+        "verified": false
+      }
+    ],
+    "selected": null
+  },
+  "engineering.flow": {
+    "as_of": "2026-10-21T12:05:00Z",
+    "cost": {
+      "experimental": {
+        "electrochemicalarrays": 1,
+        "hybridcapacitors": 1,
+        "pharmaceuticalisolators": 1
+      },
+      "missing_grades": [],
+      "per_grade": {
+        "1": [
+          1,
+          {
+            "carbon": 1,
+            "heatconductionwiring": 1
+          }
+        ],
+        "2": [
+          1,
+          {
+            "heatdispersionplate": 1,
+            "vanadium": 1
+          }
+        ],
+        "3": [
+          1,
+          {
+            "heatexchangers": 1,
+            "niobium": 1
+          }
+        ],
+        "4": [
+          1,
+          {
+            "heatvanes": 1,
+            "yttrium": 1
+          }
+        ],
+        "5": [
+          4,
+          {
+            "polonium": 4,
+            "protoheatradiators": 4
+          }
+        ]
+      },
+      "replaces_blueprint": false,
+      "total": {
+        "carbon": 1,
+        "electrochemicalarrays": 1,
+        "heatconductionwiring": 1,
+        "heatdispersionplate": 1,
+        "heatexchangers": 1,
+        "heatvanes": 1,
+        "hybridcapacitors": 1,
+        "niobium": 1,
+        "pharmaceuticalisolators": 1,
+        "polonium": 4,
+        "protoheatradiators": 4,
+        "vanadium": 1,
+        "yttrium": 1
+      },
+      "verified": false
+    },
+    "current": null,
+    "engineer": {
+      "nearest_any": {
+        "distance_ly": 88.3683053068944,
+        "id": 300220,
+        "name": "Professor Palin",
+        "on_foot": false,
+        "rank": null,
+        "rank_progress": null,
+        "status": "Unknown",
+        "system": "Arque",
+        "verified": false
+      },
+      "nearest_unlocked": null,
+      "next_step": {
+        "Requirement": {
+          "key": "unlock-professor-palin"
+        }
+      }
+    },
+    "item": "int_engine_size5_class5",
+    "lines": [
+      {
+        "grade": 1,
+        "have": 1,
+        "key": "carbon",
+        "missing": 0,
+        "name_en": "Carbon",
+        "need": 1,
+        "state": "ok",
+        "trade": null
+      },
+      {
+        "grade": 3,
+        "have": 0,
+        "key": "electrochemicalarrays",
+        "missing": 0,
+        "name_en": "Electrochemical Arrays",
+        "need": 1,
+        "state": "trade",
+        "trade": {
+          "get": 3,
+          "get_key": "electrochemicalarrays",
+          "give": 2,
+          "give_key": "pharmaceuticalisolators",
+          "same_family": false,
+          "trader": "Manufactured"
+        }
+      },
+      {
+        "grade": 1,
+        "have": 0,
+        "key": "heatconductionwiring",
+        "missing": 0,
+        "name_en": "Heat Conduction Wiring",
+        "need": 1,
+        "state": "trade",
+        "trade": {
+          "get": 3,
+          "get_key": "heatconductionwiring",
+          "give": 2,
+          "give_key": "conductiveceramics",
+          "same_family": false,
+          "trader": "Manufactured"
+        }
+      },
+      {
+        "grade": 2,
+        "have": 0,
+        "key": "heatdispersionplate",
+        "missing": 0,
+        "name_en": "Heat Dispersion Plate",
+        "need": 1,
+        "state": "trade",
+        "trade": {
+          "get": 9,
+          "get_key": "heatdispersionplate",
+          "give": 1,
+          "give_key": "heatvanes",
+          "same_family": true,
+          "trader": "Manufactured"
+        }
+      },
+      {
+        "grade": 3,
+        "have": 0,
+        "key": "heatexchangers",
+        "missing": 0,
+        "name_en": "Heat Exchangers",
+        "need": 1,
+        "state": "trade",
+        "trade": {
+          "get": 3,
+          "get_key": "heatexchangers",
+          "give": 1,
+          "give_key": "heatvanes",
+          "same_family": true,
+          "trader": "Manufactured"
+        }
+      },
+      {
+        "grade": 4,
+        "have": 3,
+        "key": "heatvanes",
+        "missing": 0,
+        "name_en": "Heat Vanes",
+        "need": 1,
+        "state": "ok",
+        "trade": null
+      },
+      {
+        "grade": 2,
+        "have": 0,
+        "key": "hybridcapacitors",
+        "missing": 0,
+        "name_en": "Hybrid Capacitors",
+        "need": 1,
+        "state": "trade",
+        "trade": {
+          "get": 1,
+          "get_key": "hybridcapacitors",
+          "give": 2,
+          "give_key": "conductiveceramics",
+          "same_family": false,
+          "trader": "Manufactured"
+        }
+      },
+      {
+        "grade": 3,
+        "have": 0,
+        "key": "niobium",
+        "missing": 0,
+        "name_en": "Niobium",
+        "need": 1,
+        "state": "trade",
+        "trade": {
+          "get": 1,
+          "get_key": "niobium",
+          "give": 2,
+          "give_key": "polonium",
+          "same_family": false,
+          "trader": "Raw"
+        }
+      },
+      {
+        "grade": 5,
+        "have": 8,
+        "key": "pharmaceuticalisolators",
+        "missing": 0,
+        "name_en": "Pharmaceutical Isolators",
+        "need": 1,
+        "state": "ok",
+        "trade": null
+      },
+      {
+        "grade": 4,
+        "have": 150,
+        "key": "polonium",
+        "missing": 0,
+        "name_en": "Polonium",
+        "need": 4,
+        "state": "ok",
+        "trade": null
+      },
+      {
+        "grade": 5,
+        "have": 2,
+        "key": "protoheatradiators",
+        "missing": 2,
+        "name_en": "Proto Heat Radiators",
+        "need": 4,
+        "state": "missing",
+        "trade": null
+      },
+      {
+        "grade": 2,
+        "have": 0,
+        "key": "vanadium",
+        "missing": 0,
+        "name_en": "Vanadium",
+        "need": 1,
+        "state": "trade",
+        "trade": {
+          "get": 3,
+          "get_key": "vanadium",
+          "give": 2,
+          "give_key": "polonium",
+          "same_family": false,
+          "trader": "Raw"
+        }
+      },
+      {
+        "grade": 4,
+        "have": 0,
+        "key": "yttrium",
+        "missing": 0,
+        "name_en": "Yttrium",
+        "need": 1,
+        "state": "trade",
+        "trade": {
+          "get": 1,
+          "get_key": "yttrium",
+          "give": 6,
+          "give_key": "polonium",
+          "same_family": false,
+          "trader": "Raw"
+        }
+      }
+    ],
+    "module_type": "engine",
+    "options": {
+      "blueprints": [
+        "engine_dirty"
+      ],
+      "experimentals": [
+        "special_engine_overloaded"
+      ]
+    },
+    "percent": 47,
+    "request": {
+      "blueprint": "engine_dirty",
+      "experimental": "special_engine_overloaded",
+      "module_type": "engine",
+      "rolls": [
+        1,
+        1,
+        1,
+        1,
+        4
+      ],
+      "target_grade": 5
+    },
+    "slot": "MainEngines",
+    "status": "ok"
+  },
+  "engineering.goals": {
+    "as_of": "2026-10-21T12:05:00Z",
+    "goals": [
+      {
+        "completable": true,
+        "engineer": "Felicity Farseer",
+        "id": "7:FrameShiftDrive:fsd_longrange:-:5",
+        "item": "int_hyperdrive_size5_class5",
+        "missing": {
+          "dataminedwake": 1
+        },
+        "percent": 87,
+        "request": {
+          "blueprint": "fsd_longrange",
+          "experimental": null,
+          "module_type": "fsd",
+          "rolls": [
+            1,
+            1,
+            1,
+            1,
+            4
+          ],
+          "target_grade": 5
+        },
+        "slot": "FrameShiftDrive",
+        "trades": [
+          {
+            "get": 1,
+            "get_key": "dataminedwake",
+            "give": 6,
+            "give_key": "hyperspacetrajectories",
+            "same_family": true,
+            "trader": "Encoded"
+          }
+        ],
+        "verified": false
+      }
+    ],
+    "missing": {
+      "dataminedwake": 1
+    },
+    "needs": {
+      "biotechconductors": 4,
+      "dataminedwake": 4
+    },
+    "status": "ok",
+    "surplus": {
+      "carbon": 1,
+      "conductiveceramics": 26,
+      "heatvanes": 3,
+      "hyperspacetrajectories": 6,
+      "iron": 117,
+      "pharmaceuticalisolators": 8,
+      "polonium": 150,
+      "protoheatradiators": 2,
+      "shieldpatternanalysis": 14
+    }
+  },
+  "engineering.inventory": {
+    "as_of": "2026-10-21T12:03:00Z",
+    "at_max": [
+      "polonium"
+    ],
+    "by_category": {
+      "Encoded": {
+        "0": [
+          {
+            "count": 4,
+            "key": "foo_new",
+            "known": false
+          }
+        ],
+        "4": [
+          {
+            "count": 6,
+            "key": "hyperspacetrajectories",
+            "name_en": "Eccentric Hyperspace Trajectories"
+          },
+          {
+            "count": 14,
+            "key": "shieldpatternanalysis",
+            "name_en": "Aberrant Shield Pattern Analysis"
+          }
+        ],
+        "5": [
+          {
+            "count": 3,
+            "key": "dataminedwake",
+            "name_en": "Datamined Wake Exceptions"
+          }
+        ]
+      },
+      "Manufactured": {
+        "3": [
+          {
+            "count": 26,
+            "key": "conductiveceramics",
+            "name_en": "Conductive Ceramics"
+          }
+        ],
+        "4": [
+          {
+            "count": 3,
+            "key": "heatvanes",
+            "name_localised": "Heat Vanes"
+          }
+        ],
+        "5": [
+          {
+            "count": 4,
+            "key": "biotechconductors",
+            "name_en": "Biotech Conductors"
+          },
+          {
+            "count": 8,
+            "key": "pharmaceuticalisolators",
+            "name_en": "Pharmaceutical Isolators"
+          },
+          {
+            "count": 2,
+            "key": "protoheatradiators",
+            "name_en": "Proto Heat Radiators"
+          }
+        ]
+      },
+      "Raw": {
+        "1": [
+          {
+            "count": 1,
+            "key": "carbon",
+            "name_en": "Carbon"
+          },
+          {
+            "count": 117,
+            "key": "iron",
+            "name_localised": "Hierro"
+          }
+        ],
+        "4": [
+          {
+            "count": 150,
+            "key": "polonium",
+            "name_en": "Polonium"
+          }
+        ]
+      }
+    },
+    "caps": {
+      "1": 300,
+      "2": 250,
+      "3": 200,
+      "4": 150,
+      "5": 100
+    },
+    "snapshot": true
+  },
+  "engineering.locker": {
+    "as_of": "2026-10-21T12:00:06Z",
+    "components": [
+      {
+        "count": 8,
+        "key": "graphene",
+        "name_localised": "Graphene"
+      }
+    ],
+    "consumables": [],
+    "data": [],
+    "items": []
+  },
+  "engineering.session": {
+    "as_of": "2026-10-21T12:03:00Z",
+    "recent": [
+      {
+        "at": "2026-10-21T12:00:10Z",
+        "delta": 2,
+        "key": "shieldpatternanalysis",
+        "lost": 0,
+        "origin": "Scan"
+      },
+      {
+        "at": "2026-10-21T12:00:11Z",
+        "delta": 3,
+        "key": "iron",
+        "lost": 0,
+        "origin": "Mining"
+      },
+      {
+        "at": "2026-10-21T12:00:12Z",
+        "delta": 0,
+        "key": "polonium",
+        "lost": 2,
+        "origin": "Mining"
+      },
+      {
+        "at": "2026-10-21T12:00:20Z",
+        "delta": -6,
+        "key": "iron",
+        "lost": 0,
+        "origin": "Trade"
+      },
+      {
+        "at": "2026-10-21T12:00:20Z",
+        "delta": 1,
+        "key": "carbon",
+        "lost": 0,
+        "origin": "Trade"
+      },
+      {
+        "at": "2026-10-21T12:00:30Z",
+        "delta": -1,
+        "key": "conductiveceramics",
+        "lost": 0,
+        "origin": "Synthesis"
+      },
+      {
+        "at": "2026-10-21T12:00:40Z",
+        "delta": 2,
+        "key": "heatvanes",
+        "lost": 0,
+        "origin": "Mission"
+      },
+      {
+        "at": "2026-10-21T12:03:00Z",
+        "delta": -2,
+        "key": "pharmaceuticalisolators",
+        "lost": 0,
+        "origin": "Engineering"
+      },
+      {
+        "at": "2026-10-21T12:03:00Z",
+        "delta": -3,
+        "key": "conductiveceramics",
+        "lost": 0,
+        "origin": "Engineering"
+      }
+    ],
+    "since": "2026-10-21T12:00:00Z",
+    "totals": {
+      "Engineering": {
+        "in": 0,
+        "out": 5
+      },
+      "Mining": {
+        "in": 3,
+        "out": 0
+      },
+      "Mission": {
+        "in": 2,
+        "out": 0
+      },
+      "Scan": {
+        "in": 2,
+        "out": 0
+      },
+      "Synthesis": {
+        "in": 0,
+        "out": 1
+      },
+      "Trade": {
+        "in": 1,
+        "out": 6
+      }
+    }
+  },
+  "engineering.ship": {
+    "as_of": "2026-10-21T12:03:00Z",
+    "modules": [
+      {
+        "current": null,
+        "engineerable": true,
+        "item": "int_engine_size5_class5",
+        "module_type": "engine",
+        "slot": "MainEngines"
+      },
+      {
+        "current": {
+          "blueprint": "FSD_LongRange",
+          "experimental": null,
+          "level": 4,
+          "quality": 1.0
+        },
+        "engineerable": true,
+        "item": "int_hyperdrive_size5_class5",
+        "module_type": "fsd",
+        "slot": "FrameShiftDrive"
+      }
+    ],
+    "ship": "asp",
+    "ship_id": 7
+  },
+  "engineering.sources": {
+    "as_of": "2026-10-21T12:05:00Z",
+    "brokers": {
+      "Human": "Loading"
+    },
+    "hints": {
+      "dataminedwake": [
+        {
+          "detail_key": null,
+          "kind": "data_scan"
+        },
+        {
+          "detail_key": null,
+          "kind": "signal_source"
+        }
+      ],
+      "electrochemicalarrays": [
+        {
+          "detail_key": null,
+          "kind": "salvage"
+        }
+      ],
+      "heatconductionwiring": [
+        {
+          "detail_key": null,
+          "kind": "salvage"
+        },
+        {
+          "detail_key": null,
+          "kind": "mission_reward"
+        }
+      ],
+      "heatdispersionplate": [
+        {
+          "detail_key": null,
+          "kind": "salvage"
+        },
+        {
+          "detail_key": null,
+          "kind": "mission_reward"
+        }
+      ],
+      "heatexchangers": [
+        {
+          "detail_key": null,
+          "kind": "salvage"
+        },
+        {
+          "detail_key": null,
+          "kind": "mission_reward"
+        }
+      ],
+      "hybridcapacitors": [
+        {
+          "detail_key": null,
+          "kind": "salvage"
+        }
+      ],
+      "niobium": [
+        {
+          "detail_key": null,
+          "kind": "surface_prospecting"
+        },
+        {
+          "detail_key": null,
+          "kind": "mining"
+        }
+      ],
+      "protoheatradiators": [
+        {
+          "detail_key": null,
+          "kind": "mission_reward"
+        },
+        {
+          "detail_key": null,
+          "kind": "broker"
+        }
+      ],
+      "vanadium": [
+        {
+          "detail_key": null,
+          "kind": "surface_prospecting"
+        }
+      ],
+      "yttrium": [
+        {
+          "detail_key": null,
+          "kind": "surface_prospecting"
+        },
+        {
+          "detail_key": null,
+          "kind": "mining"
+        }
+      ]
+    },
+    "traders": {
+      "Encoded": {
+        "Ok": {
+          "distance_ly": 8.2,
+          "distance_to_arrival_ls": 1200.0,
+          "max_pad": "Large",
+          "station_name": "Fake Port",
+          "system_name": "Synthetic Neighbour",
+          "updated_at": null
+        }
+      },
+      "Manufactured": "Loading",
+      "Raw": "Loading"
+    }
+  }
+}
