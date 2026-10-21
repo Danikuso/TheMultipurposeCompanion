@@ -1248,7 +1248,11 @@ mod tests {
                 .find(|b| b.blueprint == "engine_dirty")
                 .map(|b| b.max_grade)
         };
-        assert_eq!((dirty(300100), dirty(300160)), (Some(5), Some(3)));
+        assert_eq!(
+            (dirty(300220), dirty(300100), dirty(300160)),
+            (Some(5), Some(3), Some(2))
+        );
+        assert_eq!(engineer(300220).unwrap().system, "Arque");
         assert!(
             engineer(300100)
                 .unwrap()
