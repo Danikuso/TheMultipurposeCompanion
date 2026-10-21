@@ -50,3 +50,12 @@ export interface EngineeringFlowTopic {
   lines: FlowLine[]; percent: number;
   engineer: { nearest_any: EngineerRow | null; nearest_unlocked: EngineerRow | null; next_step: EngineerNextStep | null } | null;
 }
+
+export interface GoalSummary { id: string; percent: number; completable: boolean; engineer: string | null }
+export interface GoalsTopic { revision: number; status: string; total: number; goals: GoalSummary[] }
+export interface GoalDetail extends GoalSummary { slot: string; item: string; request: EngineeringRequest; missing: Record<string, number>; trades: EngineeringTrade[]; verified: boolean }
+export interface AggregateRow { key: string; count: number; name_en?: string | null }
+export interface RemoteStation { station_name: string; system_name: string; distance_ly: number; max_pad: string | null }
+export type SourceStatus = 'Loading' | 'Disabled' | 'NoData' | { Ok: RemoteStation };
+export interface SourcesTopic { traders: Partial<Record<MaterialCategory, SourceStatus>>; brokers: Record<string, SourceStatus>; hints: Record<string, { kind: string; detail_key: string | null }[]> }
+export interface EngineeringAlert { id: string; kind: string; key?: string; grade?: number; goal?: string; engineer?: string | null; engineer_id?: number }

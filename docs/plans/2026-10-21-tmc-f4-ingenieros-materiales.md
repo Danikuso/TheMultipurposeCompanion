@@ -669,13 +669,13 @@ test('pin goal posts action', /* POST engineering.pin_goal {} */);
 
 ### Task 24: UI — «Lista de la compra», «Intercambios», «Dónde conseguirlo» y avisos
 
-**Files:** Create `ui/src/modules/engineering/{ShoppingPanel.svelte, TradesPanel.svelte, SourcesPanel.svelte, EngineeringAlerts.svelte}`; Modify `index.ts`, `locales/*/engineering.ftl`, `ui/tests/engineering.test.ts`, `diagnostics.rs`.
+**Files:** Create `ui/src/modules/engineering/{ShoppingPanel.svelte, TradesPanel.svelte, SourcesPanel.svelte, EngineeringAlerts.svelte, goals.svelte.ts}`; Modify `index.ts`, `types.ts`, `labels.ts`, `locales/*/engineering.ftl`, `ui/tests/engineering.test.ts`, `diagnostics.rs`.
 
 **Interfaces:** objetivos con % y faltantes, subir/bajar (`engineering.move_goal`), quitar (`engineering.unpin_goal`), «ya puedes completar X» con ingeniero; intercambios das/recibes con comerciante cercano; dónde conseguir: comerciante por tipo con distancia y plataforma o «sin datos», broker si aplica, pistas por material; avisos descartables (`engineering.dismiss_alert`).
 
 **Enmienda de Task 20:** `engineering.goals` contiene el resumen con revisión; cargar detalles y agregados mediante el helper de páginas de Task 21 al mostrar los paneles. Descartar datos anteriores ante otra revisión/comandante; no mezclar páginas ni cursar consultas cuando el panel está oculto. Las acciones permanecen idénticas.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```ts
 test('goal shows percent and completable hint', /* completable → engineering-goal-completable con nombre de ingeniero */);
@@ -685,7 +685,9 @@ test('no services shows no data per trader', /* Disabled → engineering-no-data
 test('nearest trader shows distance and pad', /* "8,2 al", L */);
 ```
 
-- [ ] **Step 2–4:** FAIL → implementar → PASS; checks. **Step 5: Commit** `feat(ui): lista de la compra, intercambios, dónde conseguirlo y avisos`
+- [x] **Step 2–4:** FAIL → implementar → PASS; checks. **Step 5: Commit** `feat(ui): lista de la compra, intercambios, dónde conseguirlo y avisos`
+
+**Verificación (2026-10-22):** TDD con 16 tests nuevos; 71 tests de ingeniería y UI 309/309 PASS, check 0 errores/avisos y build PASS. Rust fmt/clippy PASS; workspace 1.356 PASS, 2 ignoradas previas. Ambas revisiones aprobadas; resumen WS tipado con sus campos reales y `verified` solo en detalle REST. QA visual sintética 2560/800 sin errores ni desbordamiento: 19 páginas en tres revisiones, mover `{id,to:0}`, quitar `{id}` y descartar `{id}` correctos. Helpers con lectores privados, publicación conjunta de cuatro secciones, nombres ingleses desde el catálogo MIT único cuando faltan en topics y errores tardíos descartados por comandante.
 
 ---
 

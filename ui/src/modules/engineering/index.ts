@@ -1,7 +1,11 @@
-﻿import type { Component } from 'svelte';
+import type { Component } from 'svelte';
 import MaterialsPanel from './MaterialsPanel.svelte';
 import EngineersPanel from './EngineersPanel.svelte';
 import ShipPanel from './ShipPanel.svelte';
 import EngineerFlow from './EngineerFlow.svelte';
-export const engineeringPanels: Component[] = [MaterialsPanel, EngineersPanel, ShipPanel, EngineerFlow];
-export { MaterialsPanel, EngineersPanel, ShipPanel, EngineerFlow };
+import ShoppingPanel from './ShoppingPanel.svelte';
+import TradesPanel from './TradesPanel.svelte';
+import SourcesPanel from './SourcesPanel.svelte';
+import EngineeringAlerts from './EngineeringAlerts.svelte';
+export const engineeringPanels: Component[] = [MaterialsPanel, EngineersPanel, ShipPanel, EngineerFlow, ShoppingPanel, TradesPanel, SourcesPanel, EngineeringAlerts];
+export { MaterialsPanel, EngineersPanel, ShipPanel, EngineerFlow, ShoppingPanel, TradesPanel, SourcesPanel, EngineeringAlerts };
