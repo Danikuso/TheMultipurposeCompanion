@@ -83,8 +83,8 @@
         }
       ],
       "unlock": {
-        "requirement_key": "unlock-palin-req",
-        "invite_key": "unlock-palin-invite",
+        "requirement_key": "unlock-professor-palin",
+        "invite_key": "unlock-invite-professor-palin",
         "contribution": null
       },
       "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
