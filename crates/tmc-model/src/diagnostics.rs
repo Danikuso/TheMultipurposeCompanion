@@ -673,6 +673,10 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
                     | "canonn.system_poi"
                     | "ardent.nearby.imports"
                     | "ardent.nearest.service"
+                    | "ardent.nearest.material_trader"
+                    | "ardent.nearest.technology_broker"
+                    | "spansh.stations.material_trader"
+                    | "spansh.stations.technology_broker"
                     | "spansh.trade.job"
                     | "ardent.nearby.exports"
                     | "ardent.system.coords"
@@ -1381,6 +1385,8 @@ mod tests {
             ctx,
         );
         assert_eq!(safe["NearestService"]["service"]["MaterialTrader"], "Raw");
+        // `system_name` es público (nombre de sistema del juego): se conserva.
+        assert_eq!(safe["NearestService"]["system_name"], "Sol");
         assert_eq!(
             safe["NearestService"]["service2"]["TechnologyBroker"],
             "Guardian"
@@ -1401,6 +1407,24 @@ mod tests {
         // Un tipo de bróker no vale como tipo de comerciante.
         let safe = redact_diagnostic(&json!({"MaterialTrader":"Guardian"}), ctx);
         assert_eq!(safe["MaterialTrader"], REDACTED);
+    }
+
+    #[test]
+    fn new_endpoint_labels_are_closed_set() {
+        let ctx = DiagnosticContext::NetOutcome;
+        for label in [
+            "ardent.nearest.material_trader",
+            "ardent.nearest.technology_broker",
+            "spansh.stations.material_trader",
+            "spansh.stations.technology_broker",
+        ] {
+            let safe = redact_diagnostic(&json!({ "endpoint": label }), ctx);
+            assert_eq!(safe["endpoint"], label);
+        }
+        for canary in ["spansh.stations.CANARY", "ardent.nearest.CANARY"] {
+            let safe = redact_diagnostic(&json!({ "endpoint": canary }), ctx);
+            assert_eq!(safe["endpoint"], REDACTED);
+        }
     }
 
     #[test]
