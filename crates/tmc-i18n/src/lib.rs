@@ -336,7 +336,7 @@ mod tests {
                 ("missing", FluentValue::from(2)),
                 ("engineer", FluentValue::from("Felicity Farseer")),
                 ("blueprint", FluentValue::from("Dirty Drive Tuning")),
-                ("experimental", FluentValue::from("Drive Distributors")),
+                ("experimental", FluentValue::from("Drag Drives")),
                 ("give", FluentValue::from(6)),
                 ("receive", FluentValue::from(1)),
                 ("max", FluentValue::from(300)),
