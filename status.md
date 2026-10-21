@@ -2,17 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-21 19:59 (Europe/Madrid) · Codex
-- **Fase actual:** F4 — Ingenieros y materiales (🔄 ejecución: Tasks 0–19 registradas; Task 20 completada; Task 21 en curso). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Última actualización:** 2026-10-22 00:59 (Europe/Madrid) · Codex
+- **Fase actual:** F4 — Ingenieros y materiales (🔄 ejecución: Tasks 0–19 registradas; Task 20 completada; Task 21 completada; Task 22 en curso). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
-- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 21/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
+- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 22/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** Task 21 🔄 en curso — Step 1 (tests UI de Materiales y lector de páginas)
-- **Último paso completado:** Task 20 cerrada en `a4c5f3d`: resúmenes WS y detalles REST del actor menores de 16 KiB, ambos probes reactivados PASS; 1.356 Rust PASS/2 ignoradas previas, 238 UI PASS, fmt/clippy/check/build correctos, revisiones spec y calidad aprobadas.
-- **Siguiente acción:** tests RED para Materiales (categoría/grado/máximo/taquilla/sesión) y lector REST por instancia; implementar UI con contrato real, invalidación por revisión/comandante, cancelación y sin polling; revisar y ejecutar checks antes de commit.
+- **Tarea:** Task 22 🔄 en curso — Step 1: tests del panel de ingenieros
+- **Último paso completado:** Task 21 cerrada en `04e5ea4`: ambas revisiones y QA visual aprobadas; 1.356 Rust PASS/2 ignoradas previas, 258 UI PASS, fmt/clippy/check/build correctos.
+- **Siguiente acción:** implementar Task 22 con TDD: lista de ingenieros de nave/a pie, selección, siguiente paso y blueprints/grado máximo.
 
 ## Tareas de F4
 
@@ -41,8 +41,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 18 | `engineering` — lista de la compra, reservas y persistencia | ✅ hecha | 6646975, 47f910d, 7f71e31 | Revisión aprobada tras 2 rondas (escritura atómica en tmc-store) |
 | 19 | `engineering` — dónde conseguirlo, ingeniero recomendado y avisos | ✅ hecha | 4672cdc | Revisión aprobada |
 | 20 | `engineering` — módulo, topics, relevancia, red, almacén y registro | ✅ hecha | 9904133, 1fc8b74, a4c5f3d | Paginación aprobada; 1.356 Rust/238 UI PASS, probes activos, ambas revisiones |
-| 21 | UI — «Materiales» | 🔄 en curso | — | Step 1: tests de panel y lector de páginas por revisión |
-| 22 | UI — «Ingenieros» | ⬜ pendiente | — | |
+| 21 | UI — «Materiales» | ✅ hecha | 04e5ea4 | 20 tests nuevos; 258 UI/1.356 Rust PASS; ambas revisiones y QA visual |
+| 22 | UI — «Ingenieros» | 🔄 en curso | — | Step 1: TDD del panel |
 | 23 | UI — «Mi nave» e «Ingenierizar un módulo» | ⬜ pendiente | — | |
 | 24 | UI — «Lista de la compra», «Intercambios», «Dónde conseguirlo» y avisos | ⬜ pendiente | — | |
 | 25 | UI — disposición «Ingeniería», prioridad, Auto-companion y tiradas | ⬜ pendiente | — | |
@@ -72,7 +72,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | F1 | Navegación, exploración, exobiología | ✅ completada y fusionada (b96fecf) |
 | F2 | Cazarrecompensas/combate (incl. AX), minería | ✅ completada y fusionada (e069a14) |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ✅ completada y fusionada (6dc09d9) |
-| F4 | Ingenieros y materiales | 🔄 ejecución; Task 20 completada; Task 21 en curso |
+| F4 | Ingenieros y materiales | 🔄 ejecución; Task 20 completada; Task 21 completada; Task 22 en curso |
 | F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | ⬜ |
 | F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | ⬜ |
 | F7 | Voz (KokoroTTS; alemán sin voz) | ⬜ |
@@ -298,6 +298,10 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-22 00:59 (Europe/Madrid) · Codex · Task 21 cerrada en `04e5ea4` tras revisiones spec/calidad, QA visual 2560/800 y checks globales: 1.356 Rust PASS/2 ignoradas previas y 258 UI PASS. Continúa Task 22 con TDD. Sin código pendiente de Task 21.
+
+- 2026-10-22 00:59 (Europe/Madrid) · Codex · Propietario reanuda. Task 20 sigue cerrada; se retoma Task 21 implementada sin commit, con 20 tests nuevos informados y Unicode corregido. QA visual anterior no ejecutado por fallo de revisión automática debido a cuota; reintento ahora autorizado por el sistema pero servidor local ya no estaba activo. Se reinicia servidor de desarrollo y se continúa QA/revisiones/checks.
 
 - 2026-10-21 19:59 (Europe/Madrid) · Codex · Task 20 cerrada `a4c5f3d` con aprobación previa de paginación, TDD, revisión spec/calidad y checks globales: 1.356 Rust PASS/2 ignoradas previas, 238 UI PASS, fmt/clippy/check/build. Ambos probes reactivados; HTTP/actor real reconstruye20objetivos/215propuestas y200recursos sin pérdida, páginas<16KiB, revisión semántica y aislamiento de clientes. Sin push, release original preservado. Se inicia Task 21 Step 1; ningún código UI tocado todavía. Este seguimiento se guarda en commit documental inmediato.
 
