@@ -1122,6 +1122,130 @@ pub struct MaterialReward {
     pub name_localised: Option<String>,
     #[serde(deserialize_with = "ld")]
     pub count: u32,
+    /// Llega como `$MICRORESOURCE_CATEGORY_<X>;`; ver [`reward_category`].
+    #[serde(deserialize_with = "lo")]
+    pub category: Option<String>,
+}
+
+/// Categoría de material del juego.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum MaterialCategory {
+    Raw,
+    Manufactured,
+    Encoded,
+}
+
+impl MaterialCategory {
+    /// Acepta `Raw`/`Manufactured`/`Encoded` y `$MICRORESOURCE_CATEGORY_<X>;`, sin distinguir mayúsculas.
+    pub fn from_journal(s: &str) -> Option<Self> {
+        let t = s.trim();
+        let t = t
+            .strip_prefix("$MICRORESOURCE_CATEGORY_")
+            .map(|r| r.trim_end_matches(';'))
+            .unwrap_or(t);
+        match t.to_ascii_lowercase().as_str() {
+            "raw" => Some(Self::Raw),
+            "manufactured" => Some(Self::Manufactured),
+            "encoded" => Some(Self::Encoded),
+            _ => None,
+        }
+    }
+}
+
+/// Categoría normalizada de una recompensa de misión (`None` si falta o es desconocida).
+pub fn reward_category(r: &MaterialReward) -> Option<MaterialCategory> {
+    r.category
+        .as_deref()
+        .and_then(MaterialCategory::from_journal)
+}
+
+/// Clave única de material en todo F4: minúsculas y sin espacios.
+pub fn material_key(name: &str) -> String {
+    name.chars()
+        .filter(|c| !c.is_whitespace())
+        .flat_map(char::to_lowercase)
+        .collect()
+}
+
+/// Entrada de la instantánea `Materials`. `Count` es estricto: uno no numérico invalida la entrada.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MaterialCount {
+    pub name: String,
+    #[serde(rename = "Name_Localised", deserialize_with = "lo")]
+    pub name_localised: Option<String>,
+    pub count: u32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct Materials {
+    #[serde(deserialize_with = "lv")]
+    pub raw: Vec<MaterialCount>,
+    #[serde(deserialize_with = "lv")]
+    pub manufactured: Vec<MaterialCount>,
+    #[serde(deserialize_with = "lv")]
+    pub encoded: Vec<MaterialCount>,
+}
+
+/// Forma común de `MaterialCollected` y `MaterialDiscarded`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MaterialCollected {
+    #[serde(deserialize_with = "ld")]
+    pub category: String,
+    #[serde(deserialize_with = "ld")]
+    pub name: String,
+    #[serde(rename = "Name_Localised", deserialize_with = "lo")]
+    pub name_localised: Option<String>,
+    #[serde(deserialize_with = "ld")]
+    pub count: u32,
+}
+
+pub type MaterialDiscarded = MaterialCollected;
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MaterialTradeSide {
+    #[serde(deserialize_with = "ld")]
+    pub material: String,
+    #[serde(rename = "Material_Localised", deserialize_with = "lo")]
+    pub material_localised: Option<String>,
+    #[serde(deserialize_with = "ld")]
+    pub category: String,
+    #[serde(deserialize_with = "ld")]
+    pub quantity: u32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MaterialTrade {
+    #[serde(rename = "MarketID", deserialize_with = "lo")]
+    pub market_id: Option<u64>,
+    #[serde(deserialize_with = "ld")]
+    pub trader_type: String,
+    #[serde(deserialize_with = "ld")]
+    pub paid: MaterialTradeSide,
+    #[serde(deserialize_with = "ld")]
+    pub received: MaterialTradeSide,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MaterialUse {
+    #[serde(alias = "Material", deserialize_with = "ld")]
+    pub name: String,
+    #[serde(deserialize_with = "ld")]
+    pub count: u32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct Synthesis {
+    #[serde(deserialize_with = "ld")]
+    pub name: String,
+    #[serde(deserialize_with = "lv")]
+    pub materials: Vec<MaterialUse>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -1401,6 +1525,11 @@ pub enum EventKind {
     CommunityGoal(Box<CommunityGoal>),
     RepairAll(RepairAll),
     Repair(Repair),
+    Materials(Box<Materials>),
+    MaterialCollected(MaterialCollected),
+    MaterialDiscarded(MaterialDiscarded),
+    MaterialTrade(Box<MaterialTrade>),
+    Synthesis(Synthesis),
     Other,
 }
 
@@ -1513,6 +1642,13 @@ fn classify(name: &str, raw: &RawValue) -> EventKind {
         }
         "RepairAll" => de(name, raw).map(EventKind::RepairAll),
         "Repair" => de(name, raw).map(EventKind::Repair),
+        "Materials" => de::<Materials>(name, raw).map(|m| EventKind::Materials(Box::new(m))),
+        "MaterialCollected" => de(name, raw).map(EventKind::MaterialCollected),
+        "MaterialDiscarded" => de(name, raw).map(EventKind::MaterialDiscarded),
+        "MaterialTrade" => {
+            de::<MaterialTrade>(name, raw).map(|t| EventKind::MaterialTrade(Box::new(t)))
+        }
+        "Synthesis" => de(name, raw).map(EventKind::Synthesis),
         _ => None,
     };
     kind.unwrap_or(EventKind::Other)
@@ -2561,6 +2697,104 @@ mod tests {
         assert_eq!(m.materials_reward[0].count, 2);
         assert_eq!(m.faction_effects[0].influence[0].influence, "+++");
         assert_eq!(m.faction_effects[0].reputation.as_deref(), Some("++"));
+    }
+
+    #[test]
+    fn materials_snapshot_parses_three_categories() {
+        let EventKind::Materials(m) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Materials","Raw":[{"Name":"iron","Count":120}],"Manufactured":[{"Name":"conductiveceramics","Name_Localised":"Cerámica conductora","Count":30}],"Encoded":[{"Name":"shieldpatternanalysis","Count":12}]}"#,
+        ) else {
+            panic!("Materials")
+        };
+        assert_eq!(m.raw[0].count, 120);
+        assert_eq!(m.raw[0].name_localised, None);
+        assert_eq!(
+            m.manufactured[0].name_localised.as_deref(),
+            Some("Cerámica conductora")
+        );
+        assert_eq!(m.encoded[0].name, "shieldpatternanalysis");
+    }
+
+    #[test]
+    fn material_trade_parses_paid_and_received() {
+        let EventKind::MaterialTrade(t) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MaterialTrade","MarketID":128000001,"TraderType":"encoded","Paid":{"Material":"scandatabanks","Category":"Encoded","Quantity":6},"Received":{"Material":"encodedscandata","Material_Localised":"X","Category":"Encoded","Quantity":1}}"#,
+        ) else {
+            panic!("MaterialTrade")
+        };
+        assert_eq!(t.market_id, Some(128000001));
+        assert_eq!(t.trader_type, "encoded");
+        assert_eq!(t.paid.quantity, 6);
+        assert_eq!(t.received.material, "encodedscandata");
+    }
+
+    #[test]
+    fn malformed_material_entry_is_skipped_not_fatal() {
+        let EventKind::Materials(m) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Materials","Raw":[{"Name":"iron","Count":"x"},{"Name":"nickel","Count":5}],"Manufactured":7}"#,
+        ) else {
+            panic!("Materials")
+        };
+        assert_eq!(m.raw.len(), 1);
+        assert_eq!(m.raw[0].name, "nickel");
+        assert!(m.manufactured.is_empty());
+    }
+
+    #[test]
+    fn material_key_normalizes() {
+        assert_eq!(material_key("Iron"), "iron");
+        assert_eq!(material_key(" Conductive Ceramics "), "conductiveceramics");
+    }
+
+    #[test]
+    fn materials_reward_category_normalized() {
+        let EventKind::MissionCompleted(m) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MissionCompleted","MissionID":1,"MaterialsReward":[{"Name":"a","Category":"$MICRORESOURCE_CATEGORY_Manufactured;","Count":1},{"Name":"b","Count":2}]}"#,
+        ) else {
+            panic!("MissionCompleted")
+        };
+        assert_eq!(
+            reward_category(&m.materials_reward[0]),
+            Some(MaterialCategory::Manufactured)
+        );
+        assert_eq!(reward_category(&m.materials_reward[1]), None);
+    }
+
+    #[test]
+    fn category_from_journal_variants() {
+        assert_eq!(
+            MaterialCategory::from_journal("Raw"),
+            Some(MaterialCategory::Raw)
+        );
+        assert_eq!(
+            MaterialCategory::from_journal("$MICRORESOURCE_CATEGORY_Encoded;"),
+            Some(MaterialCategory::Encoded)
+        );
+        assert_eq!(
+            MaterialCategory::from_journal("MANUFACTURED"),
+            Some(MaterialCategory::Manufactured)
+        );
+        assert_eq!(MaterialCategory::from_journal("foo"), None);
+    }
+
+    #[test]
+    fn synthesis_and_collected_parse() {
+        let EventKind::Synthesis(s) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Synthesis","Name":"FSD Basic","Materials":[{"Name":"carbon","Count":1}]}"#,
+        ) else {
+            panic!("Synthesis")
+        };
+        assert_eq!(s.name, "FSD Basic");
+        assert_eq!(s.materials[0].count, 1);
+        let EventKind::MaterialCollected(c) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MaterialCollected","Category":"Raw","Name":"iron","Count":3}"#,
+        ) else {
+            panic!("MaterialCollected")
+        };
+        assert_eq!(
+            (c.category.as_str(), c.name.as_str(), c.count),
+            ("Raw", "iron", 3)
+        );
     }
 
     #[test]
