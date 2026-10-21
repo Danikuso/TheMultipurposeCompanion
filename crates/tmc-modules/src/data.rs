@@ -1063,12 +1063,13 @@ mod tests {
     #[test]
     fn materials_load_with_provenance_and_valid_grades() {
         let table = materials();
-        assert_eq!(table.len(), 29);
+        assert_eq!(table.len(), 139);
         for (key, m) in table {
             assert_eq!(key, &m.key);
             assert!(!m.source.trim().is_empty());
             assert!((1..=5).contains(&m.grade), "{key}");
-            assert!(!m.verified);
+            assert!(m.verified, "{key}");
+            assert_eq!(m.source, "EDEngineer 2cadd66 (MIT)", "{key}");
         }
         let iron = &table["iron"];
         assert_eq!(
@@ -1080,6 +1081,31 @@ mod tests {
             (ceramics.category, ceramics.grade),
             (MaterialCategory::Manufactured, 3)
         );
+    }
+
+    #[test]
+    fn materials_full_catalogue_size() {
+        use std::collections::BTreeMap;
+        let mut by_category: BTreeMap<String, usize> = BTreeMap::new();
+        for m in materials().values() {
+            *by_category.entry(format!("{:?}", m.category)).or_default() += 1;
+        }
+        assert_eq!(materials().len(), 139);
+        assert_eq!(by_category["Raw"], 28);
+        assert_eq!(by_category["Manufactured"], 64);
+        assert_eq!(by_category["Encoded"], 47);
+        // Raw materials have four grades (seven categories); the rest five.
+        let mut raw_one: Vec<u8> = materials()
+            .values()
+            .filter(|m| m.family == "raw-1")
+            .map(|m| m.grade)
+            .collect();
+        raw_one.sort_unstable();
+        assert_eq!(raw_one, vec![1, 2, 3, 4]);
+        // Journal keys differ from the display name for some encoded data.
+        assert!(materials().contains_key("shieldpatternanalysis"));
+        assert!(materials().contains_key("fsdtelemetry"));
+        assert!(!materials().contains_key("anomalousfsdtelemetry"));
     }
 
     #[test]
@@ -1100,7 +1126,7 @@ mod tests {
                 m.grade
             );
         }
-        for family in ["raw-1", "heat", "conductive", "wake-scans"] {
+        for family in ["heat", "conductive", "wake-scans"] {
             let mut grades: Vec<u8> = materials()
                 .values()
                 .filter(|m| m.family == family)

@@ -363,3 +363,36 @@ Versión 1, licencia de datos propios del proyecto **PolyForm Noncommercial 1.0.
 |---|---|---|
 | `crates/tmc-modules/data/rare_goods.json` | Selección inicial incompleta de mercancías raras (origen y distancia de venta recomendada); redacción propia de TMC. | `verified: false`; símbolos desconocidos devuelven «sin dato». |
 | `crates/tmc-modules/data/cabins.json` | Cuatro cabinas de referencia (clase y plazas); redacción propia de TMC. | `verified: false`; pendiente de comprobación en el juego. |
+
+### EDEngineer (catálogo de materiales y nombres traducidos, F4)
+- Fuente: https://github.com/msarilar/EDEngineer, commit `2cadd66d19509221ea2e5c2c132b8f04dc8167c8` (2024-03-22). Licencia: **MIT**, «Copyright (c) 2016 Max». Decisión del propietario del 2026-10-21 (opción A para estos datos).
+- Usado de `EDEngineer/Resources/Data/entryData.json`: lista de materiales de nave (Raw, Manufactured y Encoded: nombre en inglés, rareza → grado 1–5 y grupo) → `crates/tmc-modules/data/materials.json` (139 materiales; `source: "EDEngineer 2cadd66 (MIT)"`). Las claves del diario de 22 datos codificados no coinciden con el `FormattedName` de EDEngineer y se contrastaron con los símbolos del diario (FDevIDs, solo identificadores). Familia, intercambiabilidad (`tradeable`) y pistas (`hints`) son datos propios de TMC. Los materiales a pie (Odyssey) y las mercancías no se incorporan.
+- Usado de `EDEngineer/Resources/Data/localization.json`: nombres traducidos (es, fr, de, pt) de blueprints y experimentales → `locales/{es,fr,de,pt}/engineering-data.ftl`. Son traducciones comunitarias de la aplicación; los nombres ausentes se dejan en inglés con `.pending = 1`.
+- No se usan las recetas de blueprints, los ingenieros ni las pistas de obtención de EDEngineer (datos propios).
+- Aviso: la licencia MIT cubre el repositorio de EDEngineer; sus datos son hechos del juego (propiedad intelectual de Frontier Developments) recopilados por la comunidad y `blueprints.json` de EDEngineer deriva de coriolis-data. TMC asume el mismo riesgo residual que EDEngineer.
+
+Texto de la licencia (EDEngineer):
+
+```
+MIT License
+
+Copyright (c) 2016 Max
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```

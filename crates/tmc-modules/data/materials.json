@@ -1,5 +1,5 @@
 {
-  "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+  "source": "EDEngineer 2cadd66 (MIT)",
   "entries": [
     {
       "key": "carbon",
@@ -14,8 +14,8 @@
           "detail_key": null
         }
       ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
     },
     {
       "key": "vanadium",
@@ -30,8 +30,8 @@
           "detail_key": null
         }
       ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
     },
     {
       "key": "niobium",
@@ -50,8 +50,8 @@
           "detail_key": null
         }
       ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
     },
     {
       "key": "yttrium",
@@ -70,28 +70,96 @@
           "detail_key": null
         }
       ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
     },
     {
-      "key": "polonium",
-      "name_en": "Polonium",
+      "key": "phosphorus",
+      "name_en": "Phosphorus",
       "category": "Raw",
-      "grade": 5,
-      "family": "raw-1",
+      "grade": 1,
+      "family": "raw-2",
       "tradeable": true,
-      "hints": [
-        {
-          "kind": "surface_prospecting",
-          "detail_key": null
-        },
-        {
-          "kind": "mining",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "chromium",
+      "name_en": "Chromium",
+      "category": "Raw",
+      "grade": 2,
+      "family": "raw-2",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "molybdenum",
+      "name_en": "Molybdenum",
+      "category": "Raw",
+      "grade": 3,
+      "family": "raw-2",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "technetium",
+      "name_en": "Technetium",
+      "category": "Raw",
+      "grade": 4,
+      "family": "raw-2",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "sulphur",
+      "name_en": "Sulphur",
+      "category": "Raw",
+      "grade": 1,
+      "family": "raw-3",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "manganese",
+      "name_en": "Manganese",
+      "category": "Raw",
+      "grade": 2,
+      "family": "raw-3",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "cadmium",
+      "name_en": "Cadmium",
+      "category": "Raw",
+      "grade": 3,
+      "family": "raw-3",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "ruthenium",
+      "name_en": "Ruthenium",
+      "category": "Raw",
+      "grade": 4,
+      "family": "raw-3",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
     },
     {
       "key": "iron",
@@ -106,360 +174,41 @@
           "detail_key": null
         }
       ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
     },
     {
-      "key": "heatconductionwiring",
-      "name_en": "Heat Conduction Wiring",
-      "category": "Manufactured",
-      "grade": 1,
-      "family": "heat",
-      "tradeable": true,
-      "hints": [
-        {
-          "kind": "salvage",
-          "detail_key": null
-        },
-        {
-          "kind": "mission_reward",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
-    },
-    {
-      "key": "heatdispersionplate",
-      "name_en": "Heat Dispersion Plate",
-      "category": "Manufactured",
+      "key": "zinc",
+      "name_en": "Zinc",
+      "category": "Raw",
       "grade": 2,
-      "family": "heat",
+      "family": "raw-4",
       "tradeable": true,
-      "hints": [
-        {
-          "kind": "salvage",
-          "detail_key": null
-        },
-        {
-          "kind": "mission_reward",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
     },
     {
-      "key": "heatexchangers",
-      "name_en": "Heat Exchangers",
-      "category": "Manufactured",
+      "key": "tin",
+      "name_en": "Tin",
+      "category": "Raw",
       "grade": 3,
-      "family": "heat",
+      "family": "raw-4",
       "tradeable": true,
-      "hints": [
-        {
-          "kind": "salvage",
-          "detail_key": null
-        },
-        {
-          "kind": "mission_reward",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
     },
     {
-      "key": "heatvanes",
-      "name_en": "Heat Vanes",
-      "category": "Manufactured",
+      "key": "selenium",
+      "name_en": "Selenium",
+      "category": "Raw",
       "grade": 4,
-      "family": "heat",
+      "family": "raw-4",
       "tradeable": true,
-      "hints": [
-        {
-          "kind": "mission_reward",
-          "detail_key": null
-        },
-        {
-          "kind": "broker",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
-    },
-    {
-      "key": "protoheatradiators",
-      "name_en": "Proto Heat Radiators",
-      "category": "Manufactured",
-      "grade": 5,
-      "family": "heat",
-      "tradeable": true,
-      "hints": [
-        {
-          "kind": "mission_reward",
-          "detail_key": null
-        },
-        {
-          "kind": "broker",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
-    },
-    {
-      "key": "basicconductors",
-      "name_en": "Basic Conductors",
-      "category": "Manufactured",
-      "grade": 1,
-      "family": "conductive",
-      "tradeable": true,
-      "hints": [
-        {
-          "kind": "salvage",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
-    },
-    {
-      "key": "conductivecomponents",
-      "name_en": "Conductive Components",
-      "category": "Manufactured",
-      "grade": 2,
-      "family": "conductive",
-      "tradeable": true,
-      "hints": [
-        {
-          "kind": "salvage",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
-    },
-    {
-      "key": "conductiveceramics",
-      "name_en": "Conductive Ceramics",
-      "category": "Manufactured",
-      "grade": 3,
-      "family": "conductive",
-      "tradeable": true,
-      "hints": [
-        {
-          "kind": "salvage",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
-    },
-    {
-      "key": "conductivepolymers",
-      "name_en": "Conductive Polymers",
-      "category": "Manufactured",
-      "grade": 4,
-      "family": "conductive",
-      "tradeable": true,
-      "hints": [
-        {
-          "kind": "mission_reward",
-          "detail_key": null
-        },
-        {
-          "kind": "broker",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
-    },
-    {
-      "key": "biotechconductors",
-      "name_en": "Biotech Conductors",
-      "category": "Manufactured",
-      "grade": 5,
-      "family": "conductive",
-      "tradeable": true,
-      "hints": [
-        {
-          "kind": "mission_reward",
-          "detail_key": null
-        },
-        {
-          "kind": "broker",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
-    },
-    {
-      "key": "hybridcapacitors",
-      "name_en": "Hybrid Capacitors",
-      "category": "Manufactured",
-      "grade": 2,
-      "family": "capacitors",
-      "tradeable": true,
-      "hints": [
-        {
-          "kind": "salvage",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
-    },
-    {
-      "key": "electrochemicalarrays",
-      "name_en": "Electrochemical Arrays",
-      "category": "Manufactured",
-      "grade": 3,
-      "family": "capacitors",
-      "tradeable": true,
-      "hints": [
-        {
-          "kind": "salvage",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
-    },
-    {
-      "key": "polymercapacitors",
-      "name_en": "Polymer Capacitors",
-      "category": "Manufactured",
-      "grade": 4,
-      "family": "capacitors",
-      "tradeable": true,
-      "hints": [
-        {
-          "kind": "salvage",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
-    },
-    {
-      "key": "militarysupercapacitors",
-      "name_en": "Military Supercapacitors",
-      "category": "Manufactured",
-      "grade": 5,
-      "family": "capacitors",
-      "tradeable": true,
-      "hints": [
-        {
-          "kind": "salvage",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
-    },
-    {
-      "key": "disruptedwakeechoes",
-      "name_en": "Atypical Disrupted Wake Echoes",
-      "category": "Encoded",
-      "grade": 1,
-      "family": "wake-scans",
-      "tradeable": true,
-      "hints": [
-        {
-          "kind": "data_scan",
-          "detail_key": null
-        },
-        {
-          "kind": "signal_source",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
-    },
-    {
-      "key": "fsdtelemetry",
-      "name_en": "Anomalous FSD Telemetry",
-      "category": "Encoded",
-      "grade": 2,
-      "family": "wake-scans",
-      "tradeable": true,
-      "hints": [
-        {
-          "kind": "data_scan",
-          "detail_key": null
-        },
-        {
-          "kind": "signal_source",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
-    },
-    {
-      "key": "wakesolutions",
-      "name_en": "Strange Wake Solutions",
-      "category": "Encoded",
-      "grade": 3,
-      "family": "wake-scans",
-      "tradeable": true,
-      "hints": [
-        {
-          "kind": "data_scan",
-          "detail_key": null
-        },
-        {
-          "kind": "signal_source",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
-    },
-    {
-      "key": "hyperspacetrajectories",
-      "name_en": "Eccentric Hyperspace Trajectories",
-      "category": "Encoded",
-      "grade": 4,
-      "family": "wake-scans",
-      "tradeable": true,
-      "hints": [
-        {
-          "kind": "data_scan",
-          "detail_key": null
-        },
-        {
-          "kind": "signal_source",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
-    },
-    {
-      "key": "dataminedwake",
-      "name_en": "Datamined Wake Exceptions",
-      "category": "Encoded",
-      "grade": 5,
-      "family": "wake-scans",
-      "tradeable": true,
-      "hints": [
-        {
-          "kind": "data_scan",
-          "detail_key": null
-        },
-        {
-          "kind": "signal_source",
-          "detail_key": null
-        }
-      ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
     },
     {
       "key": "nickel",
@@ -474,15 +223,37 @@
           "detail_key": null
         }
       ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "germanium",
+      "name_en": "Germanium",
+      "category": "Raw",
+      "grade": 2,
+      "family": "raw-5",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "tungsten",
+      "name_en": "Tungsten",
+      "category": "Raw",
+      "grade": 3,
+      "family": "raw-5",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
     },
     {
       "key": "tellurium",
       "name_en": "Tellurium",
       "category": "Raw",
       "grade": 4,
-      "family": "raw-3",
+      "family": "raw-5",
       "tradeable": true,
       "hints": [
         {
@@ -494,8 +265,279 @@
           "detail_key": null
         }
       ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "rhenium",
+      "name_en": "Rhenium",
+      "category": "Raw",
+      "grade": 1,
+      "family": "raw-6",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "arsenic",
+      "name_en": "Arsenic",
+      "category": "Raw",
+      "grade": 2,
+      "family": "raw-6",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "mercury",
+      "name_en": "Mercury",
+      "category": "Raw",
+      "grade": 3,
+      "family": "raw-6",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "polonium",
+      "name_en": "Polonium",
+      "category": "Raw",
+      "grade": 4,
+      "family": "raw-6",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "surface_prospecting",
+          "detail_key": null
+        },
+        {
+          "kind": "mining",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "lead",
+      "name_en": "Lead",
+      "category": "Raw",
+      "grade": 1,
+      "family": "raw-7",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "zirconium",
+      "name_en": "Zirconium",
+      "category": "Raw",
+      "grade": 2,
+      "family": "raw-7",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "boron",
+      "name_en": "Boron",
+      "category": "Raw",
+      "grade": 3,
+      "family": "raw-7",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "antimony",
+      "name_en": "Antimony",
+      "category": "Raw",
+      "grade": 4,
+      "family": "raw-7",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "salvagedalloys",
+      "name_en": "Salvaged Alloys",
+      "category": "Manufactured",
+      "grade": 1,
+      "family": "alloys",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "galvanisingalloys",
+      "name_en": "Galvanising Alloys",
+      "category": "Manufactured",
+      "grade": 2,
+      "family": "alloys",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "phasealloys",
+      "name_en": "Phase Alloys",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "alloys",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "protolightalloys",
+      "name_en": "Proto Light Alloys",
+      "category": "Manufactured",
+      "grade": 4,
+      "family": "alloys",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "protoradiolicalloys",
+      "name_en": "Proto Radiolic Alloys",
+      "category": "Manufactured",
+      "grade": 5,
+      "family": "alloys",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "gridresistors",
+      "name_en": "Grid Resistors",
+      "category": "Manufactured",
+      "grade": 1,
+      "family": "capacitors",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "hybridcapacitors",
+      "name_en": "Hybrid Capacitors",
+      "category": "Manufactured",
+      "grade": 2,
+      "family": "capacitors",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "electrochemicalarrays",
+      "name_en": "Electrochemical Arrays",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "capacitors",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "polymercapacitors",
+      "name_en": "Polymer Capacitors",
+      "category": "Manufactured",
+      "grade": 4,
+      "family": "capacitors",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "militarysupercapacitors",
+      "name_en": "Military Supercapacitors",
+      "category": "Manufactured",
+      "grade": 5,
+      "family": "capacitors",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "chemicalstorageunits",
+      "name_en": "Chemical Storage Units",
+      "category": "Manufactured",
+      "grade": 1,
+      "family": "chemical",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "chemicalprocessors",
+      "name_en": "Chemical Processors",
+      "category": "Manufactured",
+      "grade": 2,
+      "family": "chemical",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "chemicaldistillery",
+      "name_en": "Chemical Distillery",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "chemical",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "chemicalmanipulators",
+      "name_en": "Chemical Manipulators",
+      "category": "Manufactured",
+      "grade": 4,
+      "family": "chemical",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
     },
     {
       "key": "pharmaceuticalisolators",
@@ -514,8 +556,966 @@
           "detail_key": null
         }
       ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "compactcomposites",
+      "name_en": "Compact Composites",
+      "category": "Manufactured",
+      "grade": 1,
+      "family": "composite",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "filamentcomposites",
+      "name_en": "Filament Composites",
+      "category": "Manufactured",
+      "grade": 2,
+      "family": "composite",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "highdensitycomposites",
+      "name_en": "High Density Composites",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "composite",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "fedproprietarycomposites",
+      "name_en": "Proprietary Composites",
+      "category": "Manufactured",
+      "grade": 4,
+      "family": "composite",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "fedcorecomposites",
+      "name_en": "Core Dynamics Composites",
+      "category": "Manufactured",
+      "grade": 5,
+      "family": "composite",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "basicconductors",
+      "name_en": "Basic Conductors",
+      "category": "Manufactured",
+      "grade": 1,
+      "family": "conductive",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "conductivecomponents",
+      "name_en": "Conductive Components",
+      "category": "Manufactured",
+      "grade": 2,
+      "family": "conductive",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "conductiveceramics",
+      "name_en": "Conductive Ceramics",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "conductive",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "conductivepolymers",
+      "name_en": "Conductive Polymers",
+      "category": "Manufactured",
+      "grade": 4,
+      "family": "conductive",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "mission_reward",
+          "detail_key": null
+        },
+        {
+          "kind": "broker",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "biotechconductors",
+      "name_en": "Biotech Conductors",
+      "category": "Manufactured",
+      "grade": 5,
+      "family": "conductive",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "mission_reward",
+          "detail_key": null
+        },
+        {
+          "kind": "broker",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "crystalshards",
+      "name_en": "Crystal Shards",
+      "category": "Manufactured",
+      "grade": 1,
+      "family": "crystals",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "uncutfocuscrystals",
+      "name_en": "Flawed Focus Crystals",
+      "category": "Manufactured",
+      "grade": 2,
+      "family": "crystals",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "focuscrystals",
+      "name_en": "Focus Crystals",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "crystals",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "refinedfocuscrystals",
+      "name_en": "Refined Focus Crystals",
+      "category": "Manufactured",
+      "grade": 4,
+      "family": "crystals",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "exquisitefocuscrystals",
+      "name_en": "Exquisite Focus Crystals",
+      "category": "Manufactured",
+      "grade": 5,
+      "family": "crystals",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "guardian_powercell",
+      "name_en": "Guardian Power Cell",
+      "category": "Manufactured",
+      "grade": 1,
+      "family": "guardian-ruins-active",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "guardian_sentinel_wreckagecomponents",
+      "name_en": "Guardian Wreckage Components",
+      "category": "Manufactured",
+      "grade": 1,
+      "family": "guardian-ruins-active",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "guardian_powerconduit",
+      "name_en": "Guardian Power Conduit",
+      "category": "Manufactured",
+      "grade": 2,
+      "family": "guardian-ruins-active",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "guardian_sentinel_weaponparts",
+      "name_en": "Guardian Sentinel Weapon Parts",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "guardian-ruins-active",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "guardian_techcomponent",
+      "name_en": "Guardian Technology Component",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "guardian-ruins-active",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "heatconductionwiring",
+      "name_en": "Heat Conduction Wiring",
+      "category": "Manufactured",
+      "grade": 1,
+      "family": "heat",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        },
+        {
+          "kind": "mission_reward",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "heatdispersionplate",
+      "name_en": "Heat Dispersion Plate",
+      "category": "Manufactured",
+      "grade": 2,
+      "family": "heat",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        },
+        {
+          "kind": "mission_reward",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "heatexchangers",
+      "name_en": "Heat Exchangers",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "heat",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "salvage",
+          "detail_key": null
+        },
+        {
+          "kind": "mission_reward",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "heatvanes",
+      "name_en": "Heat Vanes",
+      "category": "Manufactured",
+      "grade": 4,
+      "family": "heat",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "mission_reward",
+          "detail_key": null
+        },
+        {
+          "kind": "broker",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "protoheatradiators",
+      "name_en": "Proto Heat Radiators",
+      "category": "Manufactured",
+      "grade": 5,
+      "family": "heat",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "mission_reward",
+          "detail_key": null
+        },
+        {
+          "kind": "broker",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "mechanicalscrap",
+      "name_en": "Mechanical Scrap",
+      "category": "Manufactured",
+      "grade": 1,
+      "family": "mechanical-components",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "mechanicalequipment",
+      "name_en": "Mechanical Equipment",
+      "category": "Manufactured",
+      "grade": 2,
+      "family": "mechanical-components",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "mechanicalcomponents",
+      "name_en": "Mechanical Components",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "mechanical-components",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "configurablecomponents",
+      "name_en": "Configurable Components",
+      "category": "Manufactured",
+      "grade": 4,
+      "family": "mechanical-components",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "improvisedcomponents",
+      "name_en": "Improvised Components",
+      "category": "Manufactured",
+      "grade": 5,
+      "family": "mechanical-components",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "wornshieldemitters",
+      "name_en": "Worn Shield Emitters",
+      "category": "Manufactured",
+      "grade": 1,
+      "family": "shielding",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "shieldemitters",
+      "name_en": "Shield Emitters",
+      "category": "Manufactured",
+      "grade": 2,
+      "family": "shielding",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "shieldingsensors",
+      "name_en": "Shielding Sensors",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "shielding",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "compoundshielding",
+      "name_en": "Compound Shielding",
+      "category": "Manufactured",
+      "grade": 4,
+      "family": "shielding",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "imperialshielding",
+      "name_en": "Imperial Shielding",
+      "category": "Manufactured",
+      "grade": 5,
+      "family": "shielding",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "tg_biomechanicalconduits",
+      "name_en": "Bio-Mechanical Conduits",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "thargoid-ship",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "tg_wreckagecomponents",
+      "name_en": "Wreckage Components",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "thargoid-ship",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "tg_weaponparts",
+      "name_en": "Weapon Parts",
+      "category": "Manufactured",
+      "grade": 4,
+      "family": "thargoid-ship",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "tg_propulsionelement",
+      "name_en": "Propulsion Elements",
+      "category": "Manufactured",
+      "grade": 5,
+      "family": "thargoid-ship",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "unknowncarapace",
+      "name_en": "Thargoid Carapace",
+      "category": "Manufactured",
+      "grade": 2,
+      "family": "thargoid-site",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "unknownenergycell",
+      "name_en": "Thargoid Energy Cell",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "thargoid-site",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "unknowntechnologycomponents",
+      "name_en": "Thargoid Technological Components",
+      "category": "Manufactured",
+      "grade": 4,
+      "family": "thargoid-site",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "unknownenergysource",
+      "name_en": "Sensor Fragment",
+      "category": "Manufactured",
+      "grade": 5,
+      "family": "thargoid-site",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "unknownorganiccircuitry",
+      "name_en": "Thargoid Organic Circuitry",
+      "category": "Manufactured",
+      "grade": 5,
+      "family": "thargoid-site",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "temperedalloys",
+      "name_en": "Tempered Alloys",
+      "category": "Manufactured",
+      "grade": 1,
+      "family": "thermic",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "heatresistantceramics",
+      "name_en": "Heat Resistant Ceramics",
+      "category": "Manufactured",
+      "grade": 2,
+      "family": "thermic",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "precipitatedalloys",
+      "name_en": "Precipitated Alloys",
+      "category": "Manufactured",
+      "grade": 3,
+      "family": "thermic",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "thermicalloys",
+      "name_en": "Thermic Alloys",
+      "category": "Manufactured",
+      "grade": 4,
+      "family": "thermic",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "militarygradealloys",
+      "name_en": "Military Grade Alloys",
+      "category": "Manufactured",
+      "grade": 5,
+      "family": "thermic",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "bulkscandata",
+      "name_en": "Anomalous Bulk Scan Data",
+      "category": "Encoded",
+      "grade": 1,
+      "family": "data-archives",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "scanarchives",
+      "name_en": "Unidentified Scan Archives",
+      "category": "Encoded",
+      "grade": 2,
+      "family": "data-archives",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "scandatabanks",
+      "name_en": "Classified Scan Databanks",
+      "category": "Encoded",
+      "grade": 3,
+      "family": "data-archives",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "encodedscandata",
+      "name_en": "Divergent Scan Data",
+      "category": "Encoded",
+      "grade": 4,
+      "family": "data-archives",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "classifiedscandata",
+      "name_en": "Classified Scan Fragment",
+      "category": "Encoded",
+      "grade": 5,
+      "family": "data-archives",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "scrambledemissiondata",
+      "name_en": "Exceptional Scrambled Emission Data",
+      "category": "Encoded",
+      "grade": 1,
+      "family": "emission-data",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "archivedemissiondata",
+      "name_en": "Irregular Emission Data",
+      "category": "Encoded",
+      "grade": 2,
+      "family": "emission-data",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "emissiondata",
+      "name_en": "Unexpected Emission Data",
+      "category": "Encoded",
+      "grade": 3,
+      "family": "emission-data",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "decodedemissiondata",
+      "name_en": "Decoded Emission Data",
+      "category": "Encoded",
+      "grade": 4,
+      "family": "emission-data",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "compactemissionsdata",
+      "name_en": "Abnormal Compact Emission Data",
+      "category": "Encoded",
+      "grade": 5,
+      "family": "emission-data",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "legacyfirmware",
+      "name_en": "Specialised Legacy Firmware",
+      "category": "Encoded",
+      "grade": 1,
+      "family": "encoded-firmware",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "consumerfirmware",
+      "name_en": "Modified Consumer Firmware",
+      "category": "Encoded",
+      "grade": 2,
+      "family": "encoded-firmware",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "industrialfirmware",
+      "name_en": "Cracked Industrial Firmware",
+      "category": "Encoded",
+      "grade": 3,
+      "family": "encoded-firmware",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "securityfirmware",
+      "name_en": "Security Firmware Patch",
+      "category": "Encoded",
+      "grade": 4,
+      "family": "encoded-firmware",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "embeddedfirmware",
+      "name_en": "Modified Embedded Firmware",
+      "category": "Encoded",
+      "grade": 5,
+      "family": "encoded-firmware",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "encryptedfiles",
+      "name_en": "Unusual Encrypted Files",
+      "category": "Encoded",
+      "grade": 1,
+      "family": "encryption-files",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "encryptioncodes",
+      "name_en": "Tagged Encryption Codes",
+      "category": "Encoded",
+      "grade": 2,
+      "family": "encryption-files",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "symmetrickeys",
+      "name_en": "Open Symmetric Keys",
+      "category": "Encoded",
+      "grade": 3,
+      "family": "encryption-files",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "encryptionarchives",
+      "name_en": "Atypical Encryption Archives",
+      "category": "Encoded",
+      "grade": 4,
+      "family": "encryption-files",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "adaptiveencryptors",
+      "name_en": "Adaptive Encryptors Capture",
+      "category": "Encoded",
+      "grade": 5,
+      "family": "encryption-files",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "ancienthistoricaldata",
+      "name_en": "Pattern Gamma Obelisk Data",
+      "category": "Encoded",
+      "grade": 1,
+      "family": "guardian-ruins",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "ancientculturaldata",
+      "name_en": "Pattern Beta Obelisk Data",
+      "category": "Encoded",
+      "grade": 2,
+      "family": "guardian-ruins",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "ancientbiologicaldata",
+      "name_en": "Pattern Alpha Obelisk Data",
+      "category": "Encoded",
+      "grade": 3,
+      "family": "guardian-ruins",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "ancientlanguagedata",
+      "name_en": "Pattern Delta Obelisk Data",
+      "category": "Encoded",
+      "grade": 4,
+      "family": "guardian-ruins",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "ancienttechnologicaldata",
+      "name_en": "Pattern Epsilon Obelisk Data",
+      "category": "Encoded",
+      "grade": 5,
+      "family": "guardian-ruins",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "guardian_moduleblueprint",
+      "name_en": "Guardian Module Blueprint Segment",
+      "category": "Encoded",
+      "grade": 5,
+      "family": "guardian-ruins-active-data",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "guardian_vesselblueprint",
+      "name_en": "Guardian Vessel Blueprint Segment",
+      "category": "Encoded",
+      "grade": 5,
+      "family": "guardian-ruins-active-data",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "guardian_weaponblueprint",
+      "name_en": "Guardian Weapon Blueprint Segment",
+      "category": "Encoded",
+      "grade": 5,
+      "family": "guardian-ruins-active-data",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "shieldcyclerecordings",
+      "name_en": "Distorted Shield Cycle Recordings",
+      "category": "Encoded",
+      "grade": 1,
+      "family": "shield-data",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "shieldsoakanalysis",
+      "name_en": "Inconsistent Shield Soak Analysis",
+      "category": "Encoded",
+      "grade": 2,
+      "family": "shield-data",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "shielddensityreports",
+      "name_en": "Untypical Shield Scans",
+      "category": "Encoded",
+      "grade": 3,
+      "family": "shield-data",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
     },
     {
       "key": "shieldpatternanalysis",
@@ -530,8 +1530,218 @@
           "detail_key": null
         }
       ],
-      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
-      "verified": false
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "shieldfrequencydata",
+      "name_en": "Peculiar Shield Frequency Data",
+      "category": "Encoded",
+      "grade": 5,
+      "family": "shield-data",
+      "tradeable": true,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "tg_shipflightdata",
+      "name_en": "Ship Flight Data",
+      "category": "Encoded",
+      "grade": 3,
+      "family": "thargoid-ship-data",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "unknownshipsignature",
+      "name_en": "Thargoid Ship Signature",
+      "category": "Encoded",
+      "grade": 3,
+      "family": "thargoid-ship-data",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "tg_shipsystemsdata",
+      "name_en": "Ship System Data",
+      "category": "Encoded",
+      "grade": 4,
+      "family": "thargoid-ship-data",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "tg_shutdowndata",
+      "name_en": "Massive Energy Surge Analytics",
+      "category": "Encoded",
+      "grade": 4,
+      "family": "thargoid-ship-data",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "unknownwakedata",
+      "name_en": "Thargoid Wake Data",
+      "category": "Encoded",
+      "grade": 4,
+      "family": "thargoid-ship-data",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "tg_interdictiondata",
+      "name_en": "Thargoid Interdiction Telemetry",
+      "category": "Encoded",
+      "grade": 5,
+      "family": "thargoid-ship-data",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "tg_structuraldata",
+      "name_en": "Thargoid Structural Data",
+      "category": "Encoded",
+      "grade": 2,
+      "family": "thargoid-site-data",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "tg_compositiondata",
+      "name_en": "Thargoid Material Composition Data",
+      "category": "Encoded",
+      "grade": 3,
+      "family": "thargoid-site-data",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "tg_residuedata",
+      "name_en": "Thargoid Residue Data",
+      "category": "Encoded",
+      "grade": 4,
+      "family": "thargoid-site-data",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "disruptedwakeechoes",
+      "name_en": "Atypical Disrupted Wake Echoes",
+      "category": "Encoded",
+      "grade": 1,
+      "family": "wake-scans",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "data_scan",
+          "detail_key": null
+        },
+        {
+          "kind": "signal_source",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "fsdtelemetry",
+      "name_en": "Anomalous FSD Telemetry",
+      "category": "Encoded",
+      "grade": 2,
+      "family": "wake-scans",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "data_scan",
+          "detail_key": null
+        },
+        {
+          "kind": "signal_source",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "wakesolutions",
+      "name_en": "Strange Wake Solutions",
+      "category": "Encoded",
+      "grade": 3,
+      "family": "wake-scans",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "data_scan",
+          "detail_key": null
+        },
+        {
+          "kind": "signal_source",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "hyperspacetrajectories",
+      "name_en": "Eccentric Hyperspace Trajectories",
+      "category": "Encoded",
+      "grade": 4,
+      "family": "wake-scans",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "data_scan",
+          "detail_key": null
+        },
+        {
+          "kind": "signal_source",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
+    },
+    {
+      "key": "dataminedwake",
+      "name_en": "Datamined Wake Exceptions",
+      "category": "Encoded",
+      "grade": 5,
+      "family": "wake-scans",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "data_scan",
+          "detail_key": null
+        },
+        {
+          "kind": "signal_source",
+          "detail_key": null
+        }
+      ],
+      "source": "EDEngineer 2cadd66 (MIT)",
+      "verified": true
     }
   ]
 }

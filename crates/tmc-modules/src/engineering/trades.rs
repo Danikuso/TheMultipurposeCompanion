@@ -301,13 +301,21 @@ mod tests {
 
     #[test]
     fn trade_never_exceeds_grade_cap() {
-        let p = run(&[("polonium", 3)], &[("yttrium", 60)], &[("polonium", 99)]);
+        let p = run(
+            &[("biotechconductors", 3)],
+            &[("conductivepolymers", 60)],
+            &[("biotechconductors", 99)],
+        );
         assert_eq!(p.proposals.len(), 1);
         assert_eq!((p.proposals[0].give, p.proposals[0].get), (6, 1));
-        assert_eq!(p.uncovered, map(&[("polonium", 2)]));
-        let p = run(&[("polonium", 1)], &[("yttrium", 60)], &[("polonium", 100)]);
+        assert_eq!(p.uncovered, map(&[("biotechconductors", 2)]));
+        let p = run(
+            &[("biotechconductors", 1)],
+            &[("conductivepolymers", 60)],
+            &[("biotechconductors", 100)],
+        );
         assert!(p.proposals.is_empty());
-        assert_eq!(p.uncovered, map(&[("polonium", 1)]));
+        assert_eq!(p.uncovered, map(&[("biotechconductors", 1)]));
     }
 
     #[test]
