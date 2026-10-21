@@ -333,6 +333,11 @@ const EVENTS: &[&str] = &[
     "RepairAll",
     "Repair",
     "ScanBody",
+    "Materials",
+    "MaterialCollected",
+    "MaterialDiscarded",
+    "MaterialTrade",
+    "Synthesis",
 ];
 /// Indica si un tema está en el registro de diagnóstico (si no, su nombre se redacta).
 pub fn is_registered_topic(name: &str) -> bool {
@@ -1259,6 +1264,24 @@ mod tests {
         );
         assert_eq!(safe["module"], "missions");
         assert!(!safe.to_string().contains("CANARY"));
+    }
+
+    #[test]
+    fn material_events_are_allowlisted_and_canary_is_redacted() {
+        let safe = redact_diagnostic(
+            &json!({"event":"MaterialTrade","other":{"event":"MaterialTrade.CANARY"}}),
+            DiagnosticContext::State,
+        );
+        assert_eq!(safe["event"], "MaterialTrade");
+        assert_eq!(safe["other"]["event"], REDACTED);
+        for e in [
+            "Materials",
+            "MaterialCollected",
+            "MaterialDiscarded",
+            "Synthesis",
+        ] {
+            assert_eq!(DiagnosticContext::Journal { event: e }.schema(), e);
+        }
     }
 
     #[test]
