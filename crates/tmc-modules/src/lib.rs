@@ -35,6 +35,7 @@ macro_rules! decide_if {
 pub mod combat;
 pub mod dashboard;
 pub mod data;
+pub mod engineering;
 pub mod eval;
 pub mod exobiology;
 pub mod exploration;
