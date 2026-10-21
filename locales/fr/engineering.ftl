@@ -79,3 +79,8 @@ engineering-alert-engineer-invited = Nouvelle invitation de { $engineer }
 engineering-alert-scarce-obtained = Matériau rare obtenu : { $material }
 engineering-alert-goal-completable = Vous pouvez maintenant terminer { $goal }
 engineering-alert-goal-completable-with = Vous pouvez maintenant terminer { $goal } avec { $engineer }
+
+engineering-locker-section = Section du casier
+engineering-page-loading = Chargement…
+engineering-page-failed = Impossible de charger les données
+engineering-page-stale = En attente de l’inventaire actualisé

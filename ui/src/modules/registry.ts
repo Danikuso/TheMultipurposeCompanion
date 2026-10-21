@@ -7,6 +7,7 @@ import { combatPanels } from './combat';
 import { miningPanels } from './mining';
 import { tradePanels } from './trade';
 import { missionsPanels } from './missions';
+import { engineeringPanels } from './engineering';
 
 export interface UiModuleDef {
   id: string;
@@ -16,6 +17,7 @@ export interface UiModuleDef {
 }
 
 export const modules: UiModuleDef[] = [
+  { id: 'engineering', icon: 'wrench', titleKey: 'nav-engineering', panels: engineeringPanels },
   {
     id: 'dashboard',
     icon: 'gauge',

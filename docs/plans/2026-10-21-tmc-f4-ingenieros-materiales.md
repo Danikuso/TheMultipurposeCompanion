@@ -611,7 +611,7 @@ Todas las tareas de UI: tipos en `ui/src/modules/engineering/types.ts` derivados
 
 **Enmienda de Task 20:** la taquilla usa `engineering.locker` como resumen de revisión/recuentos y carga su sección por REST paginado únicamente mientras se muestra. Helper de lectura compartido (`ui/src/modules/engineering/pages.svelte.ts` o equivalente): cancelar/ignorar respuestas anteriores al cambiar revisión/sección o destruir componente; recorrer páginas de una sola revisión y publicar el conjunto solo tras completarlo, sin polling. Un 409 espera la revisión nueva de WS; carga/error localizados. Tipos y fixture incluyen páginas reales; tests de múltiples páginas, cambio de revisión/comandante, respuesta tardía y dos instancias independientes.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```ts
 test('materials grouped by grade with count over max', /* contrato: iron 117/300 en G1 */);
@@ -622,7 +622,9 @@ test('locker tab lists components', /* graphene 8 */);
 test('session totals by origin', /* Scan +2, Trade +1/−6 */);
 ```
 
-- [ ] **Step 2–4:** FAIL → implementar → PASS; checks. **Step 5: Commit** `feat(ui): panel de materiales con taquilla y cambios de la sesión`
+- [x] **Step 2–4:** FAIL → implementar → PASS; checks. **Step 5: Commit** `feat(ui): panel de materiales con taquilla y cambios de la sesión`
+
+**Verificación (2026-10-22):** TDD con 20 tests nuevos; `npm.cmd --prefix ui test` 258/258 PASS; `npm.cmd --prefix ui run check` sin errores ni avisos; build PASS. `cargo fmt --all --check`, clippy de workspace sin avisos y `cargo test --workspace -- --test-threads=1`: 1.356 PASS, 2 ignoradas previas. Revisiones independientes de spec y calidad aprobadas. QA visual con contrato sintético a 2560 y 800 píxeles: sin errores JavaScript ni desbordamiento; Graphene 8 por REST solo al mostrar taquilla. Mejora menor de accesibilidad pendiente: patrón completo de teclado de las pestañas.
 
 ### Task 22: UI — «Ingenieros»
 
