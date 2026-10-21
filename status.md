@@ -5,14 +5,14 @@
 - **Última actualización:** 2026-10-21 (Europe/Madrid) · Claude Opus 5.5 (architect-opus)
 - **Fase actual:** F4 — Ingenieros y materiales (🔄 plan escrito; ejecución sin empezar). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
-- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 0/29 hechas (pendiente de revisión del propietario). Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
+- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 4/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** Task 0 (spike de datos) ⬜
-- **Último paso completado:** plan de F4 escrito (29 tareas, bloques 0–5).
-- **Siguiente acción:** ejecutar el bloque 0 (Tasks 0–2: spikes de datos/licencias, diario y red) y después Task 3 (aprobaciones del propietario).
+- **Tarea:** Task 5 🔄
+- **Último paso completado:** spikes (Tasks 0–2) y Task 4 hechos; preflight aplicado al plan (b0e0028).
+- **Siguiente acción:** Task 5 (eventos de ingenieros, Loadout, taquilla). Task 3 espera la decisión del propietario (B para todo vs. EDEngineer); Tasks 8–11 rellenan datos completos tras ella.
 
 ## Tareas de F4
 
@@ -20,12 +20,12 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 | # | Tarea | Estado | Commit | Notas |
 |---|---|---|---|---|
-| 0 | Spike de datos y licencias (A→B) y traducciones oficiales | ⬜ pendiente | — | |
-| 1 | Spike de diario — formatos en diarios del propietario (agregados) | ⬜ pendiente | — | |
-| 2 | Spike de red — Ardent comerciantes de materiales y broker; respaldo Spansh | ⬜ pendiente | — | |
-| 3 | Aprobaciones del propietario tras los spikes | ⬜ pendiente | — | |
-| 4 | `tmc-model` — eventos de materiales | ⬜ pendiente | — | |
-| 5 | `tmc-model` — eventos de ingenieros, `Loadout` ampliado, taquilla y mochila | ⬜ pendiente | — | |
+| 0 | Spike de datos y licencias (A→B) y traducciones oficiales | ✅ hecha | d8a6267 | Ninguna fuente A; B para todo (pendiente del propietario) |
+| 1 | Spike de diario — formatos en diarios del propietario (agregados) | ✅ hecha | 46897f9 | Agregados; stub ShipLocker→releer ShipLocker.json; Category $MICRORESOURCE_… |
+| 2 | Spike de red — Ardent comerciantes de materiales y broker; respaldo Spansh | ✅ hecha | 3e77a34 | Ardent sin tipo; Spansh por tipo; fixtures sintéticos |
+| 3 | Aprobaciones del propietario tras los spikes | 🔄 en curso | — | |
+| 4 | `tmc-model` — eventos de materiales | ✅ hecha | ba60cb7 | Revisión aprobada (2 menores aparcados) |
+| 5 | `tmc-model` — eventos de ingenieros, `Loadout` ampliado, taquilla y mochila | 🔄 en curso | — | |
 | 6 | `tmc-model` + `tmc-app` — servicios cercanos nuevos y tiradas por defecto | ⬜ pendiente | — | |
 | 7 | `tmc-net` — comerciantes de materiales y broker | ⬜ pendiente | — | |
 | 8 | Datos estáticos `materials.json` y `trader_rules.json` | ⬜ pendiente | — | |
