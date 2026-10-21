@@ -2,17 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-21 19:34 (Europe/Madrid) · Codex
-- **Fase actual:** F4 — Ingenieros y materiales (🔄 ejecución: Tasks 0–19 registradas; Task 20 bloqueada por contrato de tamaño). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Última actualización:** 2026-10-21 19:59 (Europe/Madrid) · Codex
+- **Fase actual:** F4 — Ingenieros y materiales (🔄 ejecución: Tasks 0–19 registradas; Task 20 completada; Task 21 en curso). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
-- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 20/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
+- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 21/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** Task 20 ⛔ bloqueada: objetivos y taquilla exceden el límite de 16 KiB
-- **Último paso completado:** revisión completa de Task 20: NO completa. Correcciones funcionales/diagnóstico revisadas y guardadas en `1fc8b74`; TDD RED→GREEN, fmt/clippy PASS, 1.344 Rust PASS/4 ignoradas y 238 UI PASS/check/build. Los dos probes de tamaño se ejecutaron explícitamente y FALLAN: objetivos 41.116 B y taquilla 16.832 B; no se cuentan como PASS.
-- **Siguiente acción:** obtener decisión del propietario sobre resumen WS y detalles REST paginados por bytes para objetivos/taquilla (recomendado), o excepciones explícitas de tamaño. Actualizar interfaces del plan tras aprobar, implementar y hacer pasar ambos probes sin ignorarlos; revisar/verificar Task 20 antes de iniciar Task 21.
+- **Tarea:** Task 21 🔄 en curso — Step 1 (tests UI de Materiales y lector de páginas)
+- **Último paso completado:** Task 20 cerrada en `a4c5f3d`: resúmenes WS y detalles REST del actor menores de 16 KiB, ambos probes reactivados PASS; 1.356 Rust PASS/2 ignoradas previas, 238 UI PASS, fmt/clippy/check/build correctos, revisiones spec y calidad aprobadas.
+- **Siguiente acción:** tests RED para Materiales (categoría/grado/máximo/taquilla/sesión) y lector REST por instancia; implementar UI con contrato real, invalidación por revisión/comandante, cancelación y sin polling; revisar y ejecutar checks antes de commit.
 
 ## Tareas de F4
 
@@ -40,8 +40,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 17 | `engineering` — planificador de intercambios | ✅ hecha | ae0081a | Revisión aprobada; tasas del juego |
 | 18 | `engineering` — lista de la compra, reservas y persistencia | ✅ hecha | 6646975, 47f910d, 7f71e31 | Revisión aprobada tras 2 rondas (escritura atómica en tmc-store) |
 | 19 | `engineering` — dónde conseguirlo, ingeniero recomendado y avisos | ✅ hecha | 4672cdc | Revisión aprobada |
-| 20 | `engineering` — módulo, topics, relevancia, red, almacén y registro | ⛔ bloqueada | 9904133 + 1fc8b74 (correcciones parciales) | Funcionales revisadas; contrato excede 16 KiB en objetivos/taquilla. Ver Bloqueos |
-| 21 | UI — «Materiales» | ⬜ pendiente | — | |
+| 20 | `engineering` — módulo, topics, relevancia, red, almacén y registro | ✅ hecha | 9904133, 1fc8b74, a4c5f3d | Paginación aprobada; 1.356 Rust/238 UI PASS, probes activos, ambas revisiones |
+| 21 | UI — «Materiales» | 🔄 en curso | — | Step 1: tests de panel y lector de páginas por revisión |
 | 22 | UI — «Ingenieros» | ⬜ pendiente | — | |
 | 23 | UI — «Mi nave» e «Ingenierizar un módulo» | ⬜ pendiente | — | |
 | 24 | UI — «Lista de la compra», «Intercambios», «Dónde conseguirlo» y avisos | ⬜ pendiente | — | |
@@ -72,7 +72,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | F1 | Navegación, exploración, exobiología | ✅ completada y fusionada (b96fecf) |
 | F2 | Cazarrecompensas/combate (incl. AX), minería | ✅ completada y fusionada (e069a14) |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ✅ completada y fusionada (6dc09d9) |
-| F4 | Ingenieros y materiales | 🔄 ejecución; Task 20 bloqueada por contrato de tamaño |
+| F4 | Ingenieros y materiales | 🔄 ejecución; Task 20 completada; Task 21 en curso |
 | F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | ⬜ |
 | F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | ⬜ |
 | F7 | Voz (KokoroTTS; alemán sin voz) | ⬜ |
@@ -224,10 +224,10 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Bloqueos y pendientes del propietario
 
-- [ ] **F4 · Task 20 — contrato excede el límite aprobado (2026-10-21):** revisión y prueba real demuestran `engineering.goals` de **41.116 bytes** con 20 objetivos `engine_dirty` G5 + experimental, tiradas `[10;5]`, excedentes de materiales ajenos a la receta y 215 propuestas; el plan exige `<16.384`. También `engineering.locker` ocupa **16.832 bytes** con 200 recursos localizados (50 por sección). Sin experimental: 30.986 bytes; FSD: 35.084. Se corrigen los fallos funcionales independientes, pero Task 20 no se cierra ni se inicia Task 21. **Decisión pendiente:** aprobar resumen WS con revisión y detalle REST paginado por bytes (recomendado, arquitectura §7; afecta Tasks 20/21/24/26), o excepciones de tamaño explícitas para estos topics con verificación de consumo/latencia. No se han aplicado ninguna de las dos alternativas. Evidencia y propuesta en Desviaciones del plan activo.
+- [x] **F4 · Task 20 — contrato excede el límite aprobado; solución autorizada (2026-10-21):** revisión y prueba real demuestran `engineering.goals` de **41.116 bytes** con 20 objetivos `engine_dirty` G5 + experimental, tiradas `[10;5]`, excedentes de materiales ajenos a la receta y 215 propuestas; el plan exige `<16.384`. También `engineering.locker` ocupa **16.832 bytes** con 200 recursos localizados (50 por sección). Sin experimental: 30.986 bytes; FSD: 35.084. Resuelto en `a4c5f3d`: summaries objetivos 2.471 B y taquilla 110 B; páginas de objetivos hasta 16.234 B y taquilla 4.439 B, todas las filas/propuestas preservadas. Ambos probes reactivados PASS; Task 20 cerrada tras revisiones/checks. **Decisión aprobada:** resumen WS con revisión y detalle REST paginado por bytes, arquitectura §7; interfaces de Tasks 20/21/24/26 sincronizadas. El propietario confirma «Sí, hazlo y continúa»: se aprueba resumen WS con detalles REST paginados por bytes. Implementación completada y verificada; no hace falta otra aprobación para esta solución. Evidencia y propuesta en Desviaciones del plan activo.
 
 
-- [x] **F4 · Discrepancia de seguimiento (2026-10-21, Codex), autorización recibida:** `status.md` señala Task 20 en curso sin commit y conserva cabecera/fase «ejecución sin empezar»/«plan escrito», pero `HEAD` es `99041335e8a6bc48e4b5483e640537b18f4c5d12` (`feat(engineering): módulo de ingeniería con topics, relevancia, red, almacén y registro`, 22 archivos). El commit incluye implementación, pruebas y fixture de contrato UI de Task 20; no modifica `status.md`. Rama correcta `fase/f4-ingenieros-materiales`; sin modificaciones rastreadas al iniciar, con `.claude/` y `.tmp/` no rastreados que se preservan. No se afirma que Task 20 esté terminada: faltan revisión y verificación observadas en esta sesión. Se detiene ejecución según AGENTS.md §1. **Resolución:** el propietario ordena revisar si está implementada COMPLETAMENTE, anotarlo y continuar si lo está. Revisión y checks terminados: implementación incompleta, correcciones parciales en `1fc8b74` y bloqueo de contrato independiente descrito arriba.
+- [x] **F4 · Discrepancia de seguimiento (2026-10-21, Codex), autorización recibida:** `status.md` señala Task 20 en curso sin commit y conserva cabecera/fase «ejecución sin empezar»/«plan escrito», pero `HEAD` es `99041335e8a6bc48e4b5483e640537b18f4c5d12` (`feat(engineering): módulo de ingeniería con topics, relevancia, red, almacén y registro`, 22 archivos). El commit incluye implementación, pruebas y fixture de contrato UI de Task 20; no modifica `status.md`. Rama correcta `fase/f4-ingenieros-materiales`; sin modificaciones rastreadas al iniciar, con `.claude/` y `.tmp/` no rastreados que se preservan. No se afirma que Task 20 esté terminada: faltan revisión y verificación observadas en esta sesión. Se detiene ejecución según AGENTS.md §1. **Resolución:** el propietario ordena revisar si está implementada COMPLETAMENTE, anotarlo y continuar si lo está. Revisión y checks terminados: carencias iniciales corregidas en `1fc8b74` y paginación aprobada completada en `a4c5f3d`.
 
 - [x] **F3 · Criterio 10:** ✅ medido 2026-10-20 con ventana (106,4 / 111,5 MB, 0 % CPU). Recomendado: comprobar con EDDN real durante una sesión de juego. Antes: cierra TMC.exe y ejecuta `CARGO_TARGET_DIR=target-f3 cargo build --release -p tmc-desktop` y `pwsh scripts/measure-footprint.ps1 -Exe target-f3/release/TMC.exe -JournalDir .tmp/footprint-f3-trade -FixturePath tests/fixtures/journal/trade_session.log -ShowWindow -Seconds 120` (y con `missions_session.log`); o autoriza al agente a hacerlo. Límite < 150 MB y < 1 % CPU.
 
@@ -261,6 +261,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
 
 ## Decisiones tomadas
+- 2026-10-21 · Propietario aprueba resolver el límite de objetivos/taquilla con resumen por WebSocket y detalles REST paginados por bytes, y continuar el plan tras verificar Task 20.
 - 2026-10-21 · Propietario autoriza reconciliar seguimiento y verificar COMPLETAMENTE Task 20 antes de continuar; revisión de spec detecta carencias reales, se corrigen con TDD sin iniciar Task 21 todavía.
 - 2026-10-21 · Propietario (Task 3 F4): EDEngineer (MIT, commit 2cadd66) como fuente A para el catálogo de materiales y los nombres traducidos (localization.json); opción B (recopilación propia, `verified:false`) para blueprints/recetas, ingenieros, reglas del comerciante y pistas. Riesgo anotado por el spike: los datos de EDEngineer derivan de coriolis-data (IP de Frontier, sin licencia propia); el propietario asume la decisión. Atribución en `THIRD_PARTY_NOTICES.md` al importar.
 - 2026-10-21 · Propietario: interruptor «Auto-companion» (encendido por defecto). Apagado, la app no cambia sola de disposición ni de tarjeta de contexto y recuerda la última elegida; spec `docs/specs/2026-10-21-tmc-auto-companion-design.md`, fusionado en `main`.
@@ -297,6 +298,10 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-21 19:59 (Europe/Madrid) · Codex · Task 20 cerrada `a4c5f3d` con aprobación previa de paginación, TDD, revisión spec/calidad y checks globales: 1.356 Rust PASS/2 ignoradas previas, 238 UI PASS, fmt/clippy/check/build. Ambos probes reactivados; HTTP/actor real reconstruye20objetivos/215propuestas y200recursos sin pérdida, páginas<16KiB, revisión semántica y aislamiento de clientes. Sin push, release original preservado. Se inicia Task 21 Step 1; ningún código UI tocado todavía. Este seguimiento se guarda en commit documental inmediato.
+
+- 2026-10-21 19:45 (Europe/Madrid) · Codex · Propietario aprueba resumen WS + detalle REST por bytes y continuar. Actualizadas spec/plan e interfaces afectadas; Task 20 en curso con implementador y revisión independiente prevista. Cambios documentales y backend en curso sin commit; no se inicia Task 21 hasta cerrar la verificación de Task 20.
 
 - 2026-10-21 19:34 (Europe/Madrid) · Codex · Propietario ordena verificar COMPLETAMENTE Task 20. Revisiones de spec y calidad detectan y corrigen carreras de objetivos, compatibilidad de blueprint/ranura, respuestas de comerciantes por plataforma e ID y diagnóstico con valores finitos. Commit parcial `1fc8b74`; fmt/clippy PASS, workspace serial fuera sandbox (TMP/TEMP `.tmp/test-runtime`) 1.344 PASS/4 ignoradas, UI 238 PASS/check/build. Dos probes ejecutados --ignored demuestran objetivos 41.116 B/215 propuestas y taquilla 16.832 B/200 recursos; quedan ignorados con motivo explícito, no como PASS. Task 20 bloqueada y Task 21 sin iniciar; propuesta y comandos en plan/Desviaciones. Sin push. Código y plan guardados; este seguimiento se guarda en commit documental inmediato. Se conservan `.claude/`, `.tmp/` y `target-f4/` no rastreados; ninguna modificación de código pendiente.
 
