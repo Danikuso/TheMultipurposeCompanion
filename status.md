@@ -23,7 +23,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 0 | Spike de datos y licencias (A→B) y traducciones oficiales | ✅ hecha | d8a6267 | Ninguna fuente A; B para todo (pendiente del propietario) |
 | 1 | Spike de diario — formatos en diarios del propietario (agregados) | ✅ hecha | 46897f9 | Agregados; stub ShipLocker→releer ShipLocker.json; Category $MICRORESOURCE_… |
 | 2 | Spike de red — Ardent comerciantes de materiales y broker; respaldo Spansh | ✅ hecha | 3e77a34 | Ardent sin tipo; Spansh por tipo; fixtures sintéticos |
-| 3 | Aprobaciones del propietario tras los spikes | 🔄 en curso | — | |
+| 3 | Aprobaciones del propietario tras los spikes | ✅ hecha | — | Fuente: EDEngineer (MIT) para materiales y nombres; B para el resto. Pendientes menores: nombre ES del blueprint y experimental de special_engine_overloaded (se resuelven con localization.json de EDEngineer) |
 | 4 | `tmc-model` — eventos de materiales | ✅ hecha | ba60cb7 | Revisión aprobada (2 menores aparcados) |
 | 5 | `tmc-model` — eventos de ingenieros, `Loadout` ampliado, taquilla y mochila | ✅ hecha | 93a1019 | Revisión aprobada (bajas aparcadas a Tasks 13/14) |
 | 6 | `tmc-model` + `tmc-app` — servicios cercanos nuevos y tiradas por defecto | ✅ hecha | bb66321 | Revisión aprobada; F2 intacto |
@@ -255,6 +255,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
 
 ## Decisiones tomadas
+- 2026-10-21 · Propietario (Task 3 F4): EDEngineer (MIT, commit 2cadd66) como fuente A para el catálogo de materiales y los nombres traducidos (localization.json); opción B (recopilación propia, `verified:false`) para blueprints/recetas, ingenieros, reglas del comerciante y pistas. Riesgo anotado por el spike: los datos de EDEngineer derivan de coriolis-data (IP de Frontier, sin licencia propia); el propietario asume la decisión. Atribución en `THIRD_PARTY_NOTICES.md` al importar.
 - 2026-10-21 · Propietario: interruptor «Auto-companion» (encendido por defecto). Apagado, la app no cambia sola de disposición ni de tarjeta de contexto y recuerda la última elegida; spec `docs/specs/2026-10-21-tmc-auto-companion-design.md`, fusionado en `main`.
 
 - 2026-10-20 · D7b: regla global en la spec de diagnóstico — todo topic, acción, variante NetQuery/NetOutcome, endpoint o campo de configuración nuevo se registra en las listas permitidas de diagnóstico y se cubre con un test canario.
