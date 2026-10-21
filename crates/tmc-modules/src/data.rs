@@ -445,6 +445,7 @@ fn parse_trader_rules(json: &str) -> TraderRules {
     })
 }
 
+/// Material trader exchange rules (provisional until verified).
 pub fn trader_rules() -> &'static TraderRules {
     static RULES: OnceLock<TraderRules> = OnceLock::new();
     RULES.get_or_init(|| parse_trader_rules(include_str!("../data/trader_rules.json")))
@@ -790,7 +791,7 @@ mod tests {
     #[test]
     fn materials_load_with_provenance_and_valid_grades() {
         let table = materials();
-        assert_eq!(table.len(), 25);
+        assert_eq!(table.len(), 29);
         for (key, m) in table {
             assert_eq!(key, &m.key);
             assert!(!m.source.trim().is_empty());
@@ -827,7 +828,7 @@ mod tests {
                 m.grade
             );
         }
-        for family in ["raw-1", "heat", "wake-scans"] {
+        for family in ["raw-1", "heat", "conductive", "wake-scans"] {
             let mut grades: Vec<u8> = materials()
                 .values()
                 .filter(|m| m.family == family)
@@ -867,5 +868,21 @@ mod tests {
             assert_eq!(parse_materials(&json).len(), 2);
         });
         assert_eq!(warnings.load(std::sync::atomic::Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn fixture_material_keys_exist_in_catalogue() {
+        for (key, category, grade) in [
+            ("carbon", MaterialCategory::Raw, 1),
+            ("iron", MaterialCategory::Raw, 1),
+            ("nickel", MaterialCategory::Raw, 1),
+            ("tellurium", MaterialCategory::Raw, 4),
+            ("conductiveceramics", MaterialCategory::Manufactured, 3),
+            ("pharmaceuticalisolators", MaterialCategory::Manufactured, 5),
+            ("shieldpatternanalysis", MaterialCategory::Encoded, 1),
+        ] {
+            let m = &materials()[key];
+            assert_eq!((m.category, m.grade), (category, grade), "{key}");
+        }
     }
 }
