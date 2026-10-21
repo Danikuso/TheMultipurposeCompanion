@@ -341,6 +341,7 @@ mod tests {
                 ("receive", FluentValue::from(1)),
                 ("max", FluentValue::from(300)),
                 ("rolls", FluentValue::from(4)),
+                ("goal", FluentValue::from("fsd_longrange G5")),
             ] {
                 args.set(name, value);
             }

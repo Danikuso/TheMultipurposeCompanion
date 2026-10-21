@@ -33,6 +33,14 @@ fn key_of(e: &EngineerEntry) -> Key {
         .map_or(Key::Name(lower), |d| Key::Id(d.id))
 }
 
+/// `true` si el JSON trae `StarPos` con tres números.
+fn has_star_pos(raw: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(raw)
+        .ok()
+        .and_then(|v| v.get("StarPos").and_then(|p| p.as_array().cloned()))
+        .is_some_and(|a| a.len() == 3 && a.iter().all(|c| c.is_number()))
+}
+
 /// Estado conocido de los ingenieros y posición del comandante.
 #[derive(Debug, Clone, Default)]
 pub struct EngineerBook {
@@ -101,16 +109,26 @@ impl EngineerBook {
         changes
     }
 
+    /// Solo `EngineerProgress`: la posición exige el JSON original (ver [`Self::apply_journal`]).
     pub fn apply_event(&mut self, kind: &EventKind) -> Vec<EngineerStatusChange> {
         match kind {
             EventKind::EngineerProgress(p) => self.apply(p),
+            _ => Vec::new(),
+        }
+    }
+
+    /// Como `apply_event`, pero también toma la posición de `Location`/`FSDJump`/
+    /// `CarrierJump` si el JSON original trae `StarPos`: un evento sin él no fija la
+    /// posición (el valor por defecto sería Sol).
+    pub fn apply_journal(&mut self, kind: &EventKind, raw: &str) -> Vec<EngineerStatusChange> {
+        match kind {
             EventKind::Location(l) | EventKind::FsdJump(l) | EventKind::CarrierJump(l) => {
-                if l.star_pos.iter().all(|c| c.is_finite()) {
+                if has_star_pos(raw) && l.star_pos.iter().all(|c| c.is_finite()) {
                     self.position = Some(l.star_pos);
                 }
                 Vec::new()
             }
-            _ => Vec::new(),
+            other => self.apply_event(other),
         }
     }
 
@@ -192,7 +210,8 @@ pub enum NextStep {
 /// `Known`/desconocido/vetado piden el requisito; `Invited`/`Acquainted` piden la
 /// contribución (válida) o, si no la hay, la clave de invitación; `Unlocked` está hecho.
 /// Una contribución con tipo desconocido o cantidad 0 se trata como inexistente.
-/// Los créditos no se pueden contar desde el inventario: `have` es 0.
+/// Los créditos no se pueden contar desde el inventario: `have` es 0 (usa
+/// [`NextStep::with_credits`] con el saldo del comandante).
 pub fn next_step(
     def: &EngineerDef,
     entry: Option<&EngineerEntry>,
@@ -226,6 +245,34 @@ pub fn next_step(
                 .map_or_else(requirement, |key| NextStep::Invite { key: key.clone() })
         }
         _ => requirement(),
+    }
+}
+
+impl NextStep {
+    /// Una contribución en créditos usa el saldo del comandante como `have`
+    /// (satura en `u32::MAX`; un saldo desconocido o negativo cuenta 0).
+    pub fn with_credits(self, balance: Option<i64>) -> NextStep {
+        match self {
+            NextStep::Contribute {
+                item,
+                kind,
+                need,
+                have,
+            } => {
+                let have = if kind == "credits" {
+                    u32::try_from(balance.unwrap_or(0).max(0)).unwrap_or(u32::MAX)
+                } else {
+                    have
+                };
+                NextStep::Contribute {
+                    item,
+                    kind,
+                    have,
+                    need,
+                }
+            }
+            other => other,
+        }
     }
 }
 
@@ -312,11 +359,30 @@ mod tests {
         sorted.sort_unstable();
         assert_eq!(ship, sorted);
         assert!(rows.last().unwrap().on_foot);
-        book.apply_event(&ev(
-            r#"{"timestamp":"2026-10-21T12:00:02Z","event":"Location","StarSystem":"Sol","StarPos":[0.0,0.0,0.0]}"#,
-        ));
+        let raw = r#"{"timestamp":"2026-10-21T12:00:02Z","event":"Location","StarSystem":"Sol","StarPos":[0.0,0.0,0.0]}"#;
+        book.apply_journal(&ev(raw), raw);
         assert_eq!(book.position(), Some([0.0, 0.0, 0.0]));
         assert!(book.rows().iter().all(|r| r.distance_ly.is_some()));
+    }
+
+    #[test]
+    fn location_without_star_pos_does_not_set_position() {
+        for event in ["Location", "FSDJump", "CarrierJump"] {
+            let mut book = EngineerBook::default();
+            let raw = format!(
+                r#"{{"timestamp":"2026-10-21T12:00:02Z","event":"{event}","StarSystem":"Nowhere","SystemAddress":5}}"#
+            );
+            book.apply_journal(&ev(&raw), &raw);
+            assert_eq!(book.position(), None, "{event}");
+            assert!(book.rows().iter().all(|r| r.distance_ly.is_none()));
+        }
+        // Una posición válida anterior se conserva.
+        let mut book = EngineerBook::default();
+        let with = r#"{"timestamp":"2026-10-21T12:00:02Z","event":"FSDJump","StarSystem":"A","StarPos":[1,2,3]}"#;
+        book.apply_journal(&ev(with), with);
+        let without = r#"{"timestamp":"2026-10-21T12:00:03Z","event":"Location","StarSystem":"B"}"#;
+        book.apply_journal(&ev(without), without);
+        assert_eq!(book.position(), Some([1.0, 2.0, 3.0]));
     }
 
     #[test]
@@ -428,6 +494,33 @@ mod tests {
                 key: def.unlock.invite_key.clone().unwrap()
             }
         );
+    }
+
+    #[test]
+    fn credits_contribution_uses_the_commander_balance() {
+        let step = NextStep::Contribute {
+            item: "credits".into(),
+            kind: "credits".into(),
+            have: 0,
+            need: 500_000,
+        };
+        let with = |b| match step.clone().with_credits(b) {
+            NextStep::Contribute { have, .. } => have,
+            other => panic!("{other:?}"),
+        };
+        assert_eq!(with(Some(1_234_567)), 1_234_567);
+        assert_eq!(with(Some(i64::MAX)), u32::MAX);
+        assert_eq!(with(Some(-5)), 0);
+        assert_eq!(with(None), 0);
+        // Los materiales no se tocan.
+        let mat = NextStep::Contribute {
+            item: "iron".into(),
+            kind: "material".into(),
+            have: 4,
+            need: 10,
+        };
+        assert_eq!(mat.clone().with_credits(Some(99)), mat);
+        assert_eq!(NextStep::Done.with_credits(Some(1)), NextStep::Done);
     }
 
     #[test]

@@ -44,7 +44,7 @@ pub fn goal_blueprint(goal_id: &str) -> Option<(&str, u8)> {
 /// Avisos por transición. `engineer_for(blueprint, grade)` da el nombre del ingeniero
 /// recomendado (p. ej. con `pick_engineer`) para citarlo en `GoalCompletable`.
 /// `ScarceObtained`: se obtuvo un material que faltaba antes (`missing_before`);
-/// `goal` es el primer objetivo que aún lo echa en falta o, si ya no falta, el primero.
+/// solo salta cuando ningún objetivo lo echa ya en falta; `goal` es el primero de la lista.
 #[allow(clippy::too_many_arguments)] // firma fijada por el plan (+ `engineer_for`)
 pub fn alerts_from(
     changes: &[MaterialChange],
@@ -86,11 +86,11 @@ pub fn alerts_from(
         if missing_before.get(&c.key).copied().unwrap_or(0) == 0 || !seen.insert(&c.key) {
             continue;
         }
-        let goal = view
-            .goals
-            .iter()
-            .find(|g| g.missing.contains_key(&c.key))
-            .or(view.goals.first());
+        // Solo cuando el faltante de ese material se cubre del todo (no por unidad).
+        if view.goals.iter().any(|g| g.missing.contains_key(&c.key)) {
+            continue;
+        }
+        let goal = view.goals.first();
         if let Some(g) = goal {
             out.push(EngAlertKind::ScarceObtained {
                 key: c.key.clone(),
@@ -219,17 +219,31 @@ mod tests {
     }
 
     #[test]
-    fn scarce_material_obtained_alert() {
+    fn scarce_material_obtained_alert_only_when_shortfall_reaches_zero() {
         let id = "1:fsd:fsd_longrange:-:5";
-        let v = view(vec![goal(id, &[("iron", 1)], false)]);
         let none = BTreeSet::new();
         let before = BTreeMap::from([("iron".to_string(), 2)]);
-        assert_eq!(
+        // Aún falta 1: sin aviso (no es por unidad).
+        let still = view(vec![goal(id, &[("iron", 1)], false)]);
+        assert!(
             run(
                 &[change("iron", 1)],
                 (&none, &none),
                 &none,
-                &v,
+                &still,
+                &[],
+                &before
+            )
+            .is_empty()
+        );
+        // Cubierto del todo: un único aviso.
+        let covered = view(vec![goal(id, &[], false)]);
+        assert_eq!(
+            run(
+                &[change("iron", 1), change("iron", 1)],
+                (&none, &none),
+                &none,
+                &covered,
                 &[],
                 &before
             ),
@@ -244,7 +258,7 @@ mod tests {
                 &[change("nickel", 1)],
                 (&none, &none),
                 &none,
-                &v,
+                &covered,
                 &[],
                 &before
             )
@@ -255,7 +269,7 @@ mod tests {
                 &[change("iron", -1)],
                 (&none, &none),
                 &none,
-                &v,
+                &covered,
                 &[],
                 &before
             )

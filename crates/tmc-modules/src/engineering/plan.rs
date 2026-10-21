@@ -303,4 +303,34 @@ mod tests {
         assert!(!cost.verified);
         assert_eq!(cost.per_grade[&2].0, 1);
     }
+
+    #[test]
+    fn quality_boundary_0998_is_partial_and_0999_is_complete() {
+        let almost = cur("Engine_Dirty", 3, 0.998, None);
+        let sp = start_grade(Some(&almost), "engine_dirty", &[1, 1, 1, 1, 4]);
+        assert_eq!((sp.grade, sp.partial_rolls), (3, Some(1)));
+        let done = cur("Engine_Dirty", 3, 0.999, None);
+        let sp = start_grade(Some(&done), "engine_dirty", &[1, 1, 1, 1, 4]);
+        assert_eq!((sp.grade, sp.partial_rolls), (4, None));
+        let cost = run(Some(&almost), &req(5, None, [1, 1, 1, 1, 4]));
+        assert_eq!(
+            cost.per_grade.keys().copied().collect::<Vec<_>>(),
+            [3, 4, 5]
+        );
+        let cost = run(Some(&done), &req(5, None, [1, 1, 1, 1, 4]));
+        assert_eq!(cost.per_grade.keys().copied().collect::<Vec<_>>(), [4, 5]);
+    }
+
+    #[test]
+    fn differing_experimental_is_charged_and_same_one_is_free() {
+        let wanted = "special_engine_overloaded";
+        let other = cur("Engine_Dirty", 5, 1.0, Some("special_engine_haulage"));
+        let cost = run(Some(&other), &req(5, Some(wanted), [1, 1, 1, 1, 4]));
+        assert!(cost.experimental.is_some());
+        assert!(!cost.total.is_empty());
+        let same = cur("Engine_Dirty", 5, 1.0, Some(wanted));
+        let cost = run(Some(&same), &req(5, Some(wanted), [1, 1, 1, 1, 4]));
+        assert!(cost.experimental.is_none());
+        assert!(cost.total.is_empty());
+    }
 }

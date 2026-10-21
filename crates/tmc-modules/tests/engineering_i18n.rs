@@ -65,3 +65,17 @@ fn dirty_drive_spanish_name_is_official() {
     );
     assert!(!tmc_i18n::pending_keys("es").contains("bp-engine_dirty"));
 }
+
+#[test]
+fn engineering_alert_keys_exist_in_all_languages() {
+    for key in [
+        "engineering-alert-at-max",
+        "engineering-alert-engineer-unlocked",
+        "engineering-alert-engineer-invited",
+        "engineering-alert-scarce-obtained",
+        "engineering-alert-goal-completable",
+        "engineering-alert-goal-completable-with",
+    ] {
+        assert_in_all_languages(key);
+    }
+}

@@ -77,3 +77,5 @@ engineering-alert-at-max = { $material } at maximum (G{ $grade }): anything you 
 engineering-alert-engineer-unlocked = { $engineer } unlocked
 engineering-alert-engineer-invited = New invitation from { $engineer }
 engineering-alert-scarce-obtained = Scarce material obtained: { $material }
+engineering-alert-goal-completable = You can now complete { $goal }
+engineering-alert-goal-completable-with = You can now complete { $goal } with { $engineer }

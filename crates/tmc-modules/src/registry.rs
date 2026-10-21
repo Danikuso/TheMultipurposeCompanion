@@ -1,5 +1,6 @@
 use crate::combat::Combat;
 use crate::dashboard::Dashboard;
+use crate::engineering::Engineering;
 use crate::exobiology::Exobiology;
 use crate::exploration::Exploration;
 use crate::mining::Mining;
@@ -18,6 +19,7 @@ pub fn all_modules() -> Vec<Box<dyn Module>> {
         Box::new(Mining::new()),
         Box::new(Trade::new()),
         Box::new(Missions::new()),
+        Box::new(Engineering::new()),
     ]
 }
 
