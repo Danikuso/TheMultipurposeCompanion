@@ -460,6 +460,78 @@
       ],
       "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
       "verified": false
+    },
+    {
+      "key": "nickel",
+      "name_en": "Nickel",
+      "category": "Raw",
+      "grade": 1,
+      "family": "raw-5",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "surface_prospecting",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "tellurium",
+      "name_en": "Tellurium",
+      "category": "Raw",
+      "grade": 4,
+      "family": "raw-3",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "mining",
+          "detail_key": null
+        },
+        {
+          "kind": "surface_prospecting",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "pharmaceuticalisolators",
+      "name_en": "Pharmaceutical Isolators",
+      "category": "Manufactured",
+      "grade": 5,
+      "family": "chemical",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "mission_reward",
+          "detail_key": null
+        },
+        {
+          "kind": "broker",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
+    },
+    {
+      "key": "shieldpatternanalysis",
+      "name_en": "Aberrant Shield Pattern Analysis",
+      "category": "Encoded",
+      "grade": 1,
+      "family": "shield-data",
+      "tradeable": true,
+      "hints": [
+        {
+          "kind": "data_scan",
+          "detail_key": null
+        }
+      ],
+      "source": "provisional: hecho del juego recopilado a mano, pendiente de verificar (spike_datos_f4)",
+      "verified": false
     }
   ]
 }
