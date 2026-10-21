@@ -868,6 +868,11 @@ fn d3_import_checkpoints_deduplicate_and_redact_embedded_events() {
 #[test]
 fn d3_config_bootstrap_is_retained_until_logger_and_consumed_once() {
     let dir = tempfile::tempdir().unwrap();
+    // Un arranque previo puede haber dejado su primer informe en el búfer global.
+    let previous = dir.path().join("previous.toml");
+    crate::Config::default().save_to(&previous).unwrap();
+    crate::Config::load_from_or_default(&previous);
+    crate::config::emit_bootstrap_report();
     let path = dir.path().join("config.toml");
     fs::write(
         &path,

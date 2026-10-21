@@ -551,6 +551,67 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
     if matches!(context, DiagnosticContext::Auth) {
         return false;
     }
+    let engineering_label = match context {
+        DiagnosticContext::Topic {
+            name: "engineering.flow",
+        } => match path {
+            "moduletype" | "request.moduletype" => matches!(text, "engine" | "fsd"),
+            "request.blueprint" => matches!(text, "engine_dirty" | "fsd_longrange"),
+            "request.experimental" => text == "special_engine_overloaded",
+            "status" => matches!(text, "idle" | "ok" | "no_data"),
+            "lines.state" => matches!(text, "ok" | "trade" | "missing"),
+            "engineer.nearestunlocked.status" | "engineer.nearestany.status" => matches!(
+                text,
+                "Unknown" | "Known" | "Invited" | "Acquainted" | "Unlocked" | "Barred"
+            ),
+            _ => false,
+        },
+        DiagnosticContext::Topic {
+            name: "engineering.goals",
+        } => path == "status" && matches!(text, "ok" | "too_many"),
+        DiagnosticContext::Topic {
+            name: "engineering.engineers",
+        } => {
+            path == "engineers.status"
+                && matches!(
+                    text,
+                    "Unknown" | "Known" | "Invited" | "Acquainted" | "Unlocked" | "Barred"
+                )
+        }
+        DiagnosticContext::Topic {
+            name: "engineering.session",
+        } => match path {
+            "recent.origin" => matches!(
+                text,
+                "Collected"
+                    | "Scan"
+                    | "Mining"
+                    | "Trade"
+                    | "Synthesis"
+                    | "Engineering"
+                    | "Mission"
+                    | "Discarded"
+            ),
+            "recent.category" => matches!(text, "Raw" | "Manufactured" | "Encoded"),
+            _ => false,
+        },
+        DiagnosticContext::Topic {
+            name: "engineering.sources",
+        } => {
+            matches!(
+                path,
+                "traders.raw"
+                    | "traders.manufactured"
+                    | "traders.encoded"
+                    | "brokers.human"
+                    | "brokers.guardian"
+            ) && matches!(text, "Loading" | "NoData" | "Disabled")
+        }
+        _ => false,
+    };
+    if engineering_label {
+        return true;
+    }
     if matches!(context, DiagnosticContext::NetOutcome)
         && ((matches!(path, "" | "outcome") && matches!(text, "NoData" | "Disabled"))
             || (matches!(path, "failed" | "outcome.failed")
@@ -1302,6 +1363,51 @@ mod tests {
         );
         assert_eq!(safe["module"], "missions");
         assert!(!safe.to_string().contains("CANARY"));
+    }
+
+    #[test]
+    fn engineering_topic_public_fields_and_nested_private_canaries() {
+        let context = DiagnosticContext::Topic {
+            name: "engineering.flow",
+        };
+        let raw = json!({"status":"ok","module_type":"engine","request":{"blueprint":"engine_dirty","experimental":"special_engine_overloaded"},
+            "lines":[{"state":"trade","category":"Raw"}],"unknown":{"status":"CANARY","blueprint":"CANARY"},
+            "cmdr":{"name":"CANARY","credits":42},"ship":{"name":"CANARY","ident":"CANARY"},
+            "token":{"blueprint":"CANARY","module_type":"CANARY","status":"ok"}});
+        let safe = redact_diagnostic(&raw, context);
+        assert_eq!(safe["status"], "ok");
+        assert_eq!(safe["request"]["blueprint"], "engine_dirty");
+        assert_eq!(safe["request"]["experimental"], "special_engine_overloaded");
+        assert_eq!(safe["module_type"], "engine");
+        assert_eq!(safe["lines"][0]["state"], "trade");
+        assert_eq!(safe["token"]["status"], REDACTED);
+        assert!(!safe.to_string().contains("CANARY"));
+        assert_eq!(
+            redact_diagnostic(&raw, DiagnosticContext::Topic { name: "unknown" })["status"],
+            REDACTED
+        );
+        for (topic, path) in [
+            ("engineering.session", "recent"),
+            ("engineering.inventory", "by_category"),
+        ] {
+            let raw = if path == "recent" {
+                json!({"recent":[{"key":"iron","origin":"Scan","category":"Raw"}],"token":{"recent":[{"key":"CANARY"}]},"unknown":{"key":"CANARY"}})
+            } else {
+                json!({"by_category":{"Raw":{"1":[{"key":"iron","name_localised":"Hierro"}]}},"token":{"key":"CANARY"},"unknown":{"key":"CANARY"}})
+            };
+            let safe = redact_diagnostic(&raw, DiagnosticContext::Topic { name: topic });
+            if path == "recent" {
+                assert_eq!(safe["recent"][0]["key"], REDACTED);
+                assert_eq!(safe["recent"][0]["origin"], "Scan");
+            } else {
+                assert_eq!(safe["by_category"]["Raw"]["1"][0]["key"], REDACTED);
+                assert_eq!(
+                    safe["by_category"]["Raw"]["1"][0]["name_localised"],
+                    REDACTED
+                );
+            }
+            assert!(!safe.to_string().contains("CANARY"));
+        }
     }
 
     #[test]
