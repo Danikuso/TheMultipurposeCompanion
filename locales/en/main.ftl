@@ -113,3 +113,6 @@ settings-eddn-radius = EDDN data radius (ly, 20–500)
 settings-tourism-reference = Tourism reference (cr/ly, 1,000–10,000,000)
 auto-companion = Auto-companion
 auto-companion-tooltip = On: TMC switches layout and context panel automatically by relevance. Off: it stays where you left it.
+layout-engineering = Engineering
+settings-engineering-rolls = Engineering rolls per grade (G1–G5, 1–10)
+settings-engineering-rolls-invalid = Invalid value: each grade needs between 1 and 10 rolls.

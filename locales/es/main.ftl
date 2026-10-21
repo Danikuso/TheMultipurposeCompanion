@@ -113,3 +113,6 @@ settings-eddn-radius = Radio de datos EDDN (al, 20–500)
 settings-tourism-reference = Referencia de turismo (cr/al, 1 000–10 000 000)
 auto-companion = Auto-companion
 auto-companion-tooltip = Activado, TMC cambia solo de disposición y de panel de contexto según la relevancia. Desactivado, se queda donde lo dejaste.
+layout-engineering = Ingeniería
+settings-engineering-rolls = Tiradas de ingeniería por grado (G1–G5, 1–10)
+settings-engineering-rolls-invalid = Valor no válido: cada grado necesita entre 1 y 10 tiradas.
