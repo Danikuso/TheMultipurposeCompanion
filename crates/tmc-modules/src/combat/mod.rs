@@ -376,6 +376,7 @@ impl Combat {
             .unwrap_or(PadSize::Large);
         let query = NetQuery::NearestService {
             system_address: addr,
+            system_name: state.location.system.clone(),
             service: NearbyService::InterstellarFactors,
             min_pad,
         };

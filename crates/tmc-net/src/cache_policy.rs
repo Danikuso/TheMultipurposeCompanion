@@ -136,16 +136,18 @@ pub fn cache_keys(q: &NetQuery) -> Vec<(CacheKind, String)> {
             system_address,
             service,
             min_pad,
-        } => vec![(
-            CacheKind::ArdentNearest,
-            format!(
-                "ardent:nearest:{system_address}:{}:{}",
-                match service {
-                    NearbyService::InterstellarFactors => "interstellar-factors",
-                },
-                pad_tag(*min_pad)
-            ),
-        )],
+            ..
+        } => match service {
+            NearbyService::InterstellarFactors => vec![(
+                CacheKind::ArdentNearest,
+                format!(
+                    "ardent:nearest:{system_address}:interstellar-factors:{}",
+                    pad_tag(*min_pad)
+                ),
+            )],
+            // Task 7 añade las claves reales (Ardent genérico / Spansh por tipo).
+            NearbyService::MaterialTrader(_) | NearbyService::TechnologyBroker(_) => Vec::new(),
+        },
     }
 }
 
@@ -193,6 +195,7 @@ mod tests {
         assert_eq!(
             cache_keys(&NetQuery::NearestService {
                 system_address: 7,
+                system_name: "Sol".into(),
                 service: NearbyService::InterstellarFactors,
                 min_pad: PadSize::Medium,
             }),
