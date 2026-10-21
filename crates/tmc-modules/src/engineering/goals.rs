@@ -101,6 +101,17 @@ impl Reservations {
     }
 }
 
+/// Descarta ids repetidos (gana la primera aparicion) conservando el orden.
+fn dedupe(
+    goals_needs: &[(String, BTreeMap<String, u32>)],
+) -> Vec<&(String, BTreeMap<String, u32>)> {
+    let mut seen = std::collections::BTreeSet::new();
+    goals_needs
+        .iter()
+        .filter(|(id, _)| seen.insert(id.clone()))
+        .collect()
+}
+
 /// Reserva en el orden de la lista: cada objetivo toma `min(lo que queda, lo que necesita)`.
 pub fn reserve(
     goals_needs: &[(String, BTreeMap<String, u32>)],
@@ -108,7 +119,7 @@ pub fn reserve(
 ) -> Reservations {
     let mut left: BTreeMap<String, u32> = BTreeMap::new();
     let mut res = Reservations::default();
-    for (id, needs) in goals_needs {
+    for (id, needs) in dedupe(goals_needs) {
         let mut mine = BTreeMap::new();
         for (key, need) in needs {
             let avail = left.entry(key.clone()).or_insert_with(|| have(key));
@@ -161,7 +172,7 @@ pub fn evaluate(
         missing: BTreeMap::new(),
         surplus: surplus.clone(),
     };
-    for (id, needs) in goals_needs {
+    for (id, needs) in dedupe(goals_needs) {
         let empty = BTreeMap::new();
         let reserved = res.by_goal.get(id).unwrap_or(&empty);
         let mut missing = BTreeMap::new();
@@ -210,8 +221,16 @@ pub fn goals_read_task(cmdr: String) -> StoreTask {
         )?;
         let goals: Vec<Value> = rows
             .iter()
-            .filter_map(|r| r[0].as_str())
-            .filter_map(|s| serde_json::from_str::<Value>(s).ok())
+            .filter_map(|r| {
+                let parsed = r[0]
+                    .as_str()
+                    .and_then(|s| serde_json::from_str::<Goal>(s).ok())
+                    .and_then(|g| serde_json::to_value(g).ok());
+                if parsed.is_none() {
+                    tracing::warn!("engineering: fila de objetivo ilegible descartada");
+                }
+                parsed
+            })
             .collect();
         Ok(json!({"cmdr": cmdr, "goals": goals}))
     })
@@ -230,31 +249,19 @@ pub fn goals_from_result(result: &Value) -> Vec<Goal> {
 /// Escritura (`engineering.goals.write`): reemplaza todas las del comandante en una transacción.
 pub fn goals_write_task(cmdr: String, goals: Vec<Goal>) -> StoreTask {
     Box::new(move |store| {
-        store.exec_json("BEGIN IMMEDIATE", &[])?;
-        let run = || -> Result<(), StoreError> {
-            store.exec_json(
-                "DELETE FROM engineering_goals WHERE cmdr = ?1",
-                &[json!(cmdr)],
-            )?;
-            for (i, g) in goals.iter().enumerate() {
-                let text = serde_json::to_string(g).map_err(bad)?;
-                store.exec_json(
-                    "INSERT OR REPLACE INTO engineering_goals (cmdr, position, id, json) VALUES (?1, ?2, ?3, ?4)",
-                    &[json!(cmdr), json!(i), json!(g.id), json!(text)],
-                )?;
-            }
-            Ok(())
-        };
-        match run() {
-            Ok(()) => {
-                store.exec_json("COMMIT", &[])?;
-                Ok(json!({"cmdr": cmdr, "count": goals.len()}))
-            }
-            Err(e) => {
-                let _ = store.exec_json("ROLLBACK", &[]);
-                Err(e)
-            }
+        let mut stmts: Vec<(&str, Vec<Value>)> = vec![(
+            "DELETE FROM engineering_goals WHERE cmdr = ?1",
+            vec![json!(cmdr)],
+        )];
+        for (i, g) in goals.iter().enumerate() {
+            let text = serde_json::to_string(g).map_err(bad)?;
+            stmts.push((
+                "INSERT INTO engineering_goals (cmdr, position, id, json) VALUES (?1, ?2, ?3, ?4)",
+                vec![json!(cmdr), json!(i), json!(g.id), json!(text)],
+            ));
         }
+        store.exec_batch_json(&stmts)?;
+        Ok(json!({"cmdr": cmdr, "count": goals.len()}))
     })
 }
 
@@ -351,6 +358,30 @@ mod tests {
         assert_eq!(back, vec![goal(4)]);
         let other = goals_from_result(&goals_read_task("D".into())(&store).unwrap());
         assert_eq!(other.len(), 1);
+    }
+
+    #[test]
+    fn failing_batch_keeps_previous_list() {
+        let store = Store::open_in_memory().unwrap();
+        store.apply_migrations(&[ENGINEERING_MIGRATION]).unwrap();
+        goals_write_task("C".into(), vec![goal(5), goal(4)])(&store).unwrap();
+        // mismo id dos veces: la clave primaria falla a mitad del lote
+        let dup = vec![goal(3), goal(3)];
+        assert!(goals_write_task("C".into(), dup)(&store).is_err());
+        let back = goals_from_result(&goals_read_task("C".into())(&store).unwrap());
+        assert_eq!(back, vec![goal(5), goal(4)]);
+    }
+
+    #[test]
+    fn duplicate_ids_first_wins() {
+        let list = [needs("A", &[("X", 6)]), needs("A", &[("X", 8)])];
+        let r = reserve(&list, &|_| 10);
+        assert_eq!(r.by_goal["A"]["X"], 6);
+        assert_eq!(r.surplus("X", 10), 4);
+        let have = |k: &str| if k == "X" { 10 } else { 0 };
+        let v = evaluate(&list, &have, trader_rules(), STATUS_OK);
+        assert_eq!(v.goals.len(), 1);
+        assert_eq!(v.needs, m(&[("X", 6)]));
     }
 
     #[test]
