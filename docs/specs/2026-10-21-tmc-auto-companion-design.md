@@ -9,7 +9,9 @@ Dar al jugador control sobre los cambios automáticos de la interfaz: poder fija
 ## Comportamiento
 
 - **Activado (por defecto, comportamiento previo):** la UI cambia de disposición según la relevancia de los módulos (`autoLayout`/`nextPin`) y cambia el panel de contexto de exploración (cuerpos/exobiología) automáticamente.
-- **Desactivado:** nunca se cambia sola de disposición ni de panel de contexto (entrar en un sistema, atracar, fijar un objetivo, etc. no cambian nada). Los datos siguen actualizándose y las alertas/avisos se muestran igual. La navegación manual funciona con normalidad. Al reactivarlo, la UI vuelve a seguir la relevancia.
+- **Desactivado:** nunca se cambia sola de disposición ni de panel de contexto (entrar en un sistema, atracar, fijar un objetivo, etc. no cambian nada). Los datos siguen actualizándose y las alertas/avisos se muestran igual. La navegación manual funciona con normalidad. Al reactivarlo, el modo automático se aplica de inmediato (saltar a la disposición automática es lo esperado).
+- **Arranque:** hasta leer `auto_companion` de `/api/config` la UI no aplica ningún cambio automático (sin carrera); si la lectura falla o tarda, se usa el valor por defecto (activado). Con el interruptor apagado, la última disposición y el panel de contexto elegidos se guardan por cliente en `localStorage` (opcional, sin él no pasa nada) y se restauran al arrancar; activado ignora ese valor.
+- **Escrituras:** los cambios del interruptor se serializan; si el PUT falla se vuelve al último valor confirmado.
 
 ## Interfaz y persistencia
 
