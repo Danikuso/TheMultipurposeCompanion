@@ -610,6 +610,94 @@ pub fn blueprints() -> &'static BlueprintCatalog {
     CATALOG.get_or_init(|| parse_blueprints(include_str!("../data/blueprints.json")))
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct EngineerBlueprint {
+    pub blueprint: String,
+    pub max_grade: u8,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Contribution {
+    pub item: String,
+    /// "commodity" | "material" | "credits".
+    pub kind: String,
+    pub amount: u32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UnlockSteps {
+    pub requirement_key: String,
+    #[serde(default)]
+    pub invite_key: Option<String>,
+    #[serde(default)]
+    pub contribution: Option<Contribution>,
+}
+
+/// Engineer facts (journal `EngineerID`), with provenance.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EngineerDef {
+    pub id: u64,
+    pub name: String,
+    pub system: String,
+    pub star_pos: [f64; 3],
+    pub workshop: String,
+    #[serde(default)]
+    pub market_id: Option<u64>,
+    pub on_foot: bool,
+    #[serde(default)]
+    pub blueprints: Vec<EngineerBlueprint>,
+    pub unlock: UnlockSteps,
+    pub source: String,
+    pub verified: bool,
+}
+
+fn parse_engineers(json: &str) -> Vec<EngineerDef> {
+    let Some(entries) = serde_json::from_str::<serde_json::Value>(json)
+        .map_err(|error| {
+            tracing::warn!(file = "engineers.json", %error, "invalid embedded static data; using empty table")
+        })
+        .ok()
+        .and_then(|v| v.get("entries").and_then(serde_json::Value::as_array).cloned())
+    else {
+        tracing::warn!(file = "engineers.json", "missing entries array; using empty table");
+        return Vec::new();
+    };
+    let mut out: Vec<EngineerDef> = Vec::new();
+    for (index, value) in entries.into_iter().enumerate() {
+        match serde_json::from_value::<EngineerDef>(value) {
+            Ok(e) if engineer_is_valid(&e) && !out.iter().any(|o| o.id == e.id) => out.push(e),
+            Ok(_) => tracing::warn!(
+                file = "engineers.json",
+                index,
+                "invalid engineer row; skipping"
+            ),
+            Err(error) => {
+                tracing::warn!(file = "engineers.json", index, %error, "invalid engineer row; skipping")
+            }
+        }
+    }
+    out
+}
+
+fn engineer_is_valid(e: &EngineerDef) -> bool {
+    !e.name.trim().is_empty()
+        && !e.system.trim().is_empty()
+        && !e.source.trim().is_empty()
+        && !e.unlock.requirement_key.trim().is_empty()
+        && e.star_pos.iter().all(|c| c.is_finite())
+        && e.blueprints.iter().all(|b| (1..=5).contains(&b.max_grade))
+}
+
+/// Engineers (provisional minimal set, unverified), embedded once.
+pub fn engineers() -> &'static Vec<EngineerDef> {
+    static TABLE: OnceLock<Vec<EngineerDef>> = OnceLock::new();
+    TABLE.get_or_init(|| parse_engineers(include_str!("../data/engineers.json")))
+}
+
+pub fn engineer(id: u64) -> Option<&'static EngineerDef> {
+    engineers().iter().find(|e| e.id == id)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum StarSpecial {
@@ -1130,5 +1218,82 @@ mod tests {
             let m = &materials()[key];
             assert_eq!((m.category, m.grade), (category, grade), "{key}");
         }
+    }
+
+    #[test]
+    fn engineers_load_with_coords_and_provenance() {
+        let all = engineers();
+        assert!(all.iter().any(|e| e.on_foot));
+        for e in all {
+            assert!(e.star_pos.iter().all(|c| c.is_finite()), "{}", e.name);
+            assert!(!e.source.trim().is_empty() && !e.verified, "{}", e.name);
+        }
+        let f = engineer(300100).unwrap();
+        assert_eq!(
+            (f.name.as_str(), f.system.as_str()),
+            ("Felicity Farseer", "Deciat")
+        );
+        assert_eq!(engineer(300160).unwrap().name, "Elvira Martuuk");
+        assert_eq!(engineer(300260).unwrap().name, "Tod McQuinn");
+        assert!(engineer(1).is_none());
+        let mut ids: Vec<u64> = all.iter().map(|e| e.id).collect();
+        ids.sort_unstable();
+        ids.dedup();
+        assert_eq!(ids.len(), all.len());
+        let dirty = |id| {
+            engineer(id)
+                .unwrap()
+                .blueprints
+                .iter()
+                .find(|b| b.blueprint == "engine_dirty")
+                .map(|b| b.max_grade)
+        };
+        assert_eq!((dirty(300100), dirty(300160)), (Some(5), Some(3)));
+        assert!(
+            engineer(300100)
+                .unwrap()
+                .blueprints
+                .iter()
+                .any(|b| b.blueprint == "fsd_longrange")
+        );
+    }
+
+    #[test]
+    fn engineer_blueprints_exist_in_catalogue() {
+        for e in engineers() {
+            if e.on_foot {
+                continue;
+            }
+            for b in &e.blueprints {
+                assert!(
+                    blueprints().blueprint(&b.blueprint).is_some(),
+                    "{} {}",
+                    e.name,
+                    b.blueprint
+                );
+                assert!((1..=5).contains(&b.max_grade));
+            }
+        }
+    }
+
+    #[test]
+    fn corrupt_engineer_row_skipped_with_warning() {
+        let good = serde_json::json!({"id":1,"name":"A","system":"S","star_pos":[0.0,1.0,2.0],
+            "workshop":"W","on_foot":false,"blueprints":[],
+            "unlock":{"requirement_key":"unlock-a"},"source":"t","verified":false});
+        let mut bad = good.clone();
+        bad["star_pos"] = serde_json::json!(["x", 1.0, 2.0]);
+        let mut bad_grade = good.clone();
+        bad_grade["id"] = 3.into();
+        bad_grade["blueprints"] = serde_json::json!([{"blueprint":"engine_dirty","max_grade":9}]);
+        let mut good2 = good.clone();
+        good2["id"] = 2.into();
+        let warnings = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        tracing::subscriber::with_default(WarningCounter(warnings.clone()), || {
+            let json = serde_json::json!({"entries":[good, bad, bad_grade, good2]}).to_string();
+            assert_eq!(parse_engineers(&json).len(), 2);
+        });
+        assert_eq!(warnings.load(std::sync::atomic::Ordering::Relaxed), 2);
+        assert!(parse_engineers("{oops").is_empty());
     }
 }
