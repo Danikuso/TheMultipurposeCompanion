@@ -3,3 +3,4 @@
 //! Esqueleto de la Task 12; las tareas siguientes añaden el resto de submódulos.
 
 pub mod inventory;
+pub mod locker;

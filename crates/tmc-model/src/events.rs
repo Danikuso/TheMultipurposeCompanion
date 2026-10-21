@@ -1446,14 +1446,21 @@ pub struct ShipLockerContents {
     pub components: Vec<LockerItem>,
     pub consumables: Vec<LockerItem>,
     pub data: Vec<LockerItem>,
+    /// Qué listas venían presentes (`Items`, `Components`, `Consumables`, `Data`).
     #[serde(skip)]
-    listed: bool,
+    present: [bool; 4],
 }
 
 impl ShipLockerContents {
     /// `true` si el evento no trae listas (hay que releer `ShipLocker.json`).
     pub fn is_stub(&self) -> bool {
-        !self.listed
+        !self.present.contains(&true)
+    }
+
+    /// `true` si el JSON de origen traía la lista `i` (0 Items, 1 Components,
+    /// 2 Consumables, 3 Data). Una lista ausente no es una lista vacía.
+    pub fn has_list(&self, i: usize) -> bool {
+        self.present.get(i).copied().unwrap_or(false)
     }
 
     /// Lee el contenido de un objeto JSON (evento o `ShipLocker.json`).
@@ -1468,15 +1475,14 @@ impl ShipLockerContents {
                 _ => Vec::new(),
             }
         };
-        let listed = ["Items", "Components", "Consumables", "Data"]
-            .iter()
-            .any(|k| o.get(*k).is_some_and(Json::is_array));
+        let present = ["Items", "Components", "Consumables", "Data"]
+            .map(|k| o.get(k).is_some_and(Json::is_array));
         Some(Self {
             items: list("Items"),
             components: list("Components"),
             consumables: list("Consumables"),
             data: list("Data"),
-            listed,
+            present,
         })
     }
 }
