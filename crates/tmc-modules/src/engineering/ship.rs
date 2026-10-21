@@ -1,12 +1,12 @@
 //! Mi nave modificada: ingeniería actual de cada módulo a partir de `Loadout`.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tmc_model::events::{EngineerCraft, Loadout};
 
 use crate::data::blueprints;
 
 /// Ingeniería aplicada a un módulo. `blueprint` conserva la clave del diario.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CurrentEng {
     pub blueprint: String,
     pub level: u8,
@@ -99,7 +99,7 @@ impl ShipView {
         {
             row.current = Some(CurrentEng {
                 blueprint: c.blueprint_name.clone(),
-                level: c.level,
+                level: c.level.min(5),
                 quality: c.quality.unwrap_or(0.0),
                 experimental: c
                     .apply_experimental_effect
@@ -157,6 +157,71 @@ mod tests {
         assert_eq!((cur.level, cur.blueprint.as_str()), (1, "Engine_Dirty"));
         let fresh = ShipView::from_loadout(&loadout());
         assert_eq!(fresh.modules[0].current, None);
+    }
+
+    fn craft(json: &str) -> EngineerCraft {
+        serde_json::from_str(json).unwrap()
+    }
+
+    #[test]
+    fn craft_unknown_slot_is_ignored() {
+        let mut v = ShipView::from_loadout(&loadout());
+        let before = v.clone();
+        v.apply_craft(&craft(
+            r#"{"Engineer":"F","EngineerID":1,"BlueprintName":"Engine_Dirty","Level":2,"Slot":"Nope"}"#,
+        ));
+        assert_eq!(v, before);
+    }
+
+    #[test]
+    fn craft_level_is_clamped_to_five() {
+        let mut v = ShipView::from_loadout(&loadout());
+        v.apply_craft(&craft(
+            r#"{"Engineer":"F","EngineerID":1,"BlueprintName":"Engine_Dirty","Level":9,"Slot":"MainEngines"}"#,
+        ));
+        assert_eq!(v.modules[0].current.as_ref().unwrap().level, 5);
+    }
+
+    #[test]
+    fn craft_preserves_experimental_when_absent() {
+        let mut v = ShipView::from_loadout(&loadout());
+        v.modules[0].current = Some(CurrentEng {
+            blueprint: "Engine_Dirty".into(),
+            level: 4,
+            quality: 1.0,
+            experimental: Some("special_engine_overloaded".into()),
+        });
+        v.apply_craft(&craft(
+            r#"{"Engineer":"F","EngineerID":1,"BlueprintName":"Engine_Dirty","Level":5,"Slot":"mainengines"}"#,
+        ));
+        let cur = v.modules[0].current.as_ref().unwrap();
+        assert_eq!(cur.level, 5);
+        assert_eq!(
+            cur.experimental.as_deref(),
+            Some("special_engine_overloaded")
+        );
+    }
+
+    #[test]
+    fn unknown_blueprint_key_is_kept_verbatim() {
+        let l: Loadout = serde_json::from_str(
+            r#"{"Ship":"asp","ShipID":1,"Modules":[{"Slot":"MainEngines","Item":"int_engine_size3_class5","Engineering":{"BlueprintName":"Engine_Mystery","Level":2,"Quality":0.3}}]}"#,
+        )
+        .unwrap();
+        let v = ShipView::from_loadout(&l);
+        let cur = v.modules[0].current.as_ref().unwrap();
+        assert_eq!((cur.blueprint.as_str(), cur.level), ("Engine_Mystery", 2));
+    }
+
+    #[test]
+    fn mixed_case_item_resolves_module_type() {
+        let l: Loadout = serde_json::from_str(
+            r#"{"Ship":"asp","ShipID":1,"Modules":[{"Slot":"MainEngines","Item":"Int_Engine_Size3_Class5"}]}"#,
+        )
+        .unwrap();
+        let v = ShipView::from_loadout(&l);
+        assert_eq!(v.modules[0].module_type.as_deref(), Some("engine"));
+        assert!(v.modules[0].engineerable);
     }
 
     #[test]

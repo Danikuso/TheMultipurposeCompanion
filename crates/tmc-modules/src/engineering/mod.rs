@@ -5,4 +5,5 @@
 pub mod engineers;
 pub mod inventory;
 pub mod locker;
+pub mod plan;
 pub mod ship;
