@@ -6,6 +6,7 @@ import { setLocale } from '../src/lib/i18n';
 import Panel from '../src/shell/Panel.svelte';
 import App from '../src/App.svelte';
 import { disconnect, live } from '../src/lib/ws.svelte';
+import { loadPrefs, prefs } from '../src/lib/prefs.svelte';
 import { RouteStrip, PlannerPanel, JumpPanel } from '../src/modules/navigation';
 import SystemBodiesPanel from '../src/modules/exploration/SystemBodiesPanel.svelte';
 import ExobiologyPanel from '../src/modules/exobiology/ExobiologyPanel.svelte';
@@ -87,7 +88,7 @@ describe('default exploration layout', () => {
     ];
     target = document.createElement('div');
     document.body.appendChild(target);
-    instance = mount(App, { target });
+    prefs.loaded = true; instance = mount(App, { target });
     flushSync();
   });
   afterEach(() => { unmount(instance); target.remove(); disconnect(); });
@@ -219,7 +220,7 @@ describe('app pin behaviour', () => {
     disconnect(); setLocale('es');
     live.topics['core.modules'] = [{ id: 'combat', relevance: 'active' }];
     target = document.createElement('div'); document.body.appendChild(target);
-    instance = mount(App, { target }); flushSync();
+    prefs.loaded = true; instance = mount(App, { target }); flushSync();
   });
   afterEach(() => { unmount(instance); target.remove(); disconnect(); });
   const slot = (id: string) => target.querySelector(`[data-layout-slot="${id}"]`);
@@ -295,3 +296,83 @@ describe('trade and missions layouts', () => {
     expect(slotIds('missions')).toEqual(['missions', 'mission-alerts', 'passengers', 'rewards', 'community-goals']);
   });
 });
+
+describe('auto-companion OFF', () => {
+  let target: HTMLElement;
+  let instance: Record<string, unknown>;
+  const slot = (id: string) => target.querySelector(`[data-layout-slot="${id}"]`);
+  beforeEach(() => {
+    disconnect(); setLocale('es'); prefs.autoCompanion = true;
+    live.topics['core.location'] = { system: 'Testia', system_address: 1, body: 'Testia 1' };
+    live.topics['core.modules'] = [{ id: 'exploration', relevance: 'normal' }, { id: 'exobiology', relevance: 'normal' }];
+    target = document.createElement('div'); document.body.appendChild(target);
+    prefs.loaded = true; instance = mount(App, { target }); flushSync();
+  });
+  afterEach(() => { unmount(instance); target.remove(); disconnect(); prefs.autoCompanion = true; });
+
+  test('ON follows relevance (current behaviour)', () => {
+    expect(slot('route')).not.toBeNull();
+    live.topics['core.modules'] = [{ id: 'combat', relevance: 'active' }]; flushSync();
+    expect(slot('target')).not.toBeNull();
+  });
+
+  test('OFF keeps the layout when relevance changes, manual navigation still works', () => {
+    prefs.autoCompanion = false; flushSync();
+    live.topics['core.modules'] = [{ id: 'combat', relevance: 'active' }]; flushSync();
+    expect(slot('target')).toBeNull();
+    expect(slot('route')).not.toBeNull();
+    const combat = Array.from(target.querySelectorAll('aside button')).find((b) => b.textContent?.includes('Combate')) as HTMLButtonElement;
+    combat.click(); flushSync();
+    expect(slot('target')).not.toBeNull();
+    live.topics['core.modules'] = [{ id: 'mining', relevance: 'active' }]; flushSync();
+    expect(slot('target')).not.toBeNull();
+    expect(slot('prospector')).toBeNull();
+  });
+
+  test('OFF keeps the context panel when exobiology becomes active, even across body changes', () => {
+    prefs.autoCompanion = false; flushSync();
+    live.topics['core.modules'] = [{ id: 'exobiology', relevance: 'active' }]; flushSync();
+    expect(slot('context-bodies')).not.toBeNull();
+    expect(slot('context-exobiology')).toBeNull();
+    (target.querySelector('[data-testid="context-exobiology"]') as HTMLButtonElement).click(); flushSync();
+    live.topics['core.location'] = { system: 'Testia', system_address: 1, body: 'Testia 2' };
+    live.topics['core.modules'] = [{ id: 'exobiology', relevance: 'normal' }]; flushSync();
+    expect(slot('context-exobiology')).not.toBeNull();
+  });
+
+  test('OFF with a manual pin keeps it and OFF->ON engages the auto layout immediately', () => {
+    prefs.autoCompanion = false; flushSync();
+    const nav = (label: string) => (Array.from(target.querySelectorAll('aside button')) as HTMLButtonElement[])
+      .find((b) => b.textContent?.includes(label))!;
+    nav('Minería').click(); flushSync();
+    live.topics['core.modules'] = [{ id: 'combat', relevance: 'active' }]; flushSync();
+    expect(slot('prospector')).not.toBeNull();
+    prefs.autoCompanion = true; flushSync();
+    expect(slot('target')).not.toBeNull();
+    expect(slot('prospector')).toBeNull();
+  });
+});
+
+describe('auto-companion startup', () => {
+  let target: HTMLElement;
+  let instance: Record<string, unknown>;
+  beforeEach(() => {
+    disconnect(); setLocale('es'); loadPrefs({}); prefs.loaded = false;
+    localStorage.setItem('tmc.ui.placement', JSON.stringify({ layout: 'mining', context: 'exobiology' }));
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ auto_companion: false }) })));
+    live.topics['core.modules'] = [{ id: 'combat', relevance: 'active' }];
+    target = document.createElement('div'); document.body.appendChild(target);
+  });
+  afterEach(() => { unmount(instance); target.remove(); vi.unstubAllGlobals(); localStorage.clear(); disconnect(); loadPrefs({}); });
+
+  test('config OFF with modules arriving first never auto-switches and restores the stored layout', async () => {
+    instance = mount(App, { target }); flushSync();
+    expect(target.querySelector('[data-layout-slot="target"]')).toBeNull();
+    await vi.waitFor(() => expect(prefs.loaded).toBe(true));
+    flushSync();
+    expect(prefs.autoCompanion).toBe(false);
+    expect(target.querySelector('[data-layout-slot="target"]')).toBeNull();
+    expect(target.querySelector('[data-layout-slot="prospector"]')).not.toBeNull();
+  });
+});
+

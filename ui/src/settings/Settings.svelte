@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { getLocale, setLocale, t } from '../lib/i18n';
   import { applyTheme, type HudThemeInput } from '../lib/theme';
+  import { loadPrefs, prefs, setAutoCompanion } from '../lib/prefs.svelte';
   import { topic } from '../lib/ws.svelte';
   import Panel from '../shell/Panel.svelte';
   import { diag } from '../lib/diag.svelte';
@@ -17,6 +18,7 @@
   interface ConfigDto {
     language?: string;
     auto_copy_next_system?: boolean;
+    auto_companion?: boolean;
     alerts_enabled?: boolean;
     online_services?: boolean;
     map_value_threshold?: number;
@@ -85,6 +87,7 @@
       if (res.ok) {
         const cfg = (await res.json()) as ConfigDto;
         fullConfig = cfg;
+        loadPrefs(cfg);
         onlineServices = cfg.online_services ?? true;
         mapThreshold = cfg.map_value_threshold ?? 500000;
         plannerEfficiency = cfg.default_neutron_efficiency ?? 60;
@@ -170,6 +173,7 @@
       ...fullConfig,
       language,
       auto_copy_next_system: autoCopy,
+      auto_companion: prefs.autoCompanion,
       online_services: onlineServices,
       map_value_threshold: mapThreshold,
       default_neutron_efficiency: plannerEfficiency,
@@ -235,6 +239,13 @@
       <span>{t('settings-auto-copy')}</span>
       <input type="checkbox" bind:checked={autoCopy} onchange={saveConfig} />
     </label>
+
+    <label class="field-row" title={t('auto-companion-tooltip')}>
+      <span>{t('auto-companion')}</span>
+      <input type="checkbox" role="switch" data-testid="settings-auto-companion" checked={prefs.autoCompanion}
+        onchange={(e) => { void setAutoCompanion(e.currentTarget.checked); }} />
+    </label>
+    <p class="help-text">{t('auto-companion-tooltip')}</p>
 
     <label class="field-row">
       <span>{t('settings-lan')}</span>

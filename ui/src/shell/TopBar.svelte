@@ -1,6 +1,7 @@
 <script lang="ts">
   import { credits, pct } from '../lib/format';
   import { t } from '../lib/i18n';
+  import { prefs, setAutoCompanion } from '../lib/prefs.svelte';
   import { live, topic } from '../lib/ws.svelte';
   import { diag, diagOn } from '../lib/diag.svelte';
 
@@ -108,6 +109,11 @@
   </div>
 
   <div class="topbar-status">
+    <label class="auto-switch" title={t('auto-companion-tooltip')}>
+      <input type="checkbox" role="switch" data-testid="auto-companion" checked={prefs.autoCompanion}
+        onchange={(e) => { void setAutoCompanion(e.currentTarget.checked); }} />
+      <span>{t('auto-companion')}</span>
+    </label>
     {#if game?.galaxy === 'Legacy'}
       <span class="badge badge-warning">{t('galaxy-legacy-warning')}</span>
     {/if}
@@ -180,6 +186,8 @@
     align-items: center;
     gap: 0.5rem;
   }
+
+  .auto-switch { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; cursor: pointer; }
 
   .badge {
     font-size: 0.75rem;
