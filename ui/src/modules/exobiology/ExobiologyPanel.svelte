@@ -136,34 +136,35 @@
 </Panel>
 
 <style>
-  .header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .75rem; margin-bottom: .75rem; }
+  .header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .75rem; margin-bottom: .85rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--hud-border-subtle); }
   .title { font-size: var(--font-title-lg); color: var(--hud-primary); }
   .dim { color: var(--hud-muted); }
-  .badge { display: inline-block; border: 1px solid var(--hud-border); padding: 0 .4rem; margin-left: .4rem; }
-  .badge.warn, .warn { color: var(--hud-warning); }
+  .badge { display: inline-flex; align-items: center; border: 1px solid var(--hud-border); border-radius: 3px; padding: 0.15rem .5rem; margin-left: .4rem; font-size: 0.75rem; font-family: var(--font-mono); }
+  .badge.warn, .warn { color: var(--hud-warning); border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.12); }
   .columns { display: flex; flex-wrap: wrap; gap: 1rem; align-items: stretch; }
-  .box { border: 1px solid var(--hud-border); padding: .6rem; min-width: 0; }
+  .box { background: var(--hud-surface-card); border: 1px solid var(--hud-border-subtle); border-radius: 6px; padding: .8rem; min-width: 0; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25); }
   .candidates { flex: 1.6 1 32rem; }
-  .sampling { flex: 1 1 18rem; }
-  h3 { margin: 0 0 .5rem; font-size: .85rem; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1px solid var(--hud-border); }
+  .sampling { flex: 1 1 18rem; border-top: 3px solid var(--hud-purple); }
+  h3 { margin: 0 0 .6rem; font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--hud-primary); border-bottom: 1px solid var(--hud-border-subtle); padding-bottom: 0.35rem; }
+  .sampling h3 { color: var(--hud-purple); }
   .scroll { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { padding: .2rem .6rem .2rem 0; text-align: left; white-space: nowrap; }
-  th { color: var(--hud-muted); font-weight: normal; border-bottom: 1px solid var(--hud-border); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+  th, td { padding: .35rem .6rem .35rem 0; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--hud-border-subtle); }
+  th { color: var(--hud-muted); font-size: 0.72rem; text-transform: uppercase; font-weight: 700; }
   .number { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-  tr.active td { color: var(--hud-primary); font-weight: 700; }
-  .ok { color: var(--hud-ok); }
-  .done { color: var(--hud-ok); }
-  .likelihood.high { color: var(--hud-ok); }
+  tr.active td { color: var(--hud-primary); font-weight: 700; background: rgba(255, 113, 0, 0.05); }
+  .ok { color: var(--hud-success); font-weight: 700; }
+  .done { color: var(--hud-success); font-weight: 700; }
+  .likelihood.high { color: var(--hud-success); font-weight: 700; }
   .likelihood.unknown { font-style: italic; }
   .origin { margin-left: .3rem; font-size: .85em; }
-  .species { font-size: 1.25em; }
-  .dots { display: flex; gap: .3rem; margin: .4rem 0 .2rem; }
-  .dot { width: .9rem; height: .9rem; border: 1px solid var(--hud-primary); display: inline-block; }
-  .dot.filled { background: var(--hud-primary); }
-  .bar { position: relative; height: .9rem; background: var(--hud-surface-alt); border: 1px solid var(--hud-border); margin: .3rem 0; }
-  .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--hud-primary); }
-  .notice { margin-top: .5rem; color: var(--hud-danger); border: 1px solid var(--hud-danger); padding: .2rem .4rem; }
-  .unsold { margin-top: .75rem; border-top: 1px solid var(--hud-border); padding-top: .5rem; }
-  .amount { font-size: 1.4em; margin-right: .5rem; }
+  .species { font-size: 1.15em; font-weight: 700; color: #fff; margin-bottom: 0.25rem; }
+  .dots { display: flex; gap: .4rem; margin: .5rem 0 .3rem; }
+  .dot { width: 1.1rem; height: 1.1rem; border: 1px solid var(--hud-purple); border-radius: 50%; display: inline-block; transition: all 150ms ease; }
+  .dot.filled { background: var(--hud-purple); box-shadow: 0 0 8px var(--hud-purple); }
+  .bar { position: relative; height: 8px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--hud-border-subtle); border-radius: 999px; margin: .4rem 0; overflow: hidden; }
+  .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #7c3aed, var(--hud-success)); border-radius: 999px; transition: width 150ms ease; }
+  .notice { margin-top: .5rem; color: var(--hud-danger); border: 1px solid var(--hud-danger); background: rgba(239, 68, 68, 0.1); border-radius: 4px; padding: .3rem .5rem; font-size: 0.82rem; }
+  .unsold { margin-top: .85rem; border-top: 1px solid var(--hud-border-subtle); padding-top: .6rem; }
+  .amount { font-size: 1.35em; color: #fbbf24; margin-right: .5rem; }
 </style>
