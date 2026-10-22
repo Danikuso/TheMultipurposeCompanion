@@ -10,9 +10,9 @@
 
 ## Puntero actual
 
-- **Tarea:** C3 🔄 — cálculo de materiales y Merc Coins con base explícita.
+- **Tarea:** C4 🔄 — capacidades por módulo/grado y recomendación de ingeniero.
 - **Último paso completado:** C1 cerrada en `c308ce9` (Claude; Codex paró por indicación del propietario). Node 15/15, `--check` OK, revisión aprobada. 8 filas sin resolver (4 DSS sobre DiscoveryScanner, 4 special_weapon_* sobre Weapon genérico) bloquean C8 hasta tener evidencia externa documentada.
-- **Siguiente acción:** C3 según la secuencia C del plan activo (quitar `sole_recipe_for`).
+- **Siguiente acción:** C4 según la secuencia C del plan activo.
 ## Tareas de F4
 
 Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
@@ -56,8 +56,9 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | C0 | ✅ hecha | 956248d | Spec/plan/enmienda ratificados, revisión aprobada; 11 links/cercas/diff PASS |
 | C1 | ✅ hecha | c308ce9 | Staging reproducible; 1.167 constructores (943 receta, 83 exp., 15 variantes, 116 fuera, 2 obsoletos, 8 sin resolver); 38/38 ingenieros; 1.899 Merc Coins; revisión aprobada |
 | C2 | ✅ hecha | 7ac1b54 | Recetas por contexto, política de base y alias; staging se lee sin pérdidas; revisión aprobada |
-| C3 | 🔄 en curso | — | |
-| C4–C10 | ⬜ pendientes | — | Orden, interfaces y tests en secuencia C del plan activo |
+| C3 | ✅ hecha | 9cdcdd1 | Coste con base explícita; Merc Coins aparte; bloqueos explícitos; revisión aprobada |
+| C4 | 🔄 en curso | — | |
+| C5–C10 | ⬜ pendientes | — | Orden, interfaces y tests en secuencia C del plan activo |
 
 ## Tareas de diagnóstico debug
 
