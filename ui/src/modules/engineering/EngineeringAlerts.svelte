@@ -4,13 +4,13 @@
  import { action, live, topic } from '../../lib/ws.svelte';
  import Panel from '../../shell/Panel.svelte';
  import { goalLabel, inventoryMaterial } from './labels';
- import { createSectionsReader } from './sections.svelte';
- import type { EngineeringAlert, EngineerRows, EngineersTopic, InventoryTopic } from './types';
+ import { engineerName, useEngineerNames } from './engineerNames.svelte';
+ import type { EngineeringAlert, EngineersTopic, InventoryTopic } from './types';
  const alerts=$derived(topic<{alerts: EngineeringAlert[]}>('engineering.alerts')?.alerts ?? []);
  const engineers=$derived(topic<EngineersTopic>('engineering.engineers'));
  const inventory=$derived(topic<InventoryTopic>('engineering.inventory'));
- // Los nombres salen de la página de ingenieros, solo si algún aviso los necesita.
- const names=createSectionsReader<EngineerRows>('engineers',['engineers'],() => ({revision:engineers?.revision,commander:topic<{name?:string}>('core.cmdr')?.name ?? '',enabled:alerts.some(alert => alert.engineer_id!==undefined)}));
+ // Nombres por id (filtro servidor, una vez cada uno), nunca la lista completa de ingenieros.
+ useEngineerNames(() => alerts.flatMap(alert => alert.engineer_id===undefined ? [] : [alert.engineer_id]), () => engineers?.revision);
  let pending=$state(false);
  let error=$state(false);
  const commander=$derived(topic<{name?:string}>('core.cmdr')?.name ?? '');
@@ -22,7 +22,7 @@
   return () => { generation++; };
  });
  function label(alert: EngineeringAlert) {
-  const engineer=(names.ready ? names.engineers.items.find(row => row.id===alert.engineer_id)?.name : undefined) ?? t('engineering-no-data');
+  const engineer=engineerName(alert.engineer_id) ?? t('engineering-no-data');
   const material=alert.key ? inventoryMaterial(alert.key,inventory) : t('engineering-no-data');
   switch(alert.kind) {
    case 'material_at_max': return t('engineering-alert-at-max',{material,grade:integer(alert.grade ?? 0)});

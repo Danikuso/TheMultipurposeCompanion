@@ -56,6 +56,7 @@ mod tests {
             revision: 42,
             cursor: 0,
             section: None,
+            engineer_id: None,
         };
         for name in ["a".repeat(16258), "\u{e9}".repeat(8129)] {
             let row = json!({"count":1,"key":"x","name_localised":name});

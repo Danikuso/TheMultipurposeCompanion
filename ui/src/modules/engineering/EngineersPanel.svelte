@@ -13,10 +13,18 @@
   const commander = $derived(topic<{ name?: string }>('core.cmdr')?.name ?? '');
   // Lectores privados: las filas solo se publican completas y de la revisión vigente.
   const list = createSectionsReader<EngineerRows>('engineers', ['engineers'], () => ({ revision: data?.revision, commander, enabled: true }));
-  // Las capacidades de todos los ingenieros solo se piden mientras haya uno seleccionado.
-  const caps = createSectionsReader<EngineerRows>('engineers', ['capabilities'], () => ({ revision: data?.revision, commander, enabled: selectedId !== null }));
+  // Las capacidades son estáticas: solo las del ingeniero seleccionado (filtro servidor), cacheadas por
+  // catálogo + id, sin recargar ni vaciar en cada revisión.
+  const catalogueKey = $derived(JSON.stringify(topic<{ counts?: unknown }>('engineering.catalogue')?.counts ?? null));
+  const caps = createSectionsReader<EngineerRows>('engineers', ['capabilities'], () => ({
+    revision: data?.revision, commander, enabled: selectedId !== null, engineerId: selectedId ?? undefined, cacheKey: `${selectedId}|${catalogueKey}`,
+  }));
   const rows = $derived(list.ready ? list.engineers.items : []);
   const selectedRow = $derived(rows.find((row) => row.id === selectedId));
+  // El detalle no parpadea mientras se recargan las filas dinámicas: conserva el último nombre conocido.
+  let lastSelected = $state<{ id: number; name: string } | null>(null);
+  $effect(() => { if (selectedRow) lastSelected = { id: selectedRow.id, name: selectedRow.name }; });
+  const selectedName = $derived(selectedRow?.name ?? (lastSelected?.id === selectedId ? lastSelected?.name : undefined));
   const capabilities = $derived.by(() => {
     if (!caps.ready || selectedId === null) return [];
     const grouped = new Map<string, { module: string; blueprint: string; grades: number[] }>();
@@ -82,7 +90,7 @@
     <p class="error" role="alert">{t('engineering-select-engineer-failed')}</p>
   {/if}
   {#if !list.ready}
-    <p class="muted" role="status">{t(list.state === 'failed' ? 'engineering-page-failed' : list.state === 'stale' ? 'engineering-page-stale' : list.state === 'loading' ? 'engineering-page-loading' : 'engineering-no-data')}</p>
+    <p class="muted" role="status">{t(list.state === 'failed' ? 'engineering-page-failed' : list.state === 'stale' ? 'engineering-data-stale' : list.state === 'loading' ? 'engineering-page-loading' : 'engineering-no-data')}</p>
   {:else if rows.length === 0}
     <p class="muted">{t('engineering-no-data')}</p>
   {/if}
@@ -110,9 +118,9 @@
     </section>
   {/each}
 
-  {#if selectedId !== null && selectedRow}
+  {#if selectedId !== null && selectedName !== undefined}
     <section class="details" data-testid="engineer-details">
-      <h3>{selectedRow.name}</h3>
+      <h3>{selectedName}</h3>
       <h4>{t('engineering-engineer-next-step')}</h4>
       <p data-testid="engineer-next-step">
         {#if next === 'Done'}
@@ -148,7 +156,7 @@
           {/each}
         </ul>
       {:else}
-        <p class="muted" role="status">{t(caps.state === 'failed' ? 'engineering-page-failed' : caps.state === 'stale' ? 'engineering-page-stale' : 'engineering-page-loading')}</p>
+        <p class="muted" role="status">{t(caps.state === 'failed' ? 'engineering-page-failed' : caps.state === 'stale' ? 'engineering-data-stale' : 'engineering-page-loading')}</p>
       {/if}
     </section>
   {/if}

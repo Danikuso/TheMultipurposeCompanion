@@ -1,5 +1,5 @@
 ﻿import type { EngineeringPage, PageRequest } from './types';
-export function pageKey(request: PageRequest): string { return JSON.stringify([request.resource, request.revision, request.section, request.commander, request.scope ?? null]); }
+export function pageKey(request: PageRequest): string { return JSON.stringify([request.resource, request.revision, request.section, request.commander, request.scope ?? null, request.engineerId ?? null]); }
 /** A reader belongs to one mounted consumer; only a complete revision is published. */
 export function createPageReader<T>() {
  let state = $state<'idle' | 'loading' | 'ready' | 'stale' | 'failed'>('idle');
@@ -15,6 +15,7 @@ export function createPageReader<T>() {
    let cursor = 0; let total: number | undefined; const rows: T[] = [];
    while (true) {
     const query = new URLSearchParams({ revision: String(request.revision), cursor: String(cursor), section: request.section });
+    if (request.engineerId !== undefined) query.set('engineer_id', String(request.engineerId));
     const response = await fetch(`/api/engineering/${request.resource}?${query}`, { cache: 'no-store', signal });
     if (current !== generation) return;
     if (response.status === 409) { state = 'stale'; return; }

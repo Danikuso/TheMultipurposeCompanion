@@ -8,10 +8,11 @@ import { createPageReader } from '../src/modules/engineering/pages.svelte';
 import ShipPanel from '../src/modules/engineering/ShipPanel.svelte';
 import EngineerFlow from '../src/modules/engineering/EngineerFlow.svelte';
 import { engineeringActions } from '../src/modules/engineering/actions.svelte';
+import { resetEngineerNames } from '../src/modules/engineering/engineerNames.svelte';
 let target: HTMLDivElement;
 let mounted: ReturnType<typeof mount> | undefined;
 beforeEach(() => {
- engineeringActions.pending = false; engineeringActions.selectedSlot = null;
+ engineeringActions.pending = false; engineeringActions.selectedSlot = null; resetEngineerNames();
  disconnect(); setLocale('es'); live.connected = true;
  for (const [key, value] of Object.entries(structuredClone(fixture))) if (key !== 'engineering.pages') live.topics[key] = value;
  live.topics['core.cmdr'] = { name: 'Synthetic' };
@@ -181,7 +182,7 @@ test('capabilities are not requested until an engineer is selected and only that
  selectEngineer(); flushSync(); await settle(); expect(restCalls('engineers')).toHaveLength(2);
  expect(target.querySelector('[data-testid="engineer-blueprints"]')?.textContent).toContain('G1, G2, G3');
  live.topics['engineering.engineers'] = { ...fixture['engineering.engineers'], selected_id: 300160 }; flushSync();
- expect(restCalls('engineers')).toHaveLength(2);
+ await settle(); expect(restCalls('engineers')).toHaveLength(3);
  const text = target.querySelector('[data-testid="engineer-blueprints"]')?.textContent ?? '';
  expect(text).toContain('Modificación de Motor Sucio: G1, G2'); expect(text).not.toContain('Modificación de Motor Sucio: G1, G2, G3');
 });
@@ -449,7 +450,7 @@ test('flow as_of-only updates do not restart the pages and unmount cancels them'
 test('flow pages failure and 409 are recoverable states without polling', async () => {
  await showFlow({ override: () => new Response('', { status: 500 }) }); expect(target.textContent).toContain('No se pudieron cargar los datos'); expect(restCalls('flow')).toHaveLength(5);
  await unmount(mounted!); mounted = undefined;
- await showFlow({ override: () => new Response('', { status: 409 }) }); expect(target.textContent).toContain('Esperando el cálculo actualizado'); await settle(); expect(restCalls('flow')).toHaveLength(5);
+ await showFlow({ override: () => new Response('', { status: 409 }) }); expect(target.textContent).toContain('Esperando los datos actualizados'); await settle(); expect(restCalls('flow')).toHaveLength(5);
  restFetch(); live.topics['engineering.flow'] = { ...flowTopic(), revision: 22 }; flushSync(); await settle(); expect(target.querySelector('[data-material="carbon"]')).not.toBeNull();
 });
 test('flow supports pending names and action errors', async () => {
@@ -673,4 +674,45 @@ test('goal with calculation blockers lists the localized reasons', async () => {
  }));
  panel(ShoppingPanel); await settle();
  const reasons = target.querySelector('[data-testid="goal-blockers"]')!.textContent!; expect(reasons).toContain('Falta la receta de G3'); expect(reasons).toContain('base previa'); expect(reasons).not.toContain('base_required');
+});
+
+const capCalls = () => restCalls('engineers').filter(([url]) => String(url).includes('section=capabilities'));
+test('capabilities are fetched only for the selected engineer by id', async () => {
+ selectEngineer(); await showEngineers();
+ expect(capCalls().map(([url]) => String(url))).toEqual(['/api/engineering/engineers?revision=21&cursor=0&section=capabilities&engineer_id=300100']);
+});
+test('a revision bump neither refetches nor blanks the capabilities', async () => {
+ selectEngineer(); await showEngineers(); const before = capCalls().length;
+ live.topics['engineering.engineers'] = { ...fixture['engineering.engineers'], selected_id: 300100, next_step: 'Done', revision: 22 }; flushSync();
+ expect(target.querySelector('[data-testid="engineer-blueprints"]')?.textContent).toContain('G1, G2, G3'); expect(target.querySelector('[data-testid="engineer-details"]')?.textContent).not.toContain('Cargando');
+ await settle(); expect(capCalls()).toHaveLength(before);
+ live.topics['engineering.engineers'] = { ...fixture['engineering.engineers'], selected_id: 300100, next_step: { Requirement: { key: 'unlock-felicity-farseer' } }, revision: 23 }; flushSync(); await settle();
+ expect(capCalls()).toHaveLength(before); expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('Cumple el requisito');
+});
+test('changing the selected engineer fetches that engineer once and a changed catalogue invalidates the cache', async () => {
+ selectEngineer(); await showEngineers();
+ live.topics['engineering.engineers'] = { ...fixture['engineering.engineers'], selected_id: 300160, next_step: 'Done' }; flushSync(); await settle();
+ expect(capCalls().map(([url]) => new URL(String(url), 'http://x').searchParams.get('engineer_id'))).toEqual(['300100', '300160']);
+ live.topics['engineering.catalogue'] = { ...fixture['engineering.catalogue'], counts: { ...fixture['engineering.catalogue'].counts, recipes: 99 } }; flushSync(); await settle();
+ expect(capCalls()).toHaveLength(3);
+});
+test('a 409 while loading capabilities is retried with the new revision, not left stuck', async () => {
+ selectEngineer(); let first = true;
+ await showEngineers({ override: (resource, section) => resource === 'engineers' && section === 'capabilities' && first ? ((first = false), new Response('', { status: 409 })) : undefined });
+ expect(target.textContent).toContain('Esperando los datos actualizados');
+ live.topics['engineering.engineers'] = { ...fixture['engineering.engineers'], selected_id: 300100, next_step: 'Done', revision: 22 }; flushSync(); await settle();
+ expect(capCalls()).toHaveLength(2); expect(target.querySelector('[data-testid="engineer-blueprints"]')?.textContent).toContain('G1, G2, G3');
+});
+test('alerts ask for each engineer name once by id and do not refetch on revision bumps', async () => {
+ goalFetch(); panel(EngineeringAlerts); await settle();
+ const named = () => vi.mocked(fetch).mock.calls.filter(([url]) => String(url).includes('engineer_id='));
+ expect(named().map(([url]) => String(url))).toEqual(['/api/engineering/engineers?revision=21&cursor=0&section=engineers&engineer_id=300160']);
+ expect(target.textContent).toContain('Elvira Martuuk');
+ live.topics['engineering.engineers'] = { ...fixture['engineering.engineers'], revision: 22 }; flushSync(); await settle();
+ expect(named()).toHaveLength(1); expect(target.textContent).toContain('Elvira Martuuk');
+});
+test('flow auto-correction of an inapplicable grade leaves the draft needing recalculation', async () => {
+ await showFlow({ override: blueprintRows([{ key: 'engine_dirty', available: true, reason: null, grades: [2, 3, 4] }]) });
+ expect((input('target-grade') as HTMLSelectElement).value).toBe('4');
+ expect(target.textContent).toContain('Calcula los materiales para estos ajustes'); expect(target.querySelector('[data-testid="pin-goal"]')).toBeNull();
 });

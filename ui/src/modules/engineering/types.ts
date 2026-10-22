@@ -5,7 +5,7 @@ export type LockerSection = 'items' | 'components' | 'consumables' | 'data';
 export interface LockerTopic { revision: number; counts: Record<LockerSection, number> }
 export interface LockerRow { key: string; name_localised: string | null; count: number }
 export interface SessionTopic { totals: Record<string, { in: number; out: number }>; recent: { key: string; delta: number; origin: string; lost: number; at: string }[] }
-export interface PageRequest { resource: 'locker' | 'goals' | 'catalogue' | 'engineers' | 'flow'; revision: number; section: string; commander: string; scope?: string }
+export interface PageRequest { resource: 'locker' | 'goals' | 'catalogue' | 'engineers' | 'flow'; revision: number; section: string; commander: string; scope?: string; engineerId?: number }
 export interface EngineeringPage<T> { revision: number; section: string; cursor: number; next_cursor: number | null; total: number; items: T[] }
 
 export interface EngineerRow {
