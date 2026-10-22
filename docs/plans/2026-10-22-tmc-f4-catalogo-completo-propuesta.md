@@ -81,7 +81,14 @@ Sustituir el supuesto de receta global de `Blueprint.grades` por recetas de cada
 ```rust
 struct RecipeCost { materials: Vec<Ingredient>, merc_coins: u32 }
 struct ModuleSelector { items: Vec<String>, item_prefixes: Vec<String> }
-enum EntryPolicy { Stock, ExistingOnly }
+enum BaseIdentity { Blueprint { key: String }, Variant { key: String } }
+struct BaseRequirement {
+    identity: BaseIdentity,
+    selector: ModuleSelector,
+    completed_grade: u8,
+    source_rows: Vec<String>, // Evidencia de la correspondencia, no solo de ambas identidades.
+}
+enum EntryPolicy { Stock, ExistingOnly { bases: Vec<BaseRequirement> } }
 struct ModuleBlueprint {
     module_type: String,
     selector: Option<ModuleSelector>,
@@ -100,19 +107,36 @@ struct Experimental {
 }
 struct ShipVariant {
     key: String, module_type: String, grade: u8,
-    selector: Option<ModuleSelector>, source: String, verified: bool,
+    selector: Option<ModuleSelector>,
+    journal_blueprints: Vec<String>, // Correspondencias comprobadas; vacío = identidad no resoluble aún.
+    source: String, verified: bool,
 }
 struct BlueprintAlias { module_type: String, alias: String, canonical: String }
+enum RecipeResolutionError {
+    UnknownBlueprint, IncompatibleItem, MissingBaseMapping, BaseRequired, AmbiguousRecipe,
+}
+struct BlueprintOption<'a> {
+    blueprint: &'a Blueprint,
+    availability: Result<&'a ModuleBlueprint, RecipeResolutionError>,
+}
 // Métodos nuevos/sustitutivos de BlueprintCatalog:
-fn blueprint_for_item(&self, item: &str, key: &str) -> Option<(&Blueprint, &ModuleBlueprint)>;
-fn blueprints_for_item(&self, item: &str) -> Vec<(&Blueprint, &ModuleBlueprint)>;
+fn blueprint_for_item(
+    &self, item: &str, key: &str, current: Option<&CurrentEng>,
+) -> Result<(&Blueprint, &ModuleBlueprint), RecipeResolutionError>;
+fn blueprints_for_item(&self, item: &str, current: Option<&CurrentEng>) -> Vec<BlueprintOption<'_>>;
 fn canonical_blueprint(&self, module_type: &str, raw: &str) -> Option<&str>;
 fn canonical_experimental(&self, module_type: &str, raw: &str) -> Option<&str>;
 ```
 
 `ModuleTypeDef` conserva sus IDs actuales (`engine`, `fsd`) y añade símbolos exactos si el origen los permite. Resolver ítem por símbolo exacto antes que prefijo más largo; dos reglas de igual especificidad con distinto resultado son error de importación. `ModuleSelector` restringe variantes por tamaño/clase/símbolo solo cuando hay evidencia. No adivinar que el nombre `cargoracks5c1` es un símbolo real de `Loadout`. Si falta evidencia para el selector, la fila permanece visible en catálogo como pendiente y no se ofrece para todos los Cargo Rack.
 
-Por cada `(blueprint,module_type,selector)` los grados reales se ordenan y validan en 1..=5. `Stock` requiere cadena desde G1. `ExistingOnly` admite G2–G5, pero requiere base instalada comprobada compatible; no crear G1 vacío, no saltar al primer grado cobrable desde un módulo de serie. Grados ausentes dentro de una ruta requerida producen cálculo incompleto, nunca cero. Una variante de compra se lista con su condición de adquisición y puede identificarse desde `Loadout`; no se simula su precio de compra ni su fabricación. Una transición entre variante comprada y mejora G2+ necesita correspondencia explícita fuente/journal aprobada; no deducirla solo por compartir el tipo de módulo.
+Por cada `(blueprint,module_type,selector)` los grados reales se ordenan y validan en 1..=5. `Stock` requiere cadena desde G1. `ExistingOnly` admite G2–G5, pero requiere base instalada comprobada compatible; no crear G1 vacío, no saltar al primer grado cobrable desde un módulo de serie. Grados ausentes dentro de una ruta requerida producen cálculo incompleto, nunca cero. Una variante de compra se lista con su condición de adquisición y puede identificarse desde `Loadout` cuando existe correspondencia inequívoca; no se simula su precio de compra ni su fabricación.
+
+La correspondencia base→receta vive en `ModuleBlueprint.entry.bases`, dentro del JSON normalizado y del manifiesto. Cada `BaseRequirement` enlaza una identidad canónica de blueprint o variante, símbolos de ítem comprobados y un grado base completo, con `source_rows` que acreditan **la transición**. El selector debe contener al menos un símbolo/prefijo respaldado por evidencia. Para `Variant`, se exige además que `ShipVariant.selector` y `journal_blueprints` permitan reconocer esa variante sin ambigüedad en el ítem y `CurrentEng` observados. Una entrada sin correspondencias se puede listar, pero no reconocer como base instalada ni usar para autorizar otra mejora. Compartir tipo de módulo, nombre parecido o dos filas G1/G2 contiguas no acredita un enlace. Este documento no rellena ningún enlace concreto de compra G1→mejora G2+ pendiente de demostrar.
+
+La resolución reúne todos los contextos de receta que coinciden con clave canónica y elegibilidad de ítem, y evalúa sus requisitos con `current`. `Blueprint` exige coincidencia del blueprint resuelto; `Variant` exige una única variante resuelta. Para un requisito de G*n*, `current.level > n` o `current.level == n && current.quality >= 0.999` acredita grado base completo; calidad/nivel ausentes no lo acreditan. Para continuar una mejora ya aplicada, el catálogo debe contener también el requisito explícito para su blueprint/grado base, respaldado por la cadena de recetas; no deducir la variante de compra anterior desde una mejora posterior.
+
+Resultado: cero contextos de ítem→`IncompatibleItem`; `ExistingOnly` sin enlaces documentados→`MissingBaseMapping`; enlaces conocidos pero ninguna base observada válida→`BaseRequired`; **exactamente un** contexto válido→receta; más de uno→`AmbiguousRecipe`. Si queda un contexto compatible pendiente de correspondencia que podría competir con otro válido, la resolución sigue bloqueada, hasta poder descartar la competencia con evidencia. Nunca elegir el primer contexto ni desempatar por orden de archivo. `blueprints_for_item` conserva las opciones pendientes con su motivo, por lo que la UI puede explicarlas sin habilitar cálculo/pin; el importador rechaza solapamientos de contextos no resueltos antes de declarar completitud.
 
 Resolver alias del journal con contexto de módulo: por ejemplo las reglas de `FindEngineeringFDName` generan formas compuestas y excepciones `AFM`/`CollectionLimpet`; convertirlas en tabla auditable sin reproducir el criterio upstream de «primera coincidencia». Case folding de claves ASCII permitido; cada alias debe resolver inequívocamente dentro de su contexto. No usar etiquetas traducidas como claves internas; `_Localised` sirve para mostrar texto, no para cambiar identidad. Alias desconocido conserva el raw y produce «sin datos». Aplicar la resolución a `Loadout`, `EngineerCraft`, comparación de `CurrentEng` y objetivos cargados.
 
@@ -125,7 +149,10 @@ fn plan_cost(
     catalogue: &BlueprintCatalog, item: &str,
     current: Option<&CurrentEng>, req: &PlanRequest,
 ) -> PlanCost;
-enum PlanBlocker { MissingRecipe { grade: u8 }, BaseRequired, IncompatibleItem, UnknownBlueprint, UnknownExperimental }
+enum PlanBlocker {
+    MissingRecipe { grade: u8 }, MissingBaseMapping, BaseRequired, AmbiguousRecipe,
+    IncompatibleItem, UnknownBlueprint, UnknownExperimental,
+}
 struct PlanCost {
     // Mantener per_grade/experimental/total de materiales y replaces_blueprint/verified.
     per_grade: BTreeMap<u8, (u8, BTreeMap<String, u32>)>,
@@ -141,7 +168,9 @@ struct PlanCost {
 struct MercCoinsView { need: u64, have: Option<u64>, missing: Option<u64> }
 ```
 
-Cada coste en moneda se multiplica por las mismas tiradas de su grado; experimental una vez conforme a la regla actual. Usar suma/multiplicación comprobadas. Mantener G1–G4=1/G5=4, calidad parcial y cambio de blueprint. `verified:false` significa dato sin verificar; **no equivale** a cálculo incompleto. `blockers` no vacío impide porcentaje/aviso de objetivo completo aunque todos los materiales conocidos estén disponibles. Mantener visible la necesidad parcial con su motivo.
+`plan_cost` llama primero a `blueprint_for_item(item, req.blueprint, current)` y traduce un fallo a su `PlanBlocker`, sin sumar recetas de un contexto elegido arbitrariamente. Para una transición `ExistingOnly` aprobada desde otra identidad base, empieza después del `completed_grade` acreditado por el requisito coincidente; si el módulo ya lleva el blueprint objetivo, conserva las reglas actuales de grado/calidad parcial. Varios requisitos cumplidos del mismo contexto que implican puntos de partida diferentes son `AmbiguousRecipe`, no una elección del más barato. Una base no demostrada impide el cálculo completo; no representa un plan de coste cero ni permite fijarlo como calculado. Los datos de la receta siguen consultables en catálogo con el motivo de bloqueo.
+
+Cada coste en moneda se multiplica por las mismas tiradas de su grado; experimental una vez conforme a la regla actual. Usar suma/multiplicación comprobadas. Mantener G1–G4=1/G5=4, calidad parcial y cambio de blueprint ordinario; la transición explícita desde base comprada es la excepción a reiniciar en G1. `verified:false` significa dato sin verificar; **no equivale** a cálculo incompleto. `blockers` no vacío impide porcentaje/aviso de objetivo completo aunque todos los materiales conocidos estén disponibles. Mantener visible la necesidad parcial con su motivo.
 
 No añadir Merc Coins a `materials.json`, `grade_cap`, inventario por categoría o `trader_rules`: no son materiales comerciables. El saldo empieza y permanece `None` mientras no exista una fuente de eventos demostrada/aprobada; no inventar eventos del journal, no asumir cero ni restar costes de `EngineerCraft` para reconstruir saldo desconocido. La UI muestra el total requerido y «saldo sin datos». La infraestructura puede aceptar `Option<u64>` en el cálculo puro sin añadir proveedor de saldo en F4.
 
@@ -209,10 +238,11 @@ Si antes de fases 3–5 aparece una contradicción de datos o de alcance que imp
 - **Importador:** salida determinista byte a byte con entrada idéntica; `--check` detecta un constructor desconocido, SHA alterado, ingrediente sin mapear, alias ambiguo, coste Merc Coins perdido, módulo sin selector comprobado y fila en alcance sin clasificación. Igualdad por `row_id` y por expansión de arrays; números finales por categoría fijados en manifiesto y tests después de auditar todas las sobrecargas.
 - **Receta verificada en el fuente fijado, no en el juego:** `engine_dirty`: G1 `1SLF`; G2 `1SLF,1ME`; G3 `1SLF,1Cr,1MC`; G4 `1MCF,1Se,1CCom`; G5 `1CIF,1Cd,1PI`. `special_engine_overloaded`: `5Fe,3HC,1SFP`. Con `[1,1,1,1,4]`, total manual: `legacyfirmware=3`, `mechanicalequipment=1`, `chromium=1`, `mechanicalcomponents=1`, `consumerfirmware=1`, `selenium=1`, `configurablecomponents=1`, `industrialfirmware=4`, `cadmium=4`, `pharmaceuticalisolators=4`, `iron=5`, `hybridcapacitors=3`, `securityfirmware=1`; Merc Coins = 0. No Carbon/Polonium provisional. Contrastar nombres de materiales con `MCMRType.cs` y catálogo existente; mantener `verified:false`.
 - **Mismo blueprint G3 completo→G5:** solo G4×1/G5×4; sin experimental, seis claves con totales `consumerfirmware=1`, `selenium=1`, `configurablecomponents=1`, `industrialfirmware=4`, `cadmium=4`, `pharmaceuticalisolators=4`. G5 calidad 0,5 y cuatro tiradas→dos recetas G5. Alias/case distintos resuelven al mismo blueprint.
-- **Operations con moneda:** `abrasionblaster_farreaching` contiene recetas G2/G3/G4/G5 con Merc Coins 5/5/10/20 respectivamente. Sobre una base compatible demostrada y con tiradas `[1,1,1,1,4]`, el coste de G2–G5 es **100 Merc Coins**. Desde módulo de serie sin correspondencia de base: `BaseRequired`, no G1 gratuito ni objetivo completable. Este test comprueba multiplicación desde fuente; la relación con una variante G1 concreta requiere evidencia adicional.
+- **Operations con moneda:** `abrasionblaster_farreaching` contiene recetas G2/G3/G4/G5 con Merc Coins 5/5/10/20 respectivamente. Sobre una base compatible demostrada y con tiradas `[1,1,1,1,4]`, el coste de G2–G5 es **100 Merc Coins**. Sin correspondencia documentada: `MissingBaseMapping`; con correspondencia conocida pero módulo de serie: `BaseRequired`. Ninguno crea G1 gratuito ni objetivo completable. Este test comprueba multiplicación desde fuente; la relación con una variante G1 concreta requiere evidencia adicional.
 - **Fila con proveedor desconocido:** Cargo Rack extended G5 conserva Merc Coins = 1; no aparece un ingeniero ficticio. La auditoría debe resolver si el dato es aplicable/placeholder antes de cierre, sin ocultar la fila ni certificarla por tener coste positivo.
 - **Capacidad real:** Lori/`misc_shielded`/AFMU permite G4; Lori/`misc_shielded`/Cargo Scanner no permite G4 y sí G3. La recomendación, tabla de ingeniero, objetivo y aviso usan el mismo resultado. No inferir que toda capacidad ≤ máximo existe.
 - **Variantes/alias/módulos:** todas las filas de variante preservadas sin coste de ingeniería cero; exact match precede prefijo largo; tipos desconocidos/alias ambiguos muestran sin datos. Caso de sobrecarga array `weapon_highcapacity` MissileRack/SeekerMissileRack conserva ambos módulos y sus grados/capacidades.
+- **Correspondencia base→receta:** fixture sintético, identificado como tal: variante `variant_test` de G1 con símbolo exacto y alias journal comprobables en el propio fixture; requisito explícito de esa variante→blueprint `upgrade_test` G2–G5. Base observada G1 completa habilita G2; de serie o G1 parcial→`BaseRequired`; borrar el enlace→`MissingBaseMapping`; dos contextos válidos o dos puntos de partida distintos→`AmbiguousRecipe`. Cambiar orden de filas no cambia el resultado. El fixture no certifica que esa transición exista en el juego ni añade un enlace real al catálogo.
 - **Moneda y completitud:** materiales suficientes + 100 monedas requeridas + saldo `None`→`materials_ready=true`, `completable=false`, sin aviso de objetivo completo. Receta sin monedas conserva la semántica anterior. En prueba pura con saldo 100 y objetivos de 60/60, reservas 60/40, segundo faltan 20; intercambios nunca ofrecen monedas. Bloqueo de receta impide `completable` aunque total conocido esté vacío.
 - **Persistencia:** base SQLite creada con JSON anterior, alias antiguo e ID original→carga, recálculo, reorder, reemplazo semántico y reinicio sin pérdida/duplicado/cambio de ID; comandante B no ve objetivos de A; desconocido conservado con diagnóstico. Ninguna migración destructiva.
 - **Páginas:** catálogo final entero, 38 ingenieros con todas sus capacidades, 60 módulos y 20 objetivos; recorrer cada recurso/sección devuelve igualdad de filas sin pérdida/duplicados. Página 16.383 bytes aceptada; 16.384 rechazada; UTF-8 y comillas escapadas incluidas. Revisión obsoleta 409, dos clientes independientes, GET sin mutación, sin tormenta WS/polling. No cerrar por pasar solo el fixture pequeño.
