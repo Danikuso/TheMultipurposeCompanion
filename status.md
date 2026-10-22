@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-22 12:41 (Europe/Madrid) · Codex
+- **Última actualización:** 2026-10-22 12:42 (Europe/Madrid) · Codex
 - **Fase actual:** F4 — Ingenieros y materiales (🔄 ejecución: Tasks 0–19 registradas; Task 20 completada; Tasks 21–24 completadas; Task 25 completada; Task 26 en curso). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
 - **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 24/29 completas; 2 parciales por catálogos; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
@@ -10,9 +10,9 @@
 
 ## Puntero actual
 
-- **Tarea:** Task 26 🔄 en curso — Step 1: inspeccionar fixtures/e2e y escribir los tests que faltan.
+- **Tarea:** Task 26 🔄 en curso — Step 3–4: revisiones y verificaciones globales.
 - **Último paso completado:** Task 25 cerrada en `4c70ecb`: ambas revisiones aprobadas; UI343/Rust1.356 PASS (2 ignoradas previas), fmt/clippy/check/build y QA visual a 2560/800 PASS.
-- **Siguiente acción:** TDD de fixtures y e2e de Task 26. Continúa la investigación web de catálogos autorizada por el propietario; todavía no se han importado recetas ni ingenieros de nuevas fuentes.
+- **Siguiente acción:** revisión de spec y calidad de Task 26; suite completa Rust en marcha. 6 Rust focales y 7 Playwright PASS (20,2 s), check/build UI PASS; sin cambios de fixture/catálogos/contrato. Fuente EDDiscovery aprobada; propuesta de enmienda técnica de catálogos en preparación.
 ## Tareas de F4
 
 Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
@@ -45,7 +45,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 23 | UI — «Mi nave» e «Ingenierizar un módulo» | ✅ hecha | d644a6d | 19 tests nuevos; 293 UI/1.356 Rust PASS; ambas revisiones y QA visual |
 | 24 | UI — «Lista de la compra», «Intercambios», «Dónde conseguirlo» y avisos | ✅ hecha | 65784b6 | 16 tests nuevos; 309 UI/1.356 Rust PASS; ambas revisiones y QA visual |
 | 25 | UI — disposición «Ingeniería», prioridad, Auto-companion y tiradas | ✅ hecha | 4c70ecb | 343 UI/1.356 Rust PASS; ambas revisiones y QA visual |
-| 26 | Fixtures sintéticos y pruebas de extremo a extremo | 🔄 en curso | — | Step 1: TDD |
+| 26 | Fixtures sintéticos y pruebas de extremo a extremo | 🔄 en curso | — | 6 Rust focales/7 Playwright PASS; revisiones/globales en curso |
 | 27 | `tmc-headless eval` — conciliación del inventario | ⬜ pendiente | — | |
 | 28 | Avisos de terceros, consumo, verificación de los 10 criterios y cierre | ⬜ pendiente | — | |
 
@@ -223,7 +223,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Bloqueos y pendientes del propietario
 
-- [ ] **F4 · Catálogos completos (2026-10-22):** investigación web autorizada por el propietario realizada: [fuentes y propuesta](docs/research/notes/2026-10-22-catalogos-f4-web.md). Candidato nuevo: EDDiscovery/EliteDangerousCore, archivos con cabecera Apache-2.0, 38 ingenieros y recetas por módulo/grado, revisión 7d30920. El propietario aprueba EDDiscovery como fuente A, conservando atribución y verified:false. Antes de importar también debe aprobarse la enmienda de interfaces para los costes en Merc Coins y grados por módulo/ingeniero: el catálogo provisional no los representa. No se ha importado nada de la nueva búsqueda. Tasks 26–27 pueden avanzar; F4 no completa con 2 blueprints/1 experimental/5 ingenieros provisionales.
+- [ ] **F4 · Catálogos completos (2026-10-22):** investigación web autorizada por el propietario realizada: [fuentes y propuesta](docs/research/notes/2026-10-22-catalogos-f4-web.md). Candidato nuevo: EDDiscovery/EliteDangerousCore, archivos con cabecera Apache-2.0, 38 ingenieros y recetas por módulo/grado, revisión 7d30920. El propietario aprueba EDDiscovery como fuente A, conservando atribución y verified:false. Antes de importar debe aprobarse la [enmienda técnica concreta](docs/plans/2026-10-22-tmc-f4-catalogo-completo-propuesta.md): Merc Coins, bases G2+, grados por módulo/ingeniero, paginación y mapa auxiliar de IDs EDDI Apache; el catálogo provisional no los representa. No se ha importado nada de la nueva búsqueda. Tasks 26–27 pueden avanzar; F4 no completa con 2 blueprints/1 experimental/5 ingenieros provisionales.
 
 - [x] **F4 · Task 20 — contrato excede el límite aprobado; solución autorizada (2026-10-21):** revisión y prueba real demuestran `engineering.goals` de **41.116 bytes** con 20 objetivos `engine_dirty` G5 + experimental, tiradas `[10;5]`, excedentes de materiales ajenos a la receta y 215 propuestas; el plan exige `<16.384`. También `engineering.locker` ocupa **16.832 bytes** con 200 recursos localizados (50 por sección). Sin experimental: 30.986 bytes; FSD: 35.084. Resuelto en `a4c5f3d`: summaries objetivos 2.471 B y taquilla 110 B; páginas de objetivos hasta 16.234 B y taquilla 4.439 B, todas las filas/propuestas preservadas. Ambos probes reactivados PASS; Task 20 cerrada tras revisiones/checks. **Decisión aprobada:** resumen WS con revisión y detalle REST paginado por bytes, arquitectura §7; interfaces de Tasks 20/21/24/26 sincronizadas. El propietario confirma «Sí, hazlo y continúa»: se aprueba resumen WS con detalles REST paginados por bytes. Implementación completada y verificada; no hace falta otra aprobación para esta solución. Evidencia y propuesta en Desviaciones del plan activo.
 
