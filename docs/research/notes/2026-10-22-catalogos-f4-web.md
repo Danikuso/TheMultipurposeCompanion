@@ -4,7 +4,7 @@ Fecha: 2026-10-22. Encargo del propietario: buscar en Internet, incluidas wikis 
 
 ## Resultado y propuesta concreta
 
-Se encuentra un candidato A que el spike inicial no había evaluado: **EDDiscovery/EliteDangerousCore**. Sus archivos de recetas, ingenieros y mapas auxiliares llevan una cabecera explícita Apache-2.0, además de la licencia del repositorio. Se propone usar esos archivos como fuente A para sustituir las 2 recetas, 1 experimental y 5 ingenieros provisionales. Esto requiere confirmar el cambio respecto a la decisión anterior del propietario, B para recetas e ingenieros. No se propone incorporar código de ejecución de EDDiscovery ni recursos gráficos.
+Se encuentra un candidato A que el spike inicial no había evaluado: **EDDiscovery/EliteDangerousCore**. Sus archivos de recetas, ingenieros y mapas auxiliares llevan una cabecera explícita Apache-2.0, además de la licencia del repositorio. Se propone usar esos archivos como fuente A para sustituir las 2 recetas, 1 experimental y 5 ingenieros provisionales. El propietario aprobó explícitamente el cambio de B a A en esta sesión: «Aprobar EDDiscovery como fuente A». No se propone incorporar código de ejecución de EDDiscovery ni recursos gráficos.
 
 Revisión fijada: [`7d30920e6822d4836e0d6dd5c91026ec7e2ab4c7`](https://github.com/EDDiscovery/EliteDangerousCore/commit/7d30920e6822d4836e0d6dd5c91026ec7e2ab4c7), publicada el 2026-10-22 a las 09:30:22 UTC. La actualidad del commit no certifica cada receta; las entradas importadas seguirían con `verified:false` hasta contrastarlas con el juego.
 
@@ -45,7 +45,7 @@ Las wikis y APIs se han buscado tal como pidió el propietario. No se han copiad
 
 ## Próximo paso
 
-1. Confirmar el cambio de fuente B a A para los archivos Apache de EDDiscovery, documentando la atribución.
+1. **Hecho:** el propietario aprueba el cambio de fuente B a A para los archivos Apache de EDDiscovery. Documentar la atribución al importar.
 2. Preparar la enmienda concreta del plan para cobertura completa, coste en Merc Coins, identificadores compartidos y grados por módulo/ingeniero; no inventar ni omitir costes.
 3. Tras aprobación de las interfaces que cambien, conversión reproducible con revisión por fila, auditoría de cobertura y pruebas de recetas reales. Mantener `verified:false` y nombres sin traducción conocida como pendientes.
 4. Continuar entretanto Tasks 26–27; F4 no se declara completa con los catálogos provisionales.
