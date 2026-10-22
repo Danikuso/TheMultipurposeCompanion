@@ -26,40 +26,40 @@ test('materials grouped by grade with count over max', () => { show(); expect(ta
 test('at max warning visible', () => { show(); expect(target.textContent).toContain('Al máximo'); });
 test('unknown material shows journal name and no data', () => { const inventory = structuredClone(fixture['engineering.inventory']); Object.assign(inventory.by_category.Encoded['0'][0], { name_localised: 'Nuevo material' }); live.topics['engineering.inventory'] = inventory; show(); click('tab-Encoded'); expect(target.textContent).toContain('Nuevo material'); expect(target.textContent).toContain('Sin datos'); });
 test('material name falls back to name_en', () => { const inventory = structuredClone(fixture['engineering.inventory']); Object.assign(inventory.by_category.Raw['1'][1], { name_localised: null, name_en: 'Iron' }); live.topics['engineering.inventory'] = inventory; show(); expect(target.textContent).toContain('Iron'); });
-test('locker tab lists components', async () => { show(); click('tab-locker'); await settle(); expect(target.textContent).toContain('Graphene'); expect(target.querySelector('[data-key="graphene"]')?.textContent).toContain('8'); expect(fetch).toHaveBeenCalledWith('/api/engineering/locker?revision=17&cursor=0&section=components', expect.objectContaining({ cache: 'no-store', signal: expect.any(AbortSignal) })); });
+test('locker tab lists components', async () => { show(); click('tab-locker'); await settle(); expect(target.textContent).toContain('Graphene'); expect(target.querySelector('[data-key="graphene"]')?.textContent).toContain('8'); expect(fetch).toHaveBeenCalledWith('/api/engineering/locker?revision=21&cursor=0&section=components', expect.objectContaining({ cache: 'no-store', signal: expect.any(AbortSignal) })); });
 test('session totals by origin', () => { show(); expect(target.querySelector('[data-origin="Scan"]')?.textContent).toContain('+2'); expect(target.querySelector('[data-origin="Trade"]')?.textContent).toContain('+1 / −6'); });
 test('reader accumulates all pages atomically', async () => {
  const page = fixture['engineering.pages'].locker_components;
  let finish!: (value: Response) => void;
  vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ ...page, next_cursor: 1, total: 2 }))).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; })));
- const reader = createPageReader<{ key: string }>(); const pending = reader.load({ resource: 'locker', section: 'components', revision: 17, commander: 'A' });
+ const reader = createPageReader<{ key: string }>(); const pending = reader.load({ resource: 'locker', section: 'components', revision: 21, commander: 'A' });
  await settle(); expect(reader.items).toEqual([]); finish(new Response(JSON.stringify({ ...page, cursor: 1, total: 2, items: [{ key: 'second' }] }))); await pending;
  expect(reader.items.map(row => row.key)).toEqual(['graphene', 'second']); expect(reader.state).toBe('ready'); reader.clear();
 });
 test('late response cannot resurrect cleared rows even if abort ignored', async () => {
  let finish!: (value: Response) => void; vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => { finish = resolve; })));
- const reader = createPageReader<unknown>(); const pending = reader.load({ resource: 'locker', section: 'components', revision: 17, commander: 'A' }); reader.clear(); finish(new Response(JSON.stringify(fixture['engineering.pages'].locker_components))); await pending;
+ const reader = createPageReader<unknown>(); const pending = reader.load({ resource: 'locker', section: 'components', revision: 21, commander: 'A' }); reader.clear(); finish(new Response(JSON.stringify(fixture['engineering.pages'].locker_components))); await pending;
  expect(reader.items).toEqual([]); expect(reader.state).toBe('idle');
 });
-test('409 is stale without retry', async () => { vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 409 }))); const reader = createPageReader<unknown>(); await reader.load({ resource: 'locker', section: 'components', revision: 17, commander: 'A' }); expect(reader.state).toBe('stale'); expect(fetch).toHaveBeenCalledTimes(1); });
+test('409 is stale without retry', async () => { vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 409 }))); const reader = createPageReader<unknown>(); await reader.load({ resource: 'locker', section: 'components', revision: 21, commander: 'A' }); expect(reader.state).toBe('stale'); expect(fetch).toHaveBeenCalledTimes(1); });
 test('reader rejects mismatched revision, section, total and non-progressing cursors', async () => {
  const base = fixture['engineering.pages'].locker_components;
- for (const change of [{ revision: 18 }, { section: 'data' }, { total: 2 }, { next_cursor: 0 }]) {
+ for (const change of [{ revision: 22 }, { section: 'data' }, { total: 2 }, { next_cursor: 0 }]) {
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ...base, ...change }))));
-  const reader = createPageReader<unknown>(); await reader.load({ resource: 'locker', section: 'components', revision: 17, commander: 'A' }); expect(reader.state).toBe('failed'); expect(reader.items).toEqual([]); expect(fetch).toHaveBeenCalledTimes(1);
+  const reader = createPageReader<unknown>(); await reader.load({ resource: 'locker', section: 'components', revision: 21, commander: 'A' }); expect(reader.state).toBe('failed'); expect(reader.items).toEqual([]); expect(fetch).toHaveBeenCalledTimes(1);
  }
 });
 test('two readers have independent cursors and rows', async () => {
  const readerA = createPageReader<{ key: string }>(); const readerB = createPageReader<{ key: string }>();
- await readerA.load({ resource: 'locker', section: 'components', revision: 17, commander: 'A' });
- await readerB.load({ resource: 'locker', section: 'components', revision: 17, commander: 'B' });
+ await readerA.load({ resource: 'locker', section: 'components', revision: 21, commander: 'A' });
+ await readerB.load({ resource: 'locker', section: 'components', revision: 21, commander: 'B' });
  readerA.clear(); expect(readerA.items).toEqual([]); expect(readerB.items[0].key).toBe('graphene'); readerB.clear();
 });
 test('section, revision and commander changes clear previous rows', async () => {
  show(); click('tab-locker'); await settle(); expect(target.textContent).toContain('Graphene');
  vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
  const select = target.querySelector('select')!; select.value = 'data'; select.dispatchEvent(new Event('change', { bubbles: true })); flushSync(); expect(target.textContent).not.toContain('Graphene'); expect(fetch).toHaveBeenCalledTimes(1);
- live.topics['engineering.locker'] = { ...fixture['engineering.locker'], revision: 18 }; flushSync(); expect(target.textContent).not.toContain('Graphene'); expect(fetch).toHaveBeenCalledTimes(2);
+ live.topics['engineering.locker'] = { ...fixture['engineering.locker'], revision: 22 }; flushSync(); expect(target.textContent).not.toContain('Graphene'); expect(fetch).toHaveBeenCalledTimes(2);
  live.topics['core.cmdr'] = { name: 'Other' }; flushSync(); expect(target.textContent).not.toContain('Graphene'); expect(fetch).toHaveBeenCalledTimes(3);
 });
 test('as_of-only WS updates do not restart REST', async () => {
@@ -85,7 +85,7 @@ test('REST failure is localized and does not retry', async () => {
 });
 test('409 panel waits for new WS revision', async () => {
  vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 409 }))); show(); click('tab-locker'); await settle(); expect(target.textContent).toContain('Esperando el inventario actualizado'); await settle(); expect(fetch).toHaveBeenCalledTimes(1);
- live.topics['engineering.locker'] = { ...fixture['engineering.locker'], revision: 18 }; flushSync(); await settle(); expect(fetch).toHaveBeenCalledTimes(2);
+ live.topics['engineering.locker'] = { ...fixture['engineering.locker'], revision: 22 }; flushSync(); await settle(); expect(fetch).toHaveBeenCalledTimes(2);
 });
 test('two mounted panels keep independent locker readers', async () => {
  show(); click('tab-locker'); await settle();
@@ -98,8 +98,8 @@ test('two mounted panels keep independent locker readers', async () => {
 test('late JSON parsing cannot publish rows after another commander starts', async () => {
  let finish!: (value: unknown) => void;
  vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce({ ok: true, status: 200, json: () => new Promise(resolve => { finish = resolve; }) }).mockResolvedValueOnce(new Response(JSON.stringify({ ...fixture['engineering.pages'].locker_components, items: [{ key: 'new', count: 1, name_localised: null }] }))));
- const reader = createPageReader<{ key: string }>(); const first = reader.load({ resource: 'locker', section: 'components', revision: 17, commander: 'A' });
- await settle(); await reader.load({ resource: 'locker', section: 'components', revision: 17, commander: 'B' }); finish(fixture['engineering.pages'].locker_components); await first;
+ const reader = createPageReader<{ key: string }>(); const first = reader.load({ resource: 'locker', section: 'components', revision: 21, commander: 'A' });
+ await settle(); await reader.load({ resource: 'locker', section: 'components', revision: 21, commander: 'B' }); finish(fixture['engineering.pages'].locker_components); await first;
  expect(reader.items.map(row => row.key)).toEqual(['new']); expect(reader.state).toBe('ready'); reader.clear();
 });
 import EngineersPanel from '../src/modules/engineering/EngineersPanel.svelte';
@@ -412,7 +412,7 @@ test('unknown alert and material remain readable', () => {
 });
 test('shopping 409 waits for websocket revision without polling', async () => {
  vi.stubGlobal('fetch', vi.fn(async () => new Response('',{status:409}))); panel(ShoppingPanel); await settle(); expect(target.textContent).toContain('Esperando'); expect(fetch).toHaveBeenCalledTimes(4);
- await settle(); expect(fetch).toHaveBeenCalledTimes(4); live.topics['engineering.goals'] = {...fixture['engineering.goals'],revision:18}; flushSync(); await settle(); expect(fetch).toHaveBeenCalledTimes(8);
+ await settle(); expect(fetch).toHaveBeenCalledTimes(4); live.topics['engineering.goals'] = {...fixture['engineering.goals'],revision: 22}; flushSync(); await settle(); expect(fetch).toHaveBeenCalledTimes(8);
 });
 test('shopping as_of does not restart requests and commander changes invalidate rows', async () => {
  goalFetch(); panel(ShoppingPanel); await settle(); vi.mocked(fetch).mockClear(); live.topics['engineering.goals'] = {...fixture['engineering.goals'],as_of:'2030-01-01'}; flushSync(); await settle(); expect(fetch).not.toHaveBeenCalled();
@@ -437,10 +437,10 @@ test('shopping publishes all sections atomically across multiple pages', async (
  vi.stubGlobal('fetch',vi.fn(async (url:string) => {
   const q=new URL(url,'http://localhost').searchParams; const section=q.get('section')!; const cursor=Number(q.get('cursor'));
   if(section==='surplus') return new Promise<Response>(resolve=>{finish=resolve;});
-  return new Response(JSON.stringify({revision:17,section,cursor,total:section==='goals'?2:1,next_cursor:section==='goals' && cursor===0?1:null,items:section==='goals'?[{...goal,id:cursor?'second':goal.id}]:[{key:'iron',count:7}]}));
+  return new Response(JSON.stringify({revision: 21,section,cursor,total:section==='goals'?2:1,next_cursor:section==='goals' && cursor===0?1:null,items:section==='goals'?[{...goal,id:cursor?'second':goal.id}]:[{key:'iron',count:7}]}));
  }));
  panel(ShoppingPanel); await settle(); expect(target.textContent).not.toContain('87 %');
- finish(new Response(JSON.stringify({revision:17,section:'surplus',cursor:0,next_cursor:null,total:1,items:[{key:'carbon',count:2}]}))); await settle();
+ finish(new Response(JSON.stringify({revision: 21,section:'surplus',cursor:0,next_cursor:null,total:1,items:[{key:'carbon',count:2}]}))); await settle();
  expect(target.querySelectorAll('[data-goal-id]')).toHaveLength(2); expect(target.querySelector('[data-section="surplus"]')?.textContent).toContain('2');
  click('goal-up-1'); await settle(); expect(fetch).toHaveBeenCalledWith('/api/actions/engineering.move_goal',expect.objectContaining({body:JSON.stringify({id:'second',to:0})}));
 });
@@ -448,12 +448,12 @@ test('late goals JSON from old revision cannot replace current commander rows', 
  const goal=fixture['engineering.pages'].goals.items[0]; let finish!: (value:unknown)=>void;
  vi.stubGlobal('fetch',vi.fn().mockResolvedValueOnce({ok:true,status:200,json:()=>new Promise(resolve=>{finish=resolve;})}));
  panel(TradesPanel); await settle();
- goalFetch(); live.topics['engineering.goals']={...fixture['engineering.goals'],revision:18}; live.topics['core.cmdr']={name:'Changed'}; flushSync(); await settle();
+ goalFetch(); live.topics['engineering.goals']={...fixture['engineering.goals'],revision: 22}; live.topics['core.cmdr']={name:'Changed'}; flushSync(); await settle();
  finish({...fixture['engineering.pages'].goals,items:[{...goal,trades:[{...goal.trades[0],give:999}]}]}); await settle(); expect(target.textContent).not.toContain('999'); expect(target.textContent).toContain('6');
 });
 test('shopping action and page failures are localized', async () => {
  goalFetch(); panel(ShoppingPanel); await settle(); vi.mocked(fetch).mockRejectedValue(new Error('private')); click('goal-remove-0'); await settle(); expect(target.textContent).toContain('No se pudo completar la acción'); expect(target.textContent).not.toContain('private');
- live.topics['engineering.goals']={...fixture['engineering.goals'],revision:18}; flushSync(); await settle(); expect(target.textContent).toContain('No se pudieron cargar los datos'); expect(target.textContent).not.toContain('87 %');
+ live.topics['engineering.goals']={...fixture['engineering.goals'],revision: 22}; flushSync(); await settle(); expect(target.textContent).toContain('No se pudieron cargar los datos'); expect(target.textContent).not.toContain('87 %');
 });
 test('all known engineering alert kinds resolve readable names and goals', () => {
  live.topics['engineering.alerts']={alerts:[{id:'max',kind:'material_at_max',key:'iron',grade:1},{id:'invite',kind:'engineer_invited',engineer_id:300100},{id:'scarce',kind:'scarce_obtained',key:'iron'},{id:'goal',kind:'goal_completable',goal:fixture['engineering.pages'].goals.items[0].id,engineer:'Felicity Farseer'}]};

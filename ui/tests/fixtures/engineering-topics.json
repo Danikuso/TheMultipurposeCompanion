@@ -10,6 +10,17 @@
     ],
     "as_of": "2026-10-21T12:03:30Z"
   },
+  "engineering.catalogue": {
+    "as_of": "2026-10-21T12:05:00Z",
+    "counts": {
+      "blueprints": 2,
+      "experimentals": 1,
+      "module_types": 2,
+      "recipes": 10,
+      "variants": 0
+    },
+    "revision": 21
+  },
   "engineering.engineers": {
     "as_of": "2026-10-21T12:05:00Z",
     "engineers": [
@@ -69,7 +80,10 @@
         "verified": false
       }
     ],
-    "selected": null
+    "revision": 21,
+    "selected": null,
+    "selected_id": null,
+    "total": 5
   },
   "engineering.flow": {
     "as_of": "2026-10-21T12:05:00Z",
@@ -139,6 +153,13 @@
         "yttrium": 1
       },
       "verified": false
+    },
+    "counts": {
+      "blueprints": 1,
+      "costs": 13,
+      "experimentals": 1,
+      "grades": 5,
+      "lines": 13
     },
     "current": null,
     "engineer": {
@@ -378,6 +399,7 @@
       ],
       "target_grade": 5
     },
+    "revision": 21,
     "slot": "MainEngines",
     "status": "ok"
   },
@@ -398,7 +420,7 @@
         "percent": 87
       }
     ],
-    "revision": 17,
+    "revision": 21,
     "status": "ok",
     "total": 1
   },
@@ -508,9 +530,619 @@
       "data": 0,
       "items": 0
     },
-    "revision": 17
+    "revision": 21
   },
   "engineering.pages": {
+    "catalogue_recipes": {
+      "cursor": 0,
+      "items": [
+        {
+          "bases": [],
+          "blueprint": "engine_dirty",
+          "entry": "stock",
+          "grade": 1,
+          "materials": [
+            {
+              "count": 1,
+              "material": "carbon"
+            },
+            {
+              "count": 1,
+              "material": "heatconductionwiring"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "engine",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "engine_dirty",
+          "entry": "stock",
+          "grade": 2,
+          "materials": [
+            {
+              "count": 1,
+              "material": "vanadium"
+            },
+            {
+              "count": 1,
+              "material": "heatdispersionplate"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "engine",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "engine_dirty",
+          "entry": "stock",
+          "grade": 3,
+          "materials": [
+            {
+              "count": 1,
+              "material": "niobium"
+            },
+            {
+              "count": 1,
+              "material": "heatexchangers"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "engine",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "engine_dirty",
+          "entry": "stock",
+          "grade": 4,
+          "materials": [
+            {
+              "count": 1,
+              "material": "yttrium"
+            },
+            {
+              "count": 1,
+              "material": "heatvanes"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "engine",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "engine_dirty",
+          "entry": "stock",
+          "grade": 5,
+          "materials": [
+            {
+              "count": 1,
+              "material": "polonium"
+            },
+            {
+              "count": 1,
+              "material": "protoheatradiators"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "engine",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "fsd_longrange",
+          "entry": "stock",
+          "grade": 1,
+          "materials": [
+            {
+              "count": 1,
+              "material": "disruptedwakeechoes"
+            },
+            {
+              "count": 1,
+              "material": "basicconductors"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "fsd",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "fsd_longrange",
+          "entry": "stock",
+          "grade": 2,
+          "materials": [
+            {
+              "count": 1,
+              "material": "fsdtelemetry"
+            },
+            {
+              "count": 1,
+              "material": "conductivecomponents"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "fsd",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "fsd_longrange",
+          "entry": "stock",
+          "grade": 3,
+          "materials": [
+            {
+              "count": 1,
+              "material": "wakesolutions"
+            },
+            {
+              "count": 1,
+              "material": "conductiveceramics"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "fsd",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "fsd_longrange",
+          "entry": "stock",
+          "grade": 4,
+          "materials": [
+            {
+              "count": 1,
+              "material": "hyperspacetrajectories"
+            },
+            {
+              "count": 1,
+              "material": "conductivepolymers"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "fsd",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "fsd_longrange",
+          "entry": "stock",
+          "grade": 5,
+          "materials": [
+            {
+              "count": 1,
+              "material": "dataminedwake"
+            },
+            {
+              "count": 1,
+              "material": "biotechconductors"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "fsd",
+          "selector": null
+        }
+      ],
+      "next_cursor": null,
+      "revision": 21,
+      "section": "recipes",
+      "total": 10
+    },
+    "engineers_capabilities": {
+      "cursor": 0,
+      "items": [
+        {
+          "blueprint": "engine_dirty",
+          "engineer_id": 300100,
+          "grade": 1,
+          "module_type": "engine"
+        },
+        {
+          "blueprint": "engine_dirty",
+          "engineer_id": 300100,
+          "grade": 2,
+          "module_type": "engine"
+        },
+        {
+          "blueprint": "engine_dirty",
+          "engineer_id": 300100,
+          "grade": 3,
+          "module_type": "engine"
+        },
+        {
+          "blueprint": "fsd_longrange",
+          "engineer_id": 300100,
+          "grade": 1,
+          "module_type": "fsd"
+        },
+        {
+          "blueprint": "fsd_longrange",
+          "engineer_id": 300100,
+          "grade": 2,
+          "module_type": "fsd"
+        },
+        {
+          "blueprint": "fsd_longrange",
+          "engineer_id": 300100,
+          "grade": 3,
+          "module_type": "fsd"
+        },
+        {
+          "blueprint": "fsd_longrange",
+          "engineer_id": 300100,
+          "grade": 4,
+          "module_type": "fsd"
+        },
+        {
+          "blueprint": "fsd_longrange",
+          "engineer_id": 300100,
+          "grade": 5,
+          "module_type": "fsd"
+        },
+        {
+          "blueprint": "fsd_longrange",
+          "engineer_id": 300160,
+          "grade": 1,
+          "module_type": "fsd"
+        },
+        {
+          "blueprint": "fsd_longrange",
+          "engineer_id": 300160,
+          "grade": 2,
+          "module_type": "fsd"
+        },
+        {
+          "blueprint": "fsd_longrange",
+          "engineer_id": 300160,
+          "grade": 3,
+          "module_type": "fsd"
+        },
+        {
+          "blueprint": "fsd_longrange",
+          "engineer_id": 300160,
+          "grade": 4,
+          "module_type": "fsd"
+        },
+        {
+          "blueprint": "fsd_longrange",
+          "engineer_id": 300160,
+          "grade": 5,
+          "module_type": "fsd"
+        },
+        {
+          "blueprint": "engine_dirty",
+          "engineer_id": 300160,
+          "grade": 1,
+          "module_type": "engine"
+        },
+        {
+          "blueprint": "engine_dirty",
+          "engineer_id": 300160,
+          "grade": 2,
+          "module_type": "engine"
+        },
+        {
+          "blueprint": "engine_dirty",
+          "engineer_id": 300220,
+          "grade": 1,
+          "module_type": "engine"
+        },
+        {
+          "blueprint": "engine_dirty",
+          "engineer_id": 300220,
+          "grade": 2,
+          "module_type": "engine"
+        },
+        {
+          "blueprint": "engine_dirty",
+          "engineer_id": 300220,
+          "grade": 3,
+          "module_type": "engine"
+        },
+        {
+          "blueprint": "engine_dirty",
+          "engineer_id": 300220,
+          "grade": 4,
+          "module_type": "engine"
+        },
+        {
+          "blueprint": "engine_dirty",
+          "engineer_id": 300220,
+          "grade": 5,
+          "module_type": "engine"
+        }
+      ],
+      "next_cursor": null,
+      "revision": 21,
+      "section": "capabilities",
+      "total": 20
+    },
+    "flow_costs": {
+      "cursor": 0,
+      "items": [
+        {
+          "count": 1,
+          "grade": 1,
+          "kind": "material",
+          "material": "carbon"
+        },
+        {
+          "count": 1,
+          "grade": 1,
+          "kind": "material",
+          "material": "heatconductionwiring"
+        },
+        {
+          "count": 1,
+          "grade": 2,
+          "kind": "material",
+          "material": "heatdispersionplate"
+        },
+        {
+          "count": 1,
+          "grade": 2,
+          "kind": "material",
+          "material": "vanadium"
+        },
+        {
+          "count": 1,
+          "grade": 3,
+          "kind": "material",
+          "material": "heatexchangers"
+        },
+        {
+          "count": 1,
+          "grade": 3,
+          "kind": "material",
+          "material": "niobium"
+        },
+        {
+          "count": 1,
+          "grade": 4,
+          "kind": "material",
+          "material": "heatvanes"
+        },
+        {
+          "count": 1,
+          "grade": 4,
+          "kind": "material",
+          "material": "yttrium"
+        },
+        {
+          "count": 4,
+          "grade": 5,
+          "kind": "material",
+          "material": "polonium"
+        },
+        {
+          "count": 4,
+          "grade": 5,
+          "kind": "material",
+          "material": "protoheatradiators"
+        },
+        {
+          "count": 1,
+          "grade": null,
+          "kind": "material",
+          "material": "electrochemicalarrays"
+        },
+        {
+          "count": 1,
+          "grade": null,
+          "kind": "material",
+          "material": "hybridcapacitors"
+        },
+        {
+          "count": 1,
+          "grade": null,
+          "kind": "material",
+          "material": "pharmaceuticalisolators"
+        }
+      ],
+      "next_cursor": null,
+      "revision": 21,
+      "section": "costs",
+      "total": 13
+    },
+    "flow_lines": {
+      "cursor": 0,
+      "items": [
+        {
+          "grade": 1,
+          "have": 1,
+          "key": "carbon",
+          "missing": 0,
+          "name_en": "Carbon",
+          "need": 1,
+          "state": "ok",
+          "trade": null
+        },
+        {
+          "grade": 3,
+          "have": 0,
+          "key": "electrochemicalarrays",
+          "missing": 0,
+          "name_en": "Electrochemical Arrays",
+          "need": 1,
+          "state": "trade",
+          "trade": {
+            "get": 3,
+            "get_key": "electrochemicalarrays",
+            "give": 2,
+            "give_key": "pharmaceuticalisolators",
+            "same_family": false,
+            "trader": "Manufactured"
+          }
+        },
+        {
+          "grade": 1,
+          "have": 0,
+          "key": "heatconductionwiring",
+          "missing": 0,
+          "name_en": "Heat Conduction Wiring",
+          "need": 1,
+          "state": "trade",
+          "trade": {
+            "get": 3,
+            "get_key": "heatconductionwiring",
+            "give": 2,
+            "give_key": "conductiveceramics",
+            "same_family": false,
+            "trader": "Manufactured"
+          }
+        },
+        {
+          "grade": 2,
+          "have": 0,
+          "key": "heatdispersionplate",
+          "missing": 0,
+          "name_en": "Heat Dispersion Plate",
+          "need": 1,
+          "state": "trade",
+          "trade": {
+            "get": 9,
+            "get_key": "heatdispersionplate",
+            "give": 1,
+            "give_key": "heatvanes",
+            "same_family": true,
+            "trader": "Manufactured"
+          }
+        },
+        {
+          "grade": 3,
+          "have": 0,
+          "key": "heatexchangers",
+          "missing": 0,
+          "name_en": "Heat Exchangers",
+          "need": 1,
+          "state": "trade",
+          "trade": {
+            "get": 3,
+            "get_key": "heatexchangers",
+            "give": 1,
+            "give_key": "heatvanes",
+            "same_family": true,
+            "trader": "Manufactured"
+          }
+        },
+        {
+          "grade": 4,
+          "have": 3,
+          "key": "heatvanes",
+          "missing": 0,
+          "name_en": "Heat Vanes",
+          "need": 1,
+          "state": "ok",
+          "trade": null
+        },
+        {
+          "grade": 2,
+          "have": 0,
+          "key": "hybridcapacitors",
+          "missing": 0,
+          "name_en": "Hybrid Capacitors",
+          "need": 1,
+          "state": "trade",
+          "trade": {
+            "get": 1,
+            "get_key": "hybridcapacitors",
+            "give": 2,
+            "give_key": "conductiveceramics",
+            "same_family": false,
+            "trader": "Manufactured"
+          }
+        },
+        {
+          "grade": 3,
+          "have": 0,
+          "key": "niobium",
+          "missing": 0,
+          "name_en": "Niobium",
+          "need": 1,
+          "state": "trade",
+          "trade": {
+            "get": 1,
+            "get_key": "niobium",
+            "give": 2,
+            "give_key": "polonium",
+            "same_family": false,
+            "trader": "Raw"
+          }
+        },
+        {
+          "grade": 5,
+          "have": 8,
+          "key": "pharmaceuticalisolators",
+          "missing": 0,
+          "name_en": "Pharmaceutical Isolators",
+          "need": 1,
+          "state": "ok",
+          "trade": null
+        },
+        {
+          "grade": 4,
+          "have": 150,
+          "key": "polonium",
+          "missing": 0,
+          "name_en": "Polonium",
+          "need": 4,
+          "state": "ok",
+          "trade": null
+        },
+        {
+          "grade": 5,
+          "have": 2,
+          "key": "protoheatradiators",
+          "missing": 2,
+          "name_en": "Proto Heat Radiators",
+          "need": 4,
+          "state": "missing",
+          "trade": null
+        },
+        {
+          "grade": 2,
+          "have": 0,
+          "key": "vanadium",
+          "missing": 0,
+          "name_en": "Vanadium",
+          "need": 1,
+          "state": "trade",
+          "trade": {
+            "get": 3,
+            "get_key": "vanadium",
+            "give": 2,
+            "give_key": "polonium",
+            "same_family": false,
+            "trader": "Raw"
+          }
+        },
+        {
+          "grade": 4,
+          "have": 0,
+          "key": "yttrium",
+          "missing": 0,
+          "name_en": "Yttrium",
+          "need": 1,
+          "state": "trade",
+          "trade": {
+            "get": 1,
+            "get_key": "yttrium",
+            "give": 6,
+            "give_key": "polonium",
+            "same_family": false,
+            "trader": "Raw"
+          }
+        }
+      ],
+      "next_cursor": null,
+      "revision": 21,
+      "section": "lines",
+      "total": 13
+    },
     "goals": {
       "cursor": 0,
       "items": [
@@ -558,7 +1190,7 @@
         }
       ],
       "next_cursor": null,
-      "revision": 17,
+      "revision": 21,
       "section": "goals",
       "total": 1
     },
@@ -572,7 +1204,7 @@
         }
       ],
       "next_cursor": null,
-      "revision": 17,
+      "revision": 21,
       "section": "components",
       "total": 1
     }

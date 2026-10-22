@@ -202,6 +202,24 @@ pub async fn get_engineering_locker(
 ) -> Response {
     engineering_page(&state, "locker", query).await
 }
+pub async fn get_engineering_catalogue(
+    State(state): State<AppState>,
+    query: Result<Query<tmc_core::ModulePageQuery>, axum::extract::rejection::QueryRejection>,
+) -> Response {
+    engineering_page(&state, "catalogue", query).await
+}
+pub async fn get_engineering_engineers(
+    State(state): State<AppState>,
+    query: Result<Query<tmc_core::ModulePageQuery>, axum::extract::rejection::QueryRejection>,
+) -> Response {
+    engineering_page(&state, "engineers", query).await
+}
+pub async fn get_engineering_flow(
+    State(state): State<AppState>,
+    query: Result<Query<tmc_core::ModulePageQuery>, axum::extract::rejection::QueryRejection>,
+) -> Response {
+    engineering_page(&state, "flow", query).await
+}
 async fn engineering_page(
     state: &AppState,
     resource: &str,
@@ -237,14 +255,18 @@ async fn engineering_page(
     response
 }
 
-/// Includes security and router rejections for these two live resources only.
+/// Includes security and router rejections for these live resources only.
 pub(crate) async fn no_store_engineering_pages(
     request: axum::extract::Request,
     next: axum::middleware::Next,
 ) -> Response {
     let no_store = matches!(
         request.uri().path(),
-        "/api/engineering/goals" | "/api/engineering/locker"
+        "/api/engineering/goals"
+            | "/api/engineering/locker"
+            | "/api/engineering/catalogue"
+            | "/api/engineering/engineers"
+            | "/api/engineering/flow"
     );
     let mut response = next.run(request).await;
     if no_store {
