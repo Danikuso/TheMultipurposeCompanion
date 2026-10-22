@@ -458,17 +458,12 @@ impl Engineering {
 
     fn cost_for(&self, req: &PlanRequest, current: Option<&CurrentEng>) -> Option<PlanCost> {
         let cat = blueprints();
-        let bp = cat.blueprint(&req.blueprint)?;
-        if !bp.module_types.contains(&req.module_type) {
-            return None;
-        }
-        let exp = req
-            .experimental
-            .as_deref()
-            .and_then(|e| cat.experimental(e));
-        if req.experimental.is_some()
-            && exp.is_none_or(|e| !e.module_types.contains(&req.module_type))
-        {
+        let bp = cat.blueprint(cat.canonical_blueprint(&req.module_type, &req.blueprint)?)?;
+        let exp = req.experimental.as_deref().and_then(|e| {
+            cat.canonical_experimental(&req.module_type, e)
+                .and_then(|key| cat.experimental(key))
+        });
+        if req.experimental.is_some() && exp.is_none() {
             return None;
         }
         Some(plan_cost(bp, exp, current, req))
@@ -1210,7 +1205,7 @@ impl Engineering {
         let cat = blueprints();
         if cat
             .blueprint(blueprint)
-            .is_some_and(|b| !b.module_types.contains(&module_type))
+            .is_some_and(|b| !b.has_module_type(&module_type))
         {
             decide!("engineering.preview.rejected_incompatible", {});
             return false;
@@ -1258,8 +1253,8 @@ impl Engineering {
         };
         // Un blueprint no catalogado se guarda tal cual: el flujo queda en `no_data`.
         let known = cat
-            .blueprint(blueprint)
-            .filter(|b| b.module_types.contains(&module_type));
+            .canonical_blueprint(&module_type, blueprint)
+            .and_then(|key| cat.blueprint(key));
         let request = PlanRequest {
             module_type,
             blueprint: known.map_or_else(|| blueprint.to_owned(), |b| b.key.clone()),

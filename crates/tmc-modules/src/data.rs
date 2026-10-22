@@ -8,6 +8,8 @@ use std::sync::OnceLock;
 use tmc_model::events::{AsteroidContent, MaterialCategory};
 use tmc_model::net::PadSize;
 
+use crate::engineering::ship::CurrentEng;
+
 /// Species and colony distances embedded once, without runtime file access.
 pub fn species_table() -> &'static SpeciesTable {
     static TABLE: OnceLock<SpeciesTable> = OnceLock::new();
@@ -457,30 +459,194 @@ pub struct Ingredient {
     pub count: u32,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct ModuleTypeDef {
-    pub id: String,
+/// Cost of one roll: tradeable materials plus Merc Coins (not a material, never tradeable).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+pub struct RecipeCost {
+    #[serde(default)]
+    pub materials: Vec<Ingredient>,
+    #[serde(default)]
+    pub merc_coins: u32,
+}
+
+/// Item symbols a recipe/variant applies to. Both lists empty means "no evidence": it
+/// matches nothing (the row stays visible as pending but is never offered for an item).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+pub struct ModuleSelector {
+    #[serde(default)]
+    pub items: Vec<String>,
+    #[serde(default)]
     pub item_prefixes: Vec<String>,
 }
 
-/// Engineer blueprint (journal `BlueprintName`, lowercase) with a recipe per grade roll.
-#[derive(Debug, Clone, Deserialize)]
+impl ModuleSelector {
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty() && self.item_prefixes.is_empty()
+    }
+
+    /// Case-insensitive exact symbol or prefix match.
+    pub fn matches(&self, item: &str) -> bool {
+        let item = item.to_ascii_lowercase();
+        self.items.iter().any(|i| i.eq_ignore_ascii_case(&item))
+            || self
+                .item_prefixes
+                .iter()
+                .any(|p| !p.is_empty() && item.starts_with(&p.to_ascii_lowercase()))
+    }
+
+    fn normalised(mut self) -> Self {
+        for s in self.items.iter_mut().chain(self.item_prefixes.iter_mut()) {
+            *s = s.trim().to_ascii_lowercase();
+        }
+        self.items.retain(|s| !s.is_empty());
+        self.item_prefixes.retain(|s| !s.is_empty());
+        self
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BaseIdentity {
+    Blueprint { key: String },
+    Variant { key: String },
+}
+
+/// Installed base that unlocks an `ExistingOnly` upgrade path.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct BaseRequirement {
+    pub identity: BaseIdentity,
+    pub selector: ModuleSelector,
+    pub completed_grade: u8,
+    /// Evidence of the transition itself, not only of both identities.
+    pub source_rows: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EntryPolicy {
+    /// Chain starts at grade 1.
+    Stock,
+    /// Needs a proven installed base; never starts from an empty grade 1.
+    ExistingOnly {
+        #[serde(default)]
+        bases: Vec<BaseRequirement>,
+    },
+}
+
+/// Recipes of one blueprint for one module context.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct ModuleBlueprint {
+    pub module_type: String,
+    #[serde(default)]
+    pub selector: Option<ModuleSelector>,
+    pub entry: EntryPolicy,
+    pub grades: BTreeMap<u8, RecipeCost>,
+}
+
+impl ModuleBlueprint {
+    fn applies_to(&self, module_type: &str, item: &str) -> bool {
+        self.module_type == module_type && self.selector.as_ref().is_none_or(|s| s.matches(item))
+    }
+}
+
+/// Engineer blueprint (journal `BlueprintName`, lowercase) with recipes per module context.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Blueprint {
     pub key: String,
-    pub module_types: Vec<String>,
-    pub grades: BTreeMap<u8, Vec<Ingredient>>,
+    pub recipes: Vec<ModuleBlueprint>,
     pub source: String,
     pub verified: bool,
 }
 
+impl Blueprint {
+    /// Distinct module types with at least one recipe context.
+    pub fn module_types(&self) -> Vec<&str> {
+        let mut out: Vec<&str> = Vec::new();
+        for r in &self.recipes {
+            if !out.contains(&r.module_type.as_str()) {
+                out.push(&r.module_type);
+            }
+        }
+        out
+    }
+
+    pub fn has_module_type(&self, module_type: &str) -> bool {
+        self.recipes.iter().any(|r| r.module_type == module_type)
+    }
+
+    /// Highest grade of any context.
+    pub fn max_grade(&self) -> Option<u8> {
+        self.recipes
+            .iter()
+            .filter_map(|r| r.grades.keys().next_back().copied())
+            .max()
+    }
+
+    /// Single context of a module type, if there is exactly one (never a first match).
+    pub fn sole_recipe_for(&self, module_type: &str) -> Option<&ModuleBlueprint> {
+        let mut it = self.recipes.iter().filter(|r| r.module_type == module_type);
+        let first = it.next()?;
+        it.next().is_none().then_some(first)
+    }
+}
+
 /// Experimental effect (journal `ExperimentalEffect`, lowercase).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Experimental {
     pub key: String,
     pub module_types: Vec<String>,
-    pub ingredients: Vec<Ingredient>,
+    pub cost: RecipeCost,
     pub source: String,
     pub verified: bool,
+}
+
+/// Purchased/pre-engineered variant: visible identity, never a free recipe.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct ShipVariant {
+    pub key: String,
+    pub module_type: String,
+    pub grade: u8,
+    #[serde(default)]
+    pub selector: Option<ModuleSelector>,
+    /// Verified journal blueprint names; empty means the identity cannot be resolved yet.
+    #[serde(default)]
+    pub journal_blueprints: Vec<String>,
+    pub source: String,
+    pub verified: bool,
+}
+
+/// Journal spelling of a blueprint, valid only inside one module type.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct BlueprintAlias {
+    pub module_type: String,
+    pub alias: String,
+    pub canonical: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RecipeResolutionError {
+    UnknownBlueprint,
+    IncompatibleItem,
+    MissingBaseMapping,
+    BaseRequired,
+    AmbiguousRecipe,
+}
+
+#[derive(Debug, Clone)]
+pub struct BlueprintOption<'a> {
+    pub blueprint: &'a Blueprint,
+    pub availability: Result<&'a ModuleBlueprint, RecipeResolutionError>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ModuleTypeDef {
+    pub id: String,
+    /// Exact journal symbols (win over any prefix).
+    #[serde(default)]
+    pub items: Vec<String>,
+    /// Types without proven symbols stay listed but match no item.
+    #[serde(default)]
+    pub item_prefixes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -488,40 +654,249 @@ pub struct BlueprintCatalog {
     pub module_types: Vec<ModuleTypeDef>,
     pub blueprints: Vec<Blueprint>,
     pub experimentals: Vec<Experimental>,
+    pub variants: Vec<ShipVariant>,
+    pub aliases: Vec<BlueprintAlias>,
 }
 
 fn valid_ingredients(list: &[Ingredient]) -> bool {
-    !list.is_empty()
-        && list
-            .iter()
-            .all(|i| !i.material.trim().is_empty() && i.count > 0)
+    list.iter()
+        .all(|i| !i.material.trim().is_empty() && i.count > 0)
 }
 
-fn parse_section<T: serde::de::DeserializeOwned>(
-    value: &serde_json::Value,
-    section: &str,
-    valid: fn(&T) -> bool,
-) -> Vec<T> {
-    let Some(rows) = value.get(section).and_then(serde_json::Value::as_array) else {
+fn valid_cost(cost: &RecipeCost) -> bool {
+    valid_ingredients(&cost.materials) && (!cost.materials.is_empty() || cost.merc_coins > 0)
+}
+
+/// Stock chains start at G1; `ExistingOnly` starts at G2 or later; no gaps in either.
+fn valid_grades(entry: &EntryPolicy, grades: &BTreeMap<u8, RecipeCost>) -> bool {
+    let (Some(first), Some(last)) = (grades.keys().next(), grades.keys().next_back()) else {
+        return false;
+    };
+    let start_ok = match entry {
+        EntryPolicy::Stock => *first == 1,
+        EntryPolicy::ExistingOnly { .. } => *first >= 2,
+    };
+    start_ok
+        && *last <= 5
+        && usize::from(*last - *first) + 1 == grades.len()
+        && grades.values().all(valid_cost)
+}
+
+fn valid_base(base: &BaseRequirement) -> bool {
+    let key = match &base.identity {
+        BaseIdentity::Blueprint { key } | BaseIdentity::Variant { key } => key,
+    };
+    !key.trim().is_empty()
+        && !base.selector.is_empty()
+        && (1..=5).contains(&base.completed_grade)
+        && !base.source_rows.is_empty()
+        && base.source_rows.iter().all(|r| !r.trim().is_empty())
+}
+
+fn valid_recipe(rec: &ModuleBlueprint) -> bool {
+    !rec.module_type.trim().is_empty()
+        && valid_grades(&rec.entry, &rec.grades)
+        && match &rec.entry {
+            EntryPolicy::Stock => true,
+            EntryPolicy::ExistingOnly { bases } => bases.iter().all(valid_base),
+        }
+}
+
+fn normalise_recipe(mut rec: ModuleBlueprint) -> ModuleBlueprint {
+    rec.module_type = rec.module_type.trim().to_ascii_lowercase();
+    rec.selector = rec.selector.map(ModuleSelector::normalised);
+    if let EntryPolicy::ExistingOnly { bases } = &mut rec.entry {
+        for b in bases {
+            b.selector = std::mem::take(&mut b.selector).normalised();
+            match &mut b.identity {
+                BaseIdentity::Blueprint { key } | BaseIdentity::Variant { key } => {
+                    *key = key.trim().to_ascii_lowercase();
+                }
+            }
+        }
+    }
+    rec
+}
+
+/// Blueprint row: new shape (`recipes`) or the provisional one (`module_types` + `grades`).
+#[derive(Deserialize)]
+struct BlueprintRow {
+    key: String,
+    #[serde(default)]
+    recipes: Option<Vec<ModuleBlueprint>>,
+    #[serde(default)]
+    module_types: Option<Vec<String>>,
+    #[serde(default)]
+    grades: Option<BTreeMap<u8, Vec<Ingredient>>>,
+    source: String,
+    #[serde(default)]
+    verified: bool,
+}
+
+fn blueprint_from_row(row: BlueprintRow) -> Option<Blueprint> {
+    if row.key.trim().is_empty() || row.source.trim().is_empty() {
+        return None;
+    }
+    let recipes = match (row.recipes, row.module_types, row.grades) {
+        (Some(recipes), _, _) => recipes,
+        (None, Some(types), Some(grades)) => {
+            let mut seen: Vec<String> = Vec::new();
+            for t in types {
+                if !seen.contains(&t) {
+                    seen.push(t);
+                }
+            }
+            seen.into_iter()
+                .map(|module_type| ModuleBlueprint {
+                    module_type,
+                    selector: None,
+                    entry: EntryPolicy::Stock,
+                    grades: grades
+                        .iter()
+                        .map(|(g, list)| {
+                            (
+                                *g,
+                                RecipeCost {
+                                    materials: list.clone(),
+                                    merc_coins: 0,
+                                },
+                            )
+                        })
+                        .collect(),
+                })
+                .collect()
+        }
+        _ => return None,
+    };
+    let total = recipes.len();
+    let recipes: Vec<ModuleBlueprint> = recipes
+        .into_iter()
+        .filter(valid_recipe)
+        .map(normalise_recipe)
+        .collect();
+    if recipes.is_empty() {
+        return None;
+    }
+    if recipes.len() < total {
         tracing::warn!(
             file = "blueprints.json",
-            section,
-            "missing section; using empty"
+            key = %row.key,
+            skipped = total - recipes.len(),
+            "invalid recipe contexts; skipping them"
         );
+    }
+    Some(Blueprint {
+        key: row.key.trim().to_ascii_lowercase(),
+        recipes,
+        source: row.source,
+        verified: row.verified,
+    })
+}
+
+#[derive(Deserialize)]
+struct ExperimentalRow {
+    key: String,
+    module_types: Vec<String>,
+    #[serde(default)]
+    cost: Option<RecipeCost>,
+    #[serde(default)]
+    ingredients: Option<Vec<Ingredient>>,
+    source: String,
+    #[serde(default)]
+    verified: bool,
+}
+
+fn experimental_from_row(row: ExperimentalRow) -> Option<Experimental> {
+    let cost = match (row.cost, row.ingredients) {
+        (Some(cost), _) => cost,
+        (None, Some(materials)) => RecipeCost {
+            materials,
+            merc_coins: 0,
+        },
+        _ => return None,
+    };
+    (!row.key.trim().is_empty()
+        && !row.module_types.is_empty()
+        && !row.source.trim().is_empty()
+        && valid_cost(&cost))
+    .then(|| Experimental {
+        key: row.key.trim().to_ascii_lowercase(),
+        module_types: row
+            .module_types
+            .into_iter()
+            .map(|t| t.trim().to_ascii_lowercase())
+            .collect(),
+        cost,
+        source: row.source,
+        verified: row.verified,
+    })
+}
+
+fn variant_from_row(mut v: ShipVariant) -> Option<ShipVariant> {
+    (!v.key.trim().is_empty()
+        && !v.module_type.trim().is_empty()
+        && (1..=5).contains(&v.grade)
+        && !v.source.trim().is_empty())
+    .then(|| {
+        v.key = v.key.trim().to_ascii_lowercase();
+        v.module_type = v.module_type.trim().to_ascii_lowercase();
+        v.selector = v.selector.map(ModuleSelector::normalised);
+        v.journal_blueprints = v
+            .journal_blueprints
+            .iter()
+            .map(|b| b.trim().to_ascii_lowercase())
+            .filter(|b| !b.is_empty())
+            .collect();
+        v
+    })
+}
+
+fn alias_from_row(mut a: BlueprintAlias) -> Option<BlueprintAlias> {
+    a.module_type = a.module_type.trim().to_ascii_lowercase();
+    a.alias = a.alias.trim().to_ascii_lowercase();
+    a.canonical = a.canonical.trim().to_ascii_lowercase();
+    (!a.module_type.is_empty() && !a.alias.is_empty() && !a.canonical.is_empty()).then_some(a)
+}
+
+fn module_type_from_row(mut t: ModuleTypeDef) -> Option<ModuleTypeDef> {
+    t.id = t.id.trim().to_ascii_lowercase();
+    for s in t.items.iter_mut().chain(t.item_prefixes.iter_mut()) {
+        *s = s.trim().to_ascii_lowercase();
+    }
+    t.items.retain(|s| !s.is_empty());
+    t.item_prefixes.retain(|s| !s.is_empty());
+    (!t.id.is_empty()).then_some(t)
+}
+
+/// Rows of `section`; absent optional sections yield nothing without a warning.
+fn parse_section<R: serde::de::DeserializeOwned, T>(
+    value: &serde_json::Value,
+    section: &str,
+    required: bool,
+    convert: fn(R) -> Option<T>,
+) -> Vec<T> {
+    let Some(rows) = value.get(section).and_then(serde_json::Value::as_array) else {
+        if required {
+            tracing::warn!(
+                file = "blueprints.json",
+                section,
+                "missing section; using empty"
+            );
+        }
         return Vec::new();
     };
     let mut out = Vec::new();
     for (index, row) in rows.iter().enumerate() {
-        match serde_json::from_value::<T>(row.clone()) {
-            Ok(entry) if valid(&entry) => out.push(entry),
-            Ok(_) => {
-                tracing::warn!(
+        match serde_json::from_value::<R>(row.clone()) {
+            Ok(entry) => match convert(entry) {
+                Some(entry) => out.push(entry),
+                None => tracing::warn!(
                     file = "blueprints.json",
                     section,
                     index,
                     "invalid row; skipping"
-                )
-            }
+                ),
+            },
             Err(error) => tracing::warn!(
                 file = "blueprints.json", section, index, %error, "invalid row; skipping"
             ),
@@ -538,51 +913,83 @@ fn parse_blueprints(json: &str) -> BlueprintCatalog {
             return BlueprintCatalog::default();
         }
     };
-    let module_types = parse_section::<ModuleTypeDef>(&value, "module_types", |t| {
-        !t.id.trim().is_empty() && !t.item_prefixes.is_empty()
-    });
-    let mut blueprints = parse_section::<Blueprint>(&value, "blueprints", |b| {
-        !b.key.trim().is_empty()
-            && !b.module_types.is_empty()
-            && !b.source.trim().is_empty()
-            && !b.grades.is_empty()
-            && b.grades
-                .iter()
-                .all(|(g, list)| (1..=5).contains(g) && valid_ingredients(list))
-    });
-    let mut experimentals = parse_section::<Experimental>(&value, "experimentals", |e| {
-        !e.key.trim().is_empty()
-            && !e.module_types.is_empty()
-            && !e.source.trim().is_empty()
-            && valid_ingredients(&e.ingredients)
-    });
-    for b in &mut blueprints {
-        b.key = b.key.to_ascii_lowercase();
-    }
-    for e in &mut experimentals {
-        e.key = e.key.to_ascii_lowercase();
-    }
     BlueprintCatalog {
-        module_types,
-        blueprints,
-        experimentals,
+        module_types: parse_section(&value, "module_types", true, module_type_from_row),
+        blueprints: parse_section(&value, "blueprints", true, blueprint_from_row),
+        experimentals: parse_section(&value, "experimentals", true, experimental_from_row),
+        variants: parse_section(&value, "variants", false, variant_from_row),
+        aliases: parse_section(&value, "aliases", false, alias_from_row),
     }
 }
 
+/// Alias table from a separate symbols document (`aliases` array), tolerant per row.
+#[cfg(test)]
+fn parse_aliases(json: &str) -> Vec<BlueprintAlias> {
+    match serde_json::from_str::<serde_json::Value>(json) {
+        Ok(value) => parse_section(&value, "aliases", true, alias_from_row),
+        Err(error) => {
+            tracing::warn!(file = "symbols.json", %error, "invalid alias data; using none");
+            Vec::new()
+        }
+    }
+}
+
+enum Fit<'a> {
+    Valid(&'a ModuleBlueprint),
+    MissingMapping,
+    BaseRequired,
+}
+
+/// `level > n` or a full-quality `level == n` proves grade `n` completed.
+fn grade_completed(current: &CurrentEng, grade: u8) -> bool {
+    current.level > grade
+        || (current.level == grade && current.quality.is_finite() && current.quality >= 0.999)
+}
+
 impl BlueprintCatalog {
-    /// Module type id for a journal item symbol (case-insensitive prefix match).
+    /// Module type id for a journal item symbol. An exact symbol wins over any prefix, the
+    /// longest prefix wins over shorter ones, and a tie between different types is `None`.
     pub fn module_type_of(&self, item: &str) -> Option<&str> {
         let item = item.to_ascii_lowercase();
-        self.module_types
-            .iter()
-            .find(|t| t.item_prefixes.iter().any(|p| item.starts_with(p.as_str())))
-            .map(|t| t.id.as_str())
+        let mut exact: Vec<&str> = Vec::new();
+        for t in self.module_types.iter().filter(|t| t.items.contains(&item)) {
+            if !exact.contains(&t.id.as_str()) {
+                exact.push(&t.id);
+            }
+        }
+        match exact.as_slice() {
+            [one] => return Some(one),
+            [] => {}
+            _ => return None,
+        }
+        let mut best = 0;
+        let mut ids: Vec<&str> = Vec::new();
+        for t in &self.module_types {
+            for p in t
+                .item_prefixes
+                .iter()
+                .filter(|p| item.starts_with(p.as_str()))
+            {
+                if p.len() > best {
+                    best = p.len();
+                    ids.clear();
+                }
+                if p.len() == best && !ids.contains(&t.id.as_str()) {
+                    ids.push(&t.id);
+                }
+            }
+        }
+        match ids.as_slice() {
+            [one] => Some(one),
+            _ => None,
+        }
     }
 
+    /// Blueprints with at least one recipe context for a module type.
     pub fn blueprints_for(&self, module_type: &str) -> Vec<&Blueprint> {
         self.blueprints
             .iter()
-            .filter(|b| b.module_types.iter().any(|t| t == module_type))
+            .filter(|b| b.has_module_type(module_type))
             .collect()
     }
 
@@ -601,6 +1008,261 @@ impl BlueprintCatalog {
     pub fn experimental(&self, key: &str) -> Option<&Experimental> {
         let key = key.to_ascii_lowercase();
         self.experimentals.iter().find(|e| e.key == key)
+    }
+
+    pub fn variants_for(&self, module_type: &str) -> Vec<&ShipVariant> {
+        self.variants
+            .iter()
+            .filter(|v| v.module_type == module_type)
+            .collect()
+    }
+
+    /// Canonical blueprint key for a journal spelling inside a module type. A key with a
+    /// recipe in that module wins; otherwise a single, unambiguous alias of that module.
+    /// Unknown or ambiguous spellings give `None` (callers keep the raw text).
+    pub fn canonical_blueprint(&self, module_type: &str, raw: &str) -> Option<&str> {
+        let raw = raw.trim().to_ascii_lowercase();
+        let find = |key: &str| {
+            self.blueprints
+                .iter()
+                .find(|b| b.key == key && b.has_module_type(module_type))
+                .map(|b| b.key.as_str())
+        };
+        find(&raw).or_else(|| self.unique_alias_target(module_type, &raw, find))
+    }
+
+    pub fn canonical_experimental(&self, module_type: &str, raw: &str) -> Option<&str> {
+        let raw = raw.trim().to_ascii_lowercase();
+        let find = |key: &str| {
+            self.experimentals
+                .iter()
+                .find(|e| e.key == key && e.module_types.iter().any(|t| t == module_type))
+                .map(|e| e.key.as_str())
+        };
+        find(&raw).or_else(|| self.unique_alias_target(module_type, &raw, find))
+    }
+
+    fn unique_alias_target<'a>(
+        &'a self,
+        module_type: &str,
+        raw: &str,
+        target: impl Fn(&str) -> Option<&'a str>,
+    ) -> Option<&'a str> {
+        let mut found: Option<&str> = None;
+        for a in self
+            .aliases
+            .iter()
+            .filter(|a| a.module_type == module_type && a.alias == raw)
+        {
+            let key = target(&a.canonical)?;
+            if found.is_some_and(|f| f != key) {
+                return None;
+            }
+            found = Some(key);
+        }
+        found
+    }
+
+    fn key_is_known(&self, raw: &str) -> bool {
+        let raw = raw.trim().to_ascii_lowercase();
+        self.blueprints.iter().any(|b| b.key == raw) || self.aliases.iter().any(|a| a.alias == raw)
+    }
+
+    /// Variant installed in a module, recognised only through verified journal names.
+    pub fn variant_of(&self, item: &str, current: &CurrentEng) -> Option<&ShipVariant> {
+        let module_type = self.module_type_of(item)?;
+        let raw = current.blueprint.trim().to_ascii_lowercase();
+        let mut found: Option<&ShipVariant> = None;
+        for v in self.variants.iter().filter(|v| {
+            v.module_type == module_type
+                && v.grade == current.level
+                && v.selector.as_ref().is_none_or(|s| s.matches(item))
+                && v.journal_blueprints.contains(&raw)
+        }) {
+            if found.is_some() {
+                return None;
+            }
+            found = Some(v);
+        }
+        found
+    }
+
+    fn base_satisfied(
+        &self,
+        base: &BaseRequirement,
+        module_type: &str,
+        item: &str,
+        current: Option<&CurrentEng>,
+    ) -> bool {
+        let Some(cur) = current else {
+            return false;
+        };
+        if !grade_completed(cur, base.completed_grade) || !base.selector.matches(item) {
+            return false;
+        }
+        match &base.identity {
+            BaseIdentity::Blueprint { key } => {
+                self.canonical_blueprint(module_type, &cur.blueprint) == Some(key.as_str())
+            }
+            BaseIdentity::Variant { key } => {
+                self.variant_of(item, cur).is_some_and(|v| &v.key == key)
+            }
+        }
+    }
+
+    fn fit<'a>(
+        &self,
+        rec: &'a ModuleBlueprint,
+        item: &str,
+        current: Option<&CurrentEng>,
+    ) -> Fit<'a> {
+        match &rec.entry {
+            EntryPolicy::Stock => Fit::Valid(rec),
+            EntryPolicy::ExistingOnly { bases } if bases.is_empty() => Fit::MissingMapping,
+            EntryPolicy::ExistingOnly { bases } => {
+                if bases
+                    .iter()
+                    .any(|b| self.base_satisfied(b, &rec.module_type, item, current))
+                {
+                    Fit::Valid(rec)
+                } else {
+                    Fit::BaseRequired
+                }
+            }
+        }
+    }
+
+    /// Exactly one valid context wins; never the first match. A compatible context still
+    /// lacking its base mapping blocks resolution because it could compete with the valid one.
+    fn resolve_in<'a>(
+        &self,
+        bp: &'a Blueprint,
+        module_type: &str,
+        item: &str,
+        current: Option<&CurrentEng>,
+    ) -> Result<&'a ModuleBlueprint, RecipeResolutionError> {
+        use RecipeResolutionError as E;
+        let mut valid: Vec<&ModuleBlueprint> = Vec::new();
+        let (mut missing, mut any) = (false, false);
+        for rec in bp
+            .recipes
+            .iter()
+            .filter(|r| r.applies_to(module_type, item))
+        {
+            any = true;
+            match self.fit(rec, item, current) {
+                Fit::Valid(r) => valid.push(r),
+                Fit::MissingMapping => missing = true,
+                Fit::BaseRequired => {}
+            }
+        }
+        match valid.as_slice() {
+            _ if !any => Err(E::IncompatibleItem),
+            [one] if !missing => Ok(one),
+            [] if missing => Err(E::MissingBaseMapping),
+            [] => Err(E::BaseRequired),
+            _ => Err(E::AmbiguousRecipe),
+        }
+    }
+
+    /// Recipe context for an item and a journal blueprint spelling.
+    pub fn blueprint_for_item(
+        &self,
+        item: &str,
+        key: &str,
+        current: Option<&CurrentEng>,
+    ) -> Result<(&Blueprint, &ModuleBlueprint), RecipeResolutionError> {
+        use RecipeResolutionError as E;
+        if !self.key_is_known(key) {
+            return Err(E::UnknownBlueprint);
+        }
+        let module_type = self.module_type_of(item).ok_or(E::IncompatibleItem)?;
+        let canonical = self
+            .canonical_blueprint(module_type, key)
+            .ok_or(E::IncompatibleItem)?;
+        let bp = self.blueprint(canonical).ok_or(E::UnknownBlueprint)?;
+        self.resolve_in(bp, module_type, item, current)
+            .map(|rec| (bp, rec))
+    }
+
+    /// Every blueprint with a context for the item, with the reason when unavailable.
+    pub fn blueprints_for_item(
+        &self,
+        item: &str,
+        current: Option<&CurrentEng>,
+    ) -> Vec<BlueprintOption<'_>> {
+        let Some(module_type) = self.module_type_of(item) else {
+            return Vec::new();
+        };
+        self.blueprints
+            .iter()
+            .filter(|b| b.recipes.iter().any(|r| r.applies_to(module_type, item)))
+            .map(|blueprint| BlueprintOption {
+                blueprint,
+                availability: self.resolve_in(blueprint, module_type, item, current),
+            })
+            .collect()
+    }
+
+    /// Strict consistency report (empty when sound). Runtime loading stays tolerant; this is
+    /// for importer-level checks of a whole catalogue.
+    pub fn audit(&self) -> Vec<String> {
+        let mut errors = Vec::new();
+        let ids: Vec<&str> = self.module_types.iter().map(|t| t.id.as_str()).collect();
+        for (i, t) in self.module_types.iter().enumerate() {
+            for other in &self.module_types[i + 1..] {
+                let clash = |a: &[String], b: &[String]| a.iter().any(|s| b.contains(s));
+                if t.id == other.id
+                    || clash(&t.items, &other.items)
+                    || clash(&t.item_prefixes, &other.item_prefixes)
+                {
+                    errors.push(format!("module types {} and {} collide", t.id, other.id));
+                }
+            }
+        }
+        for (i, b) in self.blueprints.iter().enumerate() {
+            if self.blueprints[i + 1..].iter().any(|o| o.key == b.key) {
+                errors.push(format!("duplicate blueprint {}", b.key));
+            }
+            for r in &b.recipes {
+                if !ids.contains(&r.module_type.as_str()) {
+                    errors.push(format!("{}: unknown module type {}", b.key, r.module_type));
+                }
+            }
+            for (j, r) in b.recipes.iter().enumerate() {
+                for o in &b.recipes[j + 1..] {
+                    if r.module_type == o.module_type
+                        && (r.selector.is_none()
+                            || o.selector.is_none()
+                            || r.selector == o.selector)
+                    {
+                        errors.push(format!(
+                            "{}: overlapping contexts for {}",
+                            b.key, r.module_type
+                        ));
+                    }
+                }
+            }
+        }
+        for a in &self.aliases {
+            if !self
+                .blueprints
+                .iter()
+                .any(|b| b.key == a.canonical && b.has_module_type(&a.module_type))
+                && !self.experimentals.iter().any(|e| e.key == a.canonical)
+                && !self.variants.iter().any(|v| v.key == a.canonical)
+            {
+                errors.push(format!("alias {} targets unknown {}", a.alias, a.canonical));
+            }
+        }
+        for (i, a) in self.aliases.iter().enumerate() {
+            if self.aliases[i + 1..].iter().any(|o| {
+                o.module_type == a.module_type && o.alias == a.alias && o.canonical != a.canonical
+            }) {
+                errors.push(format!("ambiguous alias {}/{}", a.module_type, a.alias));
+            }
+        }
+        errors
     }
 }
 
@@ -1176,8 +1838,9 @@ mod tests {
         let all = cat
             .blueprints
             .iter()
-            .flat_map(|b| b.grades.values().flatten())
-            .chain(cat.experimentals.iter().flat_map(|e| e.ingredients.iter()));
+            .flat_map(|b| b.recipes.iter().flat_map(|r| r.grades.values()))
+            .chain(cat.experimentals.iter().map(|e| &e.cost))
+            .flat_map(|c| c.materials.iter());
         for i in all {
             assert!(materials().contains_key(&i.material), "{}", i.material);
             assert!(i.count > 0);
@@ -1189,13 +1852,13 @@ mod tests {
         let cat = blueprints();
         assert!(!cat.blueprints.is_empty());
         for b in &cat.blueprints {
-            let grades: Vec<u8> = b.grades.keys().copied().collect();
+            let grades: Vec<u8> = b.recipes[0].grades.keys().copied().collect();
             let max = *grades.last().unwrap();
             assert!(max <= 5, "{}", b.key);
             assert_eq!(grades, (1..=max).collect::<Vec<_>>(), "{}", b.key);
             assert!(!b.verified && !b.source.trim().is_empty());
-            for t in &b.module_types {
-                assert!(cat.module_types.iter().any(|m| &m.id == t), "{t}");
+            for t in b.module_types() {
+                assert!(cat.module_types.iter().any(|m| m.id == t), "{t}");
             }
         }
         for e in &cat.experimentals {
@@ -1217,7 +1880,7 @@ mod tests {
         assert_eq!(cat.module_type_of("int_shieldgenerator_size3_class5"), None);
         let dirty = cat.blueprint("Engine_Dirty").unwrap();
         assert_eq!(
-            dirty.grades.keys().copied().collect::<Vec<_>>(),
+            dirty.recipes[0].grades.keys().copied().collect::<Vec<_>>(),
             [1, 2, 3, 4, 5]
         );
         assert!(
@@ -1393,5 +2056,639 @@ mod tests {
         let ok = serde_json::json!({"item":"x","kind":"Commodity","amount":3});
         let json = serde_json::json!({"entries":[row(ok)]}).to_string();
         assert!(parse_engineers(&json)[0].unlock.contribution.is_some());
+    }
+
+    // ----- C2: recipe contexts, eligibility and aliases -----
+
+    fn cost(materials: &[(&str, u32)], merc_coins: u32) -> serde_json::Value {
+        serde_json::json!({
+            "materials": materials.iter().map(|(m, c)| serde_json::json!({"material": m, "count": c})).collect::<Vec<_>>(),
+            "merc_coins": merc_coins,
+        })
+    }
+
+    fn grades(range: std::ops::RangeInclusive<u8>) -> serde_json::Value {
+        let map: serde_json::Map<String, serde_json::Value> = range
+            .map(|g| (g.to_string(), cost(&[("iron", u32::from(g))], 0)))
+            .collect();
+        map.into()
+    }
+
+    fn context(
+        module_type: &str,
+        selector: serde_json::Value,
+        entry: serde_json::Value,
+        range: std::ops::RangeInclusive<u8>,
+    ) -> serde_json::Value {
+        serde_json::json!({"module_type": module_type, "selector": selector, "entry": entry,
+            "grades": grades(range)})
+    }
+
+    fn blueprint_row(key: &str, recipes: Vec<serde_json::Value>) -> serde_json::Value {
+        serde_json::json!({"key": key, "recipes": recipes, "source": "synthetic fixture", "verified": false})
+    }
+
+    fn catalogue(
+        blueprints: Vec<serde_json::Value>,
+        variants: Vec<serde_json::Value>,
+        aliases: Vec<serde_json::Value>,
+    ) -> BlueprintCatalog {
+        parse_blueprints(
+            &serde_json::json!({
+                "module_types": [
+                    {"id": "engine", "item_prefixes": ["int_engine_"]},
+                    {"id": "special_engine", "items": ["int_engine_size3_class5_special"]},
+                    {"id": "rack", "item_prefixes": ["int_rack_"]},
+                    {"id": "pending", "item_prefixes": []},
+                ],
+                "blueprints": blueprints,
+                "experimentals": [{"key": "special_test", "module_types": ["engine"],
+                    "cost": cost(&[("iron", 1)], 0), "source": "synthetic fixture", "verified": false}],
+                "variants": variants,
+                "aliases": aliases,
+            })
+            .to_string(),
+        )
+    }
+
+    fn stock() -> serde_json::Value {
+        serde_json::json!("stock")
+    }
+
+    fn existing(bases: Vec<serde_json::Value>) -> serde_json::Value {
+        serde_json::json!({"existing_only": {"bases": bases}})
+    }
+
+    fn base(identity: serde_json::Value, grade: u8, items: &[&str]) -> serde_json::Value {
+        serde_json::json!({"identity": identity, "selector": {"items": items},
+            "completed_grade": grade, "source_rows": ["synthetic:1:0"]})
+    }
+
+    fn eng(blueprint: &str, level: u8, quality: f64) -> CurrentEng {
+        CurrentEng {
+            blueprint: blueprint.into(),
+            level,
+            quality,
+            experimental: None,
+        }
+    }
+
+    use RecipeResolutionError as E;
+
+    #[test]
+    fn grades_match_entry_policy() {
+        let warnings = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let cat = tracing::subscriber::with_default(WarningCounter(warnings.clone()), || {
+            catalogue(
+                vec![
+                    blueprint_row(
+                        "ok_stock",
+                        vec![context("engine", serde_json::Value::Null, stock(), 1..=5)],
+                    ),
+                    blueprint_row(
+                        "ok_existing",
+                        vec![context(
+                            "engine",
+                            serde_json::Value::Null,
+                            existing(vec![]),
+                            2..=5,
+                        )],
+                    ),
+                    // Stock without G1, ExistingOnly with G1, and a gap are rejected rows.
+                    blueprint_row(
+                        "stock_no_g1",
+                        vec![context("engine", serde_json::Value::Null, stock(), 2..=5)],
+                    ),
+                    blueprint_row(
+                        "existing_with_g1",
+                        vec![context(
+                            "engine",
+                            serde_json::Value::Null,
+                            existing(vec![]),
+                            1..=5,
+                        )],
+                    ),
+                    blueprint_row(
+                        "gap",
+                        vec![{
+                            let mut c = context("engine", serde_json::Value::Null, stock(), 1..=5);
+                            c["grades"].as_object_mut().unwrap().remove("3");
+                            c
+                        }],
+                    ),
+                    blueprint_row(
+                        "grade_six",
+                        vec![context("engine", serde_json::Value::Null, stock(), 1..=6)],
+                    ),
+                ],
+                vec![],
+                vec![],
+            )
+        });
+        let keys: Vec<&str> = cat.blueprints.iter().map(|b| b.key.as_str()).collect();
+        assert_eq!(keys, ["ok_stock", "ok_existing"]);
+        assert_eq!(warnings.load(std::sync::atomic::Ordering::Relaxed), 4);
+        let existing = &cat.blueprint("ok_existing").unwrap().recipes[0];
+        assert_eq!(
+            existing.grades.keys().copied().collect::<Vec<_>>(),
+            [2, 3, 4, 5]
+        );
+        assert_eq!(
+            cat.blueprint("ok_stock").unwrap().recipes[0]
+                .grades
+                .keys()
+                .copied()
+                .collect::<Vec<_>>(),
+            [1, 2, 3, 4, 5]
+        );
+        // ExistingOnly G2 is never filled in with a free G1.
+        assert!(!existing.grades.contains_key(&1));
+        // Merc Coins alone make a valid cost; an empty cost is not.
+        assert!(valid_cost(&RecipeCost {
+            materials: vec![],
+            merc_coins: 1
+        }));
+        assert!(!valid_cost(&RecipeCost::default()));
+    }
+
+    #[test]
+    fn module_exact_symbol_precedes_prefix() {
+        let cat = catalogue(vec![], vec![], vec![]);
+        assert_eq!(
+            cat.module_type_of("int_engine_size3_class5"),
+            Some("engine")
+        );
+        assert_eq!(
+            cat.module_type_of("INT_ENGINE_SIZE3_CLASS5_SPECIAL"),
+            Some("special_engine")
+        );
+        assert_eq!(cat.module_type_of("int_unknown_size1"), None);
+        // Longest prefix wins; equal specificity with different results gives no answer.
+        let cat = parse_blueprints(
+            &serde_json::json!({"module_types": [
+                {"id": "short", "item_prefixes": ["int_a_"]},
+                {"id": "long", "item_prefixes": ["int_a_big"]},
+                {"id": "tie_one", "item_prefixes": ["int_t_"]},
+                {"id": "tie_two", "item_prefixes": ["int_t_"]},
+                {"id": "same", "item_prefixes": ["int_s_", "int_s_"]},
+            ], "blueprints": [], "experimentals": []})
+            .to_string(),
+        );
+        assert_eq!(cat.module_type_of("int_a_big_one"), Some("long"));
+        assert_eq!(cat.module_type_of("int_a_small"), Some("short"));
+        assert_eq!(cat.module_type_of("int_t_x"), None);
+        assert_eq!(cat.module_type_of("int_s_x"), Some("same"));
+        assert!(cat.audit().iter().any(|e| e.contains("tie_one")));
+    }
+
+    #[test]
+    fn blueprint_alias_resolves_in_module_context() {
+        let cat = catalogue(
+            vec![
+                blueprint_row(
+                    "weapon_longrange",
+                    vec![
+                        context("engine", serde_json::Value::Null, stock(), 1..=5),
+                        context("rack", serde_json::Value::Null, stock(), 1..=5),
+                    ],
+                ),
+                blueprint_row(
+                    "rack_only",
+                    vec![context("rack", serde_json::Value::Null, stock(), 1..=5)],
+                ),
+            ],
+            vec![],
+            vec![
+                serde_json::json!({"module_type": "engine", "alias": "Engine_LongRange", "canonical": "weapon_longrange"}),
+                serde_json::json!({"module_type": "rack", "alias": "dup", "canonical": "weapon_longrange"}),
+                serde_json::json!({"module_type": "rack", "alias": "dup", "canonical": "rack_only"}),
+            ],
+        );
+        assert_eq!(
+            cat.canonical_blueprint("engine", "ENGINE_longrange"),
+            Some("weapon_longrange")
+        );
+        // Same spelling means nothing in another module.
+        assert_eq!(cat.canonical_blueprint("rack", "engine_longrange"), None);
+        // A key with a recipe in the module resolves to itself; raw unknown is not invented.
+        assert_eq!(
+            cat.canonical_blueprint("rack", "Weapon_LongRange"),
+            Some("weapon_longrange")
+        );
+        assert_eq!(cat.canonical_blueprint("engine", "rack_only"), None);
+        assert_eq!(cat.canonical_blueprint("engine", "mystery"), None);
+        // An alias with two targets in one module is ambiguous, never first-match.
+        assert_eq!(cat.canonical_blueprint("rack", "dup"), None);
+        assert!(
+            cat.audit()
+                .iter()
+                .any(|e| e.contains("ambiguous alias rack/dup"))
+        );
+        // The context-aware resolution goes through the alias.
+        let (bp, rec) = cat
+            .blueprint_for_item("int_engine_size2_class1", "engine_longrange", None)
+            .unwrap();
+        assert_eq!(
+            (bp.key.as_str(), rec.module_type.as_str()),
+            ("weapon_longrange", "engine")
+        );
+        assert_eq!(
+            cat.blueprint_for_item("int_engine_size2_class1", "mystery", None)
+                .unwrap_err(),
+            E::UnknownBlueprint
+        );
+        assert_eq!(
+            cat.blueprint_for_item("int_engine_size2_class1", "rack_only", None)
+                .unwrap_err(),
+            E::IncompatibleItem
+        );
+        assert_eq!(
+            cat.blueprint_for_item("int_unknown_x", "weapon_longrange", None)
+                .unwrap_err(),
+            E::IncompatibleItem
+        );
+        assert_eq!(
+            cat.canonical_experimental("engine", "SPECIAL_TEST"),
+            Some("special_test")
+        );
+        assert_eq!(cat.canonical_experimental("rack", "special_test"), None);
+    }
+
+    #[test]
+    fn ambiguous_recipe_is_rejected() {
+        let both = |order: bool| {
+            let mut ctx = vec![
+                context("engine", serde_json::Value::Null, stock(), 1..=5),
+                context(
+                    "engine",
+                    serde_json::json!({"items": ["int_engine_size3_class5"]}),
+                    stock(),
+                    1..=3,
+                ),
+            ];
+            if order {
+                ctx.reverse();
+            }
+            catalogue(vec![blueprint_row("dup", ctx)], vec![], vec![])
+        };
+        for order in [false, true] {
+            let cat = both(order);
+            // The exact-symbol context overlaps the unrestricted one: no first match.
+            assert_eq!(
+                cat.blueprint_for_item("int_engine_size3_class5", "dup", None)
+                    .unwrap_err(),
+                E::AmbiguousRecipe
+            );
+            // Another item only fits the unrestricted context.
+            let (_, rec) = cat
+                .blueprint_for_item("int_engine_size2_class1", "dup", None)
+                .unwrap();
+            assert!(rec.selector.is_none());
+            assert!(cat.audit().iter().any(|e| e.contains("overlapping")));
+        }
+        // A compatible context still lacking its base mapping blocks the valid one.
+        let cat = catalogue(
+            vec![blueprint_row(
+                "mixed",
+                vec![
+                    context(
+                        "engine",
+                        serde_json::json!({"items": ["int_engine_size3_class5"]}),
+                        stock(),
+                        1..=5,
+                    ),
+                    context("engine", serde_json::Value::Null, existing(vec![]), 2..=5),
+                ],
+            )],
+            vec![],
+            vec![],
+        );
+        assert_eq!(
+            cat.blueprint_for_item("int_engine_size3_class5", "mixed", None)
+                .unwrap_err(),
+            E::AmbiguousRecipe
+        );
+        assert_eq!(
+            cat.blueprint_for_item("int_engine_size2_class1", "mixed", None)
+                .unwrap_err(),
+            E::MissingBaseMapping
+        );
+        // Two satisfied bases of different contexts are ambiguous as well.
+        let identity = serde_json::json!({"blueprint": {"key": "start"}});
+        let cat = catalogue(
+            vec![
+                blueprint_row(
+                    "start",
+                    vec![context("engine", serde_json::Value::Null, stock(), 1..=5)],
+                ),
+                blueprint_row(
+                    "up",
+                    vec![
+                        context(
+                            "engine",
+                            serde_json::Value::Null,
+                            existing(vec![base(
+                                identity.clone(),
+                                1,
+                                &["int_engine_size3_class5"],
+                            )]),
+                            2..=5,
+                        ),
+                        context(
+                            "engine",
+                            serde_json::json!({"items": ["int_engine_size3_class5"]}),
+                            existing(vec![base(identity, 1, &["int_engine_size3_class5"])]),
+                            2..=5,
+                        ),
+                    ],
+                ),
+            ],
+            vec![],
+            vec![],
+        );
+        let current = eng("Start", 1, 1.0);
+        assert_eq!(
+            cat.blueprint_for_item("int_engine_size3_class5", "up", Some(&current))
+                .unwrap_err(),
+            E::AmbiguousRecipe
+        );
+    }
+
+    #[test]
+    fn variant_without_recipe_is_not_free() {
+        let variant = |journal: Vec<&str>| {
+            serde_json::json!({"key": "rack_bought", "module_type": "rack", "grade": 1,
+                "selector": {"items": ["int_rack_size5_class1"]}, "journal_blueprints": journal,
+                "source": "synthetic fixture", "verified": false})
+        };
+        let cat = catalogue(
+            vec![blueprint_row(
+                "rack_upgrade",
+                vec![context(
+                    "rack",
+                    serde_json::Value::Null,
+                    existing(vec![]),
+                    2..=5,
+                )],
+            )],
+            vec![variant(vec![])],
+            vec![],
+        );
+        assert_eq!(cat.variants_for("rack").len(), 1);
+        // The variant key is not a recipe: no free blueprint, no installed identity.
+        assert_eq!(
+            cat.blueprint_for_item("int_rack_size5_class1", "rack_bought", None)
+                .unwrap_err(),
+            E::UnknownBlueprint
+        );
+        assert!(
+            cat.blueprints_for_item("int_rack_size5_class1", None)
+                .iter()
+                .all(|o| o.blueprint.key != "rack_bought")
+        );
+        let installed = eng("rack_bought", 1, 1.0);
+        assert!(
+            cat.variant_of("int_rack_size5_class1", &installed)
+                .is_none()
+        );
+        // The pending upgrade stays listed with its reason, never available.
+        let options = cat.blueprints_for_item("int_rack_size5_class1", Some(&installed));
+        assert_eq!(options.len(), 1);
+        assert_eq!(
+            options[0].availability.as_ref().unwrap_err(),
+            &E::MissingBaseMapping
+        );
+        // Once a verified journal name exists the variant is recognised, still without a recipe.
+        let cat = catalogue(vec![], vec![variant(vec!["Rack_Bought_Journal"])], vec![]);
+        let seen = eng("rack_bought_journal", 1, 0.0);
+        assert_eq!(
+            cat.variant_of("int_rack_size5_class1", &seen).unwrap().key,
+            "rack_bought"
+        );
+        assert!(cat.variant_of("int_rack_size6_class1", &seen).is_none());
+        assert!(
+            cat.variant_of("int_rack_size5_class1", &eng("rack_bought_journal", 2, 0.0))
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn synthetic_base_to_recipe_transition() {
+        let build = |bases: Vec<serde_json::Value>, reverse: bool| {
+            let mut blueprints = vec![blueprint_row(
+                "upgrade_test",
+                vec![context(
+                    "rack",
+                    serde_json::Value::Null,
+                    existing(bases),
+                    2..=5,
+                )],
+            )];
+            if reverse {
+                blueprints.insert(
+                    0,
+                    blueprint_row(
+                        "filler",
+                        vec![context("rack", serde_json::Value::Null, stock(), 1..=5)],
+                    ),
+                );
+            }
+            catalogue(
+                blueprints,
+                vec![
+                    serde_json::json!({"key": "variant_test", "module_type": "rack", "grade": 1,
+                    "selector": {"items": ["int_rack_size5_class1"]},
+                    "journal_blueprints": ["variant_test_journal"],
+                    "source": "synthetic fixture", "verified": false}),
+                ],
+                vec![],
+            )
+        };
+        let link = base(
+            serde_json::json!({"variant": {"key": "variant_test"}}),
+            1,
+            &["int_rack_size5_class1"],
+        );
+        let item = "int_rack_size5_class1";
+        for reverse in [false, true] {
+            let cat = build(vec![link.clone()], reverse);
+            let ok = eng("Variant_Test_Journal", 1, 1.0);
+            let (bp, rec) = cat
+                .blueprint_for_item(item, "upgrade_test", Some(&ok))
+                .unwrap();
+            assert_eq!(bp.key, "upgrade_test");
+            assert_eq!(rec.grades.keys().next().copied(), Some(2));
+            let required = |cur: Option<&CurrentEng>| {
+                cat.blueprint_for_item(item, "upgrade_test", cur)
+                    .unwrap_err()
+            };
+            assert_eq!(required(None), E::BaseRequired);
+            assert_eq!(
+                required(Some(&eng("Variant_Test_Journal", 1, 0.5))),
+                E::BaseRequired
+            );
+            assert_eq!(required(Some(&eng("Other", 1, 1.0))), E::BaseRequired);
+            // Same variant on a different symbol does not satisfy the selector.
+            assert_eq!(
+                cat.blueprint_for_item("int_rack_size6_class1", "upgrade_test", Some(&ok))
+                    .unwrap_err(),
+                E::BaseRequired
+            );
+            // Without the link nothing is inferred from names or contiguous grades.
+            let cat = build(vec![], reverse);
+            assert_eq!(
+                cat.blueprint_for_item(item, "upgrade_test", Some(&ok))
+                    .unwrap_err(),
+                E::MissingBaseMapping
+            );
+        }
+        // A base without row evidence or symbols is an invalid context, not a loose link.
+        let mut bad = link.clone();
+        bad["source_rows"] = serde_json::json!([]);
+        assert!(build(vec![bad], false).blueprint("upgrade_test").is_none());
+        let mut bad = link;
+        bad["selector"] = serde_json::json!({});
+        assert!(build(vec![bad], false).blueprint("upgrade_test").is_none());
+    }
+
+    #[test]
+    fn blueprint_base_continues_an_applied_upgrade() {
+        let identity = serde_json::json!({"blueprint": {"key": "up"}});
+        let cat = catalogue(
+            vec![blueprint_row(
+                "up",
+                vec![context(
+                    "rack",
+                    serde_json::Value::Null,
+                    existing(vec![base(identity, 2, &["int_rack_size5_class1"])]),
+                    2..=5,
+                )],
+            )],
+            vec![],
+            vec![],
+        );
+        let item = "int_rack_size5_class1";
+        assert!(
+            cat.blueprint_for_item(item, "UP", Some(&eng("up", 2, 1.0)))
+                .is_ok()
+        );
+        assert!(
+            cat.blueprint_for_item(item, "up", Some(&eng("up", 3, 0.1)))
+                .is_ok()
+        );
+        assert_eq!(
+            cat.blueprint_for_item(item, "up", Some(&eng("up", 2, 0.998)))
+                .unwrap_err(),
+            E::BaseRequired
+        );
+        assert_eq!(
+            cat.blueprint_for_item(item, "up", Some(&eng("up", 2, f64::NAN)))
+                .unwrap_err(),
+            E::BaseRequired
+        );
+    }
+
+    #[test]
+    fn legacy_rows_still_load_as_stock_contexts() {
+        let cat = blueprints();
+        let dirty = cat.blueprint("engine_dirty").unwrap();
+        assert_eq!(dirty.module_types(), ["engine"]);
+        assert_eq!(dirty.recipes[0].entry, EntryPolicy::Stock);
+        assert_eq!(dirty.recipes[0].grades[&1].merc_coins, 0);
+        let (bp, rec) = cat
+            .blueprint_for_item("Int_Engine_Size3_Class5", "ENGINE_DIRTY", None)
+            .unwrap();
+        assert_eq!((bp.key.as_str(), rec.grades.len()), ("engine_dirty", 5));
+        assert_eq!(
+            cat.blueprint_for_item("int_hyperdrive_size5_class5", "engine_dirty", None)
+                .unwrap_err(),
+            E::IncompatibleItem
+        );
+        let options = cat.blueprints_for_item("int_engine_size3_class5", None);
+        assert!(options.iter().all(|o| o.availability.is_ok()));
+        assert!(options.iter().any(|o| o.blueprint.key == "engine_dirty"));
+        assert!(cat.audit().is_empty(), "{:?}", cat.audit());
+        assert!(
+            !cat.experimental("special_engine_overloaded")
+                .unwrap()
+                .cost
+                .materials
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn staged_catalogue_parses_without_losing_rows() {
+        let blueprints_json = include_str!("../data/import/engineering/staging/blueprints.json");
+        let symbols_json = include_str!("../data/import/engineering/staging/symbols.json");
+        let raw: serde_json::Value = serde_json::from_str(blueprints_json).unwrap();
+        let rows = |k: &str| raw[k].as_array().unwrap().len();
+        let warnings = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let cat = tracing::subscriber::with_default(WarningCounter(warnings.clone()), || {
+            let mut cat = parse_blueprints(blueprints_json);
+            cat.aliases = parse_aliases(symbols_json);
+            cat
+        });
+        assert_eq!(warnings.load(std::sync::atomic::Ordering::Relaxed), 0);
+        assert_eq!(cat.module_types.len(), rows("module_types"));
+        assert_eq!(cat.blueprints.len(), rows("blueprints"));
+        assert_eq!(cat.experimentals.len(), rows("experimentals"));
+        assert_eq!(cat.variants.len(), rows("variants"));
+        let contexts: usize = raw["blueprints"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|b| b["recipes"].as_array().unwrap().len())
+            .sum();
+        assert_eq!(
+            cat.blueprints
+                .iter()
+                .map(|b| b.recipes.len())
+                .sum::<usize>(),
+            contexts
+        );
+        let symbols: serde_json::Value = serde_json::from_str(symbols_json).unwrap();
+        assert_eq!(
+            cat.aliases.len(),
+            symbols["aliases"].as_array().unwrap().len()
+        );
+        // Merc Coins survive, ExistingOnly contexts stay pending without invented bases.
+        let abrasion = cat.blueprint("abrasionblaster_farreaching").unwrap();
+        let coins: Vec<u32> = abrasion.recipes[0]
+            .grades
+            .values()
+            .map(|c| c.merc_coins)
+            .collect();
+        assert_eq!(coins, [5, 5, 10, 20]);
+        assert_eq!(
+            abrasion.recipes[0].entry,
+            EntryPolicy::ExistingOnly { bases: vec![] }
+        );
+        // Symbols proven for the active modules keep resolving; pending types match nothing.
+        assert_eq!(
+            cat.module_type_of("int_engine_size3_class5"),
+            Some("engine")
+        );
+        assert_eq!(
+            cat.module_type_of("int_hyperdrive_size5_class5"),
+            Some("fsd")
+        );
+        assert!(
+            cat.blueprint_for_item("int_engine_size3_class5", "engine_dirty", None)
+                .is_ok()
+        );
+        assert_eq!(
+            cat.blueprint_for_item(
+                "int_engine_size3_class5",
+                "abrasionblaster_farreaching",
+                None
+            )
+            .unwrap_err(),
+            E::IncompatibleItem
+        );
+        // Variants are kept visible and none resolves to a recipe or an installed identity.
+        assert!(cat.variants.iter().all(|v| v.journal_blueprints.is_empty()));
+        let report = cat.audit();
+        assert!(report.is_empty(), "{report:?}");
     }
 }

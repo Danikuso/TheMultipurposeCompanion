@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use tmc_model::events::{EngineerCraft, Loadout};
 
-use crate::data::blueprints;
+use crate::data::{BlueprintCatalog, blueprints};
 
 /// Ingeniería aplicada a un módulo. `blueprint` conserva la clave del diario.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -12,6 +12,18 @@ pub struct CurrentEng {
     pub level: u8,
     pub quality: f64,
     pub experimental: Option<String>,
+}
+
+impl CurrentEng {
+    /// Clave canónica del blueprint aplicado dentro de un tipo de módulo; `None` si el
+    /// texto del diario no se reconoce (la clave original se conserva en `blueprint`).
+    pub fn canonical_blueprint<'a>(
+        &self,
+        catalogue: &'a BlueprintCatalog,
+        module_type: &str,
+    ) -> Option<&'a str> {
+        catalogue.canonical_blueprint(module_type, &self.blueprint)
+    }
 }
 
 /// Módulo instalado. `current == None` significa «de serie».
@@ -211,6 +223,25 @@ mod tests {
         let v = ShipView::from_loadout(&l);
         let cur = v.modules[0].current.as_ref().unwrap();
         assert_eq!((cur.blueprint.as_str(), cur.level), ("Engine_Mystery", 2));
+    }
+
+    #[test]
+    fn current_blueprint_canonicalises_per_module_without_rewriting_raw() {
+        let cat = blueprints();
+        let cur = CurrentEng {
+            blueprint: "ENGINE_DIRTY".into(),
+            level: 2,
+            quality: 0.5,
+            experimental: None,
+        };
+        assert_eq!(cur.canonical_blueprint(cat, "engine"), Some("engine_dirty"));
+        assert_eq!(cur.canonical_blueprint(cat, "fsd"), None);
+        assert_eq!(cur.blueprint, "ENGINE_DIRTY");
+        let unknown = CurrentEng {
+            blueprint: "Engine_Mystery".into(),
+            ..cur
+        };
+        assert_eq!(unknown.canonical_blueprint(cat, "engine"), None);
     }
 
     #[test]
