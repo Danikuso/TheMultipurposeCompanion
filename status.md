@@ -2,17 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-22 22:25 (Europe/Madrid) · Antigravity
-- **Fase actual:** F4 — Ingenieros y materiales (✅ completada: Tasks 0–28, ampliación C0–C10, rediseño UI Opción 2 y fix módulos vírgenes; binario de prueba compilado y lanzado para el usuario). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
-- **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada; diseño UI: [`docs/specs/2026-10-22-tmc-f4-ui-rediseno-opcion-2-design.md`](docs/specs/2026-10-22-tmc-f4-ui-rediseno-opcion-2-design.md).
-- **Plan activo:** [`docs/plans/2026-10-22-tmc-f4-ui-rediseno-opcion-2.md`](docs/plans/2026-10-22-tmc-f4-ui-rediseno-opcion-2.md) — 5/5 completas + fix de módulos vírgenes.
+- **Última actualización:** 2026-10-22 22:36 (Europe/Madrid) · Antigravity
+- **Fase actual:** F4 — Ingenieros y materiales (✅ completada; rediseño UI Opción 2 y fix módulos vírgenes cerrados; propuesta de rediseño global de la app formulada con maqueta HTML interactiva, spec y plan). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Spec activa:** [`docs/specs/2026-10-22-tmc-ui-rediseno-global-design.md`](docs/specs/2026-10-22-tmc-ui-rediseno-global-design.md) — pendiente de aprobación del propietario; base F4: [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md).
+- **Plan activo:** [`docs/plans/2026-10-22-tmc-ui-rediseno-global.md`](docs/plans/2026-10-22-tmc-ui-rediseno-global.md) — 10 tareas en 5 bloques preparadas para ejecución tras aprobación.
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** Tarea 5 completada ✅ (Verificación y compilación).
-- **Último paso completado:** Rediseño Opción 2 completado (stepper horizontal por grados, semáforo de existencias, asistente de intercambio directo, tarjetas de ingeniero) + fix crítico de reconocimiento de módulos vírgenes (prefijos en `blueprints.json` y fallback de ranuras core). Binario debug `target/debug/TMC.exe` compilado y listo para prueba en vivo con el juego abierto.
-- **Siguiente acción:** Probar en juego real con el usuario y confirmar que los módulos vírgenes y la nueva UI funcionan según lo esperado.
+- **Tarea:** Planificación de rediseño global de la aplicación completada (Spec, Plan y Maqueta interactiva).
+- **Último paso completado:** Diseñada la spec global (`docs/specs/2026-10-22-tmc-ui-rediseno-global-design.md`), el plan de ejecución de 10 tareas (`docs/plans/2026-10-22-tmc-ui-rediseno-global.md`) y la maqueta HTML interactiva navegable (`ui_redesign_global_mockups.html`) cubriendo Shell, Exploración/Exobiología, Combate/AX, Minería, Comercio y Misiones.
+- **Siguiente acción:** Revisión y aprobación de la spec y plan por parte del propietario para iniciar la ejecución bloque a bloque.
 ## Tareas de F4
 
 Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
@@ -332,6 +332,12 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-22 22:36 (Europe/Madrid) · Antigravity · Planificación del rediseño visual global de toda la aplicación (Design System «TMC Glass HUD»):
+  - Maqueta HTML interactiva navegable generada como artefacto (`ui_redesign_global_mockups.html`) con los 6 módulos: Shell (TopBar & Sidebar), Exploración & Exobiología, Combate & AX, Minería, Comercio, y Misiones & Pasajeros.
+  - Especificación de diseño formal redactada y commiteada: `docs/specs/2026-10-22-tmc-ui-rediseno-global-design.md` (`e6471de`).
+  - Plan de ejecución redactado y commiteado: `docs/plans/2026-10-22-tmc-ui-rediseno-global.md` (`e6471de`), estructurado en 10 tareas en 5 bloques.
+  - Siguiente: Revisión y aprobación por parte del propietario.
 
 - 2026-10-22 22:25 (Europe/Madrid) · Antigravity · Ejecución del plan de rediseño visual de Ingeniería y Materiales (Opción 2) y resolución del bug crítico de módulos vírgenes:
   - Tarea 1 (`1a81c64`): 17 claves i18n añadidas en los 5 idiomas (`locales/{es,en,fr,de,pt}/engineering.ftl`).
