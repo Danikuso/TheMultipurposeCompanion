@@ -11,7 +11,7 @@
 ## Puntero actual
 
 - **Tarea:** C1 🔄 en curso — Step 1: tests del snapshot, conversor y auditoría del catálogo en staging.
-- **Último paso completado:** Task 27 cerrada en `be03e09`: ambas revisiones aprobadas; 1.369 Rust PASS/2 ignoradas previas, 343 UI PASS, fmt/clippy/check/build PASS. Eval local: 9 diarios, 4 intervalos y 201/201 exactos, diferencia0; INSUFICIENTE por n<5. C0 documental ratificada y revisada; commit inmediato de estos documentos.
+- **Último paso completado:** Task 27 cerrada en `be03e09`: ambas revisiones aprobadas; 1.369 Rust PASS/2 ignoradas previas, 343 UI PASS, fmt/clippy/check/build PASS. Eval local: 9 diarios, 4 intervalos y 201/201 exactos, diferencia0; INSUFICIENTE por n<5. C0 documental ratificada y revisada en `956248d`.
 - **Siguiente acción:** C1 del plan activo: parser Node sin dependencias que lea fuentes fijadas y produzca staging/manifiesto por constructor; atribución Apache y mapa EDDI limitado ID/nombre. No activar aún los JSON del producto: C2–C7 adaptan contratos/UI antes de C8. Sin preguntas pendientes del propietario.
 ## Tareas de F4
 
@@ -53,7 +53,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 | Unidad | Estado | Commit | Siguiente paso / evidencia |
 |---|---|---|---|
-| C0 | ✅ hecha | commit documental inmediato | Spec/plan/enmienda ratificados, revisión aprobada; 11 links/cercas/diff PASS |
+| C0 | ✅ hecha | 956248d | Spec/plan/enmienda ratificados, revisión aprobada; 11 links/cercas/diff PASS |
 | C1 | 🔄 en curso | — | Snapshot Apache fijado, parser/manifest en staging; no sustituir datos activos |
 | C2–C10 | ⬜ pendientes | — | Orden, interfaces y tests en secuencia C del plan activo |
 
