@@ -112,8 +112,13 @@
   .off-route {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.75rem;
-    margin-bottom: 0.6rem;
+    margin-bottom: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid var(--hud-warning);
+    border-radius: 4px;
     color: var(--hud-warning);
     font-weight: 700;
   }
