@@ -230,6 +230,7 @@ const TOPICS: &[&str] = &[
     "missions.passengers",
     "missions.tourism",
     "missions.community_goals",
+    "engineering.catalogue",
     "engineering.inventory",
     "engineering.locker",
     "engineering.session",
@@ -543,6 +544,9 @@ fn route_template(text: &str) -> bool {
             | "/api/navigation/autocomplete"
             | "/api/engineering/goals"
             | "/api/engineering/locker"
+            | "/api/engineering/catalogue"
+            | "/api/engineering/engineers"
+            | "/api/engineering/flow"
             | "/api/pairing"
             | "<asset>"
             | "<unmatched>"
@@ -1432,6 +1436,7 @@ mod tests {
     #[test]
     fn engineering_topics_actions_and_module_registered_and_canary_redacted() {
         for topic in [
+            "engineering.catalogue",
             "engineering.inventory",
             "engineering.locker",
             "engineering.session",
@@ -1723,7 +1728,13 @@ mod tests {
     }
     #[test]
     fn engineering_page_routes_are_finite_and_never_expose_queries() {
-        for route in ["/api/engineering/goals", "/api/engineering/locker"] {
+        for route in [
+            "/api/engineering/goals",
+            "/api/engineering/locker",
+            "/api/engineering/catalogue",
+            "/api/engineering/engineers",
+            "/api/engineering/flow",
+        ] {
             let safe = redact_diagnostic(
                 &json!({"route":route,"url":format!("{route}?revision=1&section=CANARY"),"section":"CANARY","key":"CANARY","name":"CANARY"}),
                 DiagnosticContext::Http,

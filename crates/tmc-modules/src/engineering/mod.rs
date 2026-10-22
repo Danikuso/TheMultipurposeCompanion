@@ -23,6 +23,7 @@ pub mod engineers;
 pub mod goals;
 pub mod inventory;
 pub mod locker;
+mod pages;
 mod pagination;
 pub mod plan;
 pub mod ship;
@@ -63,6 +64,7 @@ use ship::{CurrentEng, ShipView};
 use sources::{EngineerPick, SourcesState, engineer_for, pick_engineer};
 use trades::TradeProposal;
 
+const TOPIC_CATALOGUE: &str = "engineering.catalogue";
 const TOPIC_INVENTORY: &str = "engineering.inventory";
 const TOPIC_LOCKER: &str = "engineering.locker";
 const TOPIC_SESSION: &str = "engineering.session";
@@ -72,7 +74,8 @@ const TOPIC_FLOW: &str = "engineering.flow";
 const TOPIC_GOALS: &str = "engineering.goals";
 const TOPIC_SOURCES: &str = "engineering.sources";
 const TOPIC_ALERTS: &str = "engineering.alerts";
-const TOPICS: [&str; 9] = [
+const TOPICS: [&str; 10] = [
+    TOPIC_CATALOGUE,
     TOPIC_INVENTORY,
     TOPIC_LOCKER,
     TOPIC_SESSION,
@@ -214,6 +217,8 @@ pub struct Engineering {
     revision: u64,
     goal_pages: BTreeMap<String, Vec<Value>>,
     locker_pages: BTreeMap<String, Vec<Value>>,
+    engineer_rows: Vec<Value>,
+    flow_pages: pages::Pages,
     values: std::collections::HashMap<&'static str, Value>,
 }
 
@@ -246,6 +251,8 @@ impl Engineering {
             revision: 0,
             goal_pages: BTreeMap::new(),
             locker_pages: BTreeMap::new(),
+            engineer_rows: Vec::new(),
+            flow_pages: pages::Pages::new(),
             values: std::collections::HashMap::new(),
         }
     }
@@ -1065,20 +1072,43 @@ impl Engineering {
     ) -> TopicSet {
         let mut dirty = TopicSet::new();
         let inventory = self.render_inventory();
-        let engineers = self.render_engineers(state);
+        let mut engineers = self.render_engineers(state);
         let semantic_changed = |topic: &str, value: &Value| {
-            self.values.get(topic).is_none_or(|old| {
-                old.as_object().map(|o| {
+            let strip = |v: &Value| {
+                v.as_object().map(|o| {
                     o.iter()
-                        .filter(|(k, _)| k.as_str() != "as_of")
+                        .filter(|(k, _)| !matches!(k.as_str(), "as_of" | "revision"))
                         .collect::<BTreeMap<_, _>>()
-                }) != value.as_object().map(|o| {
-                    o.iter()
-                        .filter(|(k, _)| k.as_str() != "as_of")
+                        .into_iter()
+                        .map(|(k, v)| (k.clone(), v.clone()))
                         .collect::<BTreeMap<_, _>>()
                 })
-            })
+            };
+            self.values
+                .get(topic)
+                .is_none_or(|old| strip(old) != strip(value))
         };
+        let mut flow = self.render_flow(state, all, flow_cost);
+        let flow_pages = {
+            let row = self.flow.as_ref().and_then(|f| self.row(&f.slot)).map(|r| {
+                (
+                    r.item.as_str(),
+                    r.module_type.as_deref(),
+                    r.current.as_ref(),
+                )
+            });
+            pages::flow_pages(blueprints(), row, flow_cost, &flow["lines"])
+        };
+        let engineer_rows: Vec<Value> = self
+            .book
+            .rows()
+            .iter()
+            .map(|r| serde_json::to_value(r).unwrap_or_default())
+            .collect();
+        if let Some(o) = engineers.as_object_mut() {
+            o.insert("total".into(), json!(engineer_rows.len()));
+            o.insert("selected_id".into(), json!(self.selected_engineer));
+        }
         let dependencies_changed = semantic_changed(TOPIC_INVENTORY, &inventory)
             || semantic_changed(TOPIC_ENGINEERS, &engineers);
         let mut details = self.render_goals(shopping, verified);
@@ -1110,11 +1140,43 @@ impl Engineering {
                 .is_none_or(|old| old["status"] != shopping.status)
             || self.goal_pages != goal_pages
             || self.locker_pages != locker_pages
+            || self.engineer_rows != engineer_rows
+            || self.flow_pages != flow_pages
         {
             self.revision += 1;
         }
         self.goal_pages = goal_pages;
         self.locker_pages = locker_pages;
+        self.engineer_rows = engineer_rows;
+        self.flow_pages = flow_pages;
+        let counts_of = |pages: &pages::Pages, names: &[&str]| -> BTreeMap<String, usize> {
+            names
+                .iter()
+                .map(|n| ((*n).to_owned(), pages.get(*n).map_or(0, Vec::len)))
+                .collect()
+        };
+        let catalogue_counts = counts_of(
+            pages::catalogue_pages(),
+            &[
+                "module_types",
+                "blueprints",
+                "recipes",
+                "experimentals",
+                "variants",
+            ],
+        );
+        let v = self.stamp(json!({"revision": self.revision, "counts": catalogue_counts}));
+        self.set(TOPIC_CATALOGUE, v, &mut dirty);
+        if let Some(o) = engineers.as_object_mut() {
+            o.insert("revision".into(), json!(self.revision));
+        }
+        if let Some(o) = flow.as_object_mut() {
+            o.insert("revision".into(), json!(self.revision));
+            o.insert(
+                "counts".into(),
+                json!(counts_of(&self.flow_pages, &pages::FLOW_SECTIONS)),
+            );
+        }
         self.set(TOPIC_INVENTORY, inventory, &mut dirty);
         let counts: BTreeMap<_, _> = self
             .locker_pages
@@ -1128,8 +1190,7 @@ impl Engineering {
         self.set(TOPIC_ENGINEERS, engineers, &mut dirty);
         let v = self.stamp(serde_json::to_value(&self.ship).unwrap_or_default());
         self.set(TOPIC_SHIP, v, &mut dirty);
-        let v = self.render_flow(state, all, flow_cost);
-        self.set(TOPIC_FLOW, v, &mut dirty);
+        self.set(TOPIC_FLOW, flow, &mut dirty);
         let goals: Vec<Value> = self.goal_pages["goals"].iter().map(|g| json!({
             "id":g["id"], "percent":g["percent"], "completable":g["completable"], "engineer":g["engineer"],
             "materials_ready":g["materials_ready"], "merc_coins":g["merc_coins"], "blockers":g["blockers"],
@@ -1468,20 +1529,28 @@ impl Module for Engineering {
     }
 
     fn query(&self, resource: &str, query: &ModulePageQuery) -> Result<Value, ModuleQueryError> {
-        let (sections, default) = match resource {
-            "goals" => (&self.goal_pages, "goals"),
-            "locker" => (&self.locker_pages, "items"),
+        let section = query.section.as_deref();
+        let (default, valid): (&str, &[&str]) = match resource {
+            "goals" => ("goals", &["goals", "needs", "missing", "surplus"]),
+            "locker" => ("items", &["items", "components", "consumables", "data"]),
+            "catalogue" => ("blueprints", &pages::CATALOGUE_SECTIONS),
+            "engineers" => ("engineers", &pages::ENGINEER_SECTIONS),
+            "flow" => ("lines", &pages::FLOW_SECTIONS),
             _ => return Err(ModuleQueryError::NotFound),
         };
-        let section = query.section.as_deref().unwrap_or(default);
-        let valid = match resource {
-            "goals" => matches!(section, "goals" | "needs" | "missing" | "surplus"),
-            _ => matches!(section, "items" | "components" | "consumables" | "data"),
-        };
-        if !valid {
+        let section = section.unwrap_or(default);
+        if !valid.contains(&section) {
             return Err(ModuleQueryError::InvalidQuery);
         }
-        let rows = sections.get(section).ok_or(ModuleQueryError::Unavailable)?;
+        let rows: &[Value] = match (resource, section) {
+            ("goals", s) => self.goal_pages.get(s),
+            ("locker", s) => self.locker_pages.get(s),
+            ("catalogue", s) => pages::catalogue_pages().get(s),
+            ("engineers", "engineers") => Some(&self.engineer_rows),
+            ("engineers", s) => pages::engineer_static_pages().get(s),
+            (_, s) => self.flow_pages.get(s),
+        }
+        .ok_or(ModuleQueryError::Unavailable)?;
         pagination::page(self.revision, section, rows, query)
     }
 

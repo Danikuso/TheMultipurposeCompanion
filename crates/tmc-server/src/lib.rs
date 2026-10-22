@@ -173,6 +173,18 @@ pub fn build_router(
             "/api/engineering/locker",
             axum::routing::get(rest::get_engineering_locker),
         )
+        .route(
+            "/api/engineering/catalogue",
+            axum::routing::get(rest::get_engineering_catalogue),
+        )
+        .route(
+            "/api/engineering/engineers",
+            axum::routing::get(rest::get_engineering_engineers),
+        )
+        .route(
+            "/api/engineering/flow",
+            axum::routing::get(rest::get_engineering_flow),
+        )
         .route("/api/pairing", axum::routing::get(pairing::get_pairing))
         .fallback(axum::routing::get(assets::serve_asset))
         .layer(axum::middleware::from_fn_with_state(
@@ -342,7 +354,7 @@ mod tests {
             store,
             Arc::new(DummyHost),
         );
-        for resource in ["goals", "locker"] {
+        for resource in ["goals", "locker", "catalogue", "engineers", "flow"] {
             for (suffix, expected) in [
                 ("", 400),
                 ("?revision=bad", 400),
@@ -427,7 +439,7 @@ mod tests {
     #[tokio::test]
     async fn engineering_page_rejections_are_not_cached_without_changing_other_routes() {
         let (app, _, _) = test_router(true, "test-secret");
-        for resource in ["goals", "locker"] {
+        for resource in ["goals", "locker", "catalogue", "engineers", "flow"] {
             for (method, host, peer, expected) in [
                 (
                     "GET",

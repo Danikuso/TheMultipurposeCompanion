@@ -1900,7 +1900,8 @@ fn contract_snapshot() -> Value {
     ));
     h.preview_engines();
     json!({
-        "engineering.pages": {"goals":h.m.query("goals", &ModulePageQuery {revision:h.m.revision,cursor:0,section:None}).unwrap(), "locker_components":h.m.query("locker", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("components".into())}).unwrap()},
+        "engineering.pages": {"goals":h.m.query("goals", &ModulePageQuery {revision:h.m.revision,cursor:0,section:None}).unwrap(), "locker_components":h.m.query("locker", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("components".into())}).unwrap(), "catalogue_recipes":h.m.query("catalogue", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("recipes".into())}).unwrap(), "engineers_capabilities":h.m.query("engineers", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("capabilities".into())}).unwrap(), "flow_costs":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("costs".into())}).unwrap(), "flow_lines":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:None}).unwrap()},
+        "engineering.catalogue": h.val("engineering.catalogue"),
         "engineering.inventory": h.val("engineering.inventory"),
         "engineering.locker": h.val("engineering.locker"),
         "engineering.session": h.val("engineering.session"),
@@ -1918,7 +1919,7 @@ fn contract_snapshot() -> Value {
 #[test]
 fn fixture_topics_stay_under_16_kib() {
     let snapshot = contract_snapshot();
-    assert_eq!(snapshot.as_object().unwrap().len(), 10);
+    assert_eq!(snapshot.as_object().unwrap().len(), 11);
     for (topic, value) in snapshot.as_object().unwrap() {
         let size = serde_json::to_vec(value).unwrap().len();
         assert!(size < 16384, "{topic}: {size} B");
@@ -2232,4 +2233,216 @@ fn engineer_for_goal_resolves_the_real_goal() {
     done.id = "done".into();
     h.m.goals.push(done);
     assert_eq!(h.m.engineer_for_goal("done"), None);
+}
+
+#[test]
+fn catalogue_pages_serve_every_static_row_flat() {
+    use crate::data::{blueprints, engineers};
+    let mut h = H::new();
+    h.fixture();
+    let cat = blueprints();
+    let summary = h.val("engineering.catalogue");
+    assert_eq!(summary["revision"], json!(h.m.revision));
+    let recipes: usize = cat
+        .blueprints
+        .iter()
+        .flat_map(|b| &b.recipes)
+        .map(|r| r.grades.len())
+        .sum();
+    let expected = [
+        ("module_types", cat.module_types.len()),
+        ("blueprints", cat.blueprints.len()),
+        ("recipes", recipes),
+        ("experimentals", cat.experimentals.len()),
+        ("variants", cat.variants.len()),
+    ];
+    for (section, n) in expected {
+        assert_eq!(h.pages("catalogue", section).len(), n, "{section}");
+        assert_eq!(summary["counts"][section], json!(n), "{section}");
+    }
+    assert_eq!(h.pages("catalogue", "aliases").len(), cat.aliases.len());
+    let first = &h.pages("catalogue", "recipes")[0];
+    for key in [
+        "blueprint",
+        "module_type",
+        "grade",
+        "materials",
+        "merc_coins",
+        "entry",
+    ] {
+        assert!(first.get(key).is_some(), "{key}: {first}");
+    }
+    let default =
+        h.m.query(
+            "catalogue",
+            &ModulePageQuery {
+                revision: h.m.revision,
+                cursor: 0,
+                section: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(default["section"], "blueprints");
+    assert!(!engineers().is_empty());
+}
+
+#[test]
+fn engineer_pages_flatten_capabilities_and_unlock_steps() {
+    use crate::data::engineers;
+    let mut h = H::new();
+    h.fixture();
+    let defs = engineers();
+    assert_eq!(h.pages("engineers", "engineers").len(), defs.len());
+    let caps: usize = defs
+        .iter()
+        .flat_map(|e| &e.blueprints)
+        .map(|b| b.grades.len())
+        .sum();
+    let capabilities = h.pages("engineers", "capabilities");
+    assert_eq!(capabilities.len(), caps);
+    for key in ["engineer_id", "module_type", "blueprint", "grade"] {
+        assert!(capabilities[0].get(key).is_some(), "{key}");
+    }
+    let unlock = h.pages("engineers", "unlock");
+    assert!(defs.iter().all(|e| {
+        unlock
+            .iter()
+            .any(|r| r["engineer_id"] == json!(e.id) && r["field"] == "requirement")
+    }));
+    let before = h.m.revision;
+    let summary = h.val("engineering.engineers");
+    assert_eq!(summary["total"], json!(defs.len()));
+    assert_eq!(summary["revision"], json!(before));
+    h.action(ACTION_SELECT_ENGINEER, json!({"id": 300100}));
+    assert_eq!(h.val("engineering.engineers")["selected_id"], json!(300100));
+    assert!(h.m.revision > before);
+    let default =
+        h.m.query(
+            "engineers",
+            &ModulePageQuery {
+                revision: h.m.revision,
+                cursor: 0,
+                section: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(default["section"], "engineers");
+}
+
+#[test]
+fn flow_pages_expose_options_grades_costs_and_lines() {
+    let mut h = H::new();
+    h.fixture();
+    for section in ["blueprints", "experimentals", "grades", "costs", "lines"] {
+        assert!(h.pages("flow", section).is_empty(), "idle {section}");
+    }
+    let before = h.m.revision;
+    h.preview_engines();
+    assert!(h.m.revision > before);
+    let flow = h.val("engineering.flow");
+    assert_eq!(flow["revision"], json!(h.m.revision));
+    let lines = h.pages("flow", "lines");
+    assert_eq!(json!(lines), flow["lines"]);
+    assert_eq!(flow["counts"]["lines"], json!(lines.len()));
+    let blueprints = h.pages("flow", "blueprints");
+    assert!(
+        blueprints
+            .iter()
+            .any(|b| b["key"] == "engine_dirty" && b["available"] == json!(true))
+    );
+    assert_eq!(
+        h.pages("flow", "experimentals").len(),
+        flow["options"]["experimentals"].as_array().unwrap().len()
+    );
+    let grades: Vec<u64> = h
+        .pages("flow", "grades")
+        .iter()
+        .map(|g| g["grade"].as_u64().unwrap())
+        .collect();
+    let wanted: Vec<u64> = flow["cost"]["per_grade"]
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(|k| k.parse().unwrap())
+        .collect();
+    assert_eq!(grades, wanted);
+    let total: u64 = flow["cost"]["total"]
+        .as_object()
+        .unwrap()
+        .values()
+        .map(|v| v.as_u64().unwrap())
+        .sum();
+    let costs = h.pages("flow", "costs");
+    let materials: u64 = costs
+        .iter()
+        .filter(|c| c["kind"] == "material")
+        .map(|c| c["count"].as_u64().unwrap())
+        .sum();
+    assert_eq!(materials, total);
+    assert!(
+        costs.iter().any(|c| c["grade"].is_null()),
+        "experimental cost row"
+    );
+    let default =
+        h.m.query(
+            "flow",
+            &ModulePageQuery {
+                revision: h.m.revision,
+                cursor: 0,
+                section: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(default["section"], "lines");
+    // Changing the selection invalidates the previous revision.
+    let old = h.m.revision;
+    h.action(ACTION_CLOSE_FLOW, json!({}));
+    assert!(h.m.revision > old);
+    assert_eq!(
+        h.m.query(
+            "flow",
+            &ModulePageQuery {
+                revision: old,
+                cursor: 0,
+                section: None
+            }
+        ),
+        Err(ModuleQueryError::StaleRevision)
+    );
+}
+
+#[test]
+fn new_resources_validate_sections_and_queries_are_read_only() {
+    let mut h = H::new();
+    h.fixture();
+    h.preview_engines();
+    let q = |section: &str| ModulePageQuery {
+        revision: h.m.revision,
+        cursor: 0,
+        section: Some(section.into()),
+    };
+    for (resource, section) in [
+        ("catalogue", "goals"),
+        ("catalogue", "lines"),
+        ("engineers", "lines"),
+        ("flow", "items"),
+        ("flow", "CANARY"),
+    ] {
+        assert_eq!(
+            h.m.query(resource, &q(section)),
+            Err(ModuleQueryError::InvalidQuery),
+            "{resource}/{section}"
+        );
+    }
+    let values = h.m.values.clone();
+    let revision = h.m.revision;
+    for (resource, section) in [
+        ("catalogue", "recipes"),
+        ("engineers", "capabilities"),
+        ("flow", "costs"),
+    ] {
+        h.pages(resource, section);
+    }
+    assert_eq!(values, h.m.values);
+    assert_eq!(revision, h.m.revision);
 }

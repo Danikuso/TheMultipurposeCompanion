@@ -244,3 +244,101 @@ async fn engineering_http_pages_are_lossless_and_invalidate_with_live_state() {
         assert_eq!(get(&router, &stale_uri).await.0, StatusCode::CONFLICT);
     }
 }
+
+#[tokio::test]
+async fn catalogue_engineers_and_flow_pages_are_lossless_and_independent_per_client() {
+    use tmc_modules::data::engineers;
+    let core = spawn_core(
+        vec![Box::new(Engineering::new())],
+        None,
+        Duration::from_millis(100),
+    );
+    core.events
+        .send(SourceEvent::Settings(ModuleSettings {
+            online_services: false,
+            ..Default::default()
+        }))
+        .await
+        .unwrap();
+    journal(
+        &core,
+        json!({"timestamp":"2026-10-22T12:00:00Z","event":"Commander","Name":"CMDR TESTER"}),
+    )
+    .await;
+    journal(
+        &core,
+        json!({"timestamp":"2026-10-22T12:00:01Z","event":"Loadout","Ship":"asp","ShipID":7,
+        "Modules":[{"Slot":"MainEngines","Item":"int_engine_size5_class5","On":true,"Priority":0}]}),
+    )
+    .await;
+    core.events
+        .send(SourceEvent::Action {
+            name: "engineering.select_module".into(),
+            args: json!({"slot":"MainEngines"}),
+        })
+        .await
+        .unwrap();
+    core.events
+        .send(SourceEvent::Action {
+            name: "engineering.preview".into(),
+            args: json!({"blueprint":"engine_dirty","experimental":"special_engine_overloaded","grade":5}),
+        })
+        .await
+        .unwrap();
+    let snapshot = core.snapshot().await;
+    let revision = snapshot["engineering.catalogue"]["revision"]
+        .as_u64()
+        .unwrap();
+    for topic in [
+        "engineering.catalogue",
+        "engineering.engineers",
+        "engineering.flow",
+    ] {
+        assert_eq!(snapshot[topic]["revision"], revision, "{topic}");
+        assert!(serde_json::to_vec(&snapshot[topic]).unwrap().len() < 16384);
+    }
+    let router = build_router(
+        ServerConfig::default(),
+        "127.0.0.1".into(),
+        core.clone(),
+        tmc_core::Store::open_in_memory().unwrap(),
+        Arc::new(crate::AppActions::new()),
+    );
+    let recipes = section(&router, "catalogue", revision, "recipes").await;
+    assert_eq!(
+        recipes.len() as u64,
+        snapshot["engineering.catalogue"]["counts"]["recipes"]
+    );
+    assert_eq!(
+        section(&router, "engineers", revision, "engineers")
+            .await
+            .len(),
+        engineers().len()
+    );
+    let lines = section(&router, "flow", revision, "lines").await;
+    assert_eq!(json!(lines), snapshot["engineering.flow"]["lines"]);
+    // Two clients keep independent cursors and receive identical bytes.
+    let uri = format!("/api/engineering/catalogue?revision={revision}&section=recipes&cursor=1");
+    let (a, b) = tokio::join!(get(&router, &uri), get(&router, &uri));
+    assert_eq!(a, b);
+    assert_eq!(a.1["cursor"], 1);
+    // GET never mutates the revision or broadcasts topics.
+    assert_eq!(core.snapshot().await, snapshot);
+    // A flow change invalidates every resource, not only flow.
+    core.events
+        .send(SourceEvent::Action {
+            name: "engineering.close_flow".into(),
+            args: json!({}),
+        })
+        .await
+        .unwrap();
+    let changed = core.snapshot().await["engineering.flow"]["revision"]
+        .as_u64()
+        .unwrap();
+    assert!(changed > revision);
+    for resource in ["catalogue", "engineers", "flow"] {
+        let stale = format!("/api/engineering/{resource}?revision={revision}");
+        assert_eq!(get(&router, &stale).await.0, StatusCode::CONFLICT);
+    }
+    assert!(section(&router, "flow", changed, "costs").await.is_empty());
+}
