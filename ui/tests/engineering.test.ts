@@ -184,6 +184,18 @@ test('engineer row shows status rank progress system distance and verification',
  expect(row.textContent).toContain('12,3 al');
  expect(row.textContent).toContain('Sin verificar');
 });
+test('engineer status filter tabs filter rows', async () => {
+ await showEngineers();
+ const filterTabs = target.querySelectorAll('.filter-tab');
+ expect(filterTabs.length).toBe(3);
+ expect(target.querySelectorAll('[data-engineer-id]').length).toBeGreaterThan(0);
+ (filterTabs[1] as HTMLButtonElement).click();
+ flushSync();
+ const unlockedCards = target.querySelectorAll('[data-engineer-id]');
+ for (const card of unlockedCards) {
+  expect(card.textContent).toContain('Desbloqueado');
+ }
+});
 test('select engineer posts json action', async () => {
  await showEngineers();
  (target.querySelector('[data-engineer-id="300100"] button') as HTMLButtonElement).click();
