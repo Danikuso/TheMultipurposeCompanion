@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use super::ship::CurrentEng;
 use crate::data::{
     BaseIdentity, BaseRequirement, Blueprint, BlueprintCatalog, EntryPolicy, Ingredient,
-    RecipeResolutionError,
+    ModuleBlueprint, RecipeResolutionError,
 };
 
 /// Petición de cálculo. `rolls[i]` son las tiradas del grado `i + 1`.
@@ -176,30 +176,36 @@ fn base_start(
     }
 }
 
-/// Materials and Merc Coins to engineer `item` as `req` says, starting from `current`.
-/// The recipe context is resolved from item and installed base; when none or several apply the
-/// result carries a blocker and no costs, never a silently chosen or free route.
-pub fn plan_cost(
+fn normalise(
     cat: &BlueprintCatalog,
-    item: &str,
     current: Option<&CurrentEng>,
     req: &PlanRequest,
-) -> PlanCost {
-    if cat.module_type_of(item) != Some(req.module_type.as_str()) {
-        return PlanCost::blocked(PlanBlocker::IncompatibleItem);
-    }
-    let (bp, rec) = match cat.blueprint_for_item(item, &req.blueprint, current) {
-        Ok(found) => found,
-        Err(e) => return PlanCost::blocked(e.into()),
-    };
-    // Compare the installed blueprint through its canonical key, so journal aliases match.
-    let normalised = current.map(|c| {
+) -> Option<CurrentEng> {
+    current.map(|c| {
         let mut c = c.clone();
         if let Some(k) = cat.canonical_blueprint(&req.module_type, &c.blueprint) {
             c.blueprint = k.to_owned();
         }
         c
-    });
+    })
+}
+
+/// Resolves the recipe context and the starting point of a request. Shared by the cost and by
+/// the engineer recommendation so both see the same route (aliases canonicalised, base policy).
+pub(crate) fn resolve_start<'a>(
+    cat: &'a BlueprintCatalog,
+    item: &str,
+    current: Option<&CurrentEng>,
+    req: &PlanRequest,
+) -> Result<(&'a Blueprint, &'a ModuleBlueprint, StartPoint), PlanBlocker> {
+    if cat.module_type_of(item) != Some(req.module_type.as_str()) {
+        return Err(PlanBlocker::IncompatibleItem);
+    }
+    let (bp, rec) = cat
+        .blueprint_for_item(item, &req.blueprint, current)
+        .map_err(PlanBlocker::from)?;
+    // Compare the installed blueprint through its canonical key, so journal aliases match.
+    let normalised = normalise(cat, current, req);
     let start = match &rec.entry {
         EntryPolicy::Stock => start_grade(normalised.as_ref(), &bp.key, &req.rolls),
         EntryPolicy::ExistingOnly { .. } => {
@@ -212,11 +218,41 @@ pub fn plan_cost(
             }
             match starts.as_slice() {
                 [one] => *one,
-                [] => return PlanCost::blocked(PlanBlocker::BaseRequired),
-                _ => return PlanCost::blocked(PlanBlocker::AmbiguousRecipe),
+                [] => return Err(PlanBlocker::BaseRequired),
+                _ => return Err(PlanBlocker::AmbiguousRecipe),
             }
         }
     };
+    Ok((bp, rec, start))
+}
+
+/// Grades an engineer must offer for the request: from the resolved start to the target.
+/// Empty when already achieved. If the route cannot be resolved the whole `1..=target` route
+/// is assumed. Experimentals never change it.
+pub fn required_grades(
+    cat: &BlueprintCatalog,
+    item: &str,
+    current: Option<&CurrentEng>,
+    req: &PlanRequest,
+) -> Vec<u8> {
+    let start = resolve_start(cat, item, current, req).map_or(1, |(_, _, s)| s.grade);
+    (start..=req.target_grade.min(5)).collect()
+}
+
+/// Materials and Merc Coins to engineer `item` as `req` says, starting from `current`.
+/// The recipe context is resolved from item and installed base; when none or several apply the
+/// result carries a blocker and no costs, never a silently chosen or free route.
+pub fn plan_cost(
+    cat: &BlueprintCatalog,
+    item: &str,
+    current: Option<&CurrentEng>,
+    req: &PlanRequest,
+) -> PlanCost {
+    let (bp, rec, start) = match resolve_start(cat, item, current, req) {
+        Ok(found) => found,
+        Err(blocker) => return PlanCost::blocked(blocker),
+    };
+    let normalised = normalise(cat, current, req);
     let mut cost = PlanCost {
         replaces_blueprint: start.replaces,
         verified: bp.verified,
@@ -921,5 +957,78 @@ mod tests {
         .collect();
         assert_eq!(cost.total, expected);
         assert_eq!(cost.per_grade.keys().copied().collect::<Vec<_>>(), [4, 5]);
+    }
+
+    fn stock_catalogue() -> BlueprintCatalog {
+        let mut cat = standard();
+        cat.blueprints[0].recipes = vec![ModuleBlueprint {
+            module_type: "test".into(),
+            selector: None,
+            entry: EntryPolicy::Stock,
+            grades: (1..=5)
+                .map(|g| (g, cost_of(vec![ing("m", 1)], 0)))
+                .collect(),
+        }];
+        cat
+    }
+
+    fn grades_of(cost: &PlanCost) -> Vec<u8> {
+        cost.per_grade.keys().copied().collect()
+    }
+
+    #[test]
+    fn required_grades_match_the_cost_route_through_aliases() {
+        let cat = stock_catalogue();
+        // G3 a medias escrito con un alias del diario: la ruta es [3, 4, 5], no [1..=5].
+        let current = cur("upgrade_alias", 3, 0.5, None);
+        let req = treq(None, 5);
+        let cost = plan_cost(&cat, TEST_ITEM, Some(&current), &req);
+        assert_eq!(grades_of(&cost), [3, 4, 5]);
+        assert_eq!(
+            required_grades(&cat, TEST_ITEM, Some(&current), &req),
+            [3, 4, 5]
+        );
+        // Sin canonicalizar, el grado de partida sería 1 (el fallo que esto evita).
+        assert_eq!(
+            start_grade(Some(&current), "upgrade_test", &req.rolls).grade,
+            1
+        );
+        // Sin ingeniería actual: toda la ruta.
+        assert_eq!(
+            required_grades(&cat, TEST_ITEM, None, &req),
+            [1, 2, 3, 4, 5]
+        );
+    }
+
+    #[test]
+    fn required_grades_follow_the_base_policy_and_ignore_experimentals() {
+        let cat = standard();
+        let current = variant_cur(1, 1.0);
+        let plain = treq(None, 5);
+        let cost = plan_cost(&cat, TEST_ITEM, Some(&current), &plain);
+        assert_eq!(grades_of(&cost), [2, 3, 4, 5]);
+        assert_eq!(
+            required_grades(&cat, TEST_ITEM, Some(&current), &plain),
+            [2, 3, 4, 5]
+        );
+        let with_exp = treq(Some("special_test"), 5);
+        assert_eq!(
+            required_grades(&cat, TEST_ITEM, Some(&current), &with_exp),
+            [2, 3, 4, 5]
+        );
+        // Ruta no resoluble (base exigida): se asume la ruta completa.
+        assert_eq!(
+            required_grades(&cat, TEST_ITEM, None, &plain),
+            [1, 2, 3, 4, 5]
+        );
+    }
+
+    #[test]
+    fn start_above_target_requires_no_grades() {
+        let cat = stock_catalogue();
+        let done = cur("upgrade_test", 5, 1.0, None);
+        assert!(required_grades(&cat, TEST_ITEM, Some(&done), &treq(None, 5)).is_empty());
+        let g4 = cur("upgrade_alias", 4, 1.0, None);
+        assert!(required_grades(&cat, TEST_ITEM, Some(&g4), &treq(None, 4)).is_empty());
     }
 }

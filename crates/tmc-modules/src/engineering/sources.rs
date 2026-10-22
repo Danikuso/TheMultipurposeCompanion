@@ -614,4 +614,42 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn staging_engineer_blueprints_exist_canonically_in_the_staging_catalogue() {
+        let raw: serde_json::Value = serde_json::from_str(include_str!(
+            "../../data/import/engineering/staging/blueprints.json"
+        ))
+        .unwrap();
+        let root = raw.as_object().unwrap();
+        let list = root
+            .values()
+            .find_map(|v| {
+                v.as_array()
+                    .filter(|a| a.iter().any(|b| b.get("key").is_some()))
+            })
+            .expect("blueprint list");
+        let mut keys = std::collections::BTreeSet::new();
+        for b in list {
+            let key = b["key"].as_str().unwrap();
+            for r in b["recipes"].as_array().into_iter().flatten() {
+                keys.insert((
+                    r["module_type"].as_str().unwrap().to_owned(),
+                    key.to_owned(),
+                ));
+            }
+        }
+        assert!(!keys.is_empty());
+        for d in staging() {
+            for b in &d.blueprints {
+                assert!(
+                    keys.contains(&(b.module_type.clone(), b.blueprint.clone())),
+                    "{}: {}/{}",
+                    d.name,
+                    b.module_type,
+                    b.blueprint
+                );
+            }
+        }
+    }
 }
