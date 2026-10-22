@@ -2,17 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-22 12:59 (Europe/Madrid) · Codex
-- **Fase actual:** F4 — Ingenieros y materiales (🔄 ejecución: Tasks 0–19 registradas; Task 20 completada; Tasks 21–24 completadas; Task 25 completada; Task 26 completada; Task 27 en curso). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
-- **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
-- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 25/29 completas; 2 parciales por catálogos; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
+- **Última actualización:** 2026-10-22 13:12 (Europe/Madrid) · Codex
+- **Fase actual:** F4 — Ingenieros y materiales (🔄 ejecución: Tasks 0–19 registradas; Task 20 completada; Tasks 21–24 completadas; Task 25 completada; Task 26 completada; Task 27 completada; ampliación C1 en curso). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21), enmienda de catálogo aprobada y ratificada (2026-10-22); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
+- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 26/29 completas; 2 parciales por catálogos; ampliación aprobada C0–C10 (C0 verificada, C1 en curso); preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** Task 27 🔄 en curso — Step 1: TDD del informe de conciliación de materiales.
-- **Último paso completado:** Task 26 cerrada en `8a70048`: 6 tests Rust nuevos y 7 e2e; ambas revisiones aprobadas tras dos rondas; 1.362 Rust PASS/2 ignoradas previas, 343 UI PASS, 7 Playwright PASS (21,8 s) y Node focal de reinicio PASS; fmt/clippy/check/build/nodecheck/diff PASS.
-- **Siguiente acción:** añadir métricas agregadas de inventario al eval usando MaterialInventory::apply_event, fixture engineering_eval.log y verificación local solo de agregados. En paralelo documental: ratificar la ampliación del catálogo aprobada con fuente EDDiscovery y mapa EDDI. Sin preguntas pendientes sobre esas aprobaciones; sin importación nueva todavía.
+- **Tarea:** C1 🔄 en curso — Step 1: tests del snapshot, conversor y auditoría del catálogo en staging.
+- **Último paso completado:** Task 27 cerrada en `be03e09`: ambas revisiones aprobadas; 1.369 Rust PASS/2 ignoradas previas, 343 UI PASS, fmt/clippy/check/build PASS. Eval local: 9 diarios, 4 intervalos y 201/201 exactos, diferencia0; INSUFICIENTE por n<5. C0 documental ratificada y revisada; commit inmediato de estos documentos.
+- **Siguiente acción:** C1 del plan activo: parser Node sin dependencias que lea fuentes fijadas y produzca staging/manifiesto por constructor; atribución Apache y mapa EDDI limitado ID/nombre. No activar aún los JSON del producto: C2–C7 adaptan contratos/UI antes de C8. Sin preguntas pendientes del propietario.
 ## Tareas de F4
 
 Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
@@ -46,8 +46,16 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 24 | UI — «Lista de la compra», «Intercambios», «Dónde conseguirlo» y avisos | ✅ hecha | 65784b6 | 16 tests nuevos; 309 UI/1.356 Rust PASS; ambas revisiones y QA visual |
 | 25 | UI — disposición «Ingeniería», prioridad, Auto-companion y tiradas | ✅ hecha | 4c70ecb | 343 UI/1.356 Rust PASS; ambas revisiones y QA visual |
 | 26 | Fixtures sintéticos y pruebas de extremo a extremo | ✅ hecha | 8a70048 | 1.362 Rust/343 UI/7 Playwright/1 Node PASS; ambas revisiones |
-| 27 | `tmc-headless eval` — conciliación del inventario | 🔄 en curso | — | Step 1: TDD |
+| 27 | `tmc-headless eval` — conciliación del inventario | ✅ hecha | be03e09 | 1.369 Rust/343 UI PASS; ambas revisiones; 201/201 exactos en historial, n4 insuficiente |
 | 28 | Avisos de terceros, consumo, verificación de los 10 criterios y cierre | ⬜ pendiente | — | |
+
+## Ampliación aprobada del catálogo F4
+
+| Unidad | Estado | Commit | Siguiente paso / evidencia |
+|---|---|---|---|
+| C0 | ✅ hecha | commit documental inmediato | Spec/plan/enmienda ratificados, revisión aprobada; 11 links/cercas/diff PASS |
+| C1 | 🔄 en curso | — | Snapshot Apache fijado, parser/manifest en staging; no sustituir datos activos |
+| C2–C10 | ⬜ pendientes | — | Orden, interfaces y tests en secuencia C del plan activo |
 
 ## Tareas de diagnóstico debug
 
@@ -71,7 +79,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | F1 | Navegación, exploración, exobiología | ✅ completada y fusionada (b96fecf) |
 | F2 | Cazarrecompensas/combate (incl. AX), minería | ✅ completada y fusionada (e069a14) |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ✅ completada y fusionada (6dc09d9) |
-| F4 | Ingenieros y materiales | 🔄 ejecución; Task 20 completada; Tasks 21–24 completadas; Task 25 completada; Task 26 completada; Task 27 en curso |
+| F4 | Ingenieros y materiales | 🔄 ejecución; Task 20 completada; Tasks 21–24 completadas; Task 25 completada; Task 26 completada; Task 27 completada; ampliación C1 en curso |
 | F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | ⬜ |
 | F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | ⬜ |
 | F7 | Voz (KokoroTTS; alemán sin voz) | ⬜ |
@@ -302,6 +310,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-22 · Codex · Sesión en curso: Task25 4c70ecb y Task26 8a70048 cerradas y revisadas; fuente EDDiscovery, enmienda técnica y mapa EDDI aprobados. Task27 TDD de eval en curso; C0 documental en ratificación. Evidencias Task26: 1.362 Rust/343 UI/7 Playwright/1 Node PASS. Sin importación nueva ni push.
 
 - 2026-10-22 01:37 (Europe/Madrid) · Codex · Task 24 cerrada `65784b6`: ambas revisiones, 309 UI/1.356 Rust PASS, fmt/clippy/check/build y QA visual PASS. Continúa Task 25; visibilidad del flujo adaptada a slot seleccionado para permitir primer preview desde Ingeniería. Pregunta de fuente B pendiente, sin bloquear UI.
 

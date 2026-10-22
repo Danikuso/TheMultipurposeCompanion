@@ -10,6 +10,8 @@
 
 **Spec:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](../specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) (aprobada 2026-10-21; manda sobre este plan). Base: specs de arquitectura/F0, F1, F2, F3, [Auto-companion](../specs/2026-10-21-tmc-auto-companion-design.md) y [diagnóstico debug](../specs/2026-10-20-diagnostico-debug-design.md).
 
+**Enmienda de catálogo APROBADA (2026-10-22):** [contratos completos, fuentes fijadas y oráculos](2026-10-22-tmc-f4-catalogo-completo-propuesta.md). El propietario autoriza ejecutarla y aprueba por separado EDDI exclusivamente para ID/nombre. Adaptaciones **C0–C10**, sin reabrir ni renumerar tareas hechas. Orden obligatorio: cerrar Task 26 con revisiones → Task 27 vigente → C1 auditoría/importador en staging → contratos → páginas/UI → activación coherente del catálogo → revalidación → Task 28 mediante C10. C0 es la ratificación documental; las verificaciones históricas de Tasks 0–25 acreditan sus datos/contratos anteriores, no la completitud del nuevo catálogo. Las Interfaces y pruebas de adaptación C indicadas en cada tarea sustituyen los supuestos anteriores incompatibles; no se exige rehacer los pasos ya completados.
+
 ## Restricciones globales
 
 - Código e identificadores en inglés; documentación, commits y textos de referencia (`es`) en español.
@@ -27,7 +29,7 @@
 - **Diagnóstico (regla global, orden del propietario 2026-10-20):** cada topic, acción, módulo, evento del diario, valor de `NearbyService`/endpoint de red, ranura/panel/disposición de UI y campo de configuración nuevos se registra en `crates/tmc-model/src/diagnostics.rs` (`TOPICS`, `ACTIONS`, `MODULES`, `EVENTS`, `UI_LAYOUTS`, `UI_SLOTS`, `UI_PANELS`, claves públicas) o en `tmc-net` `endpoint_of` y `Config::diagnostic_snapshot` **en la misma tarea que lo añade**, con test canario (`engineering.CANARY` → `[redacted]`; nombre de comandante nunca presente). Instrumentación con `decide!`/`decide_if!` en entradas, decisiones, descartes y resultados; solo `debug_assertions`.
 - Red: nunca con `Galaxy::Legacy` ni con «Consultar servicios online» desactivado. Ardent 1 petición/s y **caché 1 h** para comerciantes/broker; Spansh de respaldo con su límite de F1 y caché 1 h. Solo se envía el sistema actual (`system_address`), el tipo de servicio y la plataforma mínima: nada del comandante ni de su inventario. Sin servicios: «sin datos» y el resto funciona (distancias a ingenieros desde `engineers.json` y la posición).
 - **Datos estáticos propios** (`materials.json`, `blueprints.json`, `engineers.json`, `trader_rules.json`): `source` y `verified` por entrada (o por bloque, si el spike lo justifica y se documenta), carga tolerante con `OnceLock` y recuperación por fila (`tracing::warn!`, nunca `panic!`), test de carga real y corrupta, patrón de `data.rs` de F3 (`rare_goods`). Nada de fuentes GPL/AGPL ni wikis CC BY-SA; lo no verificado lleva `verified:false` y se marca en la UI («sin verificar»). Todo dato importado (spike A) se anota en `THIRD_PARTY_NOTICES.md` en la tarea que lo incorpora.
-- **Una sola fuente por concepto:** inventario de materiales **solo** con `MaterialInventory::apply_event` (en vivo, en `eval` y en tests); taquilla **solo** con `LockerInventory::apply_event`; coste de ingenierizar **solo** con `plan::plan_cost`; tasas **solo** con `trades::rate`; reservas y excedentes **solo** con `goals::reserve`.
+- **Una sola fuente por concepto:** inventario de materiales **solo** con `MaterialInventory::apply_event` (en vivo, en `eval` y en tests); taquilla **solo** con `LockerInventory::apply_event`; coste de ingenierizar **solo** con `plan::plan_cost`; tasas **solo** con `trades::rate`; reservas y excedentes **solo** con `goals::reserve`. Merc Coins separado de materiales/tasas; saldo `None` en F4, sin evento ni balance inventado. Importador Node sin dependencias nuevas y sin descarga en build/test/runtime; manifiesto por fila obligatorio.
 - Privacidad: los spikes sobre diarios del propietario emiten **solo agregados** (recuentos, presencia de campos, sí/no); nunca nombres de comandante, FID, nombres de nave, chats ni nombres de sistemas privados. Los fixtures son sintéticos (`CMDR TESTER`).
 - i18n: claves en `locales/{es,en,fr,de,pt}/engineering.ftl` (UI) y `engineering-data.ftl` (nombres oficiales de blueprints `bp-<clave>`, experimentales `exp-<clave>`, tipos de módulo `modtype-<tipo>`, requisitos de desbloqueo `unlock-<id>`), mismas claves en los 5 idiomas; nombre sin traducción oficial conocida = nombre inglés del juego **marcado** con el atributo Fluent `.pending = 1`. Nombres de materiales desde `_Localised` con respaldo `name_en` de `materials.json`. Toda variable Fluent nueva (`count`, `max`, `grade`, `rolls`, `percent`, `give`, `get`, `missing`, `distance`, `engineer`, `rank`, `goal`…) se añade a la lista fija de `embedded_resources_parse_and_format_all_messages_without_errors` (`crates/tmc-i18n/src/lib.rs`) en el mismo commit.
 - UI: números, distancias y porcentajes **solo** con `ui/src/lib/format.ts`; acciones y `PUT /api/config` con JSON y `Content-Type: application/json`; el cambio automático de disposición solo con Auto-companion activado (`prefs.autoCompanion`).
@@ -290,43 +292,45 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 
 **Files:** Create `crates/tmc-modules/data/blueprints.json`; Modify `crates/tmc-modules/src/data.rs`, `THIRD_PARTY_NOTICES.md` (solo si A).
 
-**Contenido (orden de Task 3):** código + conjunto provisional `verified:false`: `engine_dirty` G1–G5, `special_engine_overloaded` (Drag Drives), `fsd_longrange` G1–G5, tipos `engine` y `fsd`. **Step 6** (tras la decisión): todos los blueprints y experimentales de módulos de nave en un commit aparte `feat(modules): catálogo completo de blueprints`.
+**Contenido histórico:** conjunto provisional `verified:false` de dos blueprints/un experimental ya entregado. **Step 6 vigente:** catálogo completo de nave incluido Operations, mediante C1–C8; EDDiscovery fuente A aprobada. No activar recetas completas hasta adaptar contratos/páginas/UI; no cerrar con el recuento parcial exploratorio.
 
 **Interfaces:**
-- Produces: `ModuleTypeDef { id: String /* "engine", "fsd", "shield_generator"… */, item_prefixes: Vec<String> /* "int_engine_" */ }`; `Blueprint { key: String /* BlueprintName del diario, minúsculas */, module_types: Vec<String>, grades: BTreeMap<u8, Vec<Ingredient>> /* receta por tirada */, source, verified }`; `Ingredient { material: String, count: u32 }`; `Experimental { key: String /* ExperimentalEffect del diario, minúsculas */, module_types: Vec<String>, ingredients: Vec<Ingredient>, source, verified }`; `fn blueprints() -> &'static BlueprintCatalog` con `fn module_type_of(&self, item: &str) -> Option<&str>`, `fn blueprints_for(&self, module_type: &str) -> Vec<&Blueprint>`, `fn experimentals_for(&self, module_type: &str) -> Vec<&Experimental>`, `fn blueprint(&self, key: &str) -> Option<&Blueprint>`, `fn experimental(&self, key: &str) -> Option<&Experimental>`. **Todos** los blueprints y experimentales de módulos de nave (spec §10.1.2), `verified:false` salvo comprobación.
+- **Adaptación C2/C8:** interfaces exactas de enmienda §4.1: `RecipeCost {materials: Vec<Ingredient>,merc_coins:u32}`, `ModuleBlueprint {module_type,selector,entry,grades}`, `Blueprint {key,recipes,source,verified}`, `Experimental {key,module_types,cost,source,verified}`, `ShipVariant`, `BaseIdentity`, `BaseRequirement`, `EntryPolicy`, `BlueprintAlias` y `RecipeResolutionError`. `blueprint_for_item(&self,item,key,current) -> Result<(&Blueprint,&ModuleBlueprint),RecipeResolutionError>` y `blueprints_for_item(&self,item,current) -> Vec<BlueprintOption<'_>>` reemplazan seleccionar receta por clave/tipo solamente. `module_type_of` conserva IDs `engine`/`fsd`, con símbolo exacto antes que prefijo más largo y rechazo de ambigüedad. No elegir primera receta. Todos los blueprints/experimentales de nave con `verified:false` salvo comprobación; variantes sin receta gratuita y bases enlazadas por evidencia de transición.
 
 - [ ] **Step 1: Tests:**
 
 ```rust
 #[test] fn every_ingredient_is_a_catalogued_material() { /* toda Ingredient.material ∈ materials() */ }
-#[test] fn every_blueprint_has_contiguous_grades_from_1() { /* grados 1..=max sin huecos, max <= 5 */ }
-#[test] fn thrusters_have_dirty_drive_and_drag_drives() { /* module_type_of("int_engine_size3_class5")=="engine"; blueprint("engine_dirty") con grados 1..=5; experimental("special_engine_overloaded") (clave del spike) para "engine" */ }
+#[test] fn grades_match_entry_policy() { /* Stock cadena desde G1; ExistingOnly G2+ conserva grados reales y requiere BaseRequirement explícito; jamás completar huecos con receta vacía */ }
+#[test] fn thrusters_have_dirty_drive_and_drag_drives() { /* module_type_of("int_engine_size3_class5")=="engine"; blueprint_for_item(item,"engine_dirty",None) resuelve una receta Stock G1–G5; experimental special_engine_overloaded para engine */ }
 #[test] fn corrupt_blueprint_row_skipped_with_warning() { /* ingrediente con count 0 o grado 0 → fila omitida */ }
 ```
 
 - [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(modules): blueprints y experimentales de módulos de nave con procedencia`
-- [ ] **Step 6 (tras Task 3):** contenido completo + `#[test] fn catalogue_covers_all_ship_module_types() { /* lista cerrada de tipos ⊆ tipos con algún blueprint; recuento == <n del dato> */ }`.
+- [ ] **Step 6 (C8, tras C1–C7):** activar contenido completo y `catalogue_covers_all_ship_module_types`: igualdad de conjuntos con manifiesto auditado de C1, incluidos arrays, experimentales y variantes; cero filas en alcance sin resolver. Los números definitivos se fijan en C1, no se usa 924/895 como total. Nuevas pruebas C2/C3/C8 y oráculos exactos en enmienda §8 y checklist C.
 
 ### Task 10: Datos estáticos `engineers.json`
 
 **Files:** Create `crates/tmc-modules/data/engineers.json`; Modify `crates/tmc-modules/src/data.rs`, `THIRD_PARTY_NOTICES.md` (solo si A).
 
-**Contenido (orden de Task 3):** código + conjunto provisional `verified:false` (Felicity Farseer 300100, Elvira Martuuk 300160, uno que aplique `engine_dirty` solo hasta G3 y uno a pie). **Step 6** (tras la decisión): todos, en un commit aparte, con `engineers_full_catalogue` (número exacto del dato).
+**Contenido histórico:** cinco ingenieros provisionales ya entregados. **Step 6 vigente (C8):** 38 de EDDiscovery con mapa auxiliar EDDI ID/nombre aprobado, cruce exacto 38/38 y 38 IDs únicos reproducido en C1; sin nueva identidad/clase de ingeniero.
 
 **Interfaces:**
-- Produces: `EngineerDef { id: u64 /* EngineerID */, name: String, system: String, star_pos: [f64; 3], workshop: String, market_id: Option<u64>, on_foot: bool, blueprints: Vec<EngineerBlueprint { blueprint: String, max_grade: u8 }>, unlock: UnlockSteps { requirement_key: String, invite_key: Option<String>, contribution: Option<Contribution { item: String, kind: String /* "commodity"|"material"|"credits" */, amount: u32 }> }, source, verified }`; `fn engineers() -> &'static Vec<EngineerDef>`; `fn engineer(id: u64) -> Option<&'static EngineerDef>`.
+- Produces: `EngineerDef { id: u64 /* EngineerID, sin cambio de identidad */, name: String, system: String, star_pos: [f64; 3], workshop: String, market_id: Option<u64>, on_foot: bool, blueprints: Vec<EngineerBlueprint { module_type: String, blueprint: String, grades: Vec<u8> }>, unlock: UnlockSteps { requirement_key: String, invite_key: Option<String>, contribution: Option<Contribution { item: String, kind: String /* "commodity"|"material"|"credits" */, amount: u32 }> }, source, verified }`; `fn engineers() -> &'static Vec<EngineerDef>`; `fn engineer(id: u64) -> Option<&'static EngineerDef>`. **Adaptación C4/C8:** capacidades por fila de receta/módulo/grado EDDiscovery; máximo solo derivado para UI, sin rellenar grados ausentes. Requisitos compuestos traducidos fielmente, `contribution:None` si no hay donación simple; mantener fallback de taller `(system,workshop)` y no importar mercados/especialidades EDDI.
 
 - [ ] **Step 1: Tests:**
 
 ```rust
 #[test] fn engineers_load_with_coords_and_provenance() { /* ≥ 1 a pie; todos con star_pos finito y source; 300100 → "Felicity Farseer", sistema "Deciat" */ }
-#[test] fn engineer_blueprints_exist_in_catalogue() { /* todo blueprint de no a pie ∈ blueprints(); max_grade 1..=5 */ }
+#[test] fn engineer_blueprints_exist_in_catalogue() { /* todo blueprint/módulo/grado de no a pie resuelve a su receta; grados exactos en 1..=5, sin unión por clave global */ }
 #[test] fn corrupt_engineer_row_skipped_with_warning() { /* star_pos no numérico → omitido */ }
 ```
 
 - [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(modules): ingenieros de nave y a pie con coordenadas y desbloqueo`
 
 ### Task 11: i18n — `engineering.ftl` y `engineering-data.ftl`
+
+**Adaptación C7/C8 (sin reabrir entrega hecha):** enmienda §6; ampliar a todos los nombres canónicos de variantes/módulos/blueprints/experimentales y requisitos, más Merc Coins/saldo desconocido/base/ambigüedad/receta incompleta. Nombre oficial EDEngineer ya aprobado solo si mapeo inequívoco; fallback inglés `.pending = 1`, sin importar sus recetas. Extender tests de claves y nombres a igualdad exacta con catálogo final, cinco idiomas y textos/argumentos nuevos. La licencia de nombres y la de recetas se mantienen separadas.
 
 **Files:** Create `locales/{es,en,fr,de,pt}/{engineering.ftl, engineering-data.ftl}`; Modify `locales/*/main.ftl` (`layout-engineering`, ajuste `engineering-rolls`), `crates/tmc-i18n/src/lib.rs` (lista de argumentos y test de nombres).
 
@@ -393,6 +397,8 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 
 ### Task 14: `engineering` — ingenieros
 
+**Adaptación C4:** conservar `EngineerBook`/`EngineerRow.id:u64`, `{id}` de selección, posición y progreso; ampliar a los 38 IDs verificados por cruce exacto, fallback por nombre en eventos sin ID y rechazo de contradicción ID/nombre. Capacidades en páginas por módulo/blueprint/grado, sin nueva identidad. Tests C4: 38 filas únicas, Felicity 300100/Elvira 300160 preservadas, estado por nombre sin ID y requisitos compuestos sin contribución ficticia.
+
 **Files:** Create `crates/tmc-modules/src/engineering/engineers.rs`; Modify `engineering/mod.rs`.
 
 **Interfaces:**
@@ -414,6 +420,8 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 - [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(engineering): estado, rango, distancia y siguiente paso de los ingenieros`
 
 ### Task 15: `engineering` — mi nave modificada
+
+**Adaptación C2/C3:** conservar `CurrentEng` persistido y raw desconocido; resolver aliases/case para comparar identidades por módulo, tanto `Loadout` como `EngineerCraft`. Elegibilidad incluye ítem y base con resolución única; variante sin mapeo no se supone de serie fabricable. Tests: símbolo exacto antes de prefijo largo; alias reconocido no reinicia receta; desconocido conserva raw; contexto ambiguo bloquea. Interfaces de resolución/base en enmienda §4.1.
 
 **Files:** Create `crates/tmc-modules/src/engineering/ship.rs`; Modify `engineering/mod.rs`.
 
@@ -441,9 +449,9 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 
 **Interfaces:**
 - Consumes: `Blueprint`, `Experimental`, `CurrentEng`, `ModuleSettings.engineering_rolls`.
-- Produces: `PlanRequest { module_type: String, blueprint: String, experimental: Option<String>, target_grade: u8 /* por defecto 5 o el máximo del blueprint */, rolls: [u8; 5] }`; `fn start_grade(current: Option<&CurrentEng>, blueprint: &str, rolls: &[u8; 5]) -> StartPoint` con `StartPoint { grade: u8, partial_rolls: Option<u8>, replaces: bool }`; `fn plan_cost(bp: &Blueprint, exp: Option<&Experimental>, current: Option<&CurrentEng>, req: &PlanRequest) -> PlanCost`; `PlanCost { per_grade: BTreeMap<u8, (u8 /* tiradas */, BTreeMap<String, u32>)>, experimental: Option<BTreeMap<String, u32>>, total: BTreeMap<String, u32>, replaces_blueprint: bool, verified: bool }`.
+- **Adaptación C3:** `PlanRequest {module_type,blueprint,experimental,target_grade,rolls:[u8;5]}` conserva sus campos persistidos. `fn plan_cost(catalogue:&BlueprintCatalog,item:&str,current:Option<&CurrentEng>,req:&PlanRequest) -> PlanCost`; `PlanCost` conserva materiales `per_grade/experimental/total`, `replaces_blueprint/verified/missing_grades` y añade `merc_coins_by_grade:BTreeMap<u8,u64>`, `merc_coins_experimental:u64`, `merc_coins_total:u64`, `blockers:Vec<PlanBlocker>`. `PlanBlocker::{MissingRecipe{grade},MissingBaseMapping,BaseRequired,AmbiguousRecipe,IncompatibleItem,UnknownBlueprint,UnknownExperimental}`. Resolución y evaluación exactas de `BaseRequirement`/`CurrentEng` en enmienda §§4.1–4.2; `start_grade` conserva reglas ordinarias, pero una transición de base comprada explícita parte después de su grado completo, no de G1.
 - Semántica del diario: `Level` = grado actual (`Option<u32>` → `u8` acotado a 0..=5 en `CurrentEng`), `Quality` 0..1 = progreso dentro de ese grado; `quality >= 0.999` → grado completo.
-- Reglas (spec §3.4.3 y §10.2.2–4): de serie → desde G1; mismo blueprint en G*n* con `quality >= 0.999` → desde G*n+1*; mismo blueprint en G*n* a medias → G*n* cuenta `max(1, ceil(rolls[n] × (1 − quality)))` tiradas y luego G*n+1*…; otro blueprint → desde G1 y `replaces_blueprint = true`; cada tirada consume la receta de su grado una vez; experimental una vez si difiere del actual; objetivo ≤ grado completo actual → sin grados; `verified` = AND de blueprint y experimental.
+- Reglas ordinarias (spec §3.4.3 y §10.2.2–4): de serie → desde G1; mismo blueprint completo → grado siguiente; a medias → `max(1,ceil(rolls_g×(1−quality)))`; otro blueprint ordinario reinicia G1 con aviso; experimental una vez si difiere; objetivo ≤ grado completo actual → sin grados. Excepción `ExistingOnly` exige enlace/base no ambiguos, jamás rellena G1 ni receta ausente con cero. Materiales y moneda se multiplican por las mismas tiradas con operaciones comprobadas. `verified` sigue separado de completitud; bloqueos impiden completar. Oráculos C3/C8: tabla Dirty+Drag y Far-reaching **100 Merc Coins** de enmienda §8; sin correspondencia `MissingBaseMapping`, base inválida `BaseRequired`, múltiples contextos/puntos de partida `AmbiguousRecipe`.
 
 - [ ] **Step 1: Tests:**
 
@@ -484,11 +492,13 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 
 ### Task 18: `engineering` — lista de la compra, reservas y persistencia
 
+**Adaptación C5:** enmienda §§4.2/6. `Goal`, `PlanRequest`, `CurrentEng`, `engineering-001`, IDs/orden y escrituras atómicas por comandante conservados. Añadir `merc_coins:MercCoinsView {need:u64,have:Option<u64>,missing:Option<u64>}`, `materials_ready:bool` y `blockers` a vistas/detalles, no a campos obligatorios del JSON antiguo. `percent` mide materiales. `completable` requiere materiales cubiertos, sin bloqueos y coste moneda cero o saldo conocido suficiente (saldo `None` en F4). Reemplazo semántico conserva ID anterior; desconocidos no se borran ni resultan completable. Pruebas C5: JSON anterior con alias/ID intactos tras restart/reorder/replace; materiales listos+100 monedas+saldo None→sin aviso/completable; reserva pura de monedas 100 para objetivos 60/60→60/40 y faltan20. Flujo abierto sigue al final.
+
 **Files:** Create `crates/tmc-modules/src/engineering/goals.rs`; Modify `engineering/mod.rs`.
 
 **Interfaces:**
 - Consumes: `PlanRequest`, `plan_cost`, `plan_trades`, `Migration` (`tmc_core`), `StoreTask`, `Store::exec_json`/consultas JSON (verificar en código al ejecutar como en `missions::tourism`).
-- Produces: `Goal { id: String /* "{ship_id}:{slot}:{blueprint}:{experimental|-}:{grade}" */, ship_id: Option<u64>, slot: String, item: String, request: PlanRequest, base: Option<CurrentEng> }`; `MAX_GOALS = 20`; `fn reserve(goals_needs: &[(String, BTreeMap<String, u32>)], have: &dyn Fn(&str) -> u32) -> Reservations` (en el orden de la lista: cada objetivo reserva `min(lo que queda, lo que necesita)`); `Reservations { by_goal: BTreeMap<String, BTreeMap<String, u32>>, fn surplus(&self, key: &str, have: u32) -> u32 /* have − Σ reservas de todos */ }`; `GoalView { id, percent: u8 /* Σ min(have_reservado, need) / Σ need */, missing: BTreeMap<String, u32>, trades: Vec<TradeProposal>, completable: bool /* missing vacío tras intercambios */ }`; `ShoppingView { goals: Vec<GoalView>, needs: BTreeMap<String, u32>, missing: BTreeMap<String, u32>, surplus: BTreeMap<String, u32> }`; `pub const ENGINEERING_MIGRATION: Migration` con id `"engineering-001"` (tabla `engineering_goals(cmdr TEXT, position INTEGER, id TEXT, json TEXT, PRIMARY KEY(cmdr, id))`); `fn goals_read_task(cmdr: String) -> StoreTask` (tag `engineering.goals`, lectura, devuelve `{cmdr, goals}`); `fn goals_write_task(cmdr: String, goals: Vec<Goal>) -> StoreTask` (tag `engineering.goals.write`, reemplaza todas las del comandante en una transacción).
+- Produces: `Goal {id,ship_id,slot,item,request,base}` y formato de ID previos; `MAX_GOALS=20`; `reserve`/`Reservations` conservan reservas de materiales por orden y excedente `have−Σreservas`. `GoalView` conserva `id,percent,missing,trades,completable` y añade los campos de adaptación C5 anteriores; `completable` **no** se deduce solo de `missing` vacío. `ShoppingView` mantiene objetivos y agregados de materiales, con moneda separada. `ENGINEERING_MIGRATION` sigue `engineering-001`, tabla `engineering_goals(cmdr,position,id,json,PRIMARY KEY(cmdr,id))`; `goals_read_task(cmdr:String)`/`goals_write_task(cmdr:String,goals:Vec<Goal>) -> StoreTask` conservan tags `engineering.goals`/`engineering.goals.write` y reemplazo transaccional.
 - El flujo abierto (sin fijar) se evalúa como un objetivo más **al final** (no reserva antes que los fijados).
 - `pin_goal` con un `id` ya presente **sustituye** ese objetivo en su posición; un 21.º distinto se rechaza y `ShoppingView.status = "too_many"` (si no, `"ok"`). `Goal`, `PlanRequest` y `CurrentEng` derivan `Serialize, Deserialize` (columna `json`).
 
@@ -498,7 +508,7 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 #[test] fn reservations_follow_pinned_order() { /* 10 de X; A necesita 6, B 8 → A reserva 6, B 4; B missing X 4 */ }
 #[test] fn reserved_by_other_goal_never_offered() { /* criterio 5: X reservado por A no aparece como give en las propuestas de B */ }
 #[test] fn surplus_excludes_all_reservations() { /* have 30, reservas 12 → surplus 18 */ }
-#[test] fn completable_when_trades_cover_missing() { /* missing cubierto por propuestas → completable true, percent < 100 */ }
+#[test] fn completable_when_trades_cover_missing() { /* receta completa sin moneda; missing cubierto por propuestas → completable true, percent de materiales < 100 */ }
 #[test] fn goals_persist_across_restart() { /* criterio 7: Store en memoria + migración; write_task con 2 objetivos → read_task devuelve los 2 en orden */ }
 #[test] fn reorder_changes_reservations() { /* mover B antes de A → B reserva primero */ }
 #[test] fn max_goals_enforced() { /* el 21.º se rechaza con status "too_many" */ }
@@ -509,14 +519,16 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 
 ### Task 19: `engineering` — dónde conseguirlo, ingeniero recomendado y avisos
 
+**Adaptación C4/C5:** enmienda §4.3; recomendar por `(módulo,blueprint,grados requeridos)` tanto en flujo como objetivo/aviso. Un máximo global no define capacidad ni se rellena proveedor vacío. Callbacks de avisos reciben `Goal.id` y buscan el objetivo real con ítem/base/request; eliminar reconstrucción mediante `goal_blueprint(id)`/`split(':')`. No cambian acciones ni identidad de ingeniero.
+
 **Files:** Create `crates/tmc-modules/src/engineering/{sources.rs, alerts.rs}`; Modify `engineering/mod.rs`.
 
 **Interfaces:**
 - Consumes: `RemoteStation`, `TraderKind`, `BrokerKind`, `MaterialDef.hints`, `EngineerDef`, `EngineerBook`, `ShoppingView`, `MaterialChange`, `EngineerStatusChange`.
 - Produces:
   - `SourcesState { current_system: Option<u64>, fn set_current_system(&mut self, addr: Option<u64>) /* limpia resultados si cambia */; fn needed_traders(missing: &BTreeMap<String,u32>, proposals: &[TradeProposal]) -> BTreeSet<TraderKind>; fn on_stations(&mut self, system_address: u64, service: NearbyService, rows: Vec<RemoteStation>) -> bool /* false y sin cambios si system_address != current_system */; fn view(&self) -> SourcesView }`; `SourcesView { traders: BTreeMap<TraderKind, SourceStatus>, brokers: BTreeMap<BrokerKind, SourceStatus>, hints: BTreeMap<String, Vec<Hint>> }`, `enum SourceStatus { Loading, Ok(RemoteStation), NoData, Disabled }`. Peticiones: `MaterialTrader(Some(kind))` por tipo necesario; brokers con `TechnologyBroker(Some(..))`. Brokers solo si algún faltante tiene `HintKind::Broker`.
-  - `fn pick_engineer(blueprint: &str, grade: u8, book: &EngineerBook, pos: Option<[f64;3]>) -> EngineerPick` con `EngineerPick { nearest_unlocked: Option<EngineerRow>, nearest_any: Option<EngineerRow>, next_step: Option<NextStep> /* del más cercano si no está desbloqueado */ }`.
-  - `enum EngAlertKind { MaterialAtMax { key }, GoalCompletable { goal, engineer: Option<String> }, EngineerUnlocked { id }, EngineerInvited { id }, ScarceObtained { key, goal } }`; `fn alerts_from(changes: &[MaterialChange], at_max_before: &BTreeSet<String>, at_max_now: &BTreeSet<String>, completable_before: &BTreeSet<String>, view: &ShoppingView, status: &[EngineerStatusChange], missing_before: &BTreeMap<String,u32>) -> Vec<EngAlertKind>` (solo transiciones).
+  - `fn pick_engineer(module_type:&str,blueprint:&str,required_grades:&[u8],book:&EngineerBook,pos:Option<[f64;3]>) -> EngineerPick` con `EngineerPick {nearest_unlocked,nearest_any,next_step}` previos. Exigir todos los grados de la ruta, conservar cercanía/desbloqueo y mostrar ausencia si ninguno cubre la ruta.
+  - `EngAlertKind` conserva variantes/IDs previos; `alerts_from` conserva sus entradas de cambios/estado/completable y recibe `engineer_for_goal:&dyn Fn(&str)->Option<String>` para resolver el nombre desde el `Goal` real, sin analizar su ID. Solo transiciones; ninguna alerta completable con moneda y saldo desconocido, o con `blockers`.
 
 - [ ] **Step 1: Tests:**
 
@@ -525,6 +537,7 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 #[test] fn late_station_result_for_previous_system_rejected() { /* on_stations(addr viejo) → false y sin cambios */ }
 #[test] fn pick_prefers_unlocked_and_reports_next_step_for_nearest_locked() { /* A desbloqueado a 50 al, B bloqueado a 10 al → nearest_unlocked A, nearest_any B, next_step Some(..) */ }
 #[test] fn pick_respects_max_grade() { /* B solo hasta G3 y objetivo G5 → B excluido */ }
+#[test] fn pick_respects_module_and_required_grade_set() { /* Lori/misc_shielded AFMU [4] permitido; CargoScanner [4] rechazado y [3] permitido; capacidad [1,3] no cubre ruta [1,2,3] */ }
 #[test] fn alert_only_on_transition() { /* iron ya al máximo antes → sin MaterialAtMax; pasa a máximo → 1 */ }
 #[test] fn goal_completable_alert_names_nearby_engineer() { /* completable false→true → GoalCompletable{engineer: Some("Felicity Farseer")} */ }
 #[test] fn scarce_material_obtained_alert() { /* faltaban 2 de X; MaterialCollected X 1 → ScarceObtained */ }
@@ -533,6 +546,8 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 - [ ] **Step 2–4:** FAIL → implementar → PASS; Checks. **Step 5: Commit** `feat(engineering): comerciantes cercanos, ingeniero recomendado y avisos por transición`
 
 ### Task 20: `engineering` — módulo, topics, relevancia, red, almacén y registro
+
+**Adaptación C6 (aprobada 2026-10-22):** extender recursos actor/REST y revisión existente a `catalogue`, `engineers`, `flow`, según **formas/secciones exactas de enmienda §5**. Ese contrato sustituye las listas completas de ingenieros/seleccionado y opciones/costes/líneas de flujo descritas antes de C6. `engineering.catalogue` es topic nuevo de resumen; `engineering.engineers` y `engineering.flow` conservan nombre con resumen revisado. Sin lecturas SQLite para cálculos, polling ni cursores globales; cada topic/página/fila serializados <16.384 bytes. Tests C6: todas las secciones, dos clientes, revisión obsoleta409, 16.383 aceptado/16.384 rechazado, GET no muta, auth/no-store/errores. Regenerar contrato/diagnósticos al añadir rutas y topic.
 
 **Enmienda aprobada de paginación (2026-10-21):** sustituye las formas completas de `engineering.goals` y `engineering.locker` descritas más abajo. Se mantiene `<16384` bytes por topic/página, incluido el envoltorio JSON.
 
@@ -547,7 +562,7 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 
 **Interfaces:**
 - Produces: `pub struct Engineering` (`Engineering::new()`, `id() = "engineering"`, `migrations() = &[ENGINEERING_MIGRATION]`).
-  - Topics (todos con `as_of`, sin reloj): `engineering.inventory` (`by_category` solo con count > 0 y no catalogados, `at_max`), `engineering.locker` (resumen con revisión/recuentos; detalle REST), `engineering.session` (`totals` + `recent`), `engineering.engineers` (`Vec<EngineerRow>` + `selected: Option<{id, next_step}>`), `engineering.ship` (`ShipView`), `engineering.flow` (`{status: "idle"|"ok"|"no_data", slot, options: {blueprints, experimentals} , request, cost: PlanCost, lines: Vec<FlowLine { key, need, have, state: "ok"|"trade"|"missing", missing: u32, trade: Option<TradeProposal> }>, percent, engineer: EngineerPick}`), `engineering.goals` (resumen con revisión; detalles y agregados REST según la enmienda), `engineering.sources` (`SourcesView`), `engineering.alerts` (≤ 20, descartables).
+  - Topics (todos con `as_of`, sin reloj): `engineering.inventory`, `engineering.locker`, `engineering.session`, `engineering.ship`, `engineering.goals`, `engineering.sources` y `engineering.alerts` conservan sus contratos salvo extensiones de moneda/completitud de objetivos C5. `engineering.catalogue/engineers/flow` usan resúmenes y páginas de enmienda §5: catalogue `{as_of,revision,counts}`, engineers `{as_of,revision,total,selected_id}`, flow `{as_of,revision,status,slot,module_type,item,current,request,percent,materials_ready,merc_coins,blockers,engineer,counts}`. Detalles/opciones/costes por filas en REST; `FlowLine` mantiene sus campos de materiales. Resumen de objetivos acotado y detalle con moneda/bloqueos; `engineering.alerts` ≤20.
   - Acciones (`const ACTION_*`): `engineering.select_module { slot }`, `engineering.preview { blueprint, experimental, grade, rolls? }`, `engineering.close_flow`, `engineering.pin_goal {}` (fija lo del flujo), `engineering.unpin_goal { id }`, `engineering.move_goal { id, to }`, `engineering.select_engineer { id }`, `engineering.dismiss_alert { index }`, `engineering.reset_session`. Argumentos inválidos → sin cambios y `decide!` de descarte.
   - Red: `NearestService { system_address, service: MaterialTrader(k)|TechnologyBroker(b), min_pad }` con `min_pad` = plataforma de la nave (`data::ship_pads`, F2; desconocida → `Small`), clave `Inflight` `"trader:{k}:{addr}"`; se piden al cambiar de sistema o de faltantes, nunca en replay/Legacy/offline (estado `Disabled`).
   - Almacén: `goals_read_task` al primer comandante y tras cambio de comandante; `goals_write_task` tras `pin/unpin/move` (nunca en replay/Legacy).
@@ -570,7 +585,7 @@ Sin código de producción. Programas desechables en el scratchpad (nunca en el 
 #[test] fn startup_snapshots_raise_no_alerts() { /* LoadGame + Materials al máximo + lista EngineerProgress → 0 alertas */ }
 #[test] fn startup_engineer_list_does_not_activate_layout() { /* lista de arranque → Normal; EngineerCraft → Active; Undocked → Normal */ }
 #[test] fn relevance_active_docked_at_workshop() { /* Docked con market_id de engineers.json → Active */ }
-#[test] fn engineering_topics_stay_under_16_kib() { /* catálogo entero al máximo con nombres localizados, 40 ingenieros, 60 módulos, 20 objetivos, flujo con 30 líneas → cada topic < 16384 */ }
+#[test] fn engineering_topics_stay_under_16_kib() { /* C6/C9: catálogo final real con todas las capacidades de 38 ingenieros, 60 módulos, 20 objetivos; todas las páginas/topics con UTF-8/escapes y wrapper <16384, igualdad de filas al recorrer */ }
 #[test] fn topics_dirty_only_on_change() { /* mismo Materials dos veces → engineering.inventory sucio solo la primera */ }
 #[test] fn unknown_blueprint_is_no_data() { /* preview con blueprint "nope" → engineering.flow.status "no_data", sin cost */ }
 #[test] fn ui_contract_snapshot_is_up_to_date() { /* patrón de missions/trade: contract_snapshot() del escenario de abajo; con UPDATE_CONTRACTS=1 reescribe ui/tests/fixtures/engineering-topics.json; si no, compara (CRLF normalizado) */ }
@@ -605,6 +620,8 @@ Todas las tareas de UI: tipos en `ui/src/modules/engineering/types.ts` derivados
 
 ### Task 21: UI — «Materiales» (inventario, taquilla, sesión)
 
+**Adaptación C7:** reutilizar el cliente de páginas por recurso/sección para catálogo/ingenieros/flujo, conservando lectores privados, cancelación, descarte de revisión/comandante anterior y ausencia de polling. Inventario/intercambios siguen siendo de materiales: ninguna fila o tasa artificial de Merc Coins. Tests de cambio de revisión con dos clientes y error recuperable sin mezcla de páginas.
+
 **Files:** Create `ui/src/modules/engineering/{index.ts, types.ts, labels.ts, MaterialsPanel.svelte}`, `ui/tests/engineering.test.ts`; Modify `ui/src/modules/registry.ts` (`{ id: 'engineering', titleKey: 'nav-engineering', panels }`), `locales/*/engineering.ftl`, `crates/tmc-model/src/diagnostics.rs` (`UI_PANELS`).
 
 **Interfaces:** pestañas Materias primas / Fabricados / Codificados / Taquilla; por grado (G1–G5) con cantidad/máximo (300/250/200/150/100) y aviso «al máximo»; cambios de la sesión por origen.
@@ -630,7 +647,7 @@ test('session totals by origin', /* Scan +2, Trade +1/−6 */);
 
 **Files:** Create `ui/src/modules/engineering/EngineersPanel.svelte`; Modify `index.ts`, `types.ts`, `labels.ts`, `ui/src/lib/i18n.ts`, `locales/*/engineering.ftl`, `ui/tests/engineering.test.ts`, `diagnostics.rs` (`UI_PANELS`) y el mapa de argumentos de tests de `crates/tmc-i18n/src/lib.rs`.
 
-**Interfaces:** lista (nave y a pie) con estado, rango y progreso, sistema y distancia; al elegir → `engineering.select_engineer { id }` y siguiente paso con lo que tienes; blueprints y grado máximo del ingeniero.
+**Interfaces (adaptación C7):** lista y detalle desde resumen `engineering.engineers` y páginas `engineers/capabilities/unlock` de enmienda §5. Nave/a pie, estado/rango/progreso/sistema/distancia; elegir conserva `engineering.select_engineer {id}` numérico. Capacidades con módulo, blueprint y grados exactos; máximo derivado solo para presentación. Requisitos completos; contribución simple cuando existe. Tests conservan 300100 y añaden 38 filas sin pérdida, cancelación/revisión y Lori AFMU G4/Cargo Scanner G3.
 
 - [x] **Step 1: Tests:**
 
@@ -639,7 +656,7 @@ test('engineer row shows status rank and distance', /* Felicity Unlocked, rango 
 test('select engineer posts json action', /* POST engineering.select_engineer {id:300100} */);
 test('next step contribution shows have and need', /* 4/10 */);
 test('on foot engineers in their own section', /* on_foot true → sección a pie */);
-test('engineer blueprints with max grade', /* Felicity → nombre bp-engine_dirty y «G5» */);
+test('engineer blueprints show module and exact grades', /* capacidades desde páginas; Lori misc_shielded AFMU G4, Cargo Scanner solo G1–G3; no afirmar G5 para Dirty de Felicity */);
 ```
 
 - [x] **Step 2–4:** FAIL → implementar → PASS; checks. **Step 5: Commit** `feat(ui): panel de ingenieros con estado y siguiente paso`
@@ -650,7 +667,7 @@ test('engineer blueprints with max grade', /* Felicity → nombre bp-engine_dirt
 
 **Files:** Create `ui/src/modules/engineering/{ShipPanel.svelte, EngineerFlow.svelte, actions.svelte.ts}`; Modify `index.ts`, `types.ts`, `labels.ts`, `locales/*/engineering.ftl`, `ui/tests/engineering.test.ts`, `diagnostics.rs`.
 
-**Interfaces:** módulos con blueprint/grado/calidad/experimental o «de serie»; elegir → `engineering.select_module`; selector de blueprint y experimental (nombres oficiales), grado (G5 por defecto), tiradas por grado ajustables (por defecto de `engineering_rolls`) → `engineering.preview`; tabla por material (necesarios, tienes, estado OK / intercambio concreto / falta N), por grado y total, % listo; aviso de sustitución; ingeniero recomendado; «Añadir a la lista de la compra» → `engineering.pin_goal`; «Cerrar» → `engineering.close_flow`.
+**Interfaces (adaptación C7):** conservar módulos/acciones `select_module`, `preview`, `pin_goal`, `close_flow`, consumiendo resumen de flujo y páginas `blueprints/experimentals/grades/costs/lines`. Selectores con nombres oficiales/pendientes, solo grados aplicables y tiradas de esos grados; G5 por defecto si disponible. Tabla de materiales y porcentaje etiquetado de materiales; Merc Coins por grado/total/saldo desconocido separado. Motivos `MissingBaseMapping/BaseRequired/AmbiguousRecipe/MissingRecipe` impiden presentar cálculo completo/fijarlo. Recomendación por ruta/módulo. Tests: G2+ nunca ofrece G1; base válida→G2; ausencia/ambigüedad bloquea; moneda100 y saldo sin datos; dos revisiones no mezclan opciones/coste; tras cambio de ranura/comandante descartar respuestas antiguas. Detalle de contratos/oráculos en enmienda §§4–5/8.
 
 - [x] **Step 1: Tests:**
 
@@ -671,7 +688,7 @@ test('pin goal posts action', /* POST engineering.pin_goal {} */);
 
 **Files:** Create `ui/src/modules/engineering/{ShoppingPanel.svelte, TradesPanel.svelte, SourcesPanel.svelte, EngineeringAlerts.svelte, goals.svelte.ts}`; Modify `index.ts`, `types.ts`, `labels.ts`, `locales/*/engineering.ftl`, `ui/tests/engineering.test.ts`, `diagnostics.rs`.
 
-**Interfaces:** objetivos con % y faltantes, subir/bajar (`engineering.move_goal`), quitar (`engineering.unpin_goal`), «ya puedes completar X» con ingeniero; intercambios das/recibes con comerciante cercano; dónde conseguir: comerciante por tipo con distancia y plataforma o «sin datos», broker si aplica, pistas por material; avisos descartables (`engineering.dismiss_alert`).
+**Interfaces (adaptación C5/C7):** objetivos con porcentaje de materiales/faltantes, moneda y saldo desconocido separados; bloqueo de cálculo conserva motivo. Subir/bajar/quitar mantienen IDs/acciones existentes. «Ya puedes completar» requiere la semántica completa de C5; ingeniero desde objetivo real y ruta/módulo. Intercambios/dónde conseguir siguen materiales, sin monedas comerciables; avisos descartables. Tests: materiales listos+moneda100+saldoNone no muestra aviso; objetivo antiguo conserva ID al mover/quitar; receta desconocida no aparece vacía/completable; recomendación Lori por módulo consistente con flujo.
 
 **Enmienda de Task 20:** `engineering.goals` contiene el resumen con revisión; cargar detalles y agregados mediante el helper de páginas de Task 21 al mostrar los paneles. Descartar datos anteriores ante otra revisión/comandante; no mezclar páginas ni cursar consultas cuando el panel está oculto. Las acciones permanecen idénticas.
 
@@ -718,11 +735,13 @@ test('settings put rolls and reverts on 400', /* 9 válido → 400 → valor ant
 
 **Enmienda de Task 20:** probar REST paginado contra el actor real, invalidación al cambiar inventario/comandante, dos clientes y páginas bajo 16 KiB, además de la actualización de UI sin mezclar revisiones. Contrato Rust→UI incorpora páginas de objetivos y taquilla.
 
-**Files:** usa `tests/fixtures/journal/engineering_session.log` (Task 12) y los fixtures de red (Task 2); Create `ui/tests/e2e/engineering.spec.ts`; Modify `crates/tmc-app/src/e2e_tests.rs`. Si hubiera que tocar el fixture, se actualizan en este commit los tests Rust, el contrato (`UPDATE_CONTRACTS=1`) y los tests de UI 21–24.
+**Adaptación C9 posterior al cierre de esta tarea:** ampliar los escenarios a catálogo final/38 ingenieros, nuevas páginas de catálogo/ingenieros/flujo, moneda/base/alias y objetivos anteriores. Task 26 no se reinicia por la enmienda; sus escenarios actuales permanecen como regresión y los valores dependientes de recetas se actualizan coherentemente en C8.
+
+**Files:** usa `tests/fixtures/journal/engineering_session.log` (Task 12) y los fixtures de red (Task 2); Create `ui/tests/e2e/engineering.spec.ts`, `ui/scripts/e2e-server.test.mjs`; Modify `crates/tmc-app/src/e2e_tests.rs`, `ui/playwright.config.ts`, `ui/scripts/e2e-server.mjs`, `apps/headless/src/main.rs` (solo transporte de depuración para redirigir JSON al servicio falso). Si hubiera que tocar el fixture, se actualizan en este commit los tests Rust, el contrato (`UPDATE_CONTRACTS=1`) y los tests de UI 21–24.
 
 **Interfaces:** el fixture de Task 12 (`CMDR TESTER`, sin FID real) ya contiene: `LoadGame`, `Materials` (con un material al máximo y uno no catalogado), `EngineerProgress` lista (Unlocked/Invited/Known), `Loadout` con propulsores de serie y un FSD `FSD_LongRange` G3 q 1.0, `ShipLocker` completo + stub, `BackpackChange`, `MaterialCollected` ×3 (uno por encima del máximo), `MaterialTrade`, `Synthesis`, `MissionCompleted` con `MaterialsReward`, `FSDJump` a sistema con comerciante, `Docked` en el taller de un ingeniero, `EngineerCraft` sobre el FSD (G4), `EngineerProgress` suelto Invited→Unlocked.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```rust
 #[test] fn every_line_of_f4_fixture_is_typed() { /* 0 errores; eventos en Other == EXPECTED_OTHER explícito */ }
@@ -730,8 +749,10 @@ test('settings put rolls and reverts on 400', /* 9 válido → 400 → valor ant
 #[test] fn fixture_engineers_criterion_3() { /* estado, rango y progreso == fixture; distancia desde el último FSDJump */ }
 ```
   más e2e Playwright (headless de depuración con Ardent falso vía la sustitución de F2): `engineering_inventory_and_at_max` (criterio 2), `engineering_engineers_status_distance` (3), `engineering_flow_dirty_drive_g5` (4), `engineering_trade_skips_reserved` (5), `engineering_nearest_trader_fake_ardent` y `engineering_no_services_no_data` (6), `engineering_goal_persists_after_restart` (7).
-- [ ] **Step 2:** revisar fixtures (sin datos reales). **Step 3–4:** PASS; checks.
-- [ ] **Step 5: Commit** `test: fixtures sintéticos de ingeniería con pruebas de extremo a extremo`
+- [x] **Step 2:** revisar fixtures (sin datos reales). **Step 3–4:** PASS; checks.
+- [x] **Step 5: Commit** `test: fixtures sintéticos de ingeniería con pruebas de extremo a extremo` — `8a70048`; seguimiento `ee10720`.
+
+**Verificación de cierre (2026-10-22, evidencia del controlador):** revisiones de spec y calidad APPROVED; 1.362 Rust PASS/2 ignoradas previas, 343 UI PASS, 7 Playwright PASS (21,8 s), 1 test Node del fallback sin binario precompilado PASS (6,36 s). fmt/clippy/check/build, `node --check` y diff PASS. Seis archivos de infraestructura/pruebas; sin modificar fixture ni contrato. Se compila antes de lanzar el ejecutable hijo controlado; prueba Windows verifica PID directo, reinicio sobre el mismo SQLite y puertos libres. Las adaptaciones nuevas quedan en C8/C9, sin invalidar este cierre.
 
 ### Task 27: `tmc-headless eval` — conciliación del inventario de materiales
 
@@ -739,11 +760,14 @@ test('settings put rolls and reverts on 400', /* 9 válido → 400 → valor ant
 
 **Interfaces:** informe agregado (sin nombres de comandante ni sistemas): para cada instantánea `Materials` posterior a otra en el historial, predicción = anterior + cambios con `MaterialInventory::apply_event`; métricas n, % de materiales exactos, diferencia absoluta media y máx., recuento de eventos entre medias no tipados (para «Desviaciones»). Veredicto `INSUFICIENTE` si n < 5 (como F2/F3).
 
-- [ ] **Step 1: Tests:** `eval_inventory_reconciles_on_fixture` (`engineering_eval.log`: 100 % exactos, n == 1, `INSUFICIENTE`).
-- [ ] **Step 2–4:** FAIL → implementar → PASS; checks; ejecutar sobre el historial del propietario y anotar solo agregados en «Verificación F4».
-- [ ] **Step 5: Commit** `feat(headless): eval de conciliación del inventario de materiales`
+- [x] **Step 1: Tests:** `eval_inventory_reconciles_on_fixture` (`engineering_eval.log`: 100 % exactos, n == 1, `INSUFICIENTE`).
+- [x] **Step 2–4:** FAIL → implementar → PASS; checks; ejecutar sobre el historial del propietario y anotar solo agregados en «Verificación F4».
+- [x] **Step 5: Commit** `feat(headless): eval de conciliación del inventario de materiales`
 
+**Verificación (2026-10-22, `be03e09`):** 7 tests nuevos; RED de informe ausente y de continuidad incorrecta a través de archivo sin identidad observados; ambas revisiones aprobadas. `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` PASS; `cargo test --workspace -- --test-threads=1`: **1.369 PASS / 2 ignoradas previas**. UI check 0 errores/avisos, **343 tests PASS**, build PASS. CLI fixture aislado: n1/materiales5/exactos5 (100 %), media0/máxima0, Other1, INSUFICIENTE. Historial local agregado en Verificación F4. Sin dependencias nuevas ni datos reales en fixtures.
 ### Task 28: Avisos de terceros, consumo, verificación de los 10 criterios y cierre
+
+**Dependencia aprobada:** ejecutar esta tarea como **C10**, después de Tasks 26–27 y C1–C9. Criterios de la spec ratificada y enmienda §8: catálogo completo, manifiesto por fila, fuente A/IDs auxiliares atribuidos, moneda/base/capacidades correctas, cinco idiomas y todas las páginas/topics <16.384 bytes. No basta con verificaciones provisionales previas. C9 prepara evidencias funcionales; aquí se mide consumo del catálogo completo, se pasa la revisión final y se cierra F4 si no hay pendientes en alcance.
 
 **Files:** Modify `THIRD_PARTY_NOTICES.md` (completar: Ardent/Spansh por red para comerciantes/broker; datos propios o importados de F4 con su licencia — lo importado ya se anotó en Tasks 8–10), este plan («Verificación F4», «Desviaciones»), `status.md`.
 
@@ -751,6 +775,36 @@ test('settings put rolls and reverts on 400', /* 9 válido → 400 → valor ant
 - [ ] **Step 2:** `CARGO_TARGET_DIR=target-f4 cargo build --release -p tmc-desktop` y `pwsh scripts/measure-footprint.ps1 -Exe target-f4/release/TMC.exe -JournalDir .tmp/footprint-f4 -FixturePath tests/fixtures/journal/engineering_session.log -ShowWindow -Seconds 120` con la disposición «Ingeniería» visible (criterio 10). **Nunca** `target/release/TMC.exe`. Si el TMC.exe del propietario ocupa la instancia, medir el núcleo con `tmc-headless` y dejar la medición con ventana como pendiente del propietario (como F3).
 - [ ] **Step 3:** `git diff main -- Cargo.lock ui/package.json` y licencias de cada paquete o dato nuevo (criterio 8); procedencia y `verified` de los cuatro JSON; claves de los 5 idiomas y nombres oficiales (criterio 9); evidencia por criterio en «Verificación F4»; revisión completa de la rama contra la spec.
 - [ ] **Step 4: Commit** `docs: verificación de criterios y cierre de F4`
+
+---
+
+## Adaptación aprobada del catálogo — secuencia C0–C10
+
+Esta secuencia complementa Tasks 9–10/11/14–16/18–24/26/28 sin borrar sus commits ni renumerarlas. **C1 solo empieza tras el cierre revisado de Task 26 y de Task 27 vigente.** C0 es documental y puede prepararse mientras se cierra ese trabajo. Un commit por unidad C; TDD en las unidades con código, checks obligatorios antes de cada commit, revisión contra spec/enmienda y status actualizado por el controlador. No modificar el release de prueba del propietario ni añadir dependencias Node/Rust/UI para el conversor.
+
+La [enmienda aprobada](2026-10-22-tmc-f4-catalogo-completo-propuesta.md) es la definición detallada de contratos/oráculos; las tareas siguientes indican archivos, entradas/salidas y valores verificables para ejecutarlos. Mantener las firmas descritas allí; las decisiones de datos pendientes se resuelven con evidencia, nunca completando costes/capacidades/símbolos por inferencia.
+
+- [x] **C0 — Ratificación documental.** Archivos: esta spec activa, este plan, enmienda; status por el controlador. Registrar ambas aprobaciones, ordenar C tras Tasks 26–27 y sustituir supuestos incompatibles de Interfaces/Tests. Validación: links locales existentes, `git diff --check`, historial/Files/Desviación de Task 26 preservados; ninguna implementación. Commit `docs: ratificar la enmienda del catálogo completo de F4`. Ratificación revisada y aprobada; 11 enlaces locales, cercas Markdown y diff check PASS; commit de este cierre documental.
+
+- [ ] **C1 — Snapshot, conversor y auditoría completa en staging.** Archivos nuevos: `scripts/import-engineering-catalogue.mjs`, `scripts/tests/import-engineering-catalogue.test.mjs` y snapshot/manifiesto de datos de importación versionados; avisos/licencias en `THIRD_PARTY_NOTICES.md`, investigación con cobertura. Usar Node existente (`node --test scripts/tests/import-engineering-catalogue.test.mjs`), sin paquetes nuevos. Entradas fijadas: EDDiscovery `7d30920e6822d4836e0d6dd5c91026ec7e2ab4c7` y EDDI `d3b964ea7c8bb959ad6537f55b308f293a326905` solo ID/nombre. Interfaces CLI: `--source-dir <snapshot> --out-dir <staging>` y `--source-dir <snapshot> --check`, esta última sin escribir. Parser del subconjunto C# y todas las sobrecargas/arrays, sin ejecutar fuentes; hashes/licencia/copyright/URL por archivo. Salida según enmienda §3.2: catálogos normalizados, símbolos/alias y manifiesto por constructor `row_id` con clasificación y referencias de salida. Cruce exacto **38/38**, **38 IDs únicos**, cero alias/ausencias para revisiones aprobadas; preservar 300100/Felicity y 300160/Elvira. Tests: salida byte a byte determinista; constructor desconocido/SHA cambiado/ingrediente sin correspondencia/alias ambiguo fallan; array MissileRack/SeekerMissileRack conserva dos expansiones; cada coste Merc Coins se conserva. La auditoría clasifica 100 % de constructores; entradas `unresolved` de nave quedan explícitas y bloquean activación completa C8, no desaparecen del informe. Fijar números definitivos por categoría tras auditar (924/895/83/46/105 son controles parciales, nunca total). C1 produce staging y no reemplaza los datos activos. Commit `chore(datos): añadir importación reproducible y auditoría del catálogo F4`.
+
+- [ ] **C2 — Tipos de receta, elegibilidad y alias.** Archivos: `crates/tmc-modules/src/data.rs`, pruebas de datos y `engineering/ship.rs`; ampliar estructuras del catálogo provisional para probar sin activar el completo. Implementar exactamente `RecipeCost`, `ModuleSelector`, `BaseIdentity`, `BaseRequirement`, `EntryPolicy`, `ModuleBlueprint`, `Blueprint`, `Experimental`, `ShipVariant`, `BlueprintAlias`, `RecipeResolutionError`, `BlueprintOption` y métodos de enmienda §4.1. Resolución depende de `item/key/current`, sin primera coincidencia. Símbolo exacto antes de prefijo más largo; alias por módulo, raw desconocido conservado. Validaciones runtime tolerantes por fila; importación estricta. Tests `grades_match_entry_policy`, `module_exact_symbol_precedes_prefix`, `blueprint_alias_resolves_in_module_context`, `ambiguous_recipe_is_rejected`, `variant_without_recipe_is_not_free`: stock G1–G5 y ExistingOnly G2–G5 sin rellenar G1; conflicto de contextos falla; variante sin correspondencia permanece pendiente. Mantener `engine`/`fsd` y campos serializados de `CurrentEng`. Commit `feat(modules): modelar recetas por contexto y requisitos de base`.
+
+- [ ] **C3 — Cálculo de materiales y Merc Coins con base explícita.** Archivos: `engineering/plan.rs`, cableado del cálculo en `engineering/mod.rs` y tests. Firma `plan_cost(catalogue,item,current,req)->PlanCost`; campos y `PlanBlocker` de enmienda §4.2 sin nuevos campos obligatorios en `PlanRequest`. Evaluar `BaseRequirement` por identidad/selector/grado completo/evidencia: una base→ruta tras ese grado; sin mapa→`MissingBaseMapping`, base insuficiente→`BaseRequired`, más de un contexto o punto de partida→`AmbiguousRecipe`. Continuación misma identidad conserva grado parcial. Tests con base sintética `variant_test` G1→`upgrade_test` G2–G5, orden de filas irrelevante; el fixture no prueba enlace real de juego. Costes por grado y moneda multiplicados por tiradas, sumas comprobadas; Experimental una vez; `verified:false` distinto de blockers. Oráculos independientes de enmienda §8: Dirty+Drag con defaults tiene 13 claves (`legacyfirmware3`, `industrialfirmware4`, `pharmaceuticalisolators4`, `iron5`, `hybridcapacitors3`, `securityfirmware1`, resto allí) y moneda0; G3 completo→solo G4/G5; Far-reaching G2–G5 sobre base demostrada→**100 monedas**. En esta unidad se pueden usar recetas sintéticas/importadas en test, manteniendo activo el catálogo provisional compatible hasta C8. Commit `feat(engineering): calcular costes y validar bases de las mejoras`.
+
+- [ ] **C4 — Capacidades por módulo/grado y recomendación.** Archivos: `data.rs`, `engineering/{engineers,sources,alerts,mod}.rs` y tests. `EngineerBlueprint {module_type,blueprint,grades:Vec<u8>}` desde filas EDDiscovery; `EngineerDef.id:u64`/`engineer(id)`/acciones numéricas sin nueva clase de identidad. `pick_engineer(module_type,blueprint,required_grades,book,pos)` exige todos los grados, conserva preferencia/desbloqueo/distancias. Callbacks de alerta `engineer_for_goal(&str)->Option<String>` resuelven `Goal` real; ningún `split(':')` para deducir módulo. Tests: Lori/misc_shielded AFMU [4] válida, CargoScanner [4] inválida/[3] válida; capacidad [1,3] no cubre [1,2,3]; proveedor vacío no se convierte en cualquiera. Estado por nombre sin ID, contradicción ID/nombre no sobrescribe; requisitos compuestos sin donación inventada. El catálogo activo de 38 entra en C8; la unión 38/38 se prueba desde staging de C1. Commit `feat(engineering): recomendar ingenieros por módulo y ruta de grados`.
+
+- [ ] **C5 — Objetivos compatibles, moneda separada y avisos correctos.** Archivos: `engineering/{goals,alerts,mod}.rs`, pruebas de persistencia/integración y contratos si cambian. Mantener `Goal`/`PlanRequest`/`CurrentEng` y SQL `engineering-001`; vistas con `MercCoinsView {need:u64,have:Option<u64>,missing:Option<u64>}`, `materials_ready`, `blockers` según enmienda §§4.2/6. Saldo F4 siempre `None`; sin nuevos eventos. Materiales/reservas/intercambios previos preservados, moneda no comerciable; `percent` es materiales. `completable` requiere materiales, cálculo sin bloqueos y moneda cero o saldo conocido suficiente. Tests: materiales cubiertos+100 monedas+saldoNone→false/sin aviso; receta completa sin monedas conserva true; reserva pura 100 para60/60→60/40, faltan20; objetivo antiguo alias/ID conserva JSON/posición tras load/reorder/replace/restart, máximo20 y aislamiento de comandante/lecturas tardías. Desconocido se conserva con motivo y sin falso completable. Commit `feat(engineering): conservar objetivos y distinguir disponibilidad de moneda`.
+
+- [ ] **C6 — REST paginado de catálogo, ingenieros y flujo.** Archivos: `engineering/{mod,pagination,tests}.rs`, `tmc-server` rutas REST, `tmc-model` diagnóstico, tests actor/HTTP y fixtures Rust→UI. Reutilizar `ModulePageQuery`/`ModuleQueryError`/revisión monotónica existentes, sin nueva capa de E/S. **Formas y secciones exactas:** enmienda §5; `catalogue`: `module_types|blueprints|recipes|experimentals|variants|aliases` (defecto blueprints); `engineers`: `engineers|capabilities|unlock` (defecto engineers); `flow`: `blueprints|experimentals|grades|costs|lines` (defecto lines). Topics `engineering.catalogue/engineers/flow` solo resúmenes de esa sección; mantener goals/locker ya paginados. Envoltorio `{revision,section,cursor,next_cursor,total,items}`, `revision` requerido; 400/404/409/413/503, auth/no-store existentes. Aplanar capacidades/costes/recetas por fila; prohibido truncar o avanzar sin servir. Tests: páginas 16.383 B aceptadas y16.384 B rechazadas, UTF-8/escapes, todas las filas sin duplicar/perder, dos clientes/cambio comandante/selección/inventario, `as_of` solo no invalida; GET no modifica estado/difunde ni crea cursores compartidos. Registrar rutas/topic y regenerar contrato. Evitar serializar catálogo completo por evento. Commit `feat(engineering): paginar catálogo ingenieros y flujo por bytes`.
+
+- [ ] **C7 — UI y textos para los contratos ampliados.** Archivos: `ui/src/modules/engineering/{types,labels,pages,goals,actions}.svelte.ts` cuando existan, `types.ts`, `labels.ts`, paneles Engineers/Ship/EngineerFlow/Shopping/Trades/Sources/Alerts, tests UI y `locales/{es,en,fr,de,pt}/{engineering,engineering-data}.ftl`. Modificar los archivos reales existentes, sin crear duplicados por nombre de sufijo. Reutilizar lectores privados de páginas de Task21; consumir resúmenes/secciones C6, cancelar/desmontar y descartar revisión/ranura/comandante antiguos, sin polling ni habilitar opciones incompletas. Solo grados aplicables (G5 por defecto si existe), moneda por grado/total/saldo sin datos y motivos de cálculo; porcentaje etiquetado de materiales. Acción `select_engineer {id}` intacta; capacidades visibles por módulo/grados. Tests: ExistingOnly no ofrece G1, correspondencia ausente/ambigua bloquea preview/pin, materiales listos+moneda no genera completable, recomendaciones coinciden entre panel/flujo/objetivo, dos revisiones no se mezclan. Claves iguales cinco idiomas; nombre oficial conocido o inglés `.pending=1` con procedencia. QA visual 2560/800. Catálogo provisional hasta C8. Commit `feat(ui): mostrar costes bases y catálogo paginado de ingeniería`.
+
+- [ ] **C8 — Activar datos completos y nombres de forma coherente.** Archivos: `data/{blueprints,engineers}.json`, tablas de símbolos/alias y manifiesto de C1, nombres FTL completos, `THIRD_PARTY_NOTICES.md`, fixtures sintéticos/tests/contratos Rust→UI dependientes y snapshot de importación. Ejecutar importador sobre fuentes fijadas; activar datos **solo después de C2–C7**. Cerrar Step6 de Tasks9/10 con catálogo completo auditado, 38 ingenieros/IDs únicos, todas las filas en alcance resueltas y ninguna pérdida de Merc Coins/arrays/variantes. No inventar selector/base para resolver pendientes: obtener evidencia y documentarla. Filas obsoletas/fuera de alcance con motivo; proveedor desconocido no se rellena ni certifica por coste positivo. Mantener `verified:false` salvo verificación concreta. `--check` sin escritura reproduce byte a byte, detecta fila individual que no cabe; números finales fijados en tests/manifiesto. Reemplazar oráculos provisionales Carbon/Polonium y expectativas de ingenieros por los valores manuales de la fuente, sin hacer que datos incorrectos pasen tests. Reutilizar nombres EDEngineer aprobados solo por mapeo inequívoco, fallback inglés pendiente; cinco idiomas exactos. Commit `feat(modules): activar el catálogo completo de ingeniería con procedencia`.
+
+- [ ] **C9 — Revalidar integración/e2e con el catálogo final.** Archivos: tests módulo/actor/HTTP/UI/Playwright, fixtures sintéticos necesarios y este plan para evidencia. Adaptar escenarios Task26 manteniendo su cierre histórico; ningún dato real. Tests: catálogo completo reconstruido por todas las secciones;38 ingenieros/capacidades,60 módulos,20 objetivos sin pérdida y todo topic/página<16.384; fallo/cancelación/revisión antigua; dos clientes; reinicio preserva objetivos/SQLite/IDs; base comprada demostrada y ausencia de mapeo; moneda100 saldoNone sin completable; Dirty+Drag y G3 completos contra oráculos independientes; recomendaciones por módulo consistentes. Probar filas proveedor desconocido con diagnóstico sin falsa recomendación. Revisión spec/calidad y checks obligatorios completos. No cambiar umbrales ni ignorar pruebas que fallen. Registrar números exactos y comandos, sin cerrar aún consumo. Commit `test: verificar F4 con el catálogo completo y contratos paginados`.
+
+- [ ] **C10 — Ejecutar Task28 y cerrar F4.** Archivos/steps de Task28. Confirmar licencias y los diez criterios de spec ratificada con evidencia de C1–C9; clippy release/checks/e2e y consumo <150 MB/<1 % CPU, UI≤10/s con catálogo final y disposición Ingeniería visible. Carpeta de release `target-f4`, sin tocar la prueba del propietario. `unresolved` en alcance, links de base/símbolos no demostrados, aviso falso o página sobredimensionada impiden cierre; registrar pendientes concretos. Revisión completa de rama y cierre status. Commit de Task28 `docs: verificación de criterios y cierre de F4`; C10 no añade otro commit duplicado.
 
 ---
 
@@ -791,10 +845,18 @@ test('settings put rolls and reverts on 400', /* 9 válido → 400 → valor ant
 
 ## Verificación F4
 
-(Se completa en Task 28 con comando + salida por criterio.)
+El cierre de los diez criterios se completa en Task 28/C10 con el catálogo final. Evidencias parciales de ejecución:
+
+- **Task 27 / conciliación local (2026-10-22):** `target/debug/tmc-headless.exe eval` sobre el directorio local predeterminado → 9 diarios, 4.630 eventos, 0 líneas descartadas. F4: **4 intervalos, 201/201 comprobaciones exactas (100,0 %), diferencia absoluta media 0,00 y máxima 0; 2.044 eventos no tipados entre instantáneas comparadas**. Veredicto **INSUFICIENTE (4 casos)** por n<5. Solo agregados: no nombres de comandante, FID, sistemas ni chats. Esto valida el historial observado y no certifica el catálogo nuevo todavía sin activar.
+- **Task 27 / fixture aislado:** `cargo run -p tmc-headless -- eval --journal-dir .tmp/eval-inventory-task27` → 1 diario/15 eventos/0 descartadas; 1 intervalo, 5/5 materiales exactos, media/máxima0, Other1, INSUFICIENTE. La carpeta contiene únicamente una copia del fixture sintético con nombre Journal.*.
 
 ## Desviaciones
 
+- 2026-10-22 · **Task 27: definición de la muestra.** Porcentaje/media ponderados por la unión de existencias positivas de cada par (ausentes=0), sin inflar exactitud con materiales siempre vacíos. Se conserva continuidad entre archivos del mismo comandante identificado; Materials anterior a Commander/LoadGame se atribuye tras recibir identidad. Cambio de identidad o archivo sin identidad corta continuidad para impedir comparaciones cruzadas; agregados anteriores se conservan. Solo se cuentan Other de intervalos comparados. Tests de identidad tardía/cambio/desconocida y deriva verifican estas decisiones.
+
+- 2026-10-22 · **Enmienda de catálogo ratificada por aprobación expresa del propietario.** EDDiscovery fuente A y EDDI exclusivamente para ID/nombre fijados; contratos de [enmienda aprobada](2026-10-22-tmc-f4-catalogo-completo-propuesta.md) y C0–C10 sustituyen fuente B pendiente, grados siempre desde1, capacidades globales por blueprint y listas completas de catálogo/ingenieros/flujo. Saldo Merc Coins None, bases explícitas sin inventar enlaces, capacidades por módulo/grados y conservación de objetivos/IDs. Adaptación C tras cierre de Tasks26/27, sin reabrir tareas hechas. Las entradas históricas inferiores conservan la evidencia de decisiones/bloqueos anteriores; sus solicitudes de aprobación ya resueltas no son bloqueos vigentes. Task28 espera C1–C9.
+
+- 2026-10-22 · **Task 26: infraestructura real de e2e.** Se añade un proyecto Playwright aislado, reinicio del headless conservando el mismo SQLite y `Redirect::post_json` exclusivamente de depuración: los comerciantes tipados usan Spansh JSON conforme a la decisión de Task 7, mientras Ardent cubre los servicios no tipados. El servidor falso filtra por tipo. Tras reiniciar se añade un evento vivo sintético para cargar objetivos persistidos, ya que la reconstrucción inicial del diario es replay y no debe leerlos como sesión viva. Sin cambios del fixture ni del contrato, sin servicios externos y sin modificar el release del propietario.
 - 2026-10-22 · **Task 25: visibilidad del borrador seleccionado.** La interfaz real de Task 20 usa `status:idle` tanto sin selección como tras `select_module`, antes de calcular. Se determina la visibilidad del flujo por `slot != null` para poder elegir blueprint/tiradas y realizar el primer preview desde la disposición Ingeniería (spec §3.4). Se añade el caso de prueba `idle` con ranura seleccionada; sin ranura sigue oculto. Es una adaptación de la condición de UI a la interfaz existente, sin cambiar el protocolo ni el alcance de la spec.
 
 - 2026-10-22 · **Task 22: nombres y traducciones de contribuciones.** Se añade el helper compartido `translationPending` en `ui/src/lib/i18n.ts` y se amplía el mapa de argumentos de tests Rust para `progress`, sin alterar contratos. Revisión de calidad detectó que una contribución de mercancía sin existencias mostraba la clave interna; ahora usa `core.ship.cargo` (campos PascalCase del diario), `trade.cargo` como respaldo opcional y FTL para el nombre inglés de Soontill Relics, marcado `.pending = 1` en idiomas sin traducción confirmada. El nombre es un hecho aislado del juego contrastado en [Frontier Forums](https://forums.frontier.co.uk/threads/soontill-relics-not-on-the-market-in-ngurii.555561/) y [la ficha de Inara](https://inara.cz/elite/commodity/10127); no se copian tablas ni descripciones. El panel funciona con la bodega principal aunque el módulo de comercio esté inactivo.

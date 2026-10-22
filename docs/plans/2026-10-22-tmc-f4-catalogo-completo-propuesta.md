@@ -1,9 +1,9 @@
-# TMC · F4 · Propuesta de enmienda para el catálogo completo
+# TMC · F4 · Enmienda aprobada para el catálogo completo
 
-- **Estado: PENDIENTE DE APROBACIÓN TÉCNICA.** Documento de diseño; no autoriza implementación ni sustituye la spec o el plan activos.
+- **Estado: APROBADA por el propietario (2026-10-22): «Aprobar y ejecutar la enmienda» y «Aprobar el mapa auxiliar de IDs».** Sus contratos quedan ratificados en spec y plan activos; ejecución mediante la secuencia C del plan, después de cerrar Tasks 26 y 27.
 - Fecha: 2026-10-22. Redactor: Codex, rol arquitecto; skill `deep-plan`.
 - Base: [spec F4](../specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md), [plan F4](2026-10-21-tmc-f4-ingenieros-materiales.md), [investigación y fuentes](../research/notes/2026-10-22-catalogos-f4-web.md).
-- **Decisión ya aprobada por el propietario:** EDDiscovery/EliteDangerousCore como fuente A. **Pendientes:** interfaces de esta enmienda y fuente auxiliar de IDs descrita en §3. Esta aprobación de EDDiscovery no se extiende automáticamente a EDDI.
+- **Decisiones aprobadas por el propietario:** EDDiscovery/EliteDangerousCore como fuente A, interfaces de esta enmienda y, mediante aprobación expresa separada, mapa auxiliar EDDI limitado a ID/nombre (§3). No hay autorización para ampliar el uso de EDDI a recetas o especialidades.
 - Alcance: completar Tasks 9–10 y adaptar consumidores de Tasks 11/14–16/18–24/26/28. Tasks 26–27 pueden continuar con su alcance vigente; no cerrar F4 con catálogos provisionales.
 
 ## 1. Diagnóstico
@@ -23,7 +23,7 @@ El catálogo actual contiene dos blueprints, un experimental y cinco ingenieros 
 
 ## 2. Opción recomendada y alternativas
 
-Ampliar el modelo de F4 en sus límites actuales: **recetas por módulo y grado, coste separado de Merc Coins, variantes de adquisición explícitas y REST paginado reutilizando el actor**. Conservar inventario de materiales, tasas de intercambio, migración SQLite y estructura persistida de objetivos. Usar el mapa auxiliar de IDs únicamente tras aprobación y auditoría, evitando un cambio transversal de identidad si los 38 cruces son completos.
+Ampliar el modelo de F4 en sus límites actuales: **recetas por módulo y grado, coste separado de Merc Coins, variantes de adquisición explícitas y REST paginado reutilizando el actor**. Conservar inventario de materiales, tasas de intercambio, migración SQLite y estructura persistida de objetivos. Usar el mapa auxiliar de IDs ya aprobado y repetir su auditoría exacta 38/38 en C1; conservar la identidad numérica existente.
 
 | Opción | Complejidad y riesgo | Mantenimiento | Tokens/contexto futuro | Decisión |
 |---|---|---|---|---|
@@ -40,9 +40,9 @@ Ampliar el modelo de F4 en sus límites actuales: **recetas por módulo y grado,
 
 Importar datos, sin ejecutar ni integrar código C# de EDDiscovery. Fuentes aprobadas fijadas al commit anterior: `RecipesEngineering.cs`, `Engineers.cs`, `MCMRType.cs`, `Modules.cs`, `RecipeFDName.cs` y licencia. Cada archivo descargado debe registrar URL con commit, SHA-256, licencia, copyright y fecha de lectura. Cualquier archivo adicional requerido para resolver símbolos se audita con el mismo criterio y queda en el manifiesto; no asumir que un archivo GPL en otro proyecto queda cubierto por esta autorización.
 
-**Fuente auxiliar propuesta, aún sin aprobar:** exclusivamente pares `(EngineerID, nombre)` de [EDCD/EDDI `DataDefinitions/Engineer.cs` fijado a `d3b964ea7c8bb959ad6537f55b308f293a326905`](https://github.com/EDCD/EDDI/blob/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Engineer.cs). Investigación local: 38 declaraciones; `LICENSE.md` y `LicenseFile.txt` de la misma revisión declaran Apache-2.0. No se observó referencia a Coriolis/FDevIDs ni reserva específica de datos en el archivo examinado; esa observación no sustituye la revisión de procedencia antes de importar. No importar sus especialidades/recetas: la capacidad sigue saliendo de cada fila de EDDiscovery. No ampliar a `marketId` sin necesidad/aprobación; conservar el fallback de taller `(system,workshop)`.
+**Fuente auxiliar aprobada por separado:** exclusivamente pares `(EngineerID, nombre)` de [EDCD/EDDI `DataDefinitions/Engineer.cs` fijado a `d3b964ea7c8bb959ad6537f55b308f293a326905`](https://github.com/EDCD/EDDI/blob/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Engineer.cs). Investigación local: 38 declaraciones; `LICENSE.md` y `LicenseFile.txt` de la misma revisión declaran Apache-2.0. No se observó referencia a Coriolis/FDevIDs ni reserva específica de datos en el archivo examinado; conservar la auditoría de procedencia y hashes al importar. No importar sus especialidades/recetas: la capacidad sigue saliendo de cada fila de EDDiscovery. No ampliar a `marketId` sin necesidad/aprobación; conservar el fallback de taller `(system,workshop)`.
 
-Requisito de fase 0: comprobar unión uno a uno de los 38 nombres EDDiscovery con los 38 IDs auxiliares, documentar alias ortográficos explícitos y verificar unicidad de IDs. Mantener 300100/Felicity y 300160/Elvira. El fallback existente de eventos sin `EngineerID` por nombre se conserva. Un ID desconocido observado con nombre conocido se puede asociar al registro por correspondencia explícita no ambigua; una contradicción ID/nombre no se resuelve sobrescribiendo silenciosamente. No inventar secuencias numéricas ni asignar cero a varios ingenieros. Si el propietario no aprueba la fuente o el cruce falla, bloquear ese paso y revisar la alternativa de identidad opcional; la propuesta principal no necesita ese refactor por anticipado.
+La auditoría exploratoria de solo lectura ya obtiene correspondencia **38/38 por nombre exacto**, 38 IDs únicos, cero ausencias y cero alias necesarios entre las dos revisiones fijadas. Requisito de C1: repetir ese cruce y comprobar los hashes mediante el conversor reproducible; documentar alias explícitos si una revisión posterior los necesita. Mantener 300100/Felicity y 300160/Elvira. El fallback existente de eventos sin `EngineerID` por nombre se conserva. Un ID desconocido observado con nombre conocido se puede asociar al registro por correspondencia explícita no ambigua; una contradicción ID/nombre no se resuelve sobrescribiendo silenciosamente. No inventar secuencias numéricas ni asignar cero a varios ingenieros. Se mantiene `EngineerDef.id: u64` y acciones numéricas; no introducir nueva clase/identidad de ingeniero. Si un nuevo cruce falla, registrar el bloqueo de datos y revisar la causa antes de cambiar ese contrato aprobado.
 
 ### 3.2 Conversor propuesto y artefactos
 
@@ -72,7 +72,7 @@ Pruebas de importación: 100 % de constructores clasificados, cero filas ignorad
 
 La heurística upstream `PreEngineered = Ingredients.Length == 0 && MercCoins == 0` se conserva como indicio, no como verdad del juego. Filas como `cargorack_increasedcapacity` sin ingredientes y variantes de superficie deben revisarse una a una. `cargoracks5c1_extended` y `cargoracks6c1_extended` G5 contienen Merc Coins = 1 pero ningún ingeniero: conservar el coste, mostrar proveedor desconocido y resolver su significado antes de afirmar cobertura jugable completa. No convertir ingeniero vacío en «cualquier ingeniero».
 
-## 4. Contratos de datos y cálculo propuestos
+## 4. Contratos de datos y cálculo aprobados
 
 ### 4.1 Recetas y elegibilidad
 
@@ -186,7 +186,7 @@ fn pick_engineer(
 ) -> EngineerPick;
 ```
 
-`EngineerDef.id` se mantiene si se aprueba el mapa auxiliar. Sus capacidades se generan de cada fila aplicable: unión por `(ingeniero,módulo,blueprint)` con conjunto de grados exacto. `max_grade` puede derivarse para presentación; no usarlo para rellenar capacidades ausentes. Un candidato debe poder aplicar todos los grados efectivamente requeridos por la ruta; si no hay uno, mostrar «sin ingeniero que cubra esta ruta», sin inventar proveedor ni itinerario múltiple. La capacidad para mostrar G5 puede existir aunque la fuente no asigne ese mismo ingeniero a G1; recomendarla solo con una base que requiera esos grados.
+`EngineerDef.id:u64` se mantiene con el mapa auxiliar aprobado, sin nueva clase/identidad de ingeniero. Sus capacidades se generan de cada fila aplicable: unión por `(ingeniero,módulo,blueprint)` con conjunto de grados exacto. `max_grade` puede derivarse para presentación; no usarlo para rellenar capacidades ausentes. Un candidato debe poder aplicar todos los grados efectivamente requeridos por la ruta; si no hay uno, mostrar «sin ingeniero que cubra esta ruta», sin inventar proveedor ni itinerario múltiple. La capacidad para mostrar G5 puede existir aunque la fuente no asigne ese mismo ingeniero a G1; recomendarla solo con una base que requiera esos grados.
 
 Preservar preferencia desbloqueado/cercanía, estado, distancias y siguiente paso actual. Pasar siempre módulo/ruta al flujo, detalles de objetivos, resumen, avisos y panel de ingenieros. Cambiar callback de alertas a `engineer_for_goal: &dyn Fn(&str) -> Option<String>`: recibe `Goal.id`, localiza el `Goal` real y usa `request`/`item`/base; eliminar la inferencia de contexto mediante `split(':')`. No modificar formato de IDs de objetivos para añadir el módulo.
 
@@ -222,9 +222,9 @@ Un objetivo incompatible con el nuevo catálogo no se borra ni aparece vacío/co
 
 Generar claves `bp-`, `exp-`, `modtype-`, `unlock-` y nombres de variantes donde corresponda en cinco idiomas. Reutilizar nombres oficiales de EDEngineer ya aprobados cuando el mapeo canónico es inequívoco, sin importar sus recetas por asociación. Fuente EDDiscovery aporta nombre inglés; idioma sin traducción oficial conocida usa ese inglés con `.pending = 1`, nunca una traducción inventada presentada como oficial. Conservar procedencia de nombres/alias y comprobar igualdad de claves entre idiomas. Añadir textos de Merc Coins, saldo desconocido, base requerida, receta incompleta y proveedor desconocido en `engineering.ftl` de los cinco idiomas. El nombre «Merc Coins» se mantiene como nombre de la fuente hasta comprobar su denominación oficial por idioma; marcar pendiente cuando proceda.
 
-## 7. Plan de ejecución por fases tras aprobación
+## 7. Plan de ejecución por fases aprobado
 
-1. **Ratificar cambios documentales y mapa de IDs.** Actualizar spec §§3.3–3.5/4/7/8 y §10.2 para coste adicional, base existente, completitud y paginación. Actualizar Interfaces/Tests de Tasks 9–11/14–16/18–24/26/28 y status. Registrar aprobación separada del mapa EDDI y decisión ante filas ambiguas. Un commit documental. No reabrir trabajo correcto de Tasks 26–27 por simple renumeración.
+1. **Ratificar cambios documentales y mapa de IDs (C0).** Actualizar spec §§3.3–3.5/4/7/8 y §10.2 para coste adicional, base existente, completitud y paginación. Actualizar Interfaces/Tests de Tasks 9–11/14–16/18–24/26/28 y status. Registrar aprobación separada del mapa EDDI; los datos ambiguos siguen sujetos a evidencia. Un commit documental. Cerrar Task 26 con sus revisiones y después Task 27 vigente antes de iniciar C1; no reabrir ni renumerar trabajo terminado.
 2. **Auditar fuente y conversor, RED→GREEN.** Snapshot, hashes, manifiesto exhaustivo de constructores, cruce de los 38 IDs, mapeo completo de ingredientes y módulos, aliases y categorías. Resolver filas `unresolved` en alcance; no activar datos parciales como catálogo completo. Commit de herramienta/documentación y atribución. No incorporar balances ni acceso de red nuevo al producto.
 3. **Ampliar contratos con catálogo provisional, RED→GREEN.** Modelos de costes/recetas, resolución de alias/ítem, capacidades por módulo/grado, cálculo con bloqueos, goals/avisos y compatibilidad persistida. Añadir fixtures sintéticos de nuevas estructuras para aislar fallos del cambio de datos. Commit por tarea lógica, checks globales y actualización de status.
 4. **Extender páginas y consumidores, RED→GREEN.** REST/actor, tres topics, tipos TS, clientes de páginas, controles por grados, moneda y nombres pendientes. Generar contratos Rust→UI. Dos clientes, invalidación y límites de bytes; QA visual 2560 y 800. No activar aún un catálogo que la UI no puede representar correctamente.
@@ -248,6 +248,6 @@ Si antes de fases 3–5 aparece una contradicción de datos o de alcance que imp
 - **Páginas:** catálogo final entero, 38 ingenieros con todas sus capacidades, 60 módulos y 20 objetivos; recorrer cada recurso/sección devuelve igualdad de filas sin pérdida/duplicados. Página 16.383 bytes aceptada; 16.384 rechazada; UTF-8 y comillas escapadas incluidas. Revisión obsoleta 409, dos clientes independientes, GET sin mutación, sin tormenta WS/polling. No cerrar por pasar solo el fixture pequeño.
 - **Nombres y cierre:** cobertura exacta de claves en es/en/fr/de/pt y fallback inglés marcado; actualizar oráculos/contratos UI sin derivar todo del mismo conversor. Ejecutar checks obligatorios completos, e2e y medición <150 MB/<1 % CPU con catálogo completo; medir frecuencia UI ≤10/s y ausencia de trabajo continuo en reposo. No se han ejecutado estas validaciones al redactar esta propuesta.
 
-## 9. Cambios precisos pendientes de aprobación
+## 9. Alcance de las aprobaciones registradas
 
-La aceptación técnica de esta propuesta autoriza definir los contratos anteriores en spec/plan y ejecutarlos por fases: costes Merc Coins visibles sin inventar saldo, bases existentes para mejoras G2+, variantes diferenciadas, capacidades por módulo/grado, paginación de catálogo/ingenieros/flujo y compatibilidad de objetivos. La aprobación de EDDI se solicita **por separado**, limitada al mapa ID/nombre fijado y sus avisos de licencia. Las filas fuente ambiguas y símbolos/bases aún no demostrados siguen siendo preguntas de datos que deben resolverse antes de declarar completitud; no quedan aprobados por aceptar la arquitectura.
+El propietario autorizó definir los contratos anteriores en spec/plan y ejecutarlos por fases: costes Merc Coins visibles sin inventar saldo, bases existentes para mejoras G2+, variantes diferenciadas, capacidades por módulo/grado, paginación de catálogo/ingenieros/flujo y compatibilidad de objetivos. Aprobó **por separado** EDDI, limitado al mapa ID/nombre fijado y sus avisos de licencia. Las filas fuente ambiguas y símbolos/bases aún no demostrados siguen siendo preguntas de datos que deben resolverse antes de declarar completitud; no quedan certificadas por aceptar la arquitectura. La lista granular ejecutable C0–C10 y su orden viven en el plan activo; este documento conserva el contrato detallado y sus oráculos.
