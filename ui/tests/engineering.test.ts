@@ -29,6 +29,22 @@ test('unknown material shows journal name and no data', () => { const inventory 
 test('material name falls back to name_en', () => { const inventory = structuredClone(fixture['engineering.inventory']); Object.assign(inventory.by_category.Raw['1'][1], { name_localised: null, name_en: 'Iron' }); live.topics['engineering.inventory'] = inventory; show(); expect(target.textContent).toContain('Iron'); });
 test('locker tab lists components', async () => { show(); click('tab-locker'); await settle(); expect(target.textContent).toContain('Graphene'); expect(target.querySelector('[data-key="graphene"]')?.textContent).toContain('8'); expect(fetch).toHaveBeenCalledWith('/api/engineering/locker?revision=21&cursor=0&section=components', expect.objectContaining({ cache: 'no-store', signal: expect.any(AbortSignal) })); });
 test('session totals by origin', () => { show(); expect(target.querySelector('[data-origin="Scan"]')?.textContent).toContain('+2'); expect(target.querySelector('[data-origin="Trade"]')?.textContent).toContain('+1 / −6'); });
+test('search bar filters materials by name', () => {
+  show();
+  const input = target.querySelector('input[type="search"]') as HTMLInputElement;
+  expect(input).not.toBeNull();
+  expect(target.querySelector('[data-key="iron"]')).not.toBeNull();
+  expect(target.querySelector('[data-key="carbon"]')).not.toBeNull();
+  input.value = 'carbon';
+  input.dispatchEvent(new Event('input'));
+  flushSync();
+  expect(target.querySelector('[data-key="iron"]')).toBeNull();
+  expect(target.querySelector('[data-key="carbon"]')).not.toBeNull();
+});
+test('category capacity gauge displays totals', () => {
+  show();
+  expect(target.querySelector('.category-gauge')).not.toBeNull();
+});
 test('reader accumulates all pages atomically', async () => {
  const page = fixture['engineering.pages'].locker_components;
  let finish!: (value: Response) => void;
