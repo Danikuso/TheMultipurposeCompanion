@@ -207,17 +207,7 @@ fn engineering_plan_parked_quality_and_experimental() {
         4
     );
     let catalog = blueprints();
-    let bp = catalog
-        .blueprints
-        .iter()
-        .find(|bp| bp.key == "engine_dirty")
-        .unwrap();
-    let exp = catalog
-        .experimentals
-        .iter()
-        .find(|exp| exp.key == "special_engine_overloaded")
-        .unwrap();
-    let cost = plan_cost(bp, Some(exp), Some(&current), &request);
+    let cost = plan_cost(catalog, "int_engine_size5_class5", Some(&current), &request);
     assert_eq!(cost.per_grade.keys().copied().collect::<Vec<_>>(), [4, 5]);
     assert_eq!(cost.experimental.unwrap().values().sum::<u32>(), 3);
 }

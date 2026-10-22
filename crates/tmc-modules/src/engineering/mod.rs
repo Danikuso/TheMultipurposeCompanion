@@ -456,17 +456,9 @@ impl Engineering {
         g.base.clone()
     }
 
-    fn cost_for(&self, req: &PlanRequest, current: Option<&CurrentEng>) -> Option<PlanCost> {
-        let cat = blueprints();
-        let bp = cat.blueprint(cat.canonical_blueprint(&req.module_type, &req.blueprint)?)?;
-        let exp = req.experimental.as_deref().and_then(|e| {
-            cat.canonical_experimental(&req.module_type, e)
-                .and_then(|key| cat.experimental(key))
-        });
-        if req.experimental.is_some() && exp.is_none() {
-            return None;
-        }
-        Some(plan_cost(bp, exp, current, req))
+    /// Cost of `req` for the module `item`; unresolved requests carry their blockers.
+    fn cost_for(&self, item: &str, req: &PlanRequest, current: Option<&CurrentEng>) -> PlanCost {
+        plan_cost(blueprints(), item, current, req)
     }
 
     fn pos(&self) -> Option<[f64; 3]> {
@@ -520,9 +512,9 @@ impl Engineering {
         let mut needs: Vec<(String, BTreeMap<String, u32>)> = Vec::new();
         let mut verified: BTreeMap<String, bool> = BTreeMap::new();
         for g in &self.goals {
-            let cost = self.cost_for(&g.request, self.current_for(g).as_ref());
-            verified.insert(g.id.clone(), cost.as_ref().is_some_and(|c| c.verified));
-            needs.push((g.id.clone(), cost.map(|c| c.total).unwrap_or_default()));
+            let cost = self.cost_for(&g.item, &g.request, self.current_for(g).as_ref());
+            verified.insert(g.id.clone(), cost.verified);
+            needs.push((g.id.clone(), cost.total));
         }
         let rules = trader_rules();
         let inv = &self.inventory;
@@ -532,8 +524,10 @@ impl Engineering {
         // El flujo abierto va al final como un objetivo más.
         let flow_cost = self.flow.as_ref().and_then(|f| {
             let req = f.request.as_ref()?;
-            let current = self.row(&f.slot).and_then(|r| r.current.clone());
-            self.cost_for(req, current.as_ref())
+            let row = self.row(&f.slot)?;
+            // Until the blocker views (C5/C7) a blocked request still reads as `no_data`.
+            Some(self.cost_for(&row.item, req, row.current.as_ref()))
+                .filter(|c| !c.has_resolution_blocker())
         });
         let all = match &flow_cost {
             Some(c) => {
@@ -1203,29 +1197,23 @@ impl Engineering {
             return false;
         };
         let cat = blueprints();
-        if cat
-            .blueprint(blueprint)
-            .is_some_and(|b| !b.has_module_type(&module_type))
-        {
+        let raw = blueprint.to_ascii_lowercase();
+        let known_elsewhere =
+            cat.blueprint(&raw).is_some() || cat.aliases.iter().any(|a| a.alias == raw);
+        if known_elsewhere && cat.canonical_blueprint(&module_type, &raw).is_none() {
             decide!("engineering.preview.rejected_incompatible", {});
             return false;
         }
         let experimental = match args.get("experimental") {
             None | Some(Value::Null) => None,
             Some(Value::String(s)) if s.trim().is_empty() => None,
-            Some(Value::String(s)) => {
-                let valid = cat
-                    .experimentals_for(&module_type)
-                    .into_iter()
-                    .find(|e| e.key.eq_ignore_ascii_case(s.trim()));
-                match valid {
-                    Some(e) => Some(e.key.clone()),
-                    None => {
-                        decide!("engineering.preview.rejected_experimental", {});
-                        return false;
-                    }
+            Some(Value::String(s)) => match cat.canonical_experimental(&module_type, s) {
+                Some(key) => Some(key.to_owned()),
+                None => {
+                    decide!("engineering.preview.rejected_experimental", {});
+                    return false;
                 }
-            }
+            },
             Some(_) => {
                 decide!("engineering.preview.rejected_experimental", {});
                 return false;
@@ -1277,13 +1265,16 @@ impl Engineering {
             decide!("engineering.pin.rejected_no_request", {});
             return false;
         };
-        if self.cost_for(&req, None).is_none() {
-            decide!("engineering.pin.rejected_no_data", {});
-            return false;
-        }
         let Some(row) = self.row(&flow.slot) else {
             return false;
         };
+        if self
+            .cost_for(&row.item, &req, row.current.as_ref())
+            .has_resolution_blocker()
+        {
+            decide!("engineering.pin.rejected_no_data", {});
+            return false;
+        }
         if row.module_type.as_deref() != Some(req.module_type.as_str()) || !row.engineerable {
             decide!("engineering.pin.rejected_incompatible", {});
             return false;

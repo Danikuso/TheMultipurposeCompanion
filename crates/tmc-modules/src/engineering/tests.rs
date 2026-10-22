@@ -385,7 +385,10 @@ fn incompatible_known_blueprint_rejected_without_changes() {
     let mut req = h.m.flow.as_ref().unwrap().request.clone().unwrap();
     req.blueprint = "fsd_longrange".into();
     req.experimental = None;
-    assert!(h.m.cost_for(&req, None).is_none());
+    assert!(
+        h.m.cost_for("int_engine_size8_class5", &req, None)
+            .has_resolution_blocker()
+    );
     h.m.flow.as_mut().unwrap().request = Some(req);
     assert!(h.action(ACTION_PIN_GOAL, json!({})).is_empty());
     assert_eq!(h.m.goals.len(), 0);
@@ -1582,7 +1585,14 @@ fn worst_case_engine_goals_size() {
                 target_grade: 5,
                 rolls: [10; 5],
             };
-            let cost = h.m.cost_for(&req, None).unwrap();
+            let prefix = &blueprints()
+                .module_types
+                .iter()
+                .find(|t| t.id == req.module_type)
+                .unwrap()
+                .item_prefixes[0];
+            let probe = format!("{prefix}size8_class5");
+            let cost = h.m.cost_for(&probe, &req, None);
             h.m.goals = (0..20)
                 .map(|i| {
                     Goal::new(

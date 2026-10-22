@@ -5,7 +5,10 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use super::ship::CurrentEng;
-use crate::data::{Blueprint, Experimental, Ingredient};
+use crate::data::{
+    BaseIdentity, BaseRequirement, Blueprint, BlueprintCatalog, EntryPolicy, Ingredient,
+    RecipeResolutionError,
+};
 
 /// Petición de cálculo. `rolls[i]` son las tiradas del grado `i + 1`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -32,9 +35,17 @@ pub struct PlanCost {
     pub per_grade: BTreeMap<u8, (u8, BTreeMap<String, u32>)>,
     pub experimental: Option<BTreeMap<String, u32>>,
     pub total: BTreeMap<String, u32>,
+    /// Merc Coins por grado (ya multiplicadas por las tiradas), solo grados con coste.
+    /// Moneda aparte: nunca entra en `total` ni en el inventario.
+    pub merc_coins_by_grade: BTreeMap<u8, u64>,
+    pub merc_coins_experimental: u64,
+    pub merc_coins_total: u64,
+    /// Motivos por los que el cálculo no está completo; vacío = cálculo completo.
+    pub blockers: Vec<PlanBlocker>,
     pub replaces_blueprint: bool,
+    /// Dato sin verificar; no equivale a cálculo incompleto (ver `blockers`).
     pub verified: bool,
-    /// Grados pedidos sin receta en el dato (se cuentan sin materiales y `verified` queda en falso).
+    /// Grados pedidos sin receta (derivado de `blockers`; se cuentan sin materiales).
     pub missing_grades: Vec<u8>,
 }
 
@@ -99,20 +110,118 @@ fn add_into_total(total: &mut BTreeMap<String, u32>, mats: &BTreeMap<String, u32
     }
 }
 
+/// Why a calculation cannot be completed. Distinct from `verified: false`, which only says the
+/// underlying data is not verified yet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PlanBlocker {
+    MissingRecipe { grade: u8 },
+    MissingBaseMapping,
+    BaseRequired,
+    AmbiguousRecipe,
+    IncompatibleItem,
+    UnknownBlueprint,
+    UnknownExperimental,
+}
+
+impl From<RecipeResolutionError> for PlanBlocker {
+    fn from(e: RecipeResolutionError) -> Self {
+        match e {
+            RecipeResolutionError::UnknownBlueprint => Self::UnknownBlueprint,
+            RecipeResolutionError::IncompatibleItem => Self::IncompatibleItem,
+            RecipeResolutionError::MissingBaseMapping => Self::MissingBaseMapping,
+            RecipeResolutionError::BaseRequired => Self::BaseRequired,
+            RecipeResolutionError::AmbiguousRecipe => Self::AmbiguousRecipe,
+        }
+    }
+}
+
+impl PlanCost {
+    /// Blockers that make the request itself unusable (anything but a gap in the recipe chain).
+    pub fn has_resolution_blocker(&self) -> bool {
+        self.blockers
+            .iter()
+            .any(|b| !matches!(b, PlanBlocker::MissingRecipe { .. }))
+    }
+
+    fn blocked(blocker: PlanBlocker) -> Self {
+        Self {
+            blockers: vec![blocker],
+            ..Self::default()
+        }
+    }
+}
+
+fn add_coins(coins: u32, times: u32) -> u64 {
+    u64::from(coins).saturating_mul(u64::from(times))
+}
+
+/// Start of an `ExistingOnly` route from a proven base. A base that is the target blueprint
+/// itself keeps the ordinary grade/partial-quality rules; any other base starts right after
+/// its completed grade, with no replacement warning (it is the approved transition).
+fn base_start(
+    base: &BaseRequirement,
+    bp_key: &str,
+    current: Option<&CurrentEng>,
+    rolls: &[u8; 5],
+) -> StartPoint {
+    let same_identity = matches!(&base.identity, BaseIdentity::Blueprint { key } if key == bp_key);
+    if same_identity {
+        return start_grade(current, bp_key, rolls);
+    }
+    StartPoint {
+        grade: base.completed_grade.saturating_add(1),
+        partial_rolls: None,
+        replaces: false,
+    }
+}
+
+/// Materials and Merc Coins to engineer `item` as `req` says, starting from `current`.
+/// The recipe context is resolved from item and installed base; when none or several apply the
+/// result carries a blocker and no costs, never a silently chosen or free route.
 pub fn plan_cost(
-    bp: &Blueprint,
-    exp: Option<&Experimental>,
+    cat: &BlueprintCatalog,
+    item: &str,
     current: Option<&CurrentEng>,
     req: &PlanRequest,
 ) -> PlanCost {
-    let start = start_grade(current, &bp.key, &req.rolls);
+    if cat.module_type_of(item) != Some(req.module_type.as_str()) {
+        return PlanCost::blocked(PlanBlocker::IncompatibleItem);
+    }
+    let (bp, rec) = match cat.blueprint_for_item(item, &req.blueprint, current) {
+        Ok(found) => found,
+        Err(e) => return PlanCost::blocked(e.into()),
+    };
+    // Compare the installed blueprint through its canonical key, so journal aliases match.
+    let normalised = current.map(|c| {
+        let mut c = c.clone();
+        if let Some(k) = cat.canonical_blueprint(&req.module_type, &c.blueprint) {
+            c.blueprint = k.to_owned();
+        }
+        c
+    });
+    let start = match &rec.entry {
+        EntryPolicy::Stock => start_grade(normalised.as_ref(), &bp.key, &req.rolls),
+        EntryPolicy::ExistingOnly { .. } => {
+            let mut starts: Vec<StartPoint> = Vec::new();
+            for b in cat.satisfied_bases(rec, item, current) {
+                let s = base_start(b, &bp.key, normalised.as_ref(), &req.rolls);
+                if !starts.contains(&s) {
+                    starts.push(s);
+                }
+            }
+            match starts.as_slice() {
+                [one] => *one,
+                [] => return PlanCost::blocked(PlanBlocker::BaseRequired),
+                _ => return PlanCost::blocked(PlanBlocker::AmbiguousRecipe),
+            }
+        }
+    };
     let mut cost = PlanCost {
         replaces_blueprint: start.replaces,
         verified: bp.verified,
         ..PlanCost::default()
     };
-    // Interim (C3 replaces it with item/base-aware resolution): only an unambiguous context.
-    let recipe = bp.sole_recipe_for(&req.module_type);
     let target = req.target_grade.min(5);
     for g in start.grade..=target {
         let rolls = match start.partial_rolls {
@@ -120,41 +229,67 @@ pub fn plan_cost(
             _ => req.rolls[usize::from(g) - 1],
         };
         let mut mats = BTreeMap::new();
-        match recipe.and_then(|r| r.grades.get(&g)) {
-            Some(recipe) => add(&mut mats, &recipe.materials, u32::from(rolls)),
-            None => {
-                cost.missing_grades.push(g);
-                cost.verified = false;
+        match rec.grades.get(&g) {
+            Some(recipe) => {
+                add(&mut mats, &recipe.materials, u32::from(rolls));
+                let coins = add_coins(recipe.merc_coins, u32::from(rolls));
+                if coins > 0 {
+                    cost.merc_coins_by_grade.insert(g, coins);
+                    cost.merc_coins_total = cost.merc_coins_total.saturating_add(coins);
+                }
             }
+            None => cost.blockers.push(PlanBlocker::MissingRecipe { grade: g }),
         }
         add_into_total(&mut cost.total, &mats);
         cost.per_grade.insert(g, (rolls, mats));
     }
     if let Some(wanted) = req.experimental.as_deref() {
-        let same = !start.replaces
-            && current
-                .and_then(|c| c.experimental.as_deref())
-                .is_some_and(|e| e.eq_ignore_ascii_case(wanted));
-        match exp {
+        let key = cat.canonical_experimental(&req.module_type, wanted);
+        match key.and_then(|k| cat.experimental(k)) {
             Some(e) => {
                 cost.verified &= e.verified;
+                let installed = normalised.as_ref().and_then(|c| c.experimental.as_deref());
+                let same = !start.replaces
+                    && installed.is_some_and(|i| {
+                        cat.canonical_experimental(&req.module_type, i)
+                            .map_or_else(|| i.eq_ignore_ascii_case(&e.key), |k| k == e.key)
+                    });
                 if !same {
                     let mut mats = BTreeMap::new();
                     add(&mut mats, &e.cost.materials, 1);
                     add_into_total(&mut cost.total, &mats);
                     cost.experimental = Some(mats);
+                    let coins = u64::from(e.cost.merc_coins);
+                    cost.merc_coins_experimental = coins;
+                    cost.merc_coins_total = cost.merc_coins_total.saturating_add(coins);
                 }
             }
-            None => cost.verified = false,
+            None => {
+                cost.verified = false;
+                cost.blockers.push(PlanBlocker::UnknownExperimental);
+            }
         }
     }
+    cost.missing_grades = cost
+        .blockers
+        .iter()
+        .filter_map(|b| match b {
+            PlanBlocker::MissingRecipe { grade } => Some(*grade),
+            _ => None,
+        })
+        .collect();
     cost
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::data::blueprints;
+    use crate::data::{
+        BlueprintAlias, EntryPolicy, Experimental, ModuleBlueprint, ModuleSelector, ModuleTypeDef,
+        RecipeCost, ShipVariant, blueprints,
+    };
+
+    const ENGINE_ITEM: &str = "int_engine_size5_class5";
 
     const RAW: &str = include_str!("../../data/blueprints.json");
 
@@ -178,10 +313,7 @@ mod tests {
     }
 
     fn run(current: Option<&CurrentEng>, r: &PlanRequest) -> PlanCost {
-        let cat = blueprints();
-        let bp = cat.blueprint(&r.blueprint).unwrap();
-        let exp = r.experimental.as_deref().and_then(|e| cat.experimental(e));
-        plan_cost(bp, exp, current, r)
+        plan_cost(blueprints(), ENGINE_ITEM, current, r)
     }
 
     fn raw_mats(v: &serde_json::Value) -> Vec<(String, u64)> {
@@ -298,11 +430,18 @@ mod tests {
 
     #[test]
     fn missing_grade_is_flagged_not_fatal() {
-        let mut bp = blueprints().blueprint("engine_dirty").unwrap().clone();
+        let mut cat = blueprints().clone();
+        let bp = cat
+            .blueprints
+            .iter_mut()
+            .find(|b| b.key == "engine_dirty")
+            .unwrap();
+        let data_verified = bp.verified;
         bp.recipes[0].grades.remove(&2);
-        let cost = plan_cost(&bp, None, None, &req(3, None, [1; 5]));
+        let cost = plan_cost(&cat, ENGINE_ITEM, None, &req(3, None, [1; 5]));
         assert_eq!(cost.missing_grades, [2]);
-        assert!(!cost.verified);
+        assert_eq!(cost.blockers, [PlanBlocker::MissingRecipe { grade: 2 }]);
+        assert_eq!(cost.verified, data_verified);
         assert_eq!(cost.per_grade[&2].0, 1);
     }
 
@@ -334,5 +473,453 @@ mod tests {
         let cost = run(Some(&same), &req(5, Some(wanted), [1, 1, 1, 1, 4]));
         assert!(cost.experimental.is_none());
         assert!(cost.total.is_empty());
+    }
+
+    // ----- Synthetic catalogue: it does not prove any real game link. -----
+
+    const TEST_ITEM: &str = "int_test_module";
+
+    fn ing(material: &str, count: u32) -> Ingredient {
+        Ingredient {
+            material: material.into(),
+            count,
+        }
+    }
+
+    fn cost_of(materials: Vec<Ingredient>, merc_coins: u32) -> RecipeCost {
+        RecipeCost {
+            materials,
+            merc_coins,
+        }
+    }
+
+    fn items(list: &[&str]) -> ModuleSelector {
+        ModuleSelector {
+            items: list.iter().map(|s| (*s).to_owned()).collect(),
+            item_prefixes: Vec::new(),
+        }
+    }
+
+    fn base(identity: BaseIdentity, completed_grade: u8) -> BaseRequirement {
+        BaseRequirement {
+            identity,
+            selector: items(&[TEST_ITEM]),
+            completed_grade,
+            source_rows: vec!["synthetic fixture".into()],
+        }
+    }
+
+    fn variant_base(grade: u8) -> BaseRequirement {
+        base(
+            BaseIdentity::Variant {
+                key: "variant_test".into(),
+            },
+            grade,
+        )
+    }
+
+    /// `upgrade_test` G2-G5 (coins 5/5/10/20, one material per grade) behind `bases`.
+    fn upgrade_context(
+        first: u8,
+        selector: Option<ModuleSelector>,
+        bases: Vec<BaseRequirement>,
+    ) -> ModuleBlueprint {
+        let coins = [0, 5, 5, 10, 20];
+        ModuleBlueprint {
+            module_type: "test".into(),
+            selector,
+            entry: EntryPolicy::ExistingOnly { bases },
+            grades: (first..=5)
+                .map(|g| {
+                    (
+                        g,
+                        cost_of(
+                            vec![ing(&format!("mat{g}"), u32::from(g))],
+                            coins[usize::from(g) - 1],
+                        ),
+                    )
+                })
+                .collect(),
+        }
+    }
+
+    fn blueprint(key: &str, recipes: Vec<ModuleBlueprint>) -> Blueprint {
+        Blueprint {
+            key: key.into(),
+            recipes,
+            source: "synthetic".into(),
+            verified: false,
+        }
+    }
+
+    fn synthetic(variant_grade: u8, contexts: Vec<ModuleBlueprint>) -> BlueprintCatalog {
+        BlueprintCatalog {
+            module_types: vec![ModuleTypeDef {
+                id: "test".into(),
+                items: vec![TEST_ITEM.into(), "int_test_other".into()],
+                item_prefixes: Vec::new(),
+            }],
+            blueprints: vec![
+                blueprint("upgrade_test", contexts),
+                // Target of the journal spelling of the variant, for the two-starts case.
+                blueprint(
+                    "alt_test",
+                    vec![ModuleBlueprint {
+                        module_type: "test".into(),
+                        selector: Some(items(&["int_test_other"])),
+                        entry: EntryPolicy::Stock,
+                        grades: (1..=5)
+                            .map(|g| (g, cost_of(vec![ing("alt", 1)], 0)))
+                            .collect(),
+                    }],
+                ),
+            ],
+            experimentals: vec![Experimental {
+                key: "special_test".into(),
+                module_types: vec!["test".into()],
+                cost: cost_of(vec![ing("exp", 2)], 7),
+                source: "synthetic".into(),
+                verified: true,
+            }],
+            variants: vec![ShipVariant {
+                key: "variant_test".into(),
+                module_type: "test".into(),
+                grade: variant_grade,
+                selector: Some(items(&[TEST_ITEM])),
+                journal_blueprints: vec!["variant_test_journal".into()],
+                source: "synthetic".into(),
+                verified: false,
+            }],
+            aliases: vec![
+                BlueprintAlias {
+                    module_type: "test".into(),
+                    alias: "upgrade_alias".into(),
+                    canonical: "upgrade_test".into(),
+                },
+                BlueprintAlias {
+                    module_type: "test".into(),
+                    alias: "variant_test_journal".into(),
+                    canonical: "alt_test".into(),
+                },
+            ],
+        }
+    }
+
+    fn standard() -> BlueprintCatalog {
+        synthetic(1, vec![upgrade_context(2, None, vec![variant_base(1)])])
+    }
+
+    fn treq(exp: Option<&str>, target: u8) -> PlanRequest {
+        PlanRequest {
+            module_type: "test".into(),
+            blueprint: "upgrade_test".into(),
+            experimental: exp.map(str::to_owned),
+            target_grade: target,
+            rolls: [1, 1, 1, 1, 4],
+        }
+    }
+
+    fn variant_cur(level: u8, quality: f64) -> CurrentEng {
+        cur("variant_test_journal", level, quality, None)
+    }
+
+    #[test]
+    fn proven_variant_base_unlocks_g2_to_g5_with_one_hundred_coins() {
+        let cost = plan_cost(
+            &standard(),
+            TEST_ITEM,
+            Some(&variant_cur(1, 1.0)),
+            &treq(None, 5),
+        );
+        assert!(cost.blockers.is_empty());
+        assert_eq!(
+            cost.per_grade.keys().copied().collect::<Vec<_>>(),
+            [2, 3, 4, 5]
+        );
+        assert_eq!(
+            cost.merc_coins_by_grade,
+            BTreeMap::from([(2, 5), (3, 5), (4, 10), (5, 80)])
+        );
+        assert_eq!(cost.merc_coins_total, 100);
+        assert_eq!(cost.merc_coins_experimental, 0);
+        assert!(!cost.replaces_blueprint);
+        // Materials: G5 is multiplied by its four rolls; coins never become a material.
+        assert_eq!(
+            cost.total,
+            BTreeMap::from([
+                ("mat2".to_owned(), 2),
+                ("mat3".to_owned(), 3),
+                ("mat4".to_owned(), 4),
+                ("mat5".to_owned(), 20),
+            ])
+        );
+        assert!(cost.total.keys().all(|k| k.starts_with("mat")));
+        // Unverified data is not an incomplete calculation.
+        assert!(!cost.verified);
+    }
+
+    #[test]
+    fn row_order_does_not_change_the_result() {
+        let a = standard();
+        let mut b = standard();
+        b.blueprints.reverse();
+        b.variants.reverse();
+        b.aliases.reverse();
+        let cur = variant_cur(1, 1.0);
+        assert_eq!(
+            plan_cost(&a, TEST_ITEM, Some(&cur), &treq(None, 5)),
+            plan_cost(&b, TEST_ITEM, Some(&cur), &treq(None, 5))
+        );
+    }
+
+    #[test]
+    fn stock_or_partial_base_is_base_required_with_no_costs() {
+        let cat = standard();
+        for current in [None, Some(variant_cur(1, 0.5))] {
+            let cost = plan_cost(&cat, TEST_ITEM, current.as_ref(), &treq(None, 5));
+            assert_eq!(cost.blockers, [PlanBlocker::BaseRequired]);
+            assert!(cost.per_grade.is_empty() && cost.total.is_empty());
+            assert_eq!(cost.merc_coins_total, 0);
+        }
+    }
+
+    #[test]
+    fn removed_link_is_missing_base_mapping() {
+        let cat = synthetic(1, vec![upgrade_context(2, None, Vec::new())]);
+        let cost = plan_cost(&cat, TEST_ITEM, Some(&variant_cur(1, 1.0)), &treq(None, 5));
+        assert_eq!(cost.blockers, [PlanBlocker::MissingBaseMapping]);
+        assert!(cost.per_grade.is_empty());
+    }
+
+    #[test]
+    fn two_valid_contexts_are_ambiguous_in_any_order() {
+        let ctx = || upgrade_context(2, None, vec![variant_base(1)]);
+        let mut other = ctx();
+        other.selector = Some(items(&[TEST_ITEM]));
+        for contexts in [vec![ctx(), other.clone()], vec![other, ctx()]] {
+            let cat = synthetic(1, contexts);
+            let cost = plan_cost(&cat, TEST_ITEM, Some(&variant_cur(1, 1.0)), &treq(None, 5));
+            assert_eq!(cost.blockers, [PlanBlocker::AmbiguousRecipe]);
+            assert!(cost.total.is_empty() && cost.per_grade.is_empty());
+        }
+    }
+
+    #[test]
+    fn two_different_starting_points_are_ambiguous() {
+        // Level 2 complete: variant_test (grade 2) completed G1 -> start G2; the alt blueprint,
+        // reached through the journal spelling, completed G2 -> start G3.
+        let alt = base(
+            BaseIdentity::Blueprint {
+                key: "alt_test".into(),
+            },
+            2,
+        );
+        let cat = synthetic(
+            2,
+            vec![upgrade_context(2, None, vec![variant_base(1), alt])],
+        );
+        let cost = plan_cost(&cat, TEST_ITEM, Some(&variant_cur(2, 1.0)), &treq(None, 5));
+        assert_eq!(cost.blockers, [PlanBlocker::AmbiguousRecipe]);
+        assert!(cost.per_grade.is_empty());
+    }
+
+    #[test]
+    fn existing_only_context_starting_at_g3_is_allowed() {
+        let cat = synthetic(2, vec![upgrade_context(3, None, vec![variant_base(2)])]);
+        let cost = plan_cost(&cat, TEST_ITEM, Some(&variant_cur(2, 1.0)), &treq(None, 5));
+        assert!(cost.blockers.is_empty());
+        assert_eq!(
+            cost.per_grade.keys().copied().collect::<Vec<_>>(),
+            [3, 4, 5]
+        );
+        assert_eq!(cost.merc_coins_total, 5 + 10 + 80);
+        // A base that only completed G1 leaves G2 without a recipe: never a free step.
+        let gap = synthetic(1, vec![upgrade_context(3, None, vec![variant_base(1)])]);
+        let cost = plan_cost(&gap, TEST_ITEM, Some(&variant_cur(1, 1.0)), &treq(None, 5));
+        assert_eq!(cost.blockers, [PlanBlocker::MissingRecipe { grade: 2 }]);
+        assert_eq!(cost.missing_grades, [2]);
+    }
+
+    #[test]
+    fn continuing_the_same_identity_keeps_the_partial_grade() {
+        let continuation = base(
+            BaseIdentity::Blueprint {
+                key: "upgrade_test".into(),
+            },
+            2,
+        );
+        let cat = synthetic(
+            1,
+            vec![upgrade_context(
+                2,
+                None,
+                vec![variant_base(1), continuation],
+            )],
+        );
+        let mut r = treq(None, 5);
+        r.rolls = [1, 1, 4, 1, 4];
+        // Alias spelling of the installed blueprint, half of G3 done: two of four rolls left.
+        let installed = cur("UPGRADE_ALIAS", 3, 0.5, None);
+        let cost = plan_cost(&cat, TEST_ITEM, Some(&installed), &r);
+        assert!(cost.blockers.is_empty());
+        assert!(!cost.replaces_blueprint);
+        assert_eq!(
+            cost.per_grade.keys().copied().collect::<Vec<_>>(),
+            [3, 4, 5]
+        );
+        assert_eq!(cost.per_grade[&3].0, 2);
+        assert_eq!(cost.merc_coins_by_grade[&3], 10);
+    }
+
+    #[test]
+    fn experimental_is_charged_once_materials_and_coins() {
+        let cat = standard();
+        let mut r = treq(Some("SPECIAL_TEST"), 5);
+        r.rolls = [1, 1, 1, 1, 4];
+        let cost = plan_cost(&cat, TEST_ITEM, Some(&variant_cur(1, 1.0)), &r);
+        assert_eq!(
+            cost.experimental,
+            Some(BTreeMap::from([("exp".to_owned(), 2)]))
+        );
+        assert_eq!(cost.total["exp"], 2);
+        assert_eq!(cost.merc_coins_experimental, 7);
+        assert_eq!(cost.merc_coins_total, 107);
+        assert!(!cost.verified, "the recipe data is still unverified");
+    }
+
+    #[test]
+    fn unresolvable_requests_report_a_blocker_instead_of_zero_cost() {
+        let cat = standard();
+        let mut unknown = treq(None, 5);
+        unknown.blueprint = "nope".into();
+        assert_eq!(
+            plan_cost(&cat, TEST_ITEM, None, &unknown).blockers,
+            [PlanBlocker::UnknownBlueprint]
+        );
+        let cost = plan_cost(&cat, "int_other_thing", None, &treq(None, 5));
+        assert_eq!(cost.blockers, [PlanBlocker::IncompatibleItem]);
+        let bad_exp = plan_cost(
+            &cat,
+            TEST_ITEM,
+            Some(&variant_cur(1, 1.0)),
+            &treq(Some("special_none"), 5),
+        );
+        assert_eq!(bad_exp.blockers, [PlanBlocker::UnknownExperimental]);
+        assert!(bad_exp.has_resolution_blocker());
+    }
+
+    // ----- Independent oracle from the approved amendment (section 8). -----
+
+    fn oracle_catalogue() -> BlueprintCatalog {
+        let g = |list: &[(&str, u32)]| cost_of(list.iter().map(|(m, c)| ing(m, *c)).collect(), 0);
+        let grades = BTreeMap::from([
+            (1, g(&[("legacyfirmware", 1)])),
+            (2, g(&[("legacyfirmware", 1), ("mechanicalequipment", 1)])),
+            (
+                3,
+                g(&[
+                    ("legacyfirmware", 1),
+                    ("chromium", 1),
+                    ("mechanicalcomponents", 1),
+                ]),
+            ),
+            (
+                4,
+                g(&[
+                    ("consumerfirmware", 1),
+                    ("selenium", 1),
+                    ("configurablecomponents", 1),
+                ]),
+            ),
+            (
+                5,
+                g(&[
+                    ("industrialfirmware", 1),
+                    ("cadmium", 1),
+                    ("pharmaceuticalisolators", 1),
+                ]),
+            ),
+        ]);
+        BlueprintCatalog {
+            module_types: vec![ModuleTypeDef {
+                id: "engine".into(),
+                items: Vec::new(),
+                item_prefixes: vec!["int_engine_".into()],
+            }],
+            blueprints: vec![blueprint(
+                "engine_dirty",
+                vec![ModuleBlueprint {
+                    module_type: "engine".into(),
+                    selector: None,
+                    entry: EntryPolicy::Stock,
+                    grades,
+                }],
+            )],
+            experimentals: vec![Experimental {
+                key: "special_engine_overloaded".into(),
+                module_types: vec!["engine".into()],
+                cost: g(&[
+                    ("iron", 5),
+                    ("hybridcapacitors", 3),
+                    ("securityfirmware", 1),
+                ]),
+                source: "synthetic".into(),
+                verified: false,
+            }],
+            ..BlueprintCatalog::default()
+        }
+    }
+
+    #[test]
+    fn amendment_oracle_dirty_drag_defaults_has_thirteen_keys_and_no_coins() {
+        let cat = oracle_catalogue();
+        let cost = plan_cost(
+            &cat,
+            ENGINE_ITEM,
+            None,
+            &req(5, Some("special_engine_overloaded"), [1, 1, 1, 1, 4]),
+        );
+        let expected: BTreeMap<String, u32> = [
+            ("legacyfirmware", 3),
+            ("mechanicalequipment", 1),
+            ("chromium", 1),
+            ("mechanicalcomponents", 1),
+            ("consumerfirmware", 1),
+            ("selenium", 1),
+            ("configurablecomponents", 1),
+            ("industrialfirmware", 4),
+            ("cadmium", 4),
+            ("pharmaceuticalisolators", 4),
+            ("iron", 5),
+            ("hybridcapacitors", 3),
+            ("securityfirmware", 1),
+        ]
+        .into_iter()
+        .map(|(k, v)| (k.to_owned(), v))
+        .collect();
+        assert_eq!(cost.total, expected);
+        assert_eq!(cost.total.len(), 13);
+        assert_eq!(cost.merc_coins_total, 0);
+        assert!(cost.blockers.is_empty());
+    }
+
+    #[test]
+    fn amendment_oracle_g3_complete_costs_only_g4_and_g5() {
+        let cat = oracle_catalogue();
+        let c = cur("Engine_Dirty", 3, 1.0, None);
+        let cost = plan_cost(&cat, ENGINE_ITEM, Some(&c), &req(5, None, [1, 1, 1, 1, 4]));
+        let expected: BTreeMap<String, u32> = [
+            ("consumerfirmware", 1),
+            ("selenium", 1),
+            ("configurablecomponents", 1),
+            ("industrialfirmware", 4),
+            ("cadmium", 4),
+            ("pharmaceuticalisolators", 4),
+        ]
+        .into_iter()
+        .map(|(k, v)| (k.to_owned(), v))
+        .collect();
+        assert_eq!(cost.total, expected);
+        assert_eq!(cost.per_grade.keys().copied().collect::<Vec<_>>(), [4, 5]);
     }
 }
