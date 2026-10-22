@@ -45,6 +45,8 @@ Las wikis y APIs se han buscado tal como pidió el propietario. No se han copiad
 
 ## Próximo paso
 
+**Mapa auxiliar de IDs, aprobado por el propietario:** [EDDI `DataDefinitions/Engineer.cs`, revisión `d3b964ea7c8bb959ad6537f55b308f293a326905`](https://github.com/EDCD/EDDI/blob/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Engineer.cs). La auditoría de solo lectura encuentra 38 pares ID/nombre, 38 IDs únicos y correspondencia **38/38 por nombre exacto** con `Engineers.cs` de EDDiscovery; cero ausencias y cero alias necesarios. `LICENSE.md` y `LicenseFile.txt` de esa revisión declaran Apache-2.0. Se propone importar únicamente esos pares con atribución para conservar las identidades actuales, sin copiar sus recetas ni especialidades. El propietario aprobó por separado este mapa auxiliar y ejecutar la enmienda técnica; todavía no se ha incorporado al producto.
+
 1. **Hecho:** el propietario aprueba el cambio de fuente B a A para los archivos Apache de EDDiscovery. Documentar la atribución al importar.
 2. Preparar la enmienda concreta del plan para cobertura completa, coste en Merc Coins, identificadores compartidos y grados por módulo/ingeniero; no inventar ni omitir costes.
 3. Tras aprobación de las interfaces que cambien, conversión reproducible con revisión por fila, auditoría de cobertura y pruebas de recetas reales. Mantener `verified:false` y nombres sin traducción conocida como pendientes.
