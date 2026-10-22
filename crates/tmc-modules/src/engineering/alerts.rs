@@ -119,6 +119,13 @@ mod tests {
             percent: 0,
             missing: missing.iter().map(|(k, n)| ((*k).into(), *n)).collect(),
             trades: Vec::new(),
+            merc_coins: crate::engineering::goals::MercCoinsView {
+                need: 0,
+                have: None,
+                missing: None,
+            },
+            materials_ready: completable,
+            blockers: Vec::new(),
             completable,
         }
     }

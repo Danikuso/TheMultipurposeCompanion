@@ -1024,6 +1024,57 @@ mod tests {
     }
 
     #[test]
+    fn installed_experimental_alias_is_not_charged_again() {
+        let mut cat = stock_catalogue();
+        cat.aliases.push(BlueprintAlias {
+            module_type: "test".into(),
+            alias: "special_alias".into(),
+            canonical: "special_test".into(),
+        });
+        let req = treq(Some("special_test"), 5);
+        let same = cur("upgrade_alias", 3, 1.0, Some("SPECIAL_ALIAS"));
+        let cost = plan_cost(&cat, TEST_ITEM, Some(&same), &req);
+        assert_eq!(cost.experimental, None);
+        assert_eq!(cost.merc_coins_experimental, 0);
+        assert!(!cost.total.contains_key("exp"));
+        // otro experimental instalado si se cobra
+        let other = cur("upgrade_alias", 3, 1.0, Some("special_other"));
+        let cost = plan_cost(&cat, TEST_ITEM, Some(&other), &req);
+        assert!(cost.experimental.is_some());
+        assert_eq!(cost.merc_coins_experimental, 7);
+        // y pedirlo con el alias da el mismo resultado que con la clave
+        let by_alias = treq(Some("special_alias"), 5);
+        assert_eq!(
+            plan_cost(&cat, TEST_ITEM, Some(&same), &by_alias).experimental,
+            None
+        );
+    }
+
+    #[test]
+    fn base_stays_satisfied_when_installed_level_is_above_its_completed_grade() {
+        let same_blueprint = base(
+            BaseIdentity::Blueprint {
+                key: "upgrade_test".into(),
+            },
+            2,
+        );
+        let cat = synthetic(1, vec![upgrade_context(3, None, vec![same_blueprint])]);
+        let rec = &cat.blueprint("upgrade_test").unwrap().recipes[0];
+        // el nivel instalado (4, a medias) supera el grado completado de la base (2)
+        let above = cur("upgrade_alias", 4, 0.2, None);
+        assert_eq!(cat.satisfied_bases(rec, TEST_ITEM, Some(&above)).len(), 1);
+        let cost = plan_cost(&cat, TEST_ITEM, Some(&above), &treq(None, 5));
+        assert!(cost.blockers.is_empty(), "{:?}", cost.blockers);
+        assert_eq!(grades_of(&cost), [4, 5]);
+        // en el propio grado de la base a medias aun no esta completada
+        let partial = cur("upgrade_alias", 2, 0.5, None);
+        assert!(
+            cat.satisfied_bases(rec, TEST_ITEM, Some(&partial))
+                .is_empty()
+        );
+    }
+
+    #[test]
     fn start_above_target_requires_no_grades() {
         let cat = stock_catalogue();
         let done = cur("upgrade_test", 5, 1.0, None);

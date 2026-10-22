@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tmc_core::{Migration, StoreError, StoreTask};
 
-use super::plan::PlanRequest;
+use super::plan::{PlanBlocker, PlanRequest};
 use super::ship::CurrentEng;
 use super::trades::{TradeProposal, plan_trades};
 use crate::data::{TraderRules, materials};
@@ -132,12 +132,26 @@ pub fn reserve(
     res
 }
 
+/// Merc Coins de un objetivo. Moneda aparte: nunca se comercia ni entra en el inventario.
+/// `have`/`missing` son `None` mientras el saldo sea desconocido (siempre en F4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct MercCoinsView {
+    pub need: u64,
+    pub have: Option<u64>,
+    pub missing: Option<u64>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct GoalView {
     pub id: String,
+    /// Porcentaje de **materiales**; nunca 100 con el cálculo bloqueado.
     pub percent: u8,
     pub missing: BTreeMap<String, u32>,
     pub trades: Vec<TradeProposal>,
+    pub merc_coins: MercCoinsView,
+    /// Los materiales están cubiertos (con intercambios si hace falta).
+    pub materials_ready: bool,
+    pub blockers: Vec<PlanBlocker>,
     pub completable: bool,
 }
 
@@ -150,14 +164,53 @@ pub struct ShoppingView {
     pub surplus: BTreeMap<String, u32>,
 }
 
-/// Evalúa la lista en orden (el flujo abierto va al final como un objetivo más).
+/// Entrada de la evaluación: coste de un objetivo (materiales, moneda y bloqueos del cálculo).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GoalInput {
+    pub id: String,
+    pub needs: BTreeMap<String, u32>,
+    pub merc_coins: u64,
+    pub blockers: Vec<PlanBlocker>,
+}
+
+/// Evalúa solo materiales (sin moneda ni bloqueos).
 pub fn evaluate(
     goals_needs: &[(String, BTreeMap<String, u32>)],
     have: &dyn Fn(&str) -> u32,
     rules: &TraderRules,
     status: &str,
 ) -> ShoppingView {
-    let res = reserve(goals_needs, have);
+    let inputs: Vec<GoalInput> = goals_needs
+        .iter()
+        .map(|(id, needs)| GoalInput {
+            id: id.clone(),
+            needs: needs.clone(),
+            merc_coins: 0,
+            blockers: Vec::new(),
+        })
+        .collect();
+    evaluate_goals(&inputs, have, rules, status, None)
+}
+
+/// Evalúa la lista en orden (el flujo abierto va al final como un objetivo más).
+/// `coin_balance` es el saldo de Merc Coins si se conoce; se reserva por el mismo orden.
+pub fn evaluate_goals(
+    inputs: &[GoalInput],
+    have: &dyn Fn(&str) -> u32,
+    rules: &TraderRules,
+    status: &str,
+    coin_balance: Option<u64>,
+) -> ShoppingView {
+    let mut seen = std::collections::BTreeSet::new();
+    let inputs: Vec<&GoalInput> = inputs
+        .iter()
+        .filter(|g| seen.insert(g.id.clone()))
+        .collect();
+    let goals_needs: Vec<(String, BTreeMap<String, u32>)> = inputs
+        .iter()
+        .map(|g| (g.id.clone(), g.needs.clone()))
+        .collect();
+    let res = reserve(&goals_needs, have);
     let mut surplus: BTreeMap<String, u32> = materials()
         .keys()
         .filter_map(|k| {
@@ -172,12 +225,14 @@ pub fn evaluate(
         missing: BTreeMap::new(),
         surplus: surplus.clone(),
     };
-    for (id, needs) in dedupe(goals_needs) {
+    let mut coins_left = coin_balance;
+    for goal in inputs {
+        let id = &goal.id;
         let empty = BTreeMap::new();
         let reserved = res.by_goal.get(id).unwrap_or(&empty);
         let mut missing = BTreeMap::new();
         let (mut covered, mut total) = (0u64, 0u64);
-        for (key, need) in needs {
+        for (key, need) in &goal.needs {
             let got = reserved.get(key).copied().unwrap_or(0).min(*need);
             covered += u64::from(got);
             total += u64::from(*need);
@@ -187,9 +242,14 @@ pub fn evaluate(
                 *view.missing.entry(key.clone()).or_insert(0) += need - got;
             }
         }
-        let percent = (covered * 100)
+        let blocked = !goal.blockers.is_empty();
+        let mut percent = (covered * 100)
             .checked_div(total)
             .map_or(100, |p| u8::try_from(p).unwrap_or(100));
+        if blocked {
+            // un cálculo incompleto nunca se muestra como completo
+            percent = if total == 0 { 0 } else { percent.min(99) };
+        }
         let plan = plan_trades(&missing, &surplus, have, rules);
         // lo ofrecido a este objetivo no se vuelve a ofrecer a los siguientes
         for p in &plan.proposals {
@@ -197,10 +257,31 @@ pub fn evaluate(
                 *s = s.saturating_sub(p.give);
             }
         }
+        let merc_coins = match coins_left.as_mut() {
+            Some(left) => {
+                let take = (*left).min(goal.merc_coins);
+                *left -= take;
+                MercCoinsView {
+                    need: goal.merc_coins,
+                    have: Some(take),
+                    missing: Some(goal.merc_coins - take),
+                }
+            }
+            None => MercCoinsView {
+                need: goal.merc_coins,
+                have: None,
+                missing: None,
+            },
+        };
+        let materials_ready = plan.uncovered.is_empty();
+        let coins_ok = goal.merc_coins == 0 || merc_coins.missing == Some(0);
         view.goals.push(GoalView {
             id: id.clone(),
             percent,
-            completable: plan.uncovered.is_empty(),
+            completable: materials_ready && !blocked && coins_ok,
+            materials_ready,
+            blockers: goal.blockers.clone(),
+            merc_coins,
             missing,
             trades: plan.proposals,
         });
@@ -415,6 +496,108 @@ mod tests {
         same.id = "g3".into();
         let (next, status) = pin_goal(&goals, same);
         assert_eq!((next.len(), status), (MAX_GOALS, STATUS_OK));
+    }
+
+    fn input(id: &str, pairs: &[(&str, u32)], coins: u64, blockers: &[PlanBlocker]) -> GoalInput {
+        GoalInput {
+            id: id.into(),
+            needs: m(pairs),
+            merc_coins: coins,
+            blockers: blockers.to_vec(),
+        }
+    }
+
+    #[test]
+    fn covered_materials_with_coins_and_unknown_balance_not_completable() {
+        let list = [input("A", &[("X", 5)], 100, &[])];
+        let have = |k: &str| if k == "X" { 5 } else { 0 };
+        let v = evaluate_goals(&list, &have, trader_rules(), STATUS_OK, None);
+        let g = &v.goals[0];
+        assert_eq!(g.percent, 100);
+        assert!(g.materials_ready);
+        assert!(!g.completable);
+        assert_eq!(
+            g.merc_coins,
+            MercCoinsView {
+                need: 100,
+                have: None,
+                missing: None
+            }
+        );
+        // sin monedas conserva la semantica anterior
+        let list = [input("A", &[("X", 5)], 0, &[])];
+        let v = evaluate_goals(&list, &have, trader_rules(), STATUS_OK, None);
+        assert!(v.goals[0].completable);
+    }
+
+    #[test]
+    fn coin_balance_is_reserved_in_order_and_never_traded() {
+        let list = [
+            input("A", &[("X", 1)], 60, &[]),
+            input("B", &[("X", 1)], 60, &[]),
+        ];
+        let have = |k: &str| if k == "X" { 2 } else { 0 };
+        let v = evaluate_goals(&list, &have, trader_rules(), STATUS_OK, Some(100));
+        assert_eq!(v.goals[0].merc_coins.have, Some(60));
+        assert_eq!(v.goals[0].merc_coins.missing, Some(0));
+        assert!(v.goals[0].completable);
+        assert_eq!(v.goals[1].merc_coins.have, Some(40));
+        assert_eq!(v.goals[1].merc_coins.missing, Some(20));
+        assert!(!v.goals[1].completable);
+        assert!(v.goals[1].trades.is_empty());
+    }
+
+    #[test]
+    fn blocked_goal_is_never_complete_nor_completable() {
+        let blockers = [PlanBlocker::MissingRecipe { grade: 3 }];
+        let list = [input("A", &[("X", 5)], 0, &blockers)];
+        let have = |k: &str| if k == "X" { 5 } else { 0 };
+        let v = evaluate_goals(&list, &have, trader_rules(), STATUS_OK, Some(0));
+        let g = &v.goals[0];
+        assert!(g.materials_ready);
+        assert_eq!(g.percent, 99);
+        assert!(!g.completable);
+        assert_eq!(g.blockers, blockers);
+        // sin materiales conocidos tampoco llega a 100
+        let list = [input("B", &[], 0, &[PlanBlocker::BaseRequired])];
+        let v = evaluate_goals(&list, &have, trader_rules(), STATUS_OK, None);
+        assert_eq!(v.goals[0].percent, 0);
+        assert!(!v.goals[0].completable);
+    }
+
+    #[test]
+    fn old_stored_goal_with_alias_loads_unchanged() {
+        let store = Store::open_in_memory().unwrap();
+        store.apply_migrations(&[ENGINEERING_MIGRATION]).unwrap();
+        let old = r#"{"id":"7:MainEngines:engine_dirty:-:5","ship_id":7,"slot":"MainEngines","item":"int_engine_size5_class5","request":{"module_type":"engine","blueprint":"engine_dirty","experimental":null,"target_grade":5,"rolls":[1,1,1,1,4]},"base":{"blueprint":"Engine_Dirty","level":2,"quality":0.5,"experimental":"Engine_Overloaded"}}"#;
+        let stmts: Vec<(&str, Vec<Value>)> = vec![
+            (
+                "INSERT INTO engineering_goals (cmdr, position, id, json) VALUES (?1, ?2, ?3, ?4)",
+                vec![json!("C"), json!(0), json!("1"), json!(old)],
+            ),
+            (
+                "INSERT INTO engineering_goals (cmdr, position, id, json) VALUES (?1, ?2, ?3, ?4)",
+                vec![
+                    json!("C"),
+                    json!(1),
+                    json!("2"),
+                    json!(old.replace(":5\"", ":4\"")),
+                ],
+            ),
+        ];
+        store.exec_batch_json(&stmts).unwrap();
+        let back = goals_from_result(&goals_read_task("C".into())(&store).unwrap());
+        assert_eq!(back.len(), 2);
+        assert_eq!(back[0].id, "7:MainEngines:engine_dirty:-:5");
+        let base = back[0].base.as_ref().unwrap();
+        assert_eq!(base.blueprint, "Engine_Dirty");
+        assert_eq!(base.level, 2);
+        // reescribir conserva la forma y la posicion
+        goals_write_task("C".into(), back.clone())(&store).unwrap();
+        assert_eq!(
+            goals_from_result(&goals_read_task("C".into())(&store).unwrap()),
+            back
+        );
     }
 
     #[test]

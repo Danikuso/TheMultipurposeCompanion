@@ -699,6 +699,51 @@ fn preview_flow_with_fixture_ship() {
 }
 
 #[test]
+fn blocked_flow_keeps_its_reason_instead_of_plain_no_data() {
+    let mut h = H::new();
+    h.fixture();
+    h.action("engineering.select_module", json!({"slot": "MainEngines"}));
+    h.action(
+        "engineering.preview",
+        json!({"blueprint": "nope", "grade": 3}),
+    );
+    let flow = h.val("engineering.flow");
+    assert_eq!(flow["status"], "no_data");
+    assert_eq!(flow["blockers"], json!(["unknown_blueprint"]));
+    assert!(flow["cost"].is_null());
+    // un flujo sin bloqueo los publica vacios
+    h.preview_engines();
+    let flow = h.val("engineering.flow");
+    assert_eq!(flow["status"], "ok");
+    assert_eq!(flow["blockers"], json!([]));
+}
+
+#[test]
+fn pin_rejection_distinguishes_incompatible_from_no_data() {
+    use super::plan::PlanBlocker as B;
+    let with = |b: B| PlanCost {
+        blockers: vec![b],
+        ..PlanCost::default()
+    };
+    assert_eq!(
+        pin_rejection(&with(B::IncompatibleItem)),
+        Some("incompatible")
+    );
+    for b in [
+        B::UnknownBlueprint,
+        B::MissingBaseMapping,
+        B::BaseRequired,
+        B::AmbiguousRecipe,
+        B::UnknownExperimental,
+    ] {
+        assert_eq!(pin_rejection(&with(b)), Some("no_data"), "{b:?}");
+    }
+    // un hueco de receta no impide fijar; el objetivo queda bloqueado en la vista
+    assert_eq!(pin_rejection(&with(B::MissingRecipe { grade: 2 })), None);
+    assert_eq!(pin_rejection(&PlanCost::default()), None);
+}
+
+#[test]
 fn unknown_blueprint_is_no_data() {
     let mut h = H::new();
     h.fixture();
