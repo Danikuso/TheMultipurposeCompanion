@@ -24,6 +24,8 @@ En ese subconjunto hay **105 filas con coste en Merc Coins**. La fuente contiene
 
 También hay que preservar el tipo de módulo al resolver los ingenieros: la fuente asigna ingenieros/grados por receta **y módulo**, mientras que el catálogo provisional de TMC solo asocia blueprint con grado máximo. Que dos módulos compartan clave del diario y receta no implica que los mismos ingenieros puedan modificar ambos al mismo grado. La conversión requiere una auditoría de estas colisiones y una propuesta de interfaz antes de modificar consumidores.
 
+Ejemplo comprobado en la revisión fijada: `misc_shielded`, Lori Jameson, llega a G4 para Auto Field-Maintenance Unit/Fuel Scoop/Life Support/Refinery y a G3 para Cargo Scanner/Kill Warrant Scanner/Wake Scanner. Un único `max_grade` por clave produciría una recomendación incorrecta para alguno de esos módulos.
+
 La receta `engine_dirty` y el experimental `special_engine_overloaded` de la fuente difieren de las cantidades provisionales actuales. No basta con añadir filas: será necesario actualizar las expectativas calculadas a mano, fixtures sintéticos y pruebas dependientes en el mismo cambio. Las pruebas actuales acreditan la implementación con sus datos provisionales, no la exactitud de esos datos frente al juego.
 
 ## Otras fuentes revisadas
