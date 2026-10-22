@@ -27,6 +27,7 @@
       aria-valuemax={c.capacity ?? c.used}
       aria-valuenow={c.used}
     ><i style:width={cssPct(holdPct)}></i></div>
+    <div class="table-wrap">
     <table>
       <thead>
         <tr>
@@ -71,24 +72,114 @@
         {/each}
       </tbody>
     </table>
+    </div>
   {/if}
 </Panel>
 
 <style>
-  .muted { color: var(--hud-muted); margin: 0.2rem 0; }
-  .small { font-size: 0.8em; }
-  .mono { font-family: var(--font-mono); }
-  .sub { margin-top: 0.2rem; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { text-align: left; padding: 0.15rem 0.5rem 0.15rem 0; white-space: nowrap; }
-  th { color: var(--hud-muted); font-weight: normal; border-bottom: 1px solid var(--hud-border); }
-  .n { text-align: right; }
-  .bar { height: 0.9rem; background: var(--hud-surface-alt); border: 1px solid var(--hud-border); position: relative; margin: 0.2rem 0 0.6rem; }
-  .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--hud-primary); }
-  .warn { color: var(--hud-warning); }
-  .ok { color: var(--hud-success, var(--hud-primary)); }
-  .tag { font-size: 0.75em; padding: 0 0.3rem; border: 1px solid currentColor; margin-left: 0.3rem; }
-  .tag.bad { color: var(--hud-danger); }
-  .tag.info { color: var(--hud-info, var(--hud-muted)); }
-  .badge { border: 1px solid currentColor; padding: 0 0.4rem; font-size: 0.85em; }
+  .muted {
+    color: var(--hud-muted);
+    margin: 0.2rem 0;
+  }
+  .small {
+    font-size: 0.78rem;
+  }
+  .mono {
+    font-family: var(--font-mono);
+  }
+  .sub {
+    margin-top: 0.2rem;
+    font-size: 0.92rem;
+    color: var(--hud-text);
+  }
+  .table-wrap {
+    overflow-x: auto;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.35rem 0.6rem 0.35rem 0;
+    white-space: nowrap;
+    font-size: 0.88rem;
+  }
+  th {
+    color: var(--hud-muted);
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    border-bottom: 1px solid var(--hud-border-subtle);
+    padding-bottom: 0.4rem;
+  }
+  .n {
+    text-align: right;
+  }
+  .bar {
+    height: 0.7rem;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--hud-border-subtle);
+    border-radius: 2px;
+    position: relative;
+    margin: 0.35rem 0 0.75rem;
+    overflow: hidden;
+  }
+  .bar i {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, #ff9933, var(--hud-primary));
+    box-shadow: 0 0 6px rgba(255, 119, 0, 0.4);
+    border-radius: 1px;
+    transition: width var(--transition-fast);
+  }
+  .warn {
+    color: var(--hud-warning);
+    margin-left: 0.25rem;
+  }
+  .ok {
+    color: var(--hud-ok);
+    font-weight: 600;
+  }
+  .tag {
+    font-size: 0.72rem;
+    padding: 0.1rem 0.4rem;
+    border: 1px solid currentColor;
+    border-radius: 2px;
+    margin-left: 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+  }
+  .tag.bad {
+    color: var(--hud-danger);
+    background: rgba(255, 68, 68, 0.1);
+  }
+  .tag.info {
+    color: var(--hud-cyan);
+    background: rgba(0, 217, 255, 0.1);
+  }
+  .badge {
+    display: inline-block;
+    border: 1px solid currentColor;
+    border-radius: var(--radius-sm);
+    padding: 0.15rem 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .badge.ok {
+    color: var(--hud-ok);
+    background: rgba(68, 255, 136, 0.1);
+    box-shadow: 0 0 8px rgba(68, 255, 136, 0.2);
+  }
+  .badge:not(.ok) {
+    color: var(--hud-warning);
+    background: rgba(255, 170, 0, 0.1);
+    box-shadow: 0 0 8px rgba(255, 170, 0, 0.2);
+  }
 </style>
