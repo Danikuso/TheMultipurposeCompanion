@@ -1571,12 +1571,12 @@ fn worst_case_engine_goals_size() {
         for exp in [
             None,
             blueprints()
-                .experimentals_for(&bp.module_types[0])
+                .experimentals_for(bp.module_types()[0])
                 .first()
                 .copied(),
         ] {
             let req = PlanRequest {
-                module_type: bp.module_types[0].clone(),
+                module_type: bp.module_types()[0].to_owned(),
                 blueprint: bp.key.clone(),
                 experimental: exp.map(|e| e.key.clone()),
                 target_grade: 5,

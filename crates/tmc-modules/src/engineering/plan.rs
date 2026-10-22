@@ -40,7 +40,7 @@ pub struct PlanCost {
 
 /// Grado máximo definido para un blueprint (objetivo por defecto).
 pub fn max_grade(bp: &Blueprint) -> u8 {
-    bp.grades.keys().next_back().copied().unwrap_or(5)
+    bp.max_grade().unwrap_or(5)
 }
 
 pub fn start_grade(current: Option<&CurrentEng>, blueprint: &str, rolls: &[u8; 5]) -> StartPoint {
@@ -111,6 +111,8 @@ pub fn plan_cost(
         verified: bp.verified,
         ..PlanCost::default()
     };
+    // Interim (C3 replaces it with item/base-aware resolution): only an unambiguous context.
+    let recipe = bp.sole_recipe_for(&req.module_type);
     let target = req.target_grade.min(5);
     for g in start.grade..=target {
         let rolls = match start.partial_rolls {
@@ -118,8 +120,8 @@ pub fn plan_cost(
             _ => req.rolls[usize::from(g) - 1],
         };
         let mut mats = BTreeMap::new();
-        match bp.grades.get(&g) {
-            Some(recipe) => add(&mut mats, recipe, u32::from(rolls)),
+        match recipe.and_then(|r| r.grades.get(&g)) {
+            Some(recipe) => add(&mut mats, &recipe.materials, u32::from(rolls)),
             None => {
                 cost.missing_grades.push(g);
                 cost.verified = false;
@@ -138,7 +140,7 @@ pub fn plan_cost(
                 cost.verified &= e.verified;
                 if !same {
                     let mut mats = BTreeMap::new();
-                    add(&mut mats, &e.ingredients, 1);
+                    add(&mut mats, &e.cost.materials, 1);
                     add_into_total(&mut cost.total, &mats);
                     cost.experimental = Some(mats);
                 }
@@ -297,7 +299,7 @@ mod tests {
     #[test]
     fn missing_grade_is_flagged_not_fatal() {
         let mut bp = blueprints().blueprint("engine_dirty").unwrap().clone();
-        bp.grades.remove(&2);
+        bp.recipes[0].grades.remove(&2);
         let cost = plan_cost(&bp, None, None, &req(3, None, [1; 5]));
         assert_eq!(cost.missing_grades, [2]);
         assert!(!cost.verified);
