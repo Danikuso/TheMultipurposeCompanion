@@ -15,8 +15,10 @@
     {
       "id": "abrasionblaster",
       "source_name": "AbrasionBlaster",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_miningabrasionblaster_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "armour",
@@ -27,68 +29,90 @@
     {
       "id": "autofieldmaintenanceunit",
       "source_name": "AutoFieldMaintenanceUnit",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_repairer_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "axmissilerack",
       "source_name": "AXMissileRack",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_axmissilerack_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "beamlaser",
       "source_name": "BeamLaser",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_beamlaser_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "burstlaser",
       "source_name": "BurstLaser",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_burstlaser_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "cannon",
       "source_name": "Cannon",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_cannon_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "cargorack",
       "source_name": "CargoRack",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_cargorack_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "cargoscanner",
       "source_name": "CargoScanner",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_cargoscanner_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "causticsinklauncher",
       "source_name": "CausticSinkLauncher",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_causticsinklauncher_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "chafflauncher",
       "source_name": "ChaffLauncher",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_chafflauncher_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "collectorlimpetcontroller",
       "source_name": "CollectorLimpetController",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_dronecontrol_collection_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "electroniccountermeasure",
       "source_name": "ElectronicCountermeasure",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_electroniccountermeasure_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "engine",
@@ -101,20 +125,26 @@
     {
       "id": "enzymemissilerack",
       "source_name": "EnzymeMissileRack",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_enzymemissilerack_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "fragmentcannon",
       "source_name": "FragmentCannon",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_slugshot_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "frameshiftdriveinterdictor",
       "source_name": "FrameShiftDriveInterdictor",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_hyperdriveinterdictor_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "fsd",
@@ -127,98 +157,130 @@
     {
       "id": "fuelscoop",
       "source_name": "FuelScoop",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_fuelscoop_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "fueltransferlimpetcontroller",
       "source_name": "FuelTransferLimpetController",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_dronecontrol_fueltransfer_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "hatchbreakerlimpetcontroller",
       "source_name": "HatchBreakerLimpetController",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_dronecontrol_hatchbreaker_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "heatsinklauncher",
       "source_name": "HeatSinkLauncher",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_heatsinklauncher_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "hullreinforcementpackage",
       "source_name": "HullReinforcementPackage",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_hullreinforcement_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "killwarrantscanner",
       "source_name": "KillWarrantScanner",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_crimescanner_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "lifesupport",
       "source_name": "LifeSupport",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_lifesupport_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "minelauncher",
       "source_name": "MineLauncher",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_minelauncher_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "mininglaser",
       "source_name": "MiningLaser",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_mininglaser_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "missilerack",
       "source_name": "MissileRack",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_basicmissilerack_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "modulereinforcementpackage",
       "source_name": "ModuleReinforcementPackage",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_modulereinforcement_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "multi_cannon",
       "source_name": "Multi_Cannon",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_multicannon_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "plasmaaccelerator",
       "source_name": "PlasmaAccelerator",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_plasmaaccelerator_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "pointdefence",
       "source_name": "PointDefence",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_plasmapointdefence_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "powerdistributor",
       "source_name": "PowerDistributor",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_powerdistributor_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "powerplant",
       "source_name": "PowerPlant",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_powerplant_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "prismaticshieldgenerator",
@@ -229,74 +291,98 @@
     {
       "id": "prospectorlimpetcontroller",
       "source_name": "ProspectorLimpetController",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_dronecontrol_prospector_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "pulselaser",
       "source_name": "PulseLaser",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_pulselaser_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "railgun",
       "source_name": "RailGun",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_railgun_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "refinery",
       "source_name": "Refinery",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_refinery_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "seekermissilerack",
       "source_name": "SeekerMissileRack",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_seekermissilerack_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "sensor",
       "source_name": "Sensor",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_sensors_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "shieldbooster",
       "source_name": "ShieldBooster",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_shieldbooster_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "shieldcellbank",
       "source_name": "ShieldCellBank",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_shieldcellbank_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "shieldgenerator",
       "source_name": "ShieldGenerator",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_shieldgenerator_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "surfacescanner",
       "source_name": "SurfaceScanner",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "int_detailedsurfacescanner"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "torpedopylon",
       "source_name": "TorpedoPylon",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_torpedopylon_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     },
     {
       "id": "wakescanner",
       "source_name": "WakeScanner",
-      "item_prefixes": [],
-      "symbol_status": "pending_evidence"
+      "item_prefixes": [
+        "hpt_cloudscanner_"
+      ],
+      "symbol_status": "verified_active_catalogue"
     }
   ],
   "blueprints": [

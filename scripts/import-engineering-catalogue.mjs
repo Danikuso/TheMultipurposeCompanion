@@ -33,7 +33,53 @@ const MODULE_TYPES_PREFIX = 'ItemData.ShipModule.ModuleTypes.';
 // IDs de módulo heredados del catálogo activo; el resto es el nombre de la enumeración en minúsculas.
 const MODULE_ID_OVERRIDES = { Thrusters: 'engine', FrameShiftDrive: 'fsd' };
 // Prefijos de ítem del Loadout con evidencia (catálogo activo F4). El resto queda sin símbolo comprobado.
-const MODULE_ITEM_PREFIXES = { engine: ['int_engine_'], fsd: ['int_hyperdrive_'] };
+const MODULE_ITEM_PREFIXES = {
+  abrasionblaster: ['hpt_miningabrasionblaster_'],
+  autofieldmaintenanceunit: ['int_repairer_'],
+  axmissilerack: ['hpt_axmissilerack_'],
+  beamlaser: ['hpt_beamlaser_'],
+  burstlaser: ['hpt_burstlaser_'],
+  cannon: ['hpt_cannon_'],
+  cargorack: ['int_cargorack_'],
+  cargoscanner: ['hpt_cargoscanner_'],
+  causticsinklauncher: ['hpt_causticsinklauncher_'],
+  chafflauncher: ['hpt_chafflauncher_'],
+  collectorlimpetcontroller: ['int_dronecontrol_collection_'],
+  electroniccountermeasure: ['hpt_electroniccountermeasure_'],
+  engine: ['int_engine_'],
+  enzymemissilerack: ['hpt_enzymemissilerack_'],
+  fragmentcannon: ['hpt_slugshot_'],
+  frameshiftdriveinterdictor: ['int_hyperdriveinterdictor_'],
+  fsd: ['int_hyperdrive_'],
+  fuelscoop: ['int_fuelscoop_'],
+  fueltransferlimpetcontroller: ['int_dronecontrol_fueltransfer_'],
+  hatchbreakerlimpetcontroller: ['int_dronecontrol_hatchbreaker_'],
+  heatsinklauncher: ['hpt_heatsinklauncher_'],
+  hullreinforcementpackage: ['int_hullreinforcement_'],
+  killwarrantscanner: ['hpt_crimescanner_'],
+  lifesupport: ['int_lifesupport_'],
+  minelauncher: ['hpt_minelauncher_'],
+  mininglaser: ['hpt_mininglaser_'],
+  missilerack: ['hpt_basicmissilerack_'],
+  modulereinforcementpackage: ['int_modulereinforcement_'],
+  multi_cannon: ['hpt_multicannon_'],
+  plasmaaccelerator: ['hpt_plasmaaccelerator_'],
+  pointdefence: ['hpt_plasmapointdefence_'],
+  powerdistributor: ['int_powerdistributor_'],
+  powerplant: ['int_powerplant_'],
+  prospectorlimpetcontroller: ['int_dronecontrol_prospector_'],
+  pulselaser: ['hpt_pulselaser_'],
+  railgun: ['hpt_railgun_'],
+  refinery: ['int_refinery_'],
+  seekermissilerack: ['hpt_seekermissilerack_'],
+  sensor: ['int_sensors_'],
+  shieldbooster: ['hpt_shieldbooster_'],
+  shieldcellbank: ['int_shieldcellbank_'],
+  shieldgenerator: ['int_shieldgenerator_'],
+  surfacescanner: ['int_detailedsurfacescanner'],
+  torpedopylon: ['hpt_torpedopylon_'],
+  wakescanner: ['hpt_cloudscanner_']
+};
 // Marcadores de «ingeniero por determinar» de la fuente: no son ingenieros.
 const PLACEHOLDER_ENGINEERS = new Set(['tbd']);
 const SPECIAL_EFFECT_ENGINEER = 'Special Effect';

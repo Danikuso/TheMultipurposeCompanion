@@ -64,34 +64,45 @@ fn is_cosmetic(item: &str) -> bool {
 impl ShipView {
     pub fn from_loadout(l: &Loadout) -> ShipView {
         let cat = blueprints();
-        let modules = l
-            .modules
-            .iter()
-            .filter_map(|m| {
-                let slot = m.slot.clone()?;
-                let item = m.item.clone().unwrap_or_default();
-                let module_type = cat.module_type_of(&item).map(str::to_owned);
-                let engineerable = !is_cosmetic(&item) && module_type.is_some();
-                let current = m.engineering.as_ref().and_then(|e| {
-                    Some(CurrentEng {
-                        blueprint: e.blueprint_name.clone()?,
-                        level: e.level.unwrap_or(0).min(5) as u8,
-                        quality: e.quality.unwrap_or(0.0),
-                        experimental: e
-                            .experimental_effect
-                            .clone()
-                            .or_else(|| e.experimental_effect_localised.clone()),
+        let modules =
+            l.modules
+                .iter()
+                .filter_map(|m| {
+                    let slot = m.slot.clone()?;
+                    let item = m.item.clone().unwrap_or_default();
+                    let module_type = cat.module_type_of(&item).map(str::to_owned).or_else(|| {
+                        match slot.to_ascii_lowercase().as_str() {
+                            "armour" => Some("armour".into()),
+                            "powerplant" => Some("powerplant".into()),
+                            "mainengines" => Some("engine".into()),
+                            "frameshiftdrive" => Some("fsd".into()),
+                            "lifesupport" => Some("lifesupport".into()),
+                            "powerdistributor" => Some("powerdistributor".into()),
+                            "radar" => Some("sensor".into()),
+                            _ => None,
+                        }
+                    });
+                    let engineerable = !is_cosmetic(&item) && module_type.is_some();
+                    let current = m.engineering.as_ref().and_then(|e| {
+                        Some(CurrentEng {
+                            blueprint: e.blueprint_name.clone()?,
+                            level: e.level.unwrap_or(0).min(5) as u8,
+                            quality: e.quality.unwrap_or(0.0),
+                            experimental: e
+                                .experimental_effect
+                                .clone()
+                                .or_else(|| e.experimental_effect_localised.clone()),
+                        })
+                    });
+                    Some(ShipModuleRow {
+                        slot,
+                        item,
+                        module_type,
+                        current,
+                        engineerable,
                     })
-                });
-                Some(ShipModuleRow {
-                    slot,
-                    item,
-                    module_type,
-                    current,
-                    engineerable,
                 })
-            })
-            .collect();
+                .collect();
         ShipView {
             ship_id: l.ship_id,
             ship: l.ship.clone(),
@@ -267,5 +278,33 @@ mod tests {
         let v = ShipView::from_loadout(&l);
         assert!(v.modules.iter().all(|m| !m.engineerable));
         assert_eq!(v.modules[2].module_type, None);
+    }
+
+    #[test]
+    fn virgin_stock_modules_are_engineerable() {
+        let l: Loadout = serde_json::from_str(
+            r#"{"Ship":"python","ShipID":1,"Modules":[
+                {"Slot":"PowerPlant","Item":"int_powerplant_size7_class3"},
+                {"Slot":"Armour","Item":"python_armour_grade1"},
+                {"Slot":"LargeHardpoint1","Item":"hpt_beamlaser_gimbal_large"},
+                {"Slot":"Slot01_Size6","Item":"int_shieldgenerator_size6_class5"},
+                {"Slot":"PowerDistributor","Item":"int_powerdistributor_size7_class5"}
+            ]}"#,
+        )
+        .unwrap();
+        let v = ShipView::from_loadout(&l);
+        assert_eq!(v.modules[0].module_type.as_deref(), Some("powerplant"));
+        assert!(v.modules[0].engineerable);
+        assert_eq!(v.modules[1].module_type.as_deref(), Some("armour"));
+        assert!(v.modules[1].engineerable);
+        assert_eq!(v.modules[2].module_type.as_deref(), Some("beamlaser"));
+        assert!(v.modules[2].engineerable);
+        assert_eq!(v.modules[3].module_type.as_deref(), Some("shieldgenerator"));
+        assert!(v.modules[3].engineerable);
+        assert_eq!(
+            v.modules[4].module_type.as_deref(),
+            Some("powerdistributor")
+        );
+        assert!(v.modules[4].engineerable);
     }
 }
