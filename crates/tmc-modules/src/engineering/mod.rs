@@ -8,6 +8,10 @@
 //! `engineering.session`, `engineering.engineers`, `engineering.ship`, `engineering.flow`,
 //! `engineering.goals`, `engineering.sources` y `engineering.alerts`.
 //!
+//! `engineering.engineers` y `engineering.flow` son resúmenes acotados (revisión, recuentos,
+//! selección, importes, motivos de bloqueo): las filas de ingenieros, capacidades, opciones,
+//! grados, costes y líneas solo se sirven por REST paginado (`/api/engineering/{engineers,flow}`).
+//!
 //! Red y almacén: nada en replay. Los comerciantes y brókers cercanos (`NearestService`)
 //! nunca se piden en replay, en Legacy ni sin «servicios online»: el estado de cada fuente
 //! es entonces `Disabled`. La lista de la compra se lee al conocer al comandante (en vivo) y
@@ -903,85 +907,75 @@ impl Engineering {
         }))
     }
 
+    /// Resumen acotado: las filas, capacidades y requisitos se sirven por REST paginado.
     fn render_engineers(&self, state: &GameState) -> Value {
-        let selected = self.selected_engineer.and_then(|id| {
-            let def = engineer(id)?;
-            Some(json!({
-                "id": id,
-                "next_step": self.next_step_of(id, state),
-                "blueprints": def.blueprints.iter().map(|b| json!({
-                    "module_type": b.module_type,
-                    "blueprint": b.blueprint,
-                    "grades": b.grades,
-                    "max_grade": b.max_grade(),
-                })).collect::<Vec<_>>(),
-            }))
-        });
+        let next_step = self
+            .selected_engineer
+            .filter(|id| engineer(*id).is_some())
+            .and_then(|id| self.next_step_of(id, state));
         self.stamp(json!({
-            "engineers": self.book.rows(),
-            "selected": selected,
+            "selected_id": self.selected_engineer,
+            "next_step": next_step,
         }))
     }
 
-    fn render_flow(&self, state: &GameState, all: &ShoppingView, cost: Option<&PlanCost>) -> Value {
+    /// Devuelve el resumen del topic y, aparte, las líneas de material para la sección
+    /// paginada `lines` (nunca viajan en el topic).
+    fn render_flow(
+        &self,
+        state: &GameState,
+        all: &ShoppingView,
+        cost: Option<&PlanCost>,
+    ) -> (Value, Value) {
         let idle = json!({
             "status": "idle",
             "slot": null,
             "module_type": null,
             "item": null,
             "current": null,
-            "options": {"blueprints": [], "experimentals": []},
             "request": null,
-            "cost": null,
-            "lines": [],
             "percent": 0,
             "engineer": null,
             "blockers": [],
             "materials_ready": false,
             "merc_coins": null,
+            "replaces_blueprint": false,
+            "verified": false,
         });
+        let no_lines = json!([]);
         let Some(flow) = &self.flow else {
-            return self.stamp(idle);
+            return (self.stamp(idle), no_lines);
         };
         let row = self.row(&flow.slot);
         let module_type = row.and_then(|r| r.module_type.clone());
-        let cat = blueprints();
-        let options = match &module_type {
-            Some(t) => json!({
-                "blueprints": cat.blueprints_for(t).iter().map(|b| b.key.clone()).collect::<Vec<_>>(),
-                "experimentals": cat.experimentals_for(t).iter().map(|e| e.key.clone()).collect::<Vec<_>>(),
-            }),
-            None => json!({"blueprints": [], "experimentals": []}),
-        };
         let mut v = json!({
             "status": "idle",
             "slot": flow.slot,
             "module_type": module_type,
             "item": row.map(|r| r.item.clone()),
             "current": row.and_then(|r| r.current.clone()),
-            "options": options,
             "request": flow.request,
-            "cost": null,
-            "lines": [],
             "percent": 0,
             "engineer": null,
             "blockers": [],
             "materials_ready": false,
             "merc_coins": null,
+            "replaces_blueprint": false,
+            "verified": false,
         });
         let (Some(req), Some(o)) = (&flow.request, v.as_object_mut()) else {
-            return self.stamp(v);
+            return (self.stamp(v), no_lines);
         };
         let Some(cost) = cost else {
             o.insert("status".into(), json!("no_data"));
-            return self.stamp(v);
+            return (self.stamp(v), no_lines);
         };
         let gv = all.goals.iter().find(|g| g.id == FLOW_ID);
         o.insert("blockers".into(), json!(cost.blockers));
         if cost.has_resolution_blocker() {
             // El motivo del bloqueo viaja en `blockers`; sin coste ni líneas que mostrar.
             o.insert("status".into(), json!("no_data"));
-            return self.stamp(v);
+            return (self.stamp(v), no_lines);
         }
         let mut lines = Vec::new();
         for (key, need) in &cost.total {
@@ -1006,8 +1000,8 @@ impl Engineering {
             });
         }
         o.insert("status".into(), json!("ok"));
-        o.insert("cost".into(), json!(cost));
-        o.insert("lines".into(), json!(lines));
+        o.insert("replaces_blueprint".into(), json!(cost.replaces_blueprint));
+        o.insert("verified".into(), json!(cost.verified));
         o.insert("percent".into(), json!(gv.map_or(0, |g| g.percent)));
         o.insert(
             "materials_ready".into(),
@@ -1023,7 +1017,7 @@ impl Engineering {
                 state
             )),
         );
-        self.stamp(v)
+        (self.stamp(v), json!(lines))
     }
 
     fn render_goals(&self, shopping: &ShoppingView, verified: &BTreeMap<String, bool>) -> Value {
@@ -1088,7 +1082,7 @@ impl Engineering {
                 .get(topic)
                 .is_none_or(|old| strip(old) != strip(value))
         };
-        let mut flow = self.render_flow(state, all, flow_cost);
+        let (mut flow, flow_lines) = self.render_flow(state, all, flow_cost);
         let flow_pages = {
             let row = self.flow.as_ref().and_then(|f| self.row(&f.slot)).map(|r| {
                 (
@@ -1097,7 +1091,7 @@ impl Engineering {
                     r.current.as_ref(),
                 )
             });
-            pages::flow_pages(blueprints(), row, flow_cost, &flow["lines"])
+            pages::flow_pages(blueprints(), row, flow_cost, &flow_lines)
         };
         let engineer_rows: Vec<Value> = self
             .book
@@ -1107,7 +1101,6 @@ impl Engineering {
             .collect();
         if let Some(o) = engineers.as_object_mut() {
             o.insert("total".into(), json!(engineer_rows.len()));
-            o.insert("selected_id".into(), json!(self.selected_engineer));
         }
         let dependencies_changed = semantic_changed(TOPIC_INVENTORY, &inventory)
             || semantic_changed(TOPIC_ENGINEERS, &engineers);

@@ -4,7 +4,8 @@
  import { action, live, topic } from '../../lib/ws.svelte';
  import Panel from '../../shell/Panel.svelte';
  import { createGoalsReader } from './goals.svelte';
- import { blueprintLabel, engineeringDataLabel, inventoryMaterial } from './labels';
+ import { blockerLabel, blueprintLabel, engineeringDataLabel, inventoryMaterial } from './labels';
+ import MercCoinsLine from './MercCoins.svelte';
  import type { GoalsTopic, InventoryTopic } from './types';
  const reader=createGoalsReader(true);
  const inventory=$derived(topic<InventoryTopic>('engineering.inventory'));
@@ -41,6 +42,9 @@
     <p>{t('engineering-rolls')}: {goal.request.rolls.map(integer).join(' / ')}</p>
     <strong>{t('engineering-ready-percent',{pct:decimal(goal.percent)})}</strong>
     {#if !goal.verified}<small>{t('engineering-unverified')}</small>{/if}
+    <MercCoinsLine coins={goal.merc_coins} />
+    {#if goal.blockers.length}<ul data-testid="goal-blockers">{#each goal.blockers as blocker}<li>{blockerLabel(blocker)}</li>{/each}</ul>{/if}
+    {#if goal.materials_ready && !goal.completable && !goal.blockers.length && goal.merc_coins.need > 0 && goal.merc_coins.have === null}<p data-testid="goal-merc-not-confirmed">{t('engineering-merc-not-confirmed')}</p>{/if}
     {#if goal.completable && goal.engineer}<p class="ready">{t('engineering-goal-completable',{engineer:goal.engineer})}</p>{/if}
     <ul>{#each Object.entries(goal.missing) as [key,count]}<li>{inventoryMaterial(key,inventory)}: {t('engineering-goal-missing')}: {integer(count)}</li>{/each}</ul>
     <div class="actions">

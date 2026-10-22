@@ -343,6 +343,8 @@ mod tests {
                 ("max", FluentValue::from(300)),
                 ("rolls", FluentValue::from(4)),
                 ("goal", FluentValue::from("fsd_longrange G5")),
+                ("grades", FluentValue::from("G1, G2")),
+                ("reason", FluentValue::from("Receta ambigua")),
             ] {
                 args.set(name, value);
             }

@@ -68,3 +68,9 @@ export function goalLabel(id: string): string {
  const label=blueprintLabel(parts[2]);
  return `${label.name} ${t('engineering-grade',{grade:parts[4]})}${label.pending ? ` (${t('engineering-translation-pending')})` : ''}`;
 }
+/** Motivo de un cálculo incompleto o de una receta no disponible, siempre localizado. */
+export function blockerLabel(blocker: import('./types').PlanBlocker | string): string {
+ if (typeof blocker === 'object' && blocker !== null && 'missing_recipe' in blocker) return t('engineering-blocker-missing-recipe', { grade: String(blocker.missing_recipe.grade) });
+ const known = ['missing_base_mapping', 'base_required', 'ambiguous_recipe', 'incompatible_item', 'unknown_blueprint', 'unknown_experimental'];
+ return typeof blocker === 'string' && known.includes(blocker) ? t(`engineering-blocker-${blocker.replaceAll('_', '-')}`) : t('engineering-no-data');
+}

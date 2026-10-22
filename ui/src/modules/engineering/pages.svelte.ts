@@ -1,5 +1,5 @@
 ﻿import type { EngineeringPage, PageRequest } from './types';
-export function pageKey(request: PageRequest): string { return JSON.stringify([request.resource, request.revision, request.section, request.commander]); }
+export function pageKey(request: PageRequest): string { return JSON.stringify([request.resource, request.revision, request.section, request.commander, request.scope ?? null]); }
 /** A reader belongs to one mounted consumer; only a complete revision is published. */
 export function createPageReader<T>() {
  let state = $state<'idle' | 'loading' | 'ready' | 'stale' | 'failed'>('idle');

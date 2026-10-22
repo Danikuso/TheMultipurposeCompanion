@@ -1,16 +1,34 @@
-﻿<script lang="ts">
+<script lang="ts">
   import { t } from '../../lib/i18n';
   import { decimal, integer } from '../../lib/format';
   import { action, topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
-  import { blueprintLabel, contributionCommodityLabel, engineerStatusLabel, materialName } from './labels';
-  import type { EngineerRow, EngineersTopic, InventoryTopic } from './types';
+  import { blueprintLabel, contributionCommodityLabel, engineerStatusLabel, engineeringDataLabel, materialName } from './labels';
+  import { createSectionsReader } from './sections.svelte';
+  import type { EngineerRow, EngineerRows, EngineersTopic, InventoryTopic } from './types';
 
   const data = $derived(topic<EngineersTopic>('engineering.engineers'));
-  const selected = $derived(data?.selected ?? null);
-  const next = $derived(selected?.next_step ?? null);
-  const rows = $derived(data?.engineers ?? []);
-  const selectedRow = $derived(rows.find((row) => row.id === selected?.id));
+  const selectedId = $derived(data?.selected_id ?? null);
+  const next = $derived(data?.next_step ?? null);
+  const commander = $derived(topic<{ name?: string }>('core.cmdr')?.name ?? '');
+  // Lectores privados: las filas solo se publican completas y de la revisión vigente.
+  const list = createSectionsReader<EngineerRows>('engineers', ['engineers'], () => ({ revision: data?.revision, commander, enabled: true }));
+  // Las capacidades de todos los ingenieros solo se piden mientras haya uno seleccionado.
+  const caps = createSectionsReader<EngineerRows>('engineers', ['capabilities'], () => ({ revision: data?.revision, commander, enabled: selectedId !== null }));
+  const rows = $derived(list.ready ? list.engineers.items : []);
+  const selectedRow = $derived(rows.find((row) => row.id === selectedId));
+  const capabilities = $derived.by(() => {
+    if (!caps.ready || selectedId === null) return [];
+    const grouped = new Map<string, { module: string; blueprint: string; grades: number[] }>();
+    for (const row of caps.capabilities.items) {
+      if (row.engineer_id !== selectedId) continue;
+      const key = `${row.module_type}|${row.blueprint}`;
+      const entry = grouped.get(key) ?? { module: row.module_type, blueprint: row.blueprint, grades: [] };
+      if (!entry.grades.includes(row.grade)) entry.grades.push(row.grade);
+      grouped.set(key, entry);
+    }
+    return [...grouped.values()].map((entry) => ({ ...entry, grades: entry.grades.sort((a, b) => a - b) }));
+  });
   const inventory = $derived(topic<InventoryTopic>('engineering.inventory'));
   const shipCargo = $derived(topic<{
     cargo?: { Name: string; Name_Localised?: string | null; Count: number }[];
@@ -63,7 +81,9 @@
   {#if failed}
     <p class="error" role="alert">{t('engineering-select-engineer-failed')}</p>
   {/if}
-  {#if rows.length === 0}
+  {#if !list.ready}
+    <p class="muted" role="status">{t(list.state === 'failed' ? 'engineering-page-failed' : list.state === 'stale' ? 'engineering-page-stale' : list.state === 'loading' ? 'engineering-page-loading' : 'engineering-no-data')}</p>
+  {:else if rows.length === 0}
     <p class="muted">{t('engineering-no-data')}</p>
   {/if}
 
@@ -72,8 +92,8 @@
       <h3>{t(onFoot ? 'engineering-engineer-on-foot' : 'engineering-engineer-ship')}</h3>
       <ul class="engineers">
         {#each rows.filter((row) => row.on_foot === onFoot) as row (row.id)}
-          <li data-engineer-id={row.id} class:selected={selected?.id === row.id}>
-            <button onclick={() => selectEngineer(row.id)} aria-pressed={selected?.id === row.id}>
+          <li data-engineer-id={row.id} class:selected={selectedId === row.id}>
+            <button onclick={() => selectEngineer(row.id)} aria-pressed={selectedId === row.id}>
               {row.name}
             </button>
             <span>{engineerStatusLabel(row.status)}</span>
@@ -90,7 +110,7 @@
     </section>
   {/each}
 
-  {#if selected && selectedRow}
+  {#if selectedId !== null && selectedRow}
     <section class="details" data-testid="engineer-details">
       <h3>{selectedRow.name}</h3>
       <h4>{t('engineering-engineer-next-step')}</h4>
@@ -112,17 +132,24 @@
           {t('engineering-no-data')}
         {/if}
       </p>
-      <ul data-testid="engineer-blueprints">
-        {#each selected.blueprints as entry (entry.blueprint)}
-          {@const label = blueprintLabel(entry.blueprint, entry.name_en)}
-          <li>
-            {t('engineering-engineer-max-grade', {
-              blueprint: label.name, grade: integer(entry.max_grade),
-            })}
-            {#if label.pending}<small class="muted">{t('engineering-translation-pending')}</small>{/if}
-          </li>
-        {/each}
-      </ul>
+      <h4>{t('engineering-engineer-capabilities')}</h4>
+      {#if caps.ready}
+        <ul data-testid="engineer-blueprints">
+          {#each capabilities as entry (`${entry.module}/${entry.blueprint}`)}
+            {@const label = blueprintLabel(entry.blueprint)}
+            {@const module = engineeringDataLabel('modtype', entry.module)}
+            <li>
+              {t('engineering-engineer-capability', {
+                module: module.name, blueprint: label.name,
+                grades: entry.grades.map((grade) => t('engineering-grade', { grade: integer(grade) })).join(', '),
+              })}
+              {#if label.pending || module.pending}<small class="muted">{t('engineering-translation-pending')}</small>{/if}
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <p class="muted" role="status">{t(caps.state === 'failed' ? 'engineering-page-failed' : caps.state === 'stale' ? 'engineering-page-stale' : 'engineering-page-loading')}</p>
+      {/if}
     </section>
   {/if}
 </Panel>

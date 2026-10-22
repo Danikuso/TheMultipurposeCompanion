@@ -268,13 +268,18 @@ fn line_of<'a>(inv: &'a Value, cat: &str, grade: &str, key: &str) -> &'a Value {
         .unwrap_or_else(|| panic!("{key} no está en {cat} G{grade}"))
 }
 
-fn flow_line<'a>(flow: &'a Value, key: &str) -> &'a Value {
-    flow["lines"]
-        .as_array()
-        .unwrap()
+fn flow_line<'a>(lines: &'a [Value], key: &str) -> &'a Value {
+    lines
         .iter()
         .find(|l| l["key"] == key)
         .unwrap_or_else(|| panic!("línea {key}"))
+}
+
+/// Campos pesados que ya no viajan en los topics (se sirven por REST paginado).
+fn assert_no_heavy_fields(topic: &Value, fields: &[&str]) {
+    for field in fields {
+        assert!(topic.get(*field).is_none(), "{field} sigue en el topic");
+    }
 }
 
 fn deliver_goals(h: &mut H, cmdr: &str, goals: &[Goal]) -> TopicSet {
@@ -397,7 +402,7 @@ fn incompatible_known_blueprint_rejected_without_changes() {
         json!({"blueprint":"future_unknown","grade":5}),
     );
     assert_eq!(h.val(TOPIC_FLOW)["status"], "no_data");
-    assert_eq!(h.val(TOPIC_FLOW)["cost"], Value::Null);
+    assert!(h.pages("flow", "costs").is_empty());
 }
 
 #[test]
@@ -591,13 +596,16 @@ fn engineers_topic_has_rank_and_distance() {
     let mut h = H::new();
     h.fixture();
     let e = h.val("engineering.engineers");
-    let rows = e["engineers"].as_array().unwrap();
+    assert_no_heavy_fields(&e, &["engineers", "selected"]);
+    let rows = h.pages("engineers", "engineers");
+    assert_eq!(e["total"], json!(rows.len()));
     let f = rows.iter().find(|r| r["id"] == 300100).unwrap();
     assert_eq!(f["status"], "Unlocked");
     assert_eq!(f["rank"], json!(5));
     let d = f["distance_ly"].as_f64().unwrap();
     assert!((d - 12.3).abs() < 1e-6, "{d}");
-    assert!(e["selected"].is_null());
+    assert!(e["selected_id"].is_null());
+    assert!(e["next_step"].is_null());
     // Elvira se desbloqueó con un `EngineerProgress` suelto.
     let el = rows.iter().find(|r| r["id"] == 300160).unwrap();
     assert_eq!(el["status"], "Unlocked");
@@ -609,14 +617,19 @@ fn select_engineer_shows_next_step_and_blueprints() {
     h.fixture();
     // Tod McQuinn (Known): requisito de invitación.
     h.action("engineering.select_engineer", json!({"id": 300260}));
-    let sel = h.val("engineering.engineers")["selected"].clone();
-    assert_eq!(sel["id"], json!(300260));
+    let sel = h.val("engineering.engineers");
+    assert_eq!(sel["selected_id"], json!(300260));
     assert!(sel["next_step"]["Requirement"]["key"].is_string());
     h.action("engineering.select_engineer", json!({"id": 300100}));
-    let sel = h.val("engineering.engineers")["selected"].clone();
+    let sel = h.val("engineering.engineers");
     assert_eq!(sel["next_step"], json!("Done"));
-    assert_eq!(sel["blueprints"][0]["blueprint"], "engine_dirty");
-    assert_eq!(sel["blueprints"][0]["max_grade"], json!(3));
+    let capabilities = h.pages("engineers", "capabilities");
+    let grades: Vec<u64> = capabilities
+        .iter()
+        .filter(|c| c["engineer_id"] == 300100 && c["blueprint"] == "engine_dirty")
+        .map(|c| c["grade"].as_u64().unwrap())
+        .collect();
+    assert_eq!(grades, vec![1, 2, 3]);
     // Un id desconocido no cambia nada.
     let before = h.val("engineering.engineers");
     let dirty = h.action("engineering.select_engineer", json!({"id": 1}));
@@ -668,16 +681,18 @@ fn preview_flow_with_fixture_ship() {
     assert!(flow["current"].is_null());
     assert_eq!(flow["request"]["target_grade"], json!(5));
     assert_eq!(flow["request"]["rolls"], json!([1, 1, 1, 1, 4]));
-    assert_eq!(flow["lines"].as_array().unwrap().len(), 13);
+    assert_no_heavy_fields(&flow, &["lines", "cost", "options"]);
+    let lines = h.pages("flow", "lines");
+    assert_eq!(lines.len(), 13);
     // 9 de 19 unidades cubiertas (reservas): 9 × 100 / 19.
     assert_eq!(flow["percent"], json!(47));
-    let polonium = flow_line(&flow, "polonium");
+    let polonium = flow_line(&lines, "polonium");
     assert_eq!(
         (polonium["need"].clone(), polonium["have"].clone()),
         (json!(4), json!(150))
     );
     assert_eq!(polonium["state"], "ok");
-    let heat = flow_line(&flow, "protoheatradiators");
+    let heat = flow_line(&lines, "protoheatradiators");
     assert_eq!(heat["state"], "missing");
     assert_eq!(heat["missing"], json!(2));
     assert_eq!(heat["need"], json!(4));
@@ -689,8 +704,15 @@ fn preview_flow_with_fixture_ship() {
         flow["engineer"]["next_step"]["Requirement"]["key"],
         "unlock-professor-palin"
     );
-    assert_eq!(flow["cost"]["total"]["polonium"], json!(4));
-    assert_eq!(flow["options"]["blueprints"], json!(["engine_dirty"]));
+    let costs = h.pages("flow", "costs");
+    assert!(costs.iter().any(|c| {
+        c["grade"] == json!(5) && c["material"] == "polonium" && c["count"] == json!(4)
+    }));
+    let options = h.pages("flow", "blueprints");
+    assert_eq!(
+        options.iter().map(|o| o["key"].clone()).collect::<Vec<_>>(),
+        vec![json!("engine_dirty")]
+    );
     // Cerrar el flujo lo vacía.
     h.action("engineering.close_flow", json!({}));
     let flow = h.val("engineering.flow");
@@ -710,7 +732,7 @@ fn blocked_flow_keeps_its_reason_instead_of_plain_no_data() {
     let flow = h.val("engineering.flow");
     assert_eq!(flow["status"], "no_data");
     assert_eq!(flow["blockers"], json!(["unknown_blueprint"]));
-    assert!(flow["cost"].is_null());
+    assert!(h.pages("flow", "costs").is_empty());
     // un flujo sin bloqueo los publica vacios
     h.preview_engines();
     let flow = h.val("engineering.flow");
@@ -754,8 +776,8 @@ fn unknown_blueprint_is_no_data() {
     );
     let flow = h.val("engineering.flow");
     assert_eq!(flow["status"], "no_data");
-    assert!(flow["cost"].is_null());
-    assert_eq!(flow["lines"], json!([]));
+    assert!(h.pages("flow", "costs").is_empty());
+    assert!(h.pages("flow", "lines").is_empty());
     // Y no se puede fijar como objetivo.
     let dirty = h.action("engineering.pin_goal", json!({}));
     assert!(dirty.is_empty());
@@ -996,14 +1018,8 @@ fn no_services_shows_no_data_and_rest_works() {
             .all(|s| s == "Disabled")
     );
     assert_eq!(h.val("engineering.flow")["status"], "ok");
-    let rows = h.val("engineering.engineers");
-    let f = rows["engineers"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|r| r["id"] == 300100)
-        .unwrap()
-        .clone();
+    let rows = h.pages("engineers", "engineers");
+    let f = rows.iter().find(|r| r["id"] == 300100).unwrap().clone();
     assert!((f["distance_ly"].as_f64().unwrap() - 12.3).abs() < 1e-6);
     assert_eq!(h.requests.len(), 0);
     // Al activar los servicios vuelven a pedirse.
@@ -1522,29 +1538,16 @@ fn location_without_star_pos_does_not_set_position() {
     h.journal("Commander", r#","FID":"F1","Name":"CMDR TESTER""#);
     for ev in ["Location", "FSDJump", "CarrierJump"] {
         h.journal(ev, r#","StarSystem":"Nowhere","SystemAddress":9"#);
-        let rows = h.val("engineering.engineers");
-        assert!(
-            rows["engineers"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .all(|r| r["distance_ly"].is_null()),
-            "{ev}"
-        );
+        let rows = h.pages("engineers", "engineers");
+        assert!(rows.iter().all(|r| r["distance_ly"].is_null()), "{ev}");
     }
     // Con posición válida sí hay distancias.
     h.journal(
         "FSDJump",
         r#","StarSystem":"Somewhere","SystemAddress":10,"StarPos":[0,0,0]"#,
     );
-    let rows = h.val("engineering.engineers");
-    assert!(
-        rows["engineers"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .all(|r| r["distance_ly"].is_number())
-    );
+    let rows = h.pages("engineers", "engineers");
+    assert!(rows.iter().all(|r| r["distance_ly"].is_number()));
 }
 
 #[test]
@@ -1564,7 +1567,7 @@ fn commodity_contribution_have_comes_from_cargo() {
         ..Default::default()
     });
     h.action("engineering.select_engineer", json!({"id": 300160}));
-    let step = h.val("engineering.engineers")["selected"]["next_step"].clone();
+    let step = h.val("engineering.engineers")["next_step"].clone();
     assert_eq!(step["Contribute"]["have"], json!(2));
     assert_eq!(step["Contribute"]["need"], json!(3));
 }
@@ -1829,60 +1832,28 @@ fn engineering_topics_stay_under_16_kib() {
     assert_eq!(h.val(TOPIC_ALERTS)["alerts"].as_array().unwrap().len(), 20);
     assert_eq!(h.val(TOPIC_SHIP)["modules"].as_array().unwrap().len(), 60);
     assert_eq!(h.val(TOPIC_GOALS)["goals"].as_array().unwrap().len(), 20);
-    // Cuarenta filas completas, con rangos/distancias y nombres largos, conservando
-    // el envoltorio real y el siguiente paso del ingeniero seleccionado.
-    let mut engineers = h.val(TOPIC_ENGINEERS);
-    let mut rows = Vec::new();
-    for i in 0..40 {
-        rows.push(json!(engineers::EngineerRow {
-            id: 900000 + i,
-            name: format!("Synthetic Engineer Long Name {i}"),
-            system: format!("Synthetic Engineer Home System {i}"),
-            distance_ly: Some(12345.123456789),
-            status: EngineerStatus::Unlocked,
-            rank: Some(5),
-            rank_progress: Some(100),
-            on_foot: i % 2 == 0,
-            verified: false,
-        }));
-    }
-    engineers["engineers"] = json!(rows);
-    assert_eq!(engineers["engineers"].as_array().unwrap().len(), 40);
-    let projected_engineers_size = serde_json::to_vec(&engineers).unwrap().len();
+    // Los topics de ingenieros y flujo son resúmenes: sin filas pesadas y de tamaño
+    // acotado; las filas se sirven por páginas (cada una comprobada < 16 KiB en `pages`).
+    let engineers = h.val(TOPIC_ENGINEERS);
+    assert_no_heavy_fields(&engineers, &["engineers", "selected"]);
     let flow = h.val("engineering.flow");
     assert_eq!(flow["status"], "ok", "{flow}");
-    // Treinta líneas con propuestas completas (no la primera línea sin intercambio).
-    let mut projected_flow = flow.clone();
-    let lines: Vec<FlowLine> = (0..30)
-        .map(|i| FlowLine {
-            key: format!("long_material_key_{i}"),
-            name_en: Some(format!("Long Material Display Name {i}")),
-            grade: 5,
-            need: 40,
-            have: 0,
-            state: "trade",
-            missing: 0,
-            trade: Some(TradeProposal {
-                give_key: "long_surplus_material_key".into(),
-                give: 240,
-                get_key: format!("long_material_key_{i}"),
-                get: 40,
-                trader: TraderKind::Manufactured,
-                same_family: false,
-            }),
-        })
-        .collect();
-    projected_flow["lines"] = json!(lines);
-    assert_eq!(projected_flow["lines"].as_array().unwrap().len(), 30);
-    let projected_flow_size = serde_json::to_vec(&projected_flow).unwrap().len();
+    assert_no_heavy_fields(&flow, &["lines", "cost", "options"]);
+    let projected_engineers_size = serde_json::to_vec(&engineers).unwrap().len();
+    let projected_flow_size = serde_json::to_vec(&flow).unwrap().len();
+    assert!(!h.pages("engineers", "engineers").is_empty());
+    assert!(!h.pages("flow", "lines").is_empty());
     eprintln!(
-        "published topics: {sizes:?}; {actual_count} catalog materials; 40 engineers: {projected_engineers_size} B; 30 trade lines: {projected_flow_size} B"
+        "published topics: {sizes:?}; {actual_count} catalog materials; engineers summary: {projected_engineers_size} B; flow summary: {projected_flow_size} B"
     );
     for (topic, size) in &sizes {
         assert!(*size < 16384, "{topic}: {size} B ({sizes:?})");
     }
-    assert!(projected_engineers_size < 16384);
-    assert!(projected_flow_size < 16384);
+    assert!(
+        projected_engineers_size < 1024,
+        "{projected_engineers_size}"
+    );
+    assert!(projected_flow_size < 4096, "{projected_flow_size}");
 }
 
 // ----- Contrato Rust → UI -----
@@ -1900,7 +1871,7 @@ fn contract_snapshot() -> Value {
     ));
     h.preview_engines();
     json!({
-        "engineering.pages": {"goals":h.m.query("goals", &ModulePageQuery {revision:h.m.revision,cursor:0,section:None}).unwrap(), "locker_components":h.m.query("locker", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("components".into())}).unwrap(), "catalogue_recipes":h.m.query("catalogue", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("recipes".into())}).unwrap(), "engineers_capabilities":h.m.query("engineers", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("capabilities".into())}).unwrap(), "flow_costs":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("costs".into())}).unwrap(), "flow_lines":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:None}).unwrap()},
+        "engineering.pages": {"goals":h.m.query("goals", &ModulePageQuery {revision:h.m.revision,cursor:0,section:None}).unwrap(), "locker_components":h.m.query("locker", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("components".into())}).unwrap(), "catalogue_recipes":h.m.query("catalogue", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("recipes".into())}).unwrap(), "engineers_capabilities":h.m.query("engineers", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("capabilities".into())}).unwrap(), "flow_costs":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("costs".into())}).unwrap(), "flow_lines":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:None}).unwrap(), "engineers_engineers":h.m.query("engineers", &ModulePageQuery {revision:h.m.revision,cursor:0,section:None}).unwrap(), "engineers_unlock":h.m.query("engineers", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("unlock".into())}).unwrap(), "flow_blueprints":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("blueprints".into())}).unwrap(), "flow_experimentals":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("experimentals".into())}).unwrap(), "flow_grades":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("grades".into())}).unwrap()},
         "engineering.catalogue": h.val("engineering.catalogue"),
         "engineering.inventory": h.val("engineering.inventory"),
         "engineering.locker": h.val("engineering.locker"),
@@ -1944,7 +1915,7 @@ fn contract_snapshot_has_the_values_the_ui_asserts() {
     assert_eq!(goal["trades"][0]["give"], json!(6));
     assert_eq!(goal["trades"][0]["get"], json!(1));
     assert_eq!(goal["trades"].as_array().unwrap().len(), 1);
-    let missing2 = c["engineering.flow"]["lines"]
+    let missing2 = c["engineering.pages"]["flow_lines"]["items"]
         .as_array()
         .unwrap()
         .iter()
@@ -1968,10 +1939,6 @@ fn real_engineering_topics_preserve_public_diagnostic_fields() {
     assert_eq!(flow["request"]["blueprint"], "engine_dirty");
     assert_eq!(flow["request"]["experimental"], "special_engine_overloaded");
     assert_eq!(flow["module_type"], "engine");
-    assert_eq!(
-        flow["lines"][0]["state"],
-        snapshot[TOPIC_FLOW]["lines"][0]["state"]
-    );
     let inv = redact_diagnostic(
         &snapshot[TOPIC_INVENTORY],
         DiagnosticContext::Topic {
@@ -2341,37 +2308,22 @@ fn flow_pages_expose_options_grades_costs_and_lines() {
     assert!(h.m.revision > before);
     let flow = h.val("engineering.flow");
     assert_eq!(flow["revision"], json!(h.m.revision));
+    assert_no_heavy_fields(&flow, &["lines", "cost", "options"]);
     let lines = h.pages("flow", "lines");
-    assert_eq!(json!(lines), flow["lines"]);
+    assert_eq!(lines.len(), 13);
     assert_eq!(flow["counts"]["lines"], json!(lines.len()));
     let blueprints = h.pages("flow", "blueprints");
-    assert!(
-        blueprints
-            .iter()
-            .any(|b| b["key"] == "engine_dirty" && b["available"] == json!(true))
-    );
-    assert_eq!(
-        h.pages("flow", "experimentals").len(),
-        flow["options"]["experimentals"].as_array().unwrap().len()
-    );
+    assert!(blueprints.iter().any(|b| b["key"] == "engine_dirty"
+        && b["available"] == json!(true)
+        && b["grades"] == json!([1, 2, 3, 4, 5])));
+    assert_eq!(h.pages("flow", "experimentals").len(), 1);
     let grades: Vec<u64> = h
         .pages("flow", "grades")
         .iter()
         .map(|g| g["grade"].as_u64().unwrap())
         .collect();
-    let wanted: Vec<u64> = flow["cost"]["per_grade"]
-        .as_object()
-        .unwrap()
-        .keys()
-        .map(|k| k.parse().unwrap())
-        .collect();
-    assert_eq!(grades, wanted);
-    let total: u64 = flow["cost"]["total"]
-        .as_object()
-        .unwrap()
-        .values()
-        .map(|v| v.as_u64().unwrap())
-        .sum();
+    assert_eq!(grades, vec![1, 2, 3, 4, 5]);
+    let total: u64 = lines.iter().map(|l| l["need"].as_u64().unwrap()).sum();
     let costs = h.pages("flow", "costs");
     let materials: u64 = costs
         .iter()
@@ -2445,4 +2397,31 @@ fn new_resources_validate_sections_and_queries_are_read_only() {
     }
     assert_eq!(values, h.m.values);
     assert_eq!(revision, h.m.revision);
+}
+
+/// El ingeniero recomendado es el mismo en el flujo, en el objetivo fijado y en el panel
+/// de ingenieros (las tres vistas salen de la misma función, sin recalcular en la UI).
+#[test]
+fn recommended_engineer_matches_between_flow_goal_and_engineer_rows() {
+    let mut h = H::new();
+    h.fixture();
+    h.pin_fsd();
+    let flow = h.val(TOPIC_FLOW);
+    assert_eq!(flow["status"], "ok", "{flow}");
+    let goals = h.pages("goals", "goals");
+    assert_eq!(goals.len(), 1);
+    let name = goals[0]["engineer"].clone();
+    assert_eq!(name, json!("Felicity Farseer"));
+    assert_eq!(flow["engineer"]["nearest_unlocked"]["name"], name);
+    let row = h
+        .pages("engineers", "engineers")
+        .into_iter()
+        .find(|r| r["name"] == name)
+        .expect("el ingeniero recomendado aparece en las filas");
+    assert_eq!(row["id"], flow["engineer"]["nearest_unlocked"]["id"]);
+    assert_eq!(row["status"], "Unlocked");
+    let capable = h.pages("engineers", "capabilities").iter().any(|c| {
+        c["engineer_id"] == row["id"] && c["blueprint"] == "fsd_longrange" && c["grade"] == 5
+    });
+    assert!(capable);
 }

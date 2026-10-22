@@ -105,18 +105,42 @@ test('late JSON parsing cannot publish rows after another commander starts', asy
 import EngineersPanel from '../src/modules/engineering/EngineersPanel.svelte';
 import type { EngineerNextStep } from '../src/modules/engineering/types';
 import { blueprintLabel } from '../src/modules/engineering/labels';
-function showEngineers() {
+type Rest = { items: unknown[] } & Record<string, unknown>;
+const restPages = fixture['engineering.pages'] as unknown as Record<string, Rest>;
+interface RestOptions { config?: unknown | (() => Promise<Response>); action?: (url: string, init?: RequestInit) => Response | Promise<Response>; override?: (resource: string, section: string, query: URLSearchParams) => Response | Promise<Response> | undefined }
+/** Servidor falso de los recursos REST de ingeniería, las acciones y la configuración. */
+function restFetch(options: RestOptions = {}) {
+ vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+  if (url.startsWith('/api/actions/')) return options.action ? options.action(url, init) : new Response('{}');
+  if (url === '/api/config') return typeof options.config === 'function' ? options.config() : new Response(JSON.stringify(options.config ?? {}));
+  const parsed = new URL(url, 'http://localhost'); const resource = parsed.pathname.split('/').pop()!;
+  const section = parsed.searchParams.get('section') ?? (resource === 'flow' ? 'lines' : 'engineers');
+  const custom = options.override?.(resource, section, parsed.searchParams); if (custom) return custom;
+  const base = restPages[`${resource}_${section}`] ?? restPages[resource];
+  return new Response(JSON.stringify({ ...base, revision: Number(parsed.searchParams.get('revision')), section }));
+ }));
+}
+function restCalls(resource: string) { return vi.mocked(fetch).mock.calls.filter(([url]) => String(url).startsWith(`/api/engineering/${resource}?`)); }
+function actionCalls(name: string) { return vi.mocked(fetch).mock.calls.filter(([url]) => url === `/api/actions/engineering.${name}`); }
+function json(body: unknown) { return new Response(JSON.stringify(body)); }
+function page(section: string, items: unknown[], revision = 21) { return { revision, section, cursor: 0, next_cursor: null, total: items.length, items }; }
+async function showEngineers(options: RestOptions = {}) {
+ restFetch(options);
  mounted = mount(EngineersPanel, { target });
- flushSync();
+ flushSync(); await settle();
 }
-function selectEngineer(next_step: EngineerNextStep = 'Done', blueprint = 'engine_dirty') {
- live.topics['engineering.engineers'] = {
-  ...fixture['engineering.engineers'],
-  selected: { id: 300100, next_step, blueprints: [{ blueprint, max_grade: 5 }] },
- };
+function selectEngineer(next_step: EngineerNextStep = 'Done') {
+ live.topics['engineering.engineers'] = { ...fixture['engineering.engineers'], selected_id: 300100, next_step };
 }
-test('engineer row shows status rank progress system distance and verification', () => {
- showEngineers();
+const capabilityOf = (blueprint: string, grades: number[]) => (resource: string, section: string) => resource === 'engineers' && section === 'capabilities'
+ ? json(page('capabilities', grades.map(grade => ({ engineer_id: 300100, module_type: 'engine', blueprint, grade })))) : undefined;
+test('engineer topic is a summary and rows come from the paginated resource', async () => {
+ expect(Object.keys(fixture['engineering.engineers']).sort()).toEqual(['as_of', 'next_step', 'revision', 'selected_id', 'total']);
+ await showEngineers();
+ expect(restCalls('engineers').map(([url]) => String(url))).toEqual(['/api/engineering/engineers?revision=21&cursor=0&section=engineers']);
+});
+test('engineer row shows status rank progress system distance and verification', async () => {
+ await showEngineers();
  const row = target.querySelector('[data-engineer-id="300100"]')!;
  expect(row.textContent).toContain('Felicity Farseer');
  expect(row.textContent).toContain('Desbloqueado');
@@ -127,63 +151,101 @@ test('engineer row shows status rank progress system distance and verification',
  expect(row.textContent).toContain('Sin verificar');
 });
 test('select engineer posts json action', async () => {
- vi.stubGlobal('fetch', vi.fn(async () => new Response('{}')));
- showEngineers();
+ await showEngineers();
  (target.querySelector('[data-engineer-id="300100"] button') as HTMLButtonElement).click();
  await settle();
  expect(fetch).toHaveBeenCalledWith('/api/actions/engineering.select_engineer', {
   method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: 300100 }),
  });
 });
-test('next step contribution shows have and need', () => {
+test('next step contribution shows have and need', async () => {
  selectEngineer({ Contribute: { item: 'iron', kind: 'material', have: 4, need: 10 } });
- showEngineers();
+ await showEngineers();
  expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('4 / 10');
  expect(target.textContent).toContain('Hierro');
 });
-test('on foot engineers in their own section', () => {
- showEngineers();
+test('on foot engineers in their own section', async () => {
+ await showEngineers();
  expect(target.querySelector('[data-testid="engineers-on-foot"]')?.textContent).toContain('Domino Green');
  expect(target.querySelector('[data-testid="engineers-ship"]')?.textContent).not.toContain('Domino Green');
 });
-test('engineer blueprints with official name and max grade', () => {
- selectEngineer(); showEngineers();
- expect(target.querySelector('[data-testid="engineer-blueprints"]')?.textContent).toContain('Modificación de Motor Sucio hasta G5');
- expect(target.querySelector('[data-testid="engineer-blueprints"]')?.textContent).not.toContain('Traducción pendiente');
+test('selected engineer capabilities show module, official blueprint name and exact grades', async () => {
+ selectEngineer(); await showEngineers();
+ const text = target.querySelector('[data-testid="engineer-blueprints"]')?.textContent ?? '';
+ expect(text).toContain('Impulsores'); expect(text).toContain('Modificación de Motor Sucio'); expect(text).toContain('Impulsores · Modificación de Motor Sucio: G1, G2, G3');
+ expect(text).not.toContain('Modificación de Motor Sucio: G1, G2, G3, G4'); expect(text).not.toContain('Traducción pendiente');
+ expect(restCalls('engineers').map(([url]) => new URL(String(url), 'http://x').searchParams.get('section')).sort()).toEqual(['capabilities', 'engineers']);
 });
-test('all next step variants are rendered without raw Fluent keys', () => {
- selectEngineer({ Requirement: { key: 'unlock-felicity-farseer' } }); showEngineers();
+test('capabilities are not requested until an engineer is selected and only that engineer is shown', async () => {
+ await showEngineers(); expect(restCalls('engineers')).toHaveLength(1);
+ selectEngineer(); flushSync(); await settle(); expect(restCalls('engineers')).toHaveLength(2);
+ expect(target.querySelector('[data-testid="engineer-blueprints"]')?.textContent).toContain('G1, G2, G3');
+ live.topics['engineering.engineers'] = { ...fixture['engineering.engineers'], selected_id: 300160 }; flushSync();
+ expect(restCalls('engineers')).toHaveLength(2);
+ const text = target.querySelector('[data-testid="engineer-blueprints"]')?.textContent ?? '';
+ expect(text).toContain('Modificación de Motor Sucio: G1, G2'); expect(text).not.toContain('Modificación de Motor Sucio: G1, G2, G3');
+});
+test('a new revision discards old rows and reloads the pages', async () => {
+ selectEngineer(); await showEngineers();
+ let finish!: (response: Response) => void;
+ restFetch({ override: () => new Promise<Response>(resolve => { finish = resolve; }) as unknown as Response });
+ live.topics['engineering.engineers'] = { ...fixture['engineering.engineers'], selected_id: 300100, next_step: 'Done', revision: 22 }; flushSync();
+ expect(target.querySelector('[data-engineer-id="300100"]')).toBeNull(); expect(target.textContent).toContain('Cargando');
+ expect(restCalls('engineers').map(([url]) => String(url)).every(url => url.includes('revision=22'))).toBe(true);
+ finish(json(page('engineers', [], 22)));
+});
+test('engineer rows of two revisions are never mixed', async () => {
+ selectEngineer(); await showEngineers();
+ restFetch({ override: (resource, section, query) => resource === 'engineers' && section === 'engineers' && query.get('revision') === '22' ? json(page('engineers', [{ id: 1, name: 'Only Rev 22', on_foot: false, status: 'Known', rank: null, rank_progress: null, system: null, distance_ly: null, verified: true }], 22)) : undefined });
+ live.topics['engineering.engineers'] = { ...fixture['engineering.engineers'], revision: 22 }; flushSync(); await settle();
+ expect(target.textContent).toContain('Only Rev 22'); expect(target.textContent).not.toContain('Felicity Farseer');
+});
+test('engineer pages failure and stale are recoverable states', async () => {
+ await showEngineers({ override: () => new Response('', { status: 500 }) }); expect(target.textContent).toContain('No se pudieron cargar los datos');
+ await unmount(mounted!); mounted = undefined;
+ await showEngineers({ override: () => new Response('', { status: 409 }) }); expect(target.textContent).toContain('Esperando');
+ expect(restCalls('engineers')).toHaveLength(1);
+});
+test('engineer pages are cancelled on unmount and when the document is hidden', async () => {
+ restFetch({ override: () => new Promise<Response>(() => {}) as unknown as Response });
+ mounted = mount(EngineersPanel, { target }); flushSync();
+ const signal = vi.mocked(fetch).mock.calls[0][1]!.signal!;
+ const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true); document.dispatchEvent(new Event('visibilitychange')); flushSync();
+ expect(signal.aborted).toBe(true); hidden.mockRestore(); document.dispatchEvent(new Event('visibilitychange')); flushSync();
+ const second = vi.mocked(fetch).mock.calls.at(-1)![1]!.signal!; await unmount(mounted!); mounted = undefined; expect(second.aborted).toBe(true);
+});
+test('all next step variants are rendered without raw Fluent keys', async () => {
+ selectEngineer({ Requirement: { key: 'unlock-felicity-farseer' } }); await showEngineers();
  expect(target.textContent).toContain('Cumple el requisito');
  selectEngineer({ Invite: { key: 'unlock-invite-felicity-farseer' } }); flushSync();
  expect(target.textContent).toContain('Consigue la invitación');
  selectEngineer('Done'); flushSync();
  expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('Desbloqueado');
 });
-test('unknown status null rank progress and distance show localized no data', () => {
- const engineers = structuredClone(fixture['engineering.engineers']);
- Object.assign(engineers.engineers[0], { status: 'FutureStatus', rank: null, rank_progress: null, distance_ly: null });
- live.topics['engineering.engineers'] = engineers; showEngineers();
- const row = target.querySelector('[data-engineer-id="300100"]')!;
- expect(row.textContent).toContain('Desconocido'); expect(row.textContent).toContain('Sin datos');
- expect(row.textContent).not.toContain('FutureStatus'); expect(row.textContent).not.toContain('null');
+test('unknown status null rank progress and distance show localized no data', async () => {
+ const row = { ...restPages.engineers_engineers.items[0] as object, status: 'FutureStatus', rank: null, rank_progress: null, distance_ly: null };
+ await showEngineers({ override: (resource, section) => resource === 'engineers' && section === 'engineers' ? json(page('engineers', [row])) : undefined });
+ const element = target.querySelector('[data-engineer-id="300100"]')!;
+ expect(element.textContent).toContain('Desconocido'); expect(element.textContent).toContain('Sin datos');
+ expect(element.textContent).not.toContain('FutureStatus'); expect(element.textContent).not.toContain('null');
 });
-test('unknown blueprint uses English fallback and marks translation pending', () => {
+test('unknown blueprint uses English fallback key and marks translation pending', async () => {
  expect(blueprintLabel('unknown_blueprint', 'New Drive Tuning')).toEqual({ name: 'New Drive Tuning', pending: true });
- selectEngineer('Done', 'unknown_blueprint'); showEngineers();
+ selectEngineer('Done'); await showEngineers({ override: capabilityOf('unknown_blueprint', [2]) });
  expect(target.querySelector('[data-testid="engineer-blueprints"]')?.textContent).toContain('Traducción pendiente');
+ expect(target.querySelector('[data-testid="engineer-blueprints"]')?.textContent).toContain('G2');
 });
 test('engineer selection failure shows localized error', async () => {
- vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 500 })));
- showEngineers(); (target.querySelector('[data-engineer-id="300100"] button') as HTMLButtonElement).click();
+ await showEngineers({ action: () => new Response('{}', { status: 500 }) }); (target.querySelector('[data-engineer-id="300100"] button') as HTMLButtonElement).click();
  await settle(); expect(target.textContent).toContain('No se pudo seleccionar el ingeniero');
 });
-test('missing engineers topic renders no data', () => {
- delete live.topics['engineering.engineers']; showEngineers();
- expect(target.textContent).toContain('Sin datos');
+test('missing engineers topic renders no data', async () => {
+ delete live.topics['engineering.engineers']; await showEngineers();
+ expect(target.textContent).toContain('Sin datos'); expect(fetch).not.toHaveBeenCalled();
 });
 import { FluentBundle, FluentResource } from '@fluent/bundle';
 import { translationPending } from '../src/lib/i18n';
-test('pending Fluent attribute is read from a real compiled resource', () => {
+test('pending Fluent attribute is read from a real compiled resource', async () => {
  const bundle = new FluentBundle('es');
  bundle.addResource(new FluentResource('bp-synthetic = English Drive Tuning\n    .pending = 1'));
  const original = FluentBundle.prototype.getMessage;
@@ -193,178 +255,296 @@ test('pending Fluent attribute is read from a real compiled resource', () => {
  try {
   expect(blueprintLabel('synthetic')).toEqual({ name: 'English Drive Tuning', pending: true });
   expect(translationPending('bp-engine_dirty')).toBe(false);
-  selectEngineer('Done', 'synthetic'); showEngineers();
+  selectEngineer('Done'); await showEngineers({ override: capabilityOf('synthetic', [1]) });
   expect(target.textContent).toContain('English Drive Tuning');
   expect(target.textContent).toContain('Traducción pendiente');
  } finally { spy.mockRestore(); }
 });
 test('obsolete engineer selection failure cannot overwrite a newer successful selection', async () => {
- let rejectFirst!: (error: Error) => void;
- vi.stubGlobal('fetch', vi.fn()
-  .mockImplementationOnce(() => new Promise<Response>((_, reject) => { rejectFirst = reject; }))
-  .mockResolvedValueOnce(new Response('{}')));
- showEngineers();
+ let rejectFirst!: (error: Error) => void; let calls = 0;
+ await showEngineers({ action: () => ++calls === 1 ? new Promise<Response>((_, reject) => { rejectFirst = reject; }) : new Response('{}') });
  (target.querySelector('[data-engineer-id="300100"] button') as HTMLButtonElement).click();
  (target.querySelector('[data-engineer-id="300160"] button') as HTMLButtonElement).click();
  await settle(); rejectFirst(new Error('Unavailable')); await settle();
  expect(target.textContent).not.toContain('No se pudo seleccionar el ingeniero');
 });
-test('zero commodity contribution has readable catalog name and pending translation', () => {
+test('zero commodity contribution has readable catalog name and pending translation', async () => {
  selectEngineer({ Contribute: { item: 'soontillrelics', kind: 'commodity', have: 0, need: 3 } });
- showEngineers();
+ await showEngineers();
  const step = target.querySelector('[data-testid="engineer-next-step"]')!;
  expect(step.textContent).toContain('Soontill Relics');
  expect(step.textContent).toContain('0 / 3');
  expect(step.textContent).toContain('Traducción pendiente');
  expect(step.textContent).not.toContain('soontillrelics');
 });
-test('commodity contribution uses core cargo journal name and updates reactively', () => {
+test('commodity contribution uses core cargo journal name and updates reactively', async () => {
  selectEngineer({ Contribute: { item: 'soontillrelics', kind: 'commodity', have: 2, need: 3 } });
  live.topics['core.ship'] = { cargo: [{ Name: 'soontillrelics', Name_Localised: 'Nombre del diario', Count: 2 }] };
- showEngineers();
+ await showEngineers();
  const step = target.querySelector('[data-testid="engineer-next-step"]')!;
  expect(step.textContent).toContain('Nombre del diario'); expect(step.textContent).toContain('2 / 3');
  expect(step.textContent).not.toContain('Traducción pendiente');
  live.topics['core.ship'] = { cargo: [] }; setLocale('en'); flushSync();
  expect(step.textContent).toContain('Soontill Relics'); expect(step.textContent).not.toContain('Translation pending');
 });
-test('commodity contribution uses trade cargo localized name when available', () => {
+test('commodity contribution uses trade cargo localized name when available', async () => {
  selectEngineer({ Contribute: { item: 'soontillrelics', kind: 'commodity', have: 2, need: 3 } });
  live.topics['trade.cargo'] = { lines: [{ commodity: 'soontillrelics', name_localised: 'Mercancía del diario', tons: 2 }] };
- showEngineers();
+ await showEngineers();
  expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('Mercancía del diario');
 });
-test('credit contribution uses localized credits and backend counts', () => {
+test('credit contribution uses localized credits and backend counts', async () => {
  selectEngineer({ Contribute: { item: 'credits', kind: 'credits', have: 4, need: 10 } });
- showEngineers();
+ await showEngineers();
  expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('Créditos');
  expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('4 / 10');
 });
-function showShip() { mounted = mount(ShipPanel, { target }); flushSync(); }
-function showFlow() { mounted = mount(EngineerFlow, { target }); flushSync(); }
+function showShip() { restFetch(); mounted = mount(ShipPanel, { target }); flushSync(); }
+async function showFlow(options: RestOptions = {}) { restFetch(options); mounted = mount(EngineerFlow, { target }); flushSync(); await settle(); }
 function change(id: string, value: string) { const input = target.querySelector(`[data-testid="${id}"]`) as HTMLInputElement; input.value = value; input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); flushSync(); }
 function actionBody(name: string) { return vi.mocked(fetch).mock.calls.find(([url]) => url === `/api/actions/engineering.${name}`)?.[1]?.body; }
+const flowTopic = () => structuredClone(fixture['engineering.flow']) as Record<string, any>;
+const input = (id: string) => target.querySelector(`[data-testid="${id}"]`) as HTMLInputElement | HTMLSelectElement;
+const button = (id: string) => target.querySelector(`[data-testid="${id}"]`) as HTMLButtonElement;
+const blueprintRows = (rows: unknown[]) => (resource: string, section: string) => resource === 'flow' && section === 'blueprints' ? json(page('blueprints', rows)) : undefined;
+test('flow topic is a summary and every heavy section comes from the paginated resource', async () => {
+ const topicKeys = Object.keys(fixture['engineering.flow']);
+ for (const heavy of ['lines', 'cost', 'options']) expect(topicKeys).not.toContain(heavy);
+ await showFlow();
+ const sections = restCalls('flow').map(([url]) => new URL(String(url), 'http://x').searchParams.get('section')).sort();
+ expect(sections).toEqual(['blueprints', 'costs', 'experimentals', 'grades', 'lines']);
+ expect(target.querySelector('[data-material="polonium"]')).not.toBeNull();
+});
 test('ship shows stock and official current engineering including unsupported modules', async () => {
  const ship = structuredClone(fixture['engineering.ship']); ship.modules.push({ ...ship.modules[1], slot: 'Unsupported', engineerable: false }); live.topics['engineering.ship'] = ship;
  showShip(); expect(target.textContent).toContain('De serie'); expect(target.textContent).toContain('Aumento de Alcance de MDD'); expect(target.textContent).toContain('100 %');
  expect(target.querySelector('[data-slot="Unsupported"] button')).toBeNull();
- vi.stubGlobal('fetch', vi.fn(async () => new Response('{}'))); click('module-FrameShiftDrive'); await settle(); expect(actionBody('select_module')).toBe(JSON.stringify({ slot: 'FrameShiftDrive' }));
+ expect(target.querySelector('[data-slot="Unsupported"]')?.textContent).toContain('Aumento de Alcance de MDD');
+ expect(target.querySelector('[data-slot="Unsupported"]')?.textContent).toContain('G4');
+ click('module-FrameShiftDrive'); await settle(); expect(actionBody('select_module')).toBe(JSON.stringify({ slot: 'FrameShiftDrive' }));
 });
 test('preview posts exact request and pin and close post empty objects', async () => {
- vi.stubGlobal('fetch', vi.fn(async () => new Response('{}'))); showFlow(); click('preview'); await settle();
+ await showFlow(); click('preview'); await settle();
  expect(actionBody('preview')).toBe(JSON.stringify({ blueprint: 'engine_dirty', experimental: 'special_engine_overloaded', grade: 5, rolls: [1,1,1,1,4] }));
  click('pin-goal'); await settle(); click('close-flow'); await settle(); expect(actionBody('pin_goal')).toBe('{}'); expect(actionBody('close_flow')).toBe('{}');
 });
-test('flow renders material statuses per grade experimental totals readiness and locked engineer', () => {
- const flow = structuredClone(fixture['engineering.flow']); flow.lines[0] = { ...flow.lines[0], state: 'missing', missing: 2 }; flow.cost.replaces_blueprint = true; live.topics['engineering.flow'] = flow;
- showFlow(); expect(target.textContent).toContain('Falta 2'); expect(target.textContent).toContain('Cubierto con intercambio'); expect(target.textContent).toContain('Se sustituye'); expect(target.textContent).toContain('47 % listo'); expect(target.textContent).toContain('Sin verificar'); expect(target.textContent).toContain('Professor Palin'); expect(target.textContent).toContain('G5'); expect(target.querySelector('[data-testid="cost-experimental"]')?.textContent).toContain('1'); expect(target.querySelector('[data-testid="flow-next-step"]')?.textContent).not.toContain('unlock-professor-palin');
+test('flow renders material statuses per grade experimental totals readiness and locked engineer', async () => {
+ live.topics['engineering.flow'] = { ...flowTopic(), replaces_blueprint: true };
+ const lines = (restPages.flow_lines.items as { key: string }[]).map(row => row.key === 'carbon' ? { ...row, state: 'missing', missing: 2 } : row);
+ await showFlow({ override: (resource, section) => resource === 'flow' && section === 'lines' ? json(page('lines', lines)) : undefined });
+ expect(target.textContent).toContain('Falta 2'); expect(target.textContent).toContain('Cubierto con intercambio'); expect(target.textContent).toContain('Se sustituye');
+ expect(target.textContent).toContain('Sin verificar'); expect(target.textContent).toContain('Professor Palin'); expect(target.textContent).toContain('G5');
+ expect(target.querySelector('[data-testid="cost-experimental"]')?.textContent).toContain('1');
+ expect(target.querySelector('[data-testid="cost-grade-5"]')?.textContent).toContain('4');
+ expect(target.querySelector('[data-testid="flow-next-step"]')?.textContent).not.toContain('unlock-professor-palin');
+});
+test('ready percent states that it refers to materials', async () => {
+ await showFlow(); expect(target.querySelector('[data-testid="materials-percent"]')?.textContent).toBe('Materiales: 47 % listo');
+ setLocale('en'); flushSync(); expect(target.querySelector('[data-testid="materials-percent"]')?.textContent).toBe('Materials: 47 % ready');
 });
 test('flow defaults from config and resets only on slot changes', async () => {
- const flow = { ...structuredClone(fixture['engineering.flow']), request: null, status: 'idle' }; live.topics['engineering.flow'] = flow;
- vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ engineering_rolls: [2,3,4,5,6] })))); showFlow(); await settle();
- expect((target.querySelector('[data-testid="rolls-5"]') as HTMLInputElement).value).toBe('6'); change('rolls-5', '9'); change('target-grade', '3');
- live.topics['engineering.flow'] = { ...flow, as_of: 'later' }; flushSync(); expect((target.querySelector('[data-testid="rolls-5"]') as HTMLInputElement).value).toBe('9');
- live.topics['engineering.flow'] = { ...flow, slot: 'Other' }; flushSync(); expect((target.querySelector('[data-testid="rolls-5"]') as HTMLInputElement).value).toBe('6'); expect((target.querySelector('[data-testid="target-grade"]') as HTMLSelectElement).value).toBe('5');
+ live.topics['engineering.flow'] = { ...flowTopic(), request: null, status: 'idle' };
+ await showFlow({ config: { engineering_rolls: [2,3,4,5,6] } });
+ expect((input('rolls-5') as HTMLInputElement).value).toBe('6'); change('rolls-5', '9');
+ live.topics['engineering.flow'] = { ...flowTopic(), request: null, status: 'idle', as_of: 'later' }; flushSync(); await settle(); expect((input('rolls-5') as HTMLInputElement).value).toBe('9');
+ change('target-grade', '3');
+ live.topics['engineering.flow'] = { ...flowTopic(), request: null, status: 'idle', slot: 'Other' }; flushSync(); await settle();
+ expect((input('rolls-5') as HTMLInputElement).value).toBe('6'); expect((input('target-grade') as HTMLSelectElement).value).toBe('5');
 });
 test('late config never overwrites an edited draft and rejects invalid rolls', async () => {
- live.topics['engineering.flow'] = { ...fixture['engineering.flow'], request: null };
- let finish!: (response: Response) => void; vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => { finish = resolve; }))); showFlow(); change('rolls-1', '7'); finish(new Response(JSON.stringify({ engineering_rolls: [2,2,2,2,2] }))); await settle(); expect((target.querySelector('[data-testid="rolls-1"]') as HTMLInputElement).value).toBe('7'); change('rolls-1', '11'); expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(true);
+ live.topics['engineering.flow'] = { ...flowTopic(), request: null };
+ let finish!: (response: Response) => void;
+ await showFlow({ config: () => new Promise<Response>(resolve => { finish = resolve; }) });
+ change('rolls-1', '7'); finish(json({ engineering_rolls: [2,2,2,2,2] })); await settle();
+ expect((input('rolls-1') as HTMLInputElement).value).toBe('7'); change('rolls-1', '11'); expect(button('preview').disabled).toBe(true);
 });
-test('flow supports null slot no data missing grades pending names and action errors', async () => {
- live.topics['engineering.flow'] = { ...fixture['engineering.flow'], slot: null, status: 'idle' }; showFlow(); expect(target.querySelector('[data-testid="preview"]')).toBeNull();
- live.topics['engineering.flow'] = { ...fixture['engineering.flow'], status: 'no_data', cost: null }; flushSync(); expect(target.textContent).toContain('Sin datos');
- live.topics['engineering.flow'] = { ...fixture['engineering.flow'], slot: 'Other', options: { blueprints: ['unknown'], experimentals: ['unknown'] }, request: null, cost: { ...fixture['engineering.flow'].cost, missing_grades: [4] } }; flushSync(); expect(target.textContent).toContain('Traducción pendiente');
- vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); })); click('preview'); await settle(); expect(target.querySelector('[role="alert"]')?.textContent).toContain('No se pudo');
+test('flow without slot offers nothing and requests no pages', async () => {
+ live.topics['engineering.flow'] = { ...flowTopic(), slot: null, status: 'idle' }; await showFlow();
+ expect(target.querySelector('[data-testid="preview"]')).toBeNull(); expect(restCalls('flow')).toHaveLength(0);
 });
-
+test('flow visibility follows the open slot, not the calculation status', async () => {
+ live.topics['engineering.flow'] = { ...flowTopic(), status: 'idle', request: null }; await showFlow();
+ expect(target.querySelector('[data-testid="preview"]')).not.toBeNull();
+});
+test('no data without blockers is plain no data', async () => {
+ live.topics['engineering.flow'] = { ...flowTopic(), status: 'no_data', blockers: [] }; await showFlow();
+ expect(target.textContent).toContain('Sin datos'); expect(target.querySelector('[data-testid="flow-blockers"]')).toBeNull();
+});
+test('blocked flow shows the localized reason instead of plain no data', async () => {
+ live.topics['engineering.flow'] = { ...flowTopic(), status: 'no_data', blockers: ['ambiguous_recipe', 'base_required'] }; await showFlow();
+ const reasons = target.querySelector('[data-testid="flow-blockers"]')!.textContent!;
+ expect(reasons).toContain('Hay varias recetas posibles'); expect(reasons).toContain('base previa'); expect(reasons).not.toContain('ambiguous_recipe');
+ expect(target.querySelector('[data-testid="pin-goal"]')).toBeNull();
+});
+test('missing grade recipes remain visible with their concrete grades', async () => {
+ live.topics['engineering.flow'] = { ...flowTopic(), blockers: [{ missing_recipe: { grade: 2 } }, { missing_recipe: { grade: 4 } }] }; await showFlow();
+ const reasons = target.querySelector('[data-testid="flow-blockers"]')!.textContent!; expect(reasons).toContain('Falta la receta de G2'); expect(reasons).toContain('Falta la receta de G4');
+ expect(target.querySelector('[data-material="carbon"]')).not.toBeNull();
+});
+test('materials ready with unknown Merc Coins balance is not completable and shows the coins separately', async () => {
+ live.topics['engineering.flow'] = { ...flowTopic(), materials_ready: true, percent: 100, merc_coins: { need: 30, have: null, missing: null } };
+ const grades = (restPages.flow_grades.items as { grade: number }[]).map(row => row.grade === 5 ? { ...row, merc_coins: 30 } : row);
+ await showFlow({ override: (resource, section) => resource === 'flow' && section === 'grades' ? json(page('grades', grades)) : undefined });
+ expect(target.querySelector('[data-testid="merc-coins"]')?.textContent).toContain('Merc Coins necesarias: 30'); expect(target.querySelector('[data-testid="merc-coins"]')?.textContent).toContain('saldo sin datos');
+ expect(target.querySelector('[data-testid="merc-not-confirmed"]')?.textContent).toContain('no se puede marcar como completable');
+ expect(target.querySelector('[data-testid="cost-grade-5"]')?.textContent).toContain('Merc Coins: 30');
+ expect(target.textContent).not.toContain('Ya puedes completarlo'); expect(target.textContent).not.toContain('saldo: 0');
+});
+test('known Merc Coins balance is shown and no warning is raised', async () => {
+ live.topics['engineering.flow'] = { ...flowTopic(), materials_ready: true, merc_coins: { need: 30, have: 50, missing: 0 } }; await showFlow();
+ expect(target.querySelector('[data-testid="merc-coins"]')?.textContent).toContain('saldo: 50'); expect(target.querySelector('[data-testid="merc-not-confirmed"]')).toBeNull();
+});
+test('experimental Merc Coins cost is listed apart from material costs', async () => {
+ const costs = [...restPages.flow_costs.items, { grade: null, kind: 'merc_coins', count: 12 }];
+ await showFlow({ override: (resource, section) => resource === 'flow' && section === 'costs' ? json(page('costs', costs)) : undefined });
+ expect(target.querySelector('[data-testid="cost-experimental"]')?.textContent).toContain('Merc Coins: 12');
+});
+test('base-only recipes do not offer grades below their first grade', async () => {
+ live.topics['engineering.flow'] = { ...flowTopic(), request: null };
+ await showFlow({ override: blueprintRows([{ key: 'engine_dirty', available: true, reason: null, grades: [4, 5] }]) });
+ expect(Array.from((input('target-grade') as HTMLSelectElement).options).map(option => option.textContent)).toEqual(['G4', 'G5']);
+ expect(target.querySelector('[data-testid="rolls-1"]')).toBeNull(); expect(target.querySelector('[data-testid="rolls-3"]')).toBeNull();
+ expect(target.querySelector('[data-testid="rolls-4"]')).not.toBeNull(); expect((input('target-grade') as HTMLSelectElement).value).toBe('5');
+ click('preview'); await settle(); expect(JSON.parse(String(actionBody('preview'))).grade).toBe(5);
+});
+test('without grade five the highest applicable grade is the default', async () => {
+ live.topics['engineering.flow'] = { ...flowTopic(), request: null };
+ await showFlow({ override: blueprintRows([{ key: 'engine_dirty', available: true, reason: null, grades: [2, 3, 4] }]) });
+ expect((input('target-grade') as HTMLSelectElement).value).toBe('4');
+});
+test.each([['missing_base_mapping', 'No se sabe qué base previa'], ['ambiguous_recipe', 'varias recetas posibles']])('unavailable blueprint (%s) blocks preview and states the reason', async (reason, text) => {
+ live.topics['engineering.flow'] = { ...flowTopic(), request: null };
+ await showFlow({ override: blueprintRows([{ key: 'engine_dirty', available: false, reason, grades: [] }]) });
+ const option = (input('blueprint') as HTMLSelectElement).options[0];
+ expect(option.disabled).toBe(true); expect(option.textContent).toContain(text);
+ expect(button('preview').disabled).toBe(true); expect(target.querySelector('[data-testid="blueprint-blocked"]')?.textContent).toContain(text);
+ click('preview'); await settle(); expect(actionCalls('preview')).toHaveLength(0);
+});
+test('a blueprint that cannot be applied is never the default choice', async () => {
+ live.topics['engineering.flow'] = { ...flowTopic(), request: null };
+ await showFlow({ override: blueprintRows([{ key: 'broken', available: false, reason: 'base_required', grades: [] }, { key: 'engine_dirty', available: true, reason: null, grades: [1, 5] }]) });
+ expect((input('blueprint') as HTMLSelectElement).value).toBe('engine_dirty');
+});
+test('flow pages of two revisions never mix and the old slot rows disappear at once', async () => {
+ await showFlow(); expect(target.querySelector('[data-material="carbon"]')).not.toBeNull();
+ const next = [{ ...(restPages.flow_lines.items[0] as object), key: 'newmaterial', name_en: 'New Material' }];
+ restFetch({ override: (resource, section, query) => resource === 'flow' && section === 'lines' && query.get('revision') === '22' ? json(page('lines', next, 22)) : undefined });
+ live.topics['engineering.flow'] = { ...flowTopic(), revision: 22 }; flushSync();
+ expect(target.querySelector('[data-material="carbon"]')).toBeNull(); await settle();
+ expect(target.querySelector('[data-material="newmaterial"]')).not.toBeNull(); expect(target.querySelector('[data-material="carbon"]')).toBeNull();
+});
+test('a slot change discards the previous rows before the new ones arrive', async () => {
+ await showFlow(); restFetch({ override: () => new Promise<Response>(() => {}) as unknown as Response });
+ live.topics['engineering.flow'] = { ...flowTopic(), slot: 'Other' }; flushSync();
+ expect(target.querySelector('[data-material="carbon"]')).toBeNull(); expect(target.textContent).toContain('Cargando');
+});
+test('flow as_of-only updates do not restart the pages and unmount cancels them', async () => {
+ await showFlow(); vi.mocked(fetch).mockClear();
+ live.topics['engineering.flow'] = { ...flowTopic(), as_of: 'later' }; flushSync(); await settle(); expect(fetch).not.toHaveBeenCalled();
+ restFetch({ override: () => new Promise<Response>(() => {}) as unknown as Response });
+ live.topics['engineering.flow'] = { ...flowTopic(), revision: 23 }; flushSync();
+ const signals = restCalls('flow').map(call => call[1]!.signal!); expect(signals).toHaveLength(5);
+ await unmount(mounted!); mounted = undefined; expect(signals.every(signal => signal.aborted)).toBe(true);
+});
+test('flow pages failure and 409 are recoverable states without polling', async () => {
+ await showFlow({ override: () => new Response('', { status: 500 }) }); expect(target.textContent).toContain('No se pudieron cargar los datos'); expect(restCalls('flow')).toHaveLength(5);
+ await unmount(mounted!); mounted = undefined;
+ await showFlow({ override: () => new Response('', { status: 409 }) }); expect(target.textContent).toContain('Esperando el cálculo actualizado'); await settle(); expect(restCalls('flow')).toHaveLength(5);
+ restFetch(); live.topics['engineering.flow'] = { ...flowTopic(), revision: 22 }; flushSync(); await settle(); expect(target.querySelector('[data-material="carbon"]')).not.toBeNull();
+});
+test('flow supports pending names and action errors', async () => {
+ live.topics['engineering.flow'] = { ...flowTopic(), slot: 'Other', request: null };
+ await showFlow({ override: (resource, section) => resource === 'flow' && section === 'blueprints' ? json(page('blueprints', [{ key: 'unknown', available: true, reason: null, grades: [5] }])) : resource === 'flow' && section === 'experimentals' ? json(page('experimentals', [{ key: 'unknown' }])) : undefined });
+ expect(target.textContent).toContain('Traducción pendiente');
+ restFetch({ action: () => { throw new Error('offline'); } }); click('preview'); await settle(); expect(target.querySelector('[role="alert"]')?.textContent).toContain('No se pudo');
+});
 test('flow preview uses edited grade rolls and null experimental', async () => {
- vi.stubGlobal('fetch', vi.fn(async () => new Response('{}'))); showFlow(); change('experimental', ''); change('target-grade', '3'); change('rolls-3', '7'); click('preview'); await settle(); expect(actionBody('preview')).toBe(JSON.stringify({ blueprint: 'engine_dirty', experimental: null, grade: 3, rolls: [1,1,7,1,4] }));
+ await showFlow(); change('experimental', ''); change('target-grade', '3'); change('rolls-3', '7'); click('preview'); await settle(); expect(actionBody('preview')).toBe(JSON.stringify({ blueprint: 'engine_dirty', experimental: null, grade: 3, rolls: [1,1,7,1,4] }));
 });
-test('commander ship and close changes reset flow draft but inventory does not', () => {
- live.topics['engineering.flow'] = { ...fixture['engineering.flow'], request: null }; showFlow(); change('rolls-1', '8'); live.topics['engineering.inventory'] = { ...fixture['engineering.inventory'], as_of: 'later' }; flushSync(); expect((target.querySelector('[data-testid="rolls-1"]') as HTMLInputElement).value).toBe('8');
- live.topics['core.cmdr'] = { name: 'New' }; flushSync(); expect((target.querySelector('[data-testid="rolls-1"]') as HTMLInputElement).value).toBe('1'); change('rolls-1', '8'); live.topics['engineering.ship'] = { ...fixture['engineering.ship'], ship_id: 8 }; flushSync(); expect((target.querySelector('[data-testid="rolls-1"]') as HTMLInputElement).value).toBe('1');
- live.topics['engineering.flow'] = { ...fixture['engineering.flow'], slot: null }; flushSync(); live.topics['engineering.flow'] = { ...fixture['engineering.flow'], request: null }; flushSync(); expect((target.querySelector('[data-testid="rolls-1"]') as HTMLInputElement).value).toBe('1');
+test('commander ship and close changes reset flow draft but inventory does not', async () => {
+ live.topics['engineering.flow'] = { ...flowTopic(), request: null }; await showFlow(); change('rolls-1', '8'); live.topics['engineering.inventory'] = { ...fixture['engineering.inventory'], as_of: 'later' }; flushSync(); expect((input('rolls-1') as HTMLInputElement).value).toBe('8');
+ live.topics['core.cmdr'] = { name: 'New' }; flushSync(); await settle(); expect((input('rolls-1') as HTMLInputElement).value).toBe('1'); change('rolls-1', '8'); live.topics['engineering.ship'] = { ...fixture['engineering.ship'], ship_id: 8 }; flushSync(); await settle(); expect((input('rolls-1') as HTMLInputElement).value).toBe('1');
+ live.topics['engineering.flow'] = { ...flowTopic(), slot: null }; flushSync(); live.topics['engineering.flow'] = { ...flowTopic(), request: null }; flushSync(); await settle(); expect((input('rolls-1') as HTMLInputElement).value).toBe('1');
 });
 test('pending preview disables duplicate posts and obsolete failures cannot cross modules', async () => {
- showFlow(); let reject!: (error: Error) => void;
- vi.stubGlobal('fetch', vi.fn(() => new Promise((_resolve, fail) => { reject = fail; }))); click('preview'); click('preview'); expect(fetch).toHaveBeenCalledTimes(1);
- live.topics['engineering.flow'] = { ...fixture['engineering.flow'], slot: 'Other' }; flushSync(); reject(new Error('offline')); await settle(); expect(target.querySelector('[role="alert"]')).toBeNull(); expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(false);
+ await showFlow(); let reject!: (error: Error) => void;
+ restFetch({ action: () => new Promise<Response>((_resolve, fail) => { reject = fail; }) }); click('preview'); click('preview'); expect(actionCalls('preview')).toHaveLength(1);
+ live.topics['engineering.flow'] = { ...flowTopic(), slot: 'Other' }; flushSync(); await settle(); reject(new Error('offline')); await settle(); expect(target.querySelector('[role="alert"]')).toBeNull(); expect(button('preview').disabled).toBe(false);
 });
 test('edited draft cannot pin old preview while awaiting matching websocket request', async () => {
- vi.stubGlobal('fetch', vi.fn(async () => new Response('{}'))); showFlow(); change('rolls-5', '9'); expect(target.querySelector('[data-testid="pin-goal"]')).toBeNull(); expect(target.querySelector('[data-material="carbon"]')).toBeNull(); click('preview'); await settle(); expect(target.querySelector('[data-testid="pin-goal"]')).toBeNull(); expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(true);
- live.topics['engineering.flow'] = { ...fixture['engineering.flow'], request: { ...fixture['engineering.flow'].request, rolls: [1,1,1,1,9] } }; flushSync(); expect((target.querySelector('[data-testid="pin-goal"]') as HTMLButtonElement).disabled).toBe(false); click('pin-goal'); await settle(); expect(actionBody('pin_goal')).toBe('{}');
+ await showFlow(); change('rolls-5', '9'); expect(target.querySelector('[data-testid="pin-goal"]')).toBeNull(); expect(target.querySelector('[data-material="carbon"]')).toBeNull(); click('preview'); await settle(); expect(target.querySelector('[data-testid="pin-goal"]')).toBeNull(); expect(button('preview').disabled).toBe(true);
+ live.topics['engineering.flow'] = { ...flowTopic(), request: { ...fixture['engineering.flow'].request, rolls: [1,1,1,1,9] } }; flushSync(); await settle(); expect(button('pin-goal').disabled).toBe(false); click('pin-goal'); await settle(); expect(actionBody('pin_goal')).toBe('{}');
 });
 test('typing rolls protects draft from config before blur', async () => {
- live.topics['engineering.flow'] = { ...fixture['engineering.flow'], request: null }; let finish!: (response: Response) => void; vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => { finish = resolve; }))); showFlow(); const input = target.querySelector('[data-testid="rolls-5"]') as HTMLInputElement; input.value = '8'; input.dispatchEvent(new Event('input', { bubbles: true })); flushSync(); finish(new Response(JSON.stringify({ engineering_rolls: [2,2,2,2,2] }))); await settle(); expect(input.value).toBe('8');
+ live.topics['engineering.flow'] = { ...flowTopic(), request: null }; let finish!: (response: Response) => void;
+ await showFlow({ config: () => new Promise<Response>(resolve => { finish = resolve; }) }); const field = input('rolls-5') as HTMLInputElement; field.value = '8'; field.dispatchEvent(new Event('input', { bubbles: true })); flushSync(); finish(json({ engineering_rolls: [2,2,2,2,2] })); await settle(); expect(field.value).toBe('8');
 });
 test('ship selection waits for preview request and flow waits for selected slot confirmation', async () => {
- showFlow(); const shipTarget = document.createElement('div'); document.body.append(shipTarget); const ship = mount(ShipPanel, { target: shipTarget }); flushSync();
- let finish!: (response: Response) => void; vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => { finish = resolve; })));
+ await showFlow(); const shipTarget = document.createElement('div'); document.body.append(shipTarget); const ship = mount(ShipPanel, { target: shipTarget }); flushSync();
+ let finish!: (response: Response) => void; restFetch({ action: () => new Promise<Response>(resolve => { finish = resolve; }) });
  try {
-  click('preview'); const select = shipTarget.querySelector('[data-testid="module-FrameShiftDrive"]') as HTMLButtonElement; expect(select.disabled).toBe(true); select.click(); expect(fetch).toHaveBeenCalledTimes(1);
-  finish(new Response('{}')); await settle(); expect(select.disabled).toBe(false); select.click(); flushSync(); finish(new Response('{}')); await settle(); expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(true);
-  live.topics['engineering.flow'] = { ...fixture['engineering.flow'], slot: 'FrameShiftDrive' }; flushSync(); expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(false);
+  click('preview'); const select = shipTarget.querySelector('[data-testid="module-FrameShiftDrive"]') as HTMLButtonElement; expect(select.disabled).toBe(true); select.click(); expect(actionCalls('preview')).toHaveLength(1); expect(actionCalls('select_module')).toHaveLength(0);
+  finish(new Response('{}')); await settle(); expect(select.disabled).toBe(false); select.click(); flushSync(); finish(new Response('{}')); await settle(); expect(button('preview').disabled).toBe(true);
+  live.topics['engineering.flow'] = { ...flowTopic(), slot: 'FrameShiftDrive' }; flushSync(); await settle(); expect(button('preview').disabled).toBe(false);
  } finally { await unmount(ship); shipTarget.remove(); }
 });
-test('missing grade recipes remain visible with their concrete grades', () => {
- live.topics['engineering.flow'] = { ...fixture['engineering.flow'], cost: { ...fixture['engineering.flow'].cost, missing_grades: [2,4] } }; showFlow(); expect(target.textContent).toContain('Sin datos: G2, G4');
-});
 test('invalid saved rolls use factory defaults and a missing request starts at grade five', async () => {
- live.topics['engineering.flow'] = { ...fixture['engineering.flow'], request: null }; vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ engineering_rolls: [0,1,1,1,11] })))); showFlow(); await settle(); expect((target.querySelector('[data-testid="rolls-5"]') as HTMLInputElement).value).toBe('4'); expect((target.querySelector('[data-testid="target-grade"]') as HTMLSelectElement).value).toBe('5');
+ live.topics['engineering.flow'] = { ...flowTopic(), request: null }; await showFlow({ config: { engineering_rolls: [0,1,1,1,11] } }); expect((input('rolls-5') as HTMLInputElement).value).toBe('4'); expect((input('target-grade') as HTMLSelectElement).value).toBe('5');
 });
-test('flow handles null experimental cost with no selected experimental or an already installed effect', async () => {
+test('flow handles no experimental rows with no selected experimental or an already installed effect', async () => {
+ const costs = (restPages.flow_costs.items as { grade: number | null }[]).filter(row => row.grade !== null);
  for (const current of [null, { blueprint: 'engine_dirty', level: 3, quality: 1, experimental: 'special_engine_overloaded' }]) {
-  live.topics['engineering.flow'] = { ...fixture['engineering.flow'], current, request: { ...fixture['engineering.flow'].request, experimental: current?.experimental ?? null }, cost: { ...fixture['engineering.flow'].cost, experimental: null } };
-  showFlow();
+  live.topics['engineering.flow'] = { ...flowTopic(), current, request: { ...fixture['engineering.flow'].request, experimental: current?.experimental ?? null } };
+  await showFlow({ override: (resource, section) => resource === 'flow' && section === 'costs' ? json(page('costs', costs)) : undefined });
   expect(target.querySelector('[data-testid="cost-experimental"]')).not.toBeNull();
   expect(target.querySelector('[data-material="carbon"]')).not.toBeNull();
   await unmount(mounted!); mounted = undefined;
  }
 });
 test('reselecting the current module cannot reset a confirmed preview', async () => {
- showFlow(); const shipTarget = document.createElement('div'); document.body.append(shipTarget); const ship = mount(ShipPanel, { target: shipTarget }); flushSync();
- vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
+ await showFlow(); const shipTarget = document.createElement('div'); document.body.append(shipTarget); const ship = mount(ShipPanel, { target: shipTarget }); flushSync();
+ restFetch({ action: () => new Promise<Response>(() => {}) });
  try {
   const selected = shipTarget.querySelector('[data-testid="module-MainEngines"]') as HTMLButtonElement;
   expect(selected.disabled).toBe(true); selected.click(); await settle();
-  expect(fetch).not.toHaveBeenCalled();
-  expect((target.querySelector('[data-testid="pin-goal"]') as HTMLButtonElement).disabled).toBe(false);
+  expect(actionCalls('select_module')).toHaveLength(0);
+  expect(button('pin-goal').disabled).toBe(false);
  } finally { await unmount(ship); shipTarget.remove(); }
 });
 test('acknowledged preview can be recalculated after another client updates the same slot', async () => {
- showFlow(); let finish!: (response: Response) => void;
- vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => { finish = resolve; })));
+ await showFlow(); let finish!: (response: Response) => void;
+ restFetch({ action: () => new Promise<Response>(resolve => { finish = resolve; }) });
  change('rolls-5', '8'); click('preview'); finish(new Response('{}')); await settle();
- live.topics['engineering.flow'] = { ...fixture['engineering.flow'], request: { ...fixture['engineering.flow'].request, rolls: [1,1,1,1,8] } }; flushSync();
- expect((target.querySelector('[data-testid="pin-goal"]') as HTMLButtonElement).disabled).toBe(false);
- live.topics['engineering.flow'] = { ...fixture['engineering.flow'], request: { ...fixture['engineering.flow'].request, rolls: [1,1,1,1,6] } }; flushSync();
- expect((target.querySelector('[data-testid="rolls-5"]') as HTMLInputElement).value).toBe('8');
- expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(false);
- click('preview'); finish(new Response('{}')); await settle(); expect(fetch).toHaveBeenCalledTimes(2);
+ live.topics['engineering.flow'] = { ...flowTopic(), request: { ...fixture['engineering.flow'].request, rolls: [1,1,1,1,8] } }; flushSync(); await settle();
+ expect(button('pin-goal').disabled).toBe(false);
+ live.topics['engineering.flow'] = { ...flowTopic(), request: { ...fixture['engineering.flow'].request, rolls: [1,1,1,1,6] } }; flushSync(); await settle();
+ expect((input('rolls-5') as HTMLInputElement).value).toBe('8');
+ expect(button('preview').disabled).toBe(false);
+ click('preview'); finish(new Response('{}')); await settle(); expect(actionCalls('preview')).toHaveLength(2);
 });
 test.each(['commander', 'ship'])('selection wait is invalidated after %s changes and ignores obsolete failure', async (changed) => {
- showFlow(); const shipTarget = document.createElement('div'); document.body.append(shipTarget); const ship = mount(ShipPanel, { target: shipTarget }); flushSync();
- const contextChange = () => {
+ await showFlow(); const shipTarget = document.createElement('div'); document.body.append(shipTarget); const ship = mount(ShipPanel, { target: shipTarget }); flushSync();
+ const contextChange = async () => {
   if (changed === 'commander') live.topics['core.cmdr'] = { name: 'Other' };
   else live.topics['engineering.ship'] = { ...fixture['engineering.ship'], ship_id: 9 };
-  live.topics['engineering.flow'] = structuredClone(fixture['engineering.flow']); flushSync();
+  live.topics['engineering.flow'] = flowTopic(); flushSync(); await settle();
  };
  try {
-  vi.stubGlobal('fetch', vi.fn(async () => new Response('{}')));
+  restFetch();
   const select = shipTarget.querySelector('[data-testid="module-FrameShiftDrive"]') as HTMLButtonElement;
-  select.click(); await settle(); expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(true);
-  contextChange(); expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(false);
+  select.click(); await settle(); expect(button('preview').disabled).toBe(true);
+  await contextChange(); expect(button('preview').disabled).toBe(false);
   // La primera selección no se confirma por WS; el segundo POST guarda esa espera anterior.
   select.click(); await settle();
-  let reject!: (error: Error) => void; vi.stubGlobal('fetch', vi.fn(() => new Promise((_resolve, fail) => { reject = fail; })));
+  let reject!: (error: Error) => void; restFetch({ action: () => new Promise<Response>((_resolve, fail) => { reject = fail; }) });
   select.click(); flushSync();
   if (changed === 'commander') live.topics['core.cmdr'] = { name: 'Third' };
   else live.topics['engineering.ship'] = { ...fixture['engineering.ship'], ship_id: 10 };
-  flushSync(); expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(true);
+  flushSync(); await settle(); expect(button('preview').disabled).toBe(true);
   reject(new Error('obsolete')); await settle();
-  expect((target.querySelector('[data-testid="preview"]') as HTMLButtonElement).disabled).toBe(false);
-  expect((target.querySelector('[data-testid="close-flow"]') as HTMLButtonElement).disabled).toBe(false);
-  expect((target.querySelector('[data-testid="pin-goal"]') as HTMLButtonElement).disabled).toBe(false);
+  expect(button('preview').disabled).toBe(false);
+  expect(button('close-flow').disabled).toBe(false);
+  expect(button('pin-goal').disabled).toBe(false);
   expect(shipTarget.querySelector('[role="alert"]')).toBeNull();
  } finally { await unmount(ship); shipTarget.remove(); }
 });
@@ -376,6 +556,7 @@ import EngineeringAlerts from '../src/modules/engineering/EngineeringAlerts.svel
 function goalFetch() {
  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
   if (url.startsWith('/api/actions/')) return new Response('{}');
+  if (url.startsWith('/api/engineering/engineers?')) return json({ ...restPages.engineers_engineers, revision: Number(new URL(url, 'http://localhost').searchParams.get('revision')), section: 'engineers' });
   const query = new URL(url, 'http://localhost').searchParams;
   const section = query.get('section')!;
   return new Response(JSON.stringify({ ...fixture['engineering.pages'].goals, revision: Number(query.get('revision')), section, items: section === 'goals' ? fixture['engineering.pages'].goals.items : [{ key: 'iron', count: 7 }] }));
@@ -403,7 +584,7 @@ test('source disabled nodata loading and unknown states remain readable', () => 
  expect(target.querySelector('[data-trader="Raw"]')?.textContent).toContain('Sin datos'); expect(target.textContent).toContain('Servicios online desactivados'); expect(target.textContent).not.toContain('future-key'); expect(target.textContent).not.toContain('Future');
 });
 test('alerts resolve engineer names dismiss by id and localize failures', async () => {
- goalFetch(); panel(EngineeringAlerts); expect(target.textContent).toContain('Elvira Martuuk'); click('engineering-dismiss-0'); await settle();
+ goalFetch(); panel(EngineeringAlerts); await settle(); expect(target.textContent).toContain('Elvira Martuuk'); click('engineering-dismiss-0'); await settle();
  expect(fetch).toHaveBeenCalledWith('/api/actions/engineering.dismiss_alert', expect.objectContaining({body:JSON.stringify({id:'unlocked:300160'})}));
  vi.mocked(fetch).mockRejectedValue(new Error('secret')); click('engineering-dismiss-0'); await settle(); expect(target.textContent).toContain('No se pudo completar la acción'); expect(target.textContent).not.toContain('secret');
 });
@@ -455,9 +636,10 @@ test('shopping action and page failures are localized', async () => {
  goalFetch(); panel(ShoppingPanel); await settle(); vi.mocked(fetch).mockRejectedValue(new Error('private')); click('goal-remove-0'); await settle(); expect(target.textContent).toContain('No se pudo completar la acción'); expect(target.textContent).not.toContain('private');
  live.topics['engineering.goals']={...fixture['engineering.goals'],revision: 22}; flushSync(); await settle(); expect(target.textContent).toContain('No se pudieron cargar los datos'); expect(target.textContent).not.toContain('87 %');
 });
-test('all known engineering alert kinds resolve readable names and goals', () => {
+test('all known engineering alert kinds resolve readable names and goals', async () => {
+ goalFetch();
  live.topics['engineering.alerts']={alerts:[{id:'max',kind:'material_at_max',key:'iron',grade:1},{id:'invite',kind:'engineer_invited',engineer_id:300100},{id:'scarce',kind:'scarce_obtained',key:'iron'},{id:'goal',kind:'goal_completable',goal:fixture['engineering.pages'].goals.items[0].id,engineer:'Felicity Farseer'}]};
- panel(EngineeringAlerts); expect(target.textContent).toContain('Hierro al máximo'); expect(target.textContent).toContain('Invitación nueva de Felicity Farseer'); expect(target.textContent).toContain('Material escaso conseguido'); expect(target.textContent).toContain('G5'); expect(target.textContent).not.toContain('fsd_longrange');
+ panel(EngineeringAlerts); await settle(); expect(target.textContent).toContain('Hierro al máximo'); expect(target.textContent).toContain('Invitación nueva de Felicity Farseer'); expect(target.textContent).toContain('Material escaso conseguido'); expect(target.textContent).toContain('G5'); expect(target.textContent).not.toContain('fsd_longrange');
 });
 
 test('late shopping and dismiss errors cannot cross commanders or release the HTTP lock early', async () => {
@@ -470,4 +652,25 @@ test('late shopping and dismiss errors cannot cross commanders or release the HT
   fail(new Error('old commander')); await settle(); expect(target.textContent).not.toContain('No se pudo completar la acción');
   await unmount(mounted!); mounted=undefined; live.topics['core.cmdr']={name:'Synthetic'}; flushSync();
  }
+});
+test('goal with materials ready but unknown Merc Coins balance is not completable and states why', async () => {
+ const goal = fixture['engineering.pages'].goals.items[0];
+ vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+  const query = new URL(url, 'http://localhost').searchParams; const section = query.get('section')!;
+  const items = section === 'goals' ? [{ ...goal, completable: false, materials_ready: true, percent: 100, missing: {}, merc_coins: { need: 40, have: null, missing: null } }] : [];
+  return json({ revision: Number(query.get('revision')), section, cursor: 0, next_cursor: null, total: items.length, items });
+ }));
+ panel(ShoppingPanel); await settle();
+ expect(target.querySelector('[data-testid="merc-coins"]')?.textContent).toContain('Merc Coins necesarias: 40'); expect(target.querySelector('[data-testid="merc-coins"]')?.textContent).toContain('saldo sin datos');
+ expect(target.querySelector('[data-testid="goal-merc-not-confirmed"]')).not.toBeNull(); expect(target.textContent).not.toContain('Ya puedes completarlo'); expect(target.textContent).toContain('Materiales: 100 % listo');
+});
+test('goal with calculation blockers lists the localized reasons', async () => {
+ const goal = fixture['engineering.pages'].goals.items[0];
+ vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+  const query = new URL(url, 'http://localhost').searchParams; const section = query.get('section')!;
+  const items = section === 'goals' ? [{ ...goal, completable: false, blockers: [{ missing_recipe: { grade: 3 } }, 'base_required'] }] : [];
+  return json({ revision: Number(query.get('revision')), section, cursor: 0, next_cursor: null, total: items.length, items });
+ }));
+ panel(ShoppingPanel); await settle();
+ const reasons = target.querySelector('[data-testid="goal-blockers"]')!.textContent!; expect(reasons).toContain('Falta la receta de G3'); expect(reasons).toContain('base previa'); expect(reasons).not.toContain('base_required');
 });
