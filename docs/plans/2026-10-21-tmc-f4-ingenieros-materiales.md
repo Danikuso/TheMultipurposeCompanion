@@ -695,11 +695,11 @@ test('nearest trader shows distance and pad', /* "8,2 al", L */);
 
 ### Task 25: UI — disposición «Ingeniería», prioridad, Auto-companion y ajuste de tiradas
 
-**Files:** Modify `ui/src/shell/layouts.ts`, `ui/src/settings/Settings.svelte`, `locales/*/main.ftl`, `ui/tests/layouts.test.ts`; Create `ui/tests/settings-f4.test.ts`; Modify `crates/tmc-model/src/diagnostics.rs` (`UI_LAYOUTS` + `"engineering"`, `UI_SLOTS`).
+**Files:** Modify `ui/src/shell/layouts.ts`, `ui/src/settings/Settings.svelte`, `ui/tests/layouts.test.ts`; Create `ui/tests/settings-f4.test.ts`; Modify `crates/tmc-model/src/diagnostics.rs` (`UI_LAYOUTS` + `"engineering"`, `UI_SLOTS`).
 
 **Interfaces:** `layouts` + `{ id: 'engineering', titleKey: 'layout-engineering', icon: 'wrench', slots: [materials 2, engineers 1, eng-alerts 1, eng-ship 1, eng-flow 2 when flow.slot != null, shopping 2, trades 1, sources 1] }`; `AutoLayout`/`MANUAL` + `'engineering'`; `autoLayout`: manual > `combat` Active/Urgent > `mining` Active > **`engineering` Active/Urgent** > `missions` > `trade` > exploración; `nextPin` sin cambios; el cambio automático solo con `prefs.autoCompanion` (lógica existente de `App.svelte`, sin tocarla salvo el tipo). Ajustes: tiradas G1–G5 (1–10) → `PUT /api/config` JSON con `engineering_rolls`; error revierte.
 
-- [ ] **Step 1: Tests:**
+- [x] **Step 1: Tests:**
 
 ```ts
 test('engineering beats missions', /* engineering active + missions active → 'engineering' */);
@@ -708,11 +708,12 @@ test('combat beats engineering', /* combat urgent + engineering active → 'comb
 test('engineering beats trade and exploration', /* → 'engineering' */);
 test('auto companion OFF keeps layout when engineering becomes active', /* OFF + engineering active → disposición sin cambio */);
 test('engineering slots and flow visibility', /* idle sin slot → oculto; idle con slot elegido → visible para preparar preview; ok con slot → visible */);
-test('settings put rolls and reverts on 400', /* [1,1,1,1,11] → 400 → valor anterior */);
+test('settings put rolls and reverts on 400', /* 9 válido → 400 → valor anterior; 11 inválido se rechaza antes de PUT */);
 ```
 
-- [ ] **Step 2–4:** FAIL → implementar → PASS; checks. **Step 5: Commit** `feat(ui): disposición de ingeniería con prioridad, Auto-companion y tiradas`
+- [x] **Step 2–4:** FAIL → implementar → PASS; checks. **Step 5: Commit** `feat(ui): disposición de ingeniería con prioridad, Auto-companion y tiradas`
 
+**Verificación (2026-10-22, `4c70ecb`):** TDD y dos rondas de corrección: primera edición hacia defaults tras GET, y tema/idioma confirmado con otro borrador numérico pendiente (200/400/respuestas antiguas). Ambas revisiones aprobadas. `npm.cmd --prefix ui run check`: 0 errores/avisos; `npm.cmd --prefix ui test -- --run`: **343 PASS**; build PASS. Rust: fmt/clippy PASS; `cargo test --workspace -- --test-threads=1`: **1.356 PASS / 2 ignoradas previas**, TMP/TEMP local y sockets fuera del sandbox. QA sintético en Edge a 2560/800: prioridades, Auto OFF/ON, selección manual, flujo idle seleccionado, guardado/rollback/límite de tiradas; sin errores ni desbordamiento. Claves Fluent ya existentes, sin duplicarlas.
 ### Task 26: Fixtures sintéticos y pruebas de extremo a extremo
 
 **Enmienda de Task 20:** probar REST paginado contra el actor real, invalidación al cambiar inventario/comandante, dos clientes y páginas bajo 16 KiB, además de la actualización de UI sin mezclar revisiones. Contrato Rust→UI incorpora páginas de objetivos y taquilla.

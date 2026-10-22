@@ -2,18 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-22 12:24 (Europe/Madrid) · Codex
-- **Fase actual:** F4 — Ingenieros y materiales (🔄 ejecución: Tasks 0–19 registradas; Task 20 completada; Tasks 21–24 completadas; Task 25 en curso). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Última actualización:** 2026-10-22 12:35 (Europe/Madrid) · Codex
+- **Fase actual:** F4 — Ingenieros y materiales (🔄 ejecución: Tasks 0–19 registradas; Task 20 completada; Tasks 21–24 completadas; Task 25 completada; Task 26 en curso). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
-- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 25/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
+- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 26/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** Task 25 🔄 en curso — ronda 2 de calidad; investigación web de catálogos autorizada por el propietario
-- **Último paso completado:** Task 24 cerrada en `65784b6`: ambas revisiones aprobadas; 16 tests nuevos, 309 UI/1.356 Rust PASS (2 ignoradas previas), fmt/clippy/check/build y QA de 19 páginas/3 acciones a 2560/800 PASS.
-- **Siguiente acción:** corregir aplicación de tema/idioma confirmado cuando existe otro draft sin enviar; repetir revisión de calidad y QA. Spec aprobada tras corregir primera edición hacia defaults; UI338 PASS y Rust1.356 PASS/2 ignoradas previas en base actual. En paralelo solo lectura: buscar fuentes web de recetas e ingenieros por orden del propietario (wikis, APIs y repositorios), sin incorporar datos de licencia incompatible.
-
+- **Tarea:** Task 26 🔄 en curso — Step 1: inspeccionar fixtures/e2e y escribir los tests que faltan.
+- **Último paso completado:** Task 25 cerrada en `4c70ecb`: ambas revisiones aprobadas; UI343/Rust1.356 PASS (2 ignoradas previas), fmt/clippy/check/build y QA visual a 2560/800 PASS.
+- **Siguiente acción:** TDD de fixtures y e2e de Task 26. Continúa la investigación web de catálogos autorizada por el propietario; todavía no se han importado recetas ni ingenieros de nuevas fuentes.
 ## Tareas de F4
 
 Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
@@ -45,8 +44,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 22 | UI — «Ingenieros» | ✅ hecha | 88836b7 | 16 tests nuevos; 274 UI/1.356 Rust PASS; ambas revisiones y QA visual |
 | 23 | UI — «Mi nave» e «Ingenierizar un módulo» | ✅ hecha | d644a6d | 19 tests nuevos; 293 UI/1.356 Rust PASS; ambas revisiones y QA visual |
 | 24 | UI — «Lista de la compra», «Intercambios», «Dónde conseguirlo» y avisos | ✅ hecha | 65784b6 | 16 tests nuevos; 309 UI/1.356 Rust PASS; ambas revisiones y QA visual |
-| 25 | UI — disposición «Ingeniería», prioridad, Auto-companion y tiradas | 🔄 en curso | — | Step 1: TDD; flujo visible por slot seleccionado |
-| 26 | Fixtures sintéticos y pruebas de extremo a extremo | ⬜ pendiente | — | |
+| 25 | UI — disposición «Ingeniería», prioridad, Auto-companion y tiradas | ✅ hecha | 4c70ecb | 343 UI/1.356 Rust PASS; ambas revisiones y QA visual |
+| 26 | Fixtures sintéticos y pruebas de extremo a extremo | 🔄 en curso | — | Step 1: TDD |
 | 27 | `tmc-headless eval` — conciliación del inventario | ⬜ pendiente | — | |
 | 28 | Avisos de terceros, consumo, verificación de los 10 criterios y cierre | ⬜ pendiente | — | |
 
@@ -72,7 +71,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | F1 | Navegación, exploración, exobiología | ✅ completada y fusionada (b96fecf) |
 | F2 | Cazarrecompensas/combate (incl. AX), minería | ✅ completada y fusionada (e069a14) |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ✅ completada y fusionada (6dc09d9) |
-| F4 | Ingenieros y materiales | 🔄 ejecución; Task 20 completada; Tasks 21–24 completadas; Task 25 en curso |
+| F4 | Ingenieros y materiales | 🔄 ejecución; Task 20 completada; Tasks 21–24 completadas; Task 25 completada; Task 26 en curso |
 | F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | ⬜ |
 | F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | ⬜ |
 | F7 | Voz (KokoroTTS; alemán sin voz) | ⬜ |
