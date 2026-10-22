@@ -396,3 +396,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+### EDDiscovery / EliteDangerousCore (recetas, ingenieros y símbolos de ingeniería, F4 catálogo completo)
+- Fuente: https://github.com/EDDiscovery/EliteDangerousCore, revisión `7d30920e6822d4836e0d6dd5c91026ec7e2ab4c7` (2026-10-22). Licencia: **Apache-2.0**. Cabeceras de copyright de los archivos usados: «Copyright 2016-2024 EDDiscovery development team» (`RecipesEngineering.cs`, `Modules.cs`), «Copyright 2022-2024 EDDiscovery development team» (`Engineers.cs`), «Copyright 2016-2025 EDDiscovery development team» (`MCMRType.cs`) y «Copyright 2026-2026 EDDiscovery development team» (`RecipeFDName.cs`). No hay archivo `NOTICE` en esa revisión. Decisión del propietario del 2026-10-22 («Aprobar EDDiscovery como fuente A»).
+- Archivos copiados sin modificar, solo como entrada fija y verificable del importador: `crates/tmc-modules/data/import/engineering/snapshot/eddiscovery-*` (SHA-256, URL con commit, licencia y copyright por archivo en `sources.json`; texto de licencia en `eddiscovery-LICENSE`). El código C# no se compila ni se ejecuta; solo se tokeniza el subconjunto de datos.
+- Datos derivados (modificados por TMC: convertidos a JSON normalizado, expandidos por módulo y grado, reclasificados y con identificadores propios) en `crates/tmc-modules/data/import/engineering/staging/`. Cada artefacto lleva un bloque `provenance` con este aviso de modificación. Las entradas quedan `verified: false` hasta contrastarlas con el juego.
+
+### EDCD/EDDI (solo pares ID/nombre de ingenieros, F4 catálogo completo)
+- Fuente: https://github.com/EDCD/EDDI, revisión `d3b964ea7c8bb959ad6537f55b308f293a326905`, archivo `DataDefinitions/Engineer.cs`. Licencia: **Apache-2.0** (`LICENSE.md` y `LicenseFile.txt` de esa revisión). Copyright: «Copyright 2017 by the EDCD organization EDDI development team». No hay archivo `NOTICE` en esa revisión. Aprobación separada del propietario del 2026-10-22.
+- Uso limitado a los 38 pares `(EngineerID, nombre)`; no se usan sus especialidades ni sus recetas. Archivo y licencias fijados en `crates/tmc-modules/data/import/engineering/snapshot/eddi-*`; el cruce exacto 38/38 con EDDiscovery lo repite el importador en cada ejecución.
+- Procedimiento: `node scripts/import-engineering-catalogue.mjs --source-dir crates/tmc-modules/data/import/engineering/snapshot --out-dir crates/tmc-modules/data/import/engineering/staging` (o `--check`, que no escribe). Sin dependencias nuevas ni acceso a red.

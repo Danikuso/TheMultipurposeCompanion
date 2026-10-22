@@ -1,2 +1,5 @@
 * text=auto eol=lf
 *.log -text
+
+# Snapshot de fuentes de terceros: bytes exactos (los SHA-256 del manifiesto dependen de ellos)
+crates/tmc-modules/data/import/engineering/snapshot/* -text
