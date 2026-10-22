@@ -29,7 +29,7 @@ export type EngineerNextStep =
 export interface SelectedEngineer {
   id: number;
   next_step: EngineerNextStep | null;
-  blueprints: { blueprint: string; max_grade: number; name_en?: string }[];
+  blueprints: { module_type: string; blueprint: string; grades: number[]; max_grade: number; name_en?: string }[];
 }
 
 export interface EngineersTopic {

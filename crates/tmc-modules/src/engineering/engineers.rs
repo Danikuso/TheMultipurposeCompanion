@@ -33,6 +33,19 @@ fn key_of(e: &EngineerEntry) -> Key {
         .map_or(Key::Name(lower), |d| Key::Id(d.id))
 }
 
+/// `true` si `ID` y nombre se contradicen: el ID catalogado tiene otro nombre, o el
+/// nombre catalogado tiene otro ID. Una entrada así no se aplica (no pisa a nadie).
+fn contradicts(e: &EngineerEntry) -> bool {
+    let name = e.engineer.trim().to_lowercase();
+    if e.engineer_id == 0 || name.is_empty() {
+        return false;
+    }
+    if let Some(d) = engineer(e.engineer_id) {
+        return d.name.to_lowercase() != name;
+    }
+    engineers().iter().any(|d| d.name.to_lowercase() == name)
+}
+
 /// `true` si el JSON trae `StarPos` con tres números.
 fn has_star_pos(raw: &str) -> bool {
     serde_json::from_str::<serde_json::Value>(raw)
@@ -67,6 +80,7 @@ impl EngineerBook {
             if !list.is_empty() {
                 self.entries = list
                     .into_iter()
+                    .filter(|e| !contradicts(e))
                     .map(|mut e| {
                         let key = key_of(&e);
                         if let Key::Id(id) = key {
@@ -80,6 +94,9 @@ impl EngineerBook {
         }
         let mut changes = Vec::new();
         for mut entry in list {
+            if contradicts(&entry) {
+                continue;
+            }
             let key = key_of(&entry);
             if let Key::Id(id) = key {
                 entry.engineer_id = id;
@@ -158,7 +175,16 @@ fn distance(a: [f64; 3], b: [f64; 3]) -> f64 {
 
 /// Nave antes que a pie; luego por distancia (sin posición, por nombre).
 pub fn engineer_rows(book: &EngineerBook, pos: Option<[f64; 3]>) -> Vec<EngineerRow> {
-    let mut rows: Vec<EngineerRow> = engineers()
+    engineer_rows_in(engineers(), book, pos)
+}
+
+/// Como [`engineer_rows`] sobre un catálogo dado (el activo o el de pruebas).
+pub(crate) fn engineer_rows_in(
+    defs: &[EngineerDef],
+    book: &EngineerBook,
+    pos: Option<[f64; 3]>,
+) -> Vec<EngineerRow> {
+    let mut rows: Vec<EngineerRow> = defs
         .iter()
         .map(|d| {
             let entry = book.status(d.id);
@@ -560,5 +586,44 @@ mod tests {
         assert!(rows.iter().all(|r| r.id != 999));
         assert_eq!(rows.len(), engineers().len());
         assert!(rows.iter().all(|r| r.status == EngineerStatus::Unknown));
+    }
+
+    #[test]
+    fn status_by_name_without_id_resolves_to_the_catalogued_engineer() {
+        let mut book = EngineerBook::default();
+        book.apply_event(&progress(
+            r#""Engineers":[{"Engineer":"Elvira Martuuk","Progress":"Unlocked","Rank":2}]"#,
+        ));
+        let e = book.status(300160).unwrap();
+        assert_eq!(
+            (e.progress, e.rank, e.engineer_id),
+            (EngineerStatus::Unlocked, Some(2), 300160)
+        );
+    }
+
+    #[test]
+    fn id_name_contradiction_never_overwrites_a_known_engineer() {
+        let mut book = EngineerBook::default();
+        book.apply_event(&progress(
+            r#""Engineers":[{"Engineer":"Felicity Farseer","EngineerID":300100,"Progress":"Unlocked","Rank":3}]"#,
+        ));
+        // ID de Felicity con el nombre de Elvira (y al revés): se ignora.
+        for body in [
+            r#""Engineer":"Elvira Martuuk","EngineerID":300100,"Progress":"Barred""#,
+            r#""Engineer":"Felicity Farseer","EngineerID":300160,"Progress":"Barred""#,
+            r#""Engineer":"Felicity Farseer","EngineerID":999,"Progress":"Barred""#,
+        ] {
+            assert!(book.apply_event(&progress(body)).is_empty(), "{body}");
+        }
+        let e = book.status(300100).unwrap();
+        assert_eq!((e.progress, e.rank), (EngineerStatus::Unlocked, Some(3)));
+        assert!(book.status(300160).is_none());
+        assert!(book.status(999).is_none());
+        // También dentro de una lista de arranque.
+        book.apply_event(&progress(
+            r#""Engineers":[{"Engineer":"Elvira Martuuk","EngineerID":300100,"Progress":"Barred"},{"Engineer":"Elvira Martuuk","EngineerID":300160,"Progress":"Known"}]"#,
+        ));
+        assert!(book.status(300100).is_none());
+        assert_eq!(book.status(300160).unwrap().progress, EngineerStatus::Known);
     }
 }

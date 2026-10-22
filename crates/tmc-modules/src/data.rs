@@ -1281,10 +1281,29 @@ pub fn blueprints() -> &'static BlueprintCatalog {
     CATALOG.get_or_init(|| parse_blueprints(include_str!("../data/blueprints.json")))
 }
 
+/// What an engineer offers: one blueprint for one module type, at an explicit set of grades
+/// (a gap such as `[1, 3]` is a gap: it never covers grade 2).
 #[derive(Debug, Clone, Deserialize)]
 pub struct EngineerBlueprint {
+    pub module_type: String,
     pub blueprint: String,
-    pub max_grade: u8,
+    pub grades: Vec<u8>,
+}
+
+impl EngineerBlueprint {
+    /// Highest offered grade (0 when none).
+    pub fn max_grade(&self) -> u8 {
+        self.grades.iter().copied().max().unwrap_or(0)
+    }
+
+    /// `true` only if every required grade is offered. An empty requirement is never
+    /// covered: nothing is "any".
+    pub fn covers(&self, module_type: &str, blueprint: &str, required: &[u8]) -> bool {
+        !required.is_empty()
+            && self.module_type.eq_ignore_ascii_case(module_type)
+            && self.blueprint.eq_ignore_ascii_case(blueprint)
+            && required.iter().all(|g| self.grades.contains(g))
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1332,13 +1351,19 @@ pub struct EngineerDef {
     pub verified: bool,
 }
 
-fn parse_engineers(json: &str) -> Vec<EngineerDef> {
+/// Accepts the active table (root `entries`) and the import staging (root `engineers`).
+pub(crate) fn parse_engineers(json: &str) -> Vec<EngineerDef> {
     let Some(entries) = serde_json::from_str::<serde_json::Value>(json)
         .map_err(|error| {
             tracing::warn!(file = "engineers.json", %error, "invalid embedded static data; using empty table")
         })
         .ok()
-        .and_then(|v| v.get("entries").and_then(serde_json::Value::as_array).cloned())
+        .and_then(|v| {
+            v.get("entries")
+                .or_else(|| v.get("engineers"))
+                .and_then(serde_json::Value::as_array)
+                .cloned()
+        })
     else {
         tracing::warn!(file = "engineers.json", "missing entries array; using empty table");
         return Vec::new();
@@ -1381,7 +1406,12 @@ fn engineer_is_valid(e: &EngineerDef) -> bool {
         && !e.source.trim().is_empty()
         && !e.unlock.requirement_key.trim().is_empty()
         && e.star_pos.iter().all(|c| c.is_finite())
-        && e.blueprints.iter().all(|b| (1..=5).contains(&b.max_grade))
+        && e.blueprints.iter().all(|b| {
+            !b.module_type.trim().is_empty()
+                && !b.blueprint.trim().is_empty()
+                && !b.grades.is_empty()
+                && b.grades.iter().all(|g| (1..=5).contains(g))
+        })
 }
 
 /// Engineers (provisional minimal set, unverified), embedded once.
@@ -1971,7 +2001,7 @@ mod tests {
                 .blueprints
                 .iter()
                 .find(|b| b.blueprint == "engine_dirty")
-                .map(|b| b.max_grade)
+                .map(|b| b.max_grade())
         };
         assert_eq!(
             (dirty(300220), dirty(300100), dirty(300160)),
@@ -2000,7 +2030,7 @@ mod tests {
                     e.name,
                     b.blueprint
                 );
-                assert!((1..=5).contains(&b.max_grade));
+                assert!((1..=5).contains(&b.max_grade()));
             }
         }
     }
@@ -2014,7 +2044,8 @@ mod tests {
         bad["star_pos"] = serde_json::json!(["x", 1.0, 2.0]);
         let mut bad_grade = good.clone();
         bad_grade["id"] = 3.into();
-        bad_grade["blueprints"] = serde_json::json!([{"blueprint":"engine_dirty","max_grade":9}]);
+        bad_grade["blueprints"] =
+            serde_json::json!([{"module_type":"engine","blueprint":"engine_dirty","grades":[1,9]}]);
         let mut good2 = good.clone();
         good2["id"] = 2.into();
         let warnings = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
