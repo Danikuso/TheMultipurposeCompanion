@@ -12,6 +12,10 @@
   --hud-warning: #f59e0b;
   --hud-success: #22c55e;
   --hud-ok: #7fd16b;
+  --hud-cyan: #06b6d4;
+  --hud-purple: #a855f7;
+  --hud-surface-card: #161c2d;
+  --hud-border-subtle: rgba(255, 255, 255, 0.08);
   --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace;
 }
