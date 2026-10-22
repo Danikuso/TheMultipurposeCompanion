@@ -40,8 +40,8 @@ test('pinned snapshot classifies every constructor and preserves every expansion
   assert.equal(coin_audit.input_total, coin_audit.output_total);
   assert.ok(coin_audit.rows > 105);
   assert.deepEqual(engineer_id_audit, { matched: 38, unique_ids: 38, missing: [], aliases: [] });
-  assert.equal(result.engineers.engineers.find(e => e.name === 'Felicity Farseer').id, 300100);
-  assert.equal(result.engineers.engineers.find(e => e.name === 'Elvira Martuuk').id, 300160);
+  assert.equal(result.engineers.entries.find(e => e.name === 'Felicity Farseer').id, 300100);
+  assert.equal(result.engineers.entries.find(e => e.name === 'Elvira Martuuk').id, 300160);
   const missiles = rows.filter(r => r.key === 'weapon_highcapacity' && r.modules.includes('missilerack'));
   assert.equal(missiles.length, 5);
   for (const row of missiles) assert.deepEqual(row.modules, ['missilerack', 'seekermissilerack']);
@@ -56,7 +56,7 @@ test('source facts: dirty drives, Drag Drives, Operations coins, Lori capabiliti
   const far = r.blueprints.blueprints.find(b => b.key === 'abrasionblaster_farreaching').recipes[0];
   assert.deepEqual(Object.values(far.grades).map(c => c.merc_coins), [5, 5, 10, 20]);
   assert.deepEqual(far.entry, { existing_only: { bases: [] } });
-  const lori = r.engineers.engineers.find(e => e.name === 'Lori Jameson');
+  const lori = r.engineers.entries.find(e => e.name === 'Lori Jameson');
   assert.equal(lori.blueprints.find(b => b.blueprint === 'misc_shielded' && b.module_type === 'autofieldmaintenanceunit').grades.at(-1), 4);
   assert.equal(lori.blueprints.find(b => b.blueprint === 'misc_shielded' && b.module_type === 'cargoscanner').grades.at(-1), 3);
 });
@@ -90,17 +90,16 @@ test('conversion is deterministic and CLI --check is read-only and independent o
 
 test('final audit counts per category are pinned and unresolved ship rows stay explicit', () => {
   const { counts, summary, unresolved_ship_rows: unresolved } = convertSnapshot(source).manifest;
-  assert.deepEqual(counts, { ship_recipe: 943, ship_experimental: 83, ship_variant: 15, out_of_scope: 116, obsolete: 2, unresolved: 8 });
+  assert.deepEqual(counts, { ship_recipe: 947, ship_experimental: 87, ship_variant: 15, out_of_scope: 116, obsolete: 2, unresolved: 0 });
   assert.equal(summary.constructors, 1167);
-  assert.equal(summary.blueprints, 88);
-  assert.equal(summary.recipes_by_blueprint_and_module, 206);
-  assert.equal(summary.recipe_grade_rows, 983);
-  assert.equal(summary.experimentals, 83);
+  assert.equal(summary.blueprints, 89);
+  assert.equal(summary.recipes_by_blueprint_and_module, 207);
+  assert.equal(summary.recipe_grade_rows, 987);
+  assert.equal(summary.experimentals, 87);
   assert.equal(summary.variants, 15);
   assert.equal(summary.engineers, 38);
-  assert.equal(unresolved.length, counts.unresolved);
-  assert.deepEqual(unresolved.map(r => r.row_id.split(':')[1]), ['494', '495', '496', '497', '1377', '1388', '1407', '1429']);
-  assert.ok(unresolved.every(r => r.reason.length > 0));
+  assert.equal(unresolved.length, 0);
+  assert.deepEqual(unresolved, []);
 });
 
 test('every ship recipe row keeps its own Merc Coins in the output and unresolved rows are not published', () => {
@@ -114,8 +113,8 @@ test('every ship recipe row keeps its own Merc Coins in the output and unresolve
       assert.deepEqual(cost.materials, row.ingredients.map(i => ({ material: i.material, count: i.count })), row.row_id);
     }
   }
-  assert.ok(!r.blueprints.blueprints.some(b => b.key === 'detailedsurfacescanner_longrange'));
-  assert.ok(!r.blueprints.experimentals.some(e => e.key === 'special_weapon_damage'));
+  assert.ok(r.blueprints.blueprints.some(b => b.key === 'detailedsurfacescanner_longrange'));
+  assert.ok(r.blueprints.experimentals.some(e => e.key === 'special_weapon_damage'));
 });
 
 test('plan oracle: dirty drives with rolls 1,1,1,1,4 total the hand-computed materials', () => {
@@ -139,9 +138,9 @@ test('cargo rack extended G5 keeps its coin and gets no invented engineer; place
   assert.deepEqual(ext.entry, { existing_only: { bases: [] } });
   const rowsNoEng = r.manifest.ship_recipe_rows_without_engineer;
   assert.ok(rowsNoEng.length >= 2);
-  const g5 = r.engineers.engineers.flatMap(e => e.blueprints).filter(b => b.blueprint === 'cargoracks5c1_extended');
+  const g5 = r.engineers.entries.flatMap(e => e.blueprints).filter(b => b.blueprint === 'cargoracks5c1_extended');
   assert.ok(g5.length > 0 && g5.every(b => !b.grades.includes(5)));
-  assert.ok(!r.engineers.engineers.some(e => e.name.toLowerCase() === 'tbd'));
+  assert.ok(!r.engineers.entries.some(e => e.name.toLowerCase() === 'tbd'));
 });
 
 test('pre-engineered rows become variants without a free recipe', () => {

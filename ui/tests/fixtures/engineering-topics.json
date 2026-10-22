@@ -13,11 +13,11 @@
   "engineering.catalogue": {
     "as_of": "2026-10-21T12:05:00Z",
     "counts": {
-      "blueprints": 2,
-      "experimentals": 1,
-      "module_types": 2,
-      "recipes": 10,
-      "variants": 0
+      "blueprints": 89,
+      "experimentals": 87,
+      "module_types": 47,
+      "recipes": 987,
+      "variants": 15
     },
     "revision": 21
   },
@@ -26,22 +26,22 @@
     "next_step": null,
     "revision": 21,
     "selected_id": null,
-    "total": 5
+    "total": 38
   },
   "engineering.flow": {
     "as_of": "2026-10-21T12:05:00Z",
     "blockers": [],
     "counts": {
-      "blueprints": 1,
-      "costs": 13,
-      "experimentals": 1,
+      "blueprints": 3,
+      "costs": 15,
+      "experimentals": 5,
       "grades": 5,
       "lines": 13
     },
     "current": null,
     "engineer": {
       "nearest_any": {
-        "distance_ly": 88.3683053068944,
+        "distance_ly": 133.95955094379238,
         "id": 300220,
         "name": "Professor Palin",
         "on_foot": false,
@@ -66,7 +66,7 @@
       "need": 0
     },
     "module_type": "engine",
-    "percent": 47,
+    "percent": 30,
     "replaces_blueprint": false,
     "request": {
       "blueprint": "engine_dirty",
@@ -100,7 +100,7 @@
           "missing": null,
           "need": 0
         },
-        "percent": 87
+        "percent": 25
       }
     ],
     "revision": 21,
@@ -221,127 +221,128 @@
       "items": [
         {
           "bases": [],
-          "blueprint": "engine_dirty",
-          "entry": "stock",
-          "grade": 1,
-          "materials": [
-            {
-              "count": 1,
-              "material": "carbon"
-            },
-            {
-              "count": 1,
-              "material": "heatconductionwiring"
-            }
-          ],
-          "merc_coins": 0,
-          "module_type": "engine",
-          "selector": null
-        },
-        {
-          "bases": [],
-          "blueprint": "engine_dirty",
-          "entry": "stock",
+          "blueprint": "abrasionblaster_farreaching",
+          "entry": "existing_only",
           "grade": 2,
           "materials": [
             {
               "count": 1,
-              "material": "vanadium"
+              "material": "sulphur"
             },
             {
               "count": 1,
               "material": "heatdispersionplate"
+            },
+            {
+              "count": 1,
+              "material": "consumerfirmware"
             }
           ],
-          "merc_coins": 0,
-          "module_type": "engine",
+          "merc_coins": 5,
+          "module_type": "abrasionblaster",
           "selector": null
         },
         {
           "bases": [],
-          "blueprint": "engine_dirty",
-          "entry": "stock",
+          "blueprint": "abrasionblaster_farreaching",
+          "entry": "existing_only",
           "grade": 3,
           "materials": [
             {
               "count": 1,
-              "material": "niobium"
+              "material": "chromium"
+            },
+            {
+              "count": 1,
+              "material": "consumerfirmware"
             },
             {
               "count": 1,
               "material": "heatexchangers"
             }
           ],
-          "merc_coins": 0,
-          "module_type": "engine",
+          "merc_coins": 5,
+          "module_type": "abrasionblaster",
           "selector": null
         },
         {
           "bases": [],
-          "blueprint": "engine_dirty",
-          "entry": "stock",
+          "blueprint": "abrasionblaster_farreaching",
+          "entry": "existing_only",
           "grade": 4,
           "materials": [
             {
               "count": 1,
-              "material": "yttrium"
+              "material": "consumerfirmware"
+            },
+            {
+              "count": 1,
+              "material": "conductivepolymers"
+            },
+            {
+              "count": 1,
+              "material": "selenium"
             },
             {
               "count": 1,
               "material": "heatvanes"
             }
           ],
-          "merc_coins": 0,
-          "module_type": "engine",
+          "merc_coins": 10,
+          "module_type": "abrasionblaster",
           "selector": null
         },
         {
           "bases": [],
-          "blueprint": "engine_dirty",
-          "entry": "stock",
+          "blueprint": "abrasionblaster_farreaching",
+          "entry": "existing_only",
           "grade": 5,
           "materials": [
             {
               "count": 1,
-              "material": "polonium"
+              "material": "industrialfirmware"
+            },
+            {
+              "count": 1,
+              "material": "thermicalloys"
+            },
+            {
+              "count": 1,
+              "material": "biotechconductors"
             },
             {
               "count": 1,
               "material": "protoheatradiators"
             }
           ],
-          "merc_coins": 0,
-          "module_type": "engine",
+          "merc_coins": 20,
+          "module_type": "abrasionblaster",
           "selector": null
         },
         {
           "bases": [],
-          "blueprint": "fsd_longrange",
+          "blueprint": "armour_advanced",
           "entry": "stock",
           "grade": 1,
           "materials": [
             {
               "count": 1,
-              "material": "disruptedwakeechoes"
-            },
-            {
-              "count": 1,
-              "material": "basicconductors"
+              "material": "iron"
             }
           ],
           "merc_coins": 0,
-          "module_type": "fsd",
+          "module_type": "armour",
           "selector": null
         },
         {
           "bases": [],
-          "blueprint": "fsd_longrange",
+          "blueprint": "armour_advanced",
           "entry": "stock",
           "grade": 2,
           "materials": [
             {
               "count": 1,
-              "material": "fsdtelemetry"
+              "material": "iron"
             },
             {
               "count": 1,
@@ -349,200 +350,2258 @@
             }
           ],
           "merc_coins": 0,
-          "module_type": "fsd",
+          "module_type": "armour",
           "selector": null
         },
         {
           "bases": [],
-          "blueprint": "fsd_longrange",
+          "blueprint": "armour_advanced",
           "entry": "stock",
           "grade": 3,
           "materials": [
             {
               "count": 1,
-              "material": "wakesolutions"
+              "material": "iron"
             },
             {
               "count": 1,
-              "material": "conductiveceramics"
+              "material": "conductivecomponents"
+            },
+            {
+              "count": 1,
+              "material": "highdensitycomposites"
             }
           ],
           "merc_coins": 0,
-          "module_type": "fsd",
+          "module_type": "armour",
           "selector": null
         },
         {
           "bases": [],
-          "blueprint": "fsd_longrange",
+          "blueprint": "armour_advanced",
           "entry": "stock",
           "grade": 4,
           "materials": [
             {
               "count": 1,
-              "material": "hyperspacetrajectories"
+              "material": "germanium"
             },
             {
               "count": 1,
-              "material": "conductivepolymers"
+              "material": "conductiveceramics"
+            },
+            {
+              "count": 1,
+              "material": "fedproprietarycomposites"
             }
           ],
           "merc_coins": 0,
-          "module_type": "fsd",
+          "module_type": "armour",
           "selector": null
         },
         {
           "bases": [],
-          "blueprint": "fsd_longrange",
+          "blueprint": "armour_advanced",
           "entry": "stock",
           "grade": 5,
           "materials": [
             {
               "count": 1,
-              "material": "dataminedwake"
+              "material": "conductiveceramics"
             },
             {
               "count": 1,
-              "material": "biotechconductors"
+              "material": "tin"
+            },
+            {
+              "count": 1,
+              "material": "militarygradealloys"
             }
           ],
           "merc_coins": 0,
-          "module_type": "fsd",
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_explosive",
+          "entry": "stock",
+          "grade": 1,
+          "materials": [
+            {
+              "count": 1,
+              "material": "nickel"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_explosive",
+          "entry": "stock",
+          "grade": 2,
+          "materials": [
+            {
+              "count": 1,
+              "material": "carbon"
+            },
+            {
+              "count": 1,
+              "material": "zinc"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_explosive",
+          "entry": "stock",
+          "grade": 3,
+          "materials": [
+            {
+              "count": 1,
+              "material": "salvagedalloys"
+            },
+            {
+              "count": 1,
+              "material": "vanadium"
+            },
+            {
+              "count": 1,
+              "material": "zirconium"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_explosive",
+          "entry": "stock",
+          "grade": 4,
+          "materials": [
+            {
+              "count": 1,
+              "material": "galvanisingalloys"
+            },
+            {
+              "count": 1,
+              "material": "tungsten"
+            },
+            {
+              "count": 1,
+              "material": "mercury"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_explosive",
+          "entry": "stock",
+          "grade": 5,
+          "materials": [
+            {
+              "count": 1,
+              "material": "phasealloys"
+            },
+            {
+              "count": 1,
+              "material": "molybdenum"
+            },
+            {
+              "count": 1,
+              "material": "ruthenium"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_heavyduty",
+          "entry": "stock",
+          "grade": 1,
+          "materials": [
+            {
+              "count": 1,
+              "material": "carbon"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_heavyduty",
+          "entry": "stock",
+          "grade": 2,
+          "materials": [
+            {
+              "count": 1,
+              "material": "carbon"
+            },
+            {
+              "count": 1,
+              "material": "shieldemitters"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_heavyduty",
+          "entry": "stock",
+          "grade": 3,
+          "materials": [
+            {
+              "count": 1,
+              "material": "carbon"
+            },
+            {
+              "count": 1,
+              "material": "shieldemitters"
+            },
+            {
+              "count": 1,
+              "material": "highdensitycomposites"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_heavyduty",
+          "entry": "stock",
+          "grade": 4,
+          "materials": [
+            {
+              "count": 1,
+              "material": "vanadium"
+            },
+            {
+              "count": 1,
+              "material": "shieldingsensors"
+            },
+            {
+              "count": 1,
+              "material": "fedproprietarycomposites"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_heavyduty",
+          "entry": "stock",
+          "grade": 5,
+          "materials": [
+            {
+              "count": 1,
+              "material": "tungsten"
+            },
+            {
+              "count": 1,
+              "material": "compoundshielding"
+            },
+            {
+              "count": 1,
+              "material": "fedcorecomposites"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_kinetic",
+          "entry": "stock",
+          "grade": 1,
+          "materials": [
+            {
+              "count": 1,
+              "material": "nickel"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_kinetic",
+          "entry": "stock",
+          "grade": 2,
+          "materials": [
+            {
+              "count": 1,
+              "material": "nickel"
+            },
+            {
+              "count": 1,
+              "material": "vanadium"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_kinetic",
+          "entry": "stock",
+          "grade": 3,
+          "materials": [
+            {
+              "count": 1,
+              "material": "salvagedalloys"
+            },
+            {
+              "count": 1,
+              "material": "vanadium"
+            },
+            {
+              "count": 1,
+              "material": "highdensitycomposites"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_kinetic",
+          "entry": "stock",
+          "grade": 4,
+          "materials": [
+            {
+              "count": 1,
+              "material": "galvanisingalloys"
+            },
+            {
+              "count": 1,
+              "material": "tungsten"
+            },
+            {
+              "count": 1,
+              "material": "fedproprietarycomposites"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_kinetic",
+          "entry": "stock",
+          "grade": 5,
+          "materials": [
+            {
+              "count": 1,
+              "material": "phasealloys"
+            },
+            {
+              "count": 1,
+              "material": "molybdenum"
+            },
+            {
+              "count": 1,
+              "material": "fedcorecomposites"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_thermic",
+          "entry": "stock",
+          "grade": 1,
+          "materials": [
+            {
+              "count": 1,
+              "material": "heatconductionwiring"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_thermic",
+          "entry": "stock",
+          "grade": 2,
+          "materials": [
+            {
+              "count": 1,
+              "material": "nickel"
+            },
+            {
+              "count": 1,
+              "material": "heatdispersionplate"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_thermic",
+          "entry": "stock",
+          "grade": 3,
+          "materials": [
+            {
+              "count": 1,
+              "material": "salvagedalloys"
+            },
+            {
+              "count": 1,
+              "material": "vanadium"
+            },
+            {
+              "count": 1,
+              "material": "heatexchangers"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_thermic",
+          "entry": "stock",
+          "grade": 4,
+          "materials": [
+            {
+              "count": 1,
+              "material": "galvanisingalloys"
+            },
+            {
+              "count": 1,
+              "material": "tungsten"
+            },
+            {
+              "count": 1,
+              "material": "heatvanes"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "armour_thermic",
+          "entry": "stock",
+          "grade": 5,
+          "materials": [
+            {
+              "count": 1,
+              "material": "phasealloys"
+            },
+            {
+              "count": 1,
+              "material": "molybdenum"
+            },
+            {
+              "count": 1,
+              "material": "protoheatradiators"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "armour",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "beamlaser_overloaded",
+          "entry": "existing_only",
+          "grade": 2,
+          "materials": [
+            {
+              "count": 1,
+              "material": "chromium"
+            },
+            {
+              "count": 1,
+              "material": "conductivecomponents"
+            },
+            {
+              "count": 1,
+              "material": "nickel"
+            }
+          ],
+          "merc_coins": 10,
+          "module_type": "beamlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "beamlaser_overloaded",
+          "entry": "existing_only",
+          "grade": 3,
+          "materials": [
+            {
+              "count": 1,
+              "material": "chromium"
+            },
+            {
+              "count": 1,
+              "material": "conductivecomponents"
+            },
+            {
+              "count": 1,
+              "material": "electrochemicalarrays"
+            }
+          ],
+          "merc_coins": 15,
+          "module_type": "beamlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "beamlaser_overloaded",
+          "entry": "existing_only",
+          "grade": 4,
+          "materials": [
+            {
+              "count": 1,
+              "material": "electrochemicalarrays"
+            },
+            {
+              "count": 1,
+              "material": "highdensitycomposites"
+            },
+            {
+              "count": 1,
+              "material": "polymercapacitors"
+            },
+            {
+              "count": 1,
+              "material": "focuscrystals"
+            }
+          ],
+          "merc_coins": 25,
+          "module_type": "beamlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "beamlaser_overloaded",
+          "entry": "existing_only",
+          "grade": 5,
+          "materials": [
+            {
+              "count": 1,
+              "material": "zirconium"
+            },
+            {
+              "count": 1,
+              "material": "militarysupercapacitors"
+            },
+            {
+              "count": 1,
+              "material": "embeddedfirmware"
+            },
+            {
+              "count": 1,
+              "material": "focuscrystals"
+            }
+          ],
+          "merc_coins": 50,
+          "module_type": "beamlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "beamlaser_thermalplasmaconversion",
+          "entry": "stock",
+          "grade": 1,
+          "materials": [
+            {
+              "count": 1,
+              "material": "phosphorus"
+            },
+            {
+              "count": 1,
+              "material": "heatconductionwiring"
+            }
+          ],
+          "merc_coins": 10,
+          "module_type": "beamlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "beamlaser_thermalplasmaconversion",
+          "entry": "stock",
+          "grade": 2,
+          "materials": [
+            {
+              "count": 1,
+              "material": "arsenic"
+            },
+            {
+              "count": 1,
+              "material": "heatconductionwiring"
+            },
+            {
+              "count": 1,
+              "material": "heatdispersionplate"
+            }
+          ],
+          "merc_coins": 15,
+          "module_type": "beamlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "beamlaser_thermalplasmaconversion",
+          "entry": "stock",
+          "grade": 3,
+          "materials": [
+            {
+              "count": 1,
+              "material": "arsenic"
+            },
+            {
+              "count": 1,
+              "material": "heatdispersionplate"
+            },
+            {
+              "count": 1,
+              "material": "phasealloys"
+            }
+          ],
+          "merc_coins": 20,
+          "module_type": "beamlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "beamlaser_thermalplasmaconversion",
+          "entry": "stock",
+          "grade": 4,
+          "materials": [
+            {
+              "count": 1,
+              "material": "heatdispersionplate"
+            },
+            {
+              "count": 1,
+              "material": "phasealloys"
+            },
+            {
+              "count": 1,
+              "material": "refinedfocuscrystals"
+            },
+            {
+              "count": 1,
+              "material": "configurablecomponents"
+            }
+          ],
+          "merc_coins": 25,
+          "module_type": "beamlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "beamlaser_thermalplasmaconversion",
+          "entry": "stock",
+          "grade": 5,
+          "materials": [
+            {
+              "count": 1,
+              "material": "technetium"
+            },
+            {
+              "count": 1,
+              "material": "thermicalloys"
+            },
+            {
+              "count": 1,
+              "material": "militarysupercapacitors"
+            },
+            {
+              "count": 1,
+              "material": "embeddedfirmware"
+            }
+          ],
+          "merc_coins": 30,
+          "module_type": "beamlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "burstlaser_regenerative",
+          "entry": "existing_only",
+          "grade": 2,
+          "materials": [],
+          "merc_coins": 1,
+          "module_type": "burstlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "burstlaser_regenerative",
+          "entry": "existing_only",
+          "grade": 3,
+          "materials": [],
+          "merc_coins": 1,
+          "module_type": "burstlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "burstlaser_regenerative",
+          "entry": "existing_only",
+          "grade": 4,
+          "materials": [],
+          "merc_coins": 1,
+          "module_type": "burstlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "burstlaser_regenerative",
+          "entry": "existing_only",
+          "grade": 5,
+          "materials": [],
+          "merc_coins": 1,
+          "module_type": "burstlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "burstlaser_thermalplasmaconversion",
+          "entry": "stock",
+          "grade": 1,
+          "materials": [
+            {
+              "count": 1,
+              "material": "phosphorus"
+            },
+            {
+              "count": 1,
+              "material": "heatconductionwiring"
+            }
+          ],
+          "merc_coins": 10,
+          "module_type": "burstlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "burstlaser_thermalplasmaconversion",
+          "entry": "stock",
+          "grade": 2,
+          "materials": [
+            {
+              "count": 1,
+              "material": "arsenic"
+            },
+            {
+              "count": 1,
+              "material": "heatconductionwiring"
+            },
+            {
+              "count": 1,
+              "material": "heatdispersionplate"
+            }
+          ],
+          "merc_coins": 15,
+          "module_type": "burstlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "burstlaser_thermalplasmaconversion",
+          "entry": "stock",
+          "grade": 3,
+          "materials": [
+            {
+              "count": 1,
+              "material": "arsenic"
+            },
+            {
+              "count": 1,
+              "material": "heatdispersionplate"
+            },
+            {
+              "count": 1,
+              "material": "phasealloys"
+            }
+          ],
+          "merc_coins": 20,
+          "module_type": "burstlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "burstlaser_thermalplasmaconversion",
+          "entry": "stock",
+          "grade": 4,
+          "materials": [
+            {
+              "count": 1,
+              "material": "heatdispersionplate"
+            },
+            {
+              "count": 1,
+              "material": "phasealloys"
+            },
+            {
+              "count": 1,
+              "material": "refinedfocuscrystals"
+            },
+            {
+              "count": 1,
+              "material": "configurablecomponents"
+            }
+          ],
+          "merc_coins": 25,
+          "module_type": "burstlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "burstlaser_thermalplasmaconversion",
+          "entry": "stock",
+          "grade": 5,
+          "materials": [
+            {
+              "count": 1,
+              "material": "technetium"
+            },
+            {
+              "count": 1,
+              "material": "thermicalloys"
+            },
+            {
+              "count": 1,
+              "material": "militarysupercapacitors"
+            },
+            {
+              "count": 1,
+              "material": "embeddedfirmware"
+            }
+          ],
+          "merc_coins": 30,
+          "module_type": "burstlaser",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "cannon_forceimpact",
+          "entry": "existing_only",
+          "grade": 2,
+          "materials": [],
+          "merc_coins": 1,
+          "module_type": "cannon",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "cannon_forceimpact",
+          "entry": "existing_only",
+          "grade": 3,
+          "materials": [],
+          "merc_coins": 1,
+          "module_type": "cannon",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "cannon_forceimpact",
+          "entry": "existing_only",
+          "grade": 4,
+          "materials": [],
+          "merc_coins": 1,
+          "module_type": "cannon",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "cannon_forceimpact",
+          "entry": "existing_only",
+          "grade": 5,
+          "materials": [],
+          "merc_coins": 1,
+          "module_type": "cannon",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "cargoracks5c1_extended",
+          "entry": "existing_only",
+          "grade": 2,
+          "materials": [
+            {
+              "count": 1,
+              "material": "mechanicalscrap"
+            },
+            {
+              "count": 1,
+              "material": "vanadium"
+            },
+            {
+              "count": 1,
+              "material": "manganese"
+            }
+          ],
+          "merc_coins": 15,
+          "module_type": "cargorack",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "cargoracks5c1_extended",
+          "entry": "existing_only",
+          "grade": 3,
+          "materials": [
+            {
+              "count": 1,
+              "material": "mechanicalscrap"
+            },
+            {
+              "count": 1,
+              "material": "vanadium"
+            },
+            {
+              "count": 1,
+              "material": "niobium"
+            }
+          ],
+          "merc_coins": 20,
+          "module_type": "cargorack",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "cargoracks5c1_extended",
+          "entry": "existing_only",
+          "grade": 4,
+          "materials": [
+            {
+              "count": 1,
+              "material": "mechanicalequipment"
+            },
+            {
+              "count": 1,
+              "material": "highdensitycomposites"
+            },
+            {
+              "count": 1,
+              "material": "tin"
+            },
+            {
+              "count": 1,
+              "material": "niobium"
+            }
+          ],
+          "merc_coins": 40,
+          "module_type": "cargorack",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "cargoracks5c1_extended",
+          "entry": "existing_only",
+          "grade": 5,
+          "materials": [
+            {
+              "count": 1,
+              "material": "mechanicalequipment"
+            },
+            {
+              "count": 1,
+              "material": "mechanicalcomponents"
+            },
+            {
+              "count": 1,
+              "material": "fedproprietarycomposites"
+            },
+            {
+              "count": 1,
+              "material": "militarysupercapacitors"
+            }
+          ],
+          "merc_coins": 1,
+          "module_type": "cargorack",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "cargoracks6c1_extended",
+          "entry": "existing_only",
+          "grade": 2,
+          "materials": [
+            {
+              "count": 1,
+              "material": "mechanicalscrap"
+            },
+            {
+              "count": 1,
+              "material": "vanadium"
+            },
+            {
+              "count": 1,
+              "material": "manganese"
+            }
+          ],
+          "merc_coins": 15,
+          "module_type": "cargorack",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "cargoracks6c1_extended",
+          "entry": "existing_only",
+          "grade": 3,
+          "materials": [
+            {
+              "count": 1,
+              "material": "mechanicalscrap"
+            },
+            {
+              "count": 1,
+              "material": "vanadium"
+            },
+            {
+              "count": 1,
+              "material": "niobium"
+            }
+          ],
+          "merc_coins": 20,
+          "module_type": "cargorack",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "cargoracks6c1_extended",
+          "entry": "existing_only",
+          "grade": 4,
+          "materials": [
+            {
+              "count": 1,
+              "material": "mechanicalequipment"
+            },
+            {
+              "count": 1,
+              "material": "highdensitycomposites"
+            },
+            {
+              "count": 1,
+              "material": "tin"
+            },
+            {
+              "count": 1,
+              "material": "niobium"
+            }
+          ],
+          "merc_coins": 40,
+          "module_type": "cargorack",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "cargoracks6c1_extended",
+          "entry": "existing_only",
+          "grade": 5,
+          "materials": [
+            {
+              "count": 1,
+              "material": "mechanicalequipment"
+            },
+            {
+              "count": 1,
+              "material": "mechanicalcomponents"
+            },
+            {
+              "count": 1,
+              "material": "fedproprietarycomposites"
+            },
+            {
+              "count": 1,
+              "material": "militarysupercapacitors"
+            }
+          ],
+          "merc_coins": 1,
+          "module_type": "cargorack",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "detailedsurfacescanner_longrange",
+          "entry": "existing_only",
+          "grade": 2,
+          "materials": [
+            {
+              "count": 1,
+              "material": "mechanicalscrap"
+            },
+            {
+              "count": 1,
+              "material": "germanium"
+            },
+            {
+              "count": 1,
+              "material": "consumerfirmware"
+            }
+          ],
+          "merc_coins": 5,
+          "module_type": "surfacescanner",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "detailedsurfacescanner_longrange",
+          "entry": "existing_only",
+          "grade": 3,
+          "materials": [
+            {
+              "count": 1,
+              "material": "mechanicalscrap"
+            },
+            {
+              "count": 1,
+              "material": "germanium"
+            },
+            {
+              "count": 1,
+              "material": "phasealloys"
+            }
+          ],
+          "merc_coins": 5,
+          "module_type": "surfacescanner",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "detailedsurfacescanner_longrange",
+          "entry": "existing_only",
+          "grade": 4,
+          "materials": [
+            {
+              "count": 1,
+              "material": "mechanicalequipment"
+            },
+            {
+              "count": 1,
+              "material": "niobium"
+            },
+            {
+              "count": 1,
+              "material": "phasealloys"
+            },
+            {
+              "count": 1,
+              "material": "protolightalloys"
+            }
+          ],
+          "merc_coins": 10,
+          "module_type": "surfacescanner",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "detailedsurfacescanner_longrange",
+          "entry": "existing_only",
+          "grade": 5,
+          "materials": [
+            {
+              "count": 1,
+              "material": "mechanicalequipment"
+            },
+            {
+              "count": 1,
+              "material": "mechanicalcomponents"
+            },
+            {
+              "count": 1,
+              "material": "tin"
+            },
+            {
+              "count": 1,
+              "material": "protoradiolicalloys"
+            }
+          ],
+          "merc_coins": 20,
+          "module_type": "surfacescanner",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "engine_dirty",
+          "entry": "stock",
+          "grade": 1,
+          "materials": [
+            {
+              "count": 1,
+              "material": "legacyfirmware"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "engine",
+          "selector": null
+        },
+        {
+          "bases": [],
+          "blueprint": "engine_dirty",
+          "entry": "stock",
+          "grade": 2,
+          "materials": [
+            {
+              "count": 1,
+              "material": "legacyfirmware"
+            },
+            {
+              "count": 1,
+              "material": "mechanicalequipment"
+            }
+          ],
+          "merc_coins": 0,
+          "module_type": "engine",
           "selector": null
         }
       ],
-      "next_cursor": null,
+      "next_cursor": 65,
       "revision": 21,
       "section": "recipes",
-      "total": 10
+      "total": 987
     },
     "engineers_capabilities": {
       "cursor": 0,
       "items": [
         {
-          "blueprint": "engine_dirty",
-          "engineer_id": 300100,
+          "blueprint": "shieldgenerator_kinetic",
+          "engineer_id": 300000,
           "grade": 1,
-          "module_type": "engine"
+          "module_type": "prismaticshieldgenerator"
         },
         {
-          "blueprint": "engine_dirty",
-          "engineer_id": 300100,
+          "blueprint": "shieldgenerator_kinetic",
+          "engineer_id": 300000,
           "grade": 2,
-          "module_type": "engine"
+          "module_type": "prismaticshieldgenerator"
         },
         {
-          "blueprint": "engine_dirty",
-          "engineer_id": 300100,
+          "blueprint": "shieldgenerator_kinetic",
+          "engineer_id": 300000,
           "grade": 3,
-          "module_type": "engine"
+          "module_type": "prismaticshieldgenerator"
         },
         {
-          "blueprint": "fsd_longrange",
-          "engineer_id": 300100,
+          "blueprint": "shieldgenerator_optimised",
+          "engineer_id": 300000,
           "grade": 1,
-          "module_type": "fsd"
+          "module_type": "prismaticshieldgenerator"
         },
         {
-          "blueprint": "fsd_longrange",
-          "engineer_id": 300100,
+          "blueprint": "shieldgenerator_optimised",
+          "engineer_id": 300000,
           "grade": 2,
-          "module_type": "fsd"
+          "module_type": "prismaticshieldgenerator"
         },
         {
-          "blueprint": "fsd_longrange",
-          "engineer_id": 300100,
+          "blueprint": "shieldgenerator_optimised",
+          "engineer_id": 300000,
           "grade": 3,
-          "module_type": "fsd"
+          "module_type": "prismaticshieldgenerator"
         },
         {
-          "blueprint": "fsd_longrange",
-          "engineer_id": 300100,
+          "blueprint": "shieldgenerator_reinforced",
+          "engineer_id": 300000,
+          "grade": 1,
+          "module_type": "prismaticshieldgenerator"
+        },
+        {
+          "blueprint": "shieldgenerator_reinforced",
+          "engineer_id": 300000,
+          "grade": 2,
+          "module_type": "prismaticshieldgenerator"
+        },
+        {
+          "blueprint": "shieldgenerator_reinforced",
+          "engineer_id": 300000,
+          "grade": 3,
+          "module_type": "prismaticshieldgenerator"
+        },
+        {
+          "blueprint": "shieldgenerator_thermic",
+          "engineer_id": 300000,
+          "grade": 1,
+          "module_type": "prismaticshieldgenerator"
+        },
+        {
+          "blueprint": "shieldgenerator_thermic",
+          "engineer_id": 300000,
+          "grade": 2,
+          "module_type": "prismaticshieldgenerator"
+        },
+        {
+          "blueprint": "shieldgenerator_thermic",
+          "engineer_id": 300000,
+          "grade": 3,
+          "module_type": "prismaticshieldgenerator"
+        },
+        {
+          "blueprint": "shieldbooster_explosive",
+          "engineer_id": 300000,
+          "grade": 1,
+          "module_type": "shieldbooster"
+        },
+        {
+          "blueprint": "shieldbooster_explosive",
+          "engineer_id": 300000,
+          "grade": 2,
+          "module_type": "shieldbooster"
+        },
+        {
+          "blueprint": "shieldbooster_explosive",
+          "engineer_id": 300000,
+          "grade": 3,
+          "module_type": "shieldbooster"
+        },
+        {
+          "blueprint": "shieldbooster_explosive",
+          "engineer_id": 300000,
           "grade": 4,
-          "module_type": "fsd"
+          "module_type": "shieldbooster"
         },
         {
-          "blueprint": "fsd_longrange",
-          "engineer_id": 300100,
+          "blueprint": "shieldbooster_explosive",
+          "engineer_id": 300000,
           "grade": 5,
-          "module_type": "fsd"
+          "module_type": "shieldbooster"
         },
         {
-          "blueprint": "fsd_longrange",
-          "engineer_id": 300160,
+          "blueprint": "shieldbooster_heavyduty",
+          "engineer_id": 300000,
           "grade": 1,
-          "module_type": "fsd"
+          "module_type": "shieldbooster"
         },
         {
-          "blueprint": "fsd_longrange",
-          "engineer_id": 300160,
+          "blueprint": "shieldbooster_heavyduty",
+          "engineer_id": 300000,
           "grade": 2,
-          "module_type": "fsd"
+          "module_type": "shieldbooster"
         },
         {
-          "blueprint": "fsd_longrange",
-          "engineer_id": 300160,
+          "blueprint": "shieldbooster_heavyduty",
+          "engineer_id": 300000,
           "grade": 3,
-          "module_type": "fsd"
+          "module_type": "shieldbooster"
         },
         {
-          "blueprint": "fsd_longrange",
-          "engineer_id": 300160,
+          "blueprint": "shieldbooster_heavyduty",
+          "engineer_id": 300000,
           "grade": 4,
-          "module_type": "fsd"
+          "module_type": "shieldbooster"
         },
         {
-          "blueprint": "fsd_longrange",
-          "engineer_id": 300160,
+          "blueprint": "shieldbooster_heavyduty",
+          "engineer_id": 300000,
           "grade": 5,
-          "module_type": "fsd"
+          "module_type": "shieldbooster"
         },
         {
-          "blueprint": "engine_dirty",
-          "engineer_id": 300160,
+          "blueprint": "shieldbooster_kinetic",
+          "engineer_id": 300000,
           "grade": 1,
-          "module_type": "engine"
+          "module_type": "shieldbooster"
         },
         {
-          "blueprint": "engine_dirty",
-          "engineer_id": 300160,
+          "blueprint": "shieldbooster_kinetic",
+          "engineer_id": 300000,
           "grade": 2,
-          "module_type": "engine"
+          "module_type": "shieldbooster"
         },
         {
-          "blueprint": "engine_dirty",
-          "engineer_id": 300220,
-          "grade": 1,
-          "module_type": "engine"
-        },
-        {
-          "blueprint": "engine_dirty",
-          "engineer_id": 300220,
-          "grade": 2,
-          "module_type": "engine"
-        },
-        {
-          "blueprint": "engine_dirty",
-          "engineer_id": 300220,
+          "blueprint": "shieldbooster_kinetic",
+          "engineer_id": 300000,
           "grade": 3,
-          "module_type": "engine"
+          "module_type": "shieldbooster"
         },
         {
-          "blueprint": "engine_dirty",
-          "engineer_id": 300220,
+          "blueprint": "shieldbooster_kinetic",
+          "engineer_id": 300000,
           "grade": 4,
-          "module_type": "engine"
+          "module_type": "shieldbooster"
         },
         {
-          "blueprint": "engine_dirty",
-          "engineer_id": 300220,
+          "blueprint": "shieldbooster_kinetic",
+          "engineer_id": 300000,
           "grade": 5,
-          "module_type": "engine"
+          "module_type": "shieldbooster"
+        },
+        {
+          "blueprint": "shieldbooster_resistive",
+          "engineer_id": 300000,
+          "grade": 1,
+          "module_type": "shieldbooster"
+        },
+        {
+          "blueprint": "shieldbooster_resistive",
+          "engineer_id": 300000,
+          "grade": 2,
+          "module_type": "shieldbooster"
+        },
+        {
+          "blueprint": "shieldbooster_resistive",
+          "engineer_id": 300000,
+          "grade": 3,
+          "module_type": "shieldbooster"
+        },
+        {
+          "blueprint": "shieldbooster_resistive",
+          "engineer_id": 300000,
+          "grade": 4,
+          "module_type": "shieldbooster"
+        },
+        {
+          "blueprint": "shieldbooster_resistive",
+          "engineer_id": 300000,
+          "grade": 5,
+          "module_type": "shieldbooster"
+        },
+        {
+          "blueprint": "shieldbooster_thermic",
+          "engineer_id": 300000,
+          "grade": 1,
+          "module_type": "shieldbooster"
+        },
+        {
+          "blueprint": "shieldbooster_thermic",
+          "engineer_id": 300000,
+          "grade": 2,
+          "module_type": "shieldbooster"
+        },
+        {
+          "blueprint": "shieldbooster_thermic",
+          "engineer_id": 300000,
+          "grade": 3,
+          "module_type": "shieldbooster"
+        },
+        {
+          "blueprint": "shieldbooster_thermic",
+          "engineer_id": 300000,
+          "grade": 4,
+          "module_type": "shieldbooster"
+        },
+        {
+          "blueprint": "shieldbooster_thermic",
+          "engineer_id": 300000,
+          "grade": 5,
+          "module_type": "shieldbooster"
+        },
+        {
+          "blueprint": "shieldgenerator_kinetic",
+          "engineer_id": 300000,
+          "grade": 1,
+          "module_type": "shieldgenerator"
+        },
+        {
+          "blueprint": "shieldgenerator_kinetic",
+          "engineer_id": 300000,
+          "grade": 2,
+          "module_type": "shieldgenerator"
+        },
+        {
+          "blueprint": "shieldgenerator_kinetic",
+          "engineer_id": 300000,
+          "grade": 3,
+          "module_type": "shieldgenerator"
+        },
+        {
+          "blueprint": "shieldgenerator_optimised",
+          "engineer_id": 300000,
+          "grade": 1,
+          "module_type": "shieldgenerator"
+        },
+        {
+          "blueprint": "shieldgenerator_optimised",
+          "engineer_id": 300000,
+          "grade": 2,
+          "module_type": "shieldgenerator"
+        },
+        {
+          "blueprint": "shieldgenerator_optimised",
+          "engineer_id": 300000,
+          "grade": 3,
+          "module_type": "shieldgenerator"
+        },
+        {
+          "blueprint": "shieldgenerator_reinforced",
+          "engineer_id": 300000,
+          "grade": 1,
+          "module_type": "shieldgenerator"
+        },
+        {
+          "blueprint": "shieldgenerator_reinforced",
+          "engineer_id": 300000,
+          "grade": 2,
+          "module_type": "shieldgenerator"
+        },
+        {
+          "blueprint": "shieldgenerator_reinforced",
+          "engineer_id": 300000,
+          "grade": 3,
+          "module_type": "shieldgenerator"
+        },
+        {
+          "blueprint": "shieldgenerator_thermic",
+          "engineer_id": 300000,
+          "grade": 1,
+          "module_type": "shieldgenerator"
+        },
+        {
+          "blueprint": "shieldgenerator_thermic",
+          "engineer_id": 300000,
+          "grade": 2,
+          "module_type": "shieldgenerator"
+        },
+        {
+          "blueprint": "shieldgenerator_thermic",
+          "engineer_id": 300000,
+          "grade": 3,
+          "module_type": "shieldgenerator"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "autofieldmaintenanceunit"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "autofieldmaintenanceunit"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "autofieldmaintenanceunit"
+        },
+        {
+          "blueprint": "cargoracks5c1_extended",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "cargorack"
+        },
+        {
+          "blueprint": "cargoracks5c1_extended",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "cargorack"
+        },
+        {
+          "blueprint": "cargoracks5c1_extended",
+          "engineer_id": 300010,
+          "grade": 4,
+          "module_type": "cargorack"
+        },
+        {
+          "blueprint": "cargoracks6c1_extended",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "cargorack"
+        },
+        {
+          "blueprint": "cargoracks6c1_extended",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "cargorack"
+        },
+        {
+          "blueprint": "cargoracks6c1_extended",
+          "engineer_id": 300010,
+          "grade": 4,
+          "module_type": "cargorack"
+        },
+        {
+          "blueprint": "misc_lightweight",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "misc_lightweight",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "misc_lightweight",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "misc_reinforced",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "misc_reinforced",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "misc_reinforced",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "sensor_fastscan",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "sensor_fastscan",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "sensor_fastscan",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "sensor_longrange",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "sensor_longrange",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "sensor_longrange",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "sensor_wideangle",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "sensor_wideangle",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "sensor_wideangle",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "cargoscanner"
+        },
+        {
+          "blueprint": "fuelscoop_efficiency",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "fuelscoop"
+        },
+        {
+          "blueprint": "fuelscoop_efficiency",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "fuelscoop"
+        },
+        {
+          "blueprint": "fuelscoop_efficiency",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "fuelscoop"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "fuelscoop"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "fuelscoop"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "fuelscoop"
+        },
+        {
+          "blueprint": "misc_lightweight",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "misc_lightweight",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "misc_lightweight",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "misc_reinforced",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "misc_reinforced",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "misc_reinforced",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "sensor_fastscan",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "sensor_fastscan",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "sensor_fastscan",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "sensor_longrange",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "sensor_longrange",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "sensor_longrange",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "sensor_wideangle",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "sensor_wideangle",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "sensor_wideangle",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "killwarrantscanner"
+        },
+        {
+          "blueprint": "misc_lightweight",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "lifesupport"
+        },
+        {
+          "blueprint": "misc_lightweight",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "lifesupport"
+        },
+        {
+          "blueprint": "misc_lightweight",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "lifesupport"
+        },
+        {
+          "blueprint": "misc_reinforced",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "lifesupport"
+        },
+        {
+          "blueprint": "misc_reinforced",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "lifesupport"
+        },
+        {
+          "blueprint": "misc_reinforced",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "lifesupport"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "lifesupport"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "lifesupport"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "lifesupport"
+        },
+        {
+          "blueprint": "weapon_efficient",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_efficient",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_efficient",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_efficient",
+          "engineer_id": 300010,
+          "grade": 4,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_efficient",
+          "engineer_id": 300010,
+          "grade": 5,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_focused",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_focused",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_focused",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_focused",
+          "engineer_id": 300010,
+          "grade": 4,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_focused",
+          "engineer_id": 300010,
+          "grade": 5,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_lightweight",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_lightweight",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_lightweight",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_lightweight",
+          "engineer_id": 300010,
+          "grade": 4,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_lightweight",
+          "engineer_id": 300010,
+          "grade": 5,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_longrange",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_longrange",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_longrange",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_longrange",
+          "engineer_id": 300010,
+          "grade": 4,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_longrange",
+          "engineer_id": 300010,
+          "grade": 5,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_overcharged",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_overcharged",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_overcharged",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_overcharged",
+          "engineer_id": 300010,
+          "grade": 4,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_overcharged",
+          "engineer_id": 300010,
+          "grade": 5,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_rapidfire",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_rapidfire",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_rapidfire",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_rapidfire",
+          "engineer_id": 300010,
+          "grade": 4,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_rapidfire",
+          "engineer_id": 300010,
+          "grade": 5,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_shortrange",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_shortrange",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_shortrange",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_shortrange",
+          "engineer_id": 300010,
+          "grade": 4,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_shortrange",
+          "engineer_id": 300010,
+          "grade": 5,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_sturdy",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_sturdy",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_sturdy",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_sturdy",
+          "engineer_id": 300010,
+          "grade": 4,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "weapon_sturdy",
+          "engineer_id": 300010,
+          "grade": 5,
+          "module_type": "plasmaaccelerator"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "refinery"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "refinery"
+        },
+        {
+          "blueprint": "misc_shielded",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "refinery"
+        },
+        {
+          "blueprint": "sensor_lightweight",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "sensor"
+        },
+        {
+          "blueprint": "sensor_lightweight",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "sensor"
+        },
+        {
+          "blueprint": "sensor_lightweight",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "sensor"
+        },
+        {
+          "blueprint": "sensor_lightweight",
+          "engineer_id": 300010,
+          "grade": 4,
+          "module_type": "sensor"
+        },
+        {
+          "blueprint": "sensor_lightweight",
+          "engineer_id": 300010,
+          "grade": 5,
+          "module_type": "sensor"
+        },
+        {
+          "blueprint": "sensor_longrange",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "sensor"
+        },
+        {
+          "blueprint": "sensor_longrange",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "sensor"
+        },
+        {
+          "blueprint": "sensor_longrange",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "sensor"
+        },
+        {
+          "blueprint": "sensor_longrange",
+          "engineer_id": 300010,
+          "grade": 4,
+          "module_type": "sensor"
+        },
+        {
+          "blueprint": "sensor_longrange",
+          "engineer_id": 300010,
+          "grade": 5,
+          "module_type": "sensor"
+        },
+        {
+          "blueprint": "sensor_wideangle",
+          "engineer_id": 300010,
+          "grade": 1,
+          "module_type": "sensor"
+        },
+        {
+          "blueprint": "sensor_wideangle",
+          "engineer_id": 300010,
+          "grade": 2,
+          "module_type": "sensor"
+        },
+        {
+          "blueprint": "sensor_wideangle",
+          "engineer_id": 300010,
+          "grade": 3,
+          "module_type": "sensor"
+        },
+        {
+          "blueprint": "sensor_wideangle",
+          "engineer_id": 300010,
+          "grade": 4,
+          "module_type": "sensor"
+        },
+        {
+          "blueprint": "sensor_wideangle",
+          "engineer_id": 300010,
+          "grade": 5,
+          "module_type": "sensor"
         }
       ],
-      "next_cursor": null,
+      "next_cursor": 167,
       "revision": 21,
       "section": "capabilities",
-      "total": 20
+      "total": 2674
     },
     "engineers_engineers": {
       "cursor": 0,
@@ -559,18 +2618,51 @@
           "verified": false
         },
         {
-          "distance_ly": 69.2302414276088,
-          "id": 300160,
-          "name": "Elvira Martuuk",
+          "distance_ly": 76.45518346145668,
+          "id": 300110,
+          "name": "Ram Tah",
           "on_foot": false,
           "rank": null,
           "rank_progress": null,
-          "status": "Unlocked",
-          "system": "Khun",
+          "status": "Unknown",
+          "system": "Meene",
           "verified": false
         },
         {
-          "distance_ly": 88.3683053068944,
+          "distance_ly": 100.64433412859117,
+          "id": 300080,
+          "name": "Liz Ryder",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Eurybia",
+          "verified": false
+        },
+        {
+          "distance_ly": 110.24228537351266,
+          "id": 300230,
+          "name": "Lori Jameson",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Shinrarta Dezhra",
+          "verified": false
+        },
+        {
+          "distance_ly": 129.5203544874801,
+          "id": 300260,
+          "name": "Tod 'The Blaster' McQuinn",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Known",
+          "system": "Wolf 397",
+          "verified": false
+        },
+        {
+          "distance_ly": 133.95955094379238,
           "id": 300220,
           "name": "Professor Palin",
           "on_foot": false,
@@ -581,18 +2673,260 @@
           "verified": false
         },
         {
-          "distance_ly": 102.02178631455392,
-          "id": 300260,
-          "name": "Tod McQuinn",
+          "distance_ly": 135.21212992230025,
+          "id": 300200,
+          "name": "Marco Qwent",
           "on_foot": false,
           "rank": null,
           "rank_progress": null,
-          "status": "Known",
-          "system": "Wolf 397",
+          "status": "Unknown",
+          "system": "Sirius",
           "verified": false
         },
         {
-          "distance_ly": 144.12697703002203,
+          "distance_ly": 136.24246094394545,
+          "id": 300040,
+          "name": "The Sarge",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Beta-3 Tucani",
+          "verified": false
+        },
+        {
+          "distance_ly": 140.24850001983089,
+          "id": 300000,
+          "name": "Didi Vatermann",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Leesti",
+          "verified": false
+        },
+        {
+          "distance_ly": 142.9717887655201,
+          "id": 300140,
+          "name": "Colonel Bris Dekker",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Sol",
+          "verified": false
+        },
+        {
+          "distance_ly": 145.58910957940844,
+          "id": 300050,
+          "name": "Zacariah Nemo",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Yoru",
+          "verified": false
+        },
+        {
+          "distance_ly": 154.3614327287179,
+          "id": 300270,
+          "name": "Tiana Fortune",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Achenar",
+          "verified": false
+        },
+        {
+          "distance_ly": 156.21043924182854,
+          "id": 300180,
+          "name": "The Dweller",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Wyrd",
+          "verified": false
+        },
+        {
+          "distance_ly": 173.91474866924744,
+          "id": 300210,
+          "name": "Selene Jean",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Kuk",
+          "verified": false
+        },
+        {
+          "distance_ly": 185.73817614622203,
+          "id": 300010,
+          "name": "Bill Turner",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Alioth",
+          "verified": false
+        },
+        {
+          "distance_ly": 198.95735733835656,
+          "id": 300250,
+          "name": "Juri Ishmaak",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Giryak",
+          "verified": false
+        },
+        {
+          "distance_ly": 213.05333234163461,
+          "id": 300030,
+          "name": "Broo Tarquin",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Muang",
+          "verified": false
+        },
+        {
+          "distance_ly": 226.22948707078947,
+          "id": 300120,
+          "name": "Lei Cheung",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Laksak",
+          "verified": false
+        },
+        {
+          "distance_ly": 229.5130459084788,
+          "id": 300090,
+          "name": "Hera Tani",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Kuwemaki",
+          "verified": false
+        },
+        {
+          "distance_ly": 307.37510001523384,
+          "id": 300160,
+          "name": "Elvira Martuuk",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unlocked",
+          "system": "Khun",
+          "verified": false
+        },
+        {
+          "distance_ly": 791.5981968362327,
+          "id": 300300,
+          "name": "Chloe Sedesi",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Shenve",
+          "verified": false
+        },
+        {
+          "distance_ly": 22095.217655627886,
+          "id": 300150,
+          "name": "Marsha Hicks",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Tir",
+          "verified": false
+        },
+        {
+          "distance_ly": 22102.259184860846,
+          "id": 300290,
+          "name": "Etienne Dorn",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Los",
+          "verified": false
+        },
+        {
+          "distance_ly": 22114.698749015926,
+          "id": 300280,
+          "name": "Mel Brandon",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Luchtaine",
+          "verified": false
+        },
+        {
+          "distance_ly": 22117.852080653756,
+          "id": 300130,
+          "name": "Petra Olmanova",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Asura",
+          "verified": false
+        },
+        {
+          "distance_ly": 44.428103788593106,
+          "id": 400007,
+          "name": "Uma Laszlo",
+          "on_foot": true,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Xuane",
+          "verified": false
+        },
+        {
+          "distance_ly": 61.588292185893586,
+          "id": 400005,
+          "name": "Wellington Beck",
+          "on_foot": true,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Jolapa",
+          "verified": false
+        },
+        {
+          "distance_ly": 81.3036298966719,
+          "id": 400003,
+          "name": "Hero Ferrari",
+          "on_foot": true,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Siris",
+          "verified": false
+        },
+        {
+          "distance_ly": 170.04585135339232,
+          "id": 400001,
+          "name": "Jude Navarro",
+          "on_foot": true,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Aurai",
+          "verified": false
+        },
+        {
+          "distance_ly": 196.02530468825958,
           "id": 400002,
           "name": "Domino Green",
           "on_foot": true,
@@ -601,16 +2935,174 @@
           "status": "Unknown",
           "system": "Orishis",
           "verified": false
+        },
+        {
+          "distance_ly": 199.7114802698195,
+          "id": 400009,
+          "name": "Yarden Bond",
+          "on_foot": true,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Bayan",
+          "verified": false
+        },
+        {
+          "distance_ly": 211.7572957531511,
+          "id": 400006,
+          "name": "Terra Velasquez",
+          "on_foot": true,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Shou Xing",
+          "verified": false
+        },
+        {
+          "distance_ly": 212.57354186992558,
+          "id": 400004,
+          "name": "Kit Fowler",
+          "on_foot": true,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Capoya",
+          "verified": false
+        },
+        {
+          "distance_ly": 273.41637089794017,
+          "id": 400008,
+          "name": "Oden Geiger",
+          "on_foot": true,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Candiaei",
+          "verified": false
+        },
+        {
+          "distance_ly": 22089.24992680528,
+          "id": 400011,
+          "name": "Eleanor Bresa",
+          "on_foot": true,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Desy",
+          "verified": false
+        },
+        {
+          "distance_ly": 22097.76688163397,
+          "id": 400010,
+          "name": "Baltanos",
+          "on_foot": true,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "DERISO",
+          "verified": false
+        },
+        {
+          "distance_ly": 22099.557721654393,
+          "id": 400012,
+          "name": "Rosa Dayette",
+          "on_foot": true,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Kojeara",
+          "verified": false
+        },
+        {
+          "distance_ly": 22106.53882557026,
+          "id": 400013,
+          "name": "Yi Shen",
+          "on_foot": true,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Einheriar",
+          "verified": false
         }
       ],
       "next_cursor": null,
       "revision": 21,
       "section": "engineers",
-      "total": 5
+      "total": 38
     },
     "engineers_unlock": {
       "cursor": 0,
       "items": [
+        {
+          "engineer_id": 300000,
+          "field": "requirement",
+          "key": "unlock-didi-vatermann"
+        },
+        {
+          "engineer_id": 300000,
+          "field": "invite",
+          "key": "unlock-invite-didi-vatermann"
+        },
+        {
+          "engineer_id": 300010,
+          "field": "requirement",
+          "key": "unlock-bill-turner"
+        },
+        {
+          "engineer_id": 300010,
+          "field": "invite",
+          "key": "unlock-invite-bill-turner"
+        },
+        {
+          "engineer_id": 300030,
+          "field": "requirement",
+          "key": "unlock-broo-tarquin"
+        },
+        {
+          "engineer_id": 300030,
+          "field": "invite",
+          "key": "unlock-invite-broo-tarquin"
+        },
+        {
+          "engineer_id": 300040,
+          "field": "requirement",
+          "key": "unlock-the-sarge"
+        },
+        {
+          "engineer_id": 300040,
+          "field": "invite",
+          "key": "unlock-invite-the-sarge"
+        },
+        {
+          "engineer_id": 300050,
+          "field": "requirement",
+          "key": "unlock-zacariah-nemo"
+        },
+        {
+          "engineer_id": 300050,
+          "field": "invite",
+          "key": "unlock-invite-zacariah-nemo"
+        },
+        {
+          "engineer_id": 300080,
+          "field": "requirement",
+          "key": "unlock-liz-ryder"
+        },
+        {
+          "engineer_id": 300080,
+          "field": "invite",
+          "key": "unlock-invite-liz-ryder"
+        },
+        {
+          "engineer_id": 300090,
+          "field": "requirement",
+          "key": "unlock-hera-tani"
+        },
+        {
+          "engineer_id": 300090,
+          "field": "invite",
+          "key": "unlock-invite-hera-tani"
+        },
         {
           "engineer_id": 300100,
           "field": "requirement",
@@ -620,6 +3112,56 @@
           "engineer_id": 300100,
           "field": "invite",
           "key": "unlock-invite-felicity-farseer"
+        },
+        {
+          "engineer_id": 300110,
+          "field": "requirement",
+          "key": "unlock-ram-tah"
+        },
+        {
+          "engineer_id": 300110,
+          "field": "invite",
+          "key": "unlock-invite-ram-tah"
+        },
+        {
+          "engineer_id": 300120,
+          "field": "requirement",
+          "key": "unlock-lei-cheung"
+        },
+        {
+          "engineer_id": 300120,
+          "field": "invite",
+          "key": "unlock-invite-lei-cheung"
+        },
+        {
+          "engineer_id": 300130,
+          "field": "requirement",
+          "key": "unlock-petra-olmanova"
+        },
+        {
+          "engineer_id": 300130,
+          "field": "invite",
+          "key": "unlock-invite-petra-olmanova"
+        },
+        {
+          "engineer_id": 300140,
+          "field": "requirement",
+          "key": "unlock-colonel-bris-dekker"
+        },
+        {
+          "engineer_id": 300140,
+          "field": "invite",
+          "key": "unlock-invite-colonel-bris-dekker"
+        },
+        {
+          "engineer_id": 300150,
+          "field": "requirement",
+          "key": "unlock-marsha-hicks"
+        },
+        {
+          "engineer_id": 300150,
+          "field": "invite",
+          "key": "unlock-invite-marsha-hicks"
         },
         {
           "engineer_id": 300160,
@@ -639,6 +3181,36 @@
           "kind": "commodity"
         },
         {
+          "engineer_id": 300180,
+          "field": "requirement",
+          "key": "unlock-the-dweller"
+        },
+        {
+          "engineer_id": 300180,
+          "field": "invite",
+          "key": "unlock-invite-the-dweller"
+        },
+        {
+          "engineer_id": 300200,
+          "field": "requirement",
+          "key": "unlock-marco-qwent"
+        },
+        {
+          "engineer_id": 300200,
+          "field": "invite",
+          "key": "unlock-invite-marco-qwent"
+        },
+        {
+          "engineer_id": 300210,
+          "field": "requirement",
+          "key": "unlock-selene-jean"
+        },
+        {
+          "engineer_id": 300210,
+          "field": "invite",
+          "key": "unlock-invite-selene-jean"
+        },
+        {
           "engineer_id": 300220,
           "field": "requirement",
           "key": "unlock-professor-palin"
@@ -649,25 +3221,210 @@
           "key": "unlock-invite-professor-palin"
         },
         {
+          "engineer_id": 300230,
+          "field": "requirement",
+          "key": "unlock-lori-jameson"
+        },
+        {
+          "engineer_id": 300230,
+          "field": "invite",
+          "key": "unlock-invite-lori-jameson"
+        },
+        {
+          "engineer_id": 300250,
+          "field": "requirement",
+          "key": "unlock-juri-ishmaak"
+        },
+        {
+          "engineer_id": 300250,
+          "field": "invite",
+          "key": "unlock-invite-juri-ishmaak"
+        },
+        {
           "engineer_id": 300260,
           "field": "requirement",
-          "key": "unlock-tod-mcquinn"
+          "key": "unlock-tod-the-blaster-mcquinn"
         },
         {
           "engineer_id": 300260,
           "field": "invite",
-          "key": "unlock-invite-tod-mcquinn"
+          "key": "unlock-invite-tod-the-blaster-mcquinn"
+        },
+        {
+          "engineer_id": 300270,
+          "field": "requirement",
+          "key": "unlock-tiana-fortune"
+        },
+        {
+          "engineer_id": 300270,
+          "field": "invite",
+          "key": "unlock-invite-tiana-fortune"
+        },
+        {
+          "engineer_id": 300280,
+          "field": "requirement",
+          "key": "unlock-mel-brandon"
+        },
+        {
+          "engineer_id": 300280,
+          "field": "invite",
+          "key": "unlock-invite-mel-brandon"
+        },
+        {
+          "engineer_id": 300290,
+          "field": "requirement",
+          "key": "unlock-etienne-dorn"
+        },
+        {
+          "engineer_id": 300290,
+          "field": "invite",
+          "key": "unlock-invite-etienne-dorn"
+        },
+        {
+          "engineer_id": 300300,
+          "field": "requirement",
+          "key": "unlock-chloe-sedesi"
+        },
+        {
+          "engineer_id": 300300,
+          "field": "invite",
+          "key": "unlock-invite-chloe-sedesi"
+        },
+        {
+          "engineer_id": 400001,
+          "field": "requirement",
+          "key": "unlock-jude-navarro"
+        },
+        {
+          "engineer_id": 400001,
+          "field": "invite",
+          "key": "unlock-invite-jude-navarro"
         },
         {
           "engineer_id": 400002,
           "field": "requirement",
           "key": "unlock-domino-green"
+        },
+        {
+          "engineer_id": 400002,
+          "field": "invite",
+          "key": "unlock-invite-domino-green"
+        },
+        {
+          "engineer_id": 400003,
+          "field": "requirement",
+          "key": "unlock-hero-ferrari"
+        },
+        {
+          "engineer_id": 400003,
+          "field": "invite",
+          "key": "unlock-invite-hero-ferrari"
+        },
+        {
+          "engineer_id": 400004,
+          "field": "requirement",
+          "key": "unlock-kit-fowler"
+        },
+        {
+          "engineer_id": 400004,
+          "field": "invite",
+          "key": "unlock-invite-kit-fowler"
+        },
+        {
+          "engineer_id": 400005,
+          "field": "requirement",
+          "key": "unlock-wellington-beck"
+        },
+        {
+          "engineer_id": 400005,
+          "field": "invite",
+          "key": "unlock-invite-wellington-beck"
+        },
+        {
+          "engineer_id": 400006,
+          "field": "requirement",
+          "key": "unlock-terra-velasquez"
+        },
+        {
+          "engineer_id": 400006,
+          "field": "invite",
+          "key": "unlock-invite-terra-velasquez"
+        },
+        {
+          "engineer_id": 400007,
+          "field": "requirement",
+          "key": "unlock-uma-laszlo"
+        },
+        {
+          "engineer_id": 400007,
+          "field": "invite",
+          "key": "unlock-invite-uma-laszlo"
+        },
+        {
+          "engineer_id": 400008,
+          "field": "requirement",
+          "key": "unlock-oden-geiger"
+        },
+        {
+          "engineer_id": 400008,
+          "field": "invite",
+          "key": "unlock-invite-oden-geiger"
+        },
+        {
+          "engineer_id": 400009,
+          "field": "requirement",
+          "key": "unlock-yarden-bond"
+        },
+        {
+          "engineer_id": 400009,
+          "field": "invite",
+          "key": "unlock-invite-yarden-bond"
+        },
+        {
+          "engineer_id": 400010,
+          "field": "requirement",
+          "key": "unlock-baltanos"
+        },
+        {
+          "engineer_id": 400010,
+          "field": "invite",
+          "key": "unlock-invite-baltanos"
+        },
+        {
+          "engineer_id": 400011,
+          "field": "requirement",
+          "key": "unlock-eleanor-bresa"
+        },
+        {
+          "engineer_id": 400011,
+          "field": "invite",
+          "key": "unlock-invite-eleanor-bresa"
+        },
+        {
+          "engineer_id": 400012,
+          "field": "requirement",
+          "key": "unlock-rosa-dayette"
+        },
+        {
+          "engineer_id": 400012,
+          "field": "invite",
+          "key": "unlock-invite-rosa-dayette"
+        },
+        {
+          "engineer_id": 400013,
+          "field": "requirement",
+          "key": "unlock-yi-shen"
+        },
+        {
+          "engineer_id": 400013,
+          "field": "invite",
+          "key": "unlock-invite-yi-shen"
         }
       ],
       "next_cursor": null,
       "revision": 21,
       "section": "unlock",
-      "total": 10
+      "total": 77
     },
     "flow_blueprints": {
       "cursor": 0,
@@ -683,12 +3440,36 @@
           ],
           "key": "engine_dirty",
           "reason": null
+        },
+        {
+          "available": true,
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "key": "engine_reinforced",
+          "reason": null
+        },
+        {
+          "available": true,
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "key": "engine_tuned",
+          "reason": null
         }
       ],
       "next_cursor": null,
       "revision": 21,
       "section": "blueprints",
-      "total": 1
+      "total": 3
     },
     "flow_costs": {
       "cursor": 0,
@@ -697,97 +3478,121 @@
           "count": 1,
           "grade": 1,
           "kind": "material",
-          "material": "carbon"
-        },
-        {
-          "count": 1,
-          "grade": 1,
-          "kind": "material",
-          "material": "heatconductionwiring"
+          "material": "legacyfirmware"
         },
         {
           "count": 1,
           "grade": 2,
           "kind": "material",
-          "material": "heatdispersionplate"
+          "material": "legacyfirmware"
         },
         {
           "count": 1,
           "grade": 2,
           "kind": "material",
-          "material": "vanadium"
+          "material": "mechanicalequipment"
         },
         {
           "count": 1,
           "grade": 3,
           "kind": "material",
-          "material": "heatexchangers"
+          "material": "chromium"
         },
         {
           "count": 1,
           "grade": 3,
           "kind": "material",
-          "material": "niobium"
+          "material": "legacyfirmware"
+        },
+        {
+          "count": 1,
+          "grade": 3,
+          "kind": "material",
+          "material": "mechanicalcomponents"
         },
         {
           "count": 1,
           "grade": 4,
           "kind": "material",
-          "material": "heatvanes"
+          "material": "configurablecomponents"
         },
         {
           "count": 1,
           "grade": 4,
           "kind": "material",
-          "material": "yttrium"
+          "material": "consumerfirmware"
+        },
+        {
+          "count": 1,
+          "grade": 4,
+          "kind": "material",
+          "material": "selenium"
         },
         {
           "count": 4,
           "grade": 5,
           "kind": "material",
-          "material": "polonium"
+          "material": "cadmium"
         },
         {
           "count": 4,
           "grade": 5,
           "kind": "material",
-          "material": "protoheatradiators"
+          "material": "industrialfirmware"
         },
         {
-          "count": 1,
-          "grade": null,
+          "count": 4,
+          "grade": 5,
           "kind": "material",
-          "material": "electrochemicalarrays"
+          "material": "pharmaceuticalisolators"
         },
         {
-          "count": 1,
+          "count": 3,
           "grade": null,
           "kind": "material",
           "material": "hybridcapacitors"
         },
         {
+          "count": 5,
+          "grade": null,
+          "kind": "material",
+          "material": "iron"
+        },
+        {
           "count": 1,
           "grade": null,
           "kind": "material",
-          "material": "pharmaceuticalisolators"
+          "material": "securityfirmware"
         }
       ],
       "next_cursor": null,
       "revision": 21,
       "section": "costs",
-      "total": 13
+      "total": 15
     },
     "flow_experimentals": {
       "cursor": 0,
       "items": [
         {
+          "key": "special_engine_cooled"
+        },
+        {
+          "key": "special_engine_haulage"
+        },
+        {
+          "key": "special_engine_lightweight"
+        },
+        {
           "key": "special_engine_overloaded"
+        },
+        {
+          "key": "special_engine_toughened"
         }
       ],
       "next_cursor": null,
       "revision": 21,
       "section": "experimentals",
-      "total": 1
+      "total": 5
     },
     "flow_grades": {
       "cursor": 0,
@@ -827,45 +3632,52 @@
       "cursor": 0,
       "items": [
         {
-          "grade": 1,
-          "have": 1,
-          "key": "carbon",
-          "missing": 0,
-          "name_en": "Carbon",
-          "need": 1,
-          "state": "ok",
-          "trade": null
-        },
-        {
           "grade": 3,
           "have": 0,
-          "key": "electrochemicalarrays",
+          "key": "cadmium",
           "missing": 0,
-          "name_en": "Electrochemical Arrays",
-          "need": 1,
+          "name_en": "Cadmium",
+          "need": 4,
           "state": "trade",
           "trade": {
-            "get": 3,
-            "get_key": "electrochemicalarrays",
-            "give": 2,
-            "give_key": "pharmaceuticalisolators",
+            "get": 4,
+            "get_key": "cadmium",
+            "give": 8,
+            "give_key": "polonium",
             "same_family": false,
-            "trader": "Manufactured"
+            "trader": "Raw"
           }
         },
         {
-          "grade": 1,
+          "grade": 2,
           "have": 0,
-          "key": "heatconductionwiring",
+          "key": "chromium",
           "missing": 0,
-          "name_en": "Heat Conduction Wiring",
+          "name_en": "Chromium",
           "need": 1,
           "state": "trade",
           "trade": {
             "get": 3,
-            "get_key": "heatconductionwiring",
+            "get_key": "chromium",
             "give": 2,
-            "give_key": "conductiveceramics",
+            "give_key": "polonium",
+            "same_family": false,
+            "trader": "Raw"
+          }
+        },
+        {
+          "grade": 4,
+          "have": 0,
+          "key": "configurablecomponents",
+          "missing": 0,
+          "name_en": "Configurable Components",
+          "need": 1,
+          "state": "trade",
+          "trade": {
+            "get": 1,
+            "get_key": "configurablecomponents",
+            "give": 2,
+            "give_key": "biotechconductors",
             "same_family": false,
             "trader": "Manufactured"
           }
@@ -873,45 +3685,11 @@
         {
           "grade": 2,
           "have": 0,
-          "key": "heatdispersionplate",
-          "missing": 0,
-          "name_en": "Heat Dispersion Plate",
+          "key": "consumerfirmware",
+          "missing": 1,
+          "name_en": "Modified Consumer Firmware",
           "need": 1,
-          "state": "trade",
-          "trade": {
-            "get": 9,
-            "get_key": "heatdispersionplate",
-            "give": 1,
-            "give_key": "heatvanes",
-            "same_family": true,
-            "trader": "Manufactured"
-          }
-        },
-        {
-          "grade": 3,
-          "have": 0,
-          "key": "heatexchangers",
-          "missing": 0,
-          "name_en": "Heat Exchangers",
-          "need": 1,
-          "state": "trade",
-          "trade": {
-            "get": 3,
-            "get_key": "heatexchangers",
-            "give": 1,
-            "give_key": "heatvanes",
-            "same_family": true,
-            "trader": "Manufactured"
-          }
-        },
-        {
-          "grade": 4,
-          "have": 3,
-          "key": "heatvanes",
-          "missing": 0,
-          "name_en": "Heat Vanes",
-          "need": 1,
-          "state": "ok",
+          "state": "missing",
           "trade": null
         },
         {
@@ -920,13 +3698,13 @@
           "key": "hybridcapacitors",
           "missing": 0,
           "name_en": "Hybrid Capacitors",
-          "need": 1,
+          "need": 3,
           "state": "trade",
           "trade": {
-            "get": 1,
+            "get": 9,
             "get_key": "hybridcapacitors",
             "give": 2,
-            "give_key": "conductiveceramics",
+            "give_key": "biotechconductors",
             "same_family": false,
             "trader": "Manufactured"
           }
@@ -934,18 +3712,72 @@
         {
           "grade": 3,
           "have": 0,
-          "key": "niobium",
+          "key": "industrialfirmware",
           "missing": 0,
-          "name_en": "Niobium",
+          "name_en": "Cracked Industrial Firmware",
+          "need": 4,
+          "state": "trade",
+          "trade": {
+            "get": 4,
+            "get_key": "industrialfirmware",
+            "give": 8,
+            "give_key": "shieldpatternanalysis",
+            "same_family": false,
+            "trader": "Encoded"
+          }
+        },
+        {
+          "grade": 1,
+          "have": 117,
+          "key": "iron",
+          "missing": 0,
+          "name_en": "Iron",
+          "need": 5,
+          "state": "ok",
+          "trade": null
+        },
+        {
+          "grade": 1,
+          "have": 0,
+          "key": "legacyfirmware",
+          "missing": 3,
+          "name_en": "Specialised Legacy Firmware",
+          "need": 3,
+          "state": "missing",
+          "trade": null
+        },
+        {
+          "grade": 3,
+          "have": 0,
+          "key": "mechanicalcomponents",
+          "missing": 0,
+          "name_en": "Mechanical Components",
           "need": 1,
           "state": "trade",
           "trade": {
             "get": 1,
-            "get_key": "niobium",
+            "get_key": "mechanicalcomponents",
             "give": 2,
-            "give_key": "polonium",
+            "give_key": "heatvanes",
             "same_family": false,
-            "trader": "Raw"
+            "trader": "Manufactured"
+          }
+        },
+        {
+          "grade": 2,
+          "have": 0,
+          "key": "mechanicalequipment",
+          "missing": 0,
+          "name_en": "Mechanical Equipment",
+          "need": 1,
+          "state": "trade",
+          "trade": {
+            "get": 1,
+            "get_key": "mechanicalequipment",
+            "give": 2,
+            "give_key": "conductiveceramics",
+            "same_family": false,
+            "trader": "Manufactured"
           }
         },
         {
@@ -954,58 +3786,38 @@
           "key": "pharmaceuticalisolators",
           "missing": 0,
           "name_en": "Pharmaceutical Isolators",
-          "need": 1,
+          "need": 4,
           "state": "ok",
           "trade": null
         },
         {
           "grade": 4,
-          "have": 150,
-          "key": "polonium",
-          "missing": 0,
-          "name_en": "Polonium",
-          "need": 4,
-          "state": "ok",
-          "trade": null
-        },
-        {
-          "grade": 5,
-          "have": 2,
-          "key": "protoheatradiators",
-          "missing": 2,
-          "name_en": "Proto Heat Radiators",
-          "need": 4,
-          "state": "missing",
-          "trade": null
-        },
-        {
-          "grade": 2,
           "have": 0,
-          "key": "vanadium",
+          "key": "securityfirmware",
           "missing": 0,
-          "name_en": "Vanadium",
+          "name_en": "Security Firmware Patch",
           "need": 1,
           "state": "trade",
           "trade": {
-            "get": 3,
-            "get_key": "vanadium",
-            "give": 2,
-            "give_key": "polonium",
+            "get": 1,
+            "get_key": "securityfirmware",
+            "give": 6,
+            "give_key": "shieldpatternanalysis",
             "same_family": false,
-            "trader": "Raw"
+            "trader": "Encoded"
           }
         },
         {
           "grade": 4,
           "have": 0,
-          "key": "yttrium",
+          "key": "selenium",
           "missing": 0,
-          "name_en": "Yttrium",
+          "name_en": "Selenium",
           "need": 1,
           "state": "trade",
           "trade": {
             "get": 1,
-            "get_key": "yttrium",
+            "get_key": "selenium",
             "give": 6,
             "give_key": "polonium",
             "same_family": false,
@@ -1034,9 +3846,11 @@
             "need": 0
           },
           "missing": {
+            "arsenic": 4,
+            "chemicalmanipulators": 4,
             "dataminedwake": 1
           },
-          "percent": 87,
+          "percent": 25,
           "request": {
             "blueprint": "fsd_longrange",
             "experimental": null,
@@ -1059,6 +3873,22 @@
               "give_key": "hyperspacetrajectories",
               "same_family": true,
               "trader": "Encoded"
+            },
+            {
+              "get": 6,
+              "get_key": "chemicalmanipulators",
+              "give": 2,
+              "give_key": "pharmaceuticalisolators",
+              "same_family": true,
+              "trader": "Manufactured"
+            },
+            {
+              "get": 9,
+              "get_key": "arsenic",
+              "give": 1,
+              "give_key": "polonium",
+              "same_family": true,
+              "trader": "Raw"
             }
           ],
           "verified": false
@@ -1207,9 +4037,7 @@
   },
   "engineering.sources": {
     "as_of": "2026-10-21T12:05:00Z",
-    "brokers": {
-      "Human": "Loading"
-    },
+    "brokers": {},
     "hints": {
       "dataminedwake": [
         {
@@ -1221,82 +4049,10 @@
           "kind": "signal_source"
         }
       ],
-      "electrochemicalarrays": [
-        {
-          "detail_key": null,
-          "kind": "salvage"
-        }
-      ],
-      "heatconductionwiring": [
-        {
-          "detail_key": null,
-          "kind": "salvage"
-        },
-        {
-          "detail_key": null,
-          "kind": "mission_reward"
-        }
-      ],
-      "heatdispersionplate": [
-        {
-          "detail_key": null,
-          "kind": "salvage"
-        },
-        {
-          "detail_key": null,
-          "kind": "mission_reward"
-        }
-      ],
-      "heatexchangers": [
-        {
-          "detail_key": null,
-          "kind": "salvage"
-        },
-        {
-          "detail_key": null,
-          "kind": "mission_reward"
-        }
-      ],
       "hybridcapacitors": [
         {
           "detail_key": null,
           "kind": "salvage"
-        }
-      ],
-      "niobium": [
-        {
-          "detail_key": null,
-          "kind": "surface_prospecting"
-        },
-        {
-          "detail_key": null,
-          "kind": "mining"
-        }
-      ],
-      "protoheatradiators": [
-        {
-          "detail_key": null,
-          "kind": "mission_reward"
-        },
-        {
-          "detail_key": null,
-          "kind": "broker"
-        }
-      ],
-      "vanadium": [
-        {
-          "detail_key": null,
-          "kind": "surface_prospecting"
-        }
-      ],
-      "yttrium": [
-        {
-          "detail_key": null,
-          "kind": "surface_prospecting"
-        },
-        {
-          "detail_key": null,
-          "kind": "mining"
         }
       ]
     },

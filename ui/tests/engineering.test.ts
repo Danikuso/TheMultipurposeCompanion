@@ -117,6 +117,23 @@ function restFetch(options: RestOptions = {}) {
   const parsed = new URL(url, 'http://localhost'); const resource = parsed.pathname.split('/').pop()!;
   const section = parsed.searchParams.get('section') ?? (resource === 'flow' ? 'lines' : 'engineers');
   const custom = options.override?.(resource, section, parsed.searchParams); if (custom) return custom;
+  if (resource === 'engineers' && section === 'capabilities') {
+   const rev = Number(parsed.searchParams.get('revision')) || 21;
+   const engId = Number(parsed.searchParams.get('engineer_id'));
+   if (engId === 300100) {
+    return json(page('capabilities', [
+     { engineer_id: 300100, module_type: 'engine', blueprint: 'engine_dirty', grade: 1 },
+     { engineer_id: 300100, module_type: 'engine', blueprint: 'engine_dirty', grade: 2 },
+     { engineer_id: 300100, module_type: 'engine', blueprint: 'engine_dirty', grade: 3 },
+    ], rev));
+   }
+   if (engId === 300160) {
+    return json(page('capabilities', [
+     { engineer_id: 300160, module_type: 'engine', blueprint: 'engine_dirty', grade: 1 },
+     { engineer_id: 300160, module_type: 'engine', blueprint: 'engine_dirty', grade: 2 },
+    ], rev));
+   }
+  }
   const base = restPages[`${resource}_${section}`] ?? restPages[resource];
   return new Response(JSON.stringify({ ...base, revision: Number(parsed.searchParams.get('revision')), section }));
  }));
@@ -314,7 +331,7 @@ test('flow topic is a summary and every heavy section comes from the paginated r
  await showFlow();
  const sections = restCalls('flow').map(([url]) => new URL(String(url), 'http://x').searchParams.get('section')).sort();
  expect(sections).toEqual(['blueprints', 'costs', 'experimentals', 'grades', 'lines']);
- expect(target.querySelector('[data-material="polonium"]')).not.toBeNull();
+ expect(target.querySelector('[data-material="pharmaceuticalisolators"]')).not.toBeNull();
 });
 test('ship shows stock and official current engineering including unsupported modules', async () => {
  const ship = structuredClone(fixture['engineering.ship']); ship.modules.push({ ...ship.modules[1], slot: 'Unsupported', engineerable: false }); live.topics['engineering.ship'] = ship;
@@ -331,7 +348,7 @@ test('preview posts exact request and pin and close post empty objects', async (
 });
 test('flow renders material statuses per grade experimental totals readiness and locked engineer', async () => {
  live.topics['engineering.flow'] = { ...flowTopic(), replaces_blueprint: true };
- const lines = (restPages.flow_lines.items as { key: string }[]).map(row => row.key === 'carbon' ? { ...row, state: 'missing', missing: 2 } : row);
+ const lines = (restPages.flow_lines.items as { key: string }[]).map(row => row.key === 'legacyfirmware' ? { ...row, state: 'missing', missing: 2 } : row);
  await showFlow({ override: (resource, section) => resource === 'flow' && section === 'lines' ? json(page('lines', lines)) : undefined });
  expect(target.textContent).toContain('Falta 2'); expect(target.textContent).toContain('Cubierto con intercambio'); expect(target.textContent).toContain('Se sustituye');
  expect(target.textContent).toContain('Sin verificar'); expect(target.textContent).toContain('Professor Palin'); expect(target.textContent).toContain('G5');
@@ -340,8 +357,8 @@ test('flow renders material statuses per grade experimental totals readiness and
  expect(target.querySelector('[data-testid="flow-next-step"]')?.textContent).not.toContain('unlock-professor-palin');
 });
 test('ready percent states that it refers to materials', async () => {
- await showFlow(); expect(target.querySelector('[data-testid="materials-percent"]')?.textContent).toBe('Materiales: 47 % listo');
- setLocale('en'); flushSync(); expect(target.querySelector('[data-testid="materials-percent"]')?.textContent).toBe('Materials: 47 % ready');
+ await showFlow(); expect(target.querySelector('[data-testid="materials-percent"]')?.textContent).toBe('Materiales: 30 % listo');
+ setLocale('en'); flushSync(); expect(target.querySelector('[data-testid="materials-percent"]')?.textContent).toBe('Materials: 30 % ready');
 });
 test('flow defaults from config and resets only on slot changes', async () => {
  live.topics['engineering.flow'] = { ...flowTopic(), request: null, status: 'idle' };
@@ -380,7 +397,7 @@ test('blocked flow shows the localized reason instead of plain no data', async (
 test('missing grade recipes remain visible with their concrete grades', async () => {
  live.topics['engineering.flow'] = { ...flowTopic(), blockers: [{ missing_recipe: { grade: 2 } }, { missing_recipe: { grade: 4 } }] }; await showFlow();
  const reasons = target.querySelector('[data-testid="flow-blockers"]')!.textContent!; expect(reasons).toContain('Falta la receta de G2'); expect(reasons).toContain('Falta la receta de G4');
- expect(target.querySelector('[data-material="carbon"]')).not.toBeNull();
+ expect(target.querySelector('[data-material="legacyfirmware"]')).not.toBeNull();
 });
 test('materials ready with unknown Merc Coins balance is not completable and shows the coins separately', async () => {
  live.topics['engineering.flow'] = { ...flowTopic(), materials_ready: true, percent: 100, merc_coins: { need: 30, have: null, missing: null } };
@@ -427,17 +444,17 @@ test('a blueprint that cannot be applied is never the default choice', async () 
  expect((input('blueprint') as HTMLSelectElement).value).toBe('engine_dirty');
 });
 test('flow pages of two revisions never mix and the old slot rows disappear at once', async () => {
- await showFlow(); expect(target.querySelector('[data-material="carbon"]')).not.toBeNull();
+ await showFlow(); expect(target.querySelector('[data-material="legacyfirmware"]')).not.toBeNull();
  const next = [{ ...(restPages.flow_lines.items[0] as object), key: 'newmaterial', name_en: 'New Material' }];
  restFetch({ override: (resource, section, query) => resource === 'flow' && section === 'lines' && query.get('revision') === '22' ? json(page('lines', next, 22)) : undefined });
  live.topics['engineering.flow'] = { ...flowTopic(), revision: 22 }; flushSync();
- expect(target.querySelector('[data-material="carbon"]')).toBeNull(); await settle();
- expect(target.querySelector('[data-material="newmaterial"]')).not.toBeNull(); expect(target.querySelector('[data-material="carbon"]')).toBeNull();
+ expect(target.querySelector('[data-material="legacyfirmware"]')).toBeNull(); await settle();
+ expect(target.querySelector('[data-material="newmaterial"]')).not.toBeNull(); expect(target.querySelector('[data-material="legacyfirmware"]')).toBeNull();
 });
 test('a slot change discards the previous rows before the new ones arrive', async () => {
  await showFlow(); restFetch({ override: () => new Promise<Response>(() => {}) as unknown as Response });
  live.topics['engineering.flow'] = { ...flowTopic(), slot: 'Other' }; flushSync();
- expect(target.querySelector('[data-material="carbon"]')).toBeNull(); expect(target.textContent).toContain('Cargando');
+ expect(target.querySelector('[data-material="legacyfirmware"]')).toBeNull(); expect(target.textContent).toContain('Cargando');
 });
 test('flow as_of-only updates do not restart the pages and unmount cancels them', async () => {
  await showFlow(); vi.mocked(fetch).mockClear();
@@ -451,7 +468,7 @@ test('flow pages failure and 409 are recoverable states without polling', async 
  await showFlow({ override: () => new Response('', { status: 500 }) }); expect(target.textContent).toContain('No se pudieron cargar los datos'); expect(restCalls('flow')).toHaveLength(5);
  await unmount(mounted!); mounted = undefined;
  await showFlow({ override: () => new Response('', { status: 409 }) }); expect(target.textContent).toContain('Esperando los datos actualizados'); await settle(); expect(restCalls('flow')).toHaveLength(5);
- restFetch(); live.topics['engineering.flow'] = { ...flowTopic(), revision: 22 }; flushSync(); await settle(); expect(target.querySelector('[data-material="carbon"]')).not.toBeNull();
+ restFetch(); live.topics['engineering.flow'] = { ...flowTopic(), revision: 22 }; flushSync(); await settle(); expect(target.querySelector('[data-material="legacyfirmware"]')).not.toBeNull();
 });
 test('flow supports pending names and action errors', async () => {
  live.topics['engineering.flow'] = { ...flowTopic(), slot: 'Other', request: null };
@@ -473,7 +490,7 @@ test('pending preview disables duplicate posts and obsolete failures cannot cros
  live.topics['engineering.flow'] = { ...flowTopic(), slot: 'Other' }; flushSync(); await settle(); reject(new Error('offline')); await settle(); expect(target.querySelector('[role="alert"]')).toBeNull(); expect(button('preview').disabled).toBe(false);
 });
 test('edited draft cannot pin old preview while awaiting matching websocket request', async () => {
- await showFlow(); change('rolls-5', '9'); expect(target.querySelector('[data-testid="pin-goal"]')).toBeNull(); expect(target.querySelector('[data-material="carbon"]')).toBeNull(); click('preview'); await settle(); expect(target.querySelector('[data-testid="pin-goal"]')).toBeNull(); expect(button('preview').disabled).toBe(true);
+ await showFlow(); change('rolls-5', '9'); expect(target.querySelector('[data-testid="pin-goal"]')).toBeNull(); expect(target.querySelector('[data-material="legacyfirmware"]')).toBeNull(); click('preview'); await settle(); expect(target.querySelector('[data-testid="pin-goal"]')).toBeNull(); expect(button('preview').disabled).toBe(true);
  live.topics['engineering.flow'] = { ...flowTopic(), request: { ...fixture['engineering.flow'].request, rolls: [1,1,1,1,9] } }; flushSync(); await settle(); expect(button('pin-goal').disabled).toBe(false); click('pin-goal'); await settle(); expect(actionBody('pin_goal')).toBe('{}');
 });
 test('typing rolls protects draft from config before blur', async () => {
@@ -498,7 +515,7 @@ test('flow handles no experimental rows with no selected experimental or an alre
   live.topics['engineering.flow'] = { ...flowTopic(), current, request: { ...fixture['engineering.flow'].request, experimental: current?.experimental ?? null } };
   await showFlow({ override: (resource, section) => resource === 'flow' && section === 'costs' ? json(page('costs', costs)) : undefined });
   expect(target.querySelector('[data-testid="cost-experimental"]')).not.toBeNull();
-  expect(target.querySelector('[data-material="carbon"]')).not.toBeNull();
+  expect(target.querySelector('[data-material="legacyfirmware"]')).not.toBeNull();
   await unmount(mounted!); mounted = undefined;
  }
 });
@@ -566,7 +583,7 @@ function goalFetch() {
 function panel(component: typeof ShoppingPanel) { mounted = mount(component, { target }); flushSync(); }
 test('goal shows percent blueprint grade missing and completable engineer', async () => {
  goalFetch(); panel(ShoppingPanel); await settle();
- expect(target.textContent).toContain('87 %'); expect(target.textContent).toContain('G5'); expect(target.textContent).toContain('Felicity Farseer'); expect(target.textContent).toContain('Sin verificar');
+ expect(target.textContent).toContain('25 %'); expect(target.textContent).toContain('G5'); expect(target.textContent).toContain('Felicity Farseer'); expect(target.textContent).toContain('Sin verificar');
  for (const section of ['needs', 'missing', 'surplus']) expect(target.querySelector(`[data-section="${section}"]`)?.textContent).toContain('7');
 });
 test('move and remove goals post exact json and localized errors', async () => {

@@ -1742,6 +1742,28 @@
       ],
       "source": "EDEngineer 2cadd66 (MIT)",
       "verified": true
+    },
+    {
+      "key": "tg_abrasion03",
+      "name_en": "Hardened Surface Fragments",
+      "category": "Manufactured",
+      "grade": 1,
+      "family": "thargoid-ship",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDDiscovery 7d30920 MCMRType.cs (Apache-2.0); ausente en EDEngineer; grado por rareza de la fuente, familia propia de TMC",
+      "verified": false
+    },
+    {
+      "key": "tg_causticcrystal",
+      "name_en": "Caustic Crystal",
+      "category": "Manufactured",
+      "grade": 4,
+      "family": "thargoid-ship",
+      "tradeable": false,
+      "hints": [],
+      "source": "EDDiscovery 7d30920 MCMRType.cs (Apache-2.0); ausente en EDEngineer; grado por rareza de la fuente, familia propia de TMC",
+      "verified": false
     }
   ]
 }

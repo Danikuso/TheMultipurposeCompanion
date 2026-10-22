@@ -6,14 +6,19 @@
 // que necesita y falla con archivo:línea ante cualquier construcción que no comprende.
 // NO descarga nada: la obtención de fuentes es un paso separado y explícito.
 //
-//   node scripts/import-engineering-catalogue.mjs --source-dir <snapshot> --out-dir <staging>
-//   node scripts/import-engineering-catalogue.mjs --source-dir <snapshot> --check [--out-dir <staging>]
+//   node scripts/import-engineering-catalogue.mjs --source-dir <snapshot> --out-dir <staging> --active-dir <data>
+//   node scripts/import-engineering-catalogue.mjs --source-dir <snapshot> --check [--out-dir <staging>] [--active-dir <data>]
 //
-// Opcional (auditoría contra el catálogo activo, no afecta a la salida): --materials <materials.json>
+// Salidas: `--out-dir` (staging) recibe symbols.json y el manifiesto; `--active-dir` recibe los datos
+// activos blueprints.json (con aliases) y engineers.json (raíz `entries`). Con `--check` los directorios
+// por omisión son `<snapshot>/../staging` y `<snapshot>/../../..` (carpeta `data` del crate).
+// Las resoluciones manuales de filas sin resolver viven en `<snapshot>/overrides.json` (nunca en código).
+//
+// Auditoría de ingredientes: --materials <materials.json> (por omisión `materials.json` junto a los datos activos); falla si falta alguno.
 
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const FILES = {
@@ -291,15 +296,42 @@ function parseEddiPairs(text, file) {
 
 export function validateAliases(list) {
   const by = new Map();
+  const problems = [];
   for (const a of list) {
     const key = `${a.module_type}\u0000${a.alias.toLowerCase()}`;
     const prev = by.get(key);
     if (prev && prev.canonical !== a.canonical) {
-      throw new ImportError(`Ambiguous alias ${a.alias} in ${a.module_type}: ${prev.canonical} vs ${a.canonical}`);
+      problems.push(`Ambiguous alias ${a.alias} in ${a.module_type}: ${prev.canonical} vs ${a.canonical}`);
     }
     if (!prev) by.set(key, { module_type: a.module_type, alias: a.alias.toLowerCase(), canonical: a.canonical });
   }
+  if (problems.length) throw new ImportError(problems.join('\n'));
   return [...by.values()].sort(cmpBy('module_type', 'alias'));
+}
+
+// Todo alias debe apuntar a un blueprint con receta en su módulo, a un experimental o a una variante.
+export function danglingAliases(aliases, blueprints, experimentals, variants) {
+  const bp = new Set(blueprints.flatMap(b => b.recipes.map(r => `${r.module_type}\u0000${b.key}`)));
+  const ex = new Set(experimentals.map(e => e.key));
+  const va = new Set(variants.map(v => v.key));
+  return aliases.filter(a => !bp.has(`${a.module_type}\u0000${a.canonical}`) && !ex.has(a.canonical) && !va.has(a.canonical));
+}
+
+// Cada fila que se sirve paginada (blueprint, experimental, variante, ingeniero) debe caber en una página
+// de 16 KiB junto con su envoltorio (margen fijo conservador de 1 KiB).
+export const PAGE_LIMIT = 16384;
+const PAGE_WRAPPER_MARGIN = 1024;
+export function rowSizeProblems(outputs, limit = PAGE_LIMIT) {
+  const problems = [];
+  const check = (kind, key, row) => {
+    const size = Buffer.byteLength(JSON.stringify(row), 'utf8');
+    if (size + PAGE_WRAPPER_MARGIN >= limit) problems.push(`${kind} ${key}: ${size} bytes`);
+  };
+  for (const b of outputs.blueprints.blueprints) check('blueprint', b.key, b);
+  for (const e of outputs.blueprints.experimentals) check('experimental', e.key, e);
+  for (const v of outputs.blueprints.variants) check('variant', `${v.key}/${v.module_type}/g${v.grade}`, v);
+  for (const e of outputs.engineers.entries) check('engineer', e.id, e);
+  return problems;
 }
 
 function cmpBy(...fields) {
@@ -331,13 +363,22 @@ function aliasCandidates(key, moduleSourceName, moduleId) {
 // Snapshot
 // ---------------------------------------------------------------------------------------------
 
+// Las rutas de `sources.json` (`file`, `license_file`) deben quedarse dentro del snapshot.
+export function containedPath(dir, relative, what = 'file') {
+  const root = resolve(dir);
+  const path = resolve(root, String(relative));
+  if (!path.startsWith(root + sep)) throw new ImportError(`${relative}: ${what} escapes the snapshot directory`);
+  return path;
+}
+
 function readSnapshot(dir) {
   const manifestPath = join(dir, 'sources.json');
   if (!existsSync(manifestPath)) throw new ImportError(`${manifestPath}: sources.json not found`);
   const sources = JSON.parse(readFileSync(manifestPath, 'utf8'));
   const texts = {};
   for (const f of sources.files) {
-    const path = join(dir, f.file);
+    const path = containedPath(dir, f.file);
+    if (f.license_file) containedPath(dir, f.license_file, 'license_file');
     if (!existsSync(path)) throw new ImportError(`${f.file}: missing from snapshot`);
     const buf = readFileSync(path);
     if (sha256(buf) !== f.sha256) throw new ImportError(`${f.file}: SHA-256 mismatch (expected ${f.sha256}, got ${sha256(buf)})`);
@@ -346,7 +387,7 @@ function readSnapshot(dir) {
       const head = text.split('\n').slice(0, 20).join('\n');
       if (!/Apache License/.test(head)) throw new ImportError(`${f.file}: Apache-2.0 header not found`);
       if (!head.includes(f.copyright)) throw new ImportError(`${f.file}: copyright ${JSON.stringify(f.copyright)} not found in header`);
-    } else if (f.license_file && !readFileSync(join(dir, f.license_file), 'utf8').includes(f.copyright_evidence ?? f.copyright)) {
+    } else if (f.license_file && !readFileSync(containedPath(dir, f.license_file, 'license_file'), 'utf8').includes(f.copyright_evidence ?? f.copyright)) {
       throw new ImportError(`${f.file}: copyright evidence not found in ${f.license_file}`);
     }
     texts[f.file] = text;
@@ -388,6 +429,27 @@ const OVERLOADS = [
 function shipModuleNames(enumNames) {
   const idx = enumNames.indexOf('DiscoveryScanner');
   return new Set(enumNames.slice(0, idx));
+}
+
+const OVERRIDE_ACTIONS = new Set(['remap_module_types']);
+
+function readOverrides(dir, enumSet) {
+  const path = join(dir, 'overrides.json');
+  if (!existsSync(path)) return { row_overrides: [], engineer_unlock_contributions: [], sha256: null };
+  const raw = readFileSync(path);
+  const doc = JSON.parse(raw.toString('utf8'));
+  const problems = [];
+  const rowOverrides = doc.row_overrides ?? [];
+  for (const o of rowOverrides) {
+    const where = `overrides.json: ${o.row_id ?? '(sin row_id)'}`;
+    if (!o.row_id || !o.expect_key || !/^[0-9a-f]{64}$/.test(o.expect_original_sha256 ?? '')) problems.push(`${where}: row_id, expect_key y expect_original_sha256 son obligatorios`);
+    if (!OVERRIDE_ACTIONS.has(o.action)) problems.push(`${where}: action desconocida ${o.action}`);
+    if (!o.citation || typeof o.verified !== 'boolean' || !o.note) problems.push(`${where}: citation, verified y note son obligatorios`);
+    if (!Array.isArray(o.module_types) || o.module_types.length === 0) problems.push(`${where}: module_types vacío`);
+    for (const m of o.module_types ?? []) if (!enumSet.has(m)) problems.push(`${where}: tipo de módulo desconocido ${m}`);
+  }
+  if (problems.length) throw new ImportError(problems.join('\n'));
+  return { row_overrides: rowOverrides, engineer_unlock_contributions: doc.engineer_unlock_contributions ?? [], sha256: sha256(raw) };
 }
 
 export function convertSnapshot(dir, options = {}) {
@@ -505,6 +567,23 @@ export function convertSnapshot(dir, options = {}) {
   }
   if (new Set(rows.map(r => r.row_id)).size !== rows.length) throw new ImportError('row_id collision');
 
+  // --- Resoluciones manuales (overrides.json) ------------------------------------------------
+  const overrides = readOverrides(dir, enumSet);
+  const appliedOverrides = [];
+  const byRowId = new Map(rows.map(r => [r.row_id, r]));
+  for (const o of overrides.row_overrides) {
+    const row = byRowId.get(o.row_id);
+    if (!row) throw new ImportError(`overrides.json: row ${o.row_id} does not exist in the snapshot`);
+    if (row.key !== o.expect_key || row.original_sha256 !== o.expect_original_sha256) {
+      throw new ImportError(`overrides.json: row ${o.row_id} no longer matches its recorded key/SHA-256`);
+    }
+    if (row.override) throw new ImportError(`overrides.json: row ${o.row_id} is overridden twice`);
+    const before = row.source_modules;
+    row.source_modules = [...o.module_types];
+    row.override = { action: o.action, source_modules_before: before, module_types: [...o.module_types], verified: o.verified, citation: o.citation, note: o.note };
+    appliedOverrides.push({ row_id: o.row_id, key: o.expect_key, action: o.action, from: before, to: o.module_types, verified: o.verified, citation: o.citation });
+  }
+
   // --- Clasificación ------------------------------------------------------------------------
   // Tipos genéricos que sí identifican un módulo de nave; el resto de no comprables (Weapon, Fighter,
   // Suit, DiscoveryScanner, UnknownType…) no se interpretan como módulo concreto de nave.
@@ -540,6 +619,7 @@ export function convertSnapshot(dir, options = {}) {
       default: classify(row, 'unresolved', 'Sobrecarga sin clasificación');
     }
     row.modules = ['ship_recipe', 'ship_experimental', 'ship_variant'].includes(row.classification) ? [...new Set(mods.map(moduleId))] : [];
+    if (row.override) row.reason = `${row.reason} (resolución manual: ${row.override.action}, ${row.override.citation})`;
   }
 
   // --- Salidas por clase --------------------------------------------------------------------
@@ -557,8 +637,9 @@ export function convertSnapshot(dir, options = {}) {
   for (const row of rows) {
     if (row.classification === 'ship_recipe') {
       let bp = blueprintMap.get(row.key);
-      if (!bp) { bp = { names: new Set(), contexts: new Map() }; blueprintMap.set(row.key, bp); }
+      if (!bp) { bp = { names: new Set(), contexts: new Map(), rows: [] }; blueprintMap.set(row.key, bp); }
       bp.names.add(row.name);
+      bp.rows.push(row);
       for (const mod of row.modules) {
         let ctx = bp.contexts.get(mod);
         if (!ctx) { ctx = new Map(); bp.contexts.set(mod, ctx); }
@@ -574,9 +655,9 @@ export function convertSnapshot(dir, options = {}) {
     } else if (row.classification === 'ship_experimental') {
       let ex = experimentalMap.get(row.key);
       const cost = { materials: row.ingredients.map(i => ({ material: i.material, count: i.count })), merc_coins: 0 };
-      if (!ex) { ex = { names: new Set(), modules: new Set(), cost, rows: [] }; experimentalMap.set(row.key, ex); }
+      if (!ex) { ex = { names: new Set(), modules: new Set(), cost, rows: [], source_rows: [] }; experimentalMap.set(row.key, ex); }
       else if (costSig(ex.cost) !== costSig(cost)) { conflicts.push({ key: row.key, experimental: true, rows: [...ex.rows, row.row_id] }); ex.conflict = true; }
-      ex.names.add(row.name); ex.rows.push(row.row_id);
+      ex.names.add(row.name); ex.rows.push(row.row_id); ex.source_rows.push(row);
       for (const m of row.modules) ex.modules.add(m);
     } else if (row.classification === 'ship_variant') {
       for (const mod of row.modules) {
@@ -602,6 +683,10 @@ export function convertSnapshot(dir, options = {}) {
   const usedModuleSources = new Map(); // id → source enum name
   for (const row of rows) row.source_modules.forEach(m => { if (row.modules.length) usedModuleSources.set(moduleId(m), m); });
   const sourceTag = `eddiscovery@${sources.eddiscovery_commit.slice(0, 7)}`;
+  const sourceFor = srcRows => {
+    const cites = [...new Set(srcRows.filter(r => r.override).map(r => r.override.citation))];
+    return `${sourceTag}:RecipesEngineering.cs (Apache-2.0)${cites.length ? `; remapeo manual de módulos: ${cites.join(', ')}` : ''}`;
+  };
   const blueprints = [];
   const bpOut = new Map();
   for (const key of [...blueprintMap.keys()].sort()) {
@@ -623,12 +708,12 @@ export function convertSnapshot(dir, options = {}) {
       bpOut.set(recipeKey(key, mod), { grades: ctx });
     }
     if (!recipes.length) continue;
-    blueprints.push({ key, names_en: [...bp.names].sort(), recipes, source: `${sourceTag}:RecipesEngineering.cs (Apache-2.0)`, verified: false });
+    blueprints.push({ key, names_en: [...bp.names].sort(), recipes, source: sourceFor(bp.rows), verified: false });
   }
   const experimentals = [];
   for (const key of [...experimentalMap.keys()].sort()) {
     const ex = experimentalMap.get(key);
-    experimentals.push({ key, names_en: [...ex.names].sort(), module_types: [...ex.modules].sort(), cost: ex.cost, source: `${sourceTag}:RecipesEngineering.cs (Apache-2.0)`, verified: false });
+    experimentals.push({ key, names_en: [...ex.names].sort(), module_types: [...ex.modules].sort(), cost: ex.cost, source: sourceFor(ex.source_rows), verified: false });
   }
   const variants = [...variantMap.values()]
     .sort(cmpBy('key', 'module_type', 'grade'))
@@ -685,6 +770,14 @@ export function convertSnapshot(dir, options = {}) {
       }
     }
   }
+  for (const c of overrides.engineer_unlock_contributions) {
+    if (!engineerNames.has(c.engineer)) throw new ImportError(`overrides.json: unknown engineer ${c.engineer}`);
+    if (!c.item || !c.kind || !(c.amount > 0) || !c.citation) throw new ImportError(`overrides.json: incomplete contribution for ${c.engineer}`);
+  }
+  const contributionFor = name => {
+    const c = overrides.engineer_unlock_contributions.find(x => x.engineer === name);
+    return c ? { item: c.item, kind: c.kind, amount: c.amount } : null;
+  };
   const slug = name => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const engineers = engineerInfos.map(e => {
     const caps = [...(capMap.get(e.name)?.entries() ?? [])].map(([k, set]) => {
@@ -695,7 +788,7 @@ export function convertSnapshot(dir, options = {}) {
       id: idByName.get(e.name), name: e.name, system: e.system, star_pos: e.star_pos, workshop: e.workshop, planet: e.planet,
       market_id: null, on_foot: e.on_foot, permit_required: e.permit_required,
       blueprints: caps,
-      unlock: { requirement_key: `unlock-${slug(e.name)}`, invite_key: `unlock-invite-${slug(e.name)}`, contribution: null },
+      unlock: { requirement_key: `unlock-${slug(e.name)}`, invite_key: `unlock-invite-${slug(e.name)}`, contribution: contributionFor(e.name) },
       source_text: { discovery: e.discovery, meeting: e.meeting, unlock: e.unlock, reputation: e.reputation },
       source: `${sourceTag}:Engineers.cs + eddi@${sources.eddi_commit.slice(0, 7)}:Engineer.cs ids (Apache-2.0)`, verified: false,
     };
@@ -722,6 +815,8 @@ export function convertSnapshot(dir, options = {}) {
   }
   for (const a of sources.explicit_aliases ?? []) aliasList.push(a);
   const aliases = validateAliases(aliasList);
+  const dangling = danglingAliases(aliases, blueprints, experimentals, variants);
+  if (dangling.length) throw new ImportError(`Aliases without a target:\n${dangling.map(a => `${a.module_type}/${a.alias} -> ${a.canonical}`).join('\n')}`);
 
   // --- Símbolos / ingredientes usados -------------------------------------------------------
   const usedShorts = new Set(rows.flatMap(r => r.ingredients.map(i => i.short)));
@@ -771,10 +866,19 @@ export function convertSnapshot(dir, options = {}) {
     unresolved_ship_rows: unresolved,
     ship_recipe_rows_without_engineer: rowsWithoutEngineer,
     grade_gaps: gradeGaps,
-    rows,
+    // `original_text` no se guarda (1,5 MB): se recupera del snapshot por archivo:línea y se verifica con original_sha256.
+    rows: rows.map(({ original_text, ...rest }) => rest),
   };
-  if (options.materialsFile) manifest.materials_audit = materialsAudit(options.materialsFile, rows);
-  const outputs = { blueprints: { provenance, module_types: moduleTypes, blueprints, experimentals, variants }, engineers: { provenance, engineers }, symbols, manifest };
+  if (options.materialsFile) {
+    manifest.materials_audit = materialsAudit(options.materialsFile, rows);
+    if (manifest.materials_audit.missing_in_materials_json.length) {
+      throw new ImportError(`Ingredients without a material in materials.json: ${manifest.materials_audit.missing_in_materials_json.join(', ')}`);
+    }
+  }
+  manifest.overrides = { file: 'overrides.json', sha256: overrides.sha256, applied: appliedOverrides, engineer_unlock_contributions: overrides.engineer_unlock_contributions };
+  const outputs = { blueprints: { provenance, module_types: moduleTypes, blueprints, experimentals, variants, aliases }, engineers: { provenance, entries: engineers }, symbols, manifest };
+  const sizeProblems = rowSizeProblems(outputs);
+  if (sizeProblems.length) throw new ImportError(`Rows that do not fit the ${PAGE_LIMIT}-byte page:\n${sizeProblems.join('\n')}`);
   return outputs;
 }
 
@@ -797,13 +901,26 @@ function materialsAudit(path, rows) {
 // Salida y CLI
 // ---------------------------------------------------------------------------------------------
 
+// Una fila del manifiesto por línea: mismo contenido, un tercio del tamaño en el repositorio.
+function manifestJson(manifest) {
+  const { rows, ...rest } = manifest;
+  const marker = '"@@ROWS@@"';
+  const head = JSON.stringify({ ...rest, rows: '@@ROWS@@' }, null, 2);
+  const body = rows.map(r => `    ${JSON.stringify(r)}`).join(',\n');
+  return `${head.replace(marker, () => `[\n${body}\n  ]`)}\n`;
+}
+
 export function renderOutputs(result) {
   const json = v => `${JSON.stringify(v, null, 2)}\n`;
   return {
-    'blueprints.json': json(result.blueprints),
-    'engineers.json': json(result.engineers),
-    'symbols.json': json(result.symbols),
-    'engineering-catalogue-manifest.json': json(result.manifest),
+    staging: {
+      'symbols.json': json(result.symbols),
+      'engineering-catalogue-manifest.json': manifestJson(result.manifest),
+    },
+    active: {
+      'blueprints.json': json(result.blueprints),
+      'engineers.json': json(result.engineers),
+    },
   };
 }
 
@@ -814,35 +931,52 @@ function parseCli(argv) {
     if (a === '--check') opts.check = true;
     else if (a === '--source-dir') opts.sourceDir = argv[++i];
     else if (a === '--out-dir') opts.outDir = argv[++i];
+    else if (a === '--active-dir') opts.activeDir = argv[++i];
     else if (a === '--materials') opts.materials = argv[++i];
     else throw new ImportError(`Unknown argument ${a}`);
   }
-  if (!opts.sourceDir) throw new ImportError('Usage: --source-dir <snapshot> (--out-dir <staging> | --check [--out-dir <staging>])');
+  if (!opts.sourceDir) throw new ImportError('Usage: --source-dir <snapshot> (--out-dir <staging> [--active-dir <data>] | --check [--out-dir <staging>] [--active-dir <data>])');
   if (!opts.check && !opts.outDir) throw new ImportError('--out-dir is required unless --check is given');
   return opts;
+}
+
+function compareDir(dir, files, problems) {
+  const present = existsSync(dir) ? readdirSync(dir) : [];
+  for (const [name, content] of Object.entries(files)) {
+    const path = join(dir, name);
+    if (!existsSync(path)) problems.push(`${name}: missing`);
+    else if (readFileSync(path, 'utf8') !== content) problems.push(`${name}: differs from regenerated output`);
+  }
+  return present;
 }
 
 export function run(argv) {
   const opts = parseCli(argv);
   const sourceDir = resolve(opts.sourceDir);
-  const result = convertSnapshot(sourceDir, { materialsFile: opts.materials ? resolve(opts.materials) : undefined });
+  const dataDir = resolve(opts.activeDir ?? join(sourceDir, '..', '..', '..'));
+  const defaultMaterials = join(sourceDir, '..', '..', '..', 'materials.json');
+  const materialsFile = opts.materials ? resolve(opts.materials) : existsSync(defaultMaterials) ? defaultMaterials : undefined;
+  const result = convertSnapshot(sourceDir, { materialsFile });
   const outputs = renderOutputs(result);
   const outDir = resolve(opts.outDir ?? join(sourceDir, '..', 'staging'));
   if (opts.check) {
+    const activeDir = dataDir;
     const problems = [];
-    const present = existsSync(outDir) ? readdirSync(outDir) : [];
-    for (const [name, content] of Object.entries(outputs)) {
-      const path = join(outDir, name);
-      if (!existsSync(path)) problems.push(`${name}: missing`);
-      else if (readFileSync(path, 'utf8') !== content) problems.push(`${name}: differs from regenerated output`);
-    }
-    for (const f of present) if (!(f in outputs)) problems.push(`${f}: unexpected file`);
+    const present = compareDir(outDir, outputs.staging, problems);
+    for (const f of present) if (!(f in outputs.staging)) problems.push(`${f}: unexpected file`);
+    compareDir(activeDir, outputs.active, problems);
     if (problems.length) throw new ImportError(`--check failed:\n${problems.join('\n')}`);
-    return { checked: Object.keys(outputs), counts: result.manifest.counts };
+    return { checked: [...Object.keys(outputs.staging), ...Object.keys(outputs.active)], counts: result.manifest.counts };
   }
   mkdirSync(outDir, { recursive: true });
-  for (const [name, content] of Object.entries(outputs)) writeFileSync(join(outDir, name), content);
-  return { written: Object.keys(outputs), counts: result.manifest.counts };
+  const written = [];
+  for (const [name, content] of Object.entries(outputs.staging)) { writeFileSync(join(outDir, name), content); written.push(name); }
+  if (opts.activeDir) {
+    const activeDir = dataDir;
+    mkdirSync(activeDir, { recursive: true });
+    for (const [name, content] of Object.entries(outputs.active)) { writeFileSync(join(activeDir, name), content); written.push(name); }
+  }
+  return { written, counts: result.manifest.counts };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

@@ -685,19 +685,19 @@ fn preview_flow_with_fixture_ship() {
     assert_no_heavy_fields(&flow, &["lines", "cost", "options"]);
     let lines = h.pages("flow", "lines");
     assert_eq!(lines.len(), 13);
-    // 9 de 19 unidades cubiertas (reservas): 9 × 100 / 19.
-    assert_eq!(flow["percent"], json!(47));
-    let polonium = flow_line(&lines, "polonium");
+    // 9 de 30 unidades cubiertas: 9 × 100 / 30.
+    assert_eq!(flow["percent"], json!(30));
+    let pharma = flow_line(&lines, "pharmaceuticalisolators");
     assert_eq!(
-        (polonium["need"].clone(), polonium["have"].clone()),
-        (json!(4), json!(150))
+        (pharma["need"].clone(), pharma["have"].clone()),
+        (json!(4), json!(8))
     );
-    assert_eq!(polonium["state"], "ok");
-    let heat = flow_line(&lines, "protoheatradiators");
-    assert_eq!(heat["state"], "missing");
-    assert_eq!(heat["missing"], json!(2));
-    assert_eq!(heat["need"], json!(4));
-    assert_eq!(heat["have"], json!(2));
+    assert_eq!(pharma["state"], "ok");
+    let hybrid = flow_line(&lines, "hybridcapacitors");
+    assert_eq!(hybrid["state"], "trade");
+    assert_eq!(hybrid["missing"], json!(0));
+    assert_eq!(hybrid["need"], json!(3));
+    assert_eq!(hybrid["have"], json!(0));
     // Felicity solo llega a G3 en engine_dirty: el G5 lo hace el Profesor Palin (sin desbloquear).
     assert!(flow["engineer"]["nearest_unlocked"].is_null());
     assert_eq!(flow["engineer"]["nearest_any"]["id"], json!(300220));
@@ -707,12 +707,18 @@ fn preview_flow_with_fixture_ship() {
     );
     let costs = h.pages("flow", "costs");
     assert!(costs.iter().any(|c| {
-        c["grade"] == json!(5) && c["material"] == "polonium" && c["count"] == json!(4)
+        c["grade"] == json!(5)
+            && c["material"] == "pharmaceuticalisolators"
+            && c["count"] == json!(4)
     }));
     let options = h.pages("flow", "blueprints");
     assert_eq!(
         options.iter().map(|o| o["key"].clone()).collect::<Vec<_>>(),
-        vec![json!("engine_dirty")]
+        vec![
+            json!("engine_dirty"),
+            json!("engine_reinforced"),
+            json!("engine_tuned")
+        ]
     );
     // Cerrar el flujo lo vacía.
     h.action("engineering.close_flow", json!({}));
@@ -1123,7 +1129,7 @@ fn goals_survive_restart_and_alert_completable() {
     h.journal("Commander", r#","FID":"F1","Name":"CMDR TESTER""#);
     h.journal(
         "Materials",
-        r#","Raw":[],"Manufactured":[{"Name":"biotechconductors","Count":4}],"Encoded":[{"Name":"dataminedwake","Count":3}]"#,
+        r#","Raw":[{"Name":"arsenic","Count":4}],"Manufactured":[{"Name":"chemicalmanipulators","Count":4}],"Encoded":[{"Name":"dataminedwake","Count":3}]"#,
     );
     h.journal(
         "EngineerProgress",
@@ -1634,12 +1640,12 @@ fn worst_case_engine_goals_size() {
                 target_grade: 5,
                 rolls: [10; 5],
             };
-            let prefix = &blueprints()
+            let prefix = blueprints()
                 .module_types
                 .iter()
                 .find(|t| t.id == req.module_type)
-                .unwrap()
-                .item_prefixes[0];
+                .and_then(|t| t.item_prefixes.first().map(String::as_str))
+                .unwrap_or("int_module_");
             let probe = format!("{prefix}size8_class5");
             let cost = h.m.cost_for(&probe, &req, None);
             h.m.goals = (0..20)
@@ -1701,7 +1707,7 @@ fn worst_case_engine_goals_size() {
         "largest goals summary: {maximum} bytes; largest page: {} bytes; trades: {max_trades}",
         h.max_page_size.get()
     );
-    assert_eq!(max_trades, 215);
+    assert_eq!(max_trades, 244);
     assert!(maximum < 16384, "engineering.goals: {maximum} bytes");
 }
 
@@ -1893,6 +1899,13 @@ fn fixture_topics_stay_under_16_kib() {
     let snapshot = contract_snapshot();
     assert_eq!(snapshot.as_object().unwrap().len(), 11);
     for (topic, value) in snapshot.as_object().unwrap() {
+        if topic == "engineering.pages" {
+            for (page_name, page_val) in value.as_object().unwrap() {
+                let size = serde_json::to_vec(page_val).unwrap().len();
+                assert!(size < 16384, "page {page_name}: {size} B");
+            }
+            continue;
+        }
         let size = serde_json::to_vec(value).unwrap().len();
         assert!(size < 16384, "{topic}: {size} B");
     }
@@ -1913,15 +1926,13 @@ fn contract_snapshot_has_the_values_the_ui_asserts() {
     let goal = &c["engineering.pages"]["goals"]["items"][0];
     assert_eq!(goal["completable"], json!(true));
     assert_eq!(goal["engineer"], "Felicity Farseer");
-    assert_eq!(goal["trades"][0]["give"], json!(6));
-    assert_eq!(goal["trades"][0]["get"], json!(1));
-    assert_eq!(goal["trades"].as_array().unwrap().len(), 1);
-    let missing2 = c["engineering.pages"]["flow_lines"]["items"]
+    assert_eq!(goal["trades"].as_array().unwrap().len(), 3);
+    let missing3 = c["engineering.pages"]["flow_lines"]["items"]
         .as_array()
         .unwrap()
         .iter()
-        .any(|l| l["state"] == "missing" && l["missing"] == json!(2));
-    assert!(missing2);
+        .any(|l| l["state"] == "missing" && l["missing"] == json!(3));
+    assert!(missing3);
     let ok = &c["engineering.sources"]["traders"]["Encoded"]["Ok"];
     assert_eq!(ok["station_name"], "Fake Port");
     assert_eq!(ok["max_pad"], "Large");
@@ -2325,7 +2336,7 @@ fn flow_pages_expose_options_grades_costs_and_lines() {
     assert!(blueprints.iter().any(|b| b["key"] == "engine_dirty"
         && b["available"] == json!(true)
         && b["grades"] == json!([1, 2, 3, 4, 5])));
-    assert_eq!(h.pages("flow", "experimentals").len(), 1);
+    assert_eq!(h.pages("flow", "experimentals").len(), 5);
     let grades: Vec<u64> = h
         .pages("flow", "grades")
         .iter()

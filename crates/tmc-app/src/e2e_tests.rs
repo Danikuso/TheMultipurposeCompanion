@@ -209,7 +209,7 @@ fn engineering_plan_parked_quality_and_experimental() {
     let catalog = blueprints();
     let cost = plan_cost(catalog, "int_engine_size5_class5", Some(&current), &request);
     assert_eq!(cost.per_grade.keys().copied().collect::<Vec<_>>(), [4, 5]);
-    assert_eq!(cost.experimental.unwrap().values().sum::<u32>(), 3);
+    assert_eq!(cost.experimental.unwrap().values().sum::<u32>(), 9);
 }
 
 /// Simula el proceso del juego mientras vive y restaura el valor anterior al soltarse.

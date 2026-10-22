@@ -374,6 +374,12 @@ mod tests {
             .iter()
             .find(|b| b["key"] == "engine_dirty")
             .unwrap();
+        let recipe = bp["recipes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["module_type"] == "engine")
+            .unwrap();
         let exp = json["experimentals"]
             .as_array()
             .unwrap()
@@ -383,11 +389,11 @@ mod tests {
         let mut oracle: BTreeMap<String, u64> = BTreeMap::new();
         for g in 1..=5u32 {
             let times = if g == 5 { 4 } else { 1 };
-            for (m, c) in raw_mats(&bp["grades"][g.to_string()]) {
+            for (m, c) in raw_mats(&recipe["grades"][g.to_string()]["materials"]) {
                 *oracle.entry(m).or_default() += c * times;
             }
         }
-        for (m, c) in raw_mats(&exp["ingredients"]) {
+        for (m, c) in raw_mats(&exp["cost"]["materials"]) {
             *oracle.entry(m).or_default() += c;
         }
         let r = req(5, Some("special_engine_overloaded"), [1, 1, 1, 1, 4]);
@@ -399,8 +405,8 @@ mod tests {
             .collect();
         assert_eq!(got, oracle);
         // Valores concretos del dato: G5 x4 y G1 x1.
-        assert_eq!(cost.total["polonium"], 4);
-        assert_eq!(cost.total["carbon"], 1);
+        assert_eq!(cost.total["pharmaceuticalisolators"], 4);
+        assert_eq!(cost.total["legacyfirmware"], 3);
         assert_eq!(
             cost.per_grade.keys().copied().collect::<Vec<_>>(),
             [1, 2, 3, 4, 5]
@@ -423,7 +429,7 @@ mod tests {
         let cost = run(Some(&c), &req(5, None, [1, 1, 1, 1, 4]));
         assert_eq!(cost.per_grade.keys().copied().collect::<Vec<_>>(), [5]);
         assert_eq!(cost.per_grade[&5].0, 2);
-        assert_eq!(cost.total["polonium"], 2);
+        assert_eq!(cost.total["pharmaceuticalisolators"], 2);
     }
 
     #[test]
@@ -459,9 +465,9 @@ mod tests {
     fn custom_rolls_change_totals() {
         let cost = run(None, &req(5, None, [2, 1, 1, 1, 6]));
         assert_eq!(cost.per_grade[&1].0, 2);
-        assert_eq!(cost.per_grade[&1].1["carbon"], 2);
+        assert_eq!(cost.per_grade[&1].1["legacyfirmware"], 2);
         assert_eq!(cost.per_grade[&5].0, 6);
-        assert_eq!(cost.per_grade[&5].1["polonium"], 6);
+        assert_eq!(cost.per_grade[&5].1["pharmaceuticalisolators"], 6);
     }
 
     #[test]

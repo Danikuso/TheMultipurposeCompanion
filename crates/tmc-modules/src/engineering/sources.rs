@@ -423,11 +423,12 @@ mod tests {
             (300100, "Felicity Farseer", "Unlocked"),
             (300220, "Professor Palin", "Known"),
         ]);
-        // Felicity solo llega a G3 en engine_dirty.
-        let pick = pick_engineer("engine", "engine_dirty", &upto(5), &book, None);
+        // Felicity solo llega a G3 en engine_dirty. Cerca de Palin (G5), Palin es el más cercano.
+        let near_palin = Some(engineer(300220).unwrap().star_pos);
+        let pick = pick_engineer("engine", "engine_dirty", &upto(5), &book, near_palin);
         assert_eq!(pick.nearest_unlocked, None);
         assert_eq!(pick.nearest_any.unwrap().id, 300220);
-        let pick3 = pick_engineer("engine", "engine_dirty", &upto(3), &book, None);
+        let pick3 = pick_engineer("engine", "engine_dirty", &upto(3), &book, near_palin);
         assert_eq!(pick3.nearest_unlocked.unwrap().id, 300100);
         assert_eq!(
             pick_engineer("engine", "nope", &upto(1), &book, None).nearest_any,
@@ -471,13 +472,27 @@ mod tests {
         let pick = pick_engineer("fsd", "fsd_longrange", &upto(1), &book, None);
         let a = pick.nearest_any.unwrap();
         let u = pick.nearest_unlocked.unwrap();
-        assert_eq!(a.id, u.id);
-        let names: Vec<String> = engineer_rows(&book, None)
+        // Entre los desbloqueados, Elvira Martuuk precede alfabéticamente a Felicity Farseer.
+        let unlocked_names: Vec<String> = engineer_rows(&book, None)
             .into_iter()
             .filter(|r| r.status == EngineerStatus::Unlocked && !r.on_foot)
             .map(|r| r.name)
             .collect();
-        assert_eq!(a.name, names[0]);
+        assert_eq!(u.name, unlocked_names[0]);
+        // Entre todos los capaces (incluidos no descubiertos), Chloe Sedesi precede a Elvira.
+        let all_capable: Vec<String> = engineer_rows(&book, None)
+            .into_iter()
+            .filter(|r| {
+                !r.on_foot
+                    && engineer(r.id)
+                        .unwrap()
+                        .blueprints
+                        .iter()
+                        .any(|b| b.covers("fsd", "fsd_longrange", &[1]))
+            })
+            .map(|r| r.name)
+            .collect();
+        assert_eq!(a.name, all_capable[0]);
     }
 
     #[test]
@@ -495,14 +510,14 @@ mod tests {
         assert!(s.requests("Sol", PadSize::Small).is_empty());
     }
 
-    const STAGING: &str = include_str!("../../data/import/engineering/staging/engineers.json");
+    const STAGING: &str = include_str!("../../data/engineers.json");
 
     fn staging() -> Vec<EngineerDef> {
         parse_engineers(STAGING)
     }
 
     #[test]
-    fn staging_catalogue_loads_all_38_engineers_with_module_capabilities() {
+    fn active_catalogue_loads_all_38_engineers_with_module_capabilities() {
         let defs = staging();
         assert_eq!(defs.len(), 38);
         let mut ids: Vec<u64> = defs.iter().map(|d| d.id).collect();
@@ -597,8 +612,18 @@ mod tests {
     #[test]
     fn unlock_steps_never_invent_a_donation() {
         for d in &staging() {
-            // Los requisitos compuestos ("X o Y") no se reducen a una contribución.
-            assert!(d.unlock.contribution.is_none(), "{}", d.name);
+            // Los requisitos compuestos ("X o Y") no se reducen a una contribución. La única
+            // donación activa es la de Elvira Martuuk, que la fuente dice literalmente
+            // («Provide 3 units of Soontill Relics») y el override documenta.
+            match (d.name.as_str(), &d.unlock.contribution) {
+                ("Elvira Martuuk", Some(c)) => {
+                    assert_eq!(
+                        (c.item.as_str(), c.kind.as_str(), c.amount),
+                        ("soontillrelics", "commodity", 3)
+                    );
+                }
+                (name, contribution) => assert!(contribution.is_none(), "{name}"),
+            }
             let entry = tmc_model::events::EngineerEntry {
                 engineer: d.name.clone(),
                 engineer_id: d.id,
@@ -607,8 +632,9 @@ mod tests {
                 rank_progress: None,
             };
             let step = crate::engineering::engineers::next_step(d, Some(&entry), &|_| 0, &|_| 0);
-            assert!(
-                !matches!(step, NextStep::Contribute { .. }),
+            assert_eq!(
+                matches!(step, NextStep::Contribute { .. }),
+                d.unlock.contribution.is_some(),
                 "{} {step:?}",
                 d.name
             );
@@ -616,11 +642,9 @@ mod tests {
     }
 
     #[test]
-    fn staging_engineer_blueprints_exist_canonically_in_the_staging_catalogue() {
-        let raw: serde_json::Value = serde_json::from_str(include_str!(
-            "../../data/import/engineering/staging/blueprints.json"
-        ))
-        .unwrap();
+    fn active_engineer_blueprints_exist_canonically_in_the_active_catalogue() {
+        let raw: serde_json::Value =
+            serde_json::from_str(include_str!("../../data/blueprints.json")).unwrap();
         let root = raw.as_object().unwrap();
         let list = root
             .values()
