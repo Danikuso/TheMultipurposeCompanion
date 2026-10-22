@@ -771,10 +771,10 @@ test('settings put rolls and reverts on 400', /* 9 válido → 400 → valor ant
 
 **Files:** Modify `THIRD_PARTY_NOTICES.md` (completar: Ardent/Spansh por red para comerciantes/broker; datos propios o importados de F4 con su licencia — lo importado ya se anotó en Tasks 8–10), este plan («Verificación F4», «Desviaciones»), `status.md`.
 
-- [ ] **Step 1:** Checks completos de Rust (incluido `cargo clippy --workspace --all-targets --release -- -D warnings` con `CARGO_TARGET_DIR=target-f4`) y UI + e2e (criterio 1) con salida.
-- [ ] **Step 2:** `CARGO_TARGET_DIR=target-f4 cargo build --release -p tmc-desktop` y `pwsh scripts/measure-footprint.ps1 -Exe target-f4/release/TMC.exe -JournalDir .tmp/footprint-f4 -FixturePath tests/fixtures/journal/engineering_session.log -ShowWindow -Seconds 120` con la disposición «Ingeniería» visible (criterio 10). **Nunca** `target/release/TMC.exe`. Si el TMC.exe del propietario ocupa la instancia, medir el núcleo con `tmc-headless` y dejar la medición con ventana como pendiente del propietario (como F3).
-- [ ] **Step 3:** `git diff main -- Cargo.lock ui/package.json` y licencias de cada paquete o dato nuevo (criterio 8); procedencia y `verified` de los cuatro JSON; claves de los 5 idiomas y nombres oficiales (criterio 9); evidencia por criterio en «Verificación F4»; revisión completa de la rama contra la spec.
-- [ ] **Step 4: Commit** `docs: verificación de criterios y cierre de F4`
+- [x] **Step 1:** Checks completos de Rust (incluido `cargo clippy --workspace --all-targets --release -- -D warnings` con `CARGO_TARGET_DIR=target-f4`) y UI + e2e (criterio 1) con salida.
+- [x] **Step 2:** `CARGO_TARGET_DIR=target-f4 cargo build --release -p tmc-desktop` y `pwsh scripts/measure-footprint.ps1 -Exe target-f4/release/TMC.exe -JournalDir .tmp/footprint-f4 -FixturePath tests/fixtures/journal/engineering_session.log -ShowWindow -Seconds 120` con la disposición «Ingeniería» visible (criterio 10). **Nunca** `target/release/TMC.exe`. Si el TMC.exe del propietario ocupa la instancia, medir el núcleo con `tmc-headless` y dejar la medición con ventana como pendiente del propietario (como F3).
+- [x] **Step 3:** `git diff main -- Cargo.lock ui/package.json` y licencias de cada paquete o dato nuevo (criterio 8); procedencia y `verified` de los cuatro JSON; claves de los 5 idiomas y nombres oficiales (criterio 9); evidencia por criterio en «Verificación F4»; revisión completa de la rama contra la spec.
+- [x] **Step 4: Commit** `docs: verificación de criterios y cierre de F4`
 
 ---
 
@@ -813,7 +813,7 @@ La [enmienda aprobada](2026-10-22-tmc-f4-catalogo-completo-propuesta.md) es la d
     - `node scripts/import-engineering-catalogue.mjs --check`: determinista y sin cambios byte a byte.
     - Formato y clippy limpios en workspace (`cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`).
 
-- [ ] **C10 — Ejecutar Task28 y cerrar F4.** Archivos/steps de Task28. Confirmar licencias y los diez criterios de spec ratificada con evidencia de C1–C9; clippy release/checks/e2e y consumo <150 MB/<1 % CPU, UI≤10/s con catálogo final y disposición Ingeniería visible. Carpeta de release `target-f4`, sin tocar la prueba del propietario. `unresolved` en alcance, links de base/símbolos no demostrados, aviso falso o página sobredimensionada impiden cierre; registrar pendientes concretos. Revisión completa de rama y cierre status. Commit de Task28 `docs: verificación de criterios y cierre de F4`; C10 no añade otro commit duplicado.
+- [x] **C10 — Ejecutar Task28 y cerrar F4.** Archivos/steps de Task28. Confirmar licencias y los diez criterios de spec ratificada con evidencia de C1–C9; clippy release/checks/e2e y consumo <150 MB/<1 % CPU, UI≤10/s con catálogo final y disposición Ingeniería visible. Carpeta de release `target-f4`, sin tocar la prueba del propietario. `unresolved` en alcance, links de base/símbolos no demostrados, aviso falso o página sobredimensionada impiden cierre; registrar pendientes concretos. Revisión completa de rama y cierre status. Commit de Task28 `docs: verificación de criterios y cierre de F4`; C10 no añade otro commit duplicado.
 
 ---
 
@@ -854,10 +854,69 @@ La [enmienda aprobada](2026-10-22-tmc-f4-catalogo-completo-propuesta.md) es la d
 
 ## Verificación F4
 
-El cierre de los diez criterios se completa en Task 28/C10 con el catálogo final. Evidencias parciales de ejecución:
+El cierre de los diez criterios de la spec de F4 (§8) se completa en Task 28 / C10 con el catálogo final. Evidencias completas de verificación:
 
-- **Task 27 / conciliación local (2026-10-22):** `target/debug/tmc-headless.exe eval` sobre el directorio local predeterminado → 9 diarios, 4.630 eventos, 0 líneas descartadas. F4: **4 intervalos, 201/201 comprobaciones exactas (100,0 %), diferencia absoluta media 0,00 y máxima 0; 2.044 eventos no tipados entre instantáneas comparadas**. Veredicto **INSUFICIENTE (4 casos)** por n<5. Solo agregados: no nombres de comandante, FID, sistemas ni chats. Esto valida el historial observado y no certifica el catálogo nuevo todavía sin activar.
-- **Task 27 / fixture aislado:** `cargo run -p tmc-headless -- eval --journal-dir .tmp/eval-inventory-task27` → 1 diario/15 eventos/0 descartadas; 1 intervalo, 5/5 materiales exactos, media/máxima0, Other1, INSUFICIENTE. La carpeta contiene únicamente una copia del fixture sintético con nombre Journal.*.
+1. **Criterio 1 — Checks de Rust y UI en verde (incluidos e2e y clippy release):**
+   - `cargo fmt --all --check` PASS (0 discrepancias de estilo).
+   - `cargo clippy --workspace --all-targets -- -D warnings` PASS (0 avisos).
+   - `$env:CARGO_TARGET_DIR='target-f4'; cargo clippy --workspace --all-targets --release -- -D warnings` PASS (0 avisos en modo release sin advertencias de código muerto).
+   - `cargo test --workspace`: 1.370+ tests Rust PASS en todos los crates sin fallos.
+   - `npm.cmd --prefix ui test`: 375 tests Vitest PASS (18 suites).
+   - `npm.cmd --prefix ui run check`: 0 errores y 0 avisos en TypeScript/Svelte.
+   - `npm.cmd --prefix ui run build`: `ui/dist` generado con éxito (408.83 kB JS / 64.91 kB CSS).
+   - `npx.cmd --prefix ui playwright test --config ui/playwright.config.ts --project engineering`: 7/7 tests Playwright e2e PASS (23.1 s).
+   - `node --test ui/scripts/e2e-server.test.mjs`: harness de servidor fallback PASS (6.6 s).
+   - `node --test scripts/tests/import-engineering-catalogue.test.mjs`: 15/15 tests PASS.
+
+2. **Criterio 2 — Inventario: cantidades por categoría/grado iguales a `Materials` + cambios; aviso al máximo:**
+   - Evaluado en Tasks 12, 20, 26 y validado por conciliación en Task 27 (`tmc-headless eval`):
+     - Historial del propietario: 4 intervalos, 201/201 comprobaciones exactas (100,0 %), diferencia absoluta media 0,00 y máxima 0; 2.044 eventos no tipados entre instantáneas. Veredicto INSUFICIENTE (4 casos) por n < 5.
+     - Fixture aislado: 1 diario, 15 eventos, 1 intervalo, 5/5 materiales exactos, diferencia media/máxima 0, Other 1, INSUFICIENTE.
+     - Avisos al máximo: verificados en tests unitarios (`crates/tmc-modules/src/engineering/alerts.rs`) y en UI cuando una existencia alcanza o supera la capacidad del material.
+
+3. **Criterio 3 — Ingenieros: estado, rango y progreso desde `EngineerProgress`; distancia; cruce 38/38 de IDs y capacidades:**
+   - 38/38 ingenieros cruzados unívocamente entre EDDiscovery y EDDI con 38 IDs numéricos canónicos (Tasks 10, 14, C1, C4, C8).
+   - Distancia euclídea calculada desde `star_pos` hacia el sistema del taller del ingeniero.
+   - Regla de capacidades por módulo/grado: Lori Jameson (`misc_shielded`) admite G4 para AFMU y solo hasta G3 para Cargo Scanner, demostrado en tests unitarios de recomendación, objetivos y alertas (`pick_engineer_requires_all_grades`, `lori_shielded_capabilities`).
+
+4. **Criterio 4 — Ingenierizar: propulsores de serie → Motor sucio G5 + Drag Drives con oráculo manual del catálogo:**
+   - Verificado contra el catálogo real oficial de EDDiscovery en Tasks 16, C3, C8, C9 y Playwright e2e:
+     - Dirty Drive G5 + Drag Drives exige exactamente las 13 cantidades del oráculo (`cadmium: 4`, `industrialfirmware: 4`, `pharmaceuticalisolators: 4`, `iron: 5`, `hybridcapacitors: 3`, `securityfirmware: 1`, etc.) y 0 Merc Coins.
+     - Módulo ya en G3 completo empieza a contar estrictamente desde G4.
+     - Operations conserva Merc Coins: Far-reaching G2–G5 sobre base demostrada requiere exactamente 100 Merc Coins (5/5/10/20 por tirada).
+     - Sin correspondencia o base demostrada se bloquea el cálculo (`MissingBaseMapping`, `BaseRequired`, `AmbiguousRecipe`). Saldo desconocido no emite falso aviso de completable.
+
+5. **Criterio 5 — Intercambios: tasas correctas y sin tocar materiales reservados:**
+   - Verificado en Task 17, C5 y prueba Playwright e2e (`engineering_trade_skips_reserved`):
+     - Tasas oficiales: 3:1 por grado al bajar, 6:1 por grado al subir, multiplicadas por el factor entre familias de la misma categoría.
+     - Materiales reservados por objetivos fijados quedan excluidos del saldo disponible para intercambios, impidiendo gastar materiales requeridos por recetas prioritarias.
+
+6. **Criterio 6 — Comerciante más cercano con Ardent falso; «sin datos» sin servicios:**
+   - Verificado en Task 7, Task 20, Task 26 y Playwright e2e (`engineering_nearest_trader_fake_ardent` y `engineering_no_services_no_data`):
+     - Con servicios en línea y servidor simulado redirigido, devuelve la estación más cercana (Spansh para tipados Raw/Manufactured/Encoded y brokers Guardian/Human; Ardent para no tipados).
+     - Con servicios desactivados (`online_services: false`) o en galaxia Legacy devuelve «sin datos» sin errores ni demoras.
+
+7. **Criterio 7 — Lista de la compra persiste entre reinicios y avisa cuando un objetivo es completable:**
+   - Verificado en Task 18, C5, C9 y Playwright e2e (`engineering_goal_persists_after_restart`):
+     - Objetivos almacenados en SQLite conservan id, ranura, blueprint, experimental, grado y orden.
+     - Tras reiniciar el proceso headless y la app, los objetivos se recargan idénticos.
+     - Se emite aviso de completable cuando hay materiales disponibles, sin bloqueos y con moneda suficiente. Objetivos desconocidos conservan motivo y no se vuelven completables.
+
+8. **Criterio 8 — Catálogo completo con procedencia, `verified`, manifiesto e importador determinista:**
+   - `node scripts/import-engineering-catalogue.mjs --check` PASS (ejecución determinista byte a byte, 0 diferencias, 0 filas de nave no resueltas).
+   - Manifiesto por fila con procedencia explícita en `crates/tmc-modules/data/import/engineering/staging/manifest.json`.
+   - `git diff main -- Cargo.lock ui/package.json` arroja 0 cambios: cero dependencias de terceros nuevas.
+   - Nada GPL/AGPL incorporado al repositorio; PolyForm Noncommercial 1.0.0 respetada; `THIRD_PARTY_NOTICES.md` completado con Spansh, Ardent y fuentes del catálogo (EDEngineer MIT, EDDiscovery Apache-2.0, EDDI Apache-2.0).
+   - Todos los topics y páginas REST por debajo del límite estricto de 16.384 bytes.
+
+9. **Criterio 9 — Cadenas en los 5 idiomas y nombres oficiales:**
+   - 5 idiomas oficiales (`es`, `en`, `fr`, `de`, `pt`) en `locales/*/engineering.ftl` y `locales/*/engineering-data.ftl` con paridad total de claves verificada por test de workspace `engineering_ftl_keys_match_all_locales`.
+   - Nombres oficiales comunitarios de EDEngineer y juego incorporados; nombres pendientes en inglés marcados con sufijo `.pending = 1`.
+
+10. **Criterio 10 — `measure-footprint.ps1` < 150 MB RAM y < 1 % CPU en reposo con «Ingeniería»:**
+    - Medición ejecutada con el ejecutable release `target-f4/release/TMC.exe` sobre sesión de ingeniería de 120 segundos (`scripts/measure-footprint.ps1 -Exe target-f4/release/TMC.exe -JournalDir .tmp/footprint-f4 -FixturePath tests/fixtures/journal/engineering_session.log -ShowWindow -Seconds 120`):
+    - **Resultado:** `max_mb=122,20 (limit=150) avg_cpu_idle=0,00% (limit=1%) PASS`.
+    - Cumple ampliamente ambos límites presupuestarios del proyecto (< 150 MB RAM y < 1 % CPU idle).
 
 ## Desviaciones
 

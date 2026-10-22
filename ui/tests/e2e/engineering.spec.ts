@@ -11,7 +11,7 @@ async function dirtyDrive(page: Page) {
   await page.getByTestId('blueprint').selectOption('engine_dirty');
   await page.getByTestId('experimental').selectOption('special_engine_overloaded');
   await page.getByTestId('preview').click();
-  await expect(page.locator('tr[data-material="polonium"]')).toBeVisible();
+  await expect(page.locator('tr[data-material="cadmium"]')).toBeVisible();
 }
 
 async function clearGoals(page: Page) {
@@ -113,10 +113,11 @@ test('engineering_engineers_status_distance', async ({ page }) => {
 test('engineering_flow_dirty_drive_g5', async ({ page }) => {
   await dirtyDrive(page);
   // Each G1–G4 once, G5 four times; experimental charged once.
-  for (const [key, count] of Object.entries({ carbon: 1, heatconductionwiring: 1,
-    vanadium: 1, heatdispersionplate: 1, niobium: 1, heatexchangers: 1,
-    yttrium: 1, heatvanes: 1, polonium: 4, protoheatradiators: 4,
-    electrochemicalarrays: 1, hybridcapacitors: 1, pharmaceuticalisolators: 1 })) {
+  for (const [key, count] of Object.entries({
+    legacyfirmware: 3, mechanicalequipment: 1, chromium: 1, mechanicalcomponents: 1,
+    consumerfirmware: 1, selenium: 1, configurablecomponents: 1, industrialfirmware: 4,
+    cadmium: 4, pharmaceuticalisolators: 4, iron: 5, hybridcapacitors: 3, securityfirmware: 1,
+  })) {
     await expect(page.locator(`tr[data-material="${key}"] td`).nth(1)).toHaveText(String(count));
   }
   await expect(page.getByTestId('cost-grade-5')).toContainText('4');
@@ -134,20 +135,21 @@ test('engineering_trade_skips_reserved', async ({ page }) => {
       responses.push(JSON.parse(body.toString()));
     }
   });
-  // Six polonium can buy one yttrium (different raw families, both G4).
-  // Reserving four for G5 leaves two, below the six-unit exchange lot.
+  // Two cadmium can buy one chromium (different raw families: G3 -> G2 with cross-family penalty gives 2:1).
+  // Reserving four for G5 leaves one, below the two-unit exchange lot.
   await appendJournal(fakePort, JSON.stringify({ timestamp: new Date().toISOString(), event: 'Materials',
-    Raw: Object.entries({ carbon: 2, vanadium: 2, niobium: 2, polonium: 6 }).map(([Name, Count]) => ({ Name, Count })),
-    Manufactured: Object.entries({ heatconductionwiring: 2, heatdispersionplate: 2, heatexchangers: 2,
-      heatvanes: 2, protoheatradiators: 4, electrochemicalarrays: 1, hybridcapacitors: 1,
-      pharmaceuticalisolators: 1 }).map(([Name, Count]) => ({ Name, Count })), Encoded: [] }));
+    Raw: Object.entries({ cadmium: 5, selenium: 2, iron: 10 }).map(([Name, Count]) => ({ Name, Count })),
+    Manufactured: Object.entries({ mechanicalequipment: 5, mechanicalcomponents: 5, configurablecomponents: 5,
+      pharmaceuticalisolators: 10, hybridcapacitors: 10 }).map(([Name, Count]) => ({ Name, Count })),
+    Encoded: Object.entries({ legacyfirmware: 10, consumerfirmware: 5, industrialfirmware: 10,
+      securityfirmware: 2 }).map(([Name, Count]) => ({ Name, Count })) }));
   await dirtyDrive(page);
-  await expect(page.locator('tr[data-material="polonium"] td').nth(2)).toHaveText('6');
+  await expect(page.locator('tr[data-material="cadmium"] td').nth(2)).toHaveText('5');
   // Positive control: without a G5 reservation, the same stock covers G4 by trading.
   await page.getByTestId('target-grade').selectOption('4');
   await page.getByTestId('experimental').selectOption('');
   await page.getByTestId('preview').click();
-  await expect(page.locator('tr[data-material="yttrium"]')).toContainText('Da 6 de Polonium y recibe 1 Yttrium');
+  await expect(page.locator('tr[data-material="chromium"]')).toContainText('Da 2 de Cadmium y recibe 1 Chromium');
   await page.getByTestId('target-grade').selectOption('5');
   await page.getByTestId('experimental').selectOption('special_engine_overloaded');
   await page.getByTestId('preview').click();
@@ -158,12 +160,12 @@ test('engineering_trade_skips_reserved', async ({ page }) => {
   await page.getByTestId('preview').click();
   await page.getByTestId('pin-goal').click();
   await expect(page.locator('[data-goal-id]')).toHaveCount(2);
-  await expect(page.locator('[data-section="surplus"]')).toContainText('Polonium: 2');
+  await expect(page.locator('[data-section="surplus"]')).toContainText('Cadmium: 1');
   const goals = [...responses].reverse().find((response) => response.total === 2)?.items;
   expect(goals).toHaveLength(2);
   expect(goals!.map((goal) => ({ missing: goal.missing, trades: goal.trades }))).toEqual([
-    { missing: { yttrium: 1 }, trades: [] },
-    { missing: { yttrium: 1 }, trades: [] },
+    { missing: { chromium: 1 }, trades: [] },
+    { missing: { chromium: 1 }, trades: [] },
   ]);
 });
 
@@ -173,6 +175,7 @@ test('engineering_nearest_trader_fake_ardent', async ({ page }) => {
   await expect(page.locator('[data-trader="Raw"]')).toContainText('Mercader Ficticio', { timeout: 20_000 });
   await expect(page.locator('[data-trader="Raw"]')).toContainText(/5,2/);
   await page.getByTestId('module-FrameShiftDrive').click();
+  await page.getByTestId('blueprint').selectOption('fsd_longrange');
   await page.getByTestId('preview').click();
   await expect(page.locator('[data-trader="Encoded"]')).toContainText('Base de Prueba');
 });
@@ -183,7 +186,7 @@ test('engineering_no_services_no_data', async ({ page, request }) => {
   try {
     await dirtyDrive(page);
     await expect(page.locator('[data-trader="Raw"]')).toContainText('Sin datos');
-    await expect(page.locator('tr[data-material="polonium"] td').nth(1)).toHaveText('4');
+    await expect(page.locator('tr[data-material="cadmium"] td').nth(1)).toHaveText('4');
   } finally {
     expect((await request.put('/api/config', { data: current })).ok()).toBeTruthy();
   }
@@ -209,9 +212,11 @@ test('engineering_goal_persists_after_restart', async ({ page, request }) => {
   await appendJournal(fakePort, JSON.stringify({ timestamp: new Date().toISOString(), event: 'EngineerProgress',
     Engineer: 'Professor Palin', EngineerID: 300220, Progress: 'Unlocked', Rank: 5, RankProgress: 100 }));
   await appendJournal(fakePort, JSON.stringify({ timestamp: new Date().toISOString(), event: 'Materials',
-    Raw: Object.entries({ carbon: 1, vanadium: 1, niobium: 1, yttrium: 1, polonium: 4 }).map(([Name, Count]) => ({ Name, Count })),
-    Manufactured: Object.entries({ heatconductionwiring: 1, heatdispersionplate: 1, heatexchangers: 1,
-      heatvanes: 1, protoheatradiators: 4, electrochemicalarrays: 1, pharmaceuticalisolators: 1 }).map(([Name, Count]) => ({ Name, Count })), Encoded: [] }));
+    Raw: Object.entries({ chromium: 1, selenium: 1, cadmium: 4, iron: 5 }).map(([Name, Count]) => ({ Name, Count })),
+    Manufactured: Object.entries({ mechanicalequipment: 1, mechanicalcomponents: 1, configurablecomponents: 1,
+      pharmaceuticalisolators: 4, hybridcapacitors: 2 }).map(([Name, Count]) => ({ Name, Count })),
+    Encoded: Object.entries({ legacyfirmware: 3, consumerfirmware: 1, industrialfirmware: 4,
+      securityfirmware: 1 }).map(([Name, Count]) => ({ Name, Count })) }));
   await expect(page.locator('[data-goal-id]').first()).toContainText('Hybrid Capacitors');
   await appendJournal(fakePort, JSON.stringify({ timestamp: new Date().toISOString(), event: 'MaterialCollected',
     Category: 'Manufactured', Name: 'hybridcapacitors', Count: 1 }));

@@ -406,3 +406,25 @@ SOFTWARE.
 - Fuente: https://github.com/EDCD/EDDI, revisión `d3b964ea7c8bb959ad6537f55b308f293a326905`, archivo `DataDefinitions/Engineer.cs`. Licencia: **Apache-2.0** (`LICENSE.md` y `LicenseFile.txt` de esa revisión). Copyright: «Copyright 2017 by the EDCD organization EDDI development team». No hay archivo `NOTICE` en esa revisión. Aprobación separada del propietario del 2026-10-22.
 - Uso limitado a los 38 pares `(EngineerID, nombre)`; no se usan sus especialidades ni sus recetas. Archivo y licencias fijados en `crates/tmc-modules/data/import/engineering/snapshot/eddi-*`; el cruce exacto 38/38 con EDDiscovery lo repite el importador en cada ejecución.
 - Procedimiento: `node scripts/import-engineering-catalogue.mjs --source-dir crates/tmc-modules/data/import/engineering/snapshot --out-dir crates/tmc-modules/data/import/engineering/staging` (o `--check`, que no escribe). Sin dependencias nuevas ni acceso a red.
+
+## Servicios de red y dependencias de F4 (ingenieros y materiales)
+
+### Spansh API y Ardent API (servicios de red para comerciantes y brokers, no incorporados)
+- **Spansh API (`POST /api/stations/search`):** consultas HTTP de solo lectura desde `tmc-net` para localizar el comerciante de materiales tipado (`Raw`, `Manufactured`, `Encoded`) o broker de tecnología tipado (`Guardian`, `Human`) más cercano al sistema de referencia. No envía datos del comandante ni del jugador. Solo lectura por red; no se copian datos ni código de terceros.
+- **Ardent API (`nearest/material-trader` y `nearest/technology-broker`):** servicio de red AGPL usado únicamente como cliente HTTP de solo lectura para comerciantes de materiales y brokers no tipados (cuando no se especifica tipo). Aplica las mismas salvaguardas de F1–F3: sin incorporar código ni bases de datos, respuestas transitorias en caché local con caducidad.
+- **Opt-out y modo Legacy:** si las consultas a servicios en línea están desactivadas por configuración o el jugador está en la galaxia Legacy, no se emite ninguna petición de red y TMC devuelve «sin datos» de inmediato.
+- En compilaciones de depuración e integración e2e existe un transporte de pruebas que redirige estas peticiones al servidor local simulado (`Redirect::post_json` y `Redirect::get`).
+
+### Dependencias nuevas en F4
+- Ninguna (`git diff main -- Cargo.lock ui/package.json` arroja cero cambios en dependencias externas directas o transitivas respecto a `main`).
+
+### Datos estáticos propios e importados de F4
+Versión 1, licencia de datos propios del proyecto **PolyForm Noncommercial 1.0.0**; sin datasets incompatibles ni GPL/AGPL.
+
+| Archivo | Contenido y procedencia declarada | Verificación |
+|---|---|---|
+| `crates/tmc-modules/data/materials.json` | 141 materiales (Raw, Manufactured, Encoded); nombres y grados base de EDEngineer (MIT), familias, `tradeable` y `hints` propios de TMC. | Identidad, categoría y grado contrastados (`verified: true` salvo materiales especiales/Guardianes sin verificar). |
+| `crates/tmc-modules/data/trader_rules.json` | Reglas de intercambio entre comerciantes y multiplicadores entre familias del mismo tipo; hechos del juego transcritos por TMC. | Verificado contra las mecánicas y tasas oficiales de Elite Dangerous. |
+| `crates/tmc-modules/data/blueprints.json` | 89 blueprints, 87 efectos experimentales y 15 variantes con costes, bases explícitas y requisitos; convertidos desde EDDiscovery (Apache-2.0). | Importación determinista (`--check` byte a byte); `verified: false` hasta contraste en vuelo. |
+| `crates/tmc-modules/data/engineers.json` | 38 ingenieros con ubicación, taller, estado, progresión, IDs canónicos (EDDI, Apache-2.0) y capacidades detalladas por módulo y grado (EDDiscovery, Apache-2.0). | Cruce 38/38 exacto y sin duplicados; `verified: false` hasta contraste en vuelo. |
+

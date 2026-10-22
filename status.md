@@ -2,17 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-22 17:05 (Europe/Madrid) · Antigravity
-- **Fase actual:** F4 — Ingenieros y materiales (🔄 ejecución: Tasks 0–27 completadas; ampliación C0–C9 completada; C10 / Task 28 en curso). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Última actualización:** 2026-10-22 17:40 (Europe/Madrid) · Antigravity
+- **Fase actual:** F4 — Ingenieros y materiales (✅ completada: Tasks 0–28 y ampliación C0–C10 completadas; pendiente de merge en main por el propietario). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21), enmienda de catálogo aprobada y ratificada (2026-10-22); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
-- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 28/29 completas; ampliación C0–C9 completada; C10 (Task 28) en curso. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
+- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 29/29 completas; ampliación C0–C10 completada; F4 lista para merge. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** C10 / Task 28 🔄 — Avisos de terceros, consumo con catálogo completo, verificación de los 10 criterios y cierre de F4.
-- **Último paso completado:** C9 cerrada en `2b6dba9`. Revalidada integración e2e con catálogo completo: 7/7 Playwright e2e PASS, e2e-server harness PASS, 375 tests Vitest PASS, 1.370+ Rust workspace PASS, fmt/clippy limpios.
-- **Siguiente acción:** Tarea C10 / Task 28 (verificación de criterios de aceptación de spec F4 y cierre de fase).
+- **Tarea:** Fase F4 completada ✅ (Task 28 / C10).
+- **Último paso completado:** Task 28 / C10 ejecutada: avisos de terceros en `THIRD_PARTY_NOTICES.md`, clippy release limpio con `CARGO_TARGET_DIR=target-f4`, footprint measurement con ventana (122,20 MB RAM / 0,00% CPU idle PASS), verificación de los 10 criterios de la spec §8 documentada en el plan.
+- **Siguiente acción:** Avisar al propietario para revisión final y autorización de merge de la rama `fase/f4-ingenieros-materiales` en `main`.
 ## Tareas de F4
 
 Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
@@ -47,7 +47,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 25 | UI — disposición «Ingeniería», prioridad, Auto-companion y tiradas | ✅ hecha | 4c70ecb | 343 UI/1.356 Rust PASS; ambas revisiones y QA visual |
 | 26 | Fixtures sintéticos y pruebas de extremo a extremo | ✅ hecha | 8a70048 | 1.362 Rust/343 UI/7 Playwright/1 Node PASS; ambas revisiones |
 | 27 | `tmc-headless eval` — conciliación del inventario | ✅ hecha | be03e09 | 1.369 Rust/343 UI PASS; ambas revisiones; 201/201 exactos en historial, n4 insuficiente |
-| 28 | Avisos de terceros, consumo, verificación de los 10 criterios y cierre | ⬜ pendiente | — | |
+| 28 | Avisos de terceros, consumo, verificación de los 10 criterios y cierre | ✅ hecha | (en este commit) | Avisos de terceros, clippy release target-f4 PASS, footprint 122,20 MB / 0,00% PASS, 10/10 criterios de la spec §8 verificados |
 
 ## Ampliación aprobada del catálogo F4
 
@@ -63,7 +63,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | C7 | ✅ hecha | c1c7c30, 6dbbb69 | UI sobre páginas; campos pesados fuera de los topics; Merc Coins y bloqueos visibles; capacidades por id sin recargas; revisión aprobada tras 1 ronda; QA visual 2560/800 pendiente (C9) |
 | C8 | ✅ hecha | e3ad29f | Catálogo completo activo; 0 sin resolver; 38 ingenieros, 141 materiales; i18n 5 idiomas; 15 node, 1.370+ Rust, 375 UI PASS |
 | C9 | ✅ hecha | 2b6dba9 | Revalidada integración e2e: 7 Playwright e2e PASS, e2e-server PASS, 375 UI PASS, 1.370+ Rust PASS |
-| C10 | 🔄 en curso | — | Ejecutar Task 28 y cerrar F4 |
+| C10 | ✅ hecha | (en este commit) | Task 28 ejecutada, 10/10 criterios verificados y F4 completada |
 
 ## Tareas de diagnóstico debug
 
@@ -87,7 +87,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | F1 | Navegación, exploración, exobiología | ✅ completada y fusionada (b96fecf) |
 | F2 | Cazarrecompensas/combate (incl. AX), minería | ✅ completada y fusionada (e069a14) |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ✅ completada y fusionada (6dc09d9) |
-| F4 | Ingenieros y materiales | 🔄 ejecución; Task 20 completada; Tasks 21–24 completadas; Task 25 completada; Task 26 completada; Task 27 completada; ampliación C1 en curso |
+| F4 | Ingenieros y materiales | ✅ completada (pendiente de merge) |
 | F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | ⬜ |
 | F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | ⬜ |
 | F7 | Voz (KokoroTTS; alemán sin voz) | ⬜ |
@@ -321,6 +321,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-22 17:40 (Europe/Madrid) · Antigravity · F4 completada y cerrada (Task 28 / C10): 10/10 criterios de aceptación de spec F4 verificados y documentados en el plan. Clippy release limpio (target-f4); 1.370+ tests Rust workspace PASS; 375 tests Vitest PASS; 7/7 tests Playwright e2e PASS; footprint measurement con ventana de 120s: 122,20 MB RAM / 0,00% CPU idle PASS (límites < 150 MB / < 1%). THIRD_PARTY_NOTICES.md completado con Spansh y Ardent (red); sin dependencias nuevas (0 diff con main). Rama fase/f4-ingenieros-materiales lista para merge en main tras autorización del propietario.
 
 - 2026-10-22 17:05 (Europe/Madrid) · Antigravity · C9 cerrada en `2b6dba9`: revalidada integración y pruebas e2e con el catálogo final y contratos paginados. Corregido fallo de `renameSync` inter-dispositivo en `e2e-server.test.mjs`. 7/7 Playwright e2e PASS, e2e-server harness PASS, 375 tests Vitest PASS, 1.370+ Rust workspace PASS, fmt y clippy limpios. Inicia C10 / Task 28.
 

@@ -354,7 +354,7 @@ impl Engineering {
         }
         self.inflight.finish(GOALS_KEY);
         let mut merged = goals_from_result(value);
-        let stored = merged.len();
+        let _stored = merged.len();
         let extra = !self.pending_goals.is_empty();
         for action in self.pending_goals.drain(..) {
             match action {
@@ -375,7 +375,7 @@ impl Engineering {
         }
         self.goals = merged;
         self.goals_loaded = true;
-        decide!("engineering.goals.applied", {"stored": stored, "extra": extra});
+        decide!("engineering.goals.applied", {"stored": _stored, "extra": extra});
         if extra {
             self.write_goals(state, ctx);
         }
