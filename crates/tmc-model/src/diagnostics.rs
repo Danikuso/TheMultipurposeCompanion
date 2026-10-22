@@ -771,6 +771,7 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
 }
 /// Disposiciones de la UI (`ui/src/shell/layouts.ts`); `none` cuando no hay ninguna activa.
 const UI_LAYOUTS: &[&str] = &[
+    "engineering",
     "none",
     "exploration",
     "combat",
@@ -780,6 +781,14 @@ const UI_LAYOUTS: &[&str] = &[
 ];
 /// Ranuras de las disposiciones (`ui/src/shell/layouts.ts`).
 const UI_SLOTS: &[&str] = &[
+    "materials",
+    "engineers",
+    "eng-alerts",
+    "eng-ship",
+    "eng-flow",
+    "shopping",
+    "trades",
+    "sources",
     "route",
     "context-bodies",
     "context-exobiology",
