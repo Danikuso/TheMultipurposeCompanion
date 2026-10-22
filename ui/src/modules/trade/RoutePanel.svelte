@@ -71,7 +71,7 @@
     {:else if r.status === 'idle'}
       <p class="muted" data-testid="route-state">{t('trade-route-idle')}</p>
     {:else if plan}
-      <p class="muted" data-testid="route-progress">
+      <p class="muted progress-head" data-testid="route-progress">
         {r.completed ? t('trade-route-done') : t('trade-route-stop', { current: r.current + 1, stops: plan.stops.length })}
       </p>
       <ol class="stops">
@@ -96,26 +96,134 @@
           </li>
         {/each}
       </ol>
-      <p data-testid="route-total"><b>{t('trade-route-total', { profit: credits(plan.total_profit) })}</b></p>
+      <div class="total-card" data-testid="route-total"><b>{t('trade-route-total', { profit: credits(plan.total_profit) })}</b></div>
     {/if}
     {#if r.status !== 'blocked'}
-      <button type="button" data-testid="route-recalculate" disabled={r.status === 'loading'} onclick={recalc}>{t('trade-recalculate')}</button>
+      <button type="button" class="btn-recalc" data-testid="route-recalculate" disabled={r.status === 'loading'} onclick={recalc}>{t('trade-recalculate')}</button>
     {/if}
-    {#if copied}<p class="muted" role="status" data-testid="route-copied">{t('trade-route-copied', { system: copied })}</p>{/if}
+    {#if copied}<p class="copied-toast" role="status" data-testid="route-copied">{t('trade-route-copied', { system: copied })}</p>{/if}
     {#if failed}<p class="err" role="alert">{t('trade-route-failed')}</p>{/if}
   {/if}
 </Panel>
 
 <style>
-  .muted { color: var(--hud-muted); margin: 0.2rem 0; }
-  .mono { font-family: var(--font-mono); }
-  .warn { color: var(--hud-warning); }
-  .ok { color: var(--hud-success, var(--hud-primary)); }
-  .err { color: var(--hud-danger); }
-  .stops { list-style: none; margin: 0; padding: 0; }
-  .hop { display: grid; grid-template-columns: 1.7rem 1fr auto; gap: 0.5rem; align-items: center; padding: 0.35rem 0; border-bottom: 1px dashed var(--hud-border); }
-  .hop .k { width: 1.5rem; height: 1.5rem; border: 2px solid var(--hud-border); display: flex; align-items: center; justify-content: center; font-weight: bold; }
-  .hop.current .k { border-color: var(--hud-warning); color: var(--hud-warning); }
-  .hop.current { background: var(--hud-surface-alt); }
-  .hop.done { opacity: 0.55; }
+  .muted {
+    color: var(--hud-muted);
+    margin: 0.2rem 0;
+  }
+  .mono {
+    font-family: var(--font-mono);
+  }
+  .warn {
+    color: var(--hud-warning);
+    background: rgba(255, 170, 0, 0.08);
+    border-left: 3px solid var(--hud-warning);
+    padding: 0.45rem 0.75rem;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  }
+  .ok {
+    color: var(--hud-ok);
+    font-weight: 600;
+  }
+  .err {
+    color: var(--hud-danger);
+    margin-top: 0.4rem;
+  }
+  .progress-head {
+    font-size: 0.85rem;
+    margin-bottom: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .stops {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+  .hop {
+    display: grid;
+    grid-template-columns: 2rem 1fr auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.6rem 0.8rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--hud-border-subtle);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+  }
+  .hop .k {
+    width: 1.8rem;
+    height: 1.8rem;
+    border: 1px solid var(--hud-border-subtle);
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: var(--hud-muted);
+  }
+  .hop.current {
+    background: rgba(255, 119, 0, 0.06);
+    border-color: rgba(255, 119, 0, 0.4);
+    box-shadow: 0 0 12px rgba(255, 119, 0, 0.15);
+  }
+  .hop.current .k {
+    border-color: var(--hud-primary);
+    background: rgba(255, 119, 0, 0.2);
+    color: var(--hud-primary);
+    box-shadow: 0 0 8px rgba(255, 119, 0, 0.4);
+  }
+  .hop.done {
+    opacity: 0.55;
+  }
+  .hop.done .k {
+    border-color: var(--hud-ok);
+    color: var(--hud-ok);
+  }
+  .total-card {
+    margin: 0.75rem 0 0.5rem;
+    padding: 0.5rem 0.85rem;
+    background: rgba(0, 217, 255, 0.05);
+    border: 1px solid rgba(0, 217, 255, 0.25);
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+    color: var(--hud-cyan);
+  }
+  .btn-recalc {
+    margin-top: 0.5rem;
+    padding: 0.45rem 1rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--hud-border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--hud-primary);
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  .btn-recalc:hover:not(:disabled) {
+    background: rgba(255, 119, 0, 0.12);
+    border-color: var(--hud-primary);
+    box-shadow: 0 0 10px rgba(255, 119, 0, 0.25);
+  }
+  .btn-recalc:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .copied-toast {
+    margin-top: 0.5rem;
+    padding: 0.35rem 0.75rem;
+    background: rgba(68, 255, 136, 0.1);
+    border: 1px solid var(--hud-ok);
+    border-radius: var(--radius-sm);
+    color: var(--hud-ok);
+    font-size: 0.85rem;
+  }
 </style>
