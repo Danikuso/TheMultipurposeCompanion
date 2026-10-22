@@ -198,9 +198,16 @@ pub(super) fn flow_pages(
             cat.blueprints_for_item(item, current)
                 .iter()
                 .map(|o| {
+                    // `grades` lists only the grades the resolved recipe really has, so the
+                    // UI never offers e.g. G1 for a base-only (`ExistingOnly`) context.
+                    let grades: Vec<u8> = o
+                        .availability
+                        .as_ref()
+                        .map(|r| r.grades.keys().copied().collect())
+                        .unwrap_or_default();
                     json!({
                         "key": o.blueprint.key, "available": o.availability.is_ok(),
-                        "reason": o.availability.as_ref().err(),
+                        "reason": o.availability.as_ref().err(), "grades": grades,
                     })
                 })
                 .collect(),

@@ -316,7 +316,11 @@ async fn catalogue_engineers_and_flow_pages_are_lossless_and_independent_per_cli
         engineers().len()
     );
     let lines = section(&router, "flow", revision, "lines").await;
-    assert_eq!(json!(lines), snapshot["engineering.flow"]["lines"]);
+    assert_eq!(
+        lines.len() as u64,
+        snapshot["engineering.flow"]["counts"]["lines"]
+    );
+    assert!(snapshot["engineering.flow"].get("lines").is_none());
     // Two clients keep independent cursors and receive identical bytes.
     let uri = format!("/api/engineering/catalogue?revision={revision}&section=recipes&cursor=1");
     let (a, b) = tokio::join!(get(&router, &uri), get(&router, &uri));

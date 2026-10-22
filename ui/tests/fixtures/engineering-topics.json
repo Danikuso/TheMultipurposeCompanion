@@ -23,137 +23,14 @@
   },
   "engineering.engineers": {
     "as_of": "2026-10-21T12:05:00Z",
-    "engineers": [
-      {
-        "distance_ly": 12.300000000000011,
-        "id": 300100,
-        "name": "Felicity Farseer",
-        "on_foot": false,
-        "rank": 5,
-        "rank_progress": 0,
-        "status": "Unlocked",
-        "system": "Deciat",
-        "verified": false
-      },
-      {
-        "distance_ly": 69.2302414276088,
-        "id": 300160,
-        "name": "Elvira Martuuk",
-        "on_foot": false,
-        "rank": null,
-        "rank_progress": null,
-        "status": "Unlocked",
-        "system": "Khun",
-        "verified": false
-      },
-      {
-        "distance_ly": 88.3683053068944,
-        "id": 300220,
-        "name": "Professor Palin",
-        "on_foot": false,
-        "rank": null,
-        "rank_progress": null,
-        "status": "Unknown",
-        "system": "Arque",
-        "verified": false
-      },
-      {
-        "distance_ly": 102.02178631455392,
-        "id": 300260,
-        "name": "Tod McQuinn",
-        "on_foot": false,
-        "rank": null,
-        "rank_progress": null,
-        "status": "Known",
-        "system": "Wolf 397",
-        "verified": false
-      },
-      {
-        "distance_ly": 144.12697703002203,
-        "id": 400002,
-        "name": "Domino Green",
-        "on_foot": true,
-        "rank": null,
-        "rank_progress": null,
-        "status": "Unknown",
-        "system": "Orishis",
-        "verified": false
-      }
-    ],
+    "next_step": null,
     "revision": 21,
-    "selected": null,
     "selected_id": null,
     "total": 5
   },
   "engineering.flow": {
     "as_of": "2026-10-21T12:05:00Z",
     "blockers": [],
-    "cost": {
-      "blockers": [],
-      "experimental": {
-        "electrochemicalarrays": 1,
-        "hybridcapacitors": 1,
-        "pharmaceuticalisolators": 1
-      },
-      "merc_coins_by_grade": {},
-      "merc_coins_experimental": 0,
-      "merc_coins_total": 0,
-      "missing_grades": [],
-      "per_grade": {
-        "1": [
-          1,
-          {
-            "carbon": 1,
-            "heatconductionwiring": 1
-          }
-        ],
-        "2": [
-          1,
-          {
-            "heatdispersionplate": 1,
-            "vanadium": 1
-          }
-        ],
-        "3": [
-          1,
-          {
-            "heatexchangers": 1,
-            "niobium": 1
-          }
-        ],
-        "4": [
-          1,
-          {
-            "heatvanes": 1,
-            "yttrium": 1
-          }
-        ],
-        "5": [
-          4,
-          {
-            "polonium": 4,
-            "protoheatradiators": 4
-          }
-        ]
-      },
-      "replaces_blueprint": false,
-      "total": {
-        "carbon": 1,
-        "electrochemicalarrays": 1,
-        "heatconductionwiring": 1,
-        "heatdispersionplate": 1,
-        "heatexchangers": 1,
-        "heatvanes": 1,
-        "hybridcapacitors": 1,
-        "niobium": 1,
-        "pharmaceuticalisolators": 1,
-        "polonium": 4,
-        "protoheatradiators": 4,
-        "vanadium": 1,
-        "yttrium": 1
-      },
-      "verified": false
-    },
     "counts": {
       "blueprints": 1,
       "costs": 13,
@@ -182,194 +59,6 @@
       }
     },
     "item": "int_engine_size5_class5",
-    "lines": [
-      {
-        "grade": 1,
-        "have": 1,
-        "key": "carbon",
-        "missing": 0,
-        "name_en": "Carbon",
-        "need": 1,
-        "state": "ok",
-        "trade": null
-      },
-      {
-        "grade": 3,
-        "have": 0,
-        "key": "electrochemicalarrays",
-        "missing": 0,
-        "name_en": "Electrochemical Arrays",
-        "need": 1,
-        "state": "trade",
-        "trade": {
-          "get": 3,
-          "get_key": "electrochemicalarrays",
-          "give": 2,
-          "give_key": "pharmaceuticalisolators",
-          "same_family": false,
-          "trader": "Manufactured"
-        }
-      },
-      {
-        "grade": 1,
-        "have": 0,
-        "key": "heatconductionwiring",
-        "missing": 0,
-        "name_en": "Heat Conduction Wiring",
-        "need": 1,
-        "state": "trade",
-        "trade": {
-          "get": 3,
-          "get_key": "heatconductionwiring",
-          "give": 2,
-          "give_key": "conductiveceramics",
-          "same_family": false,
-          "trader": "Manufactured"
-        }
-      },
-      {
-        "grade": 2,
-        "have": 0,
-        "key": "heatdispersionplate",
-        "missing": 0,
-        "name_en": "Heat Dispersion Plate",
-        "need": 1,
-        "state": "trade",
-        "trade": {
-          "get": 9,
-          "get_key": "heatdispersionplate",
-          "give": 1,
-          "give_key": "heatvanes",
-          "same_family": true,
-          "trader": "Manufactured"
-        }
-      },
-      {
-        "grade": 3,
-        "have": 0,
-        "key": "heatexchangers",
-        "missing": 0,
-        "name_en": "Heat Exchangers",
-        "need": 1,
-        "state": "trade",
-        "trade": {
-          "get": 3,
-          "get_key": "heatexchangers",
-          "give": 1,
-          "give_key": "heatvanes",
-          "same_family": true,
-          "trader": "Manufactured"
-        }
-      },
-      {
-        "grade": 4,
-        "have": 3,
-        "key": "heatvanes",
-        "missing": 0,
-        "name_en": "Heat Vanes",
-        "need": 1,
-        "state": "ok",
-        "trade": null
-      },
-      {
-        "grade": 2,
-        "have": 0,
-        "key": "hybridcapacitors",
-        "missing": 0,
-        "name_en": "Hybrid Capacitors",
-        "need": 1,
-        "state": "trade",
-        "trade": {
-          "get": 1,
-          "get_key": "hybridcapacitors",
-          "give": 2,
-          "give_key": "conductiveceramics",
-          "same_family": false,
-          "trader": "Manufactured"
-        }
-      },
-      {
-        "grade": 3,
-        "have": 0,
-        "key": "niobium",
-        "missing": 0,
-        "name_en": "Niobium",
-        "need": 1,
-        "state": "trade",
-        "trade": {
-          "get": 1,
-          "get_key": "niobium",
-          "give": 2,
-          "give_key": "polonium",
-          "same_family": false,
-          "trader": "Raw"
-        }
-      },
-      {
-        "grade": 5,
-        "have": 8,
-        "key": "pharmaceuticalisolators",
-        "missing": 0,
-        "name_en": "Pharmaceutical Isolators",
-        "need": 1,
-        "state": "ok",
-        "trade": null
-      },
-      {
-        "grade": 4,
-        "have": 150,
-        "key": "polonium",
-        "missing": 0,
-        "name_en": "Polonium",
-        "need": 4,
-        "state": "ok",
-        "trade": null
-      },
-      {
-        "grade": 5,
-        "have": 2,
-        "key": "protoheatradiators",
-        "missing": 2,
-        "name_en": "Proto Heat Radiators",
-        "need": 4,
-        "state": "missing",
-        "trade": null
-      },
-      {
-        "grade": 2,
-        "have": 0,
-        "key": "vanadium",
-        "missing": 0,
-        "name_en": "Vanadium",
-        "need": 1,
-        "state": "trade",
-        "trade": {
-          "get": 3,
-          "get_key": "vanadium",
-          "give": 2,
-          "give_key": "polonium",
-          "same_family": false,
-          "trader": "Raw"
-        }
-      },
-      {
-        "grade": 4,
-        "have": 0,
-        "key": "yttrium",
-        "missing": 0,
-        "name_en": "Yttrium",
-        "need": 1,
-        "state": "trade",
-        "trade": {
-          "get": 1,
-          "get_key": "yttrium",
-          "give": 6,
-          "give_key": "polonium",
-          "same_family": false,
-          "trader": "Raw"
-        }
-      }
-    ],
     "materials_ready": false,
     "merc_coins": {
       "have": null,
@@ -377,15 +66,8 @@
       "need": 0
     },
     "module_type": "engine",
-    "options": {
-      "blueprints": [
-        "engine_dirty"
-      ],
-      "experimentals": [
-        "special_engine_overloaded"
-      ]
-    },
     "percent": 47,
+    "replaces_blueprint": false,
     "request": {
       "blueprint": "engine_dirty",
       "experimental": "special_engine_overloaded",
@@ -401,7 +83,8 @@
     },
     "revision": 21,
     "slot": "MainEngines",
-    "status": "ok"
+    "status": "ok",
+    "verified": false
   },
   "engineering.goals": {
     "as_of": "2026-10-21T12:05:00Z",
@@ -861,6 +544,152 @@
       "section": "capabilities",
       "total": 20
     },
+    "engineers_engineers": {
+      "cursor": 0,
+      "items": [
+        {
+          "distance_ly": 12.300000000000011,
+          "id": 300100,
+          "name": "Felicity Farseer",
+          "on_foot": false,
+          "rank": 5,
+          "rank_progress": 0,
+          "status": "Unlocked",
+          "system": "Deciat",
+          "verified": false
+        },
+        {
+          "distance_ly": 69.2302414276088,
+          "id": 300160,
+          "name": "Elvira Martuuk",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unlocked",
+          "system": "Khun",
+          "verified": false
+        },
+        {
+          "distance_ly": 88.3683053068944,
+          "id": 300220,
+          "name": "Professor Palin",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Arque",
+          "verified": false
+        },
+        {
+          "distance_ly": 102.02178631455392,
+          "id": 300260,
+          "name": "Tod McQuinn",
+          "on_foot": false,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Known",
+          "system": "Wolf 397",
+          "verified": false
+        },
+        {
+          "distance_ly": 144.12697703002203,
+          "id": 400002,
+          "name": "Domino Green",
+          "on_foot": true,
+          "rank": null,
+          "rank_progress": null,
+          "status": "Unknown",
+          "system": "Orishis",
+          "verified": false
+        }
+      ],
+      "next_cursor": null,
+      "revision": 21,
+      "section": "engineers",
+      "total": 5
+    },
+    "engineers_unlock": {
+      "cursor": 0,
+      "items": [
+        {
+          "engineer_id": 300100,
+          "field": "requirement",
+          "key": "unlock-felicity-farseer"
+        },
+        {
+          "engineer_id": 300100,
+          "field": "invite",
+          "key": "unlock-invite-felicity-farseer"
+        },
+        {
+          "engineer_id": 300160,
+          "field": "requirement",
+          "key": "unlock-elvira-martuuk"
+        },
+        {
+          "engineer_id": 300160,
+          "field": "invite",
+          "key": "unlock-invite-elvira-martuuk"
+        },
+        {
+          "amount": 3,
+          "engineer_id": 300160,
+          "field": "contribution",
+          "item": "soontillrelics",
+          "kind": "commodity"
+        },
+        {
+          "engineer_id": 300220,
+          "field": "requirement",
+          "key": "unlock-professor-palin"
+        },
+        {
+          "engineer_id": 300220,
+          "field": "invite",
+          "key": "unlock-invite-professor-palin"
+        },
+        {
+          "engineer_id": 300260,
+          "field": "requirement",
+          "key": "unlock-tod-mcquinn"
+        },
+        {
+          "engineer_id": 300260,
+          "field": "invite",
+          "key": "unlock-invite-tod-mcquinn"
+        },
+        {
+          "engineer_id": 400002,
+          "field": "requirement",
+          "key": "unlock-domino-green"
+        }
+      ],
+      "next_cursor": null,
+      "revision": 21,
+      "section": "unlock",
+      "total": 10
+    },
+    "flow_blueprints": {
+      "cursor": 0,
+      "items": [
+        {
+          "available": true,
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "key": "engine_dirty",
+          "reason": null
+        }
+      ],
+      "next_cursor": null,
+      "revision": 21,
+      "section": "blueprints",
+      "total": 1
+    },
     "flow_costs": {
       "cursor": 0,
       "items": [
@@ -947,6 +776,52 @@
       "revision": 21,
       "section": "costs",
       "total": 13
+    },
+    "flow_experimentals": {
+      "cursor": 0,
+      "items": [
+        {
+          "key": "special_engine_overloaded"
+        }
+      ],
+      "next_cursor": null,
+      "revision": 21,
+      "section": "experimentals",
+      "total": 1
+    },
+    "flow_grades": {
+      "cursor": 0,
+      "items": [
+        {
+          "grade": 1,
+          "merc_coins": 0,
+          "rolls": 1
+        },
+        {
+          "grade": 2,
+          "merc_coins": 0,
+          "rolls": 1
+        },
+        {
+          "grade": 3,
+          "merc_coins": 0,
+          "rolls": 1
+        },
+        {
+          "grade": 4,
+          "merc_coins": 0,
+          "rolls": 1
+        },
+        {
+          "grade": 5,
+          "merc_coins": 0,
+          "rolls": 4
+        }
+      ],
+      "next_cursor": null,
+      "revision": 21,
+      "section": "grades",
+      "total": 5
     },
     "flow_lines": {
       "cursor": 0,

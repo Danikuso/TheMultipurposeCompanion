@@ -5,7 +5,7 @@ export type LockerSection = 'items' | 'components' | 'consumables' | 'data';
 export interface LockerTopic { revision: number; counts: Record<LockerSection, number> }
 export interface LockerRow { key: string; name_localised: string | null; count: number }
 export interface SessionTopic { totals: Record<string, { in: number; out: number }>; recent: { key: string; delta: number; origin: string; lost: number; at: string }[] }
-export interface PageRequest { resource: 'locker' | 'goals'; revision: number; section: string; commander: string }
+export interface PageRequest { resource: 'locker' | 'goals' | 'catalogue' | 'engineers' | 'flow'; revision: number; section: string; commander: string; scope?: string }
 export interface EngineeringPage<T> { revision: number; section: string; cursor: number; next_cursor: number | null; total: number; items: T[] }
 
 export interface EngineerRow {
@@ -26,16 +26,10 @@ export type EngineerNextStep =
   | { Invite: { key: string } }
   | { Contribute: { item: string; kind: string; have: number; need: number } };
 
-export interface SelectedEngineer {
-  id: number;
-  next_step: EngineerNextStep | null;
-  blueprints: { module_type: string; blueprint: string; grades: number[]; max_grade: number; name_en?: string }[];
-}
-
-export interface EngineersTopic {
-  engineers: EngineerRow[];
-  selected: SelectedEngineer | null;
-}
+/** Resumen del topic: filas, capacidades y requisitos se leen por REST paginado. */
+export interface EngineersTopic { revision: number; total: number; selected_id: number | null; next_step: EngineerNextStep | null }
+export interface EngineerCapability { engineer_id: number; module_type: string; blueprint: string; grade: number }
+export type EngineerRows = { engineers: EngineerRow; capabilities: EngineerCapability };
 
 export interface CurrentEngineering { blueprint: string; level: number; quality: number; experimental: string | null }
 export interface ShipModule { slot: string; item: string; module_type: string | null; current: CurrentEngineering | null; engineerable: boolean }
@@ -43,15 +37,23 @@ export interface EngineeringShipTopic { ship: string | null; ship_id: number | n
 export interface EngineeringRequest { blueprint: string; experimental: string | null; target_grade: number; rolls: number[]; module_type: string }
 export interface EngineeringTrade { give: number; give_key: string; get: number; get_key: string; trader: MaterialCategory; same_family: boolean }
 export interface FlowLine { key: string; name_en: string | null; grade: number; need: number; have: number; state: string; missing: number; trade: EngineeringTrade | null }
-export interface FlowCost { per_grade: Record<string, [number, Record<string, number>]>; experimental: Record<string, number> | null; total: Record<string, number>; missing_grades: number[]; replaces_blueprint: boolean; verified: boolean }
+export type PlanBlocker = 'missing_base_mapping' | 'base_required' | 'ambiguous_recipe' | 'incompatible_item' | 'unknown_blueprint' | 'unknown_experimental' | { missing_recipe: { grade: number } };
+/** Saldo `null` = sin fuente de datos: nunca se asume cero. */
+export interface MercCoins { need: number; have: number | null; missing: number | null }
+export interface FlowEngineer { nearest_any: EngineerRow | null; nearest_unlocked: EngineerRow | null; next_step: EngineerNextStep | null }
 export interface EngineeringFlowTopic {
-  status: string; slot: string | null; module_type: string | null; item: string | null; current: CurrentEngineering | null;
-  options: { blueprints: string[]; experimentals: string[] }; request: EngineeringRequest | null; cost: FlowCost | null;
-  lines: FlowLine[]; percent: number;
-  engineer: { nearest_any: EngineerRow | null; nearest_unlocked: EngineerRow | null; next_step: EngineerNextStep | null } | null;
+  revision: number; status: string; slot: string | null; module_type: string | null; item: string | null; current: CurrentEngineering | null;
+  request: EngineeringRequest | null; percent: number; materials_ready: boolean; merc_coins: MercCoins | null; blockers: PlanBlocker[];
+  replaces_blueprint: boolean; verified: boolean; engineer: FlowEngineer | null;
+  counts?: Record<string, number>;
 }
+export interface FlowBlueprintRow { key: string; available: boolean; reason: string | null; grades: number[] }
+export interface FlowExperimentalRow { key: string }
+export interface FlowGradeRow { grade: number; rolls: number; merc_coins: number }
+export interface FlowCostRow { grade: number | null; kind: 'material' | 'merc_coins'; material?: string; count: number }
+export type FlowRows = { blueprints: FlowBlueprintRow; experimentals: FlowExperimentalRow; grades: FlowGradeRow; costs: FlowCostRow; lines: FlowLine };
 
-export interface GoalSummary { id: string; percent: number; completable: boolean; engineer: string | null }
+export interface GoalSummary { id: string; percent: number; completable: boolean; engineer: string | null; materials_ready: boolean; merc_coins: MercCoins; blockers: PlanBlocker[] }
 export interface GoalsTopic { revision: number; status: string; total: number; goals: GoalSummary[] }
 export interface GoalDetail extends GoalSummary { slot: string; item: string; request: EngineeringRequest; missing: Record<string, number>; trades: EngineeringTrade[]; verified: boolean }
 export interface AggregateRow { key: string; count: number; name_en?: string | null }
