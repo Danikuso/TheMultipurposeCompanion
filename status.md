@@ -2,17 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-22 17:40 (Europe/Madrid) · Antigravity
-- **Fase actual:** F4 — Ingenieros y materiales (✅ completada: Tasks 0–28 y ampliación C0–C10 completadas; pendiente de merge en main por el propietario). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
-- **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21), enmienda de catálogo aprobada y ratificada (2026-10-22); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
-- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 29/29 completas; ampliación C0–C10 completada; F4 lista para merge. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
+- **Última actualización:** 2026-10-22 22:25 (Europe/Madrid) · Antigravity
+- **Fase actual:** F4 — Ingenieros y materiales (✅ completada: Tasks 0–28, ampliación C0–C10, rediseño UI Opción 2 y fix módulos vírgenes; binario de prueba compilado y lanzado para el usuario). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada; diseño UI: [`docs/specs/2026-10-22-tmc-f4-ui-rediseno-opcion-2-design.md`](docs/specs/2026-10-22-tmc-f4-ui-rediseno-opcion-2-design.md).
+- **Plan activo:** [`docs/plans/2026-10-22-tmc-f4-ui-rediseno-opcion-2.md`](docs/plans/2026-10-22-tmc-f4-ui-rediseno-opcion-2.md) — 5/5 completas + fix de módulos vírgenes.
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** Fase F4 completada ✅ (Task 28 / C10).
-- **Último paso completado:** Task 28 / C10 ejecutada: avisos de terceros en `THIRD_PARTY_NOTICES.md`, clippy release limpio con `CARGO_TARGET_DIR=target-f4`, footprint measurement con ventana (122,20 MB RAM / 0,00% CPU idle PASS), verificación de los 10 criterios de la spec §8 documentada en el plan.
-- **Siguiente acción:** Avisar al propietario para revisión final y autorización de merge de la rama `fase/f4-ingenieros-materiales` en `main`.
+- **Tarea:** Tarea 5 completada ✅ (Verificación y compilación).
+- **Último paso completado:** Rediseño Opción 2 completado (stepper horizontal por grados, semáforo de existencias, asistente de intercambio directo, tarjetas de ingeniero) + fix crítico de reconocimiento de módulos vírgenes (prefijos en `blueprints.json` y fallback de ranuras core). Binario debug `target/debug/TMC.exe` compilado y listo para prueba en vivo con el juego abierto.
+- **Siguiente acción:** Probar en juego real con el usuario y confirmar que los módulos vírgenes y la nueva UI funcionan según lo esperado.
 ## Tareas de F4
 
 Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
@@ -64,6 +64,17 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | C8 | ✅ hecha | e3ad29f | Catálogo completo activo; 0 sin resolver; 38 ingenieros, 141 materiales; i18n 5 idiomas; 15 node, 1.370+ Rust, 375 UI PASS |
 | C9 | ✅ hecha | 2b6dba9 | Revalidada integración e2e: 7 Playwright e2e PASS, e2e-server PASS, 375 UI PASS, 1.370+ Rust PASS |
 | C10 | ✅ hecha | 438e572 | Task 28 ejecutada, 10/10 criterios verificados y F4 completada |
+
+## Rediseño visual de Ingeniería (Opción 2) y módulos vírgenes
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 1 | Textos e i18n en los 5 idiomas | ✅ hecha | 1a81c64 | 17 claves nuevas en `locales/{es,en,fr,de,pt}/engineering.ftl` |
+| 2 | Rediseño visual de `MaterialsPanel.svelte` | ✅ hecha | d404bca | Buscador reactivo, medidor de capacidad de categoría, barras de llenado y badge MÁXIMO |
+| 3 | Rediseño visual de `EngineersPanel.svelte` | ✅ hecha | acf0683 | Filtros Todos/Desbloqueados/Pendientes, estrellas de grado y badges de estado |
+| 4 | Stepper de grados y asistente integrado en `EngineerFlow` y `ShoppingPanel` | ✅ hecha | 31bcc81 | Stepper horizontal G1..G5, semáforo de existencias, solución de intercambio directa y botón de ruta |
+| Fix | Reconocimiento de módulos vírgenes (stock) | ✅ hecha | 44fc0da | Prefijos de módulo importados en `blueprints.json` y fallback de slot core en `ship.rs` |
+| 5 | Verificación completa y compilación del binario debug | ✅ hecha | pendiente | 378/378 Vitest PASS, svelte-check 0 errores, cargo test verde, binario `target/debug/TMC.exe` listo |
 
 ## Tareas de diagnóstico debug
 
@@ -321,6 +332,15 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-22 22:25 (Europe/Madrid) · Antigravity · Ejecución del plan de rediseño visual de Ingeniería y Materiales (Opción 2) y resolución del bug crítico de módulos vírgenes:
+  - Tarea 1 (`1a81c64`): 17 claves i18n añadidas en los 5 idiomas (`locales/{es,en,fr,de,pt}/engineering.ftl`).
+  - Tarea 2 (`d404bca`): Rediseño de `MaterialsPanel.svelte` con buscador de materiales, barra de capacidad total por categoría y barras de progreso visuales con badge `MÁXIMO`.
+  - Tarea 3 (`acf0683`): Rediseño de `EngineersPanel.svelte` con filtros Todos/Desbloqueados/Pendientes, estrellas de rango de acceso (`G5 ★★★★★`) y badges de estado semánticos.
+  - Tarea 4 (`31bcc81`): Rediseño de `EngineerFlow.svelte` con stepper horizontal de grados G1..G5, semáforo de existencias, tarjeta de asistente de intercambio directo y tarjeta de ingeniero recomendado; rediseño de `ShoppingPanel.svelte`.
+  - Bugfix (`44fc0da`): Corregida la detección de módulos vírgenes / stock en nave (`ship.rs`) añadiendo los 44 prefijos de módulo a `scripts/import-engineering-catalogue.mjs`, regenerando `blueprints.json` y añadiendo fallback de slot core para módulos sin ingeniería previa. Test `virgin_stock_modules_are_engineerable` añadido y verificado.
+  - Tarea 5: 378/378 tests Vitest PASS, `svelte-check` 0 errores, compilación de UI `ui/dist`, compilación de debug `cargo build -p tmc-desktop` (`target/debug/TMC.exe`).
+  - Siguiente: Lanzar `TMC.exe` y probar en vivo con el usuario en el juego.
 
 - 2026-10-22 17:40 (Europe/Madrid) · Antigravity · F4 completada y cerrada (Task 28 / C10): 10/10 criterios de aceptación de spec F4 verificados y documentados en el plan. Clippy release limpio (target-f4); 1.370+ tests Rust workspace PASS; 375 tests Vitest PASS; 7/7 tests Playwright e2e PASS; footprint measurement con ventana de 120s: 122,20 MB RAM / 0,00% CPU idle PASS (límites < 150 MB / < 1%). THIRD_PARTY_NOTICES.md completado con Spansh y Ardent (red); sin dependencias nuevas (0 diff con main). Rama fase/f4-ingenieros-materiales lista para merge en main tras autorización del propietario.
 
