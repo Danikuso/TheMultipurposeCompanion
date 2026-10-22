@@ -38,6 +38,7 @@ impl H {
                         revision: self.m.revision,
                         cursor,
                         section: Some(section.into()),
+                        engineer_id: None,
                     },
                 )
                 .unwrap();
@@ -1871,7 +1872,7 @@ fn contract_snapshot() -> Value {
     ));
     h.preview_engines();
     json!({
-        "engineering.pages": {"goals":h.m.query("goals", &ModulePageQuery {revision:h.m.revision,cursor:0,section:None}).unwrap(), "locker_components":h.m.query("locker", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("components".into())}).unwrap(), "catalogue_recipes":h.m.query("catalogue", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("recipes".into())}).unwrap(), "engineers_capabilities":h.m.query("engineers", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("capabilities".into())}).unwrap(), "flow_costs":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("costs".into())}).unwrap(), "flow_lines":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:None}).unwrap(), "engineers_engineers":h.m.query("engineers", &ModulePageQuery {revision:h.m.revision,cursor:0,section:None}).unwrap(), "engineers_unlock":h.m.query("engineers", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("unlock".into())}).unwrap(), "flow_blueprints":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("blueprints".into())}).unwrap(), "flow_experimentals":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("experimentals".into())}).unwrap(), "flow_grades":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("grades".into())}).unwrap()},
+        "engineering.pages": {"goals":h.m.query("goals", &ModulePageQuery {revision:h.m.revision,cursor:0,section:None, engineer_id: None}).unwrap(), "locker_components":h.m.query("locker", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("components".into()), engineer_id: None}).unwrap(), "catalogue_recipes":h.m.query("catalogue", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("recipes".into()), engineer_id: None}).unwrap(), "engineers_capabilities":h.m.query("engineers", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("capabilities".into()), engineer_id: None}).unwrap(), "flow_costs":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("costs".into()), engineer_id: None}).unwrap(), "flow_lines":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:None, engineer_id: None}).unwrap(), "engineers_engineers":h.m.query("engineers", &ModulePageQuery {revision:h.m.revision,cursor:0,section:None, engineer_id: None}).unwrap(), "engineers_unlock":h.m.query("engineers", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("unlock".into()), engineer_id: None}).unwrap(), "flow_blueprints":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("blueprints".into()), engineer_id: None}).unwrap(), "flow_experimentals":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("experimentals".into()), engineer_id: None}).unwrap(), "flow_grades":h.m.query("flow", &ModulePageQuery {revision:h.m.revision,cursor:0,section:Some("grades".into()), engineer_id: None}).unwrap()},
         "engineering.catalogue": h.val("engineering.catalogue"),
         "engineering.inventory": h.val("engineering.inventory"),
         "engineering.locker": h.val("engineering.locker"),
@@ -2014,6 +2015,7 @@ fn pagination_revisions_are_semantic_monotonic_and_queries_read_only() {
         revision,
         cursor: 0,
         section: None,
+        engineer_id: None,
     };
     let before = h.m.values.clone();
     let relevance = h.m.relevance(&h.state);
@@ -2066,7 +2068,8 @@ fn pagination_revisions_are_semantic_monotonic_and_queries_read_only() {
             &ModulePageQuery {
                 revision: empty_b,
                 cursor: 0,
-                section: None
+                section: None,
+                engineer_id: None,
             }
         ),
         Err(ModuleQueryError::StaleRevision)
@@ -2081,6 +2084,7 @@ fn pagination_validates_sections_cursor_and_preserves_escaped_utf8() {
         revision: h.m.revision,
         cursor,
         section: Some(section.into()),
+        engineer_id: None,
     };
     assert_eq!(
         h.m.query("missing", &query(0, "items")),
@@ -2109,6 +2113,7 @@ fn pagination_validates_sections_cursor_and_preserves_escaped_utf8() {
                 revision: 42,
                 cursor,
                 section: None,
+                engineer_id: None,
             },
         )
         .unwrap();
@@ -2134,7 +2139,8 @@ fn pagination_validates_sections_cursor_and_preserves_escaped_utf8() {
             &ModulePageQuery {
                 revision: 42,
                 cursor: 0,
-                section: None
+                section: None,
+                engineer_id: None,
             }
         ),
         Err(ModuleQueryError::ItemTooLarge)
@@ -2147,6 +2153,7 @@ fn pagination_validates_sections_cursor_and_preserves_escaped_utf8() {
             revision: 42,
             cursor: rows.len(),
             section: None,
+            engineer_id: None,
         },
     )
     .unwrap();
@@ -2246,6 +2253,7 @@ fn catalogue_pages_serve_every_static_row_flat() {
                 revision: h.m.revision,
                 cursor: 0,
                 section: None,
+                engineer_id: None,
             },
         )
         .unwrap();
@@ -2290,6 +2298,7 @@ fn engineer_pages_flatten_capabilities_and_unlock_steps() {
                 revision: h.m.revision,
                 cursor: 0,
                 section: None,
+                engineer_id: None,
             },
         )
         .unwrap();
@@ -2342,6 +2351,7 @@ fn flow_pages_expose_options_grades_costs_and_lines() {
                 revision: h.m.revision,
                 cursor: 0,
                 section: None,
+                engineer_id: None,
             },
         )
         .unwrap();
@@ -2356,7 +2366,8 @@ fn flow_pages_expose_options_grades_costs_and_lines() {
             &ModulePageQuery {
                 revision: old,
                 cursor: 0,
-                section: None
+                section: None,
+                engineer_id: None,
             }
         ),
         Err(ModuleQueryError::StaleRevision)
@@ -2372,6 +2383,7 @@ fn new_resources_validate_sections_and_queries_are_read_only() {
         revision: h.m.revision,
         cursor: 0,
         section: Some(section.into()),
+        engineer_id: None,
     };
     for (resource, section) in [
         ("catalogue", "goals"),
@@ -2424,4 +2436,56 @@ fn recommended_engineer_matches_between_flow_goal_and_engineer_rows() {
         c["engineer_id"] == row["id"] && c["blueprint"] == "fsd_longrange" && c["grade"] == 5
     });
     assert!(capable);
+}
+
+#[test]
+fn engineer_id_filter_returns_only_that_engineer_and_is_bounded() {
+    let mut h = H::new();
+    h.fixture();
+    let ask = |h: &H, resource: &str, section: &str, id: Option<u64>| {
+        h.m.query(
+            resource,
+            &ModulePageQuery {
+                revision: h.m.revision,
+                cursor: 0,
+                section: Some(section.into()),
+                engineer_id: id,
+            },
+        )
+    };
+    let all = h.pages("engineers", "capabilities");
+    let one = ask(&h, "engineers", "capabilities", Some(300100)).unwrap();
+    let rows = one["items"].as_array().unwrap();
+    assert!(!rows.is_empty() && rows.len() < all.len());
+    assert!(rows.iter().all(|r| r["engineer_id"] == json!(300100)));
+    assert_eq!(
+        rows.len(),
+        all.iter()
+            .filter(|r| r["engineer_id"] == json!(300100))
+            .count()
+    );
+    let named = ask(&h, "engineers", "engineers", Some(300160)).unwrap();
+    assert_eq!(named["total"], json!(1));
+    assert_eq!(named["items"][0]["id"], json!(300160));
+    // Un id desconocido da una lista vacía, no un error.
+    let none = ask(&h, "engineers", "capabilities", Some(1)).unwrap();
+    assert_eq!(
+        (none["total"].clone(), none["items"].clone()),
+        (json!(0), json!([]))
+    );
+    // Fuera de los recursos de ingenieros el filtro es inválido; la revisión se sigue validando.
+    assert_eq!(
+        ask(&h, "flow", "lines", Some(300100)).unwrap_err(),
+        ModuleQueryError::InvalidQuery
+    );
+    let stale = ModulePageQuery {
+        revision: h.m.revision + 1,
+        cursor: 0,
+        section: Some("capabilities".into()),
+        engineer_id: Some(300100),
+    };
+    assert_eq!(
+        h.m.query("engineers", &stale).unwrap_err(),
+        ModuleQueryError::StaleRevision
+    );
 }

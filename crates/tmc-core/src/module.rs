@@ -7,6 +7,9 @@ pub struct ModulePageQuery {
     #[serde(default)]
     pub cursor: usize,
     pub section: Option<String>,
+    /// Filtro opcional de filas por ingeniero (solo `engineering/engineers`).
+    #[serde(default)]
+    pub engineer_id: Option<u64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

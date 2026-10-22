@@ -750,6 +750,7 @@ mod tests {
             revision: 7,
             cursor: 3,
             section: None,
+            engineer_id: None,
         };
         assert_eq!(
             core.query_module("query", "rows", query.clone())
@@ -795,7 +796,8 @@ mod tests {
                 ModulePageQuery {
                     revision: 0,
                     cursor: 0,
-                    section: None
+                    section: None,
+                    engineer_id: None,
                 }
             )
             .await,
@@ -1257,6 +1259,7 @@ mod tests {
                     revision: 0,
                     cursor: 0,
                     section: None,
+                    engineer_id: None,
                 },
             ),
         )
@@ -1307,6 +1310,7 @@ mod tests {
                     revision: 0,
                     cursor: 0,
                     section: None,
+                    engineer_id: None,
                 },
                 reply,
             })

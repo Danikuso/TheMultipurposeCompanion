@@ -115,7 +115,7 @@
 <Panel titleKey="panel-engineering-flow" span={2}>
   {#if !slot}<p>{t('engineering-ship-pick-module')}</p>
   {:else if !rest.ready}
-    <p role="status">{t(rest.state === 'failed' ? 'engineering-page-failed' : rest.state === 'stale' ? 'engineering-flow-stale' : 'engineering-page-loading')}</p>
+    <p role="status">{t(rest.state === 'failed' ? 'engineering-page-failed' : rest.state === 'stale' ? 'engineering-data-stale' : 'engineering-page-loading')}</p>
   {:else}
     <p>{data?.module_type ? engineeringDataLabel('modtype', data.module_type).name : data?.item} · {slot}</p>
     {#if failed}<p role="alert">{t('engineering-action-failed')}</p>{/if}

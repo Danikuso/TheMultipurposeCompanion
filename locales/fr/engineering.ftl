@@ -132,5 +132,5 @@ engineering-calculation-blocked = Calcul incomplet
 engineering-engineer-capabilities = Capacités par module et par grade
 engineering-engineer-capability = { $module } · { $blueprint } : { $grades }
 engineering-blueprint-unavailable = { $name } ({ $reason })
-engineering-flow-stale = En attente du calcul actualisé
+engineering-data-stale = En attente des données actualisées
 engineering-no-engineer-covers = Aucun ingénieur ne couvre cet itinéraire

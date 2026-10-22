@@ -326,6 +326,28 @@ async fn catalogue_engineers_and_flow_pages_are_lossless_and_independent_per_cli
     let (a, b) = tokio::join!(get(&router, &uri), get(&router, &uri));
     assert_eq!(a, b);
     assert_eq!(a.1["cursor"], 1);
+    // engineer_id filters the engineers resource; garbage is a 400 and other resources reject it.
+    let base = format!("/api/engineering/engineers?revision={revision}&section=capabilities");
+    let (status, filtered) = get(&router, &format!("{base}&engineer_id=300100")).await;
+    assert_eq!(status, 200);
+    assert!(
+        filtered["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|r| r["engineer_id"] == 300100)
+    );
+    assert_eq!(
+        get(&router, &format!("{base}&engineer_id=1")).await.1["total"],
+        0
+    );
+    assert_eq!(
+        get(&router, &format!("{base}&engineer_id=abc")).await.0,
+        400
+    );
+    let flow =
+        format!("/api/engineering/flow?revision={revision}&section=lines&engineer_id=300100");
+    assert_eq!(get(&router, &flow).await.0, 400);
     // GET never mutates the revision or broadcasts topics.
     assert_eq!(core.snapshot().await, snapshot);
     // A flow change invalidates every resource, not only flow.

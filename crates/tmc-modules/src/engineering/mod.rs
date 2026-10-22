@@ -1544,7 +1544,25 @@ impl Module for Engineering {
             (_, s) => self.flow_pages.get(s),
         }
         .ok_or(ModuleQueryError::Unavailable)?;
-        pagination::page(self.revision, section, rows, query)
+        match query.engineer_id {
+            None => pagination::page(self.revision, section, rows, query),
+            // Filtro acotado por ingeniero: solo en los recursos de ingenieros; un id
+            // desconocido devuelve una lista vacía (200), nunca un error.
+            Some(id) if resource == "engineers" => {
+                let field = if section == "engineers" {
+                    "id"
+                } else {
+                    "engineer_id"
+                };
+                let rows: Vec<Value> = rows
+                    .iter()
+                    .filter(|row| row[field] == json!(id))
+                    .cloned()
+                    .collect();
+                pagination::page(self.revision, section, &rows, query)
+            }
+            Some(_) => Err(ModuleQueryError::InvalidQuery),
+        }
     }
 
     fn topic_value(&self, topic: &str) -> Option<Value> {
