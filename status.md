@@ -2,17 +2,36 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-22 22:45 (Europe/Madrid) · Antigravity
-- **Fase actual:** F4 — Ingenieros y materiales (✅ completada; rediseño UI Opción 2 cerrado; filosofía de AYUDANTE fijada en `AGENTS.md` §0; guía de desbloqueo implementada en `EngineerFlow.svelte` antes de los materiales; binario debug lanzado para pruebas en vivo).
-- **Spec activa:** [`docs/specs/2026-10-22-tmc-ui-rediseno-global-design.md`](docs/specs/2026-10-22-tmc-ui-rediseno-global-design.md) — pendiente de aprobación del propietario; base F4: [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md).
-- **Plan activo:** [`docs/plans/2026-10-22-tmc-ui-rediseno-global.md`](docs/plans/2026-10-22-tmc-ui-rediseno-global.md) — 10 tareas en 5 bloques.
+- **Última actualización:** 2026-10-23 01:30 (Europe/Madrid) · Antigravity
+- **Fase actual:** F4 — Ingenieros y materiales (✅ completada; Rediseño global de la interfaz «TMC Glass HUD» 100% completado en sus 10 tareas; guía de diseño formalizada en `docs/design-system-glass-hud.md`; filosofía de AYUDANTE fijada en `AGENTS.md` §0; guía de desbloqueo en `EngineerFlow.svelte`; 378/378 Vitest PASS, svelte-check 0 errores, cargo test workspace PASS, binario debug `TMC.exe` actualizado con assets embebidos).
+- **Spec activa:** [`docs/specs/2026-10-22-tmc-ui-rediseno-global-design.md`](docs/specs/2026-10-22-tmc-ui-rediseno-global-design.md) — Rediseño global de interfaz «TMC Glass HUD»; base F4: [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md).
+- **Plan activo:** [`docs/plans/2026-10-22-tmc-ui-rediseno-global.md`](docs/plans/2026-10-22-tmc-ui-rediseno-global.md) — 10 tareas en 5 bloques (todas completadas).
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** Guía de Desbloqueo del Ayudante (Companion) completada e integrada en `EngineerFlow.svelte` + filosofía documentada en `AGENTS.md`.
-- **Último paso completado:** Si un módulo seleccionado no tiene al ingeniero desbloqueado, se muestra primero de forma destacada la secuencia de pasos de desbloqueo (descubrimiento, invitación y donación con botón de copiar sistema al portapapeles) y después la lista de materiales y recetas necesarias. Documentada la filosofía en `AGENTS.md` §0. Binario debug `TMC.exe` recompilado y ejecutándose (PID 12236).
-- **Siguiente acción:** Probar en juego con el usuario y esperar aprobación para el rediseño global.
+- **Tarea:** Verificación integral, cierre del plan de rediseño visual global y preparación del ejecutable para pruebas en vuelo.
+- **Último paso completado:** Ejecutadas de corrido las 10 tareas del plan de rediseño global (`docs/plans/2026-10-22-tmc-ui-rediseno-global.md`): tokens CSS y glass HUD en base/shell, navegación/exploración/exobiología, combate/minería, comercio/misiones/pasajeros, y verificación global (378/378 Vitest en verde, svelte-check 0 errores, 100% Rust workspace tests pasando, `npm run build` y `cargo build -p tmc-desktop` completados con `TMC.exe` fresco).
+- **Siguiente acción:** Informar al propietario y lanzar el ejecutable debug para pruebas con el simulador abierto.
+
+## Rediseño visual global de TMC («TMC Glass HUD»)
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| DS | Guía del Sistema de Diseño «TMC Glass HUD» | ✅ hecha | `ea5f3b7` | `docs/design-system-glass-hud.md` enlazada en `AGENTS.md` §0 |
+| AY | Guía de Desbloqueo del Ayudante (Companion) | ✅ hecha | `f266f7a` | Secuencia pedagógica de desbloqueo antes de recetas y `AGENTS.md` §0 |
+| 1 | Tokens CSS y clases comunes de cabina Glass HUD | ✅ hecha | `92d4dcd` | `tokens.css`, `base.css` con superficies de cabina, medidores y acentos |
+| 2 | Rediseño de `TopBar.svelte`, `Sidebar.svelte` y `Panel.svelte` | ✅ hecha | `18fbbf9` | Shell con cabecera de cabina, navegación con píldoras y paneles glass |
+| 3 | Rediseño de `RouteStrip.svelte` y `SystemCard.svelte` | ✅ hecha | `209f672` | Tarjeta orbital de sistema y tira de saltos con combustible y repostaje |
+| 4 | Rediseño de `SystemBodiesPanel.svelte` | ✅ hecha | `1b9f90d` | VirtualList estilizado, badges de valor económico y semáforo de sondas FSS |
+| 5 | Rediseño de `ExobiologyPanel.svelte` | ✅ hecha | `47d70e9` | Stepper de muestras 1..3, tarjeta de especie activa y barra de distancia |
+| 6 | Rediseño de `TargetPanel.svelte`, `ShipPanel.svelte` y `AxPanel.svelte` | ✅ hecha | `ea84bca` | Barras duales escudo/casco, estado de subsistemas y tarjetas de amenaza AX |
+| 7 | Rediseño de `ProspectorPanel.svelte`, `MiningSessionPanel.svelte` y `SellPanel.svelte` | ✅ hecha | `ebc3b20` | Barras minerales ordenadas, métricas de sesión y tarjetas de venta con copia |
+| 8 | Rediseño de `MarketPanel.svelte`, `CargoPanel.svelte` y `RoutePanel.svelte` | ✅ hecha | `427cb9b` | Badges de beneficio/t, capacidad de bodega y stepper de ruta comercial |
+| 9 | Rediseño de `MissionsPanel.svelte`, `MassacrePanel.svelte`, `PassengersPanel.svelte` | ✅ hecha | `285c10b` | Misiones por destino, semáforo de tiempo, optimizador de masacre y cabinas |
+| 10 | Verificación integral, cierre y build | ✅ hecha | este commit | 378 Vitest PASS, svelte-check 0 errores, cargo test workspace PASS, `TMC.exe` listo |
 ## Tareas de F4
 
 Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
@@ -332,6 +351,19 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-23 01:30 (Europe/Madrid) · Antigravity · Ejecución completa y de corrido del Plan de Rediseño Visual Global de TMC («TMC Glass HUD»):
+  - Sistema de diseño normativo redactado y commiteado en `docs/design-system-glass-hud.md` (`ea5f3b7`), vinculado normativamente en `AGENTS.md` §0.
+  - Tarea 1 (`92d4dcd`): Tokens CSS y clases comunes Glass HUD (`tokens.css`, `base.css`).
+  - Tarea 2 (`18fbbf9`): Rediseño de `TopBar.svelte`, `Sidebar.svelte` y `Panel.svelte`.
+  - Tarea 3 (`209f672`): Rediseño de `RouteStrip.svelte` y `SystemCard.svelte`.
+  - Tarea 4 (`1b9f90d`): Rediseño de `SystemBodiesPanel.svelte` con VirtualList y badges económicos.
+  - Tarea 5 (`47d70e9`): Rediseño de `ExobiologyPanel.svelte` con stepper horizontal 1..3 y medidor genético.
+  - Tarea 6 (`ea84bca`): Rediseño de `TargetPanel.svelte`, `ShipPanel.svelte` y `AxPanel.svelte`.
+  - Tarea 7 (`ebc3b20`): Rediseño de `ProspectorPanel.svelte`, `MiningSessionPanel.svelte` y `SellPanel.svelte`.
+  - Tarea 8 (`427cb9b`): Rediseño de `MarketPanel.svelte`, `CargoPanel.svelte` y `RoutePanel.svelte`.
+  - Tarea 9 (`285c10b`): Rediseño de `MissionsPanel.svelte`, `MassacrePanel.svelte`, `PassengersPanel.svelte`.
+  - Tarea 10: Verificación integral completada (378/378 Vitest PASS, svelte-check 0 errores, tests completos de Rust en el workspace PASS, build de producción UI en `dist/`, y compilación del binario Tauri debug `target/debug/TMC.exe` con assets embebidos).
 
 - 2026-10-22 22:45 (Europe/Madrid) · Antigravity · Incorporación de la filosofía de AYUDANTE en `AGENTS.md` §0 y Guía de Desbloqueo en el flujo de ingeniería:
   - `AGENTS.md`: Añadida la sección §0 definiendo que TMC existe para ser el AYUDANTE (COMPANION) integral en todo lo que se pueda hacer en Elite Dangerous, guiando a principiantes y expertos sin dejarlos jamás en un callejón sin salida.
