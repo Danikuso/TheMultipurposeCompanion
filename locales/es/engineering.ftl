@@ -134,3 +134,24 @@ engineering-engineer-capability = { $module } · { $blueprint }: { $grades }
 engineering-blueprint-unavailable = { $name } ({ $reason })
 engineering-data-stale = Esperando los datos actualizados
 engineering-no-engineer-covers = Ningún ingeniero cubre esta ruta
+
+engineering-step-completed = { $grade } Completo
+engineering-step-target = { $grade } Objetivo
+engineering-step-rolls-count = { $rolls } tiradas
+engineering-mat-ready = Listo
+engineering-mat-missing-count = Falta { $count }
+engineering-mat-in-cargo = En inventario: { $count }
+engineering-trade-solution-title = Solución de intercambio
+engineering-trade-trader-location = Comerciante { $type }: { $station } ({ $system }, { $distance })
+engineering-copy-system = Copiar sistema
+engineering-copy-route = Copiar ruta
+engineering-copied = Copiado
+engineering-recommended-engineer = Ingeniero recomendado
+engineering-search-placeholder = Buscar material por nombre...
+engineering-filter-all = Todos
+engineering-filter-unlocked = Desbloqueados
+engineering-filter-pending = Pendientes
+engineering-at-max-badge = MÁXIMO
+engineering-reserved-count = Reservado: { $count }
+engineering-category-capacity = Ocupación: { $have } / { $max }
+

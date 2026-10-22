@@ -133,3 +133,24 @@ engineering-engineer-capability = { $module } · { $blueprint }: { $grades }
 engineering-blueprint-unavailable = { $name } ({ $reason })
 engineering-data-stale = Waiting for the updated data
 engineering-no-engineer-covers = No engineer covers this route
+
+engineering-step-completed = { $grade } Complete
+engineering-step-target = { $grade } Target
+engineering-step-rolls-count = { $rolls } rolls
+engineering-mat-ready = Ready
+engineering-mat-missing-count = Missing { $count }
+engineering-mat-in-cargo = In inventory: { $count }
+engineering-trade-solution-title = Trade solution
+engineering-trade-trader-location = { $type } trader: { $station } ({ $system }, { $distance })
+engineering-copy-system = Copy system
+engineering-copy-route = Copy route
+engineering-copied = Copied
+engineering-recommended-engineer = Recommended engineer
+engineering-search-placeholder = Search material by name...
+engineering-filter-all = All
+engineering-filter-unlocked = Unlocked
+engineering-filter-pending = Pending
+engineering-at-max-badge = MAXIMUM
+engineering-reserved-count = Reserved: { $count }
+engineering-category-capacity = Capacity: { $have } / { $max }
+
