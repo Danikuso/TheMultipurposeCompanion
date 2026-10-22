@@ -10,9 +10,9 @@
 
 ## Puntero actual
 
-- **Tarea:** C1 🔄 en curso — Step 1: tests del snapshot, conversor y auditoría del catálogo en staging.
-- **Último paso completado:** Task 27 cerrada en `be03e09`: ambas revisiones aprobadas; 1.369 Rust PASS/2 ignoradas previas, 343 UI PASS, fmt/clippy/check/build PASS. Eval local: 9 diarios, 4 intervalos y 201/201 exactos, diferencia0; INSUFICIENTE por n<5. C0 documental ratificada y revisada en `956248d`.
-- **Siguiente acción:** C1 del plan activo: parser Node sin dependencias que lea fuentes fijadas y produzca staging/manifiesto por constructor; atribución Apache y mapa EDDI limitado ID/nombre. No activar aún los JSON del producto: C2–C7 adaptan contratos/UI antes de C8. Sin preguntas pendientes del propietario.
+- **Tarea:** C2 🔄 — tipos de receta, elegibilidad y alias.
+- **Último paso completado:** C1 cerrada en `c308ce9` (Claude; Codex paró por indicación del propietario). Node 15/15, `--check` OK, revisión aprobada. 8 filas sin resolver (4 DSS sobre DiscoveryScanner, 4 special_weapon_* sobre Weapon genérico) bloquean C8 hasta tener evidencia externa documentada.
+- **Siguiente acción:** C2 según la secuencia C del plan activo.
 ## Tareas de F4
 
 Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
@@ -54,8 +54,9 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | Unidad | Estado | Commit | Siguiente paso / evidencia |
 |---|---|---|---|
 | C0 | ✅ hecha | 956248d | Spec/plan/enmienda ratificados, revisión aprobada; 11 links/cercas/diff PASS |
-| C1 | 🔄 en curso | — | Snapshot Apache fijado, parser/manifest en staging; no sustituir datos activos |
-| C2–C10 | ⬜ pendientes | — | Orden, interfaces y tests en secuencia C del plan activo |
+| C1 | ✅ hecha | c308ce9 | Staging reproducible; 1.167 constructores (943 receta, 83 exp., 15 variantes, 116 fuera, 2 obsoletos, 8 sin resolver); 38/38 ingenieros; 1.899 Merc Coins; revisión aprobada |
+| C2 | 🔄 en curso | — | |
+| C3–C10 | ⬜ pendientes | — | Orden, interfaces y tests en secuencia C del plan activo |
 
 ## Tareas de diagnóstico debug
 
@@ -270,6 +271,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
 
 ## Decisiones tomadas
+- 2026-10-22 · Claude (C1): las 8 filas `unresolved` no se expanden ni reasignan sin evidencia externa documentada (C8); compras del Tech Broker quedan `out_of_scope` salvo decisión del propietario; manifiesto con texto original se mantiene en staging (posible recorte en C8).
 - 2026-10-22 · Propietario: «Aprobar y ejecutar la enmienda» del catálogo completo y «Aprobar el mapa auxiliar de IDs» de EDDI d3b964e (Apache-2.0, solo 38 pares ID/nombre). Autorizadas ratificación de spec/plan e implementación por fases con atribución, Merc Coins sin saldo inventado, bases G2+, capacidades por módulo, paginación y compatibilidad de objetivos.
 - 2026-10-22 · Propietario: «Aprobar EDDiscovery como fuente A». Se autoriza usar los archivos Apache-2.0 fijados a 7d30920 para sustituir los catálogos provisionales de recetas e ingenieros, con atribución y verified:false. Preparación de enmienda técnica para Operations/grados por módulo en curso; todavía sin importación.
 - 2026-10-22 · Revisión de completitud: Tasks 9 y 10 se muestran bloqueadas para su Step 6, aunque el código provisional esté revisado. Recuento corregido a 24/29 tareas completas; no se equipara el cierre de sus pasos 1–5 con un catálogo completo. Fuente Apache propuesta y límites documentados antes de importar.
