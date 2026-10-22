@@ -47,7 +47,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 25 | UI — disposición «Ingeniería», prioridad, Auto-companion y tiradas | ✅ hecha | 4c70ecb | 343 UI/1.356 Rust PASS; ambas revisiones y QA visual |
 | 26 | Fixtures sintéticos y pruebas de extremo a extremo | ✅ hecha | 8a70048 | 1.362 Rust/343 UI/7 Playwright/1 Node PASS; ambas revisiones |
 | 27 | `tmc-headless eval` — conciliación del inventario | ✅ hecha | be03e09 | 1.369 Rust/343 UI PASS; ambas revisiones; 201/201 exactos en historial, n4 insuficiente |
-| 28 | Avisos de terceros, consumo, verificación de los 10 criterios y cierre | ✅ hecha | (en este commit) | Avisos de terceros, clippy release target-f4 PASS, footprint 122,20 MB / 0,00% PASS, 10/10 criterios de la spec §8 verificados |
+| 28 | Avisos de terceros, consumo, verificación de los 10 criterios y cierre | ✅ hecha | 438e572 | Avisos de terceros, clippy release target-f4 PASS, footprint 122,20 MB / 0,00% PASS, 10/10 criterios de la spec §8 verificados |
 
 ## Ampliación aprobada del catálogo F4
 
@@ -63,7 +63,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | C7 | ✅ hecha | c1c7c30, 6dbbb69 | UI sobre páginas; campos pesados fuera de los topics; Merc Coins y bloqueos visibles; capacidades por id sin recargas; revisión aprobada tras 1 ronda; QA visual 2560/800 pendiente (C9) |
 | C8 | ✅ hecha | e3ad29f | Catálogo completo activo; 0 sin resolver; 38 ingenieros, 141 materiales; i18n 5 idiomas; 15 node, 1.370+ Rust, 375 UI PASS |
 | C9 | ✅ hecha | 2b6dba9 | Revalidada integración e2e: 7 Playwright e2e PASS, e2e-server PASS, 375 UI PASS, 1.370+ Rust PASS |
-| C10 | ✅ hecha | (en este commit) | Task 28 ejecutada, 10/10 criterios verificados y F4 completada |
+| C10 | ✅ hecha | 438e572 | Task 28 ejecutada, 10/10 criterios verificados y F4 completada |
 
 ## Tareas de diagnóstico debug
 
