@@ -154,4 +154,12 @@ engineering-filter-pending = Ausstehend
 engineering-at-max-badge = MAXIMUM
 engineering-reserved-count = Reserviert: { $count }
 engineering-category-capacity = Belegung: { $have } / { $max }
+engineering-unlock-guide-title = COMPANION-LEITFADEN — INGENIEUR-FREISCHALTUNG
+engineering-unlock-guide-desc = Um dieses Modul zu modifizieren, benötigst du Zugang zu diesem Ingenieur. Befolge diese Schritte zur Freischaltung:
+engineering-step-discovery = 1. Entdeckung
+engineering-step-meeting = 2. Einladung
+engineering-step-unlock-task = 3. Freischaltungsaufgabe
+engineering-recipe-materials-title = NACH DER FREISCHALTUNG BENÖTIGTE MATERIALIEN
+engineering-recipe-materials-desc = Sobald der Ingenieur freigeschaltet ist, benötigst du diese Materialien und Stufen für dein Modul:
+engineering-workshop-location = Werkstatt in { $system }
 
