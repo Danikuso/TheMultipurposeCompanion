@@ -31,21 +31,12 @@ pub enum EngAlertKind {
     },
 }
 
-/// Blueprint y grado objetivo del id de un objetivo
-/// (`"{ship}:{slot}:{blueprint}:{experimental|-}:{grade}"`).
-pub fn goal_blueprint(goal_id: &str) -> Option<(&str, u8)> {
-    let parts: Vec<&str> = goal_id.split(':').collect();
-    let [_, _, blueprint, _, grade] = parts[..] else {
-        return None;
-    };
-    Some((blueprint, grade.parse().ok()?))
-}
-
-/// Avisos por transición. `engineer_for(blueprint, grade)` da el nombre del ingeniero
-/// recomendado (p. ej. con `pick_engineer`) para citarlo en `GoalCompletable`.
+/// Avisos por transición. `engineer_for_goal(goal_id)` resuelve el `Goal` real y da el
+/// nombre del ingeniero recomendado (módulo, blueprint y ruta de grados) para citarlo en
+/// `GoalCompletable`; el id del objetivo es opaco y nunca se trocea.
 /// `ScarceObtained`: se obtuvo un material que faltaba antes (`missing_before`);
 /// solo salta cuando ningún objetivo lo echa ya en falta; `goal` es el primero de la lista.
-#[allow(clippy::too_many_arguments)] // firma fijada por el plan (+ `engineer_for`)
+#[allow(clippy::too_many_arguments)] // firma fijada por el plan (+ `engineer_for_goal`)
 pub fn alerts_from(
     changes: &[MaterialChange],
     at_max_before: &BTreeSet<String>,
@@ -54,7 +45,7 @@ pub fn alerts_from(
     view: &ShoppingView,
     status: &[EngineerStatusChange],
     missing_before: &BTreeMap<String, u32>,
-    engineer_for: &dyn Fn(&str, u8) -> Option<String>,
+    engineer_for_goal: &dyn Fn(&str) -> Option<String>,
 ) -> Vec<EngAlertKind> {
     let mut out = Vec::new();
     for key in at_max_now.difference(at_max_before) {
@@ -65,7 +56,7 @@ pub fn alerts_from(
         .iter()
         .filter(|g| g.completable && !completable_before.contains(&g.id))
     {
-        let engineer = goal_blueprint(&g.id).and_then(|(bp, grade)| engineer_for(bp, grade));
+        let engineer = engineer_for_goal(&g.id);
         out.push(EngAlertKind::GoalCompletable {
             goal: g.id.clone(),
             engineer,
@@ -158,7 +149,7 @@ mod tests {
             v,
             status,
             missing_before,
-            &|bp, g| (bp == "fsd_longrange" && g <= 5).then(|| "Felicity Farseer".to_string()),
+            &|goal| (goal == "1:fsd:fsd_longrange:-:5").then(|| "Felicity Farseer".to_string()),
         )
     }
 
@@ -214,8 +205,15 @@ mod tests {
         );
         // ya completable antes: sin aviso
         assert!(run(&[], (&none, &none), &set(&[id]), &v, &[], &empty).is_empty());
-        assert_eq!(goal_blueprint("garbage"), None);
-        assert_eq!(goal_blueprint(id), Some(("fsd_longrange", 5)));
+        // El id solo se pasa al callback; uno desconocido no cita ingeniero.
+        let other = view(vec![goal("garbage", &[], true)]);
+        assert_eq!(
+            run(&[], (&none, &none), &none, &other, &[], &empty),
+            vec![EngAlertKind::GoalCompletable {
+                goal: "garbage".into(),
+                engineer: None
+            }]
+        );
     }
 
     #[test]

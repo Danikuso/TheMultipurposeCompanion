@@ -50,7 +50,7 @@ use tmc_model::state::{FlightMode, Galaxy, GameState};
 use crate::data::{blueprints, engineer, engineers as engineer_defs, grade_cap, materials};
 use crate::data::{ship_pads, trader_rules};
 use crate::inflight::Inflight;
-use alerts::{EngAlertKind, alerts_from, goal_blueprint};
+use alerts::{EngAlertKind, alerts_from};
 use engineers::{EngineerBook, EngineerStatusChange, NextStep, next_step_for};
 use goals::{
     Goal, STATUS_OK, STATUS_TOO_MANY, ShoppingView, TAG_GOALS_READ, TAG_GOALS_WRITE, evaluate,
@@ -483,8 +483,40 @@ impl Engineering {
         .map(|s| s.with_credits(state.cmdr.as_ref().and_then(|c| c.credits)))
     }
 
-    fn pick(&self, blueprint: &str, grade: u8, state: &GameState) -> EngineerPick {
-        let mut pick = pick_engineer(blueprint, grade, &self.book, self.pos());
+    /// Grados que hay que tirar para un objetivo: del punto de partida al objetivo, ambos
+    /// incluidos. Vacío si ya está conseguido.
+    fn required_grades(req: &PlanRequest, current: Option<&CurrentEng>) -> Vec<u8> {
+        let start = plan::start_grade(current, &req.blueprint, &req.rolls).grade;
+        (start..=req.target_grade.min(5)).collect()
+    }
+
+    /// Ingeniero desbloqueado más cercano para un objetivo fijado (resuelto por su `Goal`).
+    fn engineer_for_goal(&self, goal_id: &str) -> Option<String> {
+        let g = self.goals.iter().find(|g| g.id == goal_id)?;
+        let grades = Self::required_grades(&g.request, self.current_for(g).as_ref());
+        engineer_for(
+            &g.request.module_type,
+            &g.request.blueprint,
+            &grades,
+            &self.book,
+            self.pos(),
+        )
+    }
+
+    fn pick(
+        &self,
+        req: &PlanRequest,
+        current: Option<&CurrentEng>,
+        state: &GameState,
+    ) -> EngineerPick {
+        let grades = Self::required_grades(req, current);
+        let mut pick = pick_engineer(
+            &req.module_type,
+            &req.blueprint,
+            &grades,
+            &self.book,
+            self.pos(),
+        );
         if let Some(r) = pick
             .nearest_any
             .as_ref()
@@ -673,8 +705,6 @@ impl Engineering {
             return;
         }
         let at_max_now: BTreeSet<String> = self.inventory.at_max().into_iter().collect();
-        let pos = self.pos();
-        let book = &self.book;
         let found = alerts_from(
             &delta.material,
             &self.at_max_prev,
@@ -683,7 +713,7 @@ impl Engineering {
             shopping,
             &delta.status,
             &self.missing_prev,
-            &|bp, g| engineer_for(bp, g, book, pos),
+            &|goal| self.engineer_for_goal(goal),
         );
         let _ = state;
         let at = self.now;
@@ -703,9 +733,10 @@ impl Engineering {
                     )
                 }
                 EngAlertKind::GoalCompletable { goal, engineer } => {
-                    let Some((bp, grade)) = goal_blueprint(goal) else {
+                    let Some(real) = self.goals.iter().find(|g| &g.id == goal) else {
                         continue;
                     };
+                    let (bp, grade) = (real.request.blueprint.as_str(), real.request.target_grade);
                     // Un objetivo cuyo blueprint ya no está catalogado no avisa.
                     if blueprints().blueprint(bp).is_none() {
                         continue;
@@ -853,8 +884,10 @@ impl Engineering {
                 "id": id,
                 "next_step": self.next_step_of(id, state),
                 "blueprints": def.blueprints.iter().map(|b| json!({
+                    "module_type": b.module_type,
                     "blueprint": b.blueprint,
-                    "max_grade": b.max_grade,
+                    "grades": b.grades,
+                    "max_grade": b.max_grade(),
                 })).collect::<Vec<_>>(),
             }))
         });
@@ -934,20 +967,18 @@ impl Engineering {
                 trade,
             });
         }
-        let target = req.target_grade.min(5);
         o.insert("status".into(), json!("ok"));
         o.insert("cost".into(), json!(cost));
         o.insert("lines".into(), json!(lines));
         o.insert("percent".into(), json!(gv.map_or(0, |g| g.percent)));
         o.insert(
             "engineer".into(),
-            json!(self.pick(&req.blueprint, target, state)),
+            json!(self.pick(req, row.and_then(|r| r.current.as_ref()), state)),
         );
         self.stamp(v)
     }
 
     fn render_goals(&self, shopping: &ShoppingView, verified: &BTreeMap<String, bool>) -> Value {
-        let pos = self.pos();
         let goals: Vec<Value> = shopping
             .goals
             .iter()
@@ -963,7 +994,7 @@ impl Engineering {
                     "trades": gv.trades,
                     "completable": gv.completable,
                     "verified": verified.get(&g.id).copied().unwrap_or(false),
-                    "engineer": engineer_for(&g.request.blueprint, g.request.target_grade, &self.book, pos),
+                    "engineer": self.engineer_for_goal(&g.id),
                 }))
             })
             .collect();

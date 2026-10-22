@@ -9,9 +9,9 @@ use serde::Serialize;
 use tmc_model::events::EngineerStatus;
 use tmc_model::net::{BrokerKind, NearbyService, NetQuery, PadSize, RemoteStation, TraderKind};
 
-use super::engineers::{EngineerBook, EngineerRow, NextStep, engineer_rows, next_step_for};
+use super::engineers::{EngineerBook, EngineerRow, NextStep, engineer_rows_in, next_step_for};
 use super::trades::TradeProposal;
-use crate::data::{Hint, HintKind, engineer, materials};
+use crate::data::{EngineerDef, Hint, HintKind, engineers, materials};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum SourceStatus {
@@ -204,22 +204,43 @@ pub struct EngineerPick {
     pub next_step: Option<NextStep>,
 }
 
-/// Ingenieros que aplican `blueprint` hasta `grade` (como mínimo), ordenados como
-/// `engineer_rows`; los vetados (`Barred`) no se recomiendan.
+/// Ingenieros que ofrecen `blueprint` en `module_type` con **todos** los `required_grades`
+/// (una capacidad `[1, 3]` no cubre `[1, 2, 3]`), ordenados como `engineer_rows`; los
+/// vetados (`Barred`) no se recomiendan. Sin grados requeridos no hay recomendación.
 pub fn pick_engineer(
+    module_type: &str,
     blueprint: &str,
-    grade: u8,
+    required_grades: &[u8],
     book: &EngineerBook,
     pos: Option<[f64; 3]>,
 ) -> EngineerPick {
-    let capable: Vec<EngineerRow> = engineer_rows(book, pos)
+    pick_engineer_in(
+        engineers(),
+        module_type,
+        blueprint,
+        required_grades,
+        book,
+        pos,
+    )
+}
+
+/// Como [`pick_engineer`] sobre un catálogo dado (el activo o el de pruebas).
+pub(crate) fn pick_engineer_in(
+    defs: &[EngineerDef],
+    module_type: &str,
+    blueprint: &str,
+    required_grades: &[u8],
+    book: &EngineerBook,
+    pos: Option<[f64; 3]>,
+) -> EngineerPick {
+    let capable: Vec<EngineerRow> = engineer_rows_in(defs, book, pos)
         .into_iter()
         .filter(|r| r.status != EngineerStatus::Barred)
         .filter(|r| {
-            engineer(r.id).is_some_and(|d| {
+            defs.iter().find(|d| d.id == r.id).is_some_and(|d| {
                 d.blueprints
                     .iter()
-                    .any(|b| b.blueprint == blueprint && b.max_grade >= grade)
+                    .any(|b| b.covers(module_type, blueprint, required_grades))
             })
         })
         .collect();
@@ -239,14 +260,15 @@ pub fn pick_engineer(
     }
 }
 
-/// Nombre del ingeniero desbloqueado más cercano para `blueprint` hasta `grade`.
+/// Nombre del ingeniero desbloqueado más cercano que cubre la ruta de grados.
 pub fn engineer_for(
+    module_type: &str,
     blueprint: &str,
-    grade: u8,
+    required_grades: &[u8],
     book: &EngineerBook,
     pos: Option<[f64; 3]>,
 ) -> Option<String> {
-    pick_engineer(blueprint, grade, book, pos)
+    pick_engineer(module_type, blueprint, required_grades, book, pos)
         .nearest_unlocked
         .map(|r| r.name)
 }
@@ -254,6 +276,8 @@ pub fn engineer_for(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::data::{engineer, parse_engineers};
+    use crate::engineering::engineers::engineer_rows;
     use tmc_model::events::{EventKind, MaterialCategory, parse_line};
 
     fn key_of_category(cat: MaterialCategory) -> String {
@@ -264,6 +288,10 @@ mod tests {
             .collect();
         keys.sort();
         keys[0].clone()
+    }
+
+    fn upto(n: u8) -> Vec<u8> {
+        (1..=n).collect()
     }
 
     fn station(name: &str, d: f64) -> RemoteStation {
@@ -383,7 +411,7 @@ mod tests {
             (300160, "Elvira Martuuk", "Known"),
         ]);
         let pos = Some(engineer(300160).unwrap().star_pos);
-        let pick = pick_engineer("fsd_longrange", 5, &book, pos);
+        let pick = pick_engineer("fsd", "fsd_longrange", &upto(5), &book, pos);
         assert_eq!(pick.nearest_unlocked.unwrap().id, 300100);
         assert_eq!(pick.nearest_any.unwrap().id, 300160);
         assert!(pick.next_step.is_some());
@@ -396,12 +424,15 @@ mod tests {
             (300220, "Professor Palin", "Known"),
         ]);
         // Felicity solo llega a G3 en engine_dirty.
-        let pick = pick_engineer("engine_dirty", 5, &book, None);
+        let pick = pick_engineer("engine", "engine_dirty", &upto(5), &book, None);
         assert_eq!(pick.nearest_unlocked, None);
         assert_eq!(pick.nearest_any.unwrap().id, 300220);
-        let pick3 = pick_engineer("engine_dirty", 3, &book, None);
+        let pick3 = pick_engineer("engine", "engine_dirty", &upto(3), &book, None);
         assert_eq!(pick3.nearest_unlocked.unwrap().id, 300100);
-        assert_eq!(pick_engineer("nope", 1, &book, None).nearest_any, None);
+        assert_eq!(
+            pick_engineer("engine", "nope", &upto(1), &book, None).nearest_any,
+            None
+        );
     }
 
     #[test]
@@ -412,20 +443,23 @@ mod tests {
         ]);
         let near_elvira = Some(engineer(300160).unwrap().star_pos);
         assert_eq!(
-            engineer_for("fsd_longrange", 5, &book, near_elvira).as_deref(),
+            engineer_for("fsd", "fsd_longrange", &upto(5), &book, near_elvira).as_deref(),
             Some("Felicity Farseer")
         );
         // Vetada: ni nearest_any ni siguiente paso.
-        let pick = pick_engineer("fsd_longrange", 5, &book, near_elvira);
+        let pick = pick_engineer("fsd", "fsd_longrange", &upto(5), &book, near_elvira);
         assert_ne!(pick.nearest_any.as_ref().map(|r| r.id), Some(300160));
         let only_barred = book_with(&[(300160, "Elvira Martuuk", "Barred")]);
-        assert_eq!(engineer_for("fsd_longrange", 5, &only_barred, None), None);
+        assert_eq!(
+            engineer_for("fsd", "fsd_longrange", &upto(5), &only_barred, None),
+            None
+        );
         assert!(
-            pick_engineer("fsd_longrange", 5, &only_barred, None)
+            pick_engineer("fsd", "fsd_longrange", &upto(5), &only_barred, None)
                 .nearest_any
                 .is_none_or(|r| r.id != 300160)
         );
-        assert_eq!(engineer_for("nope", 1, &book, None), None);
+        assert_eq!(engineer_for("engine", "nope", &upto(1), &book, None), None);
     }
 
     #[test]
@@ -434,7 +468,7 @@ mod tests {
             (300100, "Felicity Farseer", "Unlocked"),
             (300160, "Elvira Martuuk", "Unlocked"),
         ]);
-        let pick = pick_engineer("fsd_longrange", 1, &book, None);
+        let pick = pick_engineer("fsd", "fsd_longrange", &upto(1), &book, None);
         let a = pick.nearest_any.unwrap();
         let u = pick.nearest_unlocked.unwrap();
         assert_eq!(a.id, u.id);
@@ -459,5 +493,125 @@ mod tests {
         assert!(!v.traders.is_empty());
         assert!(v.traders.values().all(|st| *st == SourceStatus::Disabled));
         assert!(s.requests("Sol", PadSize::Small).is_empty());
+    }
+
+    const STAGING: &str = include_str!("../../data/import/engineering/staging/engineers.json");
+
+    fn staging() -> Vec<EngineerDef> {
+        parse_engineers(STAGING)
+    }
+
+    #[test]
+    fn staging_catalogue_loads_all_38_engineers_with_module_capabilities() {
+        let defs = staging();
+        assert_eq!(defs.len(), 38);
+        let mut ids: Vec<u64> = defs.iter().map(|d| d.id).collect();
+        ids.sort_unstable();
+        ids.dedup();
+        assert_eq!(ids.len(), 38);
+        assert!(
+            defs.iter()
+                .flat_map(|d| &d.blueprints)
+                .all(|b| !b.module_type.is_empty() && !b.grades.is_empty())
+        );
+    }
+
+    #[test]
+    fn lori_covers_afmu_g4_but_cargo_scanner_only_to_g3() {
+        let defs = staging();
+        let lori: Vec<EngineerDef> = defs.iter().filter(|d| d.id == 300230).cloned().collect();
+        assert_eq!(lori.len(), 1);
+        let book = book_with(&[(300230, "Lori Jameson", "Unlocked")]);
+        let pick = |mt, bp, g| pick_engineer_in(&lori, mt, bp, g, &book, None);
+        let afmu = pick("autofieldmaintenanceunit", "misc_shielded", &[4]);
+        assert_eq!(afmu.nearest_unlocked.unwrap().id, 300230);
+        assert!(
+            pick("cargoscanner", "misc_shielded", &[4])
+                .nearest_any
+                .is_none()
+        );
+        let g3 = pick("cargoscanner", "misc_shielded", &[3]);
+        assert_eq!(g3.nearest_unlocked.unwrap().id, 300230);
+        // El mismo blueprint en otro tipo de módulo no cuenta.
+        assert!(
+            pick("refinery", "sensor_fastscan", &[1])
+                .nearest_any
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn capability_gaps_never_cover_missing_grades() {
+        let bp = |grades: Vec<u8>| crate::data::EngineerBlueprint {
+            module_type: "engine".into(),
+            blueprint: "engine_dirty".into(),
+            grades,
+        };
+        assert!(!bp(vec![1, 3]).covers("engine", "engine_dirty", &[1, 2, 3]));
+        assert!(bp(vec![1, 3]).covers("engine", "engine_dirty", &[1, 3]));
+        assert!(bp(vec![1, 2, 3]).covers("engine", "engine_dirty", &[1, 2, 3]));
+        // Datos reales: Bill Turner ofrece cargorack desde G2, no G1.
+        let defs = staging();
+        let book = book_with(&[]);
+        let bill: Vec<EngineerDef> = defs
+            .iter()
+            .filter(|d| d.name == "Bill Turner")
+            .cloned()
+            .collect();
+        let p = |g: &[u8]| {
+            pick_engineer_in(&bill, "cargorack", "cargoracks5c1_extended", g, &book, None)
+                .nearest_any
+        };
+        assert!(p(&[2, 3, 4]).is_some());
+        assert!(p(&[1, 2, 3]).is_none());
+    }
+
+    #[test]
+    fn empty_providers_and_empty_requirements_never_match() {
+        let defs = staging();
+        // Hay ingenieros sin ninguna capacidad: nunca son "cualquiera".
+        assert!(defs.iter().any(|d| d.blueprints.is_empty()));
+        let book = book_with(&[]);
+        for d in defs.iter().filter(|d| d.blueprints.is_empty()) {
+            let one = std::slice::from_ref(d);
+            assert!(
+                pick_engineer_in(one, "engine", "engine_dirty", &[1], &book, None)
+                    .nearest_any
+                    .is_none()
+            );
+        }
+        // Sin grados requeridos no se recomienda a nadie.
+        assert!(
+            pick_engineer_in(&defs, "engine", "engine_dirty", &[], &book, None)
+                .nearest_any
+                .is_none()
+        );
+        // Ni el módulo ni el blueprint vacíos actúan de comodín.
+        assert!(
+            pick_engineer_in(&defs, "", "", &[1], &book, None)
+                .nearest_any
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn unlock_steps_never_invent_a_donation() {
+        for d in &staging() {
+            // Los requisitos compuestos ("X o Y") no se reducen a una contribución.
+            assert!(d.unlock.contribution.is_none(), "{}", d.name);
+            let entry = tmc_model::events::EngineerEntry {
+                engineer: d.name.clone(),
+                engineer_id: d.id,
+                progress: EngineerStatus::Invited,
+                rank: None,
+                rank_progress: None,
+            };
+            let step = crate::engineering::engineers::next_step(d, Some(&entry), &|_| 0, &|_| 0);
+            assert!(
+                !matches!(step, NextStep::Contribute { .. }),
+                "{} {step:?}",
+                d.name
+            );
+        }
     }
 }
