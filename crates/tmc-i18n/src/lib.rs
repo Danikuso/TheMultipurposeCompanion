@@ -345,6 +345,7 @@ mod tests {
                 ("goal", FluentValue::from("fsd_longrange G5")),
                 ("grades", FluentValue::from("G1, G2")),
                 ("reason", FluentValue::from("Receta ambigua")),
+                ("type", FluentValue::from("Manufacturados")),
             ] {
                 args.set(name, value);
             }

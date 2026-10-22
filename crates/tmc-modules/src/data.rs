@@ -975,7 +975,13 @@ impl BlueprintCatalog {
         }
         match ids.as_slice() {
             [one] => Some(one),
-            _ => None,
+            _ => {
+                if item.contains("_armour_") && self.module_types.iter().any(|t| t.id == "armour") {
+                    Some("armour")
+                } else {
+                    None
+                }
+            }
         }
     }
 
@@ -1955,7 +1961,10 @@ mod tests {
             cat.module_type_of("Int_Hyperdrive_Size5_Class5"),
             Some("fsd")
         );
-        assert_eq!(cat.module_type_of("int_shieldgenerator_size3_class5"), None);
+        assert_eq!(
+            cat.module_type_of("int_shieldgenerator_size3_class5"),
+            Some("shieldgenerator")
+        );
         let dirty = cat.blueprint("Engine_Dirty").unwrap();
         assert_eq!(
             dirty.recipes[0].grades.keys().copied().collect::<Vec<_>>(),
