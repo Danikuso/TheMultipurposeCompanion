@@ -2,6 +2,14 @@
 
 Guía obligatoria para cualquier persona, modelo o agente que trabaje en **TMC — The Multipurpose Companion** (companion en tiempo real para Elite Dangerous). Léela entera antes de tocar nada.
 
+## 0. Propósito y filosofía de TMC: El AYUDANTE (Companion) integral
+
+TMC (**The Multipurpose Companion**) existe con un propósito fundamental e innegociable: servir como **AYUDANTE (COMPANION)** en **todo** lo que se pueda hacer en *Elite Dangerous*, siendo el copiloto indispensable tanto para los pilotos **más novatos** como para los comandantes **más experimentados**:
+
+- **Nunca dejar al jugador bloqueado o en un callejón sin salida:** Si un piloto intenta realizar una acción o explorar una posibilidad (por ejemplo, ingenierizar un módulo de su nave, virgen o ya modificado) y todavía no dispone de acceso al ingeniero o ingenieros correspondientes (están bloqueados, no conocidos o no invitados), la aplicación **debe actuar de manera proactiva como un guía/ayudante**: mostrar primero de manera clara, pedagógica y secuencial los **pasos para desbloquearlo/s** (requisitos de descubrimiento, invitación y donación/desbloqueo), y **después** el cálculo de los materiales, recetas y soluciones de intercambio.
+- **Claridad instantánea y comprensible:** La información nunca se presenta como un volcado crudo de tablas o datos sin procesar. Se emplean herramientas visuales de cabina intuitivas: steppers horizontales de progreso, semáforos de existencias, barras de llenado y tarjetas métricas de lectura rápida sin cálculos mentales.
+- **Acción directa al servicio del piloto:** Cada pantalla debe ofrecer soluciones con un solo clic (copiar sistemas o rutas al portapapeles, calcular intercambios con los excedentes reales de la bodega, indicar el comerciante más cercano).
+
 ## 1. Primero, siempre
 
 1. Lee **[`status.md`](status.md)**: dice en qué fase, plan, tarea y paso exacto está el desarrollo y si hay bloqueos.

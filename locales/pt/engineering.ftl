@@ -154,4 +154,12 @@ engineering-filter-pending = Pendentes
 engineering-at-max-badge = MÁXIMO
 engineering-reserved-count = Reservado: { $count }
 engineering-category-capacity = Ocupação: { $have } / { $max }
+engineering-unlock-guide-title = GUIA COMPANION — DESBLOQUEIO DO ENGENHEIRO
+engineering-unlock-guide-desc = Para engenheirar este módulo você precisa de acesso a este engenheiro. Siga estes passos para desbloquear sua oficina:
+engineering-step-discovery = 1. Descoberta
+engineering-step-meeting = 2. Convite
+engineering-step-unlock-task = 3. Tarefa de Desbloqueio
+engineering-recipe-materials-title = MATERIAIS NECESSÁRIOS APÓS O DESBLOQUEIO
+engineering-recipe-materials-desc = Depois que o engenheiro for desbloqueado, estes são os materiais e graus que você precisará para o seu módulo:
+engineering-workshop-location = Oficina em { $system }
 

@@ -239,15 +239,17 @@
         <p class="muted">{t('engineering-unverified')}</p>
       {/if}
 
-      <!-- Recommended Engineer Card at Top -->
-      <section data-testid="flow-engineer" class="engineer-card-highlight">
-        <div class="eng-card-header">
-          <span class="eng-card-badge">{t('engineering-recommended-engineer')}</span>
-          {#if recommended}
-            <span class="eng-status-pill">{engineerStatusLabel(recommended.status)}</span>
-          {/if}
-        </div>
-        {#if recommended}
+      <!-- Si el ingeniero NO está desbloqueado: Mostrar primero la GUÍA DE DESBLOQUEO DEL AYUDANTE -->
+      {#if !data.engineer?.nearest_unlocked && recommended}
+        <section data-testid="flow-engineer" class="companion-unlock-guide">
+          <div class="companion-guide-header">
+            <div class="guide-title-row">
+              <span class="guide-badge-pill">{t('engineering-unlock-guide-title')}</span>
+              <span class="eng-status-pill pill-locked">{engineerStatusLabel(recommended.status)}</span>
+            </div>
+            <p class="guide-desc">{t('engineering-unlock-guide-desc')}</p>
+          </div>
+
           <div class="eng-card-body">
             <h3 class="eng-card-name">{recommended.name}</h3>
             <div class="eng-card-info">
@@ -262,39 +264,100 @@
                   📋
                 </button>
               {/if}
-              <span>·</span>
+              <span>•</span>
               <span class="mono">{recommended.distance_ly == null ? t('engineering-no-data') : t('engineering-distance-ly', { distance: decimal(recommended.distance_ly) })}</span>
             </div>
           </div>
           {#if !recommended.verified}
             <small class="muted">{t('engineering-unverified')}</small>
           {/if}
-          {#if !data.engineer?.nearest_unlocked}
-            <div class="eng-next-step-box">
-              <h4>{t('engineering-engineer-next-step')}</h4>
-              <p data-testid="flow-next-step">
-                {#if next && typeof next === 'object' && 'Requirement' in next}
-                  {requirement(next.Requirement.key)}
-                {:else if next && typeof next === 'object' && 'Invite' in next}
-                  {requirement(next.Invite.key)}
-                {:else if next && typeof next === 'object' && 'Contribute' in next}
-                  {@const contribution = next.Contribute}
-                  {@const item = contribution.kind === 'credits' ? { name: t('engineering-contribution-credits'), pending: false } : contribution.kind === 'commodity' ? contributionCommodityLabel(contribution.item) : { name: name(contribution.item), pending: false }}
-                  {item.name}: {t('engineering-engineer-progress', { done: integer(contribution.have), need: integer(contribution.need) })}{#if item.pending} · {t('engineering-translation-pending')}{/if}
-                {:else}
-                  {t('engineering-no-data')}
-                {/if}
-              </p>
-            </div>
-          {/if}
-        {:else}
-          <p class="muted">{t('engineering-no-engineer-covers')}</p>
-        {/if}
-      </section>
 
-      <!-- Stepper por Grados (G1 a G5) -->
+          <!-- Pasos de desbloqueo ordenados secuencialmente -->
+          <div class="unlock-steps-walkthrough">
+            <div class="unlock-step-item" class:step-done={recommended.status === 'Known' || recommended.status === 'Invited' || recommended.status === 'Acquainted'}>
+              <div class="step-num">1</div>
+              <div class="step-details">
+                <span class="step-label">{t('engineering-step-discovery')} / {t('engineering-step-meeting')}</span>
+                <span class="step-info">
+                  {#if recommended.status === 'Known' || recommended.status === 'Invited' || recommended.status === 'Acquainted'}
+                    ✔ {engineerStatusLabel(recommended.status)}
+                  {:else if next && typeof next === 'object' && 'Requirement' in next}
+                    {requirement(next.Requirement.key)}
+                  {:else}
+                    {t('engineering-filter-pending')}
+                  {/if}
+                </span>
+              </div>
+            </div>
+
+            <div class="unlock-step-item active">
+              <div class="step-num">2</div>
+              <div class="step-details">
+                <span class="step-label">{t('engineering-step-unlock-task')}</span>
+                <div data-testid="flow-next-step" class="step-info">
+                  {#if next && typeof next === 'object' && 'Invite' in next}
+                    {requirement(next.Invite.key)}
+                  {:else if next && typeof next === 'object' && 'Contribute' in next}
+                    {@const contribution = next.Contribute}
+                    {@const item = contribution.kind === 'credits' ? { name: t('engineering-contribution-credits'), pending: false } : contribution.kind === 'commodity' ? contributionCommodityLabel(contribution.item) : { name: name(contribution.item), pending: false }}
+                    <strong>{item.name}</strong>: {t('engineering-engineer-progress', { done: integer(contribution.have), need: integer(contribution.need) })}{#if item.pending} · {t('engineering-translation-pending')}{/if}
+                  {:else if next && typeof next === 'object' && 'Requirement' in next}
+                    {requirement(next.Requirement.key)}
+                  {:else}
+                    {t('engineering-no-data')}
+                  {/if}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      {:else}
+        <!-- Recommended Engineer Card at Top (Cuando está desbloqueado) -->
+        <section data-testid="flow-engineer" class="engineer-card-highlight">
+          <div class="eng-card-header">
+            <span class="eng-card-badge">{t('engineering-recommended-engineer')}</span>
+            {#if recommended}
+              <span class="eng-status-pill pill-unlocked">{engineerStatusLabel(recommended.status)}</span>
+            {/if}
+          </div>
+          {#if recommended}
+            <div class="eng-card-body">
+              <h3 class="eng-card-name">{recommended.name}</h3>
+              <div class="eng-card-info">
+                <span>{recommended.system ?? t('engineering-no-data')}</span>
+                {#if recommended.system}
+                  <button
+                    type="button"
+                    class="btn-copy"
+                    title={t('engineering-copy-system')}
+                    onclick={() => copyText(recommended.system!)}
+                  >
+                    📋
+                  </button>
+                {/if}
+                <span>•</span>
+                <span class="mono">{recommended.distance_ly == null ? t('engineering-no-data') : t('engineering-distance-ly', { distance: decimal(recommended.distance_ly) })}</span>
+              </div>
+            </div>
+            {#if !recommended.verified}
+              <small class="muted">{t('engineering-unverified')}</small>
+            {/if}
+          {:else}
+            <p class="muted">{t('engineering-no-engineer-covers')}</p>
+          {/if}
+        </section>
+      {/if}
+
+      <!-- Y DESPUÉS: Sección de Materiales y Recetas -->
       <div class="stepper-section">
-        <h3 class="stepper-title">{t('engineering-rolls')}</h3>
+        {#if !data.engineer?.nearest_unlocked}
+          <div class="materials-header-after-unlock">
+            <h3 class="stepper-title">{t('engineering-recipe-materials-title')}</h3>
+            <p class="materials-intro-desc">{t('engineering-recipe-materials-desc')}</p>
+          </div>
+        {:else}
+          <h3 class="stepper-title">{t('engineering-rolls')}</h3>
+        {/if}
         <div class="costs stepper-grid">
           {#each gradeRows as row (row.grade)}
             <section data-testid={`cost-grade-${row.grade}`} class="grade-card" class:target-grade={row.grade === data.request?.target_grade}>
@@ -423,15 +486,34 @@
   button:disabled { opacity: .4; cursor: not-allowed; }
 
   .engineer-card-highlight { background: rgba(255, 113, 0, 0.06); border: 1px solid rgba(255, 113, 0, 0.35); border-radius: 6px; padding: .8rem; margin: .8rem 0; }
+  .companion-unlock-guide { background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.35); border-left: 4px solid var(--hud-warning); border-radius: 6px; padding: .9rem; margin: .8rem 0; }
+  .companion-guide-header { margin-bottom: .6rem; }
+  .guide-title-row { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+  .guide-badge-pill { font-size: .72rem; font-weight: 700; text-transform: uppercase; color: var(--hud-warning); letter-spacing: .5px; }
+  .guide-desc { font-size: .8rem; color: var(--hud-muted); margin: .3rem 0 0; }
+  .pill-locked { background: rgba(245, 158, 11, 0.15); color: var(--hud-warning); border: 1px solid rgba(245, 158, 11, 0.4); }
+  .pill-unlocked { background: rgba(0, 255, 100, 0.15); color: #00ff66; border: 1px solid rgba(0, 255, 100, 0.3); }
+
+  .unlock-steps-walkthrough { display: flex; flex-direction: column; gap: .5rem; margin-top: .75rem; }
+  .unlock-step-item { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--hud-border); border-radius: 4px; padding: .5rem .75rem; display: flex; align-items: flex-start; gap: .6rem; }
+  .unlock-step-item.active { border-color: var(--hud-warning); background: rgba(245, 158, 11, 0.08); }
+  .unlock-step-item.step-done { border-color: rgba(0, 255, 100, 0.3); }
+  .step-num { width: 20px; height: 20px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); color: #fff; font-size: .72rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+  .unlock-step-item.active .step-num { background: var(--hud-warning); color: #000; }
+  .unlock-step-item.step-done .step-num { background: #00ff66; color: #000; }
+  .step-details { display: flex; flex-direction: column; gap: .15rem; font-size: .82rem; }
+  .step-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; color: var(--hud-muted); letter-spacing: .04em; }
+  .step-info { color: var(--hud-text); margin: 0; }
+
+  .materials-header-after-unlock { margin-bottom: .5rem; }
+  .materials-intro-desc { font-size: .8rem; color: var(--hud-muted); margin: .2rem 0 0; }
+
   .eng-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .4rem; }
   .eng-card-badge { font-size: .7rem; font-weight: 700; text-transform: uppercase; color: var(--hud-primary); letter-spacing: .5px; }
   .eng-status-pill { font-size: .7rem; font-weight: 600; padding: .1rem .4rem; border-radius: 3px; background: rgba(0, 255, 100, 0.15); color: #00ff66; border: 1px solid rgba(0, 255, 100, 0.3); }
   .eng-card-name { font-size: 1.05rem; font-weight: 700; color: #fff; margin: 0 0 .2rem; }
   .eng-card-info { font-size: .82rem; color: var(--hud-muted); display: flex; gap: .4rem; align-items: center; }
 
-  .eng-next-step-box { background: rgba(0, 0, 0, 0.25); border: 1px solid var(--hud-border); border-radius: 4px; padding: .5rem; margin-top: .6rem; }
-  .eng-next-step-box h4 { font-size: .8rem; margin: 0 0 .2rem; color: var(--hud-text); }
-  .eng-next-step-box p { font-size: .8rem; margin: 0; color: var(--hud-text); }
 
   .stepper-section { margin: 1rem 0; }
   .stepper-title { font-size: .92rem; color: var(--hud-primary); margin: 0 0 .5rem; }

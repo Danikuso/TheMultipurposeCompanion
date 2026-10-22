@@ -2,17 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-22 22:36 (Europe/Madrid) · Antigravity
-- **Fase actual:** F4 — Ingenieros y materiales (✅ completada; rediseño UI Opción 2 y fix módulos vírgenes cerrados; propuesta de rediseño global de la app formulada con maqueta HTML interactiva, spec y plan). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Última actualización:** 2026-10-22 22:45 (Europe/Madrid) · Antigravity
+- **Fase actual:** F4 — Ingenieros y materiales (✅ completada; rediseño UI Opción 2 cerrado; filosofía de AYUDANTE fijada en `AGENTS.md` §0; guía de desbloqueo implementada en `EngineerFlow.svelte` antes de los materiales; binario debug lanzado para pruebas en vivo).
 - **Spec activa:** [`docs/specs/2026-10-22-tmc-ui-rediseno-global-design.md`](docs/specs/2026-10-22-tmc-ui-rediseno-global-design.md) — pendiente de aprobación del propietario; base F4: [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md).
-- **Plan activo:** [`docs/plans/2026-10-22-tmc-ui-rediseno-global.md`](docs/plans/2026-10-22-tmc-ui-rediseno-global.md) — 10 tareas en 5 bloques preparadas para ejecución tras aprobación.
+- **Plan activo:** [`docs/plans/2026-10-22-tmc-ui-rediseno-global.md`](docs/plans/2026-10-22-tmc-ui-rediseno-global.md) — 10 tareas en 5 bloques.
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** Planificación de rediseño global de la aplicación completada (Spec, Plan y Maqueta interactiva).
-- **Último paso completado:** Diseñada la spec global (`docs/specs/2026-10-22-tmc-ui-rediseno-global-design.md`), el plan de ejecución de 10 tareas (`docs/plans/2026-10-22-tmc-ui-rediseno-global.md`) y la maqueta HTML interactiva navegable (`ui_redesign_global_mockups.html`) cubriendo Shell, Exploración/Exobiología, Combate/AX, Minería, Comercio y Misiones.
-- **Siguiente acción:** Revisión y aprobación de la spec y plan por parte del propietario para iniciar la ejecución bloque a bloque.
+- **Tarea:** Guía de Desbloqueo del Ayudante (Companion) completada e integrada en `EngineerFlow.svelte` + filosofía documentada en `AGENTS.md`.
+- **Último paso completado:** Si un módulo seleccionado no tiene al ingeniero desbloqueado, se muestra primero de forma destacada la secuencia de pasos de desbloqueo (descubrimiento, invitación y donación con botón de copiar sistema al portapapeles) y después la lista de materiales y recetas necesarias. Documentada la filosofía en `AGENTS.md` §0. Binario debug `TMC.exe` recompilado y ejecutándose (PID 12236).
+- **Siguiente acción:** Probar en juego con el usuario y esperar aprobación para el rediseño global.
 ## Tareas de F4
 
 Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
@@ -332,6 +332,13 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-22 22:45 (Europe/Madrid) · Antigravity · Incorporación de la filosofía de AYUDANTE en `AGENTS.md` §0 y Guía de Desbloqueo en el flujo de ingeniería:
+  - `AGENTS.md`: Añadida la sección §0 definiendo que TMC existe para ser el AYUDANTE (COMPANION) integral en todo lo que se pueda hacer en Elite Dangerous, guiando a principiantes y expertos sin dejarlos jamás en un callejón sin salida.
+  - `EngineerFlow.svelte`: Si un módulo no tiene acceso al ingeniero (`!nearest_unlocked`), se despliega de forma prominente la «Guía de Desbloqueo del Ayudante» con la secuencia de pasos (descubrimiento, invitación, donación requerida y botón para copiar sistema del taller al portapapeles) y *después* se presentan los materiales y recetas necesarias.
+  - i18n: 8 claves añadidas en los 5 idiomas (`locales/{es,en,fr,de,pt}/engineering.ftl`).
+  - Verificación: 18/18 tests de i18n PASS, 378/378 tests Vitest PASS, `svelte-check` 0 errores/avisos, clippy limpio, UI compilada y binario `target/debug/TMC.exe` ejecutándose en segundo plano (PID 12236).
+
 
 - 2026-10-22 22:36 (Europe/Madrid) · Antigravity · Planificación del rediseño visual global de toda la aplicación (Design System «TMC Glass HUD»):
   - Maqueta HTML interactiva navegable generada como artefacto (`ui_redesign_global_mockups.html`) con los 6 módulos: Shell (TopBar & Sidebar), Exploración & Exobiología, Combate & AX, Minería, Comercio, y Misiones & Pasajeros.

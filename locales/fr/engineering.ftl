@@ -154,4 +154,12 @@ engineering-filter-pending = En attente
 engineering-at-max-badge = MAXIMUM
 engineering-reserved-count = Réservé : { $count }
 engineering-category-capacity = Capacité : { $have } / { $max }
+engineering-unlock-guide-title = GUIDE COMPAGNON — DÉVERROUILLAGE DE L'INGÉNIEUR
+engineering-unlock-guide-desc = Pour modifier ce module, vous devez avoir accès à cet ingénieur. Suivez ces étapes pour déverrouiller son atelier :
+engineering-step-discovery = 1. Découverte
+engineering-step-meeting = 2. Invitation
+engineering-step-unlock-task = 3. Tâche de déverrouillage
+engineering-recipe-materials-title = MATÉRIAUX REQUIS APRÈS LE DÉVERROUILLAGE
+engineering-recipe-materials-desc = Une fois l'ingénieur déverrouillé, voici les matériaux et grades nécessaires pour votre module :
+engineering-workshop-location = Atelier à { $system }
 

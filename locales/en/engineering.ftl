@@ -153,4 +153,12 @@ engineering-filter-pending = Pending
 engineering-at-max-badge = MAXIMUM
 engineering-reserved-count = Reserved: { $count }
 engineering-category-capacity = Capacity: { $have } / { $max }
+engineering-unlock-guide-title = COMPANION GUIDE — ENGINEER UNLOCK
+engineering-unlock-guide-desc = To engineer this module you need access to this engineer. Follow these steps to unlock their workshop:
+engineering-step-discovery = 1. Discovery
+engineering-step-meeting = 2. Invitation
+engineering-step-unlock-task = 3. Unlock Task
+engineering-recipe-materials-title = MATERIALS REQUIRED AFTER UNLOCK
+engineering-recipe-materials-desc = Once the engineer is unlocked, these are the materials and grades you will need for your module:
+engineering-workshop-location = Workshop in { $system }
 
