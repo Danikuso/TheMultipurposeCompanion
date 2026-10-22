@@ -5,7 +5,7 @@
 - **Última actualización:** 2026-10-22 12:34 (Europe/Madrid) · Codex
 - **Fase actual:** F4 — Ingenieros y materiales (🔄 ejecución: Tasks 0–19 registradas; Task 20 completada; Tasks 21–24 completadas; Task 25 completada; Task 26 en curso). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
-- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 26/29 hechas; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
+- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 24/29 completas; 2 parciales por catálogos; preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
@@ -28,8 +28,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 6 | `tmc-model` + `tmc-app` — servicios cercanos nuevos y tiradas por defecto | ✅ hecha | bb66321 | Revisión aprobada; F2 intacto |
 | 7 | `tmc-net` — comerciantes de materiales y broker | ✅ hecha | c24b770 | Revisión aprobada; Ardent sin tipo, Spansh por tipo |
 | 8 | Datos estáticos `materials.json` y `trader_rules.json` | ✅ hecha | 671fa03, 7f555d1, 198710b, a46dec9, dd35f8a, e0d46ef | Catálogo importado: 139 materiales; 13 Guardian sin verificar; tests globales PASS |
-| 9 | Datos estáticos `blueprints.json` | ✅ hecha | 35598f5 | Pasos 1–5; 2 blueprints/1 experimental provisionales; Step 6 (catálogo completo y recetas) pendiente con fuente B aprobada |
-| 10 | Datos estáticos `engineers.json` | ✅ hecha | fa964e5, 6a8c626, f313f63 | 5 ingenieros provisionales (verified:false); catálogo completo pendiente; Palin G5 para criterio 4 |
+| 9 | Datos estáticos `blueprints.json` | ⛔ bloqueada | 35598f5 | Pasos 1–5; 2 blueprints/1 experimental provisionales; Step 6 (catálogo completo y recetas) pendiente con fuente B aprobada |
+| 10 | Datos estáticos `engineers.json` | ⛔ bloqueada | fa964e5, 6a8c626, f313f63 | 5 ingenieros provisionales (verified:false); catálogo completo pendiente; Palin G5 para criterio 4 |
 | 11 | i18n — `engineering.ftl` y `engineering-data.ftl` | ✅ hecha | 5b66a98, a84d82c | Nombres EDEngineer MIT; Motor Sucio e Impulsores de Arrastre resueltos; revisión aprobada |
 | 12 | `engineering` — inventario de materiales y cambios de la sesión | ✅ hecha | 335edf6 | Revisión aprobada; fixture engineering_session.log |
 | 13 | `engineering` — taquilla de a pie | ✅ hecha | 35b98ab | Revisión aprobada; stub no vacía; listas parciales |
@@ -262,6 +262,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
 
 ## Decisiones tomadas
+- 2026-10-22 · Revisión de completitud: Tasks 9 y 10 se muestran bloqueadas para su Step 6, aunque el código provisional esté revisado. Recuento corregido a 24/29 tareas completas; no se equipara el cierre de sus pasos 1–5 con un catálogo completo. Fuente Apache propuesta y límites documentados antes de importar.
 - 2026-10-21 · Propietario aprueba resolver el límite de objetivos/taquilla con resumen por WebSocket y detalles REST paginados por bytes, y continuar el plan tras verificar Task 20.
 - 2026-10-21 · Propietario autoriza reconciliar seguimiento y verificar COMPLETAMENTE Task 20 antes de continuar; revisión de spec detecta carencias reales, se corrigen con TDD sin iniciar Task 21 todavía.
 - 2026-10-21 · Propietario (Task 3 F4): EDEngineer (MIT, commit 2cadd66) como fuente A para el catálogo de materiales y los nombres traducidos (localization.json); opción B (recopilación propia, `verified:false`) para blueprints/recetas, ingenieros, reglas del comerciante y pistas. Riesgo anotado por el spike: los datos de EDEngineer derivan de coriolis-data (IP de Frontier, sin licencia propia); el propietario asume la decisión. Atribución en `THIRD_PARTY_NOTICES.md` al importar.
