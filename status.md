@@ -10,9 +10,9 @@
 
 ## Puntero actual
 
-- **Tarea:** C5 🔄 — objetivos compatibles, moneda separada y avisos correctos.
+- **Tarea:** C6 🔄 — REST paginado de catálogo, ingenieros y flujo.
 - **Último paso completado:** C1 cerrada en `c308ce9` (Claude; Codex paró por indicación del propietario). Node 15/15, `--check` OK, revisión aprobada. 8 filas sin resolver (4 DSS sobre DiscoveryScanner, 4 special_weapon_* sobre Weapon genérico) bloquean C8 hasta tener evidencia externa documentada.
-- **Siguiente acción:** C5 según la secuencia C del plan activo.
+- **Siguiente acción:** C6 según la secuencia C del plan activo.
 ## Tareas de F4
 
 Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
@@ -58,8 +58,9 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | C2 | ✅ hecha | 7ac1b54 | Recetas por contexto, política de base y alias; staging se lee sin pérdidas; revisión aprobada |
 | C3 | ✅ hecha | 9cdcdd1 | Coste con base explícita; Merc Coins aparte; bloqueos explícitos; revisión aprobada |
 | C4 | ✅ hecha | 95abc6f, 21c667c | Capacidades por módulo/grado; recomendación exige todos los grados; grados requeridos con la normalización del coste; revisión aprobada tras 1 ronda |
-| C5 | 🔄 en curso | — | |
-| C6–C10 | ⬜ pendientes | — | Orden, interfaces y tests en secuencia C del plan activo |
+| C5 | ✅ hecha | e9c214d | Objetivos bloqueados nunca completables; Merc Coins reservadas por orden sin saldo inventado; avisos por `completable`; revisión aprobada |
+| C6 | 🔄 en curso | — | |
+| C7–C10 | ⬜ pendientes | — | Orden, interfaces y tests en secuencia C del plan activo |
 
 ## Tareas de diagnóstico debug
 
