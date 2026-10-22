@@ -53,8 +53,8 @@ use crate::inflight::Inflight;
 use alerts::{EngAlertKind, alerts_from};
 use engineers::{EngineerBook, EngineerStatusChange, NextStep, next_step_for};
 use goals::{
-    Goal, STATUS_OK, STATUS_TOO_MANY, ShoppingView, TAG_GOALS_READ, TAG_GOALS_WRITE, evaluate,
-    goals_from_result, goals_read_task, goals_write_task, pin_goal,
+    Goal, GoalInput, STATUS_OK, STATUS_TOO_MANY, ShoppingView, TAG_GOALS_READ, TAG_GOALS_WRITE,
+    evaluate_goals, goals_from_result, goals_read_task, goals_write_task, pin_goal,
 };
 use inventory::{MaterialChange, MaterialInventory, SessionChanges};
 use locker::LockerInventory;
@@ -146,6 +146,18 @@ struct EventDelta {
 
 /// Eventos del diario que pueden cambiar inventario, taquilla, ingenieros, nave,
 /// posición, atraque o la carga (necesaria para el siguiente paso de un ingeniero).
+/// Why a request cannot be pinned: `incompatible` (module cannot take it) or `no_data`
+/// (unresolvable recipe context); `None` when it can.
+fn pin_rejection(cost: &PlanCost) -> Option<&'static str> {
+    if cost.blockers.contains(&plan::PlanBlocker::IncompatibleItem) {
+        Some("incompatible")
+    } else if cost.has_resolution_blocker() {
+        Some("no_data")
+    } else {
+        None
+    }
+}
+
 fn affects_engineering(kind: &EventKind) -> bool {
     matches!(
         kind,
@@ -456,6 +468,15 @@ impl Engineering {
         g.base.clone()
     }
 
+    fn input_of(id: String, cost: &PlanCost) -> GoalInput {
+        GoalInput {
+            id,
+            needs: cost.total.clone(),
+            merc_coins: cost.merc_coins_total,
+            blockers: cost.blockers.clone(),
+        }
+    }
+
     /// Cost of `req` for the module `item`; unresolved requests carry their blockers.
     fn cost_for(&self, item: &str, req: &PlanRequest, current: Option<&CurrentEng>) -> PlanCost {
         plan_cost(blueprints(), item, current, req)
@@ -540,31 +561,30 @@ impl Engineering {
     /// Recalcula todo y devuelve los topics que cambiaron.
     fn refresh(&mut self, state: &GameState, ctx: &mut ModuleCtx, delta: &EventDelta) -> TopicSet {
         // Necesidades de cada objetivo fijado.
-        let mut needs: Vec<(String, BTreeMap<String, u32>)> = Vec::new();
+        let mut needs: Vec<GoalInput> = Vec::new();
         let mut verified: BTreeMap<String, bool> = BTreeMap::new();
         for g in &self.goals {
             let cost = self.cost_for(&g.item, &g.request, self.current_for(g).as_ref());
             verified.insert(g.id.clone(), cost.verified);
-            needs.push((g.id.clone(), cost.total));
+            needs.push(Self::input_of(g.id.clone(), &cost));
         }
         let rules = trader_rules();
         let inv = &self.inventory;
         let have = |k: &str| inv.count(k);
-        let shopping = evaluate(&needs, &have, rules, self.goals_status);
+        // F4 no tiene fuente demostrada del saldo de Merc Coins: siempre desconocido.
+        let shopping = evaluate_goals(&needs, &have, rules, self.goals_status, None);
 
-        // El flujo abierto va al final como un objetivo más.
+        // El flujo abierto va al final como un objetivo más; un cálculo bloqueado conserva sus motivos.
         let flow_cost = self.flow.as_ref().and_then(|f| {
             let req = f.request.as_ref()?;
             let row = self.row(&f.slot)?;
-            // Until the blocker views (C5/C7) a blocked request still reads as `no_data`.
             Some(self.cost_for(&row.item, req, row.current.as_ref()))
-                .filter(|c| !c.has_resolution_blocker())
         });
         let all = match &flow_cost {
             Some(c) => {
                 let mut with_flow = needs.clone();
-                with_flow.push((FLOW_ID.to_owned(), c.total.clone()));
-                evaluate(&with_flow, &have, rules, self.goals_status)
+                with_flow.push(Self::input_of(FLOW_ID.to_owned(), c));
+                evaluate_goals(&with_flow, &have, rules, self.goals_status, None)
             }
             None => shopping.clone(),
         };
@@ -909,6 +929,9 @@ impl Engineering {
             "lines": [],
             "percent": 0,
             "engineer": null,
+            "blockers": [],
+            "materials_ready": false,
+            "merc_coins": null,
         });
         let Some(flow) = &self.flow else {
             return self.stamp(idle);
@@ -935,6 +958,9 @@ impl Engineering {
             "lines": [],
             "percent": 0,
             "engineer": null,
+            "blockers": [],
+            "materials_ready": false,
+            "merc_coins": null,
         });
         let (Some(req), Some(o)) = (&flow.request, v.as_object_mut()) else {
             return self.stamp(v);
@@ -944,6 +970,12 @@ impl Engineering {
             return self.stamp(v);
         };
         let gv = all.goals.iter().find(|g| g.id == FLOW_ID);
+        o.insert("blockers".into(), json!(cost.blockers));
+        if cost.has_resolution_blocker() {
+            // El motivo del bloqueo viaja en `blockers`; sin coste ni líneas que mostrar.
+            o.insert("status".into(), json!("no_data"));
+            return self.stamp(v);
+        }
         let mut lines = Vec::new();
         for (key, need) in &cost.total {
             let short = gv.and_then(|g| g.missing.get(key)).copied().unwrap_or(0);
@@ -971,6 +1003,11 @@ impl Engineering {
         o.insert("lines".into(), json!(lines));
         o.insert("percent".into(), json!(gv.map_or(0, |g| g.percent)));
         o.insert(
+            "materials_ready".into(),
+            json!(gv.is_some_and(|g| g.materials_ready)),
+        );
+        o.insert("merc_coins".into(), json!(gv.map(|g| g.merc_coins)));
+        o.insert(
             "engineer".into(),
             json!(self.pick(
                 row.map_or("", |r| r.item.as_str()),
@@ -997,6 +1034,9 @@ impl Engineering {
                     "missing": gv.missing,
                     "trades": gv.trades,
                     "completable": gv.completable,
+                    "materials_ready": gv.materials_ready,
+                    "merc_coins": gv.merc_coins,
+                    "blockers": gv.blockers,
                     "verified": verified.get(&g.id).copied().unwrap_or(false),
                     "engineer": self.engineer_for_goal(&g.id),
                 }))
@@ -1092,6 +1132,7 @@ impl Engineering {
         self.set(TOPIC_FLOW, v, &mut dirty);
         let goals: Vec<Value> = self.goal_pages["goals"].iter().map(|g| json!({
             "id":g["id"], "percent":g["percent"], "completable":g["completable"], "engineer":g["engineer"],
+            "materials_ready":g["materials_ready"], "merc_coins":g["merc_coins"], "blockers":g["blockers"],
         })).collect();
         let v = self.stamp(json!({"revision":self.revision,"status":shopping.status,"total":goals.len(),"goals":goals}));
         self.set(TOPIC_GOALS, v, &mut dirty);
@@ -1303,12 +1344,17 @@ impl Engineering {
         let Some(row) = self.row(&flow.slot) else {
             return false;
         };
-        if self
-            .cost_for(&row.item, &req, row.current.as_ref())
-            .has_resolution_blocker()
-        {
-            decide!("engineering.pin.rejected_no_data", {});
-            return false;
+        let cost = self.cost_for(&row.item, &req, row.current.as_ref());
+        match pin_rejection(&cost) {
+            Some("incompatible") => {
+                decide!("engineering.pin.rejected_incompatible", {});
+                return false;
+            }
+            Some(_) => {
+                decide!("engineering.pin.rejected_no_data", {});
+                return false;
+            }
+            None => {}
         }
         if row.module_type.as_deref() != Some(req.module_type.as_str()) || !row.engineerable {
             decide!("engineering.pin.rejected_incompatible", {});

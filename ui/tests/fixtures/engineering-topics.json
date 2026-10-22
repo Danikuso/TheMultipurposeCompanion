@@ -73,6 +73,7 @@
   },
   "engineering.flow": {
     "as_of": "2026-10-21T12:05:00Z",
+    "blockers": [],
     "cost": {
       "blockers": [],
       "experimental": {
@@ -348,6 +349,12 @@
         }
       }
     ],
+    "materials_ready": false,
+    "merc_coins": {
+      "have": null,
+      "missing": null,
+      "need": 0
+    },
     "module_type": "engine",
     "options": {
       "blueprints": [
@@ -378,9 +385,16 @@
     "as_of": "2026-10-21T12:05:00Z",
     "goals": [
       {
+        "blockers": [],
         "completable": true,
         "engineer": "Felicity Farseer",
         "id": "7:FrameShiftDrive:fsd_longrange:-:5",
+        "materials_ready": true,
+        "merc_coins": {
+          "have": null,
+          "missing": null,
+          "need": 0
+        },
         "percent": 87
       }
     ],
@@ -501,10 +515,17 @@
       "cursor": 0,
       "items": [
         {
+          "blockers": [],
           "completable": true,
           "engineer": "Felicity Farseer",
           "id": "7:FrameShiftDrive:fsd_longrange:-:5",
           "item": "int_hyperdrive_size5_class5",
+          "materials_ready": true,
+          "merc_coins": {
+            "have": null,
+            "missing": null,
+            "need": 0
+          },
           "missing": {
             "dataminedwake": 1
           },
