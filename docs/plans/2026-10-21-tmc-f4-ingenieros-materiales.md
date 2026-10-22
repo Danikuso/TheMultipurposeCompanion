@@ -852,6 +852,8 @@ El cierre de los diez criterios se completa en Task 28/C10 con el catálogo fina
 
 ## Desviaciones
 
+- **C2 (2026-10-22, Claude):** `EntryPolicy::ExistingOnly` acepta recetas que empiezan en cualquier grado ≥ 2 (no solo G2), porque la fuente fijada tiene contextos G3–G5 (p. ej. `powerdistributors4c2_supportfocused`); los grados deben seguir siendo contiguos. C3 añade el test de inicio en G3.
+
 - 2026-10-22 · **Task 27: definición de la muestra.** Porcentaje/media ponderados por la unión de existencias positivas de cada par (ausentes=0), sin inflar exactitud con materiales siempre vacíos. Se conserva continuidad entre archivos del mismo comandante identificado; Materials anterior a Commander/LoadGame se atribuye tras recibir identidad. Cambio de identidad o archivo sin identidad corta continuidad para impedir comparaciones cruzadas; agregados anteriores se conservan. Solo se cuentan Other de intervalos comparados. Tests de identidad tardía/cambio/desconocida y deriva verifican estas decisiones.
 
 - 2026-10-22 · **Enmienda de catálogo ratificada por aprobación expresa del propietario.** EDDiscovery fuente A y EDDI exclusivamente para ID/nombre fijados; contratos de [enmienda aprobada](2026-10-22-tmc-f4-catalogo-completo-propuesta.md) y C0–C10 sustituyen fuente B pendiente, grados siempre desde1, capacidades globales por blueprint y listas completas de catálogo/ingenieros/flujo. Saldo Merc Coins None, bases explícitas sin inventar enlaces, capacidades por módulo/grados y conservación de objetivos/IDs. Adaptación C tras cierre de Tasks26/27, sin reabrir tareas hechas. Las entradas históricas inferiores conservan la evidencia de decisiones/bloqueos anteriores; sus solicitudes de aprobación ya resueltas no son bloqueos vigentes. Task28 espera C1–C9.
