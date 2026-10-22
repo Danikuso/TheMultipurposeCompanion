@@ -74,11 +74,15 @@
   "engineering.flow": {
     "as_of": "2026-10-21T12:05:00Z",
     "cost": {
+      "blockers": [],
       "experimental": {
         "electrochemicalarrays": 1,
         "hybridcapacitors": 1,
         "pharmaceuticalisolators": 1
       },
+      "merc_coins_by_grade": {},
+      "merc_coins_experimental": 0,
+      "merc_coins_total": 0,
       "missing_grades": [],
       "per_grade": {
         "1": [

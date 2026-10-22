@@ -580,13 +580,6 @@ impl Blueprint {
             .filter_map(|r| r.grades.keys().next_back().copied())
             .max()
     }
-
-    /// Single context of a module type, if there is exactly one (never a first match).
-    pub fn sole_recipe_for(&self, module_type: &str) -> Option<&ModuleBlueprint> {
-        let mut it = self.recipes.iter().filter(|r| r.module_type == module_type);
-        let first = it.next()?;
-        it.next().is_none().then_some(first)
-    }
 }
 
 /// Experimental effect (journal `ExperimentalEffect`, lowercase).
@@ -1107,6 +1100,22 @@ impl BlueprintCatalog {
             BaseIdentity::Variant { key } => {
                 self.variant_of(item, cur).is_some_and(|v| &v.key == key)
             }
+        }
+    }
+
+    /// Bases of an `ExistingOnly` context proven by the installed module (empty for `Stock`).
+    pub fn satisfied_bases<'a>(
+        &self,
+        rec: &'a ModuleBlueprint,
+        item: &str,
+        current: Option<&CurrentEng>,
+    ) -> Vec<&'a BaseRequirement> {
+        match &rec.entry {
+            EntryPolicy::Stock => Vec::new(),
+            EntryPolicy::ExistingOnly { bases } => bases
+                .iter()
+                .filter(|b| self.base_satisfied(b, &rec.module_type, item, current))
+                .collect(),
         }
     }
 

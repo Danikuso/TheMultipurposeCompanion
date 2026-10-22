@@ -102,15 +102,7 @@ async fn engineering_http_pages_are_lossless_and_invalidate_with_live_state() {
         rolls: [10; 5],
     };
     let catalog = blueprints();
-    let cost = plan_cost(
-        catalog.blueprint(&request.blueprint).unwrap(),
-        request
-            .experimental
-            .as_deref()
-            .and_then(|key| catalog.experimental(key)),
-        None,
-        &request,
-    );
+    let cost = plan_cost(catalog, "int_engine_size5_class5", None, &request);
     let mut categories: BTreeMap<String, Vec<Value>> = BTreeMap::new();
     for (key, material) in materials() {
         let count = if cost.total.contains_key(key) {
