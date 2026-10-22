@@ -192,7 +192,7 @@ async fn engineering_http_pages_are_lossless_and_invalidate_with_live_state() {
         rows.iter()
             .map(|row| row["trades"].as_array().unwrap().len())
             .sum::<usize>(),
-        215
+        244
     );
     let needs = section(&router, "goals", revision, "needs").await;
     assert_eq!(
@@ -200,7 +200,7 @@ async fn engineering_http_pages_are_lossless_and_invalidate_with_live_state() {
             .iter()
             .map(|row| row["count"].as_u64().unwrap())
             .sum::<u64>(),
-        2060
+        2580
     );
     for name in ["missing", "surplus"] {
         assert!(!section(&router, "goals", revision, name).await.is_empty());
@@ -225,7 +225,7 @@ async fn engineering_http_pages_are_lossless_and_invalidate_with_live_state() {
     journal(
         &core,
         json!({"timestamp":"2026-10-21T12:00:03Z","event":"MaterialCollected",
-        "Category":"Raw","Name":"carbon","Count":1}),
+        "Category":"Encoded","Name":"legacyfirmware","Count":1}),
     )
     .await;
     let changed = core.snapshot().await["engineering.goals"]["revision"]
@@ -234,8 +234,8 @@ async fn engineering_http_pages_are_lossless_and_invalidate_with_live_state() {
     assert!(changed > revision);
     assert_eq!(get(&router, &first_uri).await.0, StatusCode::CONFLICT);
     assert_eq!(
-        section(&router, "goals", changed, "goals").await[0]["missing"]["carbon"],
-        9
+        section(&router, "goals", changed, "goals").await[0]["missing"]["legacyfirmware"],
+        29
     );
     for (offset, name) in [(4, "OTHER TESTER"), (5, "CMDR TESTER")] {
         journal(&core,json!({"timestamp":format!("2026-10-21T12:00:0{offset}Z"),"event":"Commander","Name":name})).await;

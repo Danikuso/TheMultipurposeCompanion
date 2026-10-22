@@ -22,14 +22,37 @@ enum Key {
     Name(String),
 }
 
+fn engineer_name_matches(catalog: &str, candidate: &str) -> bool {
+    let cat = catalog.trim().to_lowercase();
+    let cand = candidate.trim().to_lowercase();
+    if cat == cand {
+        return true;
+    }
+    // "Tod 'The Blaster' McQuinn" en catálogo vs "Tod McQuinn" en el diario de Frontier
+    if cat.contains('\'') {
+        let stripped: String = cat
+            .split('\'')
+            .enumerate()
+            .filter(|(i, _)| i % 2 == 0)
+            .map(|(_, part)| part)
+            .collect::<Vec<_>>()
+            .join(" ");
+        let cleaned = stripped.split_whitespace().collect::<Vec<_>>().join(" ");
+        if cleaned == cand {
+            return true;
+        }
+    }
+    false
+}
+
 fn key_of(e: &EngineerEntry) -> Key {
     if e.engineer_id != 0 {
         return Key::Id(e.engineer_id);
     }
-    let lower = e.engineer.to_lowercase();
+    let lower = e.engineer.trim().to_lowercase();
     engineers()
         .iter()
-        .find(|d| d.name.to_lowercase() == lower)
+        .find(|d| engineer_name_matches(&d.name, &lower))
         .map_or(Key::Name(lower), |d| Key::Id(d.id))
 }
 
@@ -41,9 +64,11 @@ fn contradicts(e: &EngineerEntry) -> bool {
         return false;
     }
     if let Some(d) = engineer(e.engineer_id) {
-        return d.name.to_lowercase() != name;
+        return !engineer_name_matches(&d.name, &name);
     }
-    engineers().iter().any(|d| d.name.to_lowercase() == name)
+    engineers()
+        .iter()
+        .any(|d| engineer_name_matches(&d.name, &name))
 }
 
 /// `true` si el JSON trae `StarPos` con tres números.

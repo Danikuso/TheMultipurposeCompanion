@@ -917,6 +917,7 @@ fn parse_blueprints(json: &str) -> BlueprintCatalog {
 
 /// Alias table from a separate symbols document (`aliases` array), tolerant per row.
 #[cfg(test)]
+#[allow(dead_code)]
 fn parse_aliases(json: &str) -> Vec<BlueprintAlias> {
     match serde_json::from_str::<serde_json::Value>(json) {
         Ok(value) => parse_section(&value, "aliases", true, alias_from_row),
@@ -1047,7 +1048,11 @@ impl BlueprintCatalog {
             .iter()
             .filter(|a| a.module_type == module_type && a.alias == raw)
         {
-            let key = target(&a.canonical)?;
+            // A dangling alias targets nothing here: it neither resolves nor blocks the lookup
+            // (`audit` reports every dangling alias).
+            let Some(key) = target(&a.canonical) else {
+                continue;
+            };
             if found.is_some_and(|f| f != key) {
                 return None;
             }
@@ -1264,6 +1269,25 @@ impl BlueprintCatalog {
                 errors.push(format!("alias {} targets unknown {}", a.alias, a.canonical));
             }
         }
+        for b in &self.blueprints {
+            for base in b.recipes.iter().flat_map(|r| match &r.entry {
+                EntryPolicy::ExistingOnly { bases } => bases.as_slice(),
+                EntryPolicy::Stock => &[],
+            }) {
+                let exists = match &base.identity {
+                    BaseIdentity::Blueprint { key } => {
+                        self.blueprints.iter().any(|o| &o.key == key)
+                    }
+                    BaseIdentity::Variant { key } => self.variants.iter().any(|v| &v.key == key),
+                };
+                if !exists {
+                    errors.push(format!(
+                        "{}: base identity {:?} does not exist",
+                        b.key, base.identity
+                    ));
+                }
+            }
+        }
         for (i, a) in self.aliases.iter().enumerate() {
             if self.aliases[i + 1..].iter().any(|o| {
                 o.module_type == a.module_type && o.alias == a.alias && o.canonical != a.canonical
@@ -1351,7 +1375,7 @@ pub struct EngineerDef {
     pub verified: bool,
 }
 
-/// Accepts the active table (root `entries`) and the import staging (root `engineers`).
+/// Active engineer table: root `entries` (the importer writes the same root).
 pub(crate) fn parse_engineers(json: &str) -> Vec<EngineerDef> {
     let Some(entries) = serde_json::from_str::<serde_json::Value>(json)
         .map_err(|error| {
@@ -1360,7 +1384,6 @@ pub(crate) fn parse_engineers(json: &str) -> Vec<EngineerDef> {
         .ok()
         .and_then(|v| {
             v.get("entries")
-                .or_else(|| v.get("engineers"))
                 .and_then(serde_json::Value::as_array)
                 .cloned()
         })
@@ -1764,15 +1787,24 @@ mod tests {
     #[test]
     fn materials_load_with_provenance_and_valid_grades() {
         let table = materials();
-        assert_eq!(table.len(), 139);
+        assert_eq!(table.len(), 141);
         for (key, m) in table {
             assert_eq!(key, &m.key);
             assert!(!m.source.trim().is_empty());
             assert!((1..=5).contains(&m.grade), "{key}");
             // Guardian grades disagree between EDEngineer and FDevIDs: unverified.
             let guardian = m.family.starts_with("guardian");
-            assert_eq!(m.verified, !guardian, "{key}");
-            assert_eq!(m.source, "EDEngineer 2cadd66 (MIT)", "{key}");
+            let own = key == "tg_abrasion03" || key == "tg_causticcrystal";
+            assert_eq!(m.verified, !guardian && !own, "{key}");
+            // Two Thargoid materials used by recipes are absent from EDEngineer: EDDiscovery data.
+            if key == "tg_abrasion03" || key == "tg_causticcrystal" {
+                assert!(
+                    !m.verified && m.source.starts_with("EDDiscovery 7d30920"),
+                    "{key}"
+                );
+            } else {
+                assert_eq!(m.source, "EDEngineer 2cadd66 (MIT)", "{key}");
+            }
         }
         let iron = &table["iron"];
         assert_eq!(
@@ -1793,9 +1825,9 @@ mod tests {
         for m in materials().values() {
             *by_category.entry(format!("{:?}", m.category)).or_default() += 1;
         }
-        assert_eq!(materials().len(), 139);
+        assert_eq!(materials().len(), 141);
         assert_eq!(by_category["Raw"], 28);
-        assert_eq!(by_category["Manufactured"], 64);
+        assert_eq!(by_category["Manufactured"], 66);
         assert_eq!(by_category["Encoded"], 47);
         // Raw materials have four grades (seven categories); the rest five.
         let mut raw_one: Vec<u8> = materials()
@@ -1891,10 +1923,17 @@ mod tests {
         let cat = blueprints();
         assert!(!cat.blueprints.is_empty());
         for b in &cat.blueprints {
-            let grades: Vec<u8> = b.recipes[0].grades.keys().copied().collect();
-            let max = *grades.last().unwrap();
-            assert!(max <= 5, "{}", b.key);
-            assert_eq!(grades, (1..=max).collect::<Vec<_>>(), "{}", b.key);
+            for r in &b.recipes {
+                let grades: Vec<u8> = r.grades.keys().copied().collect();
+                let (min, max) = (grades[0], *grades.last().unwrap());
+                assert!(max <= 5, "{}", b.key);
+                // Stock chains start at G1; ExistingOnly (Operations) upgrades start at G2+.
+                match r.entry {
+                    EntryPolicy::Stock => assert_eq!(min, 1, "{}", b.key),
+                    EntryPolicy::ExistingOnly { .. } => assert!(min >= 2, "{}", b.key),
+                }
+                assert_eq!(grades, (min..=max).collect::<Vec<_>>(), "{}", b.key);
+            }
             assert!(!b.verified && !b.source.trim().is_empty());
             for t in b.module_types() {
                 assert!(cat.module_types.iter().any(|m| m.id == t), "{t}");
@@ -1934,7 +1973,7 @@ mod tests {
                 .iter()
                 .any(|e| e.key == drag.key)
         );
-        assert!(cat.experimentals_for("fsd").is_empty());
+        assert!(!cat.experimentals_for("fsd").is_empty());
         assert!(cat.blueprint("nope").is_none());
     }
 
@@ -1989,7 +2028,7 @@ mod tests {
             ("Felicity Farseer", "Deciat")
         );
         assert_eq!(engineer(300160).unwrap().name, "Elvira Martuuk");
-        assert_eq!(engineer(300260).unwrap().name, "Tod McQuinn");
+        assert_eq!(engineer(300260).unwrap().name, "Tod 'The Blaster' McQuinn");
         assert!(engineer(1).is_none());
         let mut ids: Vec<u64> = all.iter().map(|e| e.id).collect();
         ids.sort_unstable();
@@ -2628,9 +2667,19 @@ mod tests {
         );
     }
 
+    /// Provisional row shape (`module_types` + `grades`, `ingredients`): still accepted on load.
+    const LEGACY_CATALOGUE: &str = r#"{
+        "module_types": [{"id": "engine", "item_prefixes": ["int_engine_"]}, {"id": "fsd", "item_prefixes": ["int_hyperdrive_"]}],
+        "blueprints": [{"key": "engine_dirty", "module_types": ["engine"], "source": "t", "verified": false,
+            "grades": {"1": [{"material": "legacyfirmware", "count": 1}], "2": [{"material": "iron", "count": 1}],
+                       "3": [{"material": "iron", "count": 1}], "4": [{"material": "iron", "count": 1}], "5": [{"material": "iron", "count": 1}]}}],
+        "experimentals": [{"key": "special_engine_overloaded", "module_types": ["engine"], "source": "t",
+            "ingredients": [{"material": "iron", "count": 5}]}]
+    }"#;
+
     #[test]
     fn legacy_rows_still_load_as_stock_contexts() {
-        let cat = blueprints();
+        let cat = parse_blueprints(LEGACY_CATALOGUE);
         let dirty = cat.blueprint("engine_dirty").unwrap();
         assert_eq!(dirty.module_types(), ["engine"]);
         assert_eq!(dirty.recipes[0].entry, EntryPolicy::Stock);
@@ -2658,27 +2707,43 @@ mod tests {
     }
 
     #[test]
-    fn staged_catalogue_parses_without_losing_rows() {
-        let blueprints_json = include_str!("../data/import/engineering/staging/blueprints.json");
+    fn active_catalogue_parses_without_losing_rows() {
+        let blueprints_json = include_str!("../data/blueprints.json");
         let symbols_json = include_str!("../data/import/engineering/staging/symbols.json");
         let raw: serde_json::Value = serde_json::from_str(blueprints_json).unwrap();
         let rows = |k: &str| raw[k].as_array().unwrap().len();
         let warnings = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let cat = tracing::subscriber::with_default(WarningCounter(warnings.clone()), || {
-            let mut cat = parse_blueprints(blueprints_json);
-            cat.aliases = parse_aliases(symbols_json);
-            cat
+            parse_blueprints(blueprints_json)
         });
         assert_eq!(warnings.load(std::sync::atomic::Ordering::Relaxed), 0);
+        // Final numbers fixed after the full audit (manifest `summary`).
+        assert_eq!(
+            (
+                cat.module_types.len(),
+                cat.blueprints.len(),
+                cat.experimentals.len(),
+                cat.variants.len(),
+                cat.aliases.len()
+            ),
+            (47, 89, 87, 15, 382)
+        );
         assert_eq!(cat.module_types.len(), rows("module_types"));
         assert_eq!(cat.blueprints.len(), rows("blueprints"));
         assert_eq!(cat.experimentals.len(), rows("experimentals"));
         assert_eq!(cat.variants.len(), rows("variants"));
+        assert_eq!(cat.aliases.len(), rows("aliases"));
         let contexts: usize = raw["blueprints"]
             .as_array()
             .unwrap()
             .iter()
             .map(|b| b["recipes"].as_array().unwrap().len())
+            .sum();
+        let grade_rows: usize = cat
+            .blueprints
+            .iter()
+            .flat_map(|b| &b.recipes)
+            .map(|r| r.grades.len())
             .sum();
         assert_eq!(
             cat.blueprints
@@ -2687,11 +2752,10 @@ mod tests {
                 .sum::<usize>(),
             contexts
         );
+        assert_eq!((contexts, grade_rows), (207, 987));
+        // The alias table of the staging symbols is the one embedded in the active catalogue.
         let symbols: serde_json::Value = serde_json::from_str(symbols_json).unwrap();
-        assert_eq!(
-            cat.aliases.len(),
-            symbols["aliases"].as_array().unwrap().len()
-        );
+        assert_eq!(symbols["aliases"], raw["aliases"]);
         // Merc Coins survive, ExistingOnly contexts stay pending without invented bases.
         let abrasion = cat.blueprint("abrasionblaster_farreaching").unwrap();
         let coins: Vec<u32> = abrasion.recipes[0]
@@ -2704,6 +2768,26 @@ mod tests {
             abrasion.recipes[0].entry,
             EntryPolicy::ExistingOnly { bases: vec![] }
         );
+        // Operations rows resolved by the documented override keep their coins.
+        let dss = cat.blueprint("detailedsurfacescanner_longrange").unwrap();
+        assert_eq!(dss.module_types(), ["surfacescanner"]);
+        let coins: Vec<u32> = dss.recipes[0]
+            .grades
+            .values()
+            .map(|c| c.merc_coins)
+            .collect();
+        assert_eq!(coins, [5, 5, 10, 20]);
+        assert!(!dss.verified);
+        for key in [
+            "special_weapon_toughened",
+            "special_weapon_efficient",
+            "special_weapon_damage",
+            "special_weapon_lightweight",
+        ] {
+            let e = cat.experimental(key).unwrap();
+            assert_eq!(e.module_types.len(), 11, "{key}");
+            assert!(!e.verified && e.source.contains("2026-10-22-filas-sin-resolver-c8"));
+        }
         // Symbols proven for the active modules keep resolving; pending types match nothing.
         assert_eq!(
             cat.module_type_of("int_engine_size3_class5"),
@@ -2728,7 +2812,43 @@ mod tests {
         );
         // Variants are kept visible and none resolves to a recipe or an installed identity.
         assert!(cat.variants.iter().all(|v| v.journal_blueprints.is_empty()));
+        // MissileRack / SeekerMissileRack array expansion keeps both modules.
+        let highcap = cat.blueprint("weapon_highcapacity").unwrap();
+        assert!(
+            highcap.has_module_type("missilerack") && highcap.has_module_type("seekermissilerack")
+        );
         let report = cat.audit();
         assert!(report.is_empty(), "{report:?}");
+    }
+
+    #[test]
+    fn dangling_aliases_neither_block_a_valid_alias_nor_hide_from_the_audit() {
+        let cat = parse_blueprints(
+            r#"{
+            "module_types": [{"id": "engine", "item_prefixes": ["int_engine_"]}],
+            "blueprints": [{"key": "engine_dirty", "source": "t",
+                "recipes": [{"module_type": "engine", "entry": "stock",
+                    "grades": {"1": {"materials": [{"material": "iron", "count": 1}]}}}]}],
+            "aliases": [
+                {"module_type": "engine", "alias": "dt", "canonical": "ghost_one"},
+                {"module_type": "engine", "alias": "dt", "canonical": "engine_dirty"},
+                {"module_type": "engine", "alias": "xx", "canonical": "ghost_two"}
+            ]}"#,
+        );
+        assert_eq!(
+            cat.canonical_blueprint("engine", "dt"),
+            Some("engine_dirty")
+        );
+        assert_eq!(cat.canonical_blueprint("engine", "xx"), None);
+        let report = cat.audit();
+        // Both dangling targets and the (now visible) ambiguity are reported, none aborts the report.
+        assert_eq!(report.len(), 3, "{report:?}");
+        assert!(
+            report
+                .iter()
+                .any(|r| r.contains("ambiguous alias engine/dt"))
+        );
+        assert!(report.iter().any(|r| r.contains("ghost_one")));
+        assert!(report.iter().any(|r| r.contains("ghost_two")));
     }
 }

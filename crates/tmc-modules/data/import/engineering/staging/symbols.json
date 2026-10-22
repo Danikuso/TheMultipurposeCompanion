@@ -3508,6 +3508,11 @@
     },
     {
       "module_type": "surfacescanner",
+      "alias": "detailedsurfacescanner_surfacescanner_longrange",
+      "canonical": "detailedsurfacescanner_longrange"
+    },
+    {
+      "module_type": "surfacescanner",
       "alias": "sensor_surfacescanner_expanded",
       "canonical": "sensor_expanded"
     },
@@ -3525,6 +3530,11 @@
       "module_type": "surfacescanner",
       "alias": "surfacescanner_fastscan",
       "canonical": "sensor_fastscan"
+    },
+    {
+      "module_type": "surfacescanner",
+      "alias": "surfacescanner_longrange",
+      "canonical": "detailedsurfacescanner_longrange"
     },
     {
       "module_type": "torpedopylon",
