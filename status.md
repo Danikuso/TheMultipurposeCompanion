@@ -10,9 +10,9 @@
 
 ## Puntero actual
 
-- **Tarea:** C6 🔄 — REST paginado de catálogo, ingenieros y flujo.
+- **Tarea:** C7 🔄 — UI y textos para los contratos ampliados.
 - **Último paso completado:** C1 cerrada en `c308ce9` (Claude; Codex paró por indicación del propietario). Node 15/15, `--check` OK, revisión aprobada. 8 filas sin resolver (4 DSS sobre DiscoveryScanner, 4 special_weapon_* sobre Weapon genérico) bloquean C8 hasta tener evidencia externa documentada.
-- **Siguiente acción:** C6 según la secuencia C del plan activo.
+- **Siguiente acción:** C7 según la secuencia C del plan activo (UI a páginas; quitar campos pesados legacy de los topics).
 ## Tareas de F4
 
 Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
@@ -59,8 +59,9 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | C3 | ✅ hecha | 9cdcdd1 | Coste con base explícita; Merc Coins aparte; bloqueos explícitos; revisión aprobada |
 | C4 | ✅ hecha | 95abc6f, 21c667c | Capacidades por módulo/grado; recomendación exige todos los grados; grados requeridos con la normalización del coste; revisión aprobada tras 1 ronda |
 | C5 | ✅ hecha | e9c214d | Objetivos bloqueados nunca completables; Merc Coins reservadas por orden sin saldo inventado; avisos por `completable`; revisión aprobada |
-| C6 | 🔄 en curso | — | |
-| C7–C10 | ⬜ pendientes | — | Orden, interfaces y tests en secuencia C del plan activo |
+| C6 | ✅ hecha | 513d481 | REST paginado (catálogo, ingenieros, flujo) con las capas de seguridad existentes; revisión aprobada; campos pesados legacy se quitan en C7 |
+| C7 | 🔄 en curso | — | |
+| C8–C10 | ⬜ pendientes | — | Orden, interfaces y tests en secuencia C del plan activo |
 
 ## Tareas de diagnóstico debug
 
