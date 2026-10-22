@@ -82,17 +82,104 @@
 </Panel>
 
 <style>
-  .empty { color: var(--hud-muted); margin: 0; }
-  .row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.4rem; }
-  .label { color: var(--hud-muted); }
-  .mono { font-family: var(--font-mono); }
-  .ind[data-state='up'] { color: var(--hud-ok); }
-  .ind[data-state='down'] { color: var(--hud-danger); }
-  .steps { display: flex; gap: 2px; flex: 1; }
-  .steps i { flex: 1; height: 0.7rem; border: 1px solid var(--hud-primary); }
-  .steps i[data-on='true'] { background: var(--hud-primary); }
-  .heat[data-heat='normal'] { color: var(--hud-ok); }
-  .heat[data-heat='overheating'] { color: var(--hud-warning); }
-  .heat[data-heat='heat_damage'] { color: var(--hud-danger); }
-  .alerts { list-style: none; margin: 0.6rem 0 0; padding: 0; color: var(--hud-warning); }
+  .empty {
+    color: var(--hud-muted);
+    margin: 0;
+    font-style: italic;
+    padding: 1rem 0;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+    margin-bottom: 0.65rem;
+  }
+  .label {
+    color: var(--hud-muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    min-width: 4.8rem;
+  }
+  .mono {
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+  .ind {
+    font-size: 1.1rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ind[data-state='up'] {
+    color: var(--hud-ok);
+    text-shadow: 0 0 10px rgba(68, 255, 136, 0.65);
+  }
+  .ind[data-state='down'] {
+    color: var(--hud-danger);
+    text-shadow: 0 0 10px rgba(255, 68, 68, 0.65);
+  }
+  .steps {
+    display: flex;
+    gap: 3px;
+    flex: 1;
+    padding: 2px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--hud-border-subtle);
+    border-radius: var(--radius-sm);
+  }
+  .steps i {
+    flex: 1;
+    height: 0.75rem;
+    border-radius: 1px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: background var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .steps i[data-on='true'] {
+    background: linear-gradient(180deg, #ff9933, var(--hud-primary));
+    border-color: rgba(255, 119, 0, 0.6);
+    box-shadow: 0 0 6px rgba(255, 119, 0, 0.4);
+  }
+  .heat {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.88rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-sm);
+  }
+  .heat[data-heat='normal'] {
+    color: var(--hud-ok);
+    background: rgba(68, 255, 136, 0.08);
+  }
+  .heat[data-heat='overheating'] {
+    color: var(--hud-warning);
+    background: rgba(255, 170, 0, 0.12);
+    box-shadow: 0 0 8px rgba(255, 170, 0, 0.25);
+  }
+  .heat[data-heat='heat_damage'] {
+    color: var(--hud-danger);
+    background: rgba(255, 68, 68, 0.15);
+    box-shadow: 0 0 10px rgba(255, 68, 68, 0.35);
+  }
+  .alerts {
+    list-style: none;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .alerts li {
+    padding: 0.4rem 0.65rem;
+    background: rgba(255, 170, 0, 0.08);
+    border-left: 3px solid var(--hud-warning);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    color: var(--hud-warning);
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
 </style>
