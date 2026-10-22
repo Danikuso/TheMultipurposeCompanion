@@ -61,7 +61,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | C5 | ✅ hecha | e9c214d | Objetivos bloqueados nunca completables; Merc Coins reservadas por orden sin saldo inventado; avisos por `completable`; revisión aprobada |
 | C6 | ✅ hecha | 513d481 | REST paginado (catálogo, ingenieros, flujo) con las capas de seguridad existentes; revisión aprobada; campos pesados legacy se quitan en C7 |
 | C7 | ✅ hecha | c1c7c30, 6dbbb69 | UI sobre páginas; campos pesados fuera de los topics; Merc Coins y bloqueos visibles; capacidades por id sin recargas; revisión aprobada tras 1 ronda; QA visual 2560/800 pendiente (C9) |
-| C8 | 🔄 en curso | — | Antes: evidencia externa de las 8 filas sin resolver |
+| C8 | 🔄 en curso | — | Evidencia de las 8 filas en 7fd4c29; subagente detenido por límite de sesión (reanudar tras 18:30), cambios sin commit en el árbol |
 | C9–C10 | ⬜ pendientes | — | Orden, interfaces y tests en secuencia C del plan activo |
 
 ## Tareas de diagnóstico debug
@@ -277,6 +277,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
 
 ## Decisiones tomadas
+- 2026-10-22 · Propietario: comprobado en el juego que Stripped Down de armas de nave (`special_weapon_lightweight`) pide 5 Carbon (coincide con EDDiscovery/EDEngineer; Coriolis 3 descartado).
+- 2026-10-22 · Claude (C8): las 8 filas sin resolver se reasignan con tabla de overrides citada (`docs/research/notes/2026-10-22-filas-sin-resolver-c8.md`): DSS largo alcance → SurfaceScanner; 4 experimentales de arma → 11 tipos de arma de nave; `verified:false`.
 - 2026-10-22 · Claude (C1): las 8 filas `unresolved` no se expanden ni reasignan sin evidencia externa documentada (C8); compras del Tech Broker quedan `out_of_scope` salvo decisión del propietario; manifiesto con texto original se mantiene en staging (posible recorte en C8).
 - 2026-10-22 · Propietario: «Aprobar y ejecutar la enmienda» del catálogo completo y «Aprobar el mapa auxiliar de IDs» de EDDI d3b964e (Apache-2.0, solo 38 pares ID/nombre). Autorizadas ratificación de spec/plan e implementación por fases con atribución, Merc Coins sin saldo inventado, bases G2+, capacidades por módulo, paginación y compatibilidad de objetivos.
 - 2026-10-22 · Propietario: «Aprobar EDDiscovery como fuente A». Se autoriza usar los archivos Apache-2.0 fijados a 7d30920 para sustituir los catálogos provisionales de recetas e ingenieros, con atribución y verified:false. Preparación de enmienda técnica para Operations/grados por módulo en curso; todavía sin importación.
