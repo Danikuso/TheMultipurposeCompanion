@@ -74,7 +74,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 3 | Rediseño visual de `EngineersPanel.svelte` | ✅ hecha | acf0683 | Filtros Todos/Desbloqueados/Pendientes, estrellas de grado y badges de estado |
 | 4 | Stepper de grados y asistente integrado en `EngineerFlow` y `ShoppingPanel` | ✅ hecha | 31bcc81 | Stepper horizontal G1..G5, semáforo de existencias, solución de intercambio directa y botón de ruta |
 | Fix | Reconocimiento de módulos vírgenes (stock) | ✅ hecha | 44fc0da | Prefijos de módulo importados en `blueprints.json` y fallback de slot core en `ship.rs` |
-| 5 | Verificación completa y compilación del binario debug | ✅ hecha | pendiente | 378/378 Vitest PASS, svelte-check 0 errores, cargo test verde, binario `target/debug/TMC.exe` listo |
+| 5 | Verificación completa y compilación del binario debug | ✅ hecha | 5b4c24d | 378/378 Vitest PASS, svelte-check 0 errores, cargo test verde, binario `target/debug/TMC.exe` listo |
 
 ## Tareas de diagnóstico debug
 
