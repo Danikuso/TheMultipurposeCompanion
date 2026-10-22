@@ -2,17 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-22 13:12 (Europe/Madrid) · Codex
-- **Fase actual:** F4 — Ingenieros y materiales (🔄 ejecución: Tasks 0–19 registradas; Task 20 completada; Tasks 21–24 completadas; Task 25 completada; Task 26 completada; Task 27 completada; ampliación C1 en curso). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
+- **Última actualización:** 2026-10-22 17:00 (Europe/Madrid) · Antigravity
+- **Fase actual:** F4 — Ingenieros y materiales (🔄 ejecución: Tasks 0–27 completadas; ampliación C8 completada; C9 en curso). F3 ✅ (`6dc09d9`); F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
 - **Spec activa:** [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md) — ✅ aprobada (2026-10-21), enmienda de catálogo aprobada y ratificada (2026-10-22); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversales: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md), [Auto-companion](docs/specs/2026-10-21-tmc-auto-companion-design.md).
-- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 26/29 completas; 2 parciales por catálogos; ampliación aprobada C0–C10 (C0 verificada, C1 en curso); preflight aplicado en b0e0028. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
+- **Plan activo:** [`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`](docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md) — 28/29 completas (Tasks 9 y 10 completadas en C8); ampliación C0–C8 completada, C9 en curso. Anteriores: F3 ✅ 35/35, F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19.
 - **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** C8 🔄 — activar datos completos y nombres; primero, evidencia de las 8 filas sin resolver.
-- **Último paso completado:** C1 cerrada en `c308ce9` (Claude; Codex paró por indicación del propietario). Node 15/15, `--check` OK, revisión aprobada. 8 filas sin resolver (4 DSS sobre DiscoveryScanner, 4 special_weapon_* sobre Weapon genérico) bloquean C8 hasta tener evidencia externa documentada.
-- **Siguiente acción:** investigación de las 8 filas `unresolved` (4 DSS, 4 special_weapon_*) y después C8.
+- **Tarea:** C9 🔄 — Revalidar integración/e2e con el catálogo final.
+- **Último paso completado:** C8 cerrada en `e3ad29f`. Catálogo completo activo (89 blueprints, 87 experimentales, 15 variantes, 38 ingenieros, 141 materiales), 0 filas en alcance sin resolver (`overrides.json` con evidencia documentada), i18n 5 idiomas, 15 node / 1.370+ Rust / 375 UI PASS, clippy y fmt limpios.
+- **Siguiente acción:** Tarea C9 (revalidar integración/e2e con el catálogo final y contratos paginados).
 ## Tareas de F4
 
 Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
@@ -28,8 +28,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 6 | `tmc-model` + `tmc-app` — servicios cercanos nuevos y tiradas por defecto | ✅ hecha | bb66321 | Revisión aprobada; F2 intacto |
 | 7 | `tmc-net` — comerciantes de materiales y broker | ✅ hecha | c24b770 | Revisión aprobada; Ardent sin tipo, Spansh por tipo |
 | 8 | Datos estáticos `materials.json` y `trader_rules.json` | ✅ hecha | 671fa03, 7f555d1, 198710b, a46dec9, dd35f8a, e0d46ef | Catálogo importado: 139 materiales; 13 Guardian sin verificar; tests globales PASS |
-| 9 | Datos estáticos `blueprints.json` | 🔄 en curso | 35598f5 | Pasos 1–5; 2 blueprints/1 experimental provisionales; Step 6 pendiente: fuente A EDDiscovery y ampliación técnica aprobadas |
-| 10 | Datos estáticos `engineers.json` | 🔄 en curso | fa964e5, 6a8c626, f313f63 | 5 ingenieros provisionales (verified:false); catálogo completo pendiente de la ampliación aprobada; Palin G5 para criterio 4 |
+| 9 | Datos estáticos `blueprints.json` | ✅ hecha | 35598f5, e3ad29f | Step 6 completado en C8 con catálogo completo (89 blueprints, 87 experimentales, 15 variantes) |
+| 10 | Datos estáticos `engineers.json` | ✅ hecha | fa964e5, 6a8c626, f313f63, e3ad29f | Step 6 completado en C8 con 38 ingenieros, mapa auxiliar EDDI y capacidades completas |
 | 11 | i18n — `engineering.ftl` y `engineering-data.ftl` | ✅ hecha | 5b66a98, a84d82c | Nombres EDEngineer MIT; Motor Sucio e Impulsores de Arrastre resueltos; revisión aprobada |
 | 12 | `engineering` — inventario de materiales y cambios de la sesión | ✅ hecha | 335edf6 | Revisión aprobada; fixture engineering_session.log |
 | 13 | `engineering` — taquilla de a pie | ✅ hecha | 35b98ab | Revisión aprobada; stub no vacía; listas parciales |
@@ -61,8 +61,9 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | C5 | ✅ hecha | e9c214d | Objetivos bloqueados nunca completables; Merc Coins reservadas por orden sin saldo inventado; avisos por `completable`; revisión aprobada |
 | C6 | ✅ hecha | 513d481 | REST paginado (catálogo, ingenieros, flujo) con las capas de seguridad existentes; revisión aprobada; campos pesados legacy se quitan en C7 |
 | C7 | ✅ hecha | c1c7c30, 6dbbb69 | UI sobre páginas; campos pesados fuera de los topics; Merc Coins y bloqueos visibles; capacidades por id sin recargas; revisión aprobada tras 1 ronda; QA visual 2560/800 pendiente (C9) |
-| C8 | 🔄 en curso | — | Evidencia de las 8 filas en 7fd4c29; subagente detenido por límite de sesión (reanudar tras 18:30), cambios sin commit en el árbol |
-| C9–C10 | ⬜ pendientes | — | Orden, interfaces y tests en secuencia C del plan activo |
+| C8 | ✅ hecha | e3ad29f | Catálogo completo activo; 0 sin resolver; 38 ingenieros, 141 materiales; i18n 5 idiomas; 15 node, 1.370+ Rust, 375 UI PASS |
+| C9 | 🔄 en curso | — | Revalidar integración/e2e con catálogo final y contratos paginados |
+| C10 | ⬜ pendiente | — | Ejecutar Task 28 y cerrar F4 |
 
 ## Tareas de diagnóstico debug
 
@@ -320,6 +321,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-22 17:00 (Europe/Madrid) · Antigravity · C8 cerrada en `e3ad29f`: activado catálogo completo de ingeniería con procedencia de EDDiscovery 7d30920 y mapa auxiliar EDDI d3b964e (89 blueprints, 87 experimentales, 15 variantes, 38 ingenieros, 141 materiales). 8 filas sin resolver remapeadas en overrides.json con evidencia citada (0 unresolved). i18n completa en 5 idiomas (engineering-data.ftl). Actualizadas expectativas de tests en tmc-app y UI con los oráculos de la fuente real. Checks: 15/15 node PASS, 1.370+ Rust tests PASS, 375 UI tests PASS, svelte-check 0 errores, fmt y clippy workspace limpios. Inicia C9.
 
 - 2026-10-22 · Codex · Sesión en curso: Task25 4c70ecb y Task26 8a70048 cerradas y revisadas; fuente EDDiscovery, enmienda técnica y mapa EDDI aprobados. Task27 TDD de eval en curso; C0 documental en ratificación. Evidencias Task26: 1.362 Rust/343 UI/7 Playwright/1 Node PASS. Sin importación nueva ni push.
 
