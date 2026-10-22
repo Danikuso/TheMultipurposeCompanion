@@ -2141,3 +2141,50 @@ fn pagination_validates_sections_cursor_and_preserves_escaped_utf8() {
     assert!(end["next_cursor"].is_null());
     eprintln!("largest escaped UTF8 page: {max_size} bytes");
 }
+
+/// `engineer_for_goal` resuelve el `Goal` real: el id es opaco, los experimentales no cuentan
+/// y un objetivo ya conseguido (partida por encima del objetivo) no pide ingeniero.
+#[test]
+fn engineer_for_goal_resolves_the_real_goal() {
+    let mut h = H::with_store();
+    h.journal("Commander", r#","FID":"F1","Name":"CMDR TESTER""#);
+    h.journal(
+        "EngineerProgress",
+        r#","Engineers":[{"Engineer":"Felicity Farseer","EngineerID":300100,"Progress":"Unlocked","Rank":5}]"#,
+    );
+    h.journal(
+        "LoadGame",
+        r#","Commander":"CMDR TESTER","Ship":"asp","ShipID":7,"GameMode":"Solo","Credits":10"#,
+    );
+    h.journal(
+        "Loadout",
+        r#","Ship":"asp","ShipID":7,"Modules":[{"Slot":"FrameShiftDrive","Item":"int_hyperdrive_size5_class5","On":true,"Priority":0,"Engineering":{"BlueprintName":"FSD_LongRange","Level":4,"Quality":1.0}}]"#,
+    );
+    h.pin_fsd();
+    let real = h.m.goals[0].clone();
+    assert_eq!(
+        h.m.engineer_for_goal(&real.id).as_deref(),
+        Some("Felicity Farseer")
+    );
+    // Un id que no es de ningún objetivo no se interpreta: sin ingeniero.
+    assert_eq!(
+        h.m.engineer_for_goal("7:FrameShiftDrive:fsd_longrange:-:5x"),
+        None
+    );
+    assert_eq!(h.m.engineer_for_goal("garbage"), None);
+    // Un experimental no altera la ruta de grados.
+    let mut exp = real.clone();
+    exp.request.experimental = Some("fsd_fastboot".into());
+    exp.id = "exp".into();
+    h.m.goals.push(exp);
+    assert_eq!(
+        h.m.engineer_for_goal("exp").as_deref(),
+        Some("Felicity Farseer")
+    );
+    // Instalado G4 completo y objetivo G4: nada que tirar, nadie que recomendar.
+    let mut done = real;
+    done.request.target_grade = 4;
+    done.id = "done".into();
+    h.m.goals.push(done);
+    assert_eq!(h.m.engineer_for_goal("done"), None);
+}

@@ -483,17 +483,15 @@ impl Engineering {
         .map(|s| s.with_credits(state.cmdr.as_ref().and_then(|c| c.credits)))
     }
 
-    /// Grados que hay que tirar para un objetivo: del punto de partida al objetivo, ambos
-    /// incluidos. Vacío si ya está conseguido.
-    fn required_grades(req: &PlanRequest, current: Option<&CurrentEng>) -> Vec<u8> {
-        let start = plan::start_grade(current, &req.blueprint, &req.rolls).grade;
-        (start..=req.target_grade.min(5)).collect()
-    }
-
     /// Ingeniero desbloqueado más cercano para un objetivo fijado (resuelto por su `Goal`).
     fn engineer_for_goal(&self, goal_id: &str) -> Option<String> {
         let g = self.goals.iter().find(|g| g.id == goal_id)?;
-        let grades = Self::required_grades(&g.request, self.current_for(g).as_ref());
+        let grades = plan::required_grades(
+            blueprints(),
+            &g.item,
+            self.current_for(g).as_ref(),
+            &g.request,
+        );
         engineer_for(
             &g.request.module_type,
             &g.request.blueprint,
@@ -505,11 +503,12 @@ impl Engineering {
 
     fn pick(
         &self,
+        item: &str,
         req: &PlanRequest,
         current: Option<&CurrentEng>,
         state: &GameState,
     ) -> EngineerPick {
-        let grades = Self::required_grades(req, current);
+        let grades = plan::required_grades(blueprints(), item, current, req);
         let mut pick = pick_engineer(
             &req.module_type,
             &req.blueprint,
@@ -973,7 +972,12 @@ impl Engineering {
         o.insert("percent".into(), json!(gv.map_or(0, |g| g.percent)));
         o.insert(
             "engineer".into(),
-            json!(self.pick(req, row.and_then(|r| r.current.as_ref()), state)),
+            json!(self.pick(
+                row.map_or("", |r| r.item.as_str()),
+                req,
+                row.and_then(|r| r.current.as_ref()),
+                state
+            )),
         );
         self.stamp(v)
     }
