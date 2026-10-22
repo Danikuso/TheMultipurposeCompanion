@@ -39,17 +39,18 @@
 <style>
   .hud-panel {
     background: var(--hud-surface);
-    border: 1px solid var(--hud-border);
-    border-top: 2px solid var(--hud-primary);
-    border-radius: 4px;
+    border: 1px solid var(--hud-border-subtle);
+    border-top: 3px solid var(--hud-primary);
+    border-radius: 6px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   }
 
   .hud-panel-header {
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--hud-border);
+    padding: 0.6rem 0.85rem;
+    border-bottom: 1px solid var(--hud-border-subtle);
     background: var(--hud-surface-alt);
   }
 
