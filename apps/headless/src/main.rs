@@ -136,6 +136,16 @@ fn e2e_transport() -> anyhow::Result<Option<std::sync::Arc<dyn tmc_net::Transpor
                 None => Box::pin(async { Err(TransportError::Connect("blocked in e2e".into())) }),
             }
         }
+        fn post_json(
+            &self,
+            url: &str,
+            body: &str,
+        ) -> BoxFut<'_, Result<HttpReply, TransportError>> {
+            match self.map(url) {
+                Some(target) => self.inner.post_json(&target, body),
+                None => Box::pin(async { Err(TransportError::Connect("blocked in e2e".into())) }),
+            }
+        }
     }
     let base = match std::env::var("TMC_E2E_ARDENT_BASE") {
         Ok(b) => b,
