@@ -1,0 +1,7929 @@
+{
+  "provenance": {
+    "notice": "Datos derivados de EDDiscovery/EliteDangerousCore (Apache-2.0) y, solo para pares ID/nombre de ingenieros, de EDCD/EDDI (Apache-2.0). Convertidos y modificados por TMC con scripts/import-engineering-catalogue.mjs; entradas sin verificar contra el juego (verified:false).",
+    "eddiscovery": {
+      "repository": "https://github.com/EDDiscovery/EliteDangerousCore",
+      "commit": "7d30920e6822d4836e0d6dd5c91026ec7e2ab4c7"
+    },
+    "eddi": {
+      "repository": "https://github.com/EDCD/EDDI",
+      "commit": "d3b964ea7c8bb959ad6537f55b308f293a326905",
+      "use": "solo pares (EngineerID, nombre)"
+    }
+  },
+  "engineers": [
+    {
+      "id": 300000,
+      "name": "Didi Vatermann",
+      "system": "Leesti",
+      "star_pos": [
+        72.75,
+        48.75,
+        68.25
+      ],
+      "workshop": "Vatermann LLC",
+      "planet": "1 A",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "prismaticshieldgenerator",
+          "blueprint": "shieldgenerator_kinetic",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "prismaticshieldgenerator",
+          "blueprint": "shieldgenerator_optimised",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "prismaticshieldgenerator",
+          "blueprint": "shieldgenerator_reinforced",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "prismaticshieldgenerator",
+          "blueprint": "shieldgenerator_thermic",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_explosive",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_heavyduty",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_kinetic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_resistive",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_thermic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldgenerator",
+          "blueprint": "shieldgenerator_kinetic",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "shieldgenerator",
+          "blueprint": "shieldgenerator_optimised",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "shieldgenerator",
+          "blueprint": "shieldgenerator_reinforced",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "shieldgenerator",
+          "blueprint": "shieldgenerator_thermic",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-didi-vatermann",
+        "invite_key": "unlock-invite-didi-vatermann",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Selene Jean (grade 3-4).",
+        "meeting": "Gain trade rank Merchant or higher.",
+        "unlock": "Provide 50 units of Lavian Brandy.",
+        "reputation": "Craft modules for a major increase.Sell commodities to Vatermann LLC."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300010,
+      "name": "Bill Turner",
+      "system": "Alioth",
+      "star_pos": [
+        -33.65625,
+        72.46875,
+        -20.65625
+      ],
+      "workshop": "Turner Metallics Inc",
+      "planet": "4 A",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": true,
+      "blueprints": [
+        {
+          "module_type": "autofieldmaintenanceunit",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "cargorack",
+          "blueprint": "cargoracks5c1_extended",
+          "grades": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "cargorack",
+          "blueprint": "cargoracks6c1_extended",
+          "grades": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "sensor_fastscan",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fuelscoop",
+          "blueprint": "fuelscoop_efficiency",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fuelscoop",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "sensor_fastscan",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_focused",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "refinery",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "surfacescanner",
+          "blueprint": "sensor_expanded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "sensor_fastscan",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-bill-turner",
+        "invite_key": "unlock-invite-bill-turner",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "Common knowledge",
+        "meeting": "Gain Friendly status with Alliance. You will also need Allied status with Alioth Independents to get a permit to access the Alioth starsystem.",
+        "unlock": "Provide 50 units of Bromellite.",
+        "reputation": "Craft modules for a major increase. Sell commodities to Turner Metallics Inc."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300030,
+      "name": "Broo Tarquin",
+      "system": "Muang",
+      "star_pos": [
+        17.03125,
+        -172.78125,
+        -3.46875
+      ],
+      "workshop": "Broo's Legacy",
+      "planet": "5 A",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "beamlaser",
+          "blueprint": "beamlaser_overloaded",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "beamlaser_thermalplasmaconversion",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "burstlaser_regenerative",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "burstlaser_thermalplasmaconversion",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_focused",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "pulselaser_thermalplasmaconversion",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_focused",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-broo-tarquin",
+        "invite_key": "unlock-invite-broo-tarquin",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Hera Tani (grade 3-4).",
+        "meeting": "Gain combat rank Competent or higher.",
+        "unlock": "Provide 50 units of Fujin Tea.",
+        "reputation": "Craft modules for a major increase. Hand in bounty vouchers to Broo's Legacy."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300040,
+      "name": "The Sarge",
+      "system": "Beta-3 Tucani",
+      "star_pos": [
+        32.25,
+        -55.1875,
+        23.875
+      ],
+      "workshop": "The Beach",
+      "planet": "2 B A",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "cannon",
+          "blueprint": "cannon_forceimpact",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "collectorlimpetcontroller",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "collectorlimpetcontroller",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "collectorlimpetcontroller",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fueltransferlimpetcontroller",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fueltransferlimpetcontroller",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fueltransferlimpetcontroller",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "hatchbreakerlimpetcontroller",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "hatchbreakerlimpetcontroller",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "hatchbreakerlimpetcontroller",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prospectorlimpetcontroller",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prospectorlimpetcontroller",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prospectorlimpetcontroller",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "railgun_longshot",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-the-sarge",
+        "invite_key": "unlock-invite-the-sarge",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Juri Ishmaak (grade 3-4).",
+        "meeting": "Gain rank Midshipman or higher with the Federal Navy.",
+        "unlock": "Provide 50 units of Aberrant Shield Pattern Analysis.",
+        "reputation": "Craft modules for a major increase. Sell exploration data and hand in bounty vouchers to The Beach."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300050,
+      "name": "Zacariah Nemo",
+      "system": "Yoru",
+      "star_pos": [
+        97.875,
+        -86.90625,
+        64.125
+      ],
+      "workshop": "Nemo Cyber Party Base",
+      "planet": "4",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "fragmentcannonlarge_doublescreaming",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "fragmentcannonsmall_doublescreaming",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_doubleshot",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "multicannon_rapid",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_focused",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-zacariah-nemo",
+        "invite_key": "unlock-invite-zacariah-nemo",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Elvira Martuuk (grade 3-4).",
+        "meeting": "Gain invitation from Party of Yoru.",
+        "unlock": "Provide 25 units of Xihe Companions.",
+        "reputation": "Craft modules for a major increase. Sell commodities to Nemo Cyber Party Base."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300080,
+      "name": "Liz Ryder",
+      "system": "Eurybia",
+      "star_pos": [
+        51.40625,
+        -54.40625,
+        -30.5
+      ],
+      "workshop": "Demolition Unlimited",
+      "planet": "Makalu",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "abrasionblaster",
+          "blueprint": "abrasionblaster_farreaching",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "armour",
+          "blueprint": "armour_advanced",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "armour",
+          "blueprint": "armour_explosive",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "armour",
+          "blueprint": "armour_heavyduty",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "armour",
+          "blueprint": "armour_kinetic",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "armour",
+          "blueprint": "armour_thermic",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "enzymemissilerack",
+          "blueprint": "enzymemissilerack_highyield",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "hullreinforcementpackage",
+          "blueprint": "hullreinforcement_advanced",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "hullreinforcementpackage",
+          "blueprint": "hullreinforcement_explosive",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "hullreinforcementpackage",
+          "blueprint": "hullreinforcement_heavyduty",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "hullreinforcementpackage",
+          "blueprint": "hullreinforcement_kinetic",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "hullreinforcementpackage",
+          "blueprint": "hullreinforcement_thermic",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "minelauncher",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "minelauncher",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "minelauncher",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "minelauncher",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "mininglaser",
+          "blueprint": "mininglaser_longrange",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "missilerack",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "missilerack",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "missilerack",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "missilerack",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "seekermissilerack_drag",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "seekermissilerack_lightweightthermal",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "seekermissileracklarge_exposingmissiles",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "seekermissileracklarge_lockdown",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "seekermissilerackmedium_lockdown",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "torpedopylon",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "torpedopylon",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-liz-ryder",
+        "invite_key": "unlock-invite-liz-ryder",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "Public sources.",
+        "meeting": "Gain Cordial or Friendly status with Eurybia Blue Mafia.",
+        "unlock": "Provide 200 units of Landmines.",
+        "reputation": "Craft modules for a major increase. Sell commodities to Demolition Unlimited."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300090,
+      "name": "Hera Tani",
+      "system": "Kuwemaki",
+      "star_pos": [
+        134.65625,
+        -226.90625,
+        -7.8125
+      ],
+      "workshop": "The Jet's Hole",
+      "planet": "A 3 A",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_balanced",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_highcapacity",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_highfrequency",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_priorityengines",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_prioritysystems",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_priorityweapons",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_shielded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors3c2_supportfocused",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors3c5_supportfocused",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors4c2_supportfocused",
+          "grades": [
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors4c5_supportfocused",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors6c5_supportfocused",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerplant",
+          "blueprint": "powerplant_armoured",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerplant",
+          "blueprint": "powerplant_boosted",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerplant",
+          "blueprint": "powerplant_stealth",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "surfacescanner",
+          "blueprint": "sensor_expanded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-hera-tani",
+        "invite_key": "unlock-invite-hera-tani",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Liz Ryder (grade 3-4).",
+        "meeting": "Gain rank Outsider or higher with the Empire.",
+        "unlock": "Provide 50 units of Kamitra Cigars.",
+        "reputation": "Craft modules for a major increase. Sell commodities to The Jet's Hole."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300100,
+      "name": "Felicity Farseer",
+      "system": "Deciat",
+      "star_pos": [
+        122.625,
+        -0.8125,
+        -47.28125
+      ],
+      "workshop": "Farseer Inc",
+      "planet": "6 A",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "engine",
+          "blueprint": "engine_dirty",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "engine",
+          "blueprint": "engine_reinforced",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "engine",
+          "blueprint": "engine_tuned",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "frameshiftdriveinterdictor",
+          "blueprint": "fsdinterdictor_expanded",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "frameshiftdriveinterdictor",
+          "blueprint": "fsdinterdictor_longrange",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_fastboot",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerplant",
+          "blueprint": "powerplant_armoured",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "powerplant",
+          "blueprint": "powerplant_boosted",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "powerplant",
+          "blueprint": "powerplant_stealth",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_explosive",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_heavyduty",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_kinetic",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_resistive",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_thermic",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "surfacescanner",
+          "blueprint": "sensor_expanded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-felicity-farseer",
+        "invite_key": "unlock-invite-felicity-farseer",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "Public data sources.",
+        "meeting": "Gain exploration rank Scout or higher.",
+        "unlock": "Provide 1 unit of Meta Alloys.",
+        "reputation": "Craft modules for a major increase. Sell exploration data at Farseer Inc."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300110,
+      "name": "Ram Tah",
+      "system": "Meene",
+      "star_pos": [
+        118.78125,
+        -56.4375,
+        -97.1875
+      ],
+      "workshop": "Phoenix Base",
+      "planet": "AB 5 D",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "axmissilerack",
+          "blueprint": "guardianmodule_sturdy",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "cargorack",
+          "blueprint": "cargoracks5c1_extended",
+          "grades": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "cargorack",
+          "blueprint": "cargoracks6c1_extended",
+          "grades": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "chafflauncher",
+          "blueprint": "misc_chaffcapacity",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "chafflauncher",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "chafflauncher",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "chafflauncher",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "collectorlimpetcontroller",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "collectorlimpetcontroller",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "collectorlimpetcontroller",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "electroniccountermeasure",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "electroniccountermeasure",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "electroniccountermeasure",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fueltransferlimpetcontroller",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "fueltransferlimpetcontroller",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "fueltransferlimpetcontroller",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "hatchbreakerlimpetcontroller",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "hatchbreakerlimpetcontroller",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "hatchbreakerlimpetcontroller",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "heatsinklauncher",
+          "blueprint": "misc_heatsinkcapacity",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "heatsinklauncher",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "heatsinklauncher",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "heatsinklauncher",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pointdefence",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pointdefence",
+          "blueprint": "misc_pointdefensecapacity",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "pointdefence",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pointdefence",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prospectorlimpetcontroller",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "prospectorlimpetcontroller",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "prospectorlimpetcontroller",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-ram-tah",
+        "invite_key": "unlock-invite-ram-tah",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Lei Cheung (grade 3-4).",
+        "meeting": "Gain exploration rank Surveyor or higher.",
+        "unlock": "Provide 50 units of Classified Scan Databanks.",
+        "reputation": "Craft modules for a major increase. Sell exploration data to Phoenix Base."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300120,
+      "name": "Lei Cheung",
+      "system": "Laksak",
+      "star_pos": [
+        -21.53125,
+        -6.3125,
+        116.03125
+      ],
+      "workshop": "Trader's Rest",
+      "planet": "A 1",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "prismaticshieldgenerator",
+          "blueprint": "shieldgenerator_kinetic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prismaticshieldgenerator",
+          "blueprint": "shieldgenerator_optimised",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prismaticshieldgenerator",
+          "blueprint": "shieldgenerator_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prismaticshieldgenerator",
+          "blueprint": "shieldgenerator_thermic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_explosive",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_heavyduty",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_kinetic",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_resistive",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_thermic",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "shieldgenerator",
+          "blueprint": "shieldgenerator_kinetic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldgenerator",
+          "blueprint": "shieldgenerator_optimised",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldgenerator",
+          "blueprint": "shieldgenerator_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldgenerator",
+          "blueprint": "shieldgenerator_thermic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "surfacescanner",
+          "blueprint": "sensor_expanded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-lei-cheung",
+        "invite_key": "unlock-invite-lei-cheung",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From The Dweller (grade 3-4).",
+        "meeting": "You have traded in over 50 markets.",
+        "unlock": "Provide 200 units of Gold.",
+        "reputation": "Craft modules for a major increase. Sell commodities to Trader's Rest."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300130,
+      "name": "Petra Olmanova",
+      "system": "Asura",
+      "star_pos": [
+        -9550.28125,
+        -916.65625,
+        19816.1875
+      ],
+      "workshop": "Sanctuary",
+      "planet": "1 A",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "armour",
+          "blueprint": "armour_advanced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "armour",
+          "blueprint": "armour_explosive",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "armour",
+          "blueprint": "armour_heavyduty",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "armour",
+          "blueprint": "armour_kinetic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "armour",
+          "blueprint": "armour_thermic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "autofieldmaintenanceunit",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "chafflauncher",
+          "blueprint": "misc_chaffcapacity",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "chafflauncher",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "chafflauncher",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "chafflauncher",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "electroniccountermeasure",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "electroniccountermeasure",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "electroniccountermeasure",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "heatsinklauncher",
+          "blueprint": "misc_heatsinkcapacity",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "heatsinklauncher",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "heatsinklauncher",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "heatsinklauncher",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "hullreinforcementpackage",
+          "blueprint": "hullreinforcement_advanced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "hullreinforcementpackage",
+          "blueprint": "hullreinforcement_explosive",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "hullreinforcementpackage",
+          "blueprint": "hullreinforcement_heavyduty",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "hullreinforcementpackage",
+          "blueprint": "hullreinforcement_kinetic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "hullreinforcementpackage",
+          "blueprint": "hullreinforcement_thermic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "minelauncher",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "minelauncher",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "minelauncher",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "minelauncher",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "missilerack",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "missilerack",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "missilerack",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "missilerack",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "modulereinforcementpackage",
+          "blueprint": "modulereinforcement_heavyduty",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pointdefence",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "pointdefence",
+          "blueprint": "misc_pointdefensecapacity",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "pointdefence",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "pointdefence",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "seekermissilerack_drag",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "seekermissilerack_lightweightthermal",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "seekermissileracklarge_exposingmissiles",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "seekermissileracklarge_lockdown",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "seekermissilerackmedium_lockdown",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "torpedopylon",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "torpedopylon",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-petra-olmanova",
+        "invite_key": "unlock-invite-petra-olmanova",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Tod McQuinn (grade 3-4).",
+        "meeting": "Gain combat rank Expert or higher.",
+        "unlock": "Provide 200 units of Progenitor Cells.",
+        "reputation": "Craft modules for a major increase."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300140,
+      "name": "Colonel Bris Dekker",
+      "system": "Sol",
+      "star_pos": [
+        0,
+        0,
+        0
+      ],
+      "workshop": "Dekker's Yard",
+      "planet": "Iapetus",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": true,
+      "blueprints": [
+        {
+          "module_type": "frameshiftdriveinterdictor",
+          "blueprint": "fsdinterdictor_expanded",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "frameshiftdriveinterdictor",
+          "blueprint": "fsdinterdictor_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_fastboot",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_shielded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-colonel-bris-dekker",
+        "invite_key": "unlock-invite-colonel-bris-dekker",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Juri Ishmaak (grade 3-4).",
+        "meeting": "Friendly with the Federation.",
+        "unlock": "Provide 1,000,000 or 10,000,000 credits worth of federal combat bonds.",
+        "reputation": "Craft modules for a major increase. Hand in bounty vouchers to Dekker's Yard."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300150,
+      "name": "Marsha Hicks",
+      "system": "Tir",
+      "star_pos": [
+        -9532.9375,
+        -923.4375,
+        19799.125
+      ],
+      "workshop": "The Watchtower",
+      "planet": "A 2",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "cannon",
+          "blueprint": "cannon_forceimpact",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "collectorlimpetcontroller",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "collectorlimpetcontroller",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "collectorlimpetcontroller",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "fragmentcannonlarge_doublescreaming",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "fragmentcannonsmall_doublescreaming",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_doubleshot",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "fuelscoop",
+          "blueprint": "fuelscoop_efficiency",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fuelscoop",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fueltransferlimpetcontroller",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "fueltransferlimpetcontroller",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "fueltransferlimpetcontroller",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "hatchbreakerlimpetcontroller",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "hatchbreakerlimpetcontroller",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "hatchbreakerlimpetcontroller",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "multicannon_rapid",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prospectorlimpetcontroller",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prospectorlimpetcontroller",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prospectorlimpetcontroller",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "refinery",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-marsha-hicks",
+        "invite_key": "unlock-invite-marsha-hicks",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From The Dweller (grade 3-4).",
+        "meeting": "Gain exploration rank Surveyor or higher.",
+        "unlock": "Mine 10 units of Osmium.",
+        "reputation": "Craft modules for a major increase."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300160,
+      "name": "Elvira Martuuk",
+      "system": "Khun",
+      "star_pos": [
+        -171.59375,
+        19.96875,
+        -56.96875
+      ],
+      "workshop": "Long Sight Base",
+      "planet": "5",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "engine",
+          "blueprint": "engine_dirty",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "engine",
+          "blueprint": "engine_reinforced",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "engine",
+          "blueprint": "engine_tuned",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_fastboot",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prismaticshieldgenerator",
+          "blueprint": "shieldgenerator_kinetic",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "prismaticshieldgenerator",
+          "blueprint": "shieldgenerator_optimised",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "prismaticshieldgenerator",
+          "blueprint": "shieldgenerator_reinforced",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "prismaticshieldgenerator",
+          "blueprint": "shieldgenerator_thermic",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "shieldcellbank",
+          "blueprint": "shieldcellbank_rapid",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "shieldcellbank",
+          "blueprint": "shieldcellbank_specialised",
+          "grades": [
+            1
+          ]
+        },
+        {
+          "module_type": "shieldgenerator",
+          "blueprint": "shieldgenerator_kinetic",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "shieldgenerator",
+          "blueprint": "shieldgenerator_optimised",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "shieldgenerator",
+          "blueprint": "shieldgenerator_reinforced",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "shieldgenerator",
+          "blueprint": "shieldgenerator_thermic",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-elvira-martuuk",
+        "invite_key": "unlock-invite-elvira-martuuk",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "Public knowledge",
+        "meeting": "Attain a maximum distance from your career start location of at least 300 light years.",
+        "unlock": "Provide 3 units of Soontill Relics.",
+        "reputation": "Craft modules for a major increase. Sell exploration data at Long Sight Base."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300180,
+      "name": "The Dweller",
+      "system": "Wyrd",
+      "star_pos": [
+        -11.625,
+        31.53125,
+        -3.9375
+      ],
+      "workshop": "Black Hide",
+      "planet": "A 2",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "beamlaser",
+          "blueprint": "beamlaser_overloaded",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "beamlaser_thermalplasmaconversion",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "burstlaser_regenerative",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "burstlaser_thermalplasmaconversion",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_focused",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_balanced",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_highcapacity",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_highfrequency",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_priorityengines",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_prioritysystems",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_priorityweapons",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors3c2_supportfocused",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors3c5_supportfocused",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors4c2_supportfocused",
+          "grades": [
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors4c5_supportfocused",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors6c5_supportfocused",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "pulselaser_thermalplasmaconversion",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_focused",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-the-dweller",
+        "invite_key": "unlock-invite-the-dweller",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "Common knowledge",
+        "meeting": "Deal with at least 5 black markets.",
+        "unlock": "Pay 500,000 credits.",
+        "reputation": "Craft modules for a major increase. Sell commodities to Black Hide."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300200,
+      "name": "Marco Qwent",
+      "system": "Sirius",
+      "star_pos": [
+        6.25,
+        -1.28125,
+        -5.75
+      ],
+      "workshop": "Qwent Research Base",
+      "planet": "Lucifer",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": true,
+      "blueprints": [
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_balanced",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_highcapacity",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_highfrequency",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_priorityengines",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_prioritysystems",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_priorityweapons",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_shielded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors3c2_supportfocused",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors3c5_supportfocused",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors4c2_supportfocused",
+          "grades": [
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors4c5_supportfocused",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors6c5_supportfocused",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "powerplant",
+          "blueprint": "powerplant_armoured",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "powerplant",
+          "blueprint": "powerplant_boosted",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "powerplant",
+          "blueprint": "powerplant_stealth",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-marco-qwent",
+        "invite_key": "unlock-invite-marco-qwent",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Elvira Martuuk (grade 3-4).",
+        "meeting": "Gain invitation from Sirius Corporation.",
+        "unlock": "Provide 25 units of Modular Terminals.",
+        "reputation": "Craft modules for a major increase. Sell commodities to Qwent Research Base."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300210,
+      "name": "Selene Jean",
+      "system": "Kuk",
+      "star_pos": [
+        -21.28125,
+        69.09375,
+        -16.3125
+      ],
+      "workshop": "Prospector's Rest",
+      "planet": "B 3",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "armour",
+          "blueprint": "armour_advanced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "armour",
+          "blueprint": "armour_explosive",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "armour",
+          "blueprint": "armour_heavyduty",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "armour",
+          "blueprint": "armour_kinetic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "armour",
+          "blueprint": "armour_thermic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "hullreinforcementpackage",
+          "blueprint": "hullreinforcement_advanced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "hullreinforcementpackage",
+          "blueprint": "hullreinforcement_explosive",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "hullreinforcementpackage",
+          "blueprint": "hullreinforcement_heavyduty",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "hullreinforcementpackage",
+          "blueprint": "hullreinforcement_kinetic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "hullreinforcementpackage",
+          "blueprint": "hullreinforcement_thermic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "modulereinforcementpackage",
+          "blueprint": "modulereinforcement_heavyduty",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-selene-jean",
+        "invite_key": "unlock-invite-selene-jean",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Tod McQuinn (grade 3-4).",
+        "meeting": "Mine at least 500 tons of ore.",
+        "unlock": "Provide 10 units of Painite.",
+        "reputation": "Craft modules for a major increase. Sell commodities and exploration data to Prospector's Rest."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300220,
+      "name": "Professor Palin",
+      "system": "Arque",
+      "star_pos": [
+        66.5,
+        38.0625,
+        61.125
+      ],
+      "workshop": "Abel Laboratory",
+      "planet": "4 E",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "engine",
+          "blueprint": "engine_dirty",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "engine",
+          "blueprint": "engine_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "engine",
+          "blueprint": "engine_tuned",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_fastboot",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_shielded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-professor-palin",
+        "invite_key": "unlock-invite-professor-palin",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Marco Qwent (grade 3-4).",
+        "meeting": "Attain a maximum distance from your career start location of at least 5,000 light years.",
+        "unlock": "Provide 25 units of Sensor Fragments.",
+        "reputation": "Craft modules for a major increase. Sell exploration data to Abel Laboratory."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300230,
+      "name": "Lori Jameson",
+      "system": "Shinrarta Dezhra",
+      "star_pos": [
+        55.71875,
+        17.59375,
+        27.15625
+      ],
+      "workshop": "Jameson Base",
+      "planet": "A 1",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": true,
+      "blueprints": [
+        {
+          "module_type": "autofieldmaintenanceunit",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "sensor_fastscan",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fuelscoop",
+          "blueprint": "fuelscoop_efficiency",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "fuelscoop",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "sensor_fastscan",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "refinery",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldcellbank",
+          "blueprint": "shieldcellbank_rapid",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "shieldcellbank",
+          "blueprint": "shieldcellbank_specialised",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "surfacescanner",
+          "blueprint": "sensor_expanded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "sensor_fastscan",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-lori-jameson",
+        "invite_key": "unlock-invite-lori-jameson",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Marco Qwent (grade 3-4).",
+        "meeting": "Gain combat rank Dangerous or higher.",
+        "unlock": "Provide 25 units of Kongga Ale.",
+        "reputation": "Craft modules for a major increase. Sell exploration data to Jameson Base."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300250,
+      "name": "Juri Ishmaak",
+      "system": "Giryak",
+      "star_pos": [
+        14.6875,
+        27.65625,
+        108.65625
+      ],
+      "workshop": "Pater's Memorial",
+      "planet": "2 A",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "abrasionblaster",
+          "blueprint": "abrasionblaster_farreaching",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "sensor_fastscan",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "enzymemissilerack",
+          "blueprint": "enzymemissilerack_highyield",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "sensor_fastscan",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "minelauncher",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "minelauncher",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "minelauncher",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "minelauncher",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "mininglaser",
+          "blueprint": "mininglaser_longrange",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "missilerack",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "missilerack",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "missilerack",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "missilerack",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "seekermissilerack_drag",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "seekermissilerack_lightweightthermal",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "seekermissileracklarge_exposingmissiles",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "seekermissileracklarge_lockdown",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "seekermissilerackmedium_lockdown",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "seekermissilerack",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "surfacescanner",
+          "blueprint": "sensor_expanded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "torpedopylon",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "torpedopylon",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "sensor_fastscan",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-juri-ishmaak",
+        "invite_key": "unlock-invite-juri-ishmaak",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Felicity Farseer (grade 3-4).",
+        "meeting": "Earn more than 50 combat bonds.",
+        "unlock": "Provide 100,000 or 1,000,000 credits worth of combat bonds.",
+        "reputation": "Craft modules for a major increase. Hand in bounty vouchers or combat bonds to Pater's Memorial."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300260,
+      "name": "Tod 'The Blaster' McQuinn",
+      "system": "Wolf 397",
+      "star_pos": [
+        40,
+        79.21875,
+        -10.40625
+      ],
+      "workshop": "Trophy Camp",
+      "planet": "Trus Madi",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "cannon",
+          "blueprint": "cannon_forceimpact",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "cannon",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "fragmentcannonlarge_doublescreaming",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "fragmentcannonsmall_doublescreaming",
+          "grades": [
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_doubleshot",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fragmentcannon",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "multicannon_rapid",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "multi_cannon",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "railgun_longshot",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-tod-the-blaster-mcquinn",
+        "invite_key": "unlock-invite-tod-the-blaster-mcquinn",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "Common knowledge.",
+        "meeting": "Earn more than 15 bounty vouchers.",
+        "unlock": "Provide 100,000 credits worth of bounty vouchers.",
+        "reputation": "Craft modules for a major increase. Hand in Alliance bounty vouchers to Trophy Camp."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300270,
+      "name": "Tiana Fortune",
+      "system": "Achenar",
+      "star_pos": [
+        67.5,
+        -119.46875,
+        24.84375
+      ],
+      "workshop": "Fortune's Loss",
+      "planet": "4 A",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": true,
+      "blueprints": [
+        {
+          "module_type": "cargorack",
+          "blueprint": "cargoracks5c1_extended",
+          "grades": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "cargorack",
+          "blueprint": "cargoracks6c1_extended",
+          "grades": [
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "sensor_fastscan",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "collectorlimpetcontroller",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "collectorlimpetcontroller",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "collectorlimpetcontroller",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "frameshiftdriveinterdictor",
+          "blueprint": "fsdinterdictor_expanded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "frameshiftdriveinterdictor",
+          "blueprint": "fsdinterdictor_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fueltransferlimpetcontroller",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fueltransferlimpetcontroller",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fueltransferlimpetcontroller",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "hatchbreakerlimpetcontroller",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "hatchbreakerlimpetcontroller",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "hatchbreakerlimpetcontroller",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "sensor_fastscan",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prospectorlimpetcontroller",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prospectorlimpetcontroller",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prospectorlimpetcontroller",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "surfacescanner",
+          "blueprint": "sensor_expanded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "sensor_fastscan",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-tiana-fortune",
+        "invite_key": "unlock-invite-tiana-fortune",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Hera Tani (grade 3-4).",
+        "meeting": "Friendly with the Empire.",
+        "unlock": "Provide 50 units of Decoded Emission Data.",
+        "reputation": "Craft modules for a major increase. Sell commodities to Fortune's Loss."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300280,
+      "name": "Mel Brandon",
+      "system": "Luchtaine",
+      "star_pos": [
+        -9523.3125,
+        -914.46875,
+        19825.90625
+      ],
+      "workshop": "The Brig",
+      "planet": "A 1 C",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "beamlaser",
+          "blueprint": "beamlaser_overloaded",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "beamlaser_thermalplasmaconversion",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "beamlaser",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "burstlaser_regenerative",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "burstlaser_thermalplasmaconversion",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_focused",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "burstlaser",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "engine",
+          "blueprint": "engine_dirty",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "engine",
+          "blueprint": "engine_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "engine",
+          "blueprint": "engine_tuned",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "frameshiftdriveinterdictor",
+          "blueprint": "fsdinterdictor_expanded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "frameshiftdriveinterdictor",
+          "blueprint": "fsdinterdictor_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_fastboot",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prismaticshieldgenerator",
+          "blueprint": "shieldgenerator_kinetic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prismaticshieldgenerator",
+          "blueprint": "shieldgenerator_optimised",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prismaticshieldgenerator",
+          "blueprint": "shieldgenerator_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "prismaticshieldgenerator",
+          "blueprint": "shieldgenerator_thermic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "pulselaser_thermalplasmaconversion",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_focused",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "pulselaser",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_explosive",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_heavyduty",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_kinetic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_resistive",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldbooster",
+          "blueprint": "shieldbooster_thermic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldcellbank",
+          "blueprint": "shieldcellbank_rapid",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "shieldcellbank",
+          "blueprint": "shieldcellbank_specialised",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "shieldgenerator",
+          "blueprint": "shieldgenerator_kinetic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldgenerator",
+          "blueprint": "shieldgenerator_optimised",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldgenerator",
+          "blueprint": "shieldgenerator_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "shieldgenerator",
+          "blueprint": "shieldgenerator_thermic",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-mel-brandon",
+        "invite_key": "unlock-invite-mel-brandon",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Elvira Martuuk (grade 3-4).",
+        "meeting": "Gain invitation from Colonia Council.",
+        "unlock": "Provide 100,000 credits worth of bounty vouchers.",
+        "reputation": "Craft modules for a major increase."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300290,
+      "name": "Etienne Dorn",
+      "system": "Los",
+      "star_pos": [
+        -9509.34375,
+        -886.3125,
+        19820.125
+      ],
+      "workshop": "Kraken's Retreat",
+      "planet": "A 2 B",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "sensor_fastscan",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "cargoscanner",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "sensor_fastscan",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "killwarrantscanner",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "lifesupport",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_efficient",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_focused",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_overcharged",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_rapidfire",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "plasmaaccelerator",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributor_balanced",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors3c2_supportfocused",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors3c5_supportfocused",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors4c2_supportfocused",
+          "grades": [
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors4c5_supportfocused",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerdistributor",
+          "blueprint": "powerdistributors6c5_supportfocused",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerplant",
+          "blueprint": "powerplant_armoured",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerplant",
+          "blueprint": "powerplant_boosted",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "powerplant",
+          "blueprint": "powerplant_stealth",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "railgun_longshot",
+          "grades": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "weapon_highcapacity",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "weapon_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "weapon_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "weapon_shortrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "railgun",
+          "blueprint": "weapon_sturdy",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "sensor",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "surfacescanner",
+          "blueprint": "sensor_expanded",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "misc_lightweight",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "misc_reinforced",
+          "grades": [
+            1,
+            2,
+            4
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "misc_shielded",
+          "grades": [
+            1,
+            2,
+            4
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "sensor_fastscan",
+          "grades": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "sensor_longrange",
+          "grades": [
+            1,
+            2,
+            4
+          ]
+        },
+        {
+          "module_type": "wakescanner",
+          "blueprint": "sensor_wideangle",
+          "grades": [
+            1,
+            2,
+            4
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-etienne-dorn",
+        "invite_key": "unlock-invite-etienne-dorn",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Liz Ryder (grade 3-4).",
+        "meeting": "Gain trade rank Dealer or higher.",
+        "unlock": "Provide 25 units of Occupied Escape Pods.",
+        "reputation": "Craft modules for a major increase."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 300300,
+      "name": "Chloe Sedesi",
+      "system": "Shenve",
+      "star_pos": [
+        351.96875,
+        -373.46875,
+        -711.09375
+      ],
+      "workshop": "Cinder Dock",
+      "planet": "A 6",
+      "market_id": null,
+      "on_foot": false,
+      "permit_required": false,
+      "blueprints": [
+        {
+          "module_type": "engine",
+          "blueprint": "engine_dirty",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "engine",
+          "blueprint": "engine_reinforced",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "engine",
+          "blueprint": "engine_tuned",
+          "grades": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_fastboot",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_longrange",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "module_type": "fsd",
+          "blueprint": "fsd_shielded",
+          "grades": [
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "unlock": {
+        "requirement_key": "unlock-chloe-sedesi",
+        "invite_key": "unlock-invite-chloe-sedesi",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Marco Qwent (grade 3-4).",
+        "meeting": "Attain a maximum distance from your career start location of at least 5,000 light years.",
+        "unlock": "Provide 25 units of Sensor Fragments.",
+        "reputation": "Craft modules for a major increase. Sell exploration data to Cinder Dock."
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 400001,
+      "name": "Jude Navarro",
+      "system": "Aurai",
+      "star_pos": [
+        0.9375,
+        -47.8125,
+        46.28125
+      ],
+      "workshop": "Marshall's Drift",
+      "planet": "1 A",
+      "market_id": null,
+      "on_foot": true,
+      "permit_required": false,
+      "blueprints": [],
+      "unlock": {
+        "requirement_key": "unlock-jude-navarro",
+        "invite_key": "unlock-invite-jude-navarro",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "Common knowledge.",
+        "meeting": "Complete 10 Restore or Reactivation missions.",
+        "unlock": "Provide 5 units of Genetic Repair Meds.",
+        "reputation": ""
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 400002,
+      "name": "Domino Green",
+      "system": "Orishis",
+      "star_pos": [
+        -31,
+        93.96875,
+        -3.5625
+      ],
+      "workshop": "The Jackrabbit",
+      "planet": "4",
+      "market_id": null,
+      "on_foot": true,
+      "permit_required": false,
+      "blueprints": [],
+      "unlock": {
+        "requirement_key": "unlock-domino-green",
+        "invite_key": "unlock-invite-domino-green",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "Common knowledge.",
+        "meeting": "Travel at least 100 light years in shuttles.",
+        "unlock": "Provide 5 doses of Push.",
+        "reputation": ""
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 400003,
+      "name": "Hero Ferrari",
+      "system": "Siris",
+      "star_pos": [
+        131.0625,
+        -73.59375,
+        -11.25
+      ],
+      "workshop": "Nevermore Terrace",
+      "planet": "5 C",
+      "market_id": null,
+      "on_foot": true,
+      "permit_required": false,
+      "blueprints": [],
+      "unlock": {
+        "requirement_key": "unlock-hero-ferrari",
+        "invite_key": "unlock-invite-hero-ferrari",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "Common knowledge.",
+        "meeting": "Complete 10 surface conflict zones.",
+        "unlock": "Provide 15 Settlement Defence Plans.",
+        "reputation": ""
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 400004,
+      "name": "Kit Fowler",
+      "system": "Capoya",
+      "star_pos": [
+        -60.65625,
+        82.4375,
+        -45.0625
+      ],
+      "workshop": "The Last Call",
+      "planet": "2",
+      "market_id": null,
+      "on_foot": true,
+      "permit_required": false,
+      "blueprints": [],
+      "unlock": {
+        "requirement_key": "unlock-kit-fowler",
+        "invite_key": "unlock-invite-kit-fowler",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Domino Green",
+        "meeting": "Sell 10 Opinion polls to bartenders.",
+        "unlock": "Provide 5 units of Surveillance equipment.",
+        "reputation": ""
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 400005,
+      "name": "Wellington Beck",
+      "system": "Jolapa",
+      "star_pos": [
+        100.1875,
+        -41.34375,
+        -78
+      ],
+      "workshop": "Beck Facility",
+      "planet": "6 A",
+      "market_id": null,
+      "on_foot": true,
+      "permit_required": false,
+      "blueprints": [],
+      "unlock": {
+        "requirement_key": "unlock-wellington-beck",
+        "invite_key": "unlock-invite-wellington-beck",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Hero Ferrari",
+        "meeting": "Sell a total of 25 Multimedia Entertainment, Classic Entertainment and Cat media to bartenders.",
+        "unlock": "Provide 5 units of Insight Entertainment suites.",
+        "reputation": ""
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 400006,
+      "name": "Terra Velasquez",
+      "system": "Shou Xing",
+      "star_pos": [
+        -16.28125,
+        -44.53125,
+        94.375
+      ],
+      "workshop": "Rascal's Choice",
+      "planet": "1",
+      "market_id": null,
+      "on_foot": true,
+      "permit_required": false,
+      "blueprints": [],
+      "unlock": {
+        "requirement_key": "unlock-terra-velasquez",
+        "invite_key": "unlock-invite-terra-velasquez",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Jude Navarro",
+        "meeting": "Complete 6 Covert theft and Covert heist missions.",
+        "unlock": "Provide 15 Financial projections.",
+        "reputation": ""
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 400007,
+      "name": "Uma Laszlo",
+      "system": "Xuane",
+      "star_pos": [
+        93.875,
+        -9.25,
+        -32.53125
+      ],
+      "workshop": "Laszlo's Resolve",
+      "planet": "A 3",
+      "market_id": null,
+      "on_foot": true,
+      "permit_required": false,
+      "blueprints": [],
+      "unlock": {
+        "requirement_key": "unlock-uma-laszlo",
+        "invite_key": "unlock-invite-uma-laszlo",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Wellington Beck",
+        "meeting": "Reach Unfriendly reputation or lower with Sirius Corporation.",
+        "unlock": "",
+        "reputation": ""
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 400008,
+      "name": "Oden Geiger",
+      "system": "Candiaei",
+      "star_pos": [
+        -113.5,
+        -4.9375,
+        66.84375
+      ],
+      "workshop": "Ankh's Promise",
+      "planet": "9 C",
+      "market_id": null,
+      "on_foot": true,
+      "permit_required": false,
+      "blueprints": [],
+      "unlock": {
+        "requirement_key": "unlock-oden-geiger",
+        "invite_key": "unlock-invite-oden-geiger",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Terra Velasquez",
+        "meeting": "Sell a total of 20 Biological sample, Employee genetic data and Genetic research to bartenders.",
+        "unlock": "",
+        "reputation": ""
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 400009,
+      "name": "Yarden Bond",
+      "system": "Bayan",
+      "star_pos": [
+        -19.96875,
+        117.625,
+        -90.46875
+      ],
+      "workshop": "Salamander Bank",
+      "planet": "7 B",
+      "market_id": null,
+      "on_foot": true,
+      "permit_required": false,
+      "blueprints": [],
+      "unlock": {
+        "requirement_key": "unlock-yarden-bond",
+        "invite_key": "unlock-invite-yarden-bond",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Kit Fowler",
+        "meeting": "Sell 8 Smear campaign plans to bartenders.",
+        "unlock": "",
+        "reputation": ""
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 400010,
+      "name": "Baltanos",
+      "system": "DERISO",
+      "star_pos": [
+        -9520.3125,
+        -909.5,
+        19808.75
+      ],
+      "workshop": "The Divine Apparatus",
+      "planet": "3 A",
+      "market_id": null,
+      "on_foot": true,
+      "permit_required": false,
+      "blueprints": [],
+      "unlock": {
+        "requirement_key": "unlock-baltanos",
+        "invite_key": "unlock-invite-baltanos",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "Common knowledge",
+        "meeting": "Reach Friendly reputation with the Colonia Council.",
+        "unlock": "Provide 10 Faction Associates data.",
+        "reputation": ""
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 400011,
+      "name": "Eleanor Bresa",
+      "system": "Desy",
+      "star_pos": [
+        -9534.21875,
+        -912.21875,
+        19792.375
+      ],
+      "workshop": "Bresa Modifications",
+      "planet": "7 A",
+      "market_id": null,
+      "on_foot": true,
+      "permit_required": false,
+      "blueprints": [],
+      "unlock": {
+        "requirement_key": "unlock-eleanor-bresa",
+        "invite_key": "unlock-invite-eleanor-bresa",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "Common knowledge.",
+        "meeting": "Visit 5 settlements in the Colonia system.",
+        "unlock": "Provide 10 Digital Designs.",
+        "reputation": ""
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 400012,
+      "name": "Rosa Dayette",
+      "system": "Kojeara",
+      "star_pos": [
+        -9513.09375,
+        -908.84375,
+        19814.28125
+      ],
+      "workshop": "Rosa's Shop",
+      "planet": "4 B",
+      "market_id": null,
+      "on_foot": true,
+      "permit_required": false,
+      "blueprints": [],
+      "unlock": {
+        "requirement_key": "unlock-rosa-dayette",
+        "invite_key": "unlock-invite-rosa-dayette",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "Common knowledge.",
+        "meeting": "Sell a total of 10 Culinary Recipes or Cocktail Recipes to stations in Colonia.",
+        "unlock": "Provide 10 units of Manufacturing Instructions data.",
+        "reputation": ""
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    },
+    {
+      "id": 400013,
+      "name": "Yi Shen",
+      "system": "Einheriar",
+      "star_pos": [
+        -9557.8125,
+        -880.1875,
+        19801.5625
+      ],
+      "workshop": "Eidolon Hold",
+      "planet": "1 A",
+      "market_id": null,
+      "on_foot": true,
+      "permit_required": false,
+      "blueprints": [],
+      "unlock": {
+        "requirement_key": "unlock-yi-shen",
+        "invite_key": "unlock-invite-yi-shen",
+        "contribution": null
+      },
+      "source_text": {
+        "discovery": "From Baltanos, Eleanor Bresa and Rosa Dayette",
+        "meeting": "Complete referral tasks for Baltanos, Eleanor Bresa and Rosa Dayette.",
+        "unlock": "",
+        "reputation": ""
+      },
+      "source": "eddiscovery@7d30920:Engineers.cs + eddi@d3b964e:Engineer.cs ids (Apache-2.0)",
+      "verified": false
+    }
+  ]
+}

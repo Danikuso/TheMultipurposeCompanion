@@ -51,3 +51,35 @@ Las wikis y APIs se han buscado tal como pidió el propietario. No se han copiad
 2. Preparar la enmienda concreta del plan para cobertura completa, coste en Merc Coins, identificadores compartidos y grados por módulo/ingeniero; no inventar ni omitir costes.
 3. Tras aprobación de las interfaces que cambien, conversión reproducible con revisión por fila, auditoría de cobertura y pruebas de recetas reales. Mantener `verified:false` y nombres sin traducción conocida como pendientes.
 4. Continuar entretanto Tasks 26–27; F4 no se declara completa con los catálogos provisionales.
+
+## Cobertura medida por el importador (C1, 2026-10-22)
+
+Resultado de `scripts/import-engineering-catalogue.mjs` sobre el snapshot fijado (EDDiscovery `7d30920`, EDDI `d3b964e`; los 9 archivos coinciden byte a byte con el SHA-256 de las URL con commit). Sustituye a las cifras exploratorias de arriba (924/895/83/46/105), que eran controles parciales: el recuento definitivo es el de esta tabla.
+
+| Clase | Constructores |
+|---|---|
+| `ship_recipe` | 943 |
+| `ship_experimental` | 83 |
+| `ship_variant` | 15 |
+| `out_of_scope` | 116 (61 compras del Tech Broker, 24 niveles y 31 mods de traje/arma Odyssey) |
+| `obsolete` | 2 (`UnknownType`, «Guardian Upgrade Obsolete») |
+| `unresolved` | 8 |
+| **Total** | **1.167 (100 % clasificado)** |
+
+- Recetas de nave: 88 blueprints, 206 contextos (blueprint × módulo), 983 filas blueprint-módulo-grado (los arrays expanden, p. ej. `weapon_highcapacity` MissileRack + SeekerMissileRack); 182 con cadena desde G1 (`stock`) y 24 que empiezan en G2+ (`existing_only`). 47 tipos de módulo. Sin huecos de grado dentro de ningún contexto.
+- Experimentales: 83 filas, 83 claves, 115 expansiones módulo-experimental. Variantes: 15 (AX Missile Rack 8, Cargo Rack 4, Abrasion Blaster 1, Mining Laser 1, Surface Scanner 1).
+- Merc Coins: 115 filas de receta con coste (frente a las 105 del patrón parcial), 1.899 monedas en la entrada y 1.899 en la salida, ninguna perdida. Además las 4 filas `unresolved` de Long range detailed suman 40 monedas, conservadas en el manifiesto.
+- Ingenieros: 38 de EDDiscovery frente a 38 pares EDDI, 38 IDs únicos, 0 ausencias, 0 alias; 300100 Felicity Farseer y 300160 Elvira Martuuk preservados. 686 capacidades (ingeniero, módulo, blueprint) con el conjunto exacto de grados.
+- Ingredientes: 234 abreviaturas usadas, todas con correspondencia única en `MCMRType.cs`. Contra el `materials.json` activo faltan 2 materiales Thargoid (`tg_abrasion03`, `tg_causticcrystal`): C8 debe añadirlos antes de activar el catálogo.
+- Alias: 380 alias de contexto sin ambigüedad; 5 candidatos derivados de `FindEngineeringFDName` son ambiguos dentro de su módulo y se excluyen (se verán como «sin datos»): `cargorack_extended`, `fragmentcannon_doublescreaming`, `lifesupport_lightweight`, `powerdistributor_supportfocused`, `seekermissilerack_lockdown`.
+
+### Filas `unresolved` (bloquean la activación completa en C8)
+
+- `RecipesEngineering.cs:494-497`: `detailedsurfacescanner_longrange` G2-G5 (Etienne Dorn, 5/5/10/20 Merc Coins) con `DiscoveryScanner`, un tipo no comprable que no es un módulo concreto de nave. Probable error de tipo en la fuente (el Detailed Surface Scanner es `SurfaceScanner`), sin evidencia para corregirlo.
+- `RecipesEngineering.cs:1377, 1388, 1407, 1429`: experimentales `special_weapon_toughened/efficient/damage/lightweight` con el tipo genérico `Weapon`, sin lista de armas aplicables.
+
+### Datos que requieren decisión de datos antes de declarar jugabilidad completa
+
+- 16 filas `ship_recipe` de CausticSinkLauncher tienen el ingeniero «tbd» en la fuente (sin ingeniero asignado) y 2 filas Cargo Rack Extended G5 tienen ingeniero vacío con 1 Merc Coin; se conservan sin inventar proveedor.
+- `weapon_lightweight` aparece asociado a `LifeSupport` (filas 747-751) junto a `misc_lightweight`; parece un error de la fuente, pero no hay evidencia para descartarlo y se importa tal cual.
+- Las 61 compras del Tech Broker no se importan como recetas (adquisición, no ingeniería); si se quieren como variantes visibles, hace falta decisión del propietario.
