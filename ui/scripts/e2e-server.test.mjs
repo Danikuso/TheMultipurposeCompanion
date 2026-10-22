@@ -44,7 +44,7 @@ test('missing prebuilt binary owns the real process, restarts SQLite and release
   const fakePort = port + 1;
   assert.equal(await available(port), true);
   assert.equal(await available(fakePort), true);
-  const backup = path.join(os.tmpdir(), `tmc-headless-fallback-${process.pid}.exe`);
+  const backup = path.join(path.dirname(binary), `tmc-headless-fallback-${process.pid}.exe`);
   const hadBinary = fs.existsSync(binary);
   if (hadBinary) fs.renameSync(binary, backup);
   let harness;
