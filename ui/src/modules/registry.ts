@@ -12,6 +12,7 @@ import { carrierPanels } from './carrier';
 import { colonisationPanels } from './colonisation';
 import { powerplayPanels } from './powerplay';
 import { bgsPanels } from './bgs';
+import { accountsPanels } from './accounts';
 
 export interface UiModuleDef {
   id: string;
@@ -93,5 +94,11 @@ export const modules: UiModuleDef[] = [
     icon: 'network',
     titleKey: 'nav-bgs',
     panels: bgsPanels,
+  },
+  {
+    id: 'accounts',
+    icon: 'globe',
+    titleKey: 'nav-accounts',
+    panels: accountsPanels,
   },
 ];
