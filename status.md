@@ -2,17 +2,31 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-24 00:18 (Europe/Madrid) · Antigravity
-- **Fase actual:** F6 — Cuentas y Sincronización Externa (EDDN, EDSM, Inara, Frontier CAPI) [Fase completada, verificada y fusionada en `main`].
-- **Spec activa:** [`docs/specs/2026-10-23-tmc-f6-cuentas-sincronizacion-design.md`](docs/specs/2026-10-23-tmc-f6-cuentas-sincronizacion-design.md) — Cuentas y sincronización externa.
-- **Plan activo:** [`docs/plans/2026-10-23-tmc-f6-cuentas-sincronizacion.md`](docs/plans/2026-10-23-tmc-f6-cuentas-sincronizacion.md) — 12 tareas en 7 bloques.
+- **Última actualización:** 2026-10-24 01:30 (Europe/Madrid) · Antigravity
+- **Fase actual:** Mejora Ergonómica Global — Tarjetas Compactas, Desplegables y Acordeones por Defecto («TMC Glass HUD»).
+- **Spec activa:** [`docs/specs/2026-10-24-tmc-ui-tarjetas-compactas-desplegables-design.md`](docs/specs/2026-10-24-tmc-ui-tarjetas-compactas-desplegables-design.md) — Tarjetas compactas, desplegables y acordeones por defecto.
+- **Plan activo:** [`docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md`](docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md) — 7 tareas en 6 bloques.
 - **Rama de trabajo:** `main`
 
 ## Puntero actual
 
-- **Tarea:** Cierre y fusión de F6 completados en `main`.
-- **Último paso completado:** Fusión formal de `fase/f6-cuentas-sincronizacion` en `main` (`--no-ff`). Verificación integral de calidad: 394 tests Vitest PASS, svelte-check 0 errores/0 advertencias, suite completa de Rust en workspace PASS (1.400+ tests), `cargo clippy --workspace --all-targets -- -D warnings` limpio (0 warnings), `cargo fmt --all --check` limpio, build de producción `ui/dist/` OK y `target/debug/TMC.exe` compilado exitosamente.
-- **Siguiente acción:** Definición o inicio de la siguiente fase según la hoja de ruta de la arquitectura (§13).
+- **Tarea:** Tarea 1 completada (`ShipPanel.svelte` con filtro de no ingenierizables, selector desplegable `<select data-testid="ship-module-select">` y acordeón colapsado por defecto). Spec y Plan formalizados.
+- **Último paso completado:** Verificación integral de tests: 394 tests Vitest PASS (107/107 en ingeniería), svelte-check 0 errores/0 advertencias, clippy limpio, tests Rust en workspace PASS (817 en `tmc-modules`), `dist/` reconstruido y `target/debug/TMC.exe` compilado exitosamente.
+- **Siguiente acción:** Aprobación del propietario para continuar con las Tareas 2 a 7 del plan (Materiales, Cuentas/Flota, Misiones, Mercado, Carrier/Colonización/Powerplay e i18n).
+
+## Tareas de Tarjetas Compactas y Desplegables («TMC Glass HUD»)
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 1 | `ShipPanel.svelte`: filtro no ingenierizables, selector desplegable y acordeón | ✅ hecha | `486cf86` | Oculta módulos no ingenierizables, `<select>` compacto, tarjeta activa y lista colapsada por defecto |
+| 2 | `MaterialsPanel.svelte`: selector compacto de categorías y buscador colapsable | ⬜ pendiente | — | Selector de categoría y colapso de inventarios |
+| 3 | `AccountsPanel.svelte`: flota remota de CAPI en selector desplegable y colapso de logs | ⬜ pendiente | — | Reemplazo de cascada de naves por desplegable y tarjeta activa |
+| 4 | `MissionsPanel.svelte`, `MassacrePanel`, `PassengersPanel`: selectores y colapso | ⬜ pendiente | — | Selector de misión/objetivo/cabina y tarjeta condensada |
+| 5 | `MarketPanel.svelte`, `CargoPanel`, `SellPanel`: selector compacto y catálogo colapsable | ⬜ pendiente | — | Top 5 mercancías y acordeón de catálogo completo |
+| 6 | `CarrierOverviewPanel`, `ColonisationProgressPanel`, `PowerplayPanel`, `BgsPanel` | ⬜ pendiente | — | Desplegables de servicios, proyectos de colonización y potencias |
+| 7 | Claves i18n en 5 idiomas, verificación global y build | ⬜ pendiente | — | Claves de acordeón y verificación de suite y memoria |
 
 ## Tareas de F6 (Cuentas y Sincronización Externa)
 
@@ -391,6 +405,14 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-24 01:30 (Europe/Madrid) · Antigravity · Implementación de mejora ergonómica en ingeniería y plan de compacidad global:
+  - `ShipPanel.svelte`: Módulos no ingenierizables filtrados y excluidos del renderizado. Selector desplegable compacto `<select data-testid="ship-module-select">` con el módulo activo y sus datos clave.
+  - Tarjeta activa compacta con slot, nombre, plano, grado y calidad. Acordeón de lista completa colapsado por defecto (`[ ▼ Ver lista ({total}) ]`).
+  - Actualizado test 364 en `engineering.test.ts` (verifica exclusión de módulos no soportados) y añadido test para el selector desplegable y alternancia de colapsado.
+  - Sistema de diseño: añadido §4.8 a `docs/design-system-glass-hud.md` estableciendo la norma de tarjetas compactas y desplegables por defecto en toda la cabina.
+  - Creadas spec formal `docs/specs/2026-10-24-tmc-ui-tarjetas-compactas-desplegables-design.md` y plan de ejecución `docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md` (7 tareas en 6 bloques abarcando todos los módulos).
+  - Verificación: 394/394 Vitest PASS (107/107 en ingeniería), svelte-check 0 errores/0 avisos, clippy limpio, 817 tests de `tmc-modules` PASS, build de producción `ui/dist` OK y `target/debug/TMC.exe` compilado exitosamente.
 
 - 2026-10-24 00:48 (Europe/Madrid) · Antigravity · Aplicación del cambio estético con iconografía oficial del juego (`b9a7944`):
   - Biblioteca de componentes vectoriales `ui/src/lib/icons/` (`PowerIcon`, `SuperpowerIcon`, `ManufacturerIcon`, `StationIcon`, `GradeBadge`, `index.ts`).
