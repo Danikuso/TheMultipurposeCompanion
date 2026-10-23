@@ -2,17 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-23 12:55 (Europe/Madrid) · Antigravity
-- **Fase actual:** F6 — Cuentas y Sincronización Externa (EDDN, EDSM, Inara, Frontier CAPI).
+- **Última actualización:** 2026-10-24 00:17 (Europe/Madrid) · Antigravity
+- **Fase actual:** F6 — Cuentas y Sincronización Externa (EDDN, EDSM, Inara, Frontier CAPI) [Fase completada y verificada].
 - **Spec activa:** [`docs/specs/2026-10-23-tmc-f6-cuentas-sincronizacion-design.md`](docs/specs/2026-10-23-tmc-f6-cuentas-sincronizacion-design.md) — Cuentas y sincronización externa.
 - **Plan activo:** [`docs/plans/2026-10-23-tmc-f6-cuentas-sincronizacion.md`](docs/plans/2026-10-23-tmc-f6-cuentas-sincronizacion.md) — 12 tareas en 7 bloques.
 - **Rama de trabajo:** `fase/f6-cuentas-sincronizacion`
 
 ## Puntero actual
 
-- **Tarea:** Tarea 1 de F6 — Modelos de sincronización, credenciales y topic de estado (`tmc-model`).
-- **Último paso completado:** Fase F5 fusionada formalmente en `main` (`chore: fusionar fase/f5-carrier-colonizacion-powerplay en main`), creada rama `fase/f6-cuentas-sincronizacion`, maqueta interactiva HTML generada (`f6_accounts_sync_mockups.html`), y spec y plan de F6 redactados.
-- **Siguiente acción:** Aprobación del propietario para iniciar la ejecución TDD tarea a tarea de F6 (comenzando por Tarea 1 en `tmc-model`).
+- **Tarea:** Tarea 12 de F6 completada — Verificación integral, calidad, footprint y build (`workspace`).
+- **Último paso completado:** Verificación integral de F6: 394 tests Vitest PASS, svelte-check 0 errores/0 advertencias, suite completa de Rust en workspace PASS (1.400+ tests), `cargo clippy --workspace --all-targets -- -D warnings` limpio (0 warnings), `cargo fmt --all --check` limpio, build de producción `ui/dist/` OK y `target/debug/TMC.exe` compilado exitosamente.
+- **Siguiente acción:** Fusión de la rama `fase/f6-cuentas-sincronizacion` en `main`.
 
 ## Tareas de F6 (Cuentas y Sincronización Externa)
 
@@ -20,18 +20,18 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 | # | Tarea | Estado | Commit | Notas |
 |---|---|---|---|---|
-| 1 | Modelos de sincronización, credenciales y topic de estado (`tmc-model`) | ⬜ pendiente | — | `AccountSettings`, `AccountsStatusTopic`, payloads de EDDN, Inara, CAPI |
-| 2 | Emisor de esquemas oficiales a gateway EDDN (`tmc-net`) | ⬜ pendiente | — | HTTP POST `commodity/3`, `journal/1`, `outfitting/2`, `shipyard/2`, sal local |
-| 3 | Cliente de sincronización EDSM (`tmc-net`) | ⬜ pendiente | — | `set-logs`, `set-commander-ranks`, créditos, materiales, limitador 10/10s |
-| 4 | Cliente Inara InAPI v1 con lotes y rate limit estricto (`tmc-net`) | ⬜ pendiente | — | InAPI v1, batching de eventos, limitador estricto de 2 req/min |
-| 5 | Flujo OAuth2 PKCE y cliente Frontier CAPI (`tmc-net`) | ⬜ pendiente | — | S256 PKCE, canje y refresco de tokens, consulta de flota remota |
-| 6 | Almacenamiento seguro de credenciales y tokens en SQLite (`tmc-store`) | ⬜ pendiente | — | Tabla `accounts_credentials` para claves, tokens OAuth y sal de anonimización |
-| 7 | Endpoint callback axum para OAuth2 de Frontier (`tmc-app`) | ⬜ pendiente | — | Rutas `/api/auth/frontier/login` y callback loopback local |
-| 8 | Módulo `accounts` en Rust (`tmc-modules`) | ⬜ pendiente | — | Orquestación de envíos, filtrado estricto Legacy y topic `accounts.status` |
-| 9 | Localización completa en 5 idiomas (`locales/`) | ⬜ pendiente | — | `accounts.ftl` en es/en/fr/de/pt, privacidad y cuotas de red |
-| 10 | Componentes y panel `AccountsPanel.svelte` (`ui/`) | ⬜ pendiente | — | 4 tarjetas Glass HUD, métricas de sesión, medidor de 2 req/min y flota |
-| 11 | Integración en el Shell y navegación (`ui/`) | ⬜ pendiente | — | Pestaña de Cuentas, registro en catálogo y sincronización con `UI_PANELS` |
-| 12 | Verificación integral, calidad, footprint y build | ⬜ pendiente | — | Vitest, svelte-check, tests Rust workspace, build `dist/` y `TMC.exe` |
+| 1 | Modelos de sincronización, credenciales y topic de estado (`tmc-model`) | ✅ hecha | `14453df` | `AccountSettings`, `AccountsStatusTopic`, payloads de EDDN, Inara, CAPI |
+| 2 | Emisor de esquemas oficiales a gateway EDDN (`tmc-net`) | ✅ hecha | `25ea553` | HTTP POST `commodity/3`, `journal/1`, `outfitting/2`, `shipyard/2`, sal local |
+| 3 | Cliente de sincronización EDSM (`tmc-net`) | ✅ hecha | `b377acd` | `set-logs`, `set-commander-ranks`, créditos, materiales, limitador 10/10s |
+| 4 | Cliente Inara InAPI v1 con lotes y rate limit estricto (`tmc-net`) | ✅ hecha | `50788b9` | InAPI v1, batching de eventos, limitador estricto de 2 req/min |
+| 5 | Flujo OAuth2 PKCE y cliente Frontier CAPI (`tmc-net`) | ✅ hecha | `196e419` | S256 PKCE, canje y refresco de tokens, consulta de flota remota |
+| 6 | Almacenamiento seguro de credenciales y tokens en SQLite (`tmc-store`) | ✅ hecha | `dbf685c` | Tabla `accounts_credentials` para claves, tokens OAuth y sal de anonimización |
+| 7 | Endpoint callback axum para OAuth2 de Frontier (`tmc-app`) | ✅ hecha | `3d4ee11` | Rutas `/api/auth/frontier/login` y callback loopback local |
+| 8 | Módulo `accounts` en Rust (`tmc-modules`) | ✅ hecha | `87c26c2` | Orquestación de envíos, filtrado estricto Legacy y topic `accounts.status` |
+| 9 | Localización completa en 5 idiomas (`locales/`) | ✅ hecha | `7db2c37` | `accounts.ftl` en es/en/fr/de/pt, privacidad y cuotas de red |
+| 10 | Componentes y panel `AccountsPanel.svelte` (`ui/`) | ✅ hecha | `919b4d9` | 4 tarjetas Glass HUD, métricas de sesión, medidor de 2 req/min y flota |
+| 11 | Integración en el Shell y navegación (`ui/`) | ✅ hecha | `ca14a61` | Pestaña de Cuentas, registro en catálogo y sincronización con `UI_PANELS` |
+| 12 | Verificación integral, calidad, footprint y build | ✅ hecha | `639dde1` | 394 Vitest PASS, svelte-check 0 err, Rust workspace PASS, clippy limpio, TMC.exe listo |
 
 ## Rediseño visual global de TMC («TMC Glass HUD»)
 
@@ -391,6 +391,11 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-24 00:17 (Europe/Madrid) · Antigravity · F6 completada y verificada:
+  - Tareas 1 a 11 ejecutadas en TDD con commits individuales (`14453df`, `25ea553`, `b377acd`, `50788b9`, `196e419`, `dbf685c`, `3d4ee11`, `87c26c2`, `7db2c37`, `919b4d9`, `ca14a61`).
+  - Tarea 12 (Verificación integral): 394 tests Vitest PASS, svelte-check 0 errores/0 avisos, suite completa de Rust en el workspace PASS (1.400+ tests), clippy limpio con -D warnings, cargo fmt limpio, ui/dist/ generado y binario `target/debug/TMC.exe` compilado.
+  - Cierre de Fase F6 y lista para fusionar en `main`.
 
 - 2026-10-23 12:55 (Europe/Madrid) · Antigravity · Fusión formal de F5 en `main`, inicio de F6 (Cuentas y Sincronización Externa):
   - Fusión de `fase/f5-carrier-colonizacion-powerplay` en `main` con `--no-ff`.
