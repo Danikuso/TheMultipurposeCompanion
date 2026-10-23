@@ -3,6 +3,7 @@
   import { diag, diagOn } from '../../lib/diag.svelte';
   import { ageShort, ly, pct, starClassLabel } from '../../lib/format';
   import { getLocale } from '../../lib/i18n';
+  import { pushToast } from '../../shell/Toasts.svelte';
   import type { Card, Politics } from './types';
 
   let {
@@ -20,6 +21,15 @@
     label?: string | null;
     starClasses?: string[] | null;
   } = $props();
+
+  async function copySystem(name: string) {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(name);
+        pushToast(`Copiado: ${name}`, 'Info');
+      }
+    } catch { /* Ignorado */ }
+  }
 
   const DANGER_STATES = ['war', 'civilwar', 'civilunrest', 'outbreak'];
 
@@ -105,7 +115,10 @@
     <div data-testid="next-card" class="cols">
       <section class="col">
         <h3>{t('strip-col-jump')}</h3>
-        <strong class="name">{card.name}</strong>
+        <div class="name-row">
+          <strong class="name">{card.name}</strong>
+          <button type="button" class="btn-copy" title="Copiar sistema" onclick={() => copySystem(card.name)}>📋</button>
+        </div>
         <div><span class="label">{t('strip-jump-ly')}</span> <span class="mono">{jumpLy}</span></div>
         {#if remainingJumps != null}
           <div><span class="label">{t('strip-remaining-jumps')}</span> <span class="mono">{remainingJumps}</span></div>
@@ -214,17 +227,30 @@
 
 <style>
   .card {
-    background: var(--hud-surface-alt);
-    border: 1px solid var(--hud-border);
-    border-radius: 4px;
+    background: var(--hud-surface-card);
+    border: 1px solid var(--hud-border-subtle);
+    border-radius: 6px;
     padding: 0.75rem;
     min-width: 0;
+    transition: all 150ms ease;
+  }
+
+  .card.big {
+    background: var(--hud-surface);
+    border: 1px solid var(--hud-border-subtle);
+    border-top: 3px solid var(--hud-primary);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+  }
+
+  .card.small:hover {
+    background: #1b2133;
+    border-color: rgba(255, 113, 0, 0.4);
   }
 
   .cols {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1rem;
+    gap: 0.85rem;
   }
 
   @media (max-width: 1599px) {
@@ -240,15 +266,20 @@
   }
 
   .col {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--hud-border-subtle);
+    border-radius: 4px;
+    padding: 0.65rem;
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 0.35rem;
     min-width: 0;
   }
 
   .card-label {
     margin: 0 0 0.5rem;
-    font-size: 0.85em;
+    font-size: 0.82rem;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--hud-primary);
@@ -256,10 +287,32 @@
 
   .col h3 {
     margin: 0 0 0.2rem;
-    font-size: 0.8em;
+    font-size: 0.72rem;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--hud-secondary);
+  }
+
+  .name-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .btn-copy {
+    background: transparent;
+    border: 1px solid var(--hud-border);
+    border-radius: 3px;
+    color: var(--hud-muted);
+    padding: 0.1rem 0.3rem;
+    font-size: 0.72rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .btn-copy:hover {
+    color: var(--hud-primary);
+    border-color: var(--hud-primary);
   }
 
   .small {
@@ -290,19 +343,24 @@
   .tag {
     border: 1px solid var(--hud-border);
     border-radius: 3px;
-    padding: 0 0.35rem;
-    font-size: 0.85em;
+    padding: 0.15rem 0.45rem;
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    text-transform: uppercase;
     width: fit-content;
   }
 
   .tag.ok {
     color: var(--hud-success);
     border-color: var(--hud-success);
+    background: rgba(34, 197, 94, 0.12);
   }
 
   .tag.hot {
     color: var(--hud-warning);
     border-color: var(--hud-warning);
+    background: rgba(245, 158, 11, 0.12);
     font-weight: 700;
   }
 

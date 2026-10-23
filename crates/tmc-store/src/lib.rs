@@ -254,6 +254,49 @@ impl Store {
         }
         result
     }
+    /// Ejecuta varias sentencias en una transaccion bajo un unico bloqueo de la conexion.
+    /// Cualquier error (o panic) deshace todo; devuelve el total de filas afectadas.
+    pub fn exec_batch_json(
+        &self,
+        stmts: &[(&str, Vec<serde_json::Value>)],
+    ) -> Result<usize, StoreError> {
+        #[cfg(debug_assertions)]
+        let diagnostic_started = std::time::Instant::now();
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::Sql,
+            "store.exec_batch.started",
+            serde_json::json!({"statements":stmts.len()})
+        );
+        let result: Result<_, StoreError> = (|| {
+            let mut conn = self.lock()?;
+            let tx = conn.transaction()?;
+            let mut total = 0;
+            for (sql, params) in stmts {
+                let params = params.iter().map(to_sql).collect::<Result<Vec<_>, _>>()?;
+                total += tx.execute(sql, rusqlite::params_from_iter(params))?;
+            }
+            tx.commit()?;
+            Ok(total)
+        })();
+        #[cfg(debug_assertions)]
+        match &result {
+            Ok(_value) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.exec_batch.completed",
+                    serde_json::json!({"statements":stmts.len(),"rows":_value,"elapsed_us":diagnostic_started.elapsed().as_micros()})
+                );
+            }
+            Err(_error) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Sql,
+                    "store.exec_batch.failed",
+                    serde_json::json!({"statements":stmts.len(),"failure_class":_error.diagnostic_class(),"elapsed_us":diagnostic_started.elapsed().as_micros()})
+                );
+            }
+        }
+        result
+    }
     pub fn api_cache_get(&self, key: &str) -> Result<Option<CachedEntry>, StoreError> {
         #[cfg(debug_assertions)]
         let diagnostic_started = std::time::Instant::now();
@@ -472,6 +515,47 @@ mod tests {
                 .unwrap(),
             vec![serde_json::json!([2, "b"])]
         );
+    }
+
+    #[test]
+    fn exec_batch_json_commits_all_and_rolls_back_on_failure() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .exec_json("CREATE TABLE b (id INTEGER PRIMARY KEY, v TEXT)", &[])
+            .unwrap();
+        let ins = "INSERT INTO b VALUES (?1, ?2)";
+        let n = store
+            .exec_batch_json(&[
+                (ins, vec![serde_json::json!(1), serde_json::json!("a")]),
+                (ins, vec![serde_json::json!(2), serde_json::json!("b")]),
+            ])
+            .unwrap();
+        assert_eq!(n, 2);
+        let err = store.exec_batch_json(&[
+            ("DELETE FROM b", vec![]),
+            (ins, vec![serde_json::json!(3), serde_json::json!("c")]),
+            (ins, vec![serde_json::json!(3), serde_json::json!("dup")]),
+        ]);
+        assert!(err.is_err());
+        let rows = store
+            .query_json("SELECT id FROM b ORDER BY id", &[])
+            .unwrap();
+        assert_eq!(rows, vec![serde_json::json!([1]), serde_json::json!([2])]);
+        // un parametro invalido tambien deshace el lote
+        assert!(
+            store
+                .exec_batch_json(&[
+                    ("DELETE FROM b", vec![]),
+                    (
+                        ins,
+                        vec![serde_json::json!(u64::MAX), serde_json::json!("x")]
+                    ),
+                ])
+                .is_err()
+        );
+        assert_eq!(store.query_json("SELECT id FROM b", &[]).unwrap().len(), 2);
+        // la conexion sigue usable para otras transacciones
+        store.exec_batch_json(&[("DELETE FROM b", vec![])]).unwrap();
     }
 
     #[test]

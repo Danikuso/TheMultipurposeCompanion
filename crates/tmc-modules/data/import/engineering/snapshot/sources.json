@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "eddiscovery_repository": "https://github.com/EDDiscovery/EliteDangerousCore",
+  "eddiscovery_commit": "7d30920e6822d4836e0d6dd5c91026ec7e2ab4c7",
+  "eddi_repository": "https://github.com/EDCD/EDDI",
+  "eddi_commit": "d3b964ea7c8bb959ad6537f55b308f293a326905",
+  "engineer_aliases": [],
+  "explicit_aliases": [],
+  "preserved_engineer_ids": [
+    {
+      "name": "Felicity Farseer",
+      "id": 300100
+    },
+    {
+      "name": "Elvira Martuuk",
+      "id": 300160
+    }
+  ],
+  "files": [
+    {
+      "file": "eddiscovery-RecipesEngineering.cs",
+      "url": "https://github.com/EDDiscovery/EliteDangerousCore/blob/7d30920e6822d4836e0d6dd5c91026ec7e2ab4c7/EliteDangerous/FrontierData/Items/RecipesEngineering.cs",
+      "role": "recipes",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2016-2024 EDDiscovery development team",
+      "header_required": true,
+      "sha256": "099b933d878d86b8c135a956c2c2fd794dbe336559e19621a9aa32fab81bf95c",
+      "retrieved_at": "2026-10-22"
+    },
+    {
+      "file": "eddiscovery-Engineers.cs",
+      "url": "https://github.com/EDDiscovery/EliteDangerousCore/blob/7d30920e6822d4836e0d6dd5c91026ec7e2ab4c7/EliteDangerous/FrontierData/Items/Engineers.cs",
+      "role": "engineers",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2022-2024 EDDiscovery development team",
+      "header_required": true,
+      "sha256": "32f6511bbdcd9016396809ab016cb9367822174161dcd6e556adee742db125f2",
+      "retrieved_at": "2026-10-22"
+    },
+    {
+      "file": "eddiscovery-MCMRType.cs",
+      "url": "https://github.com/EDDiscovery/EliteDangerousCore/blob/7d30920e6822d4836e0d6dd5c91026ec7e2ab4c7/EliteDangerous/FrontierData/Items/MCMRType.cs",
+      "role": "ingredients",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2016-2025 EDDiscovery development team",
+      "header_required": true,
+      "sha256": "b7bf6f5815d9e9c7ec7cb53c37be0dae48f130acbad8de8e9c7bb93bc69676f0",
+      "retrieved_at": "2026-10-22"
+    },
+    {
+      "file": "eddiscovery-Modules.cs",
+      "url": "https://github.com/EDDiscovery/EliteDangerousCore/blob/7d30920e6822d4836e0d6dd5c91026ec7e2ab4c7/EliteDangerous/FrontierData/Items/Modules.cs",
+      "role": "module_types",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2016-2024 EDDiscovery development team",
+      "header_required": true,
+      "sha256": "1a5c8650dd44e4cd3e94f9b6a23c06765179931cb62f7953de858e017878e696",
+      "retrieved_at": "2026-10-22"
+    },
+    {
+      "file": "eddiscovery-RecipeFDName.cs",
+      "url": "https://github.com/EDDiscovery/EliteDangerousCore/blob/7d30920e6822d4836e0d6dd5c91026ec7e2ab4c7/EliteDangerous/FrontierData/FDName/RecipeFDName.cs",
+      "role": "recipe_fdname_rules",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2026-2026 EDDiscovery development team",
+      "header_required": true,
+      "sha256": "031befe54c34bf386c25a320fc8d40f289d2b42e7161d4bb4bc4a235f1ccb323",
+      "retrieved_at": "2026-10-22"
+    },
+    {
+      "file": "eddiscovery-LICENSE",
+      "url": "https://github.com/EDDiscovery/EliteDangerousCore/blob/7d30920e6822d4836e0d6dd5c91026ec7e2ab4c7/LICENSE",
+      "role": "license",
+      "license": "Apache-2.0",
+      "copyright": "Texto de licencia Apache-2.0 (plantilla sin titular)",
+      "header_required": false,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "retrieved_at": "2026-10-22"
+    },
+    {
+      "file": "eddi-Engineer.cs",
+      "url": "https://github.com/EDCD/EDDI/blob/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Engineer.cs",
+      "role": "engineer_ids",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2017 by the EDCD organization EDDI development team",
+      "license_file": "eddi-LicenseFile.txt",
+      "header_required": false,
+      "sha256": "0ee65598882bf99de3cbf6be1ea07f4cb504c0205f15d2ab66f20c1c7136ea12",
+      "retrieved_at": "2026-10-22",
+      "use": "solo pares (EngineerID, nombre)"
+    },
+    {
+      "file": "eddi-LICENSE.md",
+      "url": "https://github.com/EDCD/EDDI/blob/d3b964ea7c8bb959ad6537f55b308f293a326905/LICENSE.md",
+      "role": "license",
+      "license": "Apache-2.0",
+      "copyright": "Texto de licencia Apache-2.0 (plantilla sin titular)",
+      "header_required": false,
+      "sha256": "0fff0187f7f9200797f5fd790ebb4e93dbc9edb5188e776eb0cf76d22305e17e",
+      "retrieved_at": "2026-10-22"
+    },
+    {
+      "file": "eddi-LicenseFile.txt",
+      "url": "https://github.com/EDCD/EDDI/blob/d3b964ea7c8bb959ad6537f55b308f293a326905/LicenseFile.txt",
+      "role": "license",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2017 by the EDCD organization EDDI development team",
+      "header_required": false,
+      "sha256": "5f67e1ea846caabe2c545fd7aafd0bec36d998f2a64295d2ae1e9d02218948f9",
+      "retrieved_at": "2026-10-22"
+    }
+  ]
+}

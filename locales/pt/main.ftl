@@ -113,3 +113,6 @@ settings-eddn-radius = Raio de dados EDDN (al, 20–500)
 settings-tourism-reference = Referência de turismo (cr/al, 1.000–10.000.000)
 auto-companion = Auto-companion
 auto-companion-tooltip = Ativado, o TMC muda sozinho de disposição e de painel de contexto conforme a relevância. Desativado, fica onde o deixou.
+layout-engineering = Engenharia
+settings-engineering-rolls = Tentativas de engenharia por grau (G1–G5, 1–10)
+settings-engineering-rolls-invalid = Valor inválido: cada grau precisa de 1 a 10 tentativas.

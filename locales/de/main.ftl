@@ -113,3 +113,6 @@ settings-eddn-radius = EDDN-Datenradius (Lj, 20–500)
 settings-tourism-reference = Tourismus-Referenz (Cr/Lj, 1.000–10.000.000)
 auto-companion = Auto-Companion
 auto-companion-tooltip = An: TMC wechselt Layout und Kontextpanel automatisch nach Relevanz. Aus: Es bleibt, wo du es gelassen hast.
+layout-engineering = Ingenieurwesen
+settings-engineering-rolls = Ingenieurs-Würfe pro Stufe (G1–G5, 1–10)
+settings-engineering-rolls-invalid = Ungültiger Wert: Jede Stufe braucht 1 bis 10 Würfe.

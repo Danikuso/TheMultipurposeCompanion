@@ -402,6 +402,13 @@ pub struct Engineering {
     pub level: Option<u32>,
     pub quality: Option<f64>,
     pub experimental_effect: Option<String>,
+    #[serde(rename = "ExperimentalEffect_Localised")]
+    pub experimental_effect_localised: Option<String>,
+    pub engineer: Option<String>,
+    #[serde(rename = "EngineerID")]
+    pub engineer_id: Option<u64>,
+    #[serde(rename = "BlueprintID")]
+    pub blueprint_id: Option<u64>,
     pub modifiers: Vec<Modifier>,
 }
 
@@ -1122,6 +1129,385 @@ pub struct MaterialReward {
     pub name_localised: Option<String>,
     #[serde(deserialize_with = "ld")]
     pub count: u32,
+    /// Llega como `$MICRORESOURCE_CATEGORY_<X>;`; ver [`reward_category`].
+    #[serde(deserialize_with = "lo")]
+    pub category: Option<String>,
+}
+
+/// Categoría de material del juego.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum MaterialCategory {
+    Raw,
+    Manufactured,
+    Encoded,
+}
+
+impl MaterialCategory {
+    /// Acepta `Raw`/`Manufactured`/`Encoded` y `$MICRORESOURCE_CATEGORY_<X>;`, sin distinguir mayúsculas.
+    pub fn from_journal(s: &str) -> Option<Self> {
+        let t = s.trim();
+        let t = t
+            .strip_prefix("$MICRORESOURCE_CATEGORY_")
+            .map(|r| r.trim_end_matches(';'))
+            .unwrap_or(t);
+        match t.to_ascii_lowercase().as_str() {
+            "raw" => Some(Self::Raw),
+            "manufactured" => Some(Self::Manufactured),
+            "encoded" => Some(Self::Encoded),
+            _ => None,
+        }
+    }
+}
+
+/// Categoría normalizada de una recompensa de misión (`None` si falta o es desconocida).
+pub fn reward_category(r: &MaterialReward) -> Option<MaterialCategory> {
+    r.category
+        .as_deref()
+        .and_then(MaterialCategory::from_journal)
+}
+
+/// Clave única de material en todo F4: minúsculas y sin espacios.
+pub fn material_key(name: &str) -> String {
+    name.chars()
+        .filter(|c| !c.is_whitespace())
+        .flat_map(char::to_lowercase)
+        .collect()
+}
+
+/// Entrada de la instantánea `Materials`. `Count` es estricto: uno no numérico invalida la entrada.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MaterialCount {
+    pub name: String,
+    #[serde(rename = "Name_Localised", deserialize_with = "lo")]
+    pub name_localised: Option<String>,
+    pub count: u32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct Materials {
+    #[serde(deserialize_with = "lv")]
+    pub raw: Vec<MaterialCount>,
+    #[serde(deserialize_with = "lv")]
+    pub manufactured: Vec<MaterialCount>,
+    #[serde(deserialize_with = "lv")]
+    pub encoded: Vec<MaterialCount>,
+}
+
+/// Forma común de `MaterialCollected` y `MaterialDiscarded`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MaterialCollected {
+    #[serde(deserialize_with = "ld")]
+    pub category: String,
+    #[serde(deserialize_with = "ld")]
+    pub name: String,
+    #[serde(rename = "Name_Localised", deserialize_with = "lo")]
+    pub name_localised: Option<String>,
+    #[serde(deserialize_with = "ld")]
+    pub count: u32,
+}
+
+pub type MaterialDiscarded = MaterialCollected;
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MaterialTradeSide {
+    #[serde(deserialize_with = "ld")]
+    pub material: String,
+    #[serde(rename = "Material_Localised", deserialize_with = "lo")]
+    pub material_localised: Option<String>,
+    #[serde(deserialize_with = "ld")]
+    pub category: String,
+    #[serde(deserialize_with = "ld")]
+    pub quantity: u32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MaterialTrade {
+    #[serde(rename = "MarketID", deserialize_with = "lo")]
+    pub market_id: Option<u64>,
+    #[serde(deserialize_with = "ld")]
+    pub trader_type: String,
+    #[serde(deserialize_with = "ld")]
+    pub paid: MaterialTradeSide,
+    #[serde(deserialize_with = "ld")]
+    pub received: MaterialTradeSide,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct MaterialUse {
+    #[serde(alias = "Material", deserialize_with = "ld")]
+    pub name: String,
+    #[serde(deserialize_with = "ld")]
+    pub count: u32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct Synthesis {
+    #[serde(deserialize_with = "ld")]
+    pub name: String,
+    #[serde(deserialize_with = "lv")]
+    pub materials: Vec<MaterialUse>,
+}
+
+/// Estado de la relación con un ingeniero (`Progress` del diario).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum EngineerStatus {
+    Known,
+    Invited,
+    Acquainted,
+    Unlocked,
+    Barred,
+    Unknown,
+}
+
+impl EngineerStatus {
+    pub fn from_journal(s: &str) -> Self {
+        match s {
+            "Known" => Self::Known,
+            "Invited" => Self::Invited,
+            "Acquainted" => Self::Acquainted,
+            "Unlocked" => Self::Unlocked,
+            "Barred" => Self::Barred,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EngineerEntry {
+    pub engineer: String,
+    pub engineer_id: u64,
+    /// `Unknown` si el diario no trae `Progress`.
+    pub progress: EngineerStatus,
+    pub rank: Option<u8>,
+    pub rank_progress: Option<u8>,
+}
+
+/// Entrada cruda de la lista de arranque (todos los campos tolerantes).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct EngineerEntryRaw {
+    #[serde(deserialize_with = "lo")]
+    pub engineer: Option<String>,
+    #[serde(rename = "EngineerID", deserialize_with = "lo")]
+    pub engineer_id: Option<u64>,
+    #[serde(deserialize_with = "lo")]
+    pub progress: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub rank: Option<u8>,
+    #[serde(deserialize_with = "lo")]
+    pub rank_progress: Option<u8>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct EngineerProgress {
+    /// Lista de arranque (`Engineers`).
+    #[serde(deserialize_with = "lv")]
+    pub engineers: Vec<EngineerEntryRaw>,
+    #[serde(deserialize_with = "lo")]
+    pub engineer: Option<String>,
+    #[serde(rename = "EngineerID", deserialize_with = "lo")]
+    pub engineer_id: Option<u64>,
+    #[serde(deserialize_with = "lo")]
+    pub progress: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub rank: Option<u8>,
+    #[serde(deserialize_with = "lo")]
+    pub rank_progress: Option<u8>,
+}
+
+fn engineer_entry(e: &EngineerEntryRaw) -> Option<EngineerEntry> {
+    let name = e.engineer.clone().filter(|n| !n.is_empty());
+    // Sin ID ni nombre no hay a quién asignar el estado.
+    if name.is_none() && e.engineer_id.is_none() {
+        return None;
+    }
+    Some(EngineerEntry {
+        engineer: name.unwrap_or_default(),
+        engineer_id: e.engineer_id.unwrap_or(0),
+        progress: e
+            .progress
+            .as_deref()
+            .map_or(EngineerStatus::Unknown, EngineerStatus::from_journal),
+        rank: e.rank,
+        rank_progress: e.rank_progress,
+    })
+}
+
+impl EngineerProgress {
+    /// `true` si es la lista de arranque (`Engineers`).
+    pub fn is_startup_list(&self) -> bool {
+        !self.engineers.is_empty()
+    }
+
+    /// Entradas de la lista de arranque o, si no hay lista, de la actualización suelta.
+    pub fn entries(&self) -> Vec<EngineerEntry> {
+        if self.is_startup_list() {
+            return self.engineers.iter().filter_map(engineer_entry).collect();
+        }
+        engineer_entry(&EngineerEntryRaw {
+            engineer: self.engineer.clone(),
+            engineer_id: self.engineer_id,
+            progress: self.progress.clone(),
+            rank: self.rank,
+            rank_progress: self.rank_progress,
+        })
+        .into_iter()
+        .collect()
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct EngineerCraft {
+    #[serde(deserialize_with = "ld")]
+    pub engineer: String,
+    #[serde(rename = "EngineerID", deserialize_with = "ld")]
+    pub engineer_id: u64,
+    #[serde(deserialize_with = "ld")]
+    pub blueprint_name: String,
+    #[serde(rename = "BlueprintID", deserialize_with = "lo")]
+    pub blueprint_id: Option<u64>,
+    #[serde(deserialize_with = "ld")]
+    pub level: u8,
+    #[serde(deserialize_with = "lo")]
+    pub quality: Option<f64>,
+    #[serde(deserialize_with = "lo")]
+    pub apply_experimental_effect: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub experimental_effect: Option<String>,
+    #[serde(deserialize_with = "lv")]
+    pub ingredients: Vec<MaterialUse>,
+    #[serde(deserialize_with = "lo")]
+    pub slot: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub module: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct EngineerContribution {
+    #[serde(deserialize_with = "ld")]
+    pub engineer: String,
+    #[serde(rename = "EngineerID", deserialize_with = "ld")]
+    pub engineer_id: u64,
+    #[serde(rename = "Type", deserialize_with = "ld")]
+    pub type_: String,
+    #[serde(deserialize_with = "lo")]
+    pub commodity: Option<String>,
+    #[serde(deserialize_with = "lo")]
+    pub material: Option<String>,
+    #[serde(deserialize_with = "ld")]
+    pub quantity: u32,
+    #[serde(deserialize_with = "ld")]
+    pub total_quantity: u32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct TechnologyBroker {
+    #[serde(deserialize_with = "ld")]
+    pub broker_type: String,
+    #[serde(rename = "MarketID", deserialize_with = "lo")]
+    pub market_id: Option<u64>,
+    #[serde(deserialize_with = "lv")]
+    pub commodities: Vec<MaterialUse>,
+    #[serde(deserialize_with = "lv")]
+    pub materials: Vec<MaterialUse>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct LockerItem {
+    #[serde(deserialize_with = "ld")]
+    pub name: String,
+    #[serde(rename = "Name_Localised", deserialize_with = "lo")]
+    pub name_localised: Option<String>,
+    #[serde(deserialize_with = "ld")]
+    pub count: u32,
+    #[serde(rename = "MissionID", deserialize_with = "lo")]
+    pub mission_id: Option<u64>,
+    #[serde(rename = "OwnerID", deserialize_with = "lo")]
+    pub owner_id: Option<u64>,
+}
+
+/// Contenido de la taquilla. Un stub (solo `timestamp`/`event`) no trae ninguna de
+/// las cuatro listas: el consumidor debe releer `ShipLocker.json`, nunca vaciar.
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct ShipLockerContents {
+    pub items: Vec<LockerItem>,
+    pub components: Vec<LockerItem>,
+    pub consumables: Vec<LockerItem>,
+    pub data: Vec<LockerItem>,
+    /// Qué listas venían presentes (`Items`, `Components`, `Consumables`, `Data`).
+    #[serde(skip)]
+    present: [bool; 4],
+}
+
+impl ShipLockerContents {
+    /// `true` si el evento no trae listas (hay que releer `ShipLocker.json`).
+    pub fn is_stub(&self) -> bool {
+        !self.present.contains(&true)
+    }
+
+    /// `true` si el JSON de origen traía la lista `i` (0 Items, 1 Components,
+    /// 2 Consumables, 3 Data). Una lista ausente no es una lista vacía.
+    pub fn has_list(&self, i: usize) -> bool {
+        self.present.get(i).copied().unwrap_or(false)
+    }
+
+    /// Lee el contenido de un objeto JSON (evento o `ShipLocker.json`).
+    pub fn from_value(v: &Json) -> Option<Self> {
+        let o = v.as_object()?;
+        let list = |k: &str| -> Vec<LockerItem> {
+            match o.get(k) {
+                Some(Json::Array(a)) => a
+                    .iter()
+                    .filter_map(|x| serde_json::from_value(x.clone()).ok())
+                    .collect(),
+                _ => Vec::new(),
+            }
+        };
+        let present = ["Items", "Components", "Consumables", "Data"]
+            .map(|k| o.get(k).is_some_and(Json::is_array));
+        Some(Self {
+            items: list("Items"),
+            components: list("Components"),
+            consumables: list("Consumables"),
+            data: list("Data"),
+            present,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct LockerChange {
+    #[serde(deserialize_with = "ld")]
+    pub name: String,
+    #[serde(rename = "Name_Localised", deserialize_with = "lo")]
+    pub name_localised: Option<String>,
+    #[serde(deserialize_with = "ld")]
+    pub count: u32,
+    /// `Item`, `Component`, `Consumable` o `Data`.
+    #[serde(rename = "Type", deserialize_with = "ld")]
+    pub type_: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct BackpackChange {
+    #[serde(deserialize_with = "lv")]
+    pub added: Vec<LockerChange>,
+    #[serde(deserialize_with = "lv")]
+    pub removed: Vec<LockerChange>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -1357,7 +1743,7 @@ pub enum EventKind {
     Shipyard,
     ModuleInfo,
     Backpack,
-    ShipLocker,
+    ShipLocker(Box<ShipLockerContents>),
     FcMaterials,
     Scan(Box<Scan>),
     FssDiscoveryScan(FssDiscoveryScan),
@@ -1401,6 +1787,16 @@ pub enum EventKind {
     CommunityGoal(Box<CommunityGoal>),
     RepairAll(RepairAll),
     Repair(Repair),
+    Materials(Box<Materials>),
+    MaterialCollected(MaterialCollected),
+    MaterialDiscarded(MaterialDiscarded),
+    MaterialTrade(Box<MaterialTrade>),
+    Synthesis(Synthesis),
+    EngineerProgress(Box<EngineerProgress>),
+    EngineerCraft(Box<EngineerCraft>),
+    EngineerContribution(EngineerContribution),
+    TechnologyBroker(TechnologyBroker),
+    BackpackChange(BackpackChange),
     Other,
 }
 
@@ -1459,7 +1855,10 @@ fn classify(name: &str, raw: &RawValue) -> EventKind {
         "Shipyard" => Some(EventKind::Shipyard),
         "ModuleInfo" => Some(EventKind::ModuleInfo),
         "Backpack" => Some(EventKind::Backpack),
-        "ShipLocker" => Some(EventKind::ShipLocker),
+        "ShipLocker" => serde_json::from_str::<Json>(raw.get())
+            .ok()
+            .and_then(|v| ShipLockerContents::from_value(&v))
+            .map(|c| EventKind::ShipLocker(Box::new(c))),
         "FCMaterials" => Some(EventKind::FcMaterials),
         "Scan" => de::<Scan>(name, raw).map(|s| EventKind::Scan(Box::new(s))),
         "FSSDiscoveryScan" => de(name, raw).map(EventKind::FssDiscoveryScan),
@@ -1513,6 +1912,22 @@ fn classify(name: &str, raw: &RawValue) -> EventKind {
         }
         "RepairAll" => de(name, raw).map(EventKind::RepairAll),
         "Repair" => de(name, raw).map(EventKind::Repair),
+        "Materials" => de::<Materials>(name, raw).map(|m| EventKind::Materials(Box::new(m))),
+        "MaterialCollected" => de(name, raw).map(EventKind::MaterialCollected),
+        "MaterialDiscarded" => de(name, raw).map(EventKind::MaterialDiscarded),
+        "MaterialTrade" => {
+            de::<MaterialTrade>(name, raw).map(|t| EventKind::MaterialTrade(Box::new(t)))
+        }
+        "Synthesis" => de(name, raw).map(EventKind::Synthesis),
+        "EngineerProgress" => {
+            de::<EngineerProgress>(name, raw).map(|e| EventKind::EngineerProgress(Box::new(e)))
+        }
+        "EngineerCraft" => {
+            de::<EngineerCraft>(name, raw).map(|e| EventKind::EngineerCraft(Box::new(e)))
+        }
+        "EngineerContribution" => de(name, raw).map(EventKind::EngineerContribution),
+        "TechnologyBroker" => de(name, raw).map(EventKind::TechnologyBroker),
+        "BackpackChange" => de(name, raw).map(EventKind::BackpackChange),
         _ => None,
     };
     kind.unwrap_or(EventKind::Other)
@@ -1548,6 +1963,169 @@ pub fn parse_line(line: &str) -> Result<JournalEvent, ParseError> {
 mod tests {
     use super::*;
     use crate::ParseError;
+
+    fn kind(line: &str) -> EventKind {
+        parse_line(line).unwrap().kind
+    }
+
+    #[test]
+    fn engineer_progress_startup_list() {
+        let EventKind::EngineerProgress(p) = kind(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"EngineerProgress","Engineers":[{"Engineer":"Felicity Farseer","EngineerID":300100,"Progress":"Unlocked","Rank":5,"RankProgress":0},{"Engineer":"Elvira Martuuk","EngineerID":300160,"Progress":"Invited"}]}"#,
+        ) else {
+            panic!("EngineerProgress")
+        };
+        let e = p.entries();
+        assert_eq!(e.len(), 2);
+        assert!(p.is_startup_list());
+        assert_eq!(e[0].progress, EngineerStatus::Unlocked);
+        assert_eq!(e[0].rank, Some(5));
+        assert_eq!(e[1].progress, EngineerStatus::Invited);
+        assert_eq!(e[1].rank, None);
+    }
+
+    #[test]
+    fn engineer_progress_single_update() {
+        let EventKind::EngineerProgress(p) = kind(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"EngineerProgress","Engineer":"Elvira Martuuk","EngineerID":300160,"Progress":"Unlocked"}"#,
+        ) else {
+            panic!("EngineerProgress")
+        };
+        assert!(!p.is_startup_list());
+        let e = p.entries();
+        assert_eq!(e.len(), 1);
+        assert_eq!(e[0].engineer_id, 300160);
+        assert_eq!(e[0].progress, EngineerStatus::Unlocked);
+        assert_eq!(e[0].rank, None);
+    }
+
+    #[test]
+    fn engineer_progress_loose_rank_only() {
+        let EventKind::EngineerProgress(p) = kind(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"EngineerProgress","Engineer":"Felicity Farseer","EngineerID":300100,"Rank":4}"#,
+        ) else {
+            panic!("EngineerProgress")
+        };
+        let e = p.entries();
+        assert_eq!(e[0].progress, EngineerStatus::Unknown);
+        assert_eq!(e[0].rank, Some(4));
+    }
+
+    #[test]
+    fn engineer_craft_parses_ingredients_and_experimental() {
+        let EventKind::EngineerCraft(c) = kind(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"EngineerCraft","Slot":"MainEngines","Module":"int_engine_size5_class5","Engineer":"Felicity Farseer","EngineerID":300100,"BlueprintID":128673694,"BlueprintName":"Engine_Dirty","Level":5,"Quality":0.42,"ApplyExperimentalEffect":"special_engine_overloaded","Ingredients":[{"Name":"pharmaceuticalisolators","Count":1}]}"#,
+        ) else {
+            panic!("EngineerCraft")
+        };
+        assert_eq!(c.level, 5);
+        assert_eq!(c.blueprint_name, "Engine_Dirty");
+        assert_eq!(c.quality, Some(0.42));
+        assert_eq!(
+            c.apply_experimental_effect.as_deref(),
+            Some("special_engine_overloaded")
+        );
+        assert_eq!(c.ingredients[0].count, 1);
+        assert_eq!(c.blueprint_id, Some(128673694));
+    }
+
+    #[test]
+    fn engineer_contribution_and_broker_parse() {
+        let EventKind::EngineerContribution(c) = kind(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"EngineerContribution","Engineer":"Tod McQuinn","EngineerID":300260,"Type":"Commodity","Commodity":"soontillrelics","Quantity":3,"TotalQuantity":3}"#,
+        ) else {
+            panic!("EngineerContribution")
+        };
+        assert_eq!(c.type_, "Commodity");
+        assert_eq!(c.commodity.as_deref(), Some("soontillrelics"));
+        assert_eq!(c.total_quantity, 3);
+        let EventKind::TechnologyBroker(t) = kind(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"TechnologyBroker","BrokerType":"guardian","MarketID":1,"Commodities":[{"Name":"ancientrelic","Count":2}],"Materials":[{"Name":"guardian_powercell","Count":5}]}"#,
+        ) else {
+            panic!("TechnologyBroker")
+        };
+        assert_eq!(t.broker_type, "guardian");
+        assert_eq!(t.commodities[0].count, 2);
+        assert_eq!(t.materials[0].count, 5);
+    }
+
+    #[test]
+    fn loadout_engineering_extra_fields_are_additive() {
+        let EventKind::Loadout(l) = kind(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Loadout","Modules":[{"Slot":"A","Item":"x","Engineering":{"Engineer":"Felicity Farseer","EngineerID":300100,"BlueprintID":128673694,"BlueprintName":"Engine_Dirty","Level":5,"ExperimentalEffect":"special_engine_overloaded","ExperimentalEffect_Localised":"Overloaded","Modifiers":[]}},{"Slot":"B","Item":"y","Engineering":{"BlueprintName":"FSD_LongRange","Level":5}}]}"#,
+        ) else {
+            panic!("Loadout")
+        };
+        let a = l.modules[0].engineering.as_ref().unwrap();
+        assert_eq!(a.engineer.as_deref(), Some("Felicity Farseer"));
+        assert_eq!(a.engineer_id, Some(300100));
+        assert_eq!(a.blueprint_id, Some(128673694));
+        assert_eq!(
+            a.experimental_effect_localised.as_deref(),
+            Some("Overloaded")
+        );
+        let b = l.modules[1].engineering.as_ref().unwrap();
+        assert_eq!(b.engineer, None);
+        assert_eq!(b.engineer_id, None);
+        assert_eq!(b.blueprint_id, None);
+        assert_eq!(b.experimental_effect_localised, None);
+        assert_eq!(b.level, Some(5));
+    }
+
+    #[test]
+    fn ship_locker_stub_and_full() {
+        let EventKind::ShipLocker(s) =
+            kind(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"ShipLocker"}"#)
+        else {
+            panic!("ShipLocker")
+        };
+        assert!(s.is_stub());
+        let EventKind::ShipLocker(f) = kind(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"ShipLocker","Items":[{"Name":"healthpack","OwnerID":0,"Count":2}],"Components":[],"Consumables":[],"Data":[]}"#,
+        ) else {
+            panic!("ShipLocker")
+        };
+        assert!(!f.is_stub());
+        assert_eq!(f.items.len(), 1);
+        assert_eq!(f.items[0].count, 2);
+        // Una taquilla realmente vacia (listas presentes) no es un stub.
+        let EventKind::ShipLocker(e) = kind(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"ShipLocker","Items":[],"Components":[],"Consumables":[],"Data":[]}"#,
+        ) else {
+            panic!("ShipLocker")
+        };
+        assert!(!e.is_stub());
+    }
+
+    #[test]
+    fn backpack_change_added_and_removed() {
+        let EventKind::BackpackChange(b) = kind(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"BackpackChange","Added":[{"Name":"graphene","Count":3,"Type":"Component"}],"Removed":[{"Name":"healthpack","Name_Localised":"Medkit","Count":1,"Type":"Consumable"}]}"#,
+        ) else {
+            panic!("BackpackChange")
+        };
+        assert_eq!(b.added[0].count, 3);
+        assert_eq!(b.added[0].type_, "Component");
+        assert_eq!(b.removed[0].name_localised.as_deref(), Some("Medkit"));
+    }
+
+    #[test]
+    fn malformed_engineer_events_do_not_panic() {
+        assert!(matches!(
+            kind(
+                r#"{"timestamp":"2026-04-10T20:00:00Z","event":"EngineerProgress","Engineers":"x","Rank":"y"}"#
+            ),
+            EventKind::EngineerProgress(_)
+        ));
+        assert!(matches!(
+            kind(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"EngineerCraft","Level":"x"}"#),
+            EventKind::EngineerCraft(_)
+        ));
+        assert!(matches!(
+            kind(r#"{"timestamp":"2026-04-10T20:00:00Z","event":"BackpackChange","Added":7}"#),
+            EventKind::BackpackChange(_)
+        ));
+    }
 
     const FSD: &str = r#"{ "timestamp":"2026-03-05T18:03:22Z", "event":"FSDJump", "StarSystem":"Exampla", "SystemAddress":5068732442345, "StarPos":[14.0,-2.5,40.75], "JumpDist":9.873, "FuelUsed":1.2, "FuelLevel":18.7 }"#;
 
@@ -2561,6 +3139,104 @@ mod tests {
         assert_eq!(m.materials_reward[0].count, 2);
         assert_eq!(m.faction_effects[0].influence[0].influence, "+++");
         assert_eq!(m.faction_effects[0].reputation.as_deref(), Some("++"));
+    }
+
+    #[test]
+    fn materials_snapshot_parses_three_categories() {
+        let EventKind::Materials(m) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Materials","Raw":[{"Name":"iron","Count":120}],"Manufactured":[{"Name":"conductiveceramics","Name_Localised":"Cerámica conductora","Count":30}],"Encoded":[{"Name":"shieldpatternanalysis","Count":12}]}"#,
+        ) else {
+            panic!("Materials")
+        };
+        assert_eq!(m.raw[0].count, 120);
+        assert_eq!(m.raw[0].name_localised, None);
+        assert_eq!(
+            m.manufactured[0].name_localised.as_deref(),
+            Some("Cerámica conductora")
+        );
+        assert_eq!(m.encoded[0].name, "shieldpatternanalysis");
+    }
+
+    #[test]
+    fn material_trade_parses_paid_and_received() {
+        let EventKind::MaterialTrade(t) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MaterialTrade","MarketID":128000001,"TraderType":"encoded","Paid":{"Material":"scandatabanks","Category":"Encoded","Quantity":6},"Received":{"Material":"encodedscandata","Material_Localised":"X","Category":"Encoded","Quantity":1}}"#,
+        ) else {
+            panic!("MaterialTrade")
+        };
+        assert_eq!(t.market_id, Some(128000001));
+        assert_eq!(t.trader_type, "encoded");
+        assert_eq!(t.paid.quantity, 6);
+        assert_eq!(t.received.material, "encodedscandata");
+    }
+
+    #[test]
+    fn malformed_material_entry_is_skipped_not_fatal() {
+        let EventKind::Materials(m) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Materials","Raw":[{"Name":"iron","Count":"x"},{"Name":"nickel","Count":5}],"Manufactured":7}"#,
+        ) else {
+            panic!("Materials")
+        };
+        assert_eq!(m.raw.len(), 1);
+        assert_eq!(m.raw[0].name, "nickel");
+        assert!(m.manufactured.is_empty());
+    }
+
+    #[test]
+    fn material_key_normalizes() {
+        assert_eq!(material_key("Iron"), "iron");
+        assert_eq!(material_key(" Conductive Ceramics "), "conductiveceramics");
+    }
+
+    #[test]
+    fn materials_reward_category_normalized() {
+        let EventKind::MissionCompleted(m) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MissionCompleted","MissionID":1,"MaterialsReward":[{"Name":"a","Category":"$MICRORESOURCE_CATEGORY_Manufactured;","Count":1},{"Name":"b","Count":2}]}"#,
+        ) else {
+            panic!("MissionCompleted")
+        };
+        assert_eq!(
+            reward_category(&m.materials_reward[0]),
+            Some(MaterialCategory::Manufactured)
+        );
+        assert_eq!(reward_category(&m.materials_reward[1]), None);
+    }
+
+    #[test]
+    fn category_from_journal_variants() {
+        assert_eq!(
+            MaterialCategory::from_journal("Raw"),
+            Some(MaterialCategory::Raw)
+        );
+        assert_eq!(
+            MaterialCategory::from_journal("$MICRORESOURCE_CATEGORY_Encoded;"),
+            Some(MaterialCategory::Encoded)
+        );
+        assert_eq!(
+            MaterialCategory::from_journal("MANUFACTURED"),
+            Some(MaterialCategory::Manufactured)
+        );
+        assert_eq!(MaterialCategory::from_journal("foo"), None);
+    }
+
+    #[test]
+    fn synthesis_and_collected_parse() {
+        let EventKind::Synthesis(s) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Synthesis","Name":"FSD Basic","Materials":[{"Name":"carbon","Count":1}]}"#,
+        ) else {
+            panic!("Synthesis")
+        };
+        assert_eq!(s.name, "FSD Basic");
+        assert_eq!(s.materials[0].count, 1);
+        let EventKind::MaterialCollected(c) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"MaterialCollected","Category":"Raw","Name":"iron","Count":3}"#,
+        ) else {
+            panic!("MaterialCollected")
+        };
+        assert_eq!(
+            (c.category.as_str(), c.name.as_str(), c.count),
+            ("Raw", "iron", 3)
+        );
     }
 
     #[test]

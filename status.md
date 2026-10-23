@@ -2,17 +2,98 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-21 13:30 (Europe/Madrid) · Claude Opus 5.5
-- **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (✅ completada y fusionada en `main` en `6dc09d9`). F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
-- **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversal: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md).
-- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — ✅ 35/35 hechas (criterio 10 parcial) (aprobado al ordenar «escribe el plan y ejecútalo»). Diagnóstico: [plan](docs/plans/2026-10-20-diagnostico-debug.md) D1–D7b. Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
-- **Rama de trabajo:** `main` (F3 fusionada; la siguiente fase abrirá `fase/f4-…`)
+- **Última actualización:** 2026-10-23 01:30 (Europe/Madrid) · Antigravity
+- **Fase actual:** F4 — Ingenieros y materiales (✅ completada; Rediseño global de la interfaz «TMC Glass HUD» 100% completado en sus 10 tareas; guía de diseño formalizada en `docs/design-system-glass-hud.md`; filosofía de AYUDANTE fijada en `AGENTS.md` §0; guía de desbloqueo en `EngineerFlow.svelte`; 378/378 Vitest PASS, svelte-check 0 errores, cargo test workspace PASS, binario debug `TMC.exe` actualizado con assets embebidos).
+- **Spec activa:** [`docs/specs/2026-10-22-tmc-ui-rediseno-global-design.md`](docs/specs/2026-10-22-tmc-ui-rediseno-global-design.md) — Rediseño global de interfaz «TMC Glass HUD»; base F4: [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md).
+- **Plan activo:** [`docs/plans/2026-10-22-tmc-ui-rediseno-global.md`](docs/plans/2026-10-22-tmc-ui-rediseno-global.md) — 10 tareas en 5 bloques (todas completadas).
+- **Rama de trabajo:** `fase/f4-ingenieros-materiales`
 
 ## Puntero actual
 
-- **Tarea:** F3 en ejecución con subagentes (en curso: Task -). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
-- **Último paso completado:** Task 17 ✅ (08aacf3), revisión aprobada.
-- **Siguiente acción:** escribir la spec de F4 (ingenieros y materiales) a partir de la propuesta y las maquetas aprobadas (`f4-ingenieria.html`, `f4-materiales.html`) y pedir su aprobación.
+- **Tarea:** Verificación integral, cierre del plan de rediseño visual global y preparación del ejecutable para pruebas en vuelo.
+- **Último paso completado:** Ejecutadas de corrido las 10 tareas del plan de rediseño global (`docs/plans/2026-10-22-tmc-ui-rediseno-global.md`): tokens CSS y glass HUD en base/shell, navegación/exploración/exobiología, combate/minería, comercio/misiones/pasajeros, y verificación global (378/378 Vitest en verde, svelte-check 0 errores, 100% Rust workspace tests pasando, `npm run build` y `cargo build -p tmc-desktop` completados con `TMC.exe` fresco).
+- **Siguiente acción:** Informar al propietario y lanzar el ejecutable debug para pruebas con el simulador abierto.
+
+## Rediseño visual global de TMC («TMC Glass HUD»)
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| DS | Guía del Sistema de Diseño «TMC Glass HUD» | ✅ hecha | `ea5f3b7` | `docs/design-system-glass-hud.md` enlazada en `AGENTS.md` §0 |
+| AY | Guía de Desbloqueo del Ayudante (Companion) | ✅ hecha | `f266f7a` | Secuencia pedagógica de desbloqueo antes de recetas y `AGENTS.md` §0 |
+| 1 | Tokens CSS y clases comunes de cabina Glass HUD | ✅ hecha | `92d4dcd` | `tokens.css`, `base.css` con superficies de cabina, medidores y acentos |
+| 2 | Rediseño de `TopBar.svelte`, `Sidebar.svelte` y `Panel.svelte` | ✅ hecha | `18fbbf9` | Shell con cabecera de cabina, navegación con píldoras y paneles glass |
+| 3 | Rediseño de `RouteStrip.svelte` y `SystemCard.svelte` | ✅ hecha | `209f672` | Tarjeta orbital de sistema y tira de saltos con combustible y repostaje |
+| 4 | Rediseño de `SystemBodiesPanel.svelte` | ✅ hecha | `1b9f90d` | VirtualList estilizado, badges de valor económico y semáforo de sondas FSS |
+| 5 | Rediseño de `ExobiologyPanel.svelte` | ✅ hecha | `47d70e9` | Stepper de muestras 1..3, tarjeta de especie activa y barra de distancia |
+| 6 | Rediseño de `TargetPanel.svelte`, `ShipPanel.svelte` y `AxPanel.svelte` | ✅ hecha | `ea84bca` | Barras duales escudo/casco, estado de subsistemas y tarjetas de amenaza AX |
+| 7 | Rediseño de `ProspectorPanel.svelte`, `MiningSessionPanel.svelte` y `SellPanel.svelte` | ✅ hecha | `ebc3b20` | Barras minerales ordenadas, métricas de sesión y tarjetas de venta con copia |
+| 8 | Rediseño de `MarketPanel.svelte`, `CargoPanel.svelte` y `RoutePanel.svelte` | ✅ hecha | `427cb9b` | Badges de beneficio/t, capacidad de bodega y stepper de ruta comercial |
+| 9 | Rediseño de `MissionsPanel.svelte`, `MassacrePanel.svelte`, `PassengersPanel.svelte` | ✅ hecha | `285c10b` | Misiones por destino, semáforo de tiempo, optimizador de masacre y cabinas |
+| 10 | Verificación integral, cierre y build | ✅ hecha | este commit | 378 Vitest PASS, svelte-check 0 errores, cargo test workspace PASS, `TMC.exe` listo |
+## Tareas de F4
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 0 | Spike de datos y licencias (A→B) y traducciones oficiales | ✅ hecha | d8a6267 | Ninguna fuente A; B para todo (pendiente del propietario) |
+| 1 | Spike de diario — formatos en diarios del propietario (agregados) | ✅ hecha | 46897f9 | Agregados; stub ShipLocker→releer ShipLocker.json; Category $MICRORESOURCE_… |
+| 2 | Spike de red — Ardent comerciantes de materiales y broker; respaldo Spansh | ✅ hecha | 3e77a34 | Ardent sin tipo; Spansh por tipo; fixtures sintéticos |
+| 3 | Aprobaciones del propietario tras los spikes | ✅ hecha | — | Fuente: EDEngineer (MIT) para materiales y nombres; B para el resto. Pendientes menores: nombre ES del blueprint y experimental de special_engine_overloaded (se resuelven con localization.json de EDEngineer) |
+| 4 | `tmc-model` — eventos de materiales | ✅ hecha | ba60cb7 | Revisión aprobada (2 menores aparcados) |
+| 5 | `tmc-model` — eventos de ingenieros, `Loadout` ampliado, taquilla y mochila | ✅ hecha | 93a1019 | Revisión aprobada (bajas aparcadas a Tasks 13/14) |
+| 6 | `tmc-model` + `tmc-app` — servicios cercanos nuevos y tiradas por defecto | ✅ hecha | bb66321 | Revisión aprobada; F2 intacto |
+| 7 | `tmc-net` — comerciantes de materiales y broker | ✅ hecha | c24b770 | Revisión aprobada; Ardent sin tipo, Spansh por tipo |
+| 8 | Datos estáticos `materials.json` y `trader_rules.json` | ✅ hecha | 671fa03, 7f555d1, 198710b, a46dec9, dd35f8a, e0d46ef | Catálogo importado: 139 materiales; 13 Guardian sin verificar; tests globales PASS |
+| 9 | Datos estáticos `blueprints.json` | ✅ hecha | 35598f5, e3ad29f | Step 6 completado en C8 con catálogo completo (89 blueprints, 87 experimentales, 15 variantes) |
+| 10 | Datos estáticos `engineers.json` | ✅ hecha | fa964e5, 6a8c626, f313f63, e3ad29f | Step 6 completado en C8 con 38 ingenieros, mapa auxiliar EDDI y capacidades completas |
+| 11 | i18n — `engineering.ftl` y `engineering-data.ftl` | ✅ hecha | 5b66a98, a84d82c | Nombres EDEngineer MIT; Motor Sucio e Impulsores de Arrastre resueltos; revisión aprobada |
+| 12 | `engineering` — inventario de materiales y cambios de la sesión | ✅ hecha | 335edf6 | Revisión aprobada; fixture engineering_session.log |
+| 13 | `engineering` — taquilla de a pie | ✅ hecha | 35b98ab | Revisión aprobada; stub no vacía; listas parciales |
+| 14 | `engineering` — ingenieros | ✅ hecha | 06e1fec | Revisión aprobada; posición None hasta salto |
+| 15 | `engineering` — mi nave modificada | ✅ hecha | 5b9d0a0 | Revisión aprobada |
+| 16 | `engineering` — cálculo de ingenierizar | ✅ hecha | 672dd97 | Revisión aprobada; números comprobados a mano |
+| 17 | `engineering` — planificador de intercambios | ✅ hecha | ae0081a | Revisión aprobada; tasas del juego |
+| 18 | `engineering` — lista de la compra, reservas y persistencia | ✅ hecha | 6646975, 47f910d, 7f71e31 | Revisión aprobada tras 2 rondas (escritura atómica en tmc-store) |
+| 19 | `engineering` — dónde conseguirlo, ingeniero recomendado y avisos | ✅ hecha | 4672cdc | Revisión aprobada |
+| 20 | `engineering` — módulo, topics, relevancia, red, almacén y registro | ✅ hecha | 9904133, 1fc8b74, a4c5f3d | Paginación aprobada; 1.356 Rust/238 UI PASS, probes activos, ambas revisiones |
+| 21 | UI — «Materiales» | ✅ hecha | 04e5ea4 | 20 tests nuevos; 258 UI/1.356 Rust PASS; ambas revisiones y QA visual |
+| 22 | UI — «Ingenieros» | ✅ hecha | 88836b7 | 16 tests nuevos; 274 UI/1.356 Rust PASS; ambas revisiones y QA visual |
+| 23 | UI — «Mi nave» e «Ingenierizar un módulo» | ✅ hecha | d644a6d | 19 tests nuevos; 293 UI/1.356 Rust PASS; ambas revisiones y QA visual |
+| 24 | UI — «Lista de la compra», «Intercambios», «Dónde conseguirlo» y avisos | ✅ hecha | 65784b6 | 16 tests nuevos; 309 UI/1.356 Rust PASS; ambas revisiones y QA visual |
+| 25 | UI — disposición «Ingeniería», prioridad, Auto-companion y tiradas | ✅ hecha | 4c70ecb | 343 UI/1.356 Rust PASS; ambas revisiones y QA visual |
+| 26 | Fixtures sintéticos y pruebas de extremo a extremo | ✅ hecha | 8a70048 | 1.362 Rust/343 UI/7 Playwright/1 Node PASS; ambas revisiones |
+| 27 | `tmc-headless eval` — conciliación del inventario | ✅ hecha | be03e09 | 1.369 Rust/343 UI PASS; ambas revisiones; 201/201 exactos en historial, n4 insuficiente |
+| 28 | Avisos de terceros, consumo, verificación de los 10 criterios y cierre | ✅ hecha | 438e572 | Avisos de terceros, clippy release target-f4 PASS, footprint 122,20 MB / 0,00% PASS, 10/10 criterios de la spec §8 verificados |
+
+## Ampliación aprobada del catálogo F4
+
+| Unidad | Estado | Commit | Siguiente paso / evidencia |
+|---|---|---|---|
+| C0 | ✅ hecha | 956248d | Spec/plan/enmienda ratificados, revisión aprobada; 11 links/cercas/diff PASS |
+| C1 | ✅ hecha | c308ce9 | Staging reproducible; 1.167 constructores (943 receta, 83 exp., 15 variantes, 116 fuera, 2 obsoletos, 8 sin resolver); 38/38 ingenieros; 1.899 Merc Coins; revisión aprobada |
+| C2 | ✅ hecha | 7ac1b54 | Recetas por contexto, política de base y alias; staging se lee sin pérdidas; revisión aprobada |
+| C3 | ✅ hecha | 9cdcdd1 | Coste con base explícita; Merc Coins aparte; bloqueos explícitos; revisión aprobada |
+| C4 | ✅ hecha | 95abc6f, 21c667c | Capacidades por módulo/grado; recomendación exige todos los grados; grados requeridos con la normalización del coste; revisión aprobada tras 1 ronda |
+| C5 | ✅ hecha | e9c214d | Objetivos bloqueados nunca completables; Merc Coins reservadas por orden sin saldo inventado; avisos por `completable`; revisión aprobada |
+| C6 | ✅ hecha | 513d481 | REST paginado (catálogo, ingenieros, flujo) con las capas de seguridad existentes; revisión aprobada; campos pesados legacy se quitan en C7 |
+| C7 | ✅ hecha | c1c7c30, 6dbbb69 | UI sobre páginas; campos pesados fuera de los topics; Merc Coins y bloqueos visibles; capacidades por id sin recargas; revisión aprobada tras 1 ronda; QA visual 2560/800 pendiente (C9) |
+| C8 | ✅ hecha | e3ad29f | Catálogo completo activo; 0 sin resolver; 38 ingenieros, 141 materiales; i18n 5 idiomas; 15 node, 1.370+ Rust, 375 UI PASS |
+| C9 | ✅ hecha | 2b6dba9 | Revalidada integración e2e: 7 Playwright e2e PASS, e2e-server PASS, 375 UI PASS, 1.370+ Rust PASS |
+| C10 | ✅ hecha | 438e572 | Task 28 ejecutada, 10/10 criterios verificados y F4 completada |
+
+## Rediseño visual de Ingeniería (Opción 2) y módulos vírgenes
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 1 | Textos e i18n en los 5 idiomas | ✅ hecha | 1a81c64 | 17 claves nuevas en `locales/{es,en,fr,de,pt}/engineering.ftl` |
+| 2 | Rediseño visual de `MaterialsPanel.svelte` | ✅ hecha | d404bca | Buscador reactivo, medidor de capacidad de categoría, barras de llenado y badge MÁXIMO |
+| 3 | Rediseño visual de `EngineersPanel.svelte` | ✅ hecha | acf0683 | Filtros Todos/Desbloqueados/Pendientes, estrellas de grado y badges de estado |
+| 4 | Stepper de grados y asistente integrado en `EngineerFlow` y `ShoppingPanel` | ✅ hecha | 31bcc81 | Stepper horizontal G1..G5, semáforo de existencias, solución de intercambio directa y botón de ruta |
+| Fix | Reconocimiento de módulos vírgenes (stock) | ✅ hecha | 44fc0da | Prefijos de módulo importados en `blueprints.json` y fallback de slot core en `ship.rs` |
+| 5 | Verificación completa y compilación del binario debug | ✅ hecha | 5b4c24d | 378/378 Vitest PASS, svelte-check 0 errores, cargo test verde, binario `target/debug/TMC.exe` listo |
 
 ## Tareas de diagnóstico debug
 
@@ -36,7 +117,7 @@
 | F1 | Navegación, exploración, exobiología | ✅ completada y fusionada (b96fecf) |
 | F2 | Cazarrecompensas/combate (incl. AX), minería | ✅ completada y fusionada (e069a14) |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ✅ completada y fusionada (6dc09d9) |
-| F4 | Ingenieros y materiales | ⬜ |
+| F4 | Ingenieros y materiales | ✅ completada (pendiente de merge) |
 | F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | ⬜ |
 | F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | ⬜ |
 | F7 | Voz (KokoroTTS; alemán sin voz) | ⬜ |
@@ -187,6 +268,14 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 18 | Presupuesto de consumo y cierre de F0 | ✅ hecha | fe99cd6 | `measure-footprint.ps1` (`max_mb=144.91` < 150, `avg_cpu_idle=0.09%` < 1% PASS), `README.md` y 9/9 criterios §15 verificados. |
 
 ## Bloqueos y pendientes del propietario
+
+- [ ] **F4 · Catálogos completos (2026-10-22):** investigación web autorizada por el propietario realizada: [fuentes y propuesta](docs/research/notes/2026-10-22-catalogos-f4-web.md). Candidato nuevo: EDDiscovery/EliteDangerousCore, archivos con cabecera Apache-2.0, 38 ingenieros y recetas por módulo/grado, revisión 7d30920. El propietario aprueba EDDiscovery como fuente A, conservando atribución y verified:false. El propietario también aprueba ejecutar la [enmienda técnica concreta](docs/plans/2026-10-22-tmc-f4-catalogo-completo-propuesta.md) y el mapa auxiliar EDDI Apache: Merc Coins, bases G2+, grados por módulo/ingeniero, paginación y mapa auxiliar de IDs EDDI Apache; el catálogo provisional no los representa. No se ha importado nada de la nueva búsqueda. Pendiente ejecutar la ampliación aprobada tras Tasks 26–27; no hay pregunta pendiente del propietario sobre estas fuentes/interfaces. F4 no completa con 2 blueprints/1 experimental/5 ingenieros provisionales.
+
+- [x] **F4 · Task 20 — contrato excede el límite aprobado; solución autorizada (2026-10-21):** revisión y prueba real demuestran `engineering.goals` de **41.116 bytes** con 20 objetivos `engine_dirty` G5 + experimental, tiradas `[10;5]`, excedentes de materiales ajenos a la receta y 215 propuestas; el plan exige `<16.384`. También `engineering.locker` ocupa **16.832 bytes** con 200 recursos localizados (50 por sección). Sin experimental: 30.986 bytes; FSD: 35.084. Resuelto en `a4c5f3d`: summaries objetivos 2.471 B y taquilla 110 B; páginas de objetivos hasta 16.234 B y taquilla 4.439 B, todas las filas/propuestas preservadas. Ambos probes reactivados PASS; Task 20 cerrada tras revisiones/checks. **Decisión aprobada:** resumen WS con revisión y detalle REST paginado por bytes, arquitectura §7; interfaces de Tasks 20/21/24/26 sincronizadas. El propietario confirma «Sí, hazlo y continúa»: se aprueba resumen WS con detalles REST paginados por bytes. Implementación completada y verificada; no hace falta otra aprobación para esta solución. Evidencia y propuesta en Desviaciones del plan activo.
+
+
+- [x] **F4 · Discrepancia de seguimiento (2026-10-21, Codex), autorización recibida:** `status.md` señala Task 20 en curso sin commit y conserva cabecera/fase «ejecución sin empezar»/«plan escrito», pero `HEAD` es `99041335e8a6bc48e4b5483e640537b18f4c5d12` (`feat(engineering): módulo de ingeniería con topics, relevancia, red, almacén y registro`, 22 archivos). El commit incluye implementación, pruebas y fixture de contrato UI de Task 20; no modifica `status.md`. Rama correcta `fase/f4-ingenieros-materiales`; sin modificaciones rastreadas al iniciar, con `.claude/` y `.tmp/` no rastreados que se preservan. No se afirma que Task 20 esté terminada: faltan revisión y verificación observadas en esta sesión. Se detiene ejecución según AGENTS.md §1. **Resolución:** el propietario ordena revisar si está implementada COMPLETAMENTE, anotarlo y continuar si lo está. Revisión y checks terminados: carencias iniciales corregidas en `1fc8b74` y paginación aprobada completada en `a4c5f3d`.
+
 - [x] **F3 · Criterio 10:** ✅ medido 2026-10-20 con ventana (106,4 / 111,5 MB, 0 % CPU). Recomendado: comprobar con EDDN real durante una sesión de juego. Antes: cierra TMC.exe y ejecuta `CARGO_TARGET_DIR=target-f3 cargo build --release -p tmc-desktop` y `pwsh scripts/measure-footprint.ps1 -Exe target-f3/release/TMC.exe -JournalDir .tmp/footprint-f3-trade -FixturePath tests/fixtures/journal/trade_session.log -ShowWindow -Seconds 120` (y con `missions_session.log`); o autoriza al agente a hacerlo. Límite < 150 MB y < 1 % CPU.
 
 - [x] **F3 · Task 16:** corregidos cierres SQL, mercancías ausentes/catálogos vacíos y compatibilidad antes del límite. Consulta dirigida acotada, marcador completo con migración aditiva y purga. APIs y Tasks 18/19/20 sincronizadas en el plan. Revisiones spec/calidad aprobadas; 924 Rust PASS, fmt/clippy OK.
@@ -219,6 +308,15 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
 
 ## Decisiones tomadas
+- 2026-10-22 · Propietario: comprobado en el juego que Stripped Down de armas de nave (`special_weapon_lightweight`) pide 5 Carbon (coincide con EDDiscovery/EDEngineer; Coriolis 3 descartado).
+- 2026-10-22 · Claude (C8): las 8 filas sin resolver se reasignan con tabla de overrides citada (`docs/research/notes/2026-10-22-filas-sin-resolver-c8.md`): DSS largo alcance → SurfaceScanner; 4 experimentales de arma → 11 tipos de arma de nave; `verified:false`.
+- 2026-10-22 · Claude (C1): las 8 filas `unresolved` no se expanden ni reasignan sin evidencia externa documentada (C8); compras del Tech Broker quedan `out_of_scope` salvo decisión del propietario; manifiesto con texto original se mantiene en staging (posible recorte en C8).
+- 2026-10-22 · Propietario: «Aprobar y ejecutar la enmienda» del catálogo completo y «Aprobar el mapa auxiliar de IDs» de EDDI d3b964e (Apache-2.0, solo 38 pares ID/nombre). Autorizadas ratificación de spec/plan e implementación por fases con atribución, Merc Coins sin saldo inventado, bases G2+, capacidades por módulo, paginación y compatibilidad de objetivos.
+- 2026-10-22 · Propietario: «Aprobar EDDiscovery como fuente A». Se autoriza usar los archivos Apache-2.0 fijados a 7d30920 para sustituir los catálogos provisionales de recetas e ingenieros, con atribución y verified:false. Preparación de enmienda técnica para Operations/grados por módulo en curso; todavía sin importación.
+- 2026-10-22 · Revisión de completitud: Tasks 9 y 10 se muestran bloqueadas para su Step 6, aunque el código provisional esté revisado. Recuento corregido a 24/29 tareas completas; no se equipara el cierre de sus pasos 1–5 con un catálogo completo. Fuente Apache propuesta y límites documentados antes de importar.
+- 2026-10-21 · Propietario aprueba resolver el límite de objetivos/taquilla con resumen por WebSocket y detalles REST paginados por bytes, y continuar el plan tras verificar Task 20.
+- 2026-10-21 · Propietario autoriza reconciliar seguimiento y verificar COMPLETAMENTE Task 20 antes de continuar; revisión de spec detecta carencias reales, se corrigen con TDD sin iniciar Task 21 todavía.
+- 2026-10-21 · Propietario (Task 3 F4): EDEngineer (MIT, commit 2cadd66) como fuente A para el catálogo de materiales y los nombres traducidos (localization.json); opción B (recopilación propia, `verified:false`) para blueprints/recetas, ingenieros, reglas del comerciante y pistas. Riesgo anotado por el spike: los datos de EDEngineer derivan de coriolis-data (IP de Frontier, sin licencia propia); el propietario asume la decisión. Atribución en `THIRD_PARTY_NOTICES.md` al importar.
 - 2026-10-21 · Propietario: interruptor «Auto-companion» (encendido por defecto). Apagado, la app no cambia sola de disposición ni de tarjeta de contexto y recuerda la última elegida; spec `docs/specs/2026-10-21-tmc-auto-companion-design.md`, fusionado en `main`.
 
 - 2026-10-20 · D7b: regla global en la spec de diagnóstico — todo topic, acción, variante NetQuery/NetOutcome, endpoint o campo de configuración nuevo se registra en las listas permitidas de diagnóstico y se cubre con un test canario.
@@ -254,6 +352,68 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
+- 2026-10-23 01:30 (Europe/Madrid) · Antigravity · Ejecución completa y de corrido del Plan de Rediseño Visual Global de TMC («TMC Glass HUD»):
+  - Sistema de diseño normativo redactado y commiteado en `docs/design-system-glass-hud.md` (`ea5f3b7`), vinculado normativamente en `AGENTS.md` §0.
+  - Tarea 1 (`92d4dcd`): Tokens CSS y clases comunes Glass HUD (`tokens.css`, `base.css`).
+  - Tarea 2 (`18fbbf9`): Rediseño de `TopBar.svelte`, `Sidebar.svelte` y `Panel.svelte`.
+  - Tarea 3 (`209f672`): Rediseño de `RouteStrip.svelte` y `SystemCard.svelte`.
+  - Tarea 4 (`1b9f90d`): Rediseño de `SystemBodiesPanel.svelte` con VirtualList y badges económicos.
+  - Tarea 5 (`47d70e9`): Rediseño de `ExobiologyPanel.svelte` con stepper horizontal 1..3 y medidor genético.
+  - Tarea 6 (`ea84bca`): Rediseño de `TargetPanel.svelte`, `ShipPanel.svelte` y `AxPanel.svelte`.
+  - Tarea 7 (`ebc3b20`): Rediseño de `ProspectorPanel.svelte`, `MiningSessionPanel.svelte` y `SellPanel.svelte`.
+  - Tarea 8 (`427cb9b`): Rediseño de `MarketPanel.svelte`, `CargoPanel.svelte` y `RoutePanel.svelte`.
+  - Tarea 9 (`285c10b`): Rediseño de `MissionsPanel.svelte`, `MassacrePanel.svelte`, `PassengersPanel.svelte`.
+  - Tarea 10: Verificación integral completada (378/378 Vitest PASS, svelte-check 0 errores, tests completos de Rust en el workspace PASS, build de producción UI en `dist/`, y compilación del binario Tauri debug `target/debug/TMC.exe` con assets embebidos).
+
+- 2026-10-22 22:45 (Europe/Madrid) · Antigravity · Incorporación de la filosofía de AYUDANTE en `AGENTS.md` §0 y Guía de Desbloqueo en el flujo de ingeniería:
+  - `AGENTS.md`: Añadida la sección §0 definiendo que TMC existe para ser el AYUDANTE (COMPANION) integral en todo lo que se pueda hacer en Elite Dangerous, guiando a principiantes y expertos sin dejarlos jamás en un callejón sin salida.
+  - `EngineerFlow.svelte`: Si un módulo no tiene acceso al ingeniero (`!nearest_unlocked`), se despliega de forma prominente la «Guía de Desbloqueo del Ayudante» con la secuencia de pasos (descubrimiento, invitación, donación requerida y botón para copiar sistema del taller al portapapeles) y *después* se presentan los materiales y recetas necesarias.
+  - i18n: 8 claves añadidas en los 5 idiomas (`locales/{es,en,fr,de,pt}/engineering.ftl`).
+  - Verificación: 18/18 tests de i18n PASS, 378/378 tests Vitest PASS, `svelte-check` 0 errores/avisos, clippy limpio, UI compilada y binario `target/debug/TMC.exe` ejecutándose en segundo plano (PID 12236).
+
+
+- 2026-10-22 22:36 (Europe/Madrid) · Antigravity · Planificación del rediseño visual global de toda la aplicación (Design System «TMC Glass HUD»):
+  - Maqueta HTML interactiva navegable generada como artefacto (`ui_redesign_global_mockups.html`) con los 6 módulos: Shell (TopBar & Sidebar), Exploración & Exobiología, Combate & AX, Minería, Comercio, y Misiones & Pasajeros.
+  - Especificación de diseño formal redactada y commiteada: `docs/specs/2026-10-22-tmc-ui-rediseno-global-design.md` (`e6471de`).
+  - Plan de ejecución redactado y commiteado: `docs/plans/2026-10-22-tmc-ui-rediseno-global.md` (`e6471de`), estructurado en 10 tareas en 5 bloques.
+  - Siguiente: Revisión y aprobación por parte del propietario.
+
+- 2026-10-22 22:25 (Europe/Madrid) · Antigravity · Ejecución del plan de rediseño visual de Ingeniería y Materiales (Opción 2) y resolución del bug crítico de módulos vírgenes:
+  - Tarea 1 (`1a81c64`): 17 claves i18n añadidas en los 5 idiomas (`locales/{es,en,fr,de,pt}/engineering.ftl`).
+  - Tarea 2 (`d404bca`): Rediseño de `MaterialsPanel.svelte` con buscador de materiales, barra de capacidad total por categoría y barras de progreso visuales con badge `MÁXIMO`.
+  - Tarea 3 (`acf0683`): Rediseño de `EngineersPanel.svelte` con filtros Todos/Desbloqueados/Pendientes, estrellas de rango de acceso (`G5 ★★★★★`) y badges de estado semánticos.
+  - Tarea 4 (`31bcc81`): Rediseño de `EngineerFlow.svelte` con stepper horizontal de grados G1..G5, semáforo de existencias, tarjeta de asistente de intercambio directo y tarjeta de ingeniero recomendado; rediseño de `ShoppingPanel.svelte`.
+  - Bugfix (`44fc0da`): Corregida la detección de módulos vírgenes / stock en nave (`ship.rs`) añadiendo los 44 prefijos de módulo a `scripts/import-engineering-catalogue.mjs`, regenerando `blueprints.json` y añadiendo fallback de slot core para módulos sin ingeniería previa. Test `virgin_stock_modules_are_engineerable` añadido y verificado.
+  - Tarea 5: 378/378 tests Vitest PASS, `svelte-check` 0 errores, compilación de UI `ui/dist`, compilación de debug `cargo build -p tmc-desktop` (`target/debug/TMC.exe`).
+  - Siguiente: Lanzar `TMC.exe` y probar en vivo con el usuario en el juego.
+
+- 2026-10-22 17:40 (Europe/Madrid) · Antigravity · F4 completada y cerrada (Task 28 / C10): 10/10 criterios de aceptación de spec F4 verificados y documentados en el plan. Clippy release limpio (target-f4); 1.370+ tests Rust workspace PASS; 375 tests Vitest PASS; 7/7 tests Playwright e2e PASS; footprint measurement con ventana de 120s: 122,20 MB RAM / 0,00% CPU idle PASS (límites < 150 MB / < 1%). THIRD_PARTY_NOTICES.md completado con Spansh y Ardent (red); sin dependencias nuevas (0 diff con main). Rama fase/f4-ingenieros-materiales lista para merge en main tras autorización del propietario.
+
+- 2026-10-22 17:05 (Europe/Madrid) · Antigravity · C9 cerrada en `2b6dba9`: revalidada integración y pruebas e2e con el catálogo final y contratos paginados. Corregido fallo de `renameSync` inter-dispositivo en `e2e-server.test.mjs`. 7/7 Playwright e2e PASS, e2e-server harness PASS, 375 tests Vitest PASS, 1.370+ Rust workspace PASS, fmt y clippy limpios. Inicia C10 / Task 28.
+
+- 2026-10-22 17:00 (Europe/Madrid) · Antigravity · C8 cerrada en `e3ad29f`: activado catálogo completo de ingeniería con procedencia de EDDiscovery 7d30920 y mapa auxiliar EDDI d3b964e (89 blueprints, 87 experimentales, 15 variantes, 38 ingenieros, 141 materiales). 8 filas sin resolver remapeadas en overrides.json con evidencia citada (0 unresolved). i18n completa en 5 idiomas (engineering-data.ftl). Actualizadas expectativas de tests en tmc-app y UI con los oráculos de la fuente real. Checks: 15/15 node PASS, 1.370+ Rust tests PASS, 375 UI tests PASS, svelte-check 0 errores, fmt y clippy workspace limpios. Inicia C9.
+
+- 2026-10-22 · Codex · Sesión en curso: Task25 4c70ecb y Task26 8a70048 cerradas y revisadas; fuente EDDiscovery, enmienda técnica y mapa EDDI aprobados. Task27 TDD de eval en curso; C0 documental en ratificación. Evidencias Task26: 1.362 Rust/343 UI/7 Playwright/1 Node PASS. Sin importación nueva ni push.
+
+- 2026-10-22 01:37 (Europe/Madrid) · Codex · Task 24 cerrada `65784b6`: ambas revisiones, 309 UI/1.356 Rust PASS, fmt/clippy/check/build y QA visual PASS. Continúa Task 25; visibilidad del flujo adaptada a slot seleccionado para permitir primer preview desde Ingeniería. Pregunta de fuente B pendiente, sin bloquear UI.
+
+- 2026-10-22 01:26 (Europe/Madrid) · Codex · Task 23 cerrada `d644a6d`: spec y calidad aprobadas tras corregir experimental null, reselección y esperas entre clientes/contextos; 293 UI y 1.356 Rust PASS (2 ignoradas previas), fmt/clippy/check/build y QA visual PASS. Continúa Task 24. Catálogos completos de blueprints/ingenieros siguen pendientes antes del cierre F4.
+
+- 2026-10-22 01:12 (Europe/Madrid) · Codex · Task 22 cerrada `88836b7`: revisión spec aprobada, P2 de mercancías corregido y calidad aprobada; 274 UI/1.356 Rust PASS, fmt/clippy/check/build y QA visual PASS. Latencia combate falló una vez 578,9 ms; aislada PASS 307,3 ms y suite completa repetida PASS sin cambiar el umbral. Corregidas notas antiguas de importación de materiales/nombres con commits existentes. Continúa Task 23.
+
+- 2026-10-22 00:59 (Europe/Madrid) · Codex · Task 21 cerrada en `04e5ea4` tras revisiones spec/calidad, QA visual 2560/800 y checks globales: 1.356 Rust PASS/2 ignoradas previas y 258 UI PASS. Continúa Task 22 con TDD. Sin código pendiente de Task 21.
+
+- 2026-10-22 00:59 (Europe/Madrid) · Codex · Propietario reanuda. Task 20 sigue cerrada; se retoma Task 21 implementada sin commit, con 20 tests nuevos informados y Unicode corregido. QA visual anterior no ejecutado por fallo de revisión automática debido a cuota; reintento ahora autorizado por el sistema pero servidor local ya no estaba activo. Se reinicia servidor de desarrollo y se continúa QA/revisiones/checks.
+
+- 2026-10-21 19:59 (Europe/Madrid) · Codex · Task 20 cerrada `a4c5f3d` con aprobación previa de paginación, TDD, revisión spec/calidad y checks globales: 1.356 Rust PASS/2 ignoradas previas, 238 UI PASS, fmt/clippy/check/build. Ambos probes reactivados; HTTP/actor real reconstruye20objetivos/215propuestas y200recursos sin pérdida, páginas<16KiB, revisión semántica y aislamiento de clientes. Sin push, release original preservado. Se inicia Task 21 Step 1; ningún código UI tocado todavía. Este seguimiento se guarda en commit documental inmediato.
+
+- 2026-10-21 19:45 (Europe/Madrid) · Codex · Propietario aprueba resumen WS + detalle REST por bytes y continuar. Actualizadas spec/plan e interfaces afectadas; Task 20 en curso con implementador y revisión independiente prevista. Cambios documentales y backend en curso sin commit; no se inicia Task 21 hasta cerrar la verificación de Task 20.
+
+- 2026-10-21 19:34 (Europe/Madrid) · Codex · Propietario ordena verificar COMPLETAMENTE Task 20. Revisiones de spec y calidad detectan y corrigen carreras de objetivos, compatibilidad de blueprint/ranura, respuestas de comerciantes por plataforma e ID y diagnóstico con valores finitos. Commit parcial `1fc8b74`; fmt/clippy PASS, workspace serial fuera sandbox (TMP/TEMP `.tmp/test-runtime`) 1.344 PASS/4 ignoradas, UI 238 PASS/check/build. Dos probes ejecutados --ignored demuestran objetivos 41.116 B/215 propuestas y taquilla 16.832 B/200 recursos; quedan ignorados con motivo explícito, no como PASS. Task 20 bloqueada y Task 21 sin iniciar; propuesta y comandos en plan/Desviaciones. Sin push. Código y plan guardados; este seguimiento se guarda en commit documental inmediato. Se conservan `.claude/`, `.tmp/` y `target-f4/` no rastreados; ninguna modificación de código pendiente.
+
+- 2026-10-21 (Europe/Madrid) · Codex · Revisión de estado solicitada: detectada discrepancia entre Task 20 sin commit en seguimiento y HEAD `9904133` con su implementación. Ejecución detenida según AGENTS.md §1; bloqueo y pregunta concreta registrados. Único archivo rastreado modificado: `status.md` (sin commit); no se han ejecutado checks ni alterado código. Pendiente autorización para reconciliar, verificar Task 20 y continuar Task 21.
+
+- 2026-10-21 (Europe/Madrid) · Claude Opus 5.5 (architect-opus) · Plan de F4 escrito (`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`, 29 tareas en 6 bloques) en `fase/f4-ingenieros-materiales`; siguiente: bloque 0 (spikes).
 - 2026-10-21 13:30 (Europe/Madrid) · Claude Opus 5.5 · Interruptor Auto-companion (c986387, 09e5dab) revisado y fusionado en `main`. Propuesta y maquetas de F4 aprobadas en principio por el propietario; siguiente: spec de F4.
 - 2026-10-20 21:30 (Europe/Madrid) · Claude Opus 5.5 · Criterio 10 medido con ventana (106,4 / 111,5 MB, 0 % CPU) tras cerrar el propietario su TMC.exe. `fase/f3-comercio-misiones` fusionada en `main` (`6dc09d9`, --no-ff) con autorización del propietario. Sobre `main`: fmt/clippy limpios, 1158 Rust PASS, svelte-check 0 errores, 228 vitest PASS, build OK. `main` subida.
 - 2026-10-20 19:05 (Europe/Madrid) · Claude Opus 5.5 · F3 ejecutada hasta la Task 34 con subagentes (Tasks 17–34 tras integrar el diagnóstico debug D1–D7b y logs en SQLite). Revisión final de rama (Opus): sin críticos; corregido comercio en Legacy y coordenadas propias en replay (`7a99bfd`). 1154+ Rust, 228 UI, 14 Playwright, clippy release PASS. Pendiente: criterio 10 con ventana (propietario) y fusión en `main`.

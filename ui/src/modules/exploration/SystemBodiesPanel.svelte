@@ -23,10 +23,15 @@
 <Panel titleKey="panel-system-bodies" span="full" size="large">
   {#if system}
     <div class="summary">
-      <strong class="system" data-testid="system-name">{system.system}</strong>
-      {#if system.discovered != null}
-        <span class="badge">{t(system.discovered ? 'exploration-discovered' : 'exploration-undiscovered')}</span>
-      {/if}
+      <div class="system-header">
+        <strong class="system" data-testid="system-name">{system.system}</strong>
+        {#if system.discovered != null}
+          <span class="badge" class:badge-green={system.discovered} class:badge-orange={!system.discovered}>
+            {t(system.discovered ? 'exploration-discovered' : 'exploration-undiscovered')}
+          </span>
+        {/if}
+      </div>
+
       {#if system.star_classes && system.star_classes.length > 0}
         <div class="stars" data-testid="system-stars">
           <span class="stars-label">{t('exploration-stars')}:</span>
@@ -44,13 +49,23 @@
           </div>
         </div>
       {/if}
-      <div class="fss">
-        <label for="exploration-fss">{t('exploration-fss-progress')} {system.fss.complete ? pct(1) : pct(system.fss.progress)}</label>
+
+      <div class="fss-card">
+        <div class="fss-label-row">
+          <label for="exploration-fss" class="fss-title">{t('exploration-fss-progress')} {system.fss.complete ? pct(1) : pct(system.fss.progress)}</label>
+        </div>
         <progress id="exploration-fss" value={progress} max="1"></progress>
-        <span>{t('exploration-scanned-count', { scanned: system.fss.scanned, total: system.fss.body_count ?? '—' })}</span>
+        <span class="fss-count">{t('exploration-scanned-count', { scanned: system.fss.scanned, total: system.fss.body_count ?? '—' })}</span>
       </div>
-      <div class="value"><span>{t('exploration-value-now')}</span><strong>{credits(system.value_now)}</strong></div>
-      <div class="value"><span>{t('exploration-value-if-mapped')}</span><strong>{credits(system.value_if_mapped)}</strong></div>
+
+      <div class="metric-card value-card">
+        <span class="metric-label">{t('exploration-value-now')}</span>
+        <strong class="metric-val gold">{credits(system.value_now)}</strong>
+      </div>
+      <div class="metric-card value-card">
+        <span class="metric-label">{t('exploration-value-if-mapped')}</span>
+        <strong class="metric-val green">{credits(system.value_if_mapped)}</strong>
+      </div>
     </div>
     {#if (system.truncated ?? 0) > 0}
       <p data-testid="exploration-truncated">{t('exploration-truncated', { count: system.truncated ?? 0 })}</p>
@@ -64,14 +79,16 @@
           {#snippet row(body, index)}
             <div role="row" aria-rowindex={index + 2} class="body-grid body-row" class:map-advice={body.advice?.includes('map')}
               data-testid="body-row" data-body-id={body.body_id}>
-              <span role="cell" title={body.short_name}>{body.short_name}</span>
+              <span role="cell" class="cell-body-name" title={body.short_name}>{body.short_name}</span>
               <span role="cell" data-testid="body-kind" title={t(`exploration-kind-${body.kind_key}`)}>{t(`exploration-kind-${body.kind_key}`)}{body.star_class ? ` (${body.star_class})` : ''}</span>
               <span role="cell" class="number">{num1(body.distance_ls)}</span>
-              <span role="cell" class="number">{credits(body.scanned_value)}</span>
-              <span role="cell" class="number" data-testid="mapped-value">{body.kind_key.startsWith('star-') ? '—' : credits(body.mapped_value)}</span>
+              <span role="cell" class="number font-mono">{credits(body.scanned_value)}</span>
+              <span role="cell" class="number font-mono" data-testid="mapped-value">{body.kind_key.startsWith('star-') ? '—' : credits(body.mapped_value)}</span>
               <span role="cell">{t('exploration-signals-bio')} {body.bio ?? 0} · {t('exploration-signals-geo')} {body.geo ?? 0}</span>
               <span role="cell" data-testid="body-marks" title={marks(body)}>{marks(body)}</span>
-              <span role="cell" title={advice(body) + (body.probes ? ' · ' + t(body.probes.estimated ? 'exploration-probes-estimated' : 'exploration-probes-exact', { count: body.probes.n }) : '')}>{body.advice?.includes('map') ? '★ ' : ''}{advice(body)}{#if body.probes} · {t(body.probes.estimated ? 'exploration-probes-estimated' : 'exploration-probes-exact', { count: body.probes.n })}{/if}</span>
+              <span role="cell" class="advice-cell" title={advice(body) + (body.probes ? ' · ' + t(body.probes.estimated ? 'exploration-probes-estimated' : 'exploration-probes-exact', { count: body.probes.n }) : '')}>
+                {#if body.advice?.includes('map')}<span class="map-star">★ </span>{/if}{advice(body)}{#if body.probes} · {t(body.probes.estimated ? 'exploration-probes-estimated' : 'exploration-probes-exact', { count: body.probes.n })}{/if}
+              </span>
             </div>
           {/snippet}
         </VirtualList>
@@ -83,34 +100,48 @@
   <footer data-testid="exploration-footer">
     {#if system}<span>{t('exploration-unidentified')}: {system.unidentified ?? '—'}</span>{/if}
     {#if unsold}
-      <span>{t('exploration-unsold')}: <strong>{credits(unsold.total)}</strong> · {t('exploration-unsold-systems', { count: unsold.systems })}</span>
-      {#if unsold.at_risk}<strong class="risk">{t('exploration-at-risk')}</strong>{/if}
+      <div class="unsold-info">
+        <span>{t('exploration-unsold')}: <strong class="gold font-mono">{credits(unsold.total)}</strong> · {t('exploration-unsold-systems', { count: unsold.systems })}</span>
+        {#if unsold.at_risk}<strong class="badge badge-danger risk">{t('exploration-at-risk')}</strong>{/if}
+      </div>
     {/if}
   </footer>
 </Panel>
 
 <style>
   .summary { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+  .system-header { display: flex; align-items: baseline; gap: 0.6rem; }
   .system { font-size: var(--font-title-lg); color: var(--hud-primary); }
-  .badge { border: 1px solid var(--hud-border); border-radius: 3px; padding: .2rem .5rem; }
   .stars { display: flex; align-items: center; gap: .4rem; }
-  .stars-label { color: var(--hud-muted); }
+  .stars-label { color: var(--hud-muted); font-size: 0.8rem; }
   .star-list { display: flex; align-items: center; gap: .3rem; }
-  .star-badge { border: 1px solid var(--hud-border); border-radius: 3px; padding: .15rem .45rem; font-family: var(--font-mono); font-size: .85em; font-weight: 700; }
-  .star-badge.scoopable { color: var(--hud-success); border-color: var(--hud-success); }
-  .fss { display: grid; gap: .2rem; min-width: 12rem; }
-  progress { width: 100%; accent-color: var(--hud-primary); }
-  .value { display: grid; gap: .2rem; }
-  .value span, .fss span, .empty { color: var(--hud-muted); }
-  .value strong, .number { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .star-badge { border: 1px solid var(--hud-border-subtle); background: var(--hud-surface-card); border-radius: 3px; padding: .15rem .45rem; font-family: var(--font-mono); font-size: .82em; font-weight: 700; color: var(--hud-muted); }
+  .star-badge.scoopable { color: var(--hud-success); border-color: rgba(34, 197, 94, 0.4); background: rgba(34, 197, 94, 0.1); }
+  
+  .fss-card { background: var(--hud-surface-card); border: 1px solid var(--hud-border-subtle); border-radius: 4px; padding: 0.45rem 0.75rem; display: flex; flex-direction: column; gap: 0.2rem; min-width: 14rem; }
+  .fss-label-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.75rem; }
+  .fss-title { color: var(--hud-muted); font-weight: 600; text-transform: uppercase; font-size: 0.7rem; }
+  .fss-card progress { width: 100%; height: 6px; accent-color: var(--hud-cyan); }
+  .fss-count { color: var(--hud-muted); font-size: 0.72rem; }
+
+  .value-card { min-width: 130px; }
+  .empty { color: var(--hud-muted); }
+  .number { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+  .font-mono { font-family: var(--font-mono); }
+  .gold { color: #fbbf24; }
+  
   .table-scroll { overflow-x: auto; }
   .body-table { min-width: 1350px; }
   .body-grid { display: grid; grid-template-columns: minmax(75px,.6fr) minmax(150px,1.4fr) minmax(85px,.7fr) minmax(110px,.9fr) minmax(110px,.9fr) minmax(110px,1fr) minmax(180px,1.5fr) minmax(210px,1.8fr); align-items: center; gap: .6rem; padding: 0 .4rem; }
-  .headings { min-height: 2.5rem; color: var(--hud-primary); border-bottom: 1px solid var(--hud-border); }
-  .body-row { height: 30px; box-sizing: border-box; border-bottom: 1px solid var(--hud-border); }
+  .headings { min-height: 2.5rem; color: var(--hud-primary); border-bottom: 1px solid var(--hud-border); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; }
+  .body-row { height: 30px; box-sizing: border-box; border-bottom: 1px solid var(--hud-border-subtle); transition: background-color 100ms ease; }
+  .body-row:hover { background: rgba(255, 255, 255, 0.03); }
   .body-row span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-  .map-advice { background: var(--hud-surface-alt); border-left: 3px solid var(--hud-primary); }
-  .number { text-align: right; }
-  footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .75rem; margin-top: .75rem; }
+  .cell-body-name { font-weight: 600; color: #fff; }
+  .map-advice { background: rgba(255, 113, 0, 0.06); border-left: 3px solid var(--hud-primary); }
+  .map-star { color: var(--hud-primary); font-weight: 700; }
+  
+  footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .75rem; margin-top: .75rem; padding-top: 0.5rem; border-top: 1px solid var(--hud-border-subtle); font-size: 0.82rem; color: var(--hud-muted); }
+  .unsold-info { display: flex; align-items: center; gap: 0.6rem; }
   .risk { color: var(--hud-danger); }
 </style>

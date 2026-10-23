@@ -35,6 +35,11 @@ pub trait Transport: Send + Sync {
         url: &str,
         form: &[(String, String)],
     ) -> BoxFut<'_, Result<HttpReply, TransportError>>;
+    /// POST con cuerpo JSON (`Content-Type: application/json`). Por defecto no
+    /// está soportado y responde como un fallo de conexión.
+    fn post_json(&self, _url: &str, _body: &str) -> BoxFut<'_, Result<HttpReply, TransportError>> {
+        Box::pin(async { Err(TransportError::Connect("post_json no soportado".into())) })
+    }
 }
 
 const TIMEOUT: Duration = Duration::from_secs(5);
@@ -91,6 +96,15 @@ impl Transport for ReqwestTransport {
         form: &[(String, String)],
     ) -> BoxFut<'_, Result<HttpReply, TransportError>> {
         let req = self.client.post(url).form(form);
+        Box::pin(finish(req))
+    }
+
+    fn post_json(&self, url: &str, body: &str) -> BoxFut<'_, Result<HttpReply, TransportError>> {
+        let req = self
+            .client
+            .post(url)
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .body(body.to_owned());
         Box::pin(finish(req))
     }
 }

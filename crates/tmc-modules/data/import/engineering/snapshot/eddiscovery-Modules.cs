@@ -1,0 +1,885 @@
+/*
+ * Copyright 2016-2024 EDDiscovery development team
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
+ * ANY KIND, either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
+ */
+
+using BaseUtils;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace EliteDangerousCore
+{
+    public sealed class OrderedPropertyNameAttribute : Attribute
+    {
+        public int Order { get; set; }
+        public string Text { get; set; }
+        public OrderedPropertyNameAttribute(int n, string text) { Order = n; Text = text; }
+    }
+
+    public partial class ItemData
+    {
+        static public bool TryGetShipModule(ModFDName fdid, out ShipModule m, bool synthesiseit, ShipSlots.Slot slot = ShipSlots.Slot.Unknown)
+        {
+            m = null;
+
+            // try the static values first, this is thread safe
+            bool state = shipmodules.TryGetValue(fdid, out m) || othershipmodules.TryGetValue(fdid, out m) ||
+                        srvmodules.TryGetValue(fdid, out m) || fightermodules.TryGetValue(fdid, out m) || vanitymodules.TryGetValue(fdid, out m);
+
+            if (state == false)    // not found, try find the synth modules. Since we can be called in journal creation thread, we need some safety.
+            {
+                lock (synthesisedmodules)
+                {
+                    state = synthesisedmodules.TryGetValue(fdid, out m);
+                }
+            }
+
+
+            if (!state && synthesiseit)   // if not found, and we want to synthesise it
+            {
+                lock (synthesisedmodules)  // lock for safety
+                {
+                    ModFDName candidatename = GenerateCandidateModuleName(fdid);
+
+                    var newmodule = new ShipModule(-1, IsVanity(candidatename) ? ShipModule.ModuleTypes.VanityType : ShipModule.ModuleTypes.UnknownType, candidatename.ID);
+                    string futilemessage = " - this is item unknown to EDD, but IT WILL not affect operation of the program. It would be nice to report it to us so we can add it to known module lists";
+
+                    BaseUtils.Debugger.TraceBreak($"*** Unknown Module in slot {ShipSlots.ToEnglish(slot)} : {{new ModFDName(\"{fdid.ToLower()}\"), new ShipModule(-1,{(IsVanity(candidatename) ? "ShipModule.ModuleTypes.VanityType" : "ShipModule.ModuleTypes.UnknownType")},\"{candidatename.ID}\") }}," + futilemessage);
+
+                    synthesisedmodules[candidatename] = m = newmodule;                   // lets cache them for completeness..
+                 
+                }
+            }
+
+            return state;
+        }
+
+        internal static ModFDName GenerateCandidateModuleName(ModFDName unknown)
+        {
+            string candidatename = unknown.ID;
+
+            candidatename = candidatename.Replace("weaponcustomisation", "WeaponCustomisation").Replace("testbuggy", "SRV").
+                                    Replace("enginecustomisation", "EngineCustomisation");
+
+            candidatename = candidatename.SplitCapsWordFull();
+            candidatename = candidatename.Replace("Paintjob", "Paint Job");
+            candidatename = candidatename.Replace("Mkii", "Mk II");
+            candidatename = candidatename.Replace("Mkiv", "Mk IV");
+            candidatename = candidatename.Replace("mkiii", " Mk III");
+            candidatename = candidatename.Replace("mkiv", " Mk IV");
+            candidatename = candidatename.Replace("Python Nx", "Python Mk II");
+            candidatename = candidatename.Replace("Typex 2", "Alliance Crusader");
+            candidatename = candidatename.Replace("Typex 3", "Alliance Challenger");
+            candidatename = candidatename.Replace("Empire Trader", "Imperial Clipper");
+            candidatename = candidatename.Replace("Krait Light", "Krait Phantom");
+            candidatename = candidatename.Replace("Ferdelance", "Fer De Lance");
+            candidatename = candidatename.Replace("Smallcombat 1 Nx", "Kestrel MK II");
+            if (!candidatename.Contains("Military Stripe"))
+                candidatename = candidatename.Replace("Type 9 Military ", "Type-10 Defender ");
+            candidatename = candidatename.Replace("Militarystripe", "Military Stripe");
+            candidatename = candidatename.Replace("Belugaliner", "Beluga Liner");
+            candidatename = candidatename.Replace("Ppaisling", "PP Aisling");
+            candidatename = candidatename.Replace("MK I Ii", "MK III");
+            candidatename = candidatename.Replace("Highcolour", "High Colour");
+            candidatename = candidatename.Replace("Blackfriday", "Black Friday");
+            candidatename = candidatename.Replace("Shipkita", "Ship Kit A");
+            candidatename = candidatename.Replace("Shipkitb", "Ship Kit B");
+            candidatename = candidatename.Replace("Shipkitc", "Ship Kit C");
+            candidatename = candidatename.Replace("Iridescentblack", "Iridescent Black");
+            candidatename = candidatename.Replace("Militarystripe", "Military Stripe");
+            candidatename = candidatename.Replace("Colourgeo", "Colour Geo");
+            candidatename = candidatename.Replace(" Textamper", " Text Ampersand");
+            candidatename = candidatename.Replace("Lowlighteffect", "Low Light Effect");
+            candidatename = candidatename.Replace("Metallicdesign", "Metallic Design");
+            candidatename = candidatename.Replace("Thargoidreward", "Thargoid Reward");
+            candidatename = candidatename.Replace("Largelogometallic", "Large Logo Metallic");
+            candidatename = candidatename.Replace("Blackmagenta", "Black Magenta");
+            candidatename = candidatename.Replace("Blueorange", "Blue Orange");
+            candidatename = candidatename.Replace("Greygreen", "Grey Green");
+            candidatename = candidatename.Replace("Greyorange", "Grey Orange");
+            candidatename = candidatename.Replace("Yellowblack", "Yellow Black");
+            candidatename = candidatename.Replace("Iridescenthighcolour", "Iridescent High Colour");
+            candidatename = candidatename.Replace("Panthermkii", "Panther Clipper Mk II");
+            candidatename = candidatename.Replace("Pparissa", "PP Arissa");
+            candidatename = candidatename.Replace("Ppyuri", "PP Yuri");
+            candidatename = candidatename.Replace("Ppjerome", "PP Jerome");
+            candidatename = candidatename.Replace("Pppranav", "PP Pranav");
+            candidatename = candidatename.Replace("Pp Aislingduval", "PP Aisling Duval");
+            candidatename = candidatename.Replace("Pp Arissalavignyduval", "Pp Arissa Lavigny Duval");
+            candidatename = candidatename.Replace("Pp Edmundmahon", "Pp Edmund Mahon");
+            candidatename = candidatename.Replace("Pp Feliciawinters", "Pp Felicia Winters");
+            candidatename = candidatename.Replace("Pp Jeromearcher", "Pp Jerome Archer");
+            candidatename = candidatename.Replace("Pp Liyongrui", "Pp Li Yongrui");
+            candidatename = candidatename.Replace("Pp Pranavantal", "Pp Prana Vantal");
+            candidatename = candidatename.Replace("Pp Yurigrom", "Pp Yuri Grom");
+            candidatename = candidatename.Replace("Ppnakato", "Pp Nakato");
+            candidatename = candidatename.Replace("Ppdenton", "Pp Denton");
+            candidatename = candidatename.Replace("Explorer Nx", "Caspian Explorer");
+            candidatename = candidatename.Replace("Independant Trader", "Keelback");
+            candidatename = candidatename.Replace("Cobramkv", "Cobra Mk V");
+            candidatename = candidatename.Replace("Feddropship", "Federation Dropship");
+            candidatename = candidatename.Replace("Fedcorvette", "Federation Corvette");
+            candidatename = candidatename.Replace("Indfighter", "Independent Fighter");
+            candidatename = candidatename.Replace("Ind Fighter", "Independent Fighter");
+            candidatename = candidatename.Replace("Typex ", "Alliance Chieftain ");
+            candidatename = candidatename.Replace(" lakonminer", " Type 11 Prospector", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace("ownersclub", " Owners Club", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace("brewercorporation", "Brewer Corporation", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace("Type 6", "Type-6", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace("Type 7", "Type-7", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace("Type 8", "Type-8", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace("Type 9", "Type-9", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace("Type 10", "Type-10", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace("Type 11", "Type-11", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace("Smallcombat 1 Nx", "Kestrel Mk II", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace(" MK II", " Mk II", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace(" Class 1", " Rating E", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace(" Class 2", " Rating D", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace(" Class 3", " Rating C", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace(" Class 4", " Rating B", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace(" Class 5", " Rating A", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace(" Size ", " Class ", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace("Mediumtransport 1 ", "Lynx Highliner ", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace("Constructshipemp ", "Construct Ship Empire ", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace("Constructshipfed ", "Construct Ship Federation ", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace("Corporatefleet ", "Corporate Fleet ", StringComparison.InvariantCultureIgnoreCase);
+            candidatename = candidatename.Replace("Corporate Fleet Fleet", "Corporate Fleet ", StringComparison.InvariantCultureIgnoreCase);
+            return new ModFDName(candidatename);
+        }
+
+        // List of ship modules. Synthesised are not included
+        // default is buyable modules only
+        // you can include other types
+        // compressarmour removes all armour entries except the ones for the sidewinder
+        static public Dictionary<ModFDName, ShipModule> GetShipModules(bool includebuyable = true, bool includenonbuyable = false, bool includesrv = false,
+                                                                    bool includefighter = false, bool includevanity = false, bool addunknowntype = false,
+                                                                    bool compressarmourtosidewinderonly = false)
+        {
+            Dictionary<ModFDName, ShipModule> ml = new Dictionary<ModFDName, ShipModule>();
+
+            if (includebuyable)
+            {
+                foreach (var x in shipmodules) 
+                    ml[x.Key] = x.Value;
+            }
+
+            if (compressarmourtosidewinderonly)        // remove all but _grade1 armours in list
+            {
+                var list = shipmodules.Keys;
+                foreach (var name in list)
+                {
+                    if (name.Contains("_armour_") && !name.Contains("sidewinder")) // only keep sidewinder - all other ones are removed
+                        ml.Remove(name);
+                }
+            }
+
+            if (includenonbuyable)
+            {
+                foreach (var x in othershipmodules) ml[x.Key] = x.Value;
+            }
+            if (includesrv)
+            {
+                foreach (var x in srvmodules) ml[x.Key] = x.Value;
+            }
+            if (includefighter)
+            {
+                foreach (var x in fightermodules) ml[x.Key] = x.Value;
+
+            }
+            if (includevanity)
+            {
+                foreach (var x in vanitymodules) ml[x.Key] = x.Value;
+            }
+            if (addunknowntype)
+            {
+                ModFDName unknown = new ModFDName("Unknown");
+                ml[unknown] = new ShipModule(-1, ShipModule.ModuleTypes.UnknownType, "Unknown Type");
+            }
+            return ml;
+        }
+
+        // a dictionary of module english module type vs translated module type for a set of modules
+        public static Dictionary<string, string> GetModuleTypeNamesTranslations(Dictionary<ModFDName, ShipModule> modules)
+        {
+            var ret = new Dictionary<string, string>();
+            foreach (var x in modules)
+            {
+                if (!ret.ContainsKey(x.Value.EnglishModTypeString()))
+                    ret[x.Value.EnglishModTypeString()] = x.Value.TranslatedModTypeString();
+            }
+            return ret;
+        }
+
+        // given a module name list containing siderwinder_armour_gradeX only,
+        // expand out to include all other ships armours of the same grade
+        // used in spansh station to reduce list of shiptype armours shown, as if one is there for a ship, they all are there for all ships
+        public static string[] ExpandArmours(string[] list)
+        {
+            List<string> ret = new List<string>();
+            foreach (var x in list)
+            {
+                if (x.StartsWith("sidewinder_armour"))
+                {
+                    string grade = x.Substring(x.IndexOf("_"));     // its grade (_armour_grade1, _grade2 etc)
+
+                    foreach (var kvp in shipmodules)
+                    {
+                        if (kvp.Key.EndsWith(grade))
+                            ret.Add(kvp.Key.ID);
+                    }
+                }
+                else
+                    ret.Add(x);
+            }
+
+            return ret.ToArray();
+        }
+
+        static public bool IsVanity(ModFDName ifd)
+        {
+            string[] vlist = new[] { "bobble", "decal", "enginecustomisation", "nameplate", "paintjob",
+                                    "shipkit", "weaponcustomisation", "voicepack" , "lights", "spoiler" , "wings", "bumper"};
+            return Array.Find(vlist, x => ifd.Contains(x)) != null;
+        }
+
+        static public bool IsFuelTank(ModFDName ifd)
+        {
+            return ifd.Contains("int_fueltank");
+        }
+
+        // PTx() does nothing except mark for checkers that this is a translated phrase
+
+        static string[] sizes = new string[] { " Small", " Medium", " Large", " Huge", " Tiny", " Standard", " Intermediate", " Advanced" };
+        static string[] armourdelim = new string[] { "Lightweight", "Reinforced", "Military", "Mirrored", "Reactive"};
+        static string[] types = new string[] { " Gimbal ", " Fixed ", " Turret " };
+
+        // called at start up to set up translation of module names
+        static private void TranslateModule(ShipModule sm)
+        {
+            if (sm.ModType == ShipModule.ModuleTypes.LightweightAlloy || sm.ModType == ShipModule.ModuleTypes.ReinforcedAlloy ||
+                sm.ModType == ShipModule.ModuleTypes.MilitaryGradeComposite || sm.ModType == ShipModule.ModuleTypes.MirroredSurfaceComposite ||
+                sm.ModType == ShipModule.ModuleTypes.ReactiveSurfaceComposite)
+            {
+                int index = sm.EnglishModName.IndexOf(armourdelim, out int anum, StringComparison.InvariantCulture);
+                string translated = sm.EnglishModName.Substring(index).Tx();
+                sm.TranslatedModName = sm.EnglishModName.Substring(0, index) + translated;
+                sm.TranslatedShortModName = translated;
+            }
+            else
+            {
+                int cindex = sm.EnglishModName.LastIndexOf(" Class ", StringComparison.InvariantCulture);
+                int rindex = sm.EnglishModName.LastIndexOf(" Rating ", StringComparison.InvariantCulture);
+
+                if (cindex != -1 && rindex != -1)
+                {
+                    int mkiiindex = sm.EnglishModName.IndexOf("Mk II ", StringComparison.InvariantCulture);     // only at start
+
+                    string translated = mkiiindex == 0 ? sm.EnglishModName.Substring(mkiiindex + 6, cindex - 6).Tx() : sm.EnglishModName.Substring(0, cindex).Tx();
+                    string cls = sm.EnglishModName.Substring(cindex + 1, 5).Tx();
+                    string rat = sm.EnglishModName.Substring(rindex + 1, 6).Tx();
+                    if (mkiiindex == 0)
+                        translated = "Mk II " + translated;
+                    sm.TranslatedModName = translated + " " + cls + " " + sm.EnglishModName.Substring(cindex + 7, 1) + " " + rat + " " + sm.EnglishModName.Substring(rindex + 8, 1);
+                    sm.TranslatedShortModName = translated;
+                    //  System.Diagnostics.Debug.WriteLine($"Module {sm.EnglishModName} : {sm.ModType} => `{sm.TranslatedModName}` : `{sm.TranslatedModTypeString()}` : `{sm.TranslatedShortModName}`");
+                }
+                else if (cindex != -1)
+                {
+                    int mkiiindex = sm.EnglishModName.IndexOf("Mk II ", StringComparison.InvariantCulture);     // only at start
+                    string translated = mkiiindex == 0 ? sm.EnglishModName.Substring(mkiiindex + 6, cindex - 6).Tx() : sm.EnglishModName.Substring(0, cindex).Tx();
+                    string cls = sm.EnglishModName.Substring(cindex + 1, 5).Tx();
+                    if (mkiiindex == 0)
+                        translated = "Mk II " + translated;
+                    sm.TranslatedModName = translated + " " + cls + " " + sm.EnglishModName.Substring(cindex + 7, 1);
+                    sm.TranslatedShortModName = translated;
+                    // System.Diagnostics.Debug.WriteLine($"Module {sm.EnglishModName} : {sm.ModType} => `{sm.TranslatedModName}` : `{sm.TranslatedModTypeString()}` : `{sm.TranslatedShortModName}`");
+                }
+                else if (rindex != -1)
+                {
+                    string translated = sm.EnglishModName.Substring(0, rindex).Tx();
+                    string rat = sm.EnglishModName.Substring(rindex + 1, 6).Tx();
+                    sm.TranslatedModName = translated + " " + rat + " " + sm.EnglishModName.Substring(rindex + 8, 1);
+                    sm.TranslatedShortModName = translated;
+                }
+                else
+                {
+                    int sindex = sm.EnglishModName.IndexOf(sizes, out int snum, StringComparison.InvariantCulture);
+
+                    if (sindex >= 0)
+                    {
+                        int gindex = sm.EnglishModName.IndexOf(types, out int gnum, StringComparison.InvariantCulture);
+
+                        if (gindex >= 0)
+                        {
+                            string translated = sm.EnglishModName.Substring(0, gindex).Tx();
+                            string typen = sm.EnglishModName.Substring(gindex + 1, types[gnum].Length - 2).Tx();
+                            string sizen = sm.EnglishModName.Substring(sindex + 1, sizes[snum].Length - 1).Tx();
+                            sm.TranslatedModName = translated + " " + typen + " " + sizen;
+                            sm.TranslatedShortModName = translated;
+
+                        }
+                        else
+                        {
+                            string translated = sm.EnglishModName.Substring(0, sindex).Tx();
+                            string sizen = sm.EnglishModName.Substring(sindex + 1, sizes[snum].Length - 1).Tx();
+                            sm.TranslatedModName = translated + " " + sizen;
+                            sm.TranslatedShortModName = translated;
+                        }
+                    }
+                    else
+                    {
+                        sm.TranslatedShortModName = sm.TranslatedModName = sm.EnglishModName.Tx();
+                        //System.Diagnostics.Debug.WriteLine($"?? {kvp.Key} = {sm.ModName}");
+                    }
+                }
+            }
+
+            //System.Diagnostics.Debug.WriteLine($"Module {sm.EnglishModName} : {sm.ModType} => `{sm.TranslatedModName}` : `{sm.TranslatedModTypeString()}` : `{sm.TranslatedShortModName}`");
+            //System.Diagnostics.Debug.Assert(sm.TranslatedShortModName.Length > 0);
+        }
+        static private void TranslateModules()
+        {
+            foreach (var kvp in shipmodules)
+                TranslateModule(kvp.Value);
+            foreach (var kvp in othershipmodules)
+            {
+                if ( kvp.Value.ModType == ShipModule.ModuleTypes.CargoBayDoorType)
+                    TranslateModule(kvp.Value);
+            }
+        }
+
+        #region ShipModule
+
+        [System.Diagnostics.DebuggerDisplay("{EnglishModName} {ModType} {ModuleID} {Class} {Rating}")]
+        public class ShipModule
+        {
+            public enum ModuleTypes // .Tx()
+            {
+                // Aligned with spansh, spansh is aligned with outfitting.csv on EDCD.
+                // all buyable
+
+                AXMissileRack,
+                AXMulti_Cannon,
+                AbrasionBlaster,
+                AdvancedDockingComputer,
+                AdvancedMissileRack,
+                AdvancedMulti_Cannon,
+                AdvancedPlanetaryApproachSuite,
+                AdvancedPlasmaAccelerator,
+                AutoFieldMaintenanceUnit,
+                BeamLaser,
+                Bi_WeaveShieldGenerator,
+                BurstLaser,
+                BusinessClassPassengerCabin,
+                Cannon,
+                CargoRack,
+                CargoScanner,
+                CausticSinkLauncher,
+                ChaffLauncher,
+                CollectorLimpetController,
+                Colonisation,
+                CorrosionResistantCargoRack,
+                CytoscramblerBurstLaser,
+                DecontaminationLimpetController,
+                SurfaceScanner,
+                EconomyClassPassengerCabin,
+                ElectronicCountermeasure,
+                EnforcerCannon,
+                EnhancedAXMissileRack,
+                EnhancedAXMulti_Cannon,
+                EnhancedPerformanceThrusters,
+                EnhancedXenoScanner,
+                EnzymeMissileRack,
+                ExperimentalWeaponStabiliser,
+                FighterHangar,
+                FirstClassPassengerCabin,
+                FragmentCannon,
+                FrameShiftDrive,
+                FrameShiftDriveInterdictor,
+                WakeScanner,
+                FuelScoop,
+                FuelTank,
+                FuelTransferLimpetController,
+                GuardianFSDBooster,
+                GuardianGaussCannon,
+                GuardianHullReinforcement,
+                GuardianHybridPowerDistributor,
+                GuardianHybridPowerPlant,
+                GuardianModuleReinforcement,
+                GuardianPlasmaCharger,
+                GuardianShardCannon,
+                GuardianShieldReinforcement,
+                HatchBreakerLimpetController,
+                HeatSinkLauncher,
+                HullReinforcementPackage,
+                ImperialHammerRailGun,
+                KillWarrantScanner,
+                LifeSupport,
+                LightweightAlloy,
+                LuxuryClassPassengerCabin,
+                MetaAlloyHullReinforcement,
+                MilitaryGradeComposite,
+                MineLauncher,
+                MiningLance,
+                MiningLaser,
+                MiningMultiLimpetController,
+                MirroredSurfaceComposite,
+                MissileRack,
+                ModuleReinforcementPackage,
+                Multi_Cannon,
+                OperationsMultiLimpetController,
+                PacifierFrag_Cannon,
+                Pack_HoundMissileRack,
+                PlanetaryApproachSuite,
+                PlanetaryVehicleHangar,
+                PlasmaAccelerator,
+                PointDefence,
+                PowerDistributor,
+                PowerPlant,
+                PrismaticShieldGenerator,
+                ProspectorLimpetController,
+                PulseDisruptorLaser,
+                PulseLaser,
+                PulseWaveAnalyser,
+                RailGun,
+                ReactiveSurfaceComposite,
+                ReconLimpetController,
+                Refinery,
+                ReinforcedAlloy,
+                RemoteReleaseFlakLauncher,
+                RemoteReleaseFlechetteLauncher,
+                RepairLimpetController,
+                RescueMultiLimpetController,
+                ResearchLimpetController,
+                RetributorBeamLaser,
+                RocketPropelledFSDDisruptor,
+                SeekerMissileRack,
+                SeismicChargeLauncher,
+                Sensor,
+                ShieldBooster,
+                ShieldCellBank,
+                ShieldGenerator,
+                ShockCannon,
+                ShockMineLauncher,
+                ShutdownFieldNeutraliser,
+                StandardDockingComputer,
+                Sub_SurfaceDisplacementMissile,
+                SupercruiseAssist,
+                SurfaceMining,
+                Thrusters,
+                TorpedoPylon,
+                UniversalMultiLimpetController,
+                XenoMultiLimpetController,
+                XenoScanner,
+
+                // Not buyable, DiscoveryScanner marks the first non buyable - see code below
+                DiscoveryScanner, 
+                PrisonCells, 
+                DataLinkScanner, 
+                SRVScanner, 
+                FighterWeapon,
+                VanityType, 
+                UnknownType, 
+                CockpitType, 
+                CargoBayDoorType, 
+                WearAndTearType, 
+                Codex,
+
+                // marks it as a special effect modifier list not a module
+                SpecialEffect,      // .NotTxThis() not for the scanner
+
+                // generic for module type recipes
+                Armour, 
+                Fighter, 
+                Module, 
+                Suit, 
+                Weapon,
+            };
+
+            public string EnglishModName { get; set; }     // english name
+            public string TranslatedModName { get; set; }     // foreign name
+            public string TranslatedShortModName { get; set; }     // without class and ship type
+            public int ModuleID { get; set; }
+            public ModuleTypes ModType { get; set; }
+            public bool IsBuyable { get { return !(ModType < ModuleTypes.DiscoveryScanner); } }
+
+            public bool IsShieldGenerator { get { return ModType == ModuleTypes.PrismaticShieldGenerator || ModType == ModuleTypes.Bi_WeaveShieldGenerator || ModType == ModuleTypes.ShieldGenerator; } }
+            public bool IsPowerDistributor { get { return ModType == ModuleTypes.PowerDistributor; } }
+            public bool IsHardpoint { get { return Damage.HasValue && ModuleID != 128049522; } }        // Damage, but not point defense
+            public bool IsMiningEquipment { get { return ModType == ModuleTypes.AbrasionBlaster || ModType == ModuleTypes.MiningLance || ModType == ModuleTypes.Sub_SurfaceDisplacementMissile || ModType == ModuleTypes.SeismicChargeLauncher ||
+                                            ModType == ModuleTypes.MiningLaser || ModType == ModuleTypes.MiningLance; } }
+
+            public bool HasEnable { get { return PowerDraw.HasValue; } }
+
+            // string should be in spansh/EDCD csv compatible format, in english, as it it fed into Spansh
+            public static string EnglishModTypeString(ModuleTypes t) { return t.ToString().Replace("AX", "AX ").Replace("_", "-").SplitCapsWordFull(); }
+            public string EnglishModTypeString() { return EnglishModTypeString(ModType); }
+
+            public static string TranslatedModTypeString(ModuleTypes t) { return EnglishModTypeString(t).Tx(); }
+            public string TranslatedModTypeString() { return EnglishModTypeString(ModType).Tx(); }
+
+            // printed in this order
+
+            public int? Class { get; set; }     // handled specifically
+            public string Rating { get; set; }
+
+            public string ClassRating => (Class != null ? Class.Value.ToStringInvariant() : "") + (Rating != null ? Rating : "");
+
+            // EDSY ordered
+
+
+            [OrderedPropertyNameAttribute(0, "")] public string Mount { get; set; }                               // 'mount'
+            [OrderedPropertyNameAttribute(1, "")] public string MissileType { get; set; }                         // 'missile'
+
+
+            [OrderedPropertyNameAttribute(10, "t")] public double? Mass { get; set; }                              // 'mass' of module t
+            [OrderedPropertyNameAttribute(11, "")] public double? Integrity { get; set; }                          // 'integ'
+            [OrderedPropertyNameAttribute(12, "MW")] public double? PowerDraw { get; set; }                        // 'pwrdraw'
+            [OrderedPropertyNameAttribute(13, "s")] public double? BootTime { get; set; }                          // 'boottime'
+
+
+            [OrderedPropertyNameAttribute(20, "s")] public double? SCBSpinUp { get; set; }                        // SCBs
+            [OrderedPropertyNameAttribute(21, "s")] public double? SCBDuration { get; set; }
+
+            [OrderedPropertyNameAttribute(25, "%")] public double? PowerBonus { get; set; }                       // guardian power bonus
+
+            [OrderedPropertyNameAttribute(30, "MW")] public double? WeaponsCapacity { get; set; }                  // 'wepcap' max MW power distributor
+            [OrderedPropertyNameAttribute(31, "MW/s")] public double? WeaponsRechargeRate { get; set; }            // 'wepchg' power distributor rate MW/s
+            [OrderedPropertyNameAttribute(32, "MW")] public double? EngineCapacity { get; set; }                   // 'engcap' max MW power distributor
+            [OrderedPropertyNameAttribute(33, "MW/s")] public double? EngineRechargeRate { get; set; }             // 'engchg' power distributor rate MW/s
+            [OrderedPropertyNameAttribute(34, "MW")] public double? SystemsCapacity { get; set; }                  // 'syscap' max MW power distributor
+            [OrderedPropertyNameAttribute(35, "MW/s")] public double? SystemsRechargeRate { get; set; }            // 'syschg' power distributor rate MW/s
+
+            [OrderedPropertyNameAttribute(40, "/s")] public double? DPS { get; set; }                          // 'dps'
+            [OrderedPropertyNameAttribute(41, "")] public double? Damage { get; set; }                         // 'damage'
+            [OrderedPropertyNameAttribute(42, "")] public int? DamageMultiplierFullCharge { get; set; }        // 'dmgmul' Guardian weapons
+
+            [OrderedPropertyNameAttribute(50, "t")] public double? MinMass { get; set; }                       // 'fsdminmass' 'genminmass' 'engminmass'
+            [OrderedPropertyNameAttribute(51, "t")] public double? OptMass { get; set; }                       // 'fsdoptmass' 'genoptmass' 'engoptmass'
+            [OrderedPropertyNameAttribute(52, "t")] public double? MaxMass { get; set; }                       // 'fsdmaxmass' 'genmaxmass' 'engmaxmass'
+            [OrderedPropertyNameAttribute(53, "")] public double? EngineMinMultiplier { get; set; }            // 'engminmul'
+            [OrderedPropertyNameAttribute(54, "")] public double? EngineOptMultiplier { get; set; }            // 'engoptmul'
+            [OrderedPropertyNameAttribute(55, "")] public double? EngineMaxMultiplier { get; set; }            // 'engmaxmul'
+
+            [OrderedPropertyNameAttribute(60, "")] public double? MinStrength { get; set; }                    // 'genminmul'
+            [OrderedPropertyNameAttribute(61, "")] public double? OptStrength { get; set; }                    // 'genoptmul' shields
+            [OrderedPropertyNameAttribute(62, "")] public double? MaxStrength { get; set; }                    // 'genmaxmul' shields
+            [OrderedPropertyNameAttribute(63, "/s")] public double? RegenRate { get; set; }                    // 'genrate' units/s
+            [OrderedPropertyNameAttribute(64, "/s")] public double? BrokenRegenRate { get; set; }              // 'bgenrate' units/s
+            [OrderedPropertyNameAttribute(65, "MW/Shot_or_s")] public double? DistributorDraw { get; set; }    // 'distdraw'
+
+
+            [OrderedPropertyNameAttribute(80, "%")] public double? MinimumSpeedModifier { get; set; }           // enhanced thrusters
+            [OrderedPropertyNameAttribute(81, "%")] public double? OptimalSpeedModifier { get; set; }
+            [OrderedPropertyNameAttribute(82, "%")] public double? MaximumSpeedModifier { get; set; }
+            [OrderedPropertyNameAttribute(83, "%")] public double? MinimumAccelerationModifier { get; set; }
+            [OrderedPropertyNameAttribute(84, "%")] public double? OptimalAccelerationModifier { get; set; }
+            [OrderedPropertyNameAttribute(85, "%")] public double? MaximumAccelerationModifier { get; set; }
+            [OrderedPropertyNameAttribute(86, "%")] public double? MinimumRotationModifier { get; set; }
+            [OrderedPropertyNameAttribute(87, "%")] public double? OptimalRotationModifier { get; set; }
+            [OrderedPropertyNameAttribute(88, "%")] public double? MaximumRotationModifier { get; set; }
+
+            [OrderedPropertyNameAttribute(90, "/s")] public double? ThermalLoad { get; set; }                   // 'engheat' 'fsdheat' 'thmload'
+
+            [OrderedPropertyNameAttribute(100, "t")] public double? MaxFuelPerJump { get; set; }                // 'maxfuel'
+            [OrderedPropertyNameAttribute(101, "")] public double? PowerConstant { get; set; }                  // 'fuelpower' Number
+            [OrderedPropertyNameAttribute(102, "")] public double? LinearConstant { get; set; }                 // 'fuelmul' Number
+
+            [OrderedPropertyNameAttribute(120, "%")] public double? SCOSpeedIncrease { get; set; }              // 'scospd' %
+            [OrderedPropertyNameAttribute(121, "")] public double? SCOAccelerationRate { get; set; }            // 'scoacc' factor
+            [OrderedPropertyNameAttribute(122, "")] public double? SCOHeatGenerationRate { get; set; }          // 'scoheat' factor
+            [OrderedPropertyNameAttribute(123, "")] public double? SCOControlInterference { get; set; }         // 'scoconint' factor
+            [OrderedPropertyNameAttribute(124, "t/s")] public double? SCOFuelDuringOvercharge { get; set; }     // 'scofuel' use during overdrive
+
+            [OrderedPropertyNameAttribute(200, "%")] public double? HullStrengthBonus { get; set; }             // 'hullbst' % bonus over the ship information armour value
+            [OrderedPropertyNameAttribute(201, "%")] public double? HullReinforcement { get; set; }             // 'hullrnf' units
+
+            [OrderedPropertyNameAttribute(209, "%")] public double? ShieldReinforcement { get; set; }          // 'shieldrnf'
+
+            [OrderedPropertyNameAttribute(210, "%")] public double? KineticResistance { get; set; }             // 'kinres' % bonus on base values
+            [OrderedPropertyNameAttribute(211, "%")] public double? ThermalResistance { get; set; }             // 'thmres' % bonus on base values
+            [OrderedPropertyNameAttribute(212, "%")] public double? ExplosiveResistance { get; set; }           // 'expres' % bonus on base values
+            [OrderedPropertyNameAttribute(213, "%")] public double? AXResistance { get; set; }                  // 'axeres' % bonus on base values armour - not engineered
+            [OrderedPropertyNameAttribute(214, "%")] public double? CausticResistance { get; set; }             // 'caures' % bonus on base values not armour
+            [OrderedPropertyNameAttribute(215, "MW/u")] public double? MWPerUnit { get; set; }                  // 'genpwr' MW per shield unit
+
+            [OrderedPropertyNameAttribute(220, "")] public double? ArmourPiercing { get; set; }                 // 'pierce'
+
+            [OrderedPropertyNameAttribute(230, "m")] public double? Range { get; set; }                         // 'maximumrng' 'lpactrng' 'ecmrng' 'barrierrng' 'scanrng' 'maxrng'
+            [OrderedPropertyNameAttribute(231, "deg")] public double? Angle { get; set; }                       // 'maxangle' 'scanangle' 'facinglim'
+            [OrderedPropertyNameAttribute(232, "m")] public double? TypicalEmission { get; set; }               // 'typemis'
+
+            [OrderedPropertyNameAttribute(240, "m")] public double? Falloff { get; set; }                       // 'dmgfall' m weapon fall off distance
+            [OrderedPropertyNameAttribute(241, "m/s")] public double? Speed { get; set; }                       // 'shotspd' 'maxspd' m/s
+            [OrderedPropertyNameAttribute(242, "/s")] public double? RateOfFire { get; set; }                   // 'rof' s weapon
+            [OrderedPropertyNameAttribute(243, "shots/s")] public double? BurstRateOfFire { get; set; }         // 'bstrof'
+            [OrderedPropertyNameAttribute(244, "s")] public double? BurstInterval { get; set; }                 // 'bstint' s weapon
+            [OrderedPropertyNameAttribute(250, "shots")] public double? BurstSize { get; set; }                     // 'bstsize'
+            [OrderedPropertyNameAttribute(251, "")] public int? Clip { get; set; }                              // 'ammoclip'
+            [OrderedPropertyNameAttribute(252, "")] public int? Ammo { get; set; }                              // 'ammomax'
+            [OrderedPropertyNameAttribute(255, "/shot")] public double? Rounds { get; set; }                    // 'rounds'
+            [OrderedPropertyNameAttribute(256, "s")] public double? ReloadTime { get; set; }                    // 'ecmcool' 'rldtime' 'barriercool'
+
+            [OrderedPropertyNameAttribute(260, "")] public double? BreachDamage { get; set; }                   // 'brcdmg'
+            [OrderedPropertyNameAttribute(261, "%/FullI")] public double? BreachMin { get; set; }               // 'minbrc'
+            [OrderedPropertyNameAttribute(262, "%/ZeroI")] public double? BreachMax { get; set; }               // 'maxbrc'
+            [OrderedPropertyNameAttribute(263, "%")] public double? BreachModuleDamageAfterBreach { get; set; } // 'brcpct'
+
+
+            [OrderedPropertyNameAttribute(280, "deg")] public double? Jitter { get; set; }                      // 'jitter'
+
+
+            [OrderedPropertyNameAttribute(400, "%")] public double? AbsoluteProportionDamage { get; set; }      // 'abswgt'
+            [OrderedPropertyNameAttribute(401, "%")] public double? KineticProportionDamage { get; set; }       // 'kinwgt'
+            [OrderedPropertyNameAttribute(402, "%")] public double? ThermalProportionDamage { get; set; }       // 'thmwgt'
+            [OrderedPropertyNameAttribute(403, "%")] public double? ExplosiveProportionDamage { get; set; }     // 'expwgt'
+            [OrderedPropertyNameAttribute(404, "%")] public double? CausticPorportionDamage { get; set; }       // 'cauwgt'
+            [OrderedPropertyNameAttribute(405, "%")] public double? AXPorportionDamage { get; set; }            // 'axewgt'
+
+
+            [OrderedPropertyNameAttribute(420, "MW")] public double? PowerGen { get; set; }             // MW power plant
+            [OrderedPropertyNameAttribute(421, "%")] public double? HeatEfficiency { get; set; } //% power plants
+
+            [OrderedPropertyNameAttribute(440, "MW/s")] public double? MWPerSec { get; set; }                   // MW per sec shutdown field neutr
+
+
+            [OrderedPropertyNameAttribute(450, "s")] public double? Time { get; set; }                          // 'jamdir' 'ecmdur' 'hsdur' 'duration' 'emgcylife' 'limpettime' 'scantime' 'barrierdur'
+
+
+            [OrderedPropertyNameAttribute(500, "m")] public double? TargetRange { get; set; } // m w
+            [OrderedPropertyNameAttribute(501, "")] public int? Limpets { get; set; }// collector controllers
+            [OrderedPropertyNameAttribute(502, "s")] public double? HackTime { get; set; }// hatch breaker limpet
+            [OrderedPropertyNameAttribute(503, "")] public int? MinCargo { get; set; } // hatch breaker limpet
+            [OrderedPropertyNameAttribute(504, "")] public int? MaxCargo { get; set; } // hatch breaker limpet
+
+            [OrderedPropertyNameAttribute(505, "/S")] public double? ThermalDrain { get; set; }                    // 'thmdrain'
+
+            [OrderedPropertyNameAttribute(550, "")] public string CabinClass { get; set; }              // 'cabincls'
+
+            [OrderedPropertyNameAttribute(551, "")] public int? Passengers { get; set; }
+
+            [OrderedPropertyNameAttribute(560, "")] public double? AdditionalReinforcement { get; set; }        // shields additional strength, units guardian shield reinforcement
+
+            [OrderedPropertyNameAttribute(600, "u/s")] public double? RateOfRepairConsumption { get; set; }
+            [OrderedPropertyNameAttribute(601, "i/m")] public double? RepairCostPerMat { get; set; }
+
+            [OrderedPropertyNameAttribute(620, "t")] public int? FuelTransfer { get; set; }
+
+            [OrderedPropertyNameAttribute(630, "/s")] public double? RefillRate { get; set; } // t/s
+
+            [OrderedPropertyNameAttribute(640, "")] public int? MaxRepairMaterialCapacity { get; set; }     // drone repair
+
+            [OrderedPropertyNameAttribute(650, "m/s")] public double? MultiTargetSpeed { get; set; }        // drones
+
+            [OrderedPropertyNameAttribute(660, "MW/use")] public double? ActivePower { get; set; }           //ECM
+
+            // Any order
+
+            [OrderedPropertyNameAttribute(999, "")] public double? Protection { get; set; }                         // 'dmgprot' multiplier
+            [OrderedPropertyNameAttribute(999, "")] public int? Prisoners { get; set; }
+            [OrderedPropertyNameAttribute(999, "")] public int? Capacity { get; set; }                          // 'bins' 'vslots'
+            [OrderedPropertyNameAttribute(999, "t")] public int? Size { get; set; }                             // 'cargocap' 'fuelcap'
+            [OrderedPropertyNameAttribute(999, "")] public int? Rebuilds { get; set; }                          // 'vcount'
+            [OrderedPropertyNameAttribute(999, "ly")] public double? AdditionalRange { get; set; } // ly
+            [OrderedPropertyNameAttribute(999, "s")] public double? TargetMaxTime { get; set; }
+            [OrderedPropertyNameAttribute(999, "")] public double? MineBonus { get; set; }
+            [OrderedPropertyNameAttribute(999, "")] public double? ProbeRadius { get; set; }
+            [OrderedPropertyNameAttribute(999, "")] public string GuardianModuleResistance { get; set; }        // Active, blank
+
+            // at end
+
+            [OrderedPropertyNameAttribute(1000, "cr")] public int? Cost { get; set; }
+            [OrderedPropertyNameAttribute(1001, "cr")] public int? AmmoCost { get; set; }
+            [OrderedPropertyNameAttribute(2000, "")] public int? FSDNeutronMultiplier { get; set; }     // Added by EDDTools manually for fsd drives
+
+            const double WEAPON_CHARGE = 0.0;
+
+            // look up one of the values above (use nameof()), or look up a special computed value
+            // if not defined by module, return default value
+            public double getEffectiveAttrValue(string attr, double defaultvalue = 1)
+            {
+                switch (attr)
+                {
+                    case "fpc":
+                    case "sfpc":
+                        {
+                            var ammoclip = getEffectiveAttrValue(nameof(Clip), 0);
+                            if (ammoclip != 0)
+                            {
+                                //if (modified && this.expid === 'wpnx_aulo')
+                                //  ammoclip += ammoclip - 1;
+                                return ammoclip;
+                            }
+                            else
+                                return getEffectiveAttrValue(nameof(BurstSize), 1);
+                        }
+
+                    case "spc":
+                    case "sspc":
+                        {
+                            var dmgmul = getEffectiveAttrValue(nameof(DamageMultiplierFullCharge), 0);      // if not there, 0
+                            var duration = getEffectiveAttrValue(nameof(Time), 0) * (dmgmul != 0 ? WEAPON_CHARGE : 1.0);
+                            if (ModuleID == 128671341 && attr == "spc") // TODO: bug? Imperial Hammer Rail Gun can keep firing through reloads without re-charging
+                                duration = 0;
+                            var bstsize = getEffectiveAttrValue(nameof(BurstSize), 1);      // if not there, from eddb.js, defaults are 1
+                            var bstrof = getEffectiveAttrValue(nameof(BurstRateOfFire), 1);
+                            var bstint = getEffectiveAttrValue(nameof(BurstInterval), 1);
+                            var spc = (duration + (bstsize - 1) / bstrof + bstint);
+                            var ammoclip = getEffectiveAttrValue(nameof(Clip), 0);
+                            var rldtime = (attr == "sspc") ? getEffectiveAttrValue(nameof(ReloadTime), 0) : 0;
+                            if (ammoclip != 0)
+                            {
+                                // Auto Loader adds 1 round per 2 shots for an almost-but-not-quite +100% effective clip size
+                                //if (modified && this.expid === 'wpnx_aulo')
+                                //    ammoclip += ammoclip - 1;
+                                spc *= Math.Ceiling(ammoclip / bstsize);
+                            }
+                            var spcres = spc + Math.Max(0, rldtime - duration - bstint);
+                            return spcres;
+                        }
+
+                    case "eps":     // energy per second
+                    case "seps":
+                        {
+                            var distdraw = getEffectiveAttrValue(nameof(DistributorDraw), 0);
+                            var rof = getEffectiveAttrValue(attr == "seps" ? "srof" : "rof");        // may be infinite
+                            return distdraw * (double.IsInfinity(rof) ? 1 : rof);
+                        }
+
+                    case "dps":     // damage per second adjusted to firing rate
+                    case "sdps":
+                        {
+                            var damage = getEffectiveAttrValue(nameof(Damage), 0);
+                            var dmgmul = (1 + WEAPON_CHARGE * (getEffectiveAttrValue(nameof(DamageMultiplierFullCharge), 1) - 1));
+                            var rounds = getEffectiveAttrValue(nameof(Rounds), 1);
+                            var rof = getEffectiveAttrValue(attr == "sdps" ? "srof" : "rof");        // may be infinite
+                            return (damage * dmgmul * rounds * (double.IsInfinity(rof) ? 1 : rof));
+                        }
+
+                    case "rof":     // may be Infinite
+                        return getEffectiveAttrValue("fpc") / getEffectiveAttrValue("spc");
+
+                    case "srof":    // may be Infinite - sustained
+                        return getEffectiveAttrValue("sfpc") / getEffectiveAttrValue("sspc");
+
+                    default:
+                        var found = GetType().GetProperty(attr);
+                        if (found != null)
+                        {
+                            var value = found.GetValue(this);
+                            return value != null ? Convert.ToDouble(value) : defaultvalue;
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.Assert(false, $"Tried to find module attribute {attr} but does not exist");
+                            return 0;
+                        }
+                }
+            }
+
+            public ShipModule()
+            {
+            }
+            public ShipModule(int id, ModuleTypes modtype, string descr)
+            {
+                ModuleID = id; TranslatedShortModName = TranslatedModName = EnglishModName = descr; ModType = modtype;
+            }
+
+            public ShipModule(ShipModule other)
+            {
+                // cheap way of doing a copy constructor without listing all those effing attributes
+
+                foreach (System.Reflection.PropertyInfo pi in typeof(ShipModule).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                {
+                    if (pi.CanWrite)
+                        pi.SetValue(this, pi.GetValue(other));
+                }
+            }
+
+            public string ToString(string separ = ", ")
+            {
+                StringBuilder output = new StringBuilder();
+                if (Class != null && Rating != null)
+                {
+                    output.Append($"{Class}{Rating}");
+                }
+                else if (Rating != null || Class != null)
+                {
+                    System.Diagnostics.Debug.Assert(false);
+                }
+
+                foreach (var kvp in GetPropertiesInOrder())
+                {
+                    string postfix = kvp.Value.Text;
+                    dynamic value = kvp.Key.GetValue(this);
+                    if (value != null)        // if not null, print value
+                    {
+                        if (output.Length > 0)
+                            output.Append(separ);
+                        string title = kvp.Key.Name.SplitCapsWord() + ':';
+                        //if (namepadding > 0 && title.Length < namepadding)  title += new string(' ', namepadding - title.Length); // does not work due to prop font
+                        output.Append(title);
+                        if (value is string)
+                            output.Append($"{value}{postfix}");
+                        else
+                            output.Append($"{value:0.####}{postfix}");
+                    }
+                }
+
+                return output.ToString();
+            }
+
+            public static Dictionary<System.Reflection.PropertyInfo, OrderedPropertyNameAttribute> GetPropertiesInOrder()
+            {
+                lock (locker)   // do this once, and needs locking across threads
+                {
+                    if (PropertiesInOrder == null)
+                    {
+                        var props = typeof(ShipModule).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance).
+                                            Where(x => x.GetCustomAttributes(typeof(OrderedPropertyNameAttribute), true).Length > 0).
+                                            ToArray();
+                        var inorder = props.OrderBy(x => ((OrderedPropertyNameAttribute)(x.GetCustomAttributes(typeof(OrderedPropertyNameAttribute), true)[0])).Order).ToArray();
+
+                        PropertiesInOrder = inorder.
+                                            ToDictionary(x => x, y => (OrderedPropertyNameAttribute)(y.GetCustomAttributes(typeof(OrderedPropertyNameAttribute), true)[0]));
+                    }
+                }
+
+                return PropertiesInOrder;
+            }
+
+            public static ModuleTypes? GetModuleType(ModFDName fd)
+            {
+                string fdname = fd.ID.Replace(" ", "").Replace("-", "_").Replace("Manifest", "Cargo").Replace("FrameShiftWakeScanner", "WakeScanner").Replace("Sensors", "Sensor")
+                    .Replace("ContainmentMissile", "MissileRack");
+
+                if (Enum.TryParse<ModuleTypes>(fdname, true, out ModuleTypes type))
+                {
+                    return type;
+                }
+                else if (Enum.TryParse<ModuleTypes>(fdname.Replace("_", ""), true, out type))                
+                {
+                    return type;
+                }
+                else
+                    return null;
+            }
+
+            private static Dictionary<System.Reflection.PropertyInfo, OrderedPropertyNameAttribute> PropertiesInOrder = null;
+            private static Object locker = new object();
+        }
+
+        #endregion
+    }
+}

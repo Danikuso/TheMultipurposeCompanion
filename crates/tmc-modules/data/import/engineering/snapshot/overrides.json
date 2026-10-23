@@ -1,0 +1,154 @@
+{
+  "schema": 1,
+  "description": "Resoluciones manuales y documentadas de filas que el conversor deja sin resolver. Cada una exige row_id, clave y SHA-256 de la fila original: si la fuente cambia, el importador falla. Nunca se aplican en código.",
+  "citation": "docs/research/notes/2026-10-22-filas-sin-resolver-c8.md",
+  "row_overrides": [
+    {
+      "row_id": "eddiscovery-RecipesEngineering.cs:494:255",
+      "expect_key": "detailedsurfacescanner_longrange",
+      "expect_original_sha256": "3fd9ffd739730b3d3b9f2e655d44f07b74229bb6a7932d5904af570fc0f217a9",
+      "action": "remap_module_types",
+      "module_types": [
+        "SurfaceScanner"
+      ],
+      "verified": false,
+      "note": "Blueprint Merc del Detailed Surface Scanner. EDDiscovery 7d30920 usa DiscoveryScanner (marcador de enum no comprable); el módulo es SurfaceScanner. Ingredientes, ingeniero y Merc Coins tal cual la fuente. Sin segunda fuente para ingredientes/grados: verificar en juego.",
+      "citation": "docs/research/notes/2026-10-22-filas-sin-resolver-c8.md"
+    },
+    {
+      "row_id": "eddiscovery-RecipesEngineering.cs:495:256",
+      "expect_key": "detailedsurfacescanner_longrange",
+      "expect_original_sha256": "56c98b063671499c2dd4ea180219d1eba9a2bce5394a8da05b907a9db4caf895",
+      "action": "remap_module_types",
+      "module_types": [
+        "SurfaceScanner"
+      ],
+      "verified": false,
+      "note": "Blueprint Merc del Detailed Surface Scanner. EDDiscovery 7d30920 usa DiscoveryScanner (marcador de enum no comprable); el módulo es SurfaceScanner. Ingredientes, ingeniero y Merc Coins tal cual la fuente. Sin segunda fuente para ingredientes/grados: verificar en juego.",
+      "citation": "docs/research/notes/2026-10-22-filas-sin-resolver-c8.md"
+    },
+    {
+      "row_id": "eddiscovery-RecipesEngineering.cs:496:257",
+      "expect_key": "detailedsurfacescanner_longrange",
+      "expect_original_sha256": "212319e26362516aa08ddedd2edb95e15dc08f58a23ea4bd9fa866d3aab5b6f1",
+      "action": "remap_module_types",
+      "module_types": [
+        "SurfaceScanner"
+      ],
+      "verified": false,
+      "note": "Blueprint Merc del Detailed Surface Scanner. EDDiscovery 7d30920 usa DiscoveryScanner (marcador de enum no comprable); el módulo es SurfaceScanner. Ingredientes, ingeniero y Merc Coins tal cual la fuente. Sin segunda fuente para ingredientes/grados: verificar en juego.",
+      "citation": "docs/research/notes/2026-10-22-filas-sin-resolver-c8.md"
+    },
+    {
+      "row_id": "eddiscovery-RecipesEngineering.cs:497:258",
+      "expect_key": "detailedsurfacescanner_longrange",
+      "expect_original_sha256": "b0f231b0d04f3daec73811e40990935992755e631eabcbfadc2200bec174c281",
+      "action": "remap_module_types",
+      "module_types": [
+        "SurfaceScanner"
+      ],
+      "verified": false,
+      "note": "Blueprint Merc del Detailed Surface Scanner. EDDiscovery 7d30920 usa DiscoveryScanner (marcador de enum no comprable); el módulo es SurfaceScanner. Ingredientes, ingeniero y Merc Coins tal cual la fuente. Sin segunda fuente para ingredientes/grados: verificar en juego.",
+      "citation": "docs/research/notes/2026-10-22-filas-sin-resolver-c8.md"
+    },
+    {
+      "row_id": "eddiscovery-RecipesEngineering.cs:1377:1046",
+      "expect_key": "special_weapon_toughened",
+      "expect_original_sha256": "b644f5ba4711985189c59a8d7f9a5f715f16eff528f0c1aef327be16ba56c39c",
+      "action": "remap_module_types",
+      "module_types": [
+        "BeamLaser",
+        "BurstLaser",
+        "PulseLaser",
+        "Cannon",
+        "Multi_Cannon",
+        "FragmentCannon",
+        "PlasmaAccelerator",
+        "RailGun",
+        "MissileRack",
+        "TorpedoPylon",
+        "MineLauncher"
+      ],
+      "verified": false,
+      "note": "Experimental de arma de nave con el marcador genérico Weapon. Lista contrastada con EDEngineer 2cadd66 (MIT); coriolis-data no incluye MissileRack. Sin evidencia para armas posteriores a 2024: no se añaden.",
+      "citation": "docs/research/notes/2026-10-22-filas-sin-resolver-c8.md"
+    },
+    {
+      "row_id": "eddiscovery-RecipesEngineering.cs:1388:1057",
+      "expect_key": "special_weapon_efficient",
+      "expect_original_sha256": "ee032ab6b05fb31c62bb44dd904be29502c5f459a639540e847ea73bbe31555c",
+      "action": "remap_module_types",
+      "module_types": [
+        "BeamLaser",
+        "BurstLaser",
+        "PulseLaser",
+        "Cannon",
+        "Multi_Cannon",
+        "FragmentCannon",
+        "PlasmaAccelerator",
+        "RailGun",
+        "MissileRack",
+        "TorpedoPylon",
+        "MineLauncher"
+      ],
+      "verified": false,
+      "note": "Experimental de arma de nave con el marcador genérico Weapon. Lista contrastada con EDEngineer 2cadd66 (MIT); coriolis-data no incluye MissileRack. Sin evidencia para armas posteriores a 2024: no se añaden.",
+      "citation": "docs/research/notes/2026-10-22-filas-sin-resolver-c8.md"
+    },
+    {
+      "row_id": "eddiscovery-RecipesEngineering.cs:1407:1076",
+      "expect_key": "special_weapon_damage",
+      "expect_original_sha256": "712195cd4b5eff78e270c04f2546a7a16ad0ec0177afd8327e71a751a50abb14",
+      "action": "remap_module_types",
+      "module_types": [
+        "BeamLaser",
+        "BurstLaser",
+        "PulseLaser",
+        "Cannon",
+        "Multi_Cannon",
+        "FragmentCannon",
+        "PlasmaAccelerator",
+        "RailGun",
+        "MissileRack",
+        "TorpedoPylon",
+        "MineLauncher"
+      ],
+      "verified": false,
+      "note": "Experimental de arma de nave con el marcador genérico Weapon. Lista contrastada con EDEngineer 2cadd66 (MIT); coriolis-data no incluye MissileRack. Sin evidencia para armas posteriores a 2024: no se añaden.",
+      "citation": "docs/research/notes/2026-10-22-filas-sin-resolver-c8.md"
+    },
+    {
+      "row_id": "eddiscovery-RecipesEngineering.cs:1429:1098",
+      "expect_key": "special_weapon_lightweight",
+      "expect_original_sha256": "63ff0363142adaa44749b04ec279510c755556b9f1e95eca3a4b0f28932337b1",
+      "action": "remap_module_types",
+      "module_types": [
+        "BeamLaser",
+        "BurstLaser",
+        "PulseLaser",
+        "Cannon",
+        "Multi_Cannon",
+        "FragmentCannon",
+        "PlasmaAccelerator",
+        "RailGun",
+        "MissileRack",
+        "TorpedoPylon",
+        "MineLauncher"
+      ],
+      "verified": false,
+      "note": "Experimental de arma de nave con el marcador genérico Weapon. Lista contrastada con EDEngineer 2cadd66 (MIT); coriolis-data no incluye MissileRack. Sin evidencia para armas posteriores a 2024: no se añaden.",
+      "citation": "docs/research/notes/2026-10-22-filas-sin-resolver-c8.md"
+    }
+  ],
+  "engineer_unlock_contributions": [
+    {
+      "engineer": "Elvira Martuuk",
+      "item": "soontillrelics",
+      "kind": "commodity",
+      "amount": 3,
+      "verified": false,
+      "note": "Heredado del catálogo provisional de F4 (spike_datos_f4, recopilado a mano) y coincidente con el texto de EDDiscovery 7d30920 («Provide 3 units of Soontill Relics.»). Es la única donación estructurada: el resto de requisitos de la fuente son texto libre y no se convierten. Sin verificar en juego.",
+      "citation": "crates/tmc-modules/data/engineers.json en el commit 7fd4c29 (catálogo provisional previo a C8)"
+    }
+  ]
+}

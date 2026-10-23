@@ -316,6 +316,16 @@ describe('auto-companion OFF', () => {
     expect(slot('target')).not.toBeNull();
   });
 
+  test('OFF keeps layout when engineering becomes active, ON follows it', () => {
+    prefs.autoCompanion = false; flushSync();
+    live.topics['core.modules'] = [{ id: 'engineering', relevance: 'active' }]; flushSync();
+    expect(slot('route')).not.toBeNull();
+    expect(slot('materials')).toBeNull();
+    prefs.autoCompanion = true; flushSync();
+    expect(slot('materials')).not.toBeNull();
+    expect(slot('route')).toBeNull();
+  });
+
   test('OFF keeps the layout when relevance changes, manual navigation still works', () => {
     prefs.autoCompanion = false; flushSync();
     live.topics['core.modules'] = [{ id: 'combat', relevance: 'active' }]; flushSync();
@@ -350,6 +360,41 @@ describe('auto-companion OFF', () => {
     prefs.autoCompanion = true; flushSync();
     expect(slot('target')).not.toBeNull();
     expect(slot('prospector')).toBeNull();
+  });
+});
+
+describe('engineering layout', () => {
+  beforeEach(() => disconnect());
+  afterEach(() => disconnect());
+  const m = (id: string, relevance = 'active') => ({ id, relevance });
+
+  test.each(['active', 'urgent', 'Active', 'Urgent'])('engineering %s beats missions, trade and exploration', (relevance) => {
+    expect(autoLayout([m('engineering', relevance), m('missions'), m('trade'), m('exploration')], null)).toBe('engineering');
+  });
+  test('combat and mining beat engineering; manual still wins', () => {
+    expect(autoLayout([m('engineering'), m('combat', 'urgent')], null)).toBe('combat');
+    expect(autoLayout([m('engineering', 'urgent'), m('mining')], null)).toBe('mining');
+    expect(autoLayout([m('engineering'), m('mining', 'urgent')], null)).toBe('engineering');
+    expect(autoLayout([m('engineering', 'normal')], null)).toBeNull();
+    expect(autoLayout([m('combat')], 'engineering')).toBe('engineering');
+    expect(autoLayout([m('engineering')], 'trade')).toBe('trade');
+  });
+  test('engineering slots and flow visibility follow selected slot, including idle drafts', () => {
+    const layout = layouts.find((l) => l.id === 'engineering')!;
+    expect(layout).toMatchObject({ titleKey: 'layout-engineering', icon: 'wrench' });
+    expect(layout.slots.map(({ id, span }) => [id, span])).toEqual([
+      ['materials', 2], ['engineers', 1], ['eng-alerts', 1], ['eng-ship', 1],
+      ['eng-flow', 2], ['shopping', 2], ['trades', 1], ['sources', 1],
+    ]);
+    const flow = layout.slots.find((s) => s.id === 'eng-flow')!;
+    const ctx = { modules: [], manual: null };
+    expect(flow.when!(ctx)).toBe(false);
+    live.topics['engineering.flow'] = { status: 'idle', slot: null };
+    expect(flow.when!(ctx)).toBe(false);
+    live.topics['engineering.flow'] = { status: 'idle', slot: 'MainEngines' };
+    expect(flow.when!(ctx)).toBe(true);
+    live.topics['engineering.flow'] = { status: 'ok', slot: 'MainEngines' };
+    expect(flow.when!(ctx)).toBe(true);
   });
 });
 

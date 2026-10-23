@@ -237,6 +237,9 @@ impl ConfigHost for AppActions {
         updated
             .validate_f3()
             .map_err(|e| ActionError::Failed(e.into()))?;
+        updated
+            .validate_f4()
+            .map_err(|e| ActionError::Failed(e.into()))?;
         if updated.server.lan {
             updated.ensure_lan_token();
         }
@@ -369,7 +372,7 @@ impl ActionHost for AppActions {
     }
 }
 
-const MODULE_PREFIXES: [&str; 7] = [
+const MODULE_PREFIXES: [&str; 8] = [
     "navigation.",
     "exploration.",
     "exobiology.",
@@ -377,6 +380,7 @@ const MODULE_PREFIXES: [&str; 7] = [
     "mining.",
     "trade.",
     "missions.",
+    "engineering.",
 ];
 
 #[cfg(test)]

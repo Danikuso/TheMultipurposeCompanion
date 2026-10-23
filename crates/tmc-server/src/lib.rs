@@ -165,13 +165,34 @@ pub fn build_router(
             "/api/navigation/autocomplete",
             axum::routing::get(rest::get_autocomplete),
         )
+        .route(
+            "/api/engineering/goals",
+            axum::routing::get(rest::get_engineering_goals),
+        )
+        .route(
+            "/api/engineering/locker",
+            axum::routing::get(rest::get_engineering_locker),
+        )
+        .route(
+            "/api/engineering/catalogue",
+            axum::routing::get(rest::get_engineering_catalogue),
+        )
+        .route(
+            "/api/engineering/engineers",
+            axum::routing::get(rest::get_engineering_engineers),
+        )
+        .route(
+            "/api/engineering/flow",
+            axum::routing::get(rest::get_engineering_flow),
+        )
         .route("/api/pairing", axum::routing::get(pairing::get_pairing))
         .fallback(axum::routing::get(assets::serve_asset))
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             security::enforce_security,
         ))
-        .with_state(state);
+        .with_state(state)
+        .layer(axum::middleware::from_fn(rest::no_store_engineering_pages));
     #[cfg(debug_assertions)]
     let router = router.layer(axum::middleware::from_fn(diag::trace_http));
     router
@@ -273,6 +294,197 @@ mod tests {
                 _ => Err(ActionError::NotFound),
             }
         }
+    }
+
+    struct PageModule;
+    impl tmc_core::Module for PageModule {
+        fn id(&self) -> &'static str {
+            "engineering"
+        }
+        fn on_event(
+            &mut self,
+            _: &tmc_model::source::SourceEvent,
+            _: &tmc_model::state::GameState,
+            _: &mut tmc_core::ModuleCtx,
+        ) -> tmc_core::TopicSet {
+            tmc_core::TopicSet::new()
+        }
+        fn topics(&self) -> Vec<String> {
+            vec![]
+        }
+        fn topic_value(&self, _: &str) -> Option<Value> {
+            None
+        }
+        fn query(
+            &self,
+            resource: &str,
+            query: &tmc_core::ModulePageQuery,
+        ) -> Result<Value, tmc_core::ModuleQueryError> {
+            use tmc_core::ModuleQueryError as E;
+            if query.revision != 7 {
+                return Err(E::StaleRevision);
+            }
+            if query.section.as_deref() == Some("oversize") {
+                return Err(E::ItemTooLarge);
+            }
+            if query.section.as_deref() == Some("panic") {
+                panic!("synthetic page panic");
+            }
+            if query.cursor > 1 || query.section.as_deref() == Some("invalid") {
+                return Err(E::InvalidQuery);
+            }
+            Ok(
+                serde_json::json!({"revision":7,"section":query.section.as_deref().unwrap_or(if resource=="goals" {"goals"} else {"items"}),"cursor":query.cursor,"next_cursor":null,"total":1,"items":[{"count":8}]}),
+            )
+        }
+    }
+    #[tokio::test]
+    async fn engineering_pages_validate_queries_headers_and_auth() {
+        let store = Store::open_in_memory().unwrap();
+        let core = spawn_core(vec![Box::new(PageModule)], None, Duration::from_millis(100));
+        let app = build_router(
+            ServerConfig {
+                port: 47320,
+                lan: true,
+                token: "test-secret".into(),
+                ui_dir: None,
+            },
+            "192.168.1.50".into(),
+            core,
+            store,
+            Arc::new(DummyHost),
+        );
+        for resource in ["goals", "locker", "catalogue", "engineers", "flow"] {
+            for (suffix, expected) in [
+                ("", 400),
+                ("?revision=bad", 400),
+                ("?revision=-1", 400),
+                ("?revision=18446744073709551616", 400),
+                ("?revision=7&cursor=bad", 400),
+                ("?revision=7&cursor=-1", 400),
+                ("?revision=7&cursor=2", 400),
+                ("?revision=7&section=invalid", 400),
+                ("?revision=6", 409),
+                ("?revision=7&section=oversize", 413),
+                ("?revision=7&section=panic", 503),
+                ("?revision=7", 200),
+            ] {
+                let req = with_peer(
+                    Request::builder()
+                        .uri(format!("/api/engineering/{resource}{suffix}"))
+                        .header(header::HOST, "127.0.0.1:47320")
+                        .body(Body::empty())
+                        .unwrap(),
+                    "127.0.0.1:55000",
+                );
+                let response = app.clone().oneshot(req).await.unwrap();
+                assert_eq!(response.status().as_u16(), expected, "{resource}{suffix}");
+                assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+                if expected == 200 {
+                    let body = axum::body::to_bytes(response.into_body(), 16384)
+                        .await
+                        .unwrap();
+                    let page: Value = serde_json::from_slice(&body).unwrap();
+                    assert_eq!(page["cursor"], 0);
+                    assert_eq!(page["revision"], 7);
+                    assert_eq!(
+                        page["section"],
+                        if resource == "goals" {
+                            "goals"
+                        } else {
+                            "items"
+                        }
+                    );
+                }
+            }
+            for cookie in [None, Some("tmc_token=test-secret")] {
+                let mut req = Request::builder()
+                    .uri(format!("/api/engineering/{resource}?revision=7"))
+                    .header(header::HOST, "192.168.1.50:47320");
+                if let Some(cookie) = cookie {
+                    req = req.header(header::COOKIE, cookie);
+                }
+                let response = app
+                    .clone()
+                    .oneshot(with_peer(
+                        req.body(Body::empty()).unwrap(),
+                        "192.168.1.99:55000",
+                    ))
+                    .await
+                    .unwrap();
+                assert_eq!(
+                    response.status(),
+                    if cookie.is_some() {
+                        StatusCode::OK
+                    } else {
+                        StatusCode::FORBIDDEN
+                    }
+                );
+            }
+        }
+        let (empty, _, _) = test_router(false, "");
+        let req = with_peer(
+            Request::builder()
+                .uri("/api/engineering/goals?revision=0")
+                .header(header::HOST, "127.0.0.1:47320")
+                .body(Body::empty())
+                .unwrap(),
+            "127.0.0.1:55000",
+        );
+        let response = empty.oneshot(req).await.unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+    }
+
+    #[tokio::test]
+    async fn engineering_page_rejections_are_not_cached_without_changing_other_routes() {
+        let (app, _, _) = test_router(true, "test-secret");
+        for resource in ["goals", "locker", "catalogue", "engineers", "flow"] {
+            for (method, host, peer, expected) in [
+                (
+                    "GET",
+                    "192.168.1.50:47320",
+                    "192.168.1.99:55000",
+                    StatusCode::FORBIDDEN,
+                ),
+                (
+                    "POST",
+                    "127.0.0.1:47320",
+                    "127.0.0.1:55000",
+                    StatusCode::METHOD_NOT_ALLOWED,
+                ),
+            ] {
+                let req = with_peer(
+                    Request::builder()
+                        .method(method)
+                        .uri(format!("/api/engineering/{resource}?revision=7"))
+                        .header(header::HOST, host)
+                        .body(Body::empty())
+                        .unwrap(),
+                    peer,
+                );
+                let response = app.clone().oneshot(req).await.unwrap();
+                assert_eq!(response.status(), expected);
+                assert_eq!(
+                    response
+                        .headers()
+                        .get(header::CACHE_CONTROL)
+                        .and_then(|v| v.to_str().ok()),
+                    Some("no-store")
+                );
+            }
+        }
+        let req = with_peer(
+            Request::builder()
+                .uri("/api/health")
+                .header(header::HOST, "127.0.0.1:47320")
+                .body(Body::empty())
+                .unwrap(),
+            "127.0.0.1:55000",
+        );
+        let response = app.oneshot(req).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(!response.headers().contains_key(header::CACHE_CONTROL));
     }
 
     fn test_router(lan: bool, token: &str) -> (Router, CoreHandle, Store) {

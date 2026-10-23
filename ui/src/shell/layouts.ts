@@ -13,6 +13,10 @@ import {
 import type {
   MassacreTopic, PassengersTopic, TourismTopic, CommunityGoalsTopic,
 } from '../modules/missions/types';
+import {
+  MaterialsPanel, EngineersPanel, ShipPanel as EngineeringShipPanel, EngineerFlow,
+  ShoppingPanel, TradesPanel, SourcesPanel, EngineeringAlerts,
+} from '../modules/engineering';
 import { topic } from '../lib/ws.svelte';
 
 export interface LayoutCtx {
@@ -60,10 +64,10 @@ const tourismVisible = () => (topic<TourismTopic>('missions.tourism')?.trips?.le
 const cgVisible = () => (topic<CommunityGoalsTopic>('missions.community_goals')?.goals?.length ?? 0) > 0;
 const czVisible = () => (topic<unknown>('combat.conflict_zone') ?? null) !== null;
 
-type AutoLayout = 'exploration' | 'combat' | 'mining' | 'missions' | 'trade';
-const MANUAL: string[] = ['exploration', 'combat', 'mining', 'missions', 'trade'];
+type AutoLayout = 'exploration' | 'combat' | 'mining' | 'engineering' | 'missions' | 'trade';
+const MANUAL: string[] = ['exploration', 'combat', 'mining', 'engineering', 'missions', 'trade'];
 
-/** Disposición elegida por relevancia: manual > combate > minería > misiones > comercio > exploración > null. */
+/** Disposición elegida por relevancia: manual > combate > minería > ingeniería > misiones > comercio > exploración > null. */
 export function autoLayout(
   mods: { id: string; relevance: string }[],
   manual: string | null,
@@ -71,6 +75,7 @@ export function autoLayout(
   if (manual !== null && MANUAL.includes(manual)) return manual as AutoLayout;
   if (isActive(rel(mods, 'combat'))) return 'combat';
   if (rel(mods, 'mining') === 'active') return 'mining';
+  if (isActive(rel(mods, 'engineering'))) return 'engineering';
   if (isActive(rel(mods, 'missions'))) return 'missions';
   if (isActive(rel(mods, 'trade'))) return 'trade';
   if (isActive(rel(mods, 'exploration')) || isActive(rel(mods, 'exobiology'))) return 'exploration';
@@ -138,5 +143,20 @@ export const layouts: LayoutDef[] = [{
     { id: 'tourism', panel: TourismPanel, span: 2, when: tourismVisible },
     { id: 'rewards', panel: RewardsPanel, span: 1 },
     { id: 'community-goals', panel: CommunityGoalsPanel, span: 1, when: cgVisible },
+  ],
+}, {
+  id: 'engineering',
+  titleKey: 'layout-engineering',
+  icon: 'wrench',
+  slots: [
+    { id: 'materials', panel: MaterialsPanel, span: 2 },
+    { id: 'engineers', panel: EngineersPanel, span: 1 },
+    { id: 'eng-alerts', panel: EngineeringAlerts, span: 1 },
+    { id: 'eng-ship', panel: EngineeringShipPanel, span: 1 },
+    { id: 'eng-flow', panel: EngineerFlow, span: 2,
+      when: () => topic<{ slot?: string | null }>('engineering.flow')?.slot != null },
+    { id: 'shopping', panel: ShoppingPanel, span: 2 },
+    { id: 'trades', panel: TradesPanel, span: 1 },
+    { id: 'sources', panel: SourcesPanel, span: 1 },
   ],
 }];

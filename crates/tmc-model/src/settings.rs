@@ -18,7 +18,12 @@ pub struct ModuleSettings {
     pub eddn_radius_ly: u32,
     /// Referencia de turismo en cr por ano luz.
     pub tourism_reference_cr_ly: u64,
+    /// Tiradas por defecto de ingeniería por grado (G1..G5) al calcular materiales.
+    pub engineering_rolls: [u8; 5],
 }
+
+/// Tiradas por defecto de ingeniería por grado (G1..G5).
+pub const DEFAULT_ENGINEERING_ROLLS: [u8; 5] = [1, 1, 1, 1, 4];
 
 pub const DEFAULT_MINING_INTEREST: [&str; 11] = [
     "platinum",
@@ -50,6 +55,7 @@ impl Default for ModuleSettings {
             sell_search_radius_ly: 100,
             eddn_radius_ly: 200,
             tourism_reference_cr_ly: 100_000,
+            engineering_rolls: DEFAULT_ENGINEERING_ROLLS,
         }
     }
 }
@@ -57,6 +63,13 @@ impl Default for ModuleSettings {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn module_settings_f4_defaults() {
+        assert_eq!(ModuleSettings::default().engineering_rolls, [1, 1, 1, 1, 4]);
+        let s: ModuleSettings = serde_json::from_str("{}").unwrap();
+        assert_eq!(s.engineering_rolls, [1, 1, 1, 1, 4]);
+    }
 
     #[test]
     fn module_settings_defaults() {

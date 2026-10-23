@@ -154,3 +154,19 @@ pub async fn play(opts: PlayOptions) -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tmc_model::companion::CompanionKind;
+
+    #[test]
+    fn replay_maps_ship_locker_to_the_file_the_watcher_reads() {
+        let name = companion_filename_for_event("ShipLocker").unwrap();
+        assert_eq!(name, CompanionKind::ShipLocker.file_name());
+        assert_eq!(
+            CompanionKind::for_event("ShipLocker"),
+            Some(CompanionKind::ShipLocker)
+        );
+    }
+}
