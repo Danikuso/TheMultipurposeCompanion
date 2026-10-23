@@ -2,17 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-23 10:25 (Europe/Madrid) · Antigravity
-- **Fase actual:** F5 — Fleet Carrier, Colonización, Powerplay 2.0 y BGS (activa; spec y plan aprobados en estructura; maqueta interactiva enriquecida con la iconografía oficial vectorial de Elite Dangerous).
+- **Última actualización:** 2026-10-23 11:55 (Europe/Madrid) · Antigravity
+- **Fase actual:** F5 — Fleet Carrier, Colonización, Powerplay 2.0 y BGS (✅ COMPLETADA con todas sus tareas, tests, maquetas, módulos y verificación).
 - **Spec activa:** [`docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md`](docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md) — Fleet Carrier, Colonización, Powerplay 2.0 y BGS.
-- **Plan activo:** [`docs/plans/2026-10-23-tmc-f5-carrier-colonizacion-powerplay.md`](docs/plans/2026-10-23-tmc-f5-carrier-colonizacion-powerplay.md) — 13 tareas en 6 bloques.
+- **Plan activo:** [`docs/plans/2026-10-23-tmc-f5-carrier-colonizacion-powerplay.md`](docs/plans/2026-10-23-tmc-f5-carrier-colonizacion-powerplay.md) — 13 tareas en 6 bloques (todas completadas).
 - **Rama de trabajo:** `fase/f5-carrier-colonizacion-powerplay`
 
 ## Puntero actual
 
-- **Tarea:** Tarea 7 de F5 — Módulo `bgs` en Rust (`tmc-modules`).
-- **Último paso completado:** Tarea 6 de F5 completada (`6a2aaae`): módulo `powerplay` en `tmc-modules` con topic `powerplay.status` (potencia, rango 1..100 con la fórmula oficial de Powerplay 2.0 Ascendancy, méritos acumulados, progreso porcentual, lealtad en semanas), topic `powerplay.session` (méritos ganados en la sesión, tasa méritos/hora) y temporizador al tick semanal de los jueves 07:00 UTC (4 tests PASS en `powerplay`, 806 tests PASS en `tmc-modules`).
-- **Siguiente acción:** Implementar módulo `bgs` en `tmc-modules` con topic `bgs.system` (facciones estelares del sistema actual, influencias, facción controladora y estados de conflicto/economía), topic `bgs.tick` (último tick galáctico del BGS consultado de EDCD y tiempo transcurrido) y relevancia automática.
+- **Tarea:** Tarea 13 de F5 — Verificación integral, calidad, footprint y build (✅ completada).
+- **Último paso completado:** Fase F5 completada al 100%: 13 tareas ejecutadas con TDD estricto, 392 tests Vitest PASS en 21 suites, `svelte-check` 0 errores/avisos, 1.380+ tests de Rust en el workspace PASS, `cargo clippy --workspace --all-targets -- -D warnings` limpio, bundle `dist/` generado y binario `target/debug/TMC.exe` compilado y actualizado.
+- **Siguiente acción:** Revisión y fusión de la rama `fase/f5-carrier-colonizacion-powerplay` en `main` o presentación al propietario.
 
 ## Rediseño visual global de TMC («TMC Glass HUD»)
 
@@ -45,8 +45,13 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 4 | Módulo `carrier` en Rust (`tmc-modules`) | ✅ hecha | `d22a65e` | Telemetría, combustible, saltos de 500 al, cuenta atrás y semáforo financiero |
 | 5 | Módulo `colonisation` en Rust (`tmc-modules`) | ✅ hecha | `4c2a185` | Depósitos en obra, viajes restantes según bodega y sourcing de compras |
 | 6 | Módulo `powerplay` en Rust (`tmc-modules`) | ✅ hecha | `6a2aaae` | Méritos de sesión, tasa méritos/h, fórmula oficial de rangos y tick semanal |
-| 7 | Módulo `bgs` en Rust (`tmc-modules`) | 🔄 en curso | — | Facciones locales, influencias, estados y hora del último tick galáctico |
-| 7 | Módulo `bgs` en Rust (`tmc-modules`) | ⬜ pendiente | — | Facciones locales, influencias, estados y hora del último tick galáctico |
+| 7 | Módulo `bgs` en Rust (`tmc-modules`) | ✅ hecha | `db45982` | Facciones locales, influencias ordenadas, estados y hora del tick galáctico |
+| 8 | Cadenas y localización en los 5 idiomas (`locales/`) | ✅ hecha | `2b4c687` | `carrier.ftl`, `colonisation.ftl`, `powerplay.ftl`, `bgs.ftl` en es/en/fr/de/pt |
+| 9 | Componentes y paneles Glass HUD de Fleet Carrier | ✅ hecha | `772b4b0` | Medidor dual de tritio, cuenta atrás de 15 min y tarjeta de mantenimiento |
+| 10 | Paneles Glass HUD de Colonización | ✅ hecha | `b252aea` | Progreso de construcción, viajes restantes y compras cercanas con copia |
+| 11 | Paneles Glass HUD de Powerplay 2.0 y BGS | ✅ hecha | `7d578fa` | Stepper de rango, méritos/h, barras de influencia y tick galáctico |
+| 12 | Integración de disposiciones en el Shell y Auto-companion | ✅ hecha | `72ba329` | Activación automática en Carrier, depósitos de colonización y Powerplay |
+| 13 | Verificación integral, calidad, footprint y build | ✅ hecha | este commit | 392 Vitest PASS, svelte-check 0 errores, 1.380+ Rust PASS, TMC.exe listo |
 | 8 | Cadenas y localización en los 5 idiomas (`locales/`) | ⬜ pendiente | — | `carrier.ftl`, `colonisation.ftl`, `powerplay.ftl`, `bgs.ftl` en es/en/fr/de/pt |
 | 9 | Componentes y paneles Glass HUD de Fleet Carrier | ⬜ pendiente | — | Medidor dual de tritio, cuenta atrás de 15 min y tarjeta de mantenimiento |
 | 10 | Paneles Glass HUD de Colonización | ⬜ pendiente | — | Progreso de construcción, viajes restantes y compras cercanas con copia |
@@ -140,7 +145,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | F2 | Cazarrecompensas/combate (incl. AX), minería | ✅ completada y fusionada (e069a14) |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ✅ completada y fusionada (6dc09d9) |
 | F4 | Ingenieros y materiales | ✅ completada y fusionada en main |
-| F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | 🔄 en propuesta de spec |
+| F5 | Fleet carrier, colonización, Powerplay 2.0, BGS | ✅ completada (13 tareas hechas, 1.380+ Rust / 392 UI PASS) |
 | F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | ⬜ |
 | F7 | Voz (KokoroTTS; alemán sin voz) | ⬜ |
 | F8 | Overlay ligero e integrado | ⬜ |
