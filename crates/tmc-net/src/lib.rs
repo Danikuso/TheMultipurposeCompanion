@@ -5,6 +5,7 @@ pub mod ardent;
 pub mod bgs_tick;
 pub mod cache_policy;
 pub mod canonn;
+pub mod capi;
 pub mod client;
 pub mod eddn_sender;
 pub mod edsm;
