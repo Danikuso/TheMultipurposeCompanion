@@ -51,6 +51,17 @@ SELECT market_id,updated_at,origin FROM (
 ) WHERE position=1;
 ";
 
+pub(crate) const ACCOUNTS_SCHEMA: &str = "
+CREATE TABLE IF NOT EXISTS accounts_credential (
+  service TEXT PRIMARY KEY,
+  api_key TEXT,
+  cmdr_name TEXT,
+  token_json TEXT,
+  salt TEXT,
+  updated_at TEXT NOT NULL
+);
+";
+
 pub struct Migration {
     pub id: &'static str,
     pub sql: &'static str,

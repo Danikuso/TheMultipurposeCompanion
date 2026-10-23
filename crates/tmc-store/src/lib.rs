@@ -5,12 +5,14 @@ use rusqlite::{Connection, OptionalExtension};
 use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard};
 
+pub mod accounts;
 pub mod import;
 pub mod migrations;
 pub mod prices;
 pub mod query;
 pub mod writer;
 
+pub use accounts::AccountCredentialRecord;
 pub use import::{ImportOptions, ImportReport, import_history};
 pub use migrations::Migration;
 pub use query::{EventQuery, EventRow};
@@ -139,6 +141,10 @@ impl Store {
                 Migration {
                     id: "f3_market_full_snapshots",
                     sql: migrations::FULL_SNAPSHOTS_SCHEMA,
+                },
+                Migration {
+                    id: "f6_accounts",
+                    sql: migrations::ACCOUNTS_SCHEMA,
                 },
             ])?;
             Ok(store)
