@@ -233,6 +233,9 @@ fn source_of(service: Service) -> NetSource {
         Service::Canonn => NetSource::Canonn,
         Service::Ardent => NetSource::Ardent,
         Service::Edcd => NetSource::Edcd,
+        Service::Eddn => NetSource::Eddn,
+        Service::Inara => NetSource::Inara,
+        Service::Capi => NetSource::Capi,
     }
 }
 
@@ -258,6 +261,9 @@ impl NetClient {
             Service::Canonn,
             Service::Ardent,
             Service::Edcd,
+            Service::Eddn,
+            Service::Inara,
+            Service::Capi,
         ];
         NetClient {
             transport,

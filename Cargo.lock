@@ -5145,7 +5145,10 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "reqwest",
+ "serde",
  "serde_json",
+ "sha2 0.10.9",
+ "thiserror 2.0.21",
  "tmc-model",
  "tokio",
  "tracing",

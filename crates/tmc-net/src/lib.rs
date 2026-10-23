@@ -6,6 +6,7 @@ pub mod bgs_tick;
 pub mod cache_policy;
 pub mod canonn;
 pub mod client;
+pub mod eddn_sender;
 pub mod edsm;
 pub mod health;
 mod jsonx;
