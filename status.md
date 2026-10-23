@@ -10,9 +10,9 @@
 
 ## Puntero actual
 
-- **Tarea:** Tarea 4 de F5 — Módulo `carrier` en Rust (`tmc-modules`).
-- **Último paso completado:** Tarea 3 de F5 completada (`9c0973f`): cliente para consulta de tick galáctico del BGS (`https://tick.edcd.io/api/ticks`), caché de 30 min (`CacheKind::BgsTick`), limitador de EDCD (`Service::Edcd`), degradación offline y soporte en `tmc-net` y `net_service` (138 tests PASS en `tmc-net`, 23 tests PASS en `net_service`).
-- **Siguiente acción:** Implementar módulo `carrier` en `tmc-modules` con telemetría de ubicación y combustible (depósito + bodega), saltos de 500 al, cuenta atrás de 15 minutos y salud financiera de mantenimiento semanal con cobro los jueves.
+- **Tarea:** Tarea 5 de F5 — Módulo `colonisation` en Rust (`tmc-modules`).
+- **Último paso completado:** Tarea 4 de F5 completada (`d22a65e`): módulo `carrier` en `tmc-modules` con telemetría de ubicación y combustible (depósito + bodega), saltos de 500 al, cuenta atrás de 15 minutos con estados (countingdown, locked, cooldown, idle), semáforo financiero (safe, warning, critical), cálculo del próximo cobro los jueves 07:00 UTC y relevancia reactiva (`Hidden` sin carrier, `Active` a bordo o en salto) (13 tests PASS en `carrier`, 802 tests PASS en `tmc-modules`).
+- **Siguiente acción:** Implementar módulo `colonisation` en `tmc-modules` con topic `colonisation.depot` (progreso de obra, recursos requeridos y entregados, porcentaje completado), viajes restantes según la bodega actual de la nave (`ceil(faltante / capacidad)`) y enlaces de compra cercana.
 
 ## Rediseño visual global de TMC («TMC Glass HUD»)
 
@@ -42,7 +42,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 1 | Tipado de eventos de Fleet Carrier (`tmc-model`) | ✅ hecha | `3052983` | `CarrierStats`, `CarrierJumpRequest`, `CarrierFinance`, combustible y saltos |
 | 2 | Tipado de eventos de Colonización y Powerplay 2.0 (`tmc-model`) | ✅ hecha | `ce5da4a` | `ColonisationConstructionDepot`, `Powerplay`, `PowerplayMerits`, viajes |
 | 3 | Cliente para endpoint de tick de BGS (`tmc-net`) | ✅ hecha | `9c0973f` | `https://tick.edcd.io/api/ticks`, caché 30m, degradación offline |
-| 4 | Módulo `carrier` en Rust (`tmc-modules`) | 🔄 en curso | — | Telemetría, combustible, saltos de 500 al, cuenta atrás y semáforo financiero |
+| 4 | Módulo `carrier` en Rust (`tmc-modules`) | ✅ hecha | `d22a65e` | Telemetría, combustible, saltos de 500 al, cuenta atrás y semáforo financiero |
+| 5 | Módulo `colonisation` en Rust (`tmc-modules`) | 🔄 en curso | — | Depósitos en obra, viajes restantes según bodega y sourcing de compras |
 | 5 | Módulo `colonisation` en Rust (`tmc-modules`) | ⬜ pendiente | — | Depósitos en obra, viajes restantes según bodega y sourcing de compras |
 | 6 | Módulo `powerplay` en Rust (`tmc-modules`) | ⬜ pendiente | — | Méritos de sesión, tasa méritos/h, fórmula oficial de rangos y tick semanal |
 | 7 | Módulo `bgs` en Rust (`tmc-modules`) | ⬜ pendiente | — | Facciones locales, influencias, estados y hora del último tick galáctico |
