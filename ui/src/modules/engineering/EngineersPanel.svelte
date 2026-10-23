@@ -5,6 +5,7 @@
   import Panel from '../../shell/Panel.svelte';
   import { blueprintLabel, contributionCommodityLabel, engineerStatusLabel, engineeringDataLabel, materialName } from './labels';
   import { createSectionsReader } from './sections.svelte';
+  import GradeBadge from '../../lib/icons/GradeBadge.svelte';
   import type { EngineerRow, EngineerRows, EngineersTopic, InventoryTopic } from './types';
 
   const data = $derived(topic<EngineersTopic>('engineering.engineers'));
@@ -180,6 +181,9 @@
 
               <div class="card-details">
                 <div class="rank-info">
+                  {#if row.rank != null && row.rank > 0}
+                    <GradeBadge grade={row.rank} size={15} />
+                  {/if}
                   <span class="rank-label">{t('engineering-col-rank')}: {row.rank == null ? t('engineering-no-data') : integer(row.rank)}</span>
                   {#if row.rank != null && row.rank > 0}
                     <span class="rank-stars" title={String(row.rank)}>{rankStars(row.rank)}</span>

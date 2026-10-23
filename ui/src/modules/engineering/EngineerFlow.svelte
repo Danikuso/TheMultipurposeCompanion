@@ -9,6 +9,7 @@
   import { pushToast } from '../../shell/Toasts.svelte';
   import { createSectionsReader } from './sections.svelte';
   import MercCoinsLine from './MercCoins.svelte';
+  import GradeBadge from '../../lib/icons/GradeBadge.svelte';
   import type { EngineeringFlowTopic, FlowRows, InventoryTopic } from './types';
 
   const data = $derived(topic<EngineeringFlowTopic>('engineering.flow'));
@@ -362,7 +363,10 @@
           {#each gradeRows as row (row.grade)}
             <section data-testid={`cost-grade-${row.grade}`} class="grade-card" class:target-grade={row.grade === data.request?.target_grade}>
               <div class="grade-card-header">
-                <span class="grade-badge">G{row.grade}</span>
+                <span class="grade-badge">
+                  <GradeBadge grade={row.grade} size={15} />
+                  <span>G{row.grade}</span>
+                </span>
                 <span class="grade-rolls-badge">{t('engineering-step-rolls-count', { rolls: integer(row.rolls) })}</span>
               </div>
               <h4>{t('engineering-grade', { grade: integer(row.grade) })} · {t('engineering-rolls')}: {integer(row.rolls)}</h4>

@@ -3,6 +3,7 @@
   import { decimal, pct } from '../../lib/format';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
+  import SuperpowerIcon from '../../lib/icons/SuperpowerIcon.svelte';
   import type { BgsSystemTopic, BgsTickTopic } from './types';
 
   const system = $derived(topic<BgsSystemTopic>('bgs.system'));
@@ -99,7 +100,16 @@
                   {f.state ?? 'None'}
                 </span>
               </td>
-              <td class="sub">{f.allegiance ?? '—'}</td>
+              <td class="sub allegiance-cell">
+                {#if f.allegiance}
+                  <span class="allegiance-group">
+                    <SuperpowerIcon superpower={f.allegiance} size={13} />
+                    <span>{f.allegiance}</span>
+                  </span>
+                {:else}
+                  —
+                {/if}
+              </td>
               <td class="sub">{f.government ?? '—'}</td>
             </tr>
           {/each}
@@ -179,6 +189,11 @@
     font-weight: 700;
     min-width: 48px;
     text-align: right;
+  }
+  .allegiance-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
   }
   .mini {
     font-size: 0.65rem;
