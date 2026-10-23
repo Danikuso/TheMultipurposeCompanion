@@ -392,6 +392,15 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
+- 2026-10-24 00:48 (Europe/Madrid) · Antigravity · Aplicación del cambio estético con iconografía oficial del juego (`b9a7944`):
+  - Biblioteca de componentes vectoriales `ui/src/lib/icons/` (`PowerIcon`, `SuperpowerIcon`, `ManufacturerIcon`, `StationIcon`, `GradeBadge`, `index.ts`).
+  - `PowerplayPanel.svelte`: emblemas vectoriales oficiales para las 11 potencias (Aisling Duval, Hudson, Winters, etc.) con alternador a retrato fotográfico oficial de Frontier al hacer clic e insignia de superpotencia.
+  - `BgsPanel.svelte`: insignias oficiales de superpotencia (Imperio, Federación, Alianza) en la tabla de facciones.
+  - `AccountsPanel.svelte`: logotipos vectoriales de fabricantes navales (Gutamaya, Faulcon DeLacy, Core Dynamics, Lakon, Saud Kruger, Zorgon Peterson) e iconos de estación en la flota remota CAPI.
+  - `TargetPanel.svelte`: logotipos de fabricante naval para el objetivo bloqueado en combate.
+  - `EngineerFlow.svelte` y `EngineersPanel.svelte`: insignias vectoriales oficiales de grado de ingeniería G1..G5.
+  - Verificación: 394/394 tests Vitest PASS, `svelte-check` 0 errores/0 avisos, `ui/dist` reconstruido y `target/debug/TMC.exe` recompilado.
+
 - 2026-10-24 00:17 (Europe/Madrid) · Antigravity · F6 completada y verificada:
   - Tareas 1 a 11 ejecutadas en TDD con commits individuales (`14453df`, `25ea553`, `b377acd`, `50788b9`, `196e419`, `dbf685c`, `3d4ee11`, `87c26c2`, `7db2c37`, `919b4d9`, `ca14a61`).
   - Tarea 12 (Verificación integral): 394 tests Vitest PASS, svelte-check 0 errores/0 avisos, suite completa de Rust en el workspace PASS (1.400+ tests), clippy limpio con -D warnings, cargo fmt limpio, ui/dist/ generado y binario `target/debug/TMC.exe` compilado.
