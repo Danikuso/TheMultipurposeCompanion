@@ -2,17 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-24 00:17 (Europe/Madrid) · Antigravity
-- **Fase actual:** F6 — Cuentas y Sincronización Externa (EDDN, EDSM, Inara, Frontier CAPI) [Fase completada y verificada].
+- **Última actualización:** 2026-10-24 00:18 (Europe/Madrid) · Antigravity
+- **Fase actual:** F6 — Cuentas y Sincronización Externa (EDDN, EDSM, Inara, Frontier CAPI) [Fase completada, verificada y fusionada en `main`].
 - **Spec activa:** [`docs/specs/2026-10-23-tmc-f6-cuentas-sincronizacion-design.md`](docs/specs/2026-10-23-tmc-f6-cuentas-sincronizacion-design.md) — Cuentas y sincronización externa.
 - **Plan activo:** [`docs/plans/2026-10-23-tmc-f6-cuentas-sincronizacion.md`](docs/plans/2026-10-23-tmc-f6-cuentas-sincronizacion.md) — 12 tareas en 7 bloques.
-- **Rama de trabajo:** `fase/f6-cuentas-sincronizacion`
+- **Rama de trabajo:** `main`
 
 ## Puntero actual
 
-- **Tarea:** Tarea 12 de F6 completada — Verificación integral, calidad, footprint y build (`workspace`).
-- **Último paso completado:** Verificación integral de F6: 394 tests Vitest PASS, svelte-check 0 errores/0 advertencias, suite completa de Rust en workspace PASS (1.400+ tests), `cargo clippy --workspace --all-targets -- -D warnings` limpio (0 warnings), `cargo fmt --all --check` limpio, build de producción `ui/dist/` OK y `target/debug/TMC.exe` compilado exitosamente.
-- **Siguiente acción:** Fusión de la rama `fase/f6-cuentas-sincronizacion` en `main`.
+- **Tarea:** Cierre y fusión de F6 completados en `main`.
+- **Último paso completado:** Fusión formal de `fase/f6-cuentas-sincronizacion` en `main` (`--no-ff`). Verificación integral de calidad: 394 tests Vitest PASS, svelte-check 0 errores/0 advertencias, suite completa de Rust en workspace PASS (1.400+ tests), `cargo clippy --workspace --all-targets -- -D warnings` limpio (0 warnings), `cargo fmt --all --check` limpio, build de producción `ui/dist/` OK y `target/debug/TMC.exe` compilado exitosamente.
+- **Siguiente acción:** Definición o inicio de la siguiente fase según la hoja de ruta de la arquitectura (§13).
 
 ## Tareas de F6 (Cuentas y Sincronización Externa)
 
