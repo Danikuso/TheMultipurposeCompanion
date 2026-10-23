@@ -46,6 +46,7 @@ pub mod inflight;
 pub mod mining;
 pub mod missions;
 pub mod navigation;
+pub mod powerplay;
 pub mod registry;
 pub(crate) mod topicx;
 pub mod trade;
