@@ -248,6 +248,7 @@ const TOPICS: &[&str] = &[
     "powerplay.session",
     "bgs.system",
     "bgs.tick",
+    "accounts.status",
 ];
 const MODULES: &[&str] = &[
     "dashboard",
@@ -263,6 +264,7 @@ const MODULES: &[&str] = &[
     "colonisation",
     "powerplay",
     "bgs",
+    "accounts",
 ];
 const ACTIONS: &[&str] = &[
     "clipboard.copy-next-system",
@@ -288,6 +290,11 @@ const ACTIONS: &[&str] = &[
     "engineering.select_engineer",
     "engineering.dismiss_alert",
     "engineering.reset_session",
+    "accounts.sync_now",
+    "accounts.set_settings",
+    "frontier.login",
+    "frontier.logout",
+    "frontier.fleet",
 ];
 const EVENTS: &[&str] = &[
     "Fileheader",
@@ -849,6 +856,7 @@ const UI_SLOTS: &[&str] = &[
 ];
 /// Claves de título de los paneles (`titleKey` en `ui/src`); un test de la UI las mantiene sincronizadas.
 const UI_PANELS: &[&str] = &[
+    "panel-accounts",
     "panel-bgs-system",
     "panel-carrier-finances",
     "panel-carrier-jump",
