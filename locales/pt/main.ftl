@@ -116,3 +116,7 @@ auto-companion-tooltip = Ativado, o TMC muda sozinho de disposição e de painel
 layout-engineering = Engenharia
 settings-engineering-rolls = Tentativas de engenharia por grau (G1–G5, 1–10)
 settings-engineering-rolls-invalid = Valor inválido: cada grau precisa de 1 a 10 tentativas.
+layout-carrier = Fleet Carrier
+layout-colonisation = Colonização
+layout-powerplay = Powerplay 2.0
+layout-bgs = BGS
