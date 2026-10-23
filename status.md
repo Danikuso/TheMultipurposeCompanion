@@ -3,16 +3,16 @@
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
 - **Última actualización:** 2026-10-23 09:55 (Europe/Madrid) · Antigravity
-- **Fase actual:** F5 — Fleet Carrier, Colonización, Powerplay 2.0 y BGS (activa; F4 fusionada formalmente en `main`; spec de diseño redactada en `docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md`; pendiente de aprobación del propietario para derivar el plan).
+- **Fase actual:** F5 — Fleet Carrier, Colonización, Powerplay 2.0 y BGS (activa; F4 fusionada formalmente en `main`; spec de diseño redactada en `docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md`; plan de ejecución redactado en `docs/plans/2026-10-23-tmc-f5-carrier-colonizacion-powerplay.md`; pendiente de validación del propietario para iniciar la ejecución TDD).
 - **Spec activa:** [`docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md`](docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md) — Fleet Carrier, Colonización, Powerplay 2.0 y BGS.
-- **Plan activo:** Pendiente de aprobación de la spec de F5.
+- **Plan activo:** [`docs/plans/2026-10-23-tmc-f5-carrier-colonizacion-powerplay.md`](docs/plans/2026-10-23-tmc-f5-carrier-colonizacion-powerplay.md) — 13 tareas en 6 bloques.
 - **Rama de trabajo:** `fase/f5-carrier-colonizacion-powerplay`
 
 ## Puntero actual
 
-- **Tarea:** Revisión y aprobación de la especificación de diseño de F5 por el propietario.
-- **Último paso completado:** F4 fusionada en `main` con `--no-ff`. Creada la rama de trabajo `fase/f5-carrier-colonizacion-powerplay`. Redactada la especificación completa de diseño de F5 ([`docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md`](docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md)) abarcando Fleet Carrier (saltos, tritio, finanzas y mantenimiento semanal), Colonización (progreso de obra, compras y viajes restantes), Powerplay 2.0 (méritos de sesión, rango y ventajas), BGS (facciones locales y tick diario con `tick.edcd.io`) y soporte a pie (Odyssey).
-- **Siguiente acción:** Aprobación del propietario de la spec de F5 para redactar el plan de tareas TDD en `docs/plans/`.
+- **Tarea:** Validación de la spec y plan de F5 por el propietario para inicio de ejecución TDD.
+- **Último paso completado:** F4 fusionada en `main` con `--no-ff`. Creada la rama de trabajo `fase/f5-carrier-colonizacion-powerplay`. Redactada la especificación de diseño ([`docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md`](docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md)) y el plan de ejecución TDD en 13 tareas ([`docs/plans/2026-10-23-tmc-f5-carrier-colonizacion-powerplay.md`](docs/plans/2026-10-23-tmc-f5-carrier-colonizacion-powerplay.md)) abarcando Fleet Carrier (saltos, tritio, finanzas y mantenimiento semanal), Colonización (progreso de obra, compras y viajes restantes), Powerplay 2.0 (méritos de sesión, rango y ventajas), BGS (facciones locales y tick diario con `tick.edcd.io`) y soporte a pie (Odyssey).
+- **Siguiente acción:** Aprobación del propietario para comenzar la Tarea 1 de F5 (eventos y tipos de Fleet Carrier en `tmc-model`).
 
 ## Rediseño visual global de TMC («TMC Glass HUD»)
 
@@ -32,6 +32,27 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 8 | Rediseño de `MarketPanel.svelte`, `CargoPanel.svelte` y `RoutePanel.svelte` | ✅ hecha | `427cb9b` | Badges de beneficio/t, capacidad de bodega y stepper de ruta comercial |
 | 9 | Rediseño de `MissionsPanel.svelte`, `MassacrePanel.svelte`, `PassengersPanel.svelte` | ✅ hecha | `285c10b` | Misiones por destino, semáforo de tiempo, optimizador de masacre y cabinas |
 | 10 | Verificación integral, cierre y build | ✅ hecha | este commit | 378 Vitest PASS, svelte-check 0 errores, cargo test workspace PASS, `TMC.exe` listo |
+
+## Tareas de F5 (Fleet Carrier, Colonización, Powerplay 2.0 y BGS)
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 1 | Tipado de eventos de Fleet Carrier (`tmc-model`) | ⬜ pendiente | — | `CarrierStats`, `CarrierJumpRequest`, `CarrierFinance`, combustible y saltos |
+| 2 | Tipado de eventos de Colonización y Powerplay 2.0 (`tmc-model`) | ⬜ pendiente | — | `ColonisationConstructionDepot`, `Powerplay`, `PowerplayMerits` |
+| 3 | Cliente para endpoint de tick de BGS (`tmc-net`) | ⬜ pendiente | — | `https://tick.edcd.io/api/ticks`, caché 30m, degradación offline |
+| 4 | Módulo `carrier` en Rust (`tmc-modules`) | ⬜ pendiente | — | Telemetría, combustible, saltos de 500 al, cuenta atrás y semáforo financiero |
+| 5 | Módulo `colonisation` en Rust (`tmc-modules`) | ⬜ pendiente | — | Depósitos en obra, viajes restantes según bodega y sourcing de compras |
+| 6 | Módulo `powerplay` en Rust (`tmc-modules`) | ⬜ pendiente | — | Méritos de sesión, tasa méritos/h, fórmula oficial de rangos y tick semanal |
+| 7 | Módulo `bgs` en Rust (`tmc-modules`) | ⬜ pendiente | — | Facciones locales, influencias, estados y hora del último tick galáctico |
+| 8 | Cadenas y localización en los 5 idiomas (`locales/`) | ⬜ pendiente | — | `carrier.ftl`, `colonisation.ftl`, `powerplay.ftl`, `bgs.ftl` en es/en/fr/de/pt |
+| 9 | Componentes y paneles Glass HUD de Fleet Carrier | ⬜ pendiente | — | Medidor dual de tritio, cuenta atrás de 15 min y tarjeta de mantenimiento |
+| 10 | Paneles Glass HUD de Colonización | ⬜ pendiente | — | Progreso de construcción, viajes restantes y compras cercanas con copia |
+| 11 | Paneles Glass HUD de Powerplay 2.0 y BGS | ⬜ pendiente | — | Stepper de rango, méritos/h, barras de influencia y tick galáctico |
+| 12 | Integración de disposiciones en el Shell y Auto-companion | ⬜ pendiente | — | Activación automática en Carrier, depósitos de colonización y Powerplay |
+| 13 | Verificación integral, calidad, footprint y build | ⬜ pendiente | — | Tests Vitest, svelte-check, tests Rust workspace, build `dist/` y `TMC.exe` |
+
 ## Tareas de F4
 
 Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
