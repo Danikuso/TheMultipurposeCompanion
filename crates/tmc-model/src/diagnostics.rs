@@ -793,16 +793,26 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
 }
 /// Disposiciones de la UI (`ui/src/shell/layouts.ts`); `none` cuando no hay ninguna activa.
 const UI_LAYOUTS: &[&str] = &[
-    "engineering",
-    "none",
-    "exploration",
+    "carrier",
+    "colonisation",
     "combat",
+    "engineering",
+    "exploration",
     "mining",
-    "trade",
     "missions",
+    "none",
+    "powerplay",
+    "trade",
 ];
 /// Ranuras de las disposiciones (`ui/src/shell/layouts.ts`).
 const UI_SLOTS: &[&str] = &[
+    "bgs-system",
+    "carrier-finances",
+    "carrier-jump",
+    "carrier-overview",
+    "colonisation-progress",
+    "colonisation-supply",
+    "powerplay-status",
     "materials",
     "engineers",
     "eng-alerts",

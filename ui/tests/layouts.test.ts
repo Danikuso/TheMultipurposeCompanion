@@ -379,6 +379,16 @@ describe('engineering layout', () => {
     expect(autoLayout([m('combat')], 'engineering')).toBe('engineering');
     expect(autoLayout([m('engineering')], 'trade')).toBe('trade');
   });
+  test('carrier, colonisation and powerplay auto-layouts follow module relevance', () => {
+    const m = (id: string, relevance = 'active') => ({ id, relevance });
+    expect(autoLayout([m('carrier')], null)).toBe('carrier');
+    expect(autoLayout([m('colonisation')], null)).toBe('colonisation');
+    expect(autoLayout([m('powerplay')], null)).toBe('powerplay');
+    expect(autoLayout([m('carrier'), m('combat')], null)).toBe('carrier');
+    expect(autoLayout([m('combat'), m('colonisation')], null)).toBe('combat');
+    expect(autoLayout([m('colonisation'), m('mining')], null)).toBe('colonisation');
+    expect(autoLayout([m('powerplay')], 'carrier')).toBe('carrier');
+  });
   test('engineering slots and flow visibility follow selected slot, including idle drafts', () => {
     const layout = layouts.find((l) => l.id === 'engineering')!;
     expect(layout).toMatchObject({ titleKey: 'layout-engineering', icon: 'wrench' });
