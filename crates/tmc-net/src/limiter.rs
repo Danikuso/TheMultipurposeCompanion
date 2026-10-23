@@ -10,6 +10,7 @@ pub enum Service {
     Edsm,
     Canonn,
     Ardent,
+    Edcd,
 }
 
 /// Permite como máximo `max` peticiones en cualquier ventana de `window`.
@@ -29,10 +30,10 @@ impl RateLimiter {
         }
     }
 
-    /// Spansh 1/1 s, Canonn 1/1 s, Ardent 1/1 s, EDSM 10/10 s.
+    /// Spansh 1/1 s, Canonn 1/1 s, Ardent 1/1 s, EDCD 1/1 s, EDSM 10/10 s.
     pub fn for_service(service: Service) -> Self {
         match service {
-            Service::Spansh | Service::Canonn | Service::Ardent => {
+            Service::Spansh | Service::Canonn | Service::Ardent | Service::Edcd => {
                 Self::per_window(1, Duration::from_secs(1))
             }
             Service::Edsm => Self::per_window(10, Duration::from_secs(10)),
@@ -82,6 +83,18 @@ mod tests {
         assert_eq!(
             l.try_acquire(t0 + Duration::from_millis(250)),
             Err(Duration::from_millis(750))
+        );
+        assert_eq!(l.try_acquire(t0 + Duration::from_secs(1)), Ok(()));
+    }
+
+    #[test]
+    fn edcd_limiter_allows_one_per_second() {
+        let t0 = Instant::now();
+        let mut l = RateLimiter::for_service(Service::Edcd);
+        assert_eq!(l.try_acquire(t0), Ok(()));
+        assert_eq!(
+            l.try_acquire(t0 + Duration::from_millis(500)),
+            Err(Duration::from_millis(500))
         );
         assert_eq!(l.try_acquire(t0 + Duration::from_secs(1)), Ok(()));
     }

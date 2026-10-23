@@ -56,6 +56,8 @@ pub enum NetQuery {
     SystemCoordsByName {
         name: String,
     },
+    /// Consulta del último tick galáctico del BGS (EDCD).
+    BgsTick,
 }
 
 /// Tamaño de plataforma de aterrizaje.
@@ -165,6 +167,7 @@ pub enum NetSource {
     Edsm,
     Canonn,
     Ardent,
+    Edcd,
     Cache,
 }
 
@@ -190,6 +193,7 @@ pub enum NetOutcome {
     TradeRoute(TradeRoutePlan),
     Exports(Vec<RemoteExport>),
     Coords(SystemCoords),
+    BgsTick(BgsTickInfo),
     NoData,
     Disabled,
     Failed(NetFailure),
@@ -208,6 +212,7 @@ impl NetOutcome {
             Self::TradeRoute(plan) => ("trade_route", plan.stops.len()),
             Self::Exports(v) => ("exports", v.len()),
             Self::Coords(_) => ("coords", 1),
+            Self::BgsTick(_) => ("bgs_tick", 1),
             Self::NoData => ("no_data", 0),
             Self::Disabled => ("disabled", 0),
             Self::Failed(_) => ("failed", 0),
@@ -375,6 +380,13 @@ pub struct SystemCoords {
     pub name: String,
     pub id64: Option<u64>,
     pub star_pos: [f64; 3],
+}
+
+/// Información del último tick galáctico del BGS (EDCD).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BgsTickInfo {
+    pub latest_tick: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -38,6 +38,9 @@
     trade: '⚖️',
     missions: '📋',
     engineering: '🔧',
+    carrier: '⚓',
+    colonisation: '🏗️',
+    powerplay: '👑',
   };
 
   const MOD_ICONS: Record<string, string> = {
@@ -49,6 +52,10 @@
     trade: '📦',
     missions: '📜',
     engineering: '🛠️',
+    carrier: '⚓',
+    colonisation: '🏗️',
+    powerplay: '👑',
+    bgs: '🌐',
   };
 </script>
 

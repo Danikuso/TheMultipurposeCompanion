@@ -116,3 +116,7 @@ auto-companion-tooltip = An: TMC wechselt Layout und Kontextpanel automatisch na
 layout-engineering = Ingenieurwesen
 settings-engineering-rolls = Ingenieurs-Würfe pro Stufe (G1–G5, 1–10)
 settings-engineering-rolls-invalid = Ungültiger Wert: Jede Stufe braucht 1 bis 10 Würfe.
+layout-carrier = Fleet Carrier
+layout-colonisation = Kolonisation
+layout-powerplay = Powerplay 2.0
+layout-bgs = BGS

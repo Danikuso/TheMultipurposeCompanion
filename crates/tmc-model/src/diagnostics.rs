@@ -240,6 +240,14 @@ const TOPICS: &[&str] = &[
     "engineering.goals",
     "engineering.sources",
     "engineering.alerts",
+    "carrier.overview",
+    "carrier.jump",
+    "carrier.finances",
+    "colonisation.depot",
+    "powerplay.status",
+    "powerplay.session",
+    "bgs.system",
+    "bgs.tick",
 ];
 const MODULES: &[&str] = &[
     "dashboard",
@@ -251,6 +259,10 @@ const MODULES: &[&str] = &[
     "trade",
     "missions",
     "engineering",
+    "carrier",
+    "colonisation",
+    "powerplay",
+    "bgs",
 ];
 const ACTIONS: &[&str] = &[
     "clipboard.copy-next-system",
@@ -743,7 +755,12 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
         "module" => registered(text, MODULES) != REDACTED,
         "action" => registered(text, ACTIONS) != REDACTED,
         "event" => registered(text, EVENTS) != REDACTED,
-        "source" | "provider" => matches!(text, "Spansh" | "Edsm" | "Canonn" | "Ardent" | "Cache"),
+        "source" | "provider" => {
+            matches!(
+                text,
+                "Spansh" | "Edsm" | "Canonn" | "Ardent" | "Cache" | "Edcd"
+            )
+        }
         "endpoint" => {
             matches!(
                 context,
@@ -754,6 +771,7 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
                     | "spansh.route.job"
                     | "spansh.route.results"
                     | "spansh.autocomplete"
+                    | "edcd.ticks"
                     | "edsm.system"
                     | "canonn.codex_ref"
                     | "canonn.system_poi"
@@ -775,16 +793,26 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
 }
 /// Disposiciones de la UI (`ui/src/shell/layouts.ts`); `none` cuando no hay ninguna activa.
 const UI_LAYOUTS: &[&str] = &[
-    "engineering",
-    "none",
-    "exploration",
+    "carrier",
+    "colonisation",
     "combat",
+    "engineering",
+    "exploration",
     "mining",
-    "trade",
     "missions",
+    "none",
+    "powerplay",
+    "trade",
 ];
 /// Ranuras de las disposiciones (`ui/src/shell/layouts.ts`).
 const UI_SLOTS: &[&str] = &[
+    "bgs-system",
+    "carrier-finances",
+    "carrier-jump",
+    "carrier-overview",
+    "colonisation-progress",
+    "colonisation-supply",
+    "powerplay-status",
     "materials",
     "engineers",
     "eng-alerts",
@@ -821,6 +849,12 @@ const UI_SLOTS: &[&str] = &[
 ];
 /// Claves de título de los paneles (`titleKey` en `ui/src`); un test de la UI las mantiene sincronizadas.
 const UI_PANELS: &[&str] = &[
+    "panel-bgs-system",
+    "panel-carrier-finances",
+    "panel-carrier-jump",
+    "panel-carrier-overview",
+    "panel-colonisation-depot",
+    "panel-colonisation-supply",
     "panel-engineering-materials",
     "panel-engineering-engineers",
     "panel-engineering-ship",
@@ -851,6 +885,7 @@ const UI_PANELS: &[&str] = &[
     "panel-missions-rewards",
     "panel-missions-tourism",
     "panel-planner",
+    "panel-powerplay-status",
     "panel-route",
     "panel-route-strip",
     "panel-session",
