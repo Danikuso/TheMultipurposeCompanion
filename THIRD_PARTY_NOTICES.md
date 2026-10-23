@@ -428,3 +428,9 @@ Versión 1, licencia de datos propios del proyecto **PolyForm Noncommercial 1.0.
 | `crates/tmc-modules/data/blueprints.json` | 89 blueprints, 87 efectos experimentales y 15 variantes con costes, bases explícitas y requisitos; convertidos desde EDDiscovery (Apache-2.0). | Importación determinista (`--check` byte a byte); `verified: false` hasta contraste en vuelo. |
 | `crates/tmc-modules/data/engineers.json` | 38 ingenieros con ubicación, taller, estado, progresión, IDs canónicos (EDDI, Apache-2.0) y capacidades detalladas por módulo y grado (EDDiscovery, Apache-2.0). | Cruce 38/38 exacto y sin duplicados; `verified: false` hasta contraste en vuelo. |
 
+### EDAssets (iconografía y vectores de Elite Dangerous)
+- Fuente: https://github.com/Venefilyn/EDAssets (`edassets.org`).
+- Licencia: **MIT** (Copyright (c) 2015 Eric "SpyTec" Gustavsson y colaboradores de EDAssets).
+- Usada por: `ui/src/assets/icons/` (vectores SVG comunitarios y del juego para Potencias de Powerplay, Superpotencias, Fabricantes de naves, Estaciones, Grados de ingeniería e Iconos de navegación). Uso legítimo no comercial de ayuda en cabina conforme a la política de Frontier Developments.
+
+

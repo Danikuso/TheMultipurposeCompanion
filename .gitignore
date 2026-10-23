@@ -30,3 +30,6 @@ Thumbs.db
 debug_logs/
 target-f3/
 target-f2/
+target-f4/
+.tmp/
+.claude/

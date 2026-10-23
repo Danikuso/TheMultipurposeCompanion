@@ -2,17 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-23 09:55 (Europe/Madrid) · Antigravity
-- **Fase actual:** F5 — Fleet Carrier, Colonización, Powerplay 2.0 y BGS (activa; F4 fusionada formalmente en `main`; spec de diseño redactada en `docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md`; plan de ejecución redactado en `docs/plans/2026-10-23-tmc-f5-carrier-colonizacion-powerplay.md`; pendiente de validación del propietario para iniciar la ejecución TDD).
+- **Última actualización:** 2026-10-23 10:25 (Europe/Madrid) · Antigravity
+- **Fase actual:** F5 — Fleet Carrier, Colonización, Powerplay 2.0 y BGS (activa; spec y plan aprobados en estructura; maqueta interactiva enriquecida con la iconografía oficial vectorial de Elite Dangerous).
 - **Spec activa:** [`docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md`](docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md) — Fleet Carrier, Colonización, Powerplay 2.0 y BGS.
 - **Plan activo:** [`docs/plans/2026-10-23-tmc-f5-carrier-colonizacion-powerplay.md`](docs/plans/2026-10-23-tmc-f5-carrier-colonizacion-powerplay.md) — 13 tareas en 6 bloques.
 - **Rama de trabajo:** `fase/f5-carrier-colonizacion-powerplay`
 
 ## Puntero actual
 
-- **Tarea:** Validación de la spec y plan de F5 por el propietario para inicio de ejecución TDD.
-- **Último paso completado:** F4 fusionada en `main` con `--no-ff`. Creada la rama de trabajo `fase/f5-carrier-colonizacion-powerplay`. Redactada la especificación de diseño ([`docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md`](docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md)) y el plan de ejecución TDD en 13 tareas ([`docs/plans/2026-10-23-tmc-f5-carrier-colonizacion-powerplay.md`](docs/plans/2026-10-23-tmc-f5-carrier-colonizacion-powerplay.md)) abarcando Fleet Carrier (saltos, tritio, finanzas y mantenimiento semanal), Colonización (progreso de obra, compras y viajes restantes), Powerplay 2.0 (méritos de sesión, rango y ventajas), BGS (facciones locales y tick diario con `tick.edcd.io`) y soporte a pie (Odyssey).
-- **Siguiente acción:** Aprobación del propietario para comenzar la Tarea 1 de F5 (eventos y tipos de Fleet Carrier en `tmc-model`).
+- **Tarea:** Validación de la maqueta F5 con iconografía oficial de ED por el propietario para inicio de ejecución TDD.
+- **Último paso completado:** Descarga, normalización vectorial (`fill="currentColor"`) y almacenamiento de los activos oficiales de ED en `ui/src/assets/icons/` (11 potencias de Powerplay, 3 superpotencias, 6 fabricantes de naves, estaciones y grados de ingeniería) procedentes del repositorio MIT `Venefilyn/EDAssets`. Maqueta interactiva (`f5_carrier_colonisation_powerplay_mockups.html`) actualizada con el emblema vectorial de Aisling Duval (con alternador a retrato oficial), águila imperial, estrella federal en Sol, Gutamaya en Imperial Cutter, estaciones en las pestañas y modal de biblioteca de iconos. `THIRD_PARTY_NOTICES.md` actualizado; 378/378 vitest PASS y `svelte-check` 0 errores.
+- **Siguiente acción:** Aprobación del propietario sobre la maqueta y los iconos para iniciar la Tarea 1 de F5 (tipado de eventos de Fleet Carrier en `tmc-model`).
 
 ## Rediseño visual global de TMC («TMC Glass HUD»)
 
@@ -372,6 +372,13 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-23 10:25 (Europe/Madrid) · Antigravity · Ingesta y aplicación de la iconografía oficial de Elite Dangerous en TMC y en la maqueta interactiva F5:
+  - Búsqueda y catalogación del repositorio estándar comunitario [`Venefilyn/EDAssets`](https://github.com/Venefilyn/EDAssets) (licencia MIT, compatible con TMC y la política de juego no comercial de Frontier Developments).
+  - Descarga y normalización vectorial (`fill="currentColor"`, transparencias puras sin fondos negros fijos) en `ui/src/assets/icons/`: 11 potencias de Powerplay, 3 superpotencias, 6 fabricantes de naves (Gutamaya, Faulcon DeLacy, Core Dynamics, Lakon Spaceways, Zorgon Peterson, Saud Kruger), estaciones (Mega-Ship, Coriolis, Orbis, Ocellus, Outpost), grados de ingeniería 1..5 y navegación.
+  - Maqueta F5 actualizada: sustitución del emoji genérico de corona por el emblema vectorial de Aisling Duval (con alternador a retrato fotográfico oficial de Frontier al hacer clic), águila imperial junto a la potencia jurada, insignia federal en Sistema Sol, logotipo de Gutamaya en Imperial Cutter, estaciones en las pestañas y modal de biblioteca de iconos oficiales en la cabecera.
+  - `THIRD_PARTY_NOTICES.md` actualizado con EDAssets. 378/378 vitest PASS y `svelte-check` 0 errores.
+  - Siguiente: Aprobación del propietario para iniciar la ejecución de F5.
 
 - 2026-10-23 09:55 (Europe/Madrid) · Antigravity · Fusión formal de F4 en `main`, inicio de F5 y redacción de su especificación:
   - `fase/f4-ingenieros-materiales` fusionada en `main` con `--no-ff` tras completarse íntegramente las 28 tareas de F4, el catálogo extendido C0-C10, y el rediseño global «TMC Glass HUD» con 100% de tests en verde.
