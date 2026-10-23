@@ -839,6 +839,7 @@ const UI_SLOTS: &[&str] = &[
 ];
 /// Claves de título de los paneles (`titleKey` en `ui/src`); un test de la UI las mantiene sincronizadas.
 const UI_PANELS: &[&str] = &[
+    "panel-bgs-system",
     "panel-carrier-finances",
     "panel-carrier-jump",
     "panel-carrier-overview",
@@ -874,6 +875,7 @@ const UI_PANELS: &[&str] = &[
     "panel-missions-rewards",
     "panel-missions-tourism",
     "panel-planner",
+    "panel-powerplay-status",
     "panel-route",
     "panel-route-strip",
     "panel-session",

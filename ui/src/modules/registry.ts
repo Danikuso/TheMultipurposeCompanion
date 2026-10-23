@@ -10,6 +10,8 @@ import { missionsPanels } from './missions';
 import { engineeringPanels } from './engineering';
 import { carrierPanels } from './carrier';
 import { colonisationPanels } from './colonisation';
+import { powerplayPanels } from './powerplay';
+import { bgsPanels } from './bgs';
 
 export interface UiModuleDef {
   id: string;
@@ -79,5 +81,17 @@ export const modules: UiModuleDef[] = [
     icon: 'hammer',
     titleKey: 'nav-colonisation',
     panels: colonisationPanels,
+  },
+  {
+    id: 'powerplay',
+    icon: 'crown',
+    titleKey: 'nav-powerplay',
+    panels: powerplayPanels,
+  },
+  {
+    id: 'bgs',
+    icon: 'network',
+    titleKey: 'nav-bgs',
+    panels: bgsPanels,
   },
 ];
