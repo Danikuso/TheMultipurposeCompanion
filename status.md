@@ -2,17 +2,36 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-23 11:55 (Europe/Madrid) · Antigravity
-- **Fase actual:** F5 — Fleet Carrier, Colonización, Powerplay 2.0 y BGS (✅ COMPLETADA con todas sus tareas, tests, maquetas, módulos y verificación).
-- **Spec activa:** [`docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md`](docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md) — Fleet Carrier, Colonización, Powerplay 2.0 y BGS.
-- **Plan activo:** [`docs/plans/2026-10-23-tmc-f5-carrier-colonizacion-powerplay.md`](docs/plans/2026-10-23-tmc-f5-carrier-colonizacion-powerplay.md) — 13 tareas en 6 bloques (todas completadas).
-- **Rama de trabajo:** `fase/f5-carrier-colonizacion-powerplay`
+- **Última actualización:** 2026-10-23 12:55 (Europe/Madrid) · Antigravity
+- **Fase actual:** F6 — Cuentas y Sincronización Externa (EDDN, EDSM, Inara, Frontier CAPI).
+- **Spec activa:** [`docs/specs/2026-10-23-tmc-f6-cuentas-sincronizacion-design.md`](docs/specs/2026-10-23-tmc-f6-cuentas-sincronizacion-design.md) — Cuentas y sincronización externa.
+- **Plan activo:** [`docs/plans/2026-10-23-tmc-f6-cuentas-sincronizacion.md`](docs/plans/2026-10-23-tmc-f6-cuentas-sincronizacion.md) — 12 tareas en 7 bloques.
+- **Rama de trabajo:** `fase/f6-cuentas-sincronizacion`
 
 ## Puntero actual
 
-- **Tarea:** Tarea 13 de F5 — Verificación integral, calidad, footprint y build (✅ completada).
-- **Último paso completado:** Fase F5 completada al 100%: 13 tareas ejecutadas con TDD estricto, 392 tests Vitest PASS en 21 suites, `svelte-check` 0 errores/avisos, 1.380+ tests de Rust en el workspace PASS, `cargo clippy --workspace --all-targets -- -D warnings` limpio, bundle `dist/` generado y binario `target/debug/TMC.exe` compilado y actualizado.
-- **Siguiente acción:** Revisión y fusión de la rama `fase/f5-carrier-colonizacion-powerplay` en `main` o presentación al propietario.
+- **Tarea:** Tarea 1 de F6 — Modelos de sincronización, credenciales y topic de estado (`tmc-model`).
+- **Último paso completado:** Fase F5 fusionada formalmente en `main` (`chore: fusionar fase/f5-carrier-colonizacion-powerplay en main`), creada rama `fase/f6-cuentas-sincronizacion`, maqueta interactiva HTML generada (`f6_accounts_sync_mockups.html`), y spec y plan de F6 redactados.
+- **Siguiente acción:** Aprobación del propietario para iniciar la ejecución TDD tarea a tarea de F6 (comenzando por Tarea 1 en `tmc-model`).
+
+## Tareas de F6 (Cuentas y Sincronización Externa)
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 1 | Modelos de sincronización, credenciales y topic de estado (`tmc-model`) | ⬜ pendiente | — | `AccountSettings`, `AccountsStatusTopic`, payloads de EDDN, Inara, CAPI |
+| 2 | Emisor de esquemas oficiales a gateway EDDN (`tmc-net`) | ⬜ pendiente | — | HTTP POST `commodity/3`, `journal/1`, `outfitting/2`, `shipyard/2`, sal local |
+| 3 | Cliente de sincronización EDSM (`tmc-net`) | ⬜ pendiente | — | `set-logs`, `set-commander-ranks`, créditos, materiales, limitador 10/10s |
+| 4 | Cliente Inara InAPI v1 con lotes y rate limit estricto (`tmc-net`) | ⬜ pendiente | — | InAPI v1, batching de eventos, limitador estricto de 2 req/min |
+| 5 | Flujo OAuth2 PKCE y cliente Frontier CAPI (`tmc-net`) | ⬜ pendiente | — | S256 PKCE, canje y refresco de tokens, consulta de flota remota |
+| 6 | Almacenamiento seguro de credenciales y tokens en SQLite (`tmc-store`) | ⬜ pendiente | — | Tabla `accounts_credentials` para claves, tokens OAuth y sal de anonimización |
+| 7 | Endpoint callback axum para OAuth2 de Frontier (`tmc-app`) | ⬜ pendiente | — | Rutas `/api/auth/frontier/login` y callback loopback local |
+| 8 | Módulo `accounts` en Rust (`tmc-modules`) | ⬜ pendiente | — | Orquestación de envíos, filtrado estricto Legacy y topic `accounts.status` |
+| 9 | Localización completa en 5 idiomas (`locales/`) | ⬜ pendiente | — | `accounts.ftl` en es/en/fr/de/pt, privacidad y cuotas de red |
+| 10 | Componentes y panel `AccountsPanel.svelte` (`ui/`) | ⬜ pendiente | — | 4 tarjetas Glass HUD, métricas de sesión, medidor de 2 req/min y flota |
+| 11 | Integración en el Shell y navegación (`ui/`) | ⬜ pendiente | — | Pestaña de Cuentas, registro en catálogo y sincronización con `UI_PANELS` |
+| 12 | Verificación integral, calidad, footprint y build | ⬜ pendiente | — | Vitest, svelte-check, tests Rust workspace, build `dist/` y `TMC.exe` |
 
 ## Rediseño visual global de TMC («TMC Glass HUD»)
 
@@ -139,8 +158,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | F2 | Cazarrecompensas/combate (incl. AX), minería | ✅ completada y fusionada (e069a14) |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ✅ completada y fusionada (6dc09d9) |
 | F4 | Ingenieros y materiales | ✅ completada y fusionada en main |
-| F5 | Fleet carrier, colonización, Powerplay 2.0, BGS | ✅ completada (13 tareas hechas, 1.380+ Rust / 392 UI PASS) |
-| F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | ⬜ |
+| F5 | Fleet carrier, colonización, Powerplay 2.0, BGS | ✅ completada y fusionada en main |
+| F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | 🔄 en curso (spec, plan y maqueta interactiva listos) |
 | F7 | Voz (KokoroTTS; alemán sin voz) | ⬜ |
 | F8 | Overlay ligero e integrado | ⬜ |
 | F9 | Crimen y piratería (Law & Disorder, dic. 2026) | ⬜ |
@@ -372,6 +391,14 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-23 12:55 (Europe/Madrid) · Antigravity · Fusión formal de F5 en `main`, inicio de F6 (Cuentas y Sincronización Externa):
+  - Fusión de `fase/f5-carrier-colonizacion-powerplay` en `main` con `--no-ff`.
+  - Creada rama de trabajo `fase/f6-cuentas-sincronizacion`.
+  - Redactada la especificación de diseño: `docs/specs/2026-10-23-tmc-f6-cuentas-sincronizacion-design.md` cubriendo emisor de esquemas EDDN (`commodity/3`, `journal/1`, `outfitting/2`, `shipyard/2`), EDSM (`set-logs`, rangos, créditos), Inara (InAPI v1 con lotes y rate limit de 2 req/min) y Frontier CAPI (OAuth2 PKCE con callback loopback local).
+  - Creada maqueta interactiva HTML (`f6_accounts_sync_mockups.html`) con el sistema de diseño TMC Glass HUD, medidores de cuota en vivo, terminal de envíos, flota remota y simulador interactivo de estados.
+  - Redactado el plan de ejecución: `docs/plans/2026-10-23-tmc-f6-cuentas-sincronizacion.md` (12 tareas en 7 bloques).
+  - Siguiente: Aprobación del propietario para iniciar la ejecución TDD tarea a tarea.
 
 - 2026-10-23 11:55 (Europe/Madrid) · Antigravity · Ejecución completa y de corrido de la Fase F5 (Fleet Carrier, Colonización, Powerplay 2.0 y BGS):
   - Tarea 1 (`3052983`): Tipado de eventos de Fleet Carrier (`CarrierStats`, `CarrierJumpRequest`, `CarrierFinance`, saltos y combustible) en `tmc-model`.
