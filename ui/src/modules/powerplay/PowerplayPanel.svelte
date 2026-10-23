@@ -3,10 +3,14 @@
   import { integer, pct } from '../../lib/format';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
+  import PowerIcon from '../../lib/icons/PowerIcon.svelte';
+  import SuperpowerIcon from '../../lib/icons/SuperpowerIcon.svelte';
+  import { POWERS } from '../../lib/icons';
   import type { PowerplayStatusTopic, PowerplaySessionTopic } from './types';
 
   const status = $derived(topic<PowerplayStatusTopic>('powerplay.status'));
   const session = $derived(topic<PowerplaySessionTopic>('powerplay.session'));
+  const superpower = $derived(status?.power ? POWERS[status.power]?.superpower : null);
 
   function formatCycleTime(seconds: number): string {
     if (seconds <= 0) return '0h';
@@ -23,9 +27,18 @@
     <p class="muted" data-testid="powerplay-no-data">{t('powerplay-no-pledge')}</p>
   {:else}
     <div class="power-header" data-testid="powerplay-header">
-      <div class="identity">
-        <span class="pledge-label mono">{t('powerplay-pledged-to')}</span>
-        <h3 class="power-name" data-testid="powerplay-power">{status.power}</h3>
+      <div class="power-identity-group">
+        <PowerIcon power={status.power} size={56} allowToggle={true} />
+        <div class="identity">
+          <div class="superpower-tag">
+            {#if superpower}
+              <SuperpowerIcon superpower={superpower} size={13} />
+              <span class="superpower-name sub mono uppercase">{superpower}</span>
+            {/if}
+            <span class="pledge-label mono">{t('powerplay-pledged-to')}</span>
+          </div>
+          <h3 class="power-name" data-testid="powerplay-power">{status.power}</h3>
+        </div>
       </div>
       <div class="loyalty-badge">
         <span class="badge badge-cyan" data-testid="powerplay-weeks">
@@ -89,14 +102,31 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: 0.75rem;
+    padding-bottom: 0.85rem;
     border-bottom: 1px solid var(--hud-border-subtle);
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.85rem;
+    gap: 1rem;
+  }
+  .power-identity-group {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+  }
+  .superpower-tag {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.7rem;
+    color: var(--hud-muted);
+  }
+  .superpower-name {
+    font-weight: 600;
+    letter-spacing: 0.05em;
   }
   .identity {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.2rem;
   }
   .pledge-label {
     font-size: 0.72rem;

@@ -4,6 +4,7 @@
   import { ageShort, ly, pct, starClassLabel } from '../../lib/format';
   import { getLocale } from '../../lib/i18n';
   import { pushToast } from '../../shell/Toasts.svelte';
+  import SuperpowerIcon from '../../lib/icons/SuperpowerIcon.svelte';
   import type { Card, Politics } from './types';
 
   let {
@@ -163,7 +164,15 @@
       <section class="col">
         <h3>{t('strip-col-politics')}</h3>
         {#if pol}
-          <div><span class="label">{t('strip-politics-allegiance')}</span> <span>{pol.allegiance ?? '—'}</span></div>
+          <div class="allegiance-row">
+            <span class="label">{t('strip-politics-allegiance')}</span>
+            <span class="val-group">
+              {#if pol.allegiance}
+                <SuperpowerIcon superpower={pol.allegiance} size={13} />
+              {/if}
+              <span>{pol.allegiance ?? '—'}</span>
+            </span>
+          </div>
           <div><span class="label">{t('strip-politics-government')}</span> <span>{pol.government ?? '—'}</span></div>
           <div><span class="label">{t('strip-politics-faction')}</span> <span>{pol.controlling_faction ?? '—'}</span></div>
           <div>{@render stateTag()}</div>
@@ -372,5 +381,11 @@
   .state.danger {
     color: var(--hud-danger);
     font-weight: 700;
+  }
+
+  .val-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
   }
 </style>

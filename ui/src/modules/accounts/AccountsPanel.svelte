@@ -3,6 +3,8 @@
   import { credits, integer, ly } from '../../lib/format';
   import { action, topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
+  import ManufacturerIcon from '../../lib/icons/ManufacturerIcon.svelte';
+  import StationIcon from '../../lib/icons/StationIcon.svelte';
   import type { AccountsStatusTopic, RemoteShip } from './types';
 
   const status = $derived(topic<AccountsStatusTopic>('accounts.status'));
@@ -336,14 +338,20 @@
                 <div class="fleet-grid">
                   {#each remoteShips as ship (ship.id)}
                     <div class="ship-card">
-                      <div class="ship-top">
-                        <span class="ship-type mono bold">{ship.ship_type}</span>
-                        {#if ship.name}
-                          <span class="ship-custom-name">«{ship.name}»</span>
-                        {/if}
+                      <div class="ship-card-head">
+                        <div class="ship-top">
+                          <span class="ship-type mono bold">{ship.ship_type}</span>
+                          {#if ship.name}
+                            <span class="ship-custom-name">«{ship.name}»</span>
+                          {/if}
+                        </div>
+                        <div class="ship-mfr" title={ship.ship_type}>
+                          <ManufacturerIcon shipType={ship.ship_type} size={18} />
+                        </div>
                       </div>
                       <div class="ship-loc sub">
-                        <span>📍 {ship.station} ({ship.system})</span>
+                        <StationIcon size={13} />
+                        <span>{ship.station} ({ship.system})</span>
                       </div>
                       <div class="ship-meta sub mono">
                         <span class="gold">{credits(ship.value)}</span>
@@ -720,11 +728,30 @@
     gap: 4px;
   }
 
+  .ship-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
   .ship-top,
   .ship-meta {
     display: flex;
     justify-content: space-between;
     align-items: center;
+  }
+
+  .ship-mfr {
+    opacity: 0.8;
+  }
+
+  .ship-loc {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--text-dim, #8fa3b8);
   }
 
   .ship-type {

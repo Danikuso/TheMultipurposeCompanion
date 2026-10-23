@@ -3,6 +3,7 @@
   import { credits, pct } from '../../lib/format';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
+  import ManufacturerIcon from '../../lib/icons/ManufacturerIcon.svelte';
   import type { SubsystemKind, TargetTopic } from './types';
 
   const LOST_TTL_MS = 10_000;
@@ -48,7 +49,10 @@
   {:else}
     <div class="head">
       <div>
-        <strong class="ship">{tgt.ship_name ?? '—'}</strong>
+        <div class="target-title-row">
+          <strong class="ship">{tgt.ship_name ?? '—'}</strong>
+          <ManufacturerIcon shipType={tgt.ship_name ?? tgt.ship_key} size={16} />
+        </div>
         {#if tgt.pilot}<div class="dim">{tgt.pilot}{tgt.rank ? ` · ${tgt.rank}` : ''}</div>{/if}
         {#if tgt.faction}<div class="dim">{t('combat-target-faction', { faction: tgt.faction })}</div>{/if}
       </div>
@@ -113,6 +117,11 @@
     color: var(--hud-primary);
     letter-spacing: 0.04em;
     text-transform: uppercase;
+  }
+  .target-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
   .badge {
     display: inline-block;

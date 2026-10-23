@@ -3,6 +3,7 @@
   import { decimal, integer, pct } from '../../lib/format';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
+  import StationIcon from '../../lib/icons/StationIcon.svelte';
   import type { ColonisationDepotTopic } from './types';
 
   const depot = $derived(topic<ColonisationDepotTopic>('colonisation.depot'));
@@ -16,7 +17,10 @@
     <div class="depot-header" data-testid="depot-header">
       <div class="identity">
         <span class="type-label mono">{depot.construction_type ?? 'CONSTRUCTION PROJECT'}</span>
-        <h3 class="name" data-testid="depot-station-name">{depot.station_name ?? t('colonisation-depot')}</h3>
+        <div class="depot-title-row">
+          <StationIcon stationType="outpost" size={20} />
+          <h3 class="name" data-testid="depot-station-name">{depot.station_name ?? t('colonisation-depot')}</h3>
+        </div>
         {#if depot.market_id}
           <span class="sub">{t('colonisation-market-id')}: {depot.market_id}</span>
         {/if}
@@ -140,6 +144,11 @@
     font-size: 0.75rem;
     letter-spacing: 0.08em;
     color: var(--hud-primary);
+  }
+  .depot-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
   }
   .name {
     margin: 0;

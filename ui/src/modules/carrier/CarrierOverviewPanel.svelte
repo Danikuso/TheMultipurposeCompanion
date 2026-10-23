@@ -3,6 +3,7 @@
   import { decimal, integer } from '../../lib/format';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
+  import StationIcon from '../../lib/icons/StationIcon.svelte';
   import type { CarrierOverviewTopic } from './types';
 
   const overview = $derived(topic<CarrierOverviewTopic>('carrier.overview'));
@@ -19,9 +20,14 @@
     <p class="muted" data-testid="carrier-no-data">{t('carrier-no-carrier')}</p>
   {:else}
     <div class="carrier-header" data-testid="carrier-header">
-      <div class="identity">
-        <span class="callsign mono" data-testid="carrier-callsign">{overview.callsign ?? '—'}</span>
-        <h3 class="name" data-testid="carrier-name">{overview.name ?? 'Fleet Carrier'}</h3>
+      <div class="carrier-avatar-group">
+        <div class="carrier-icon-badge">
+          <StationIcon stationType="mega-ship" size={28} />
+        </div>
+        <div class="identity">
+          <span class="callsign mono" data-testid="carrier-callsign">{overview.callsign ?? '—'}</span>
+          <h3 class="name" data-testid="carrier-name">{overview.name ?? 'Fleet Carrier'}</h3>
+        </div>
       </div>
       {#if overview.is_aboard}
         <span class="badge badge-green" data-testid="carrier-aboard">A BORDO</span>
@@ -95,6 +101,22 @@
     padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--hud-border-subtle);
     margin-bottom: 0.75rem;
+  }
+  .carrier-avatar-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .carrier-icon-badge {
+    width: 42px;
+    height: 42px;
+    background: rgba(0, 217, 255, 0.08);
+    border: 1px solid rgba(0, 217, 255, 0.3);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 10px rgba(0, 217, 255, 0.15);
   }
   .identity {
     display: flex;
