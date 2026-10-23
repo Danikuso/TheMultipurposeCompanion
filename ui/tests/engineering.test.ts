@@ -361,13 +361,29 @@ test('flow topic is a summary and every heavy section comes from the paginated r
  expect(sections).toEqual(['blueprints', 'costs', 'experimentals', 'grades', 'lines']);
  expect(target.querySelector('[data-material="pharmaceuticalisolators"]')).not.toBeNull();
 });
-test('ship shows stock and official current engineering including unsupported modules', async () => {
+test('ship shows stock and official current engineering filtering unengineerable modules', async () => {
  const ship = structuredClone(fixture['engineering.ship']); ship.modules.push({ ...ship.modules[1], slot: 'Unsupported', engineerable: false }); live.topics['engineering.ship'] = ship;
  showShip(); expect(target.textContent).toContain('De serie'); expect(target.textContent).toContain('Aumento de Alcance de MDD'); expect(target.textContent).toContain('100 %');
- expect(target.querySelector('[data-slot="Unsupported"] button')).toBeNull();
- expect(target.querySelector('[data-slot="Unsupported"]')?.textContent).toContain('Aumento de Alcance de MDD');
- expect(target.querySelector('[data-slot="Unsupported"]')?.textContent).toContain('G4');
+ expect(target.querySelector('[data-slot="Unsupported"]')).toBeNull();
  click('module-FrameShiftDrive'); await settle(); expect(actionBody('select_module')).toBe(JSON.stringify({ slot: 'FrameShiftDrive' }));
+});
+test('ship module select dropdown and collapsible accordion operate compactly by default', async () => {
+ showShip();
+ const selectEl = target.querySelector('[data-testid="ship-module-select"]') as HTMLSelectElement;
+ expect(selectEl).not.toBeNull();
+ expect(selectEl.options.length).toBe(2);
+ const toggleBtn = target.querySelector('[data-testid="toggle-module-list"]') as HTMLButtonElement;
+ expect(toggleBtn).not.toBeNull();
+ expect(toggleBtn.textContent).toContain('Ver lista');
+ const list = target.querySelector('.module-list');
+ expect(list?.classList.contains('is-collapsed')).toBe(true);
+ toggleBtn.click(); flushSync();
+ expect(toggleBtn.textContent).toContain('Ocultar lista');
+ expect(list?.classList.contains('is-collapsed')).toBe(false);
+ selectEl.value = 'FrameShiftDrive';
+ selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+ await settle();
+ expect(actionBody('select_module')).toBe(JSON.stringify({ slot: 'FrameShiftDrive' }));
 });
 test('preview posts exact request and pin and close post empty objects', async () => {
  await showFlow(); click('preview'); await settle();
