@@ -63,3 +63,17 @@ export function t(key: string, args?: Record<string, string | number>): string {
 export function localeKeys(): Record<string, string[]> {
   return keysMap;
 }
+
+/** Whether the current translation explicitly awaits confirmation. */
+export function translationPending(key: string): boolean {
+  const primary = bundles.get(getLocale());
+  const fallback = bundles.get('es');
+  for (const bundle of [primary, fallback]) {
+    const message = bundle?.getMessage(key);
+    if (message?.value) {
+      const pending = message.attributes.pending;
+      return pending !== undefined && bundle!.formatPattern(pending).trim() === '1';
+    }
+  }
+  return false;
+}

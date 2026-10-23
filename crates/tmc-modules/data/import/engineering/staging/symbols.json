@@ -1,0 +1,3751 @@
+{
+  "provenance": {
+    "notice": "Datos derivados de EDDiscovery/EliteDangerousCore (Apache-2.0) y, solo para pares ID/nombre de ingenieros, de EDCD/EDDI (Apache-2.0). Convertidos y modificados por TMC con scripts/import-engineering-catalogue.mjs; entradas sin verificar contra el juego (verified:false).",
+    "eddiscovery": {
+      "repository": "https://github.com/EDDiscovery/EliteDangerousCore",
+      "commit": "7d30920e6822d4836e0d6dd5c91026ec7e2ab4c7"
+    },
+    "eddi": {
+      "repository": "https://github.com/EDCD/EDDI",
+      "commit": "d3b964ea7c8bb959ad6537f55b308f293a326905",
+      "use": "solo pares (EngineerID, nombre)"
+    }
+  },
+  "module_types": [
+    {
+      "id": "abrasionblaster",
+      "source_name": "AbrasionBlaster",
+      "item_prefixes": [
+        "hpt_miningabrasionblaster_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "armour",
+      "source_name": "Armour",
+      "item_prefixes": [],
+      "symbol_status": "pending_evidence"
+    },
+    {
+      "id": "autofieldmaintenanceunit",
+      "source_name": "AutoFieldMaintenanceUnit",
+      "item_prefixes": [
+        "int_repairer_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "axmissilerack",
+      "source_name": "AXMissileRack",
+      "item_prefixes": [
+        "hpt_axmissilerack_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "beamlaser",
+      "source_name": "BeamLaser",
+      "item_prefixes": [
+        "hpt_beamlaser_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "burstlaser",
+      "source_name": "BurstLaser",
+      "item_prefixes": [
+        "hpt_burstlaser_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "cannon",
+      "source_name": "Cannon",
+      "item_prefixes": [
+        "hpt_cannon_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "cargorack",
+      "source_name": "CargoRack",
+      "item_prefixes": [
+        "int_cargorack_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "cargoscanner",
+      "source_name": "CargoScanner",
+      "item_prefixes": [
+        "hpt_cargoscanner_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "causticsinklauncher",
+      "source_name": "CausticSinkLauncher",
+      "item_prefixes": [
+        "hpt_causticsinklauncher_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "chafflauncher",
+      "source_name": "ChaffLauncher",
+      "item_prefixes": [
+        "hpt_chafflauncher_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "collectorlimpetcontroller",
+      "source_name": "CollectorLimpetController",
+      "item_prefixes": [
+        "int_dronecontrol_collection_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "electroniccountermeasure",
+      "source_name": "ElectronicCountermeasure",
+      "item_prefixes": [
+        "hpt_electroniccountermeasure_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "engine",
+      "source_name": "Thrusters",
+      "item_prefixes": [
+        "int_engine_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "enzymemissilerack",
+      "source_name": "EnzymeMissileRack",
+      "item_prefixes": [
+        "hpt_enzymemissilerack_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "fragmentcannon",
+      "source_name": "FragmentCannon",
+      "item_prefixes": [
+        "hpt_slugshot_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "frameshiftdriveinterdictor",
+      "source_name": "FrameShiftDriveInterdictor",
+      "item_prefixes": [
+        "int_hyperdriveinterdictor_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "fsd",
+      "source_name": "FrameShiftDrive",
+      "item_prefixes": [
+        "int_hyperdrive_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "fuelscoop",
+      "source_name": "FuelScoop",
+      "item_prefixes": [
+        "int_fuelscoop_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "fueltransferlimpetcontroller",
+      "source_name": "FuelTransferLimpetController",
+      "item_prefixes": [
+        "int_dronecontrol_fueltransfer_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "hatchbreakerlimpetcontroller",
+      "source_name": "HatchBreakerLimpetController",
+      "item_prefixes": [
+        "int_dronecontrol_hatchbreaker_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "heatsinklauncher",
+      "source_name": "HeatSinkLauncher",
+      "item_prefixes": [
+        "hpt_heatsinklauncher_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "hullreinforcementpackage",
+      "source_name": "HullReinforcementPackage",
+      "item_prefixes": [
+        "int_hullreinforcement_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "killwarrantscanner",
+      "source_name": "KillWarrantScanner",
+      "item_prefixes": [
+        "hpt_crimescanner_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "lifesupport",
+      "source_name": "LifeSupport",
+      "item_prefixes": [
+        "int_lifesupport_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "minelauncher",
+      "source_name": "MineLauncher",
+      "item_prefixes": [
+        "hpt_minelauncher_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "mininglaser",
+      "source_name": "MiningLaser",
+      "item_prefixes": [
+        "hpt_mininglaser_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "missilerack",
+      "source_name": "MissileRack",
+      "item_prefixes": [
+        "hpt_basicmissilerack_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "modulereinforcementpackage",
+      "source_name": "ModuleReinforcementPackage",
+      "item_prefixes": [
+        "int_modulereinforcement_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "multi_cannon",
+      "source_name": "Multi_Cannon",
+      "item_prefixes": [
+        "hpt_multicannon_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "plasmaaccelerator",
+      "source_name": "PlasmaAccelerator",
+      "item_prefixes": [
+        "hpt_plasmaaccelerator_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "pointdefence",
+      "source_name": "PointDefence",
+      "item_prefixes": [
+        "hpt_plasmapointdefence_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "powerdistributor",
+      "source_name": "PowerDistributor",
+      "item_prefixes": [
+        "int_powerdistributor_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "powerplant",
+      "source_name": "PowerPlant",
+      "item_prefixes": [
+        "int_powerplant_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "prismaticshieldgenerator",
+      "source_name": "PrismaticShieldGenerator",
+      "item_prefixes": [],
+      "symbol_status": "pending_evidence"
+    },
+    {
+      "id": "prospectorlimpetcontroller",
+      "source_name": "ProspectorLimpetController",
+      "item_prefixes": [
+        "int_dronecontrol_prospector_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "pulselaser",
+      "source_name": "PulseLaser",
+      "item_prefixes": [
+        "hpt_pulselaser_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "railgun",
+      "source_name": "RailGun",
+      "item_prefixes": [
+        "hpt_railgun_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "refinery",
+      "source_name": "Refinery",
+      "item_prefixes": [
+        "int_refinery_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "seekermissilerack",
+      "source_name": "SeekerMissileRack",
+      "item_prefixes": [
+        "hpt_seekermissilerack_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "sensor",
+      "source_name": "Sensor",
+      "item_prefixes": [
+        "int_sensors_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "shieldbooster",
+      "source_name": "ShieldBooster",
+      "item_prefixes": [
+        "hpt_shieldbooster_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "shieldcellbank",
+      "source_name": "ShieldCellBank",
+      "item_prefixes": [
+        "int_shieldcellbank_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "shieldgenerator",
+      "source_name": "ShieldGenerator",
+      "item_prefixes": [
+        "int_shieldgenerator_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "surfacescanner",
+      "source_name": "SurfaceScanner",
+      "item_prefixes": [
+        "int_detailedsurfacescanner"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "torpedopylon",
+      "source_name": "TorpedoPylon",
+      "item_prefixes": [
+        "hpt_torpedopylon_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    },
+    {
+      "id": "wakescanner",
+      "source_name": "WakeScanner",
+      "item_prefixes": [
+        "hpt_cloudscanner_"
+      ],
+      "symbol_status": "verified_active_catalogue"
+    }
+  ],
+  "ingredients": [
+    {
+      "short": "ABSD",
+      "material": "bulkscandata",
+      "name_en": "Anomalous Bulk Scan Data",
+      "category": "Encoded"
+    },
+    {
+      "short": "ADWE",
+      "material": "disruptedwakeechoes",
+      "name_en": "Atypical Disrupted Wake Echoes",
+      "category": "Encoded"
+    },
+    {
+      "short": "AEA",
+      "material": "encryptionarchives",
+      "name_en": "Atypical Encryption Archives",
+      "category": "Encoded"
+    },
+    {
+      "short": "AEC",
+      "material": "adaptiveencryptors",
+      "name_en": "Adaptive Encryptors Capture",
+      "category": "Encoded"
+    },
+    {
+      "short": "AFT",
+      "material": "fsdtelemetry",
+      "name_en": "Anomalous FSD Telemetry",
+      "category": "Encoded"
+    },
+    {
+      "short": "AM",
+      "material": "articulationmotors",
+      "name_en": "Articulation Motors",
+      "category": "Commodity"
+    },
+    {
+      "short": "ARTG",
+      "material": "ancientrelictg",
+      "name_en": "Unclassified Relic",
+      "category": "Commodity"
+    },
+    {
+      "short": "ASPA",
+      "material": "shieldpatternanalysis",
+      "name_en": "Aberrant Shield Pattern Analysis",
+      "category": "Encoded"
+    },
+    {
+      "short": "As",
+      "material": "arsenic",
+      "name_en": "Arsenic",
+      "category": "Raw"
+    },
+    {
+      "short": "BMC",
+      "material": "tg_biomechanicalconduits",
+      "name_en": "Bio-Mechanical Conduits",
+      "category": "Manufactured"
+    },
+    {
+      "short": "BiC",
+      "material": "biotechconductors",
+      "name_en": "Biotech Conductors",
+      "category": "Manufactured"
+    },
+    {
+      "short": "C",
+      "material": "carbon",
+      "name_en": "Carbon",
+      "category": "Raw"
+    },
+    {
+      "short": "CACR",
+      "material": "tg_causticcrystal",
+      "name_en": "Caustic Crystal",
+      "category": "Manufactured"
+    },
+    {
+      "short": "CC",
+      "material": "compactcomposites",
+      "name_en": "Compact Composites",
+      "category": "Manufactured"
+    },
+    {
+      "short": "CCe",
+      "material": "conductiveceramics",
+      "name_en": "Conductive Ceramics",
+      "category": "Manufactured"
+    },
+    {
+      "short": "CCo",
+      "material": "conductivecomponents",
+      "name_en": "Conductive Components",
+      "category": "Manufactured"
+    },
+    {
+      "short": "CCom",
+      "material": "configurablecomponents",
+      "name_en": "Configurable Components",
+      "category": "Manufactured"
+    },
+    {
+      "short": "CED",
+      "material": "compactemissionsdata",
+      "name_en": "Abnormal Compact Emissions Data",
+      "category": "Encoded"
+    },
+    {
+      "short": "CFSD",
+      "material": "classifiedscandata",
+      "name_en": "Classified Scan Fragment",
+      "category": "Encoded"
+    },
+    {
+      "short": "CHD",
+      "material": "chemicaldistillery",
+      "name_en": "Chemical Distillery",
+      "category": "Manufactured"
+    },
+    {
+      "short": "CIF",
+      "material": "industrialfirmware",
+      "name_en": "Cracked Industrial Firmware",
+      "category": "Encoded"
+    },
+    {
+      "short": "CM",
+      "material": "chemicalmanipulators",
+      "name_en": "Chemical Manipulators",
+      "category": "Manufactured"
+    },
+    {
+      "short": "CMMC",
+      "material": "cmmcomposite",
+      "name_en": "CMM Composite",
+      "category": "Commodity"
+    },
+    {
+      "short": "CP",
+      "material": "chemicalprocessors",
+      "name_en": "Chemical Processors",
+      "category": "Manufactured"
+    },
+    {
+      "short": "CPo",
+      "material": "conductivepolymers",
+      "name_en": "Conductive Polymers",
+      "category": "Manufactured"
+    },
+    {
+      "short": "CS",
+      "material": "crystalshards",
+      "name_en": "Crystal Shards",
+      "category": "Manufactured"
+    },
+    {
+      "short": "CSD",
+      "material": "scandatabanks",
+      "name_en": "Classified Scan Databanks",
+      "category": "Encoded"
+    },
+    {
+      "short": "CSU",
+      "material": "chemicalstorageunits",
+      "name_en": "Chemical Storage Units",
+      "category": "Manufactured"
+    },
+    {
+      "short": "Cd",
+      "material": "cadmium",
+      "name_en": "Cadmium",
+      "category": "Raw"
+    },
+    {
+      "short": "CoS",
+      "material": "compoundshielding",
+      "name_en": "Compound Shielding",
+      "category": "Manufactured"
+    },
+    {
+      "short": "Cr",
+      "material": "chromium",
+      "name_en": "Chromium",
+      "category": "Raw"
+    },
+    {
+      "short": "DED",
+      "material": "decodedemissiondata",
+      "name_en": "Decoded Emission Data",
+      "category": "Encoded"
+    },
+    {
+      "short": "DIS",
+      "material": "diagnosticsensor",
+      "name_en": "Hardware Diagnostic Sensor",
+      "category": "Commodity"
+    },
+    {
+      "short": "DSCR",
+      "material": "shieldcyclerecordings",
+      "name_en": "Distorted Shield Cycle Recordings",
+      "category": "Encoded"
+    },
+    {
+      "short": "DSD",
+      "material": "encodedscandata",
+      "name_en": "Divergent Scan Data",
+      "category": "Encoded"
+    },
+    {
+      "short": "DWEx",
+      "material": "dataminedwake",
+      "name_en": "Datamined Wake Exceptions",
+      "category": "Encoded"
+    },
+    {
+      "short": "EA",
+      "material": "electrochemicalarrays",
+      "name_en": "Electrochemical Arrays",
+      "category": "Manufactured"
+    },
+    {
+      "short": "EFC",
+      "material": "exquisitefocuscrystals",
+      "name_en": "Exquisite Focus Crystals",
+      "category": "Manufactured"
+    },
+    {
+      "short": "EFW",
+      "material": "embeddedfirmware",
+      "name_en": "Modified Embedded Firmware",
+      "category": "Encoded"
+    },
+    {
+      "short": "EGA",
+      "material": "powergridassembly",
+      "name_en": "Energy Grid Assembly",
+      "category": "Commodity"
+    },
+    {
+      "short": "EHT",
+      "material": "hyperspacetrajectories",
+      "name_en": "Eccentric Hyperspace Trajectories",
+      "category": "Encoded"
+    },
+    {
+      "short": "ESED",
+      "material": "scrambledemissiondata",
+      "name_en": "Exceptional Scrambled Emission Data",
+      "category": "Encoded"
+    },
+    {
+      "short": "FCC",
+      "material": "fedcorecomposites",
+      "name_en": "Core Dynamics Composites",
+      "category": "Manufactured"
+    },
+    {
+      "short": "FFC",
+      "material": "uncutfocuscrystals",
+      "name_en": "Flawed Focus Crystals",
+      "category": "Manufactured"
+    },
+    {
+      "short": "FPC",
+      "material": "fedproprietarycomposites",
+      "name_en": "Proprietary Composites",
+      "category": "Manufactured"
+    },
+    {
+      "short": "Fe",
+      "material": "iron",
+      "name_en": "Iron",
+      "category": "Raw"
+    },
+    {
+      "short": "FiC",
+      "material": "filamentcomposites",
+      "name_en": "Filament Composites",
+      "category": "Manufactured"
+    },
+    {
+      "short": "FoC",
+      "material": "focuscrystals",
+      "name_en": "Focus Crystals",
+      "category": "Manufactured"
+    },
+    {
+      "short": "GA",
+      "material": "galvanisingalloys",
+      "name_en": "Galvanising Alloys",
+      "category": "Manufactured"
+    },
+    {
+      "short": "GMBS",
+      "material": "guardian_moduleblueprint",
+      "name_en": "Guardian Module Blueprint Fragment",
+      "category": "Encoded"
+    },
+    {
+      "short": "GMVB",
+      "material": "guardian_vesselblueprint",
+      "name_en": "Guardian Vessel Blueprint Fragment",
+      "category": "Encoded"
+    },
+    {
+      "short": "GPC",
+      "material": "guardian_powerconduit",
+      "name_en": "Guardian Power Conduit",
+      "category": "Manufactured"
+    },
+    {
+      "short": "GPCe",
+      "material": "guardian_powercell",
+      "name_en": "Guardian Power Cell",
+      "category": "Manufactured"
+    },
+    {
+      "short": "GR",
+      "material": "gridresistors",
+      "name_en": "Grid Resistors",
+      "category": "Manufactured"
+    },
+    {
+      "short": "GSWC",
+      "material": "guardian_sentinel_wreckagecomponents",
+      "name_en": "Guardian Wreckage Components",
+      "category": "Manufactured"
+    },
+    {
+      "short": "GSWP",
+      "material": "guardian_sentinel_weaponparts",
+      "name_en": "Guardian Sentinel Weapon Parts",
+      "category": "Manufactured"
+    },
+    {
+      "short": "GTC",
+      "material": "guardian_techcomponent",
+      "name_en": "Guardian Technology Component",
+      "category": "Manufactured"
+    },
+    {
+      "short": "GWBS",
+      "material": "guardian_weaponblueprint",
+      "name_en": "Guardian Weapon Blueprint Fragment",
+      "category": "Encoded"
+    },
+    {
+      "short": "Ge",
+      "material": "germanium",
+      "name_en": "Germanium",
+      "category": "Raw"
+    },
+    {
+      "short": "HC",
+      "material": "hybridcapacitors",
+      "name_en": "Hybrid Capacitors",
+      "category": "Manufactured"
+    },
+    {
+      "short": "HCW",
+      "material": "heatconductionwiring",
+      "name_en": "Heat Conduction Wiring",
+      "category": "Manufactured"
+    },
+    {
+      "short": "HDC",
+      "material": "highdensitycomposites",
+      "name_en": "High Density Composites",
+      "category": "Manufactured"
+    },
+    {
+      "short": "HDP",
+      "material": "heatdispersionplate",
+      "name_en": "Heat Dispersion Plate",
+      "category": "Manufactured"
+    },
+    {
+      "short": "HE",
+      "material": "heatexchangers",
+      "name_en": "Heat Exchangers",
+      "category": "Manufactured"
+    },
+    {
+      "short": "HNSM",
+      "material": "hnshockmount",
+      "name_en": "HN Shock Mount",
+      "category": "Commodity"
+    },
+    {
+      "short": "HRC",
+      "material": "heatresistantceramics",
+      "name_en": "Heat Resistant Ceramics",
+      "category": "Manufactured"
+    },
+    {
+      "short": "HSF",
+      "material": "tg_abrasion03",
+      "name_en": "Hardened Surface Fragments",
+      "category": "Manufactured"
+    },
+    {
+      "short": "HSI",
+      "material": "heatsinkinterlink",
+      "name_en": "Heatsink Interlink",
+      "category": "Commodity"
+    },
+    {
+      "short": "HV",
+      "material": "heatvanes",
+      "name_en": "Heat Vanes",
+      "category": "Manufactured"
+    },
+    {
+      "short": "Hg",
+      "material": "mercury",
+      "name_en": "Mercury",
+      "category": "Raw"
+    },
+    {
+      "short": "IC",
+      "material": "improvisedcomponents",
+      "name_en": "Improvised Components",
+      "category": "Manufactured"
+    },
+    {
+      "short": "IED",
+      "material": "archivedemissiondata",
+      "name_en": "Irregular Emission Data",
+      "category": "Encoded"
+    },
+    {
+      "short": "IOD",
+      "material": "iondistributor",
+      "name_en": "Ion Distributor",
+      "category": "Commodity"
+    },
+    {
+      "short": "IS",
+      "material": "imperialshielding",
+      "name_en": "Imperial Shielding",
+      "category": "Manufactured"
+    },
+    {
+      "short": "ISSA",
+      "material": "shieldsoakanalysis",
+      "name_en": "Inconsistent Shield Soak Analysis",
+      "category": "Encoded"
+    },
+    {
+      "short": "MA",
+      "material": "metaalloys",
+      "name_en": "Meta-Alloys",
+      "category": "Commodity"
+    },
+    {
+      "short": "MC",
+      "material": "mechanicalcomponents",
+      "name_en": "Mechanical Components",
+      "category": "Manufactured"
+    },
+    {
+      "short": "MCC",
+      "material": "microcontrollers",
+      "name_en": "Micro Controllers",
+      "category": "Commodity"
+    },
+    {
+      "short": "MCF",
+      "material": "consumerfirmware",
+      "name_en": "Modified Consumer Firmware",
+      "category": "Encoded"
+    },
+    {
+      "short": "ME",
+      "material": "mechanicalequipment",
+      "name_en": "Mechanical Equipment",
+      "category": "Manufactured"
+    },
+    {
+      "short": "MEC",
+      "material": "magneticemittercoil",
+      "name_en": "Magnetic Emitter Coil",
+      "category": "Commodity"
+    },
+    {
+      "short": "MESA",
+      "material": "tg_shutdowndata",
+      "name_en": "Massive Energy Surge Analytics",
+      "category": "Encoded"
+    },
+    {
+      "short": "MGA",
+      "material": "militarygradealloys",
+      "name_en": "Military Grade Alloys",
+      "category": "Manufactured"
+    },
+    {
+      "short": "MRCA",
+      "material": "aerogel",
+      "name_en": "Aerogel",
+      "category": "Component"
+    },
+    {
+      "short": "MRCCB",
+      "material": "circuitboard",
+      "name_en": "Circuit Board",
+      "category": "Component"
+    },
+    {
+      "short": "MRCCC",
+      "material": "chemicalcatalyst",
+      "name_en": "Chemical Catalyst",
+      "category": "Component"
+    },
+    {
+      "short": "MRCCFP",
+      "material": "carbonfibreplating",
+      "name_en": "Carbon Fibre Plating",
+      "category": "Component"
+    },
+    {
+      "short": "MRCCIRSWITCH",
+      "material": "circuitswitch",
+      "name_en": "Circuit Switch",
+      "category": "Component"
+    },
+    {
+      "short": "MRCCS",
+      "material": "chemicalsuperbase",
+      "name_en": "Chemical Superbase",
+      "category": "Component"
+    },
+    {
+      "short": "MRCE",
+      "material": "electromagnet",
+      "name_en": "Electromagnet",
+      "category": "Component"
+    },
+    {
+      "short": "MRCEA",
+      "material": "epoxyadhesive",
+      "name_en": "Epoxy Adhesive",
+      "category": "Component"
+    },
+    {
+      "short": "MRCEF",
+      "material": "electricalfuse",
+      "name_en": "Electrical Fuse",
+      "category": "Component"
+    },
+    {
+      "short": "MRCEMC",
+      "material": "encryptedmemorychip",
+      "name_en": "Encrypted Memory Chip",
+      "category": "Component"
+    },
+    {
+      "short": "MRCEPINE",
+      "material": "epinephrine",
+      "name_en": "Epinephrine",
+      "category": "Component"
+    },
+    {
+      "short": "MRCEW",
+      "material": "electricalwiring",
+      "name_en": "Electrical Wiring",
+      "category": "Component"
+    },
+    {
+      "short": "MRCG",
+      "material": "graphene",
+      "name_en": "Graphene",
+      "category": "Component"
+    },
+    {
+      "short": "MRCIB",
+      "material": "ionbattery",
+      "name_en": "Ion Battery",
+      "category": "Component"
+    },
+    {
+      "short": "MRCMC",
+      "material": "memorychip",
+      "name_en": "Memory Chip",
+      "category": "Component"
+    },
+    {
+      "short": "MRCMETALCOIL",
+      "material": "metalcoil",
+      "name_en": "Metal Coil",
+      "category": "Component"
+    },
+    {
+      "short": "MRCMH",
+      "material": "microhydraulics",
+      "name_en": "Micro Hydraulics",
+      "category": "Component"
+    },
+    {
+      "short": "MRCMICROELEC",
+      "material": "microelectrode",
+      "name_en": "Microelectrode",
+      "category": "Component"
+    },
+    {
+      "short": "MRCMICTRANS",
+      "material": "microtransformer",
+      "name_en": "Micro Transformer",
+      "category": "Component"
+    },
+    {
+      "short": "MRCMOTOR",
+      "material": "motor",
+      "name_en": "Motor",
+      "category": "Component"
+    },
+    {
+      "short": "MRCMS",
+      "material": "microsupercapacitor",
+      "name_en": "Micro Supercapacitor",
+      "category": "Component"
+    },
+    {
+      "short": "MRCMT",
+      "material": "microthrusters",
+      "name_en": "Micro Thrusters",
+      "category": "Component"
+    },
+    {
+      "short": "MRCOF",
+      "material": "opticalfibre",
+      "name_en": "Optical Fibre",
+      "category": "Component"
+    },
+    {
+      "short": "MRCOL",
+      "material": "opticallens",
+      "name_en": "Optical Lens",
+      "category": "Component"
+    },
+    {
+      "short": "MRCOXYBAC",
+      "material": "oxygenicbacteria",
+      "name_en": "Oxygenic Bacteria",
+      "category": "Component"
+    },
+    {
+      "short": "MRCPHN",
+      "material": "phneutraliser",
+      "name_en": "pH Neutraliser",
+      "category": "Component"
+    },
+    {
+      "short": "MRCR",
+      "material": "rdx",
+      "name_en": "RDX",
+      "category": "Component"
+    },
+    {
+      "short": "MRCS",
+      "material": "scrambler",
+      "name_en": "Scrambler",
+      "category": "Component"
+    },
+    {
+      "short": "MRCTC",
+      "material": "tungstencarbide",
+      "name_en": "Tungsten Carbide",
+      "category": "Component"
+    },
+    {
+      "short": "MRCTP",
+      "material": "titaniumplating",
+      "name_en": "Titanium Plating",
+      "category": "Component"
+    },
+    {
+      "short": "MRCTX",
+      "material": "transmitter",
+      "name_en": "Transmitter",
+      "category": "Component"
+    },
+    {
+      "short": "MRCVP",
+      "material": "viscoelasticpolymer",
+      "name_en": "Viscoelastic Polymer",
+      "category": "Component"
+    },
+    {
+      "short": "MRCWC",
+      "material": "weaponcomponent",
+      "name_en": "Weapon Component",
+      "category": "Component"
+    },
+    {
+      "short": "MRDAD",
+      "material": "atmosphericdata",
+      "name_en": "Atmospheric Data",
+      "category": "Data"
+    },
+    {
+      "short": "MRDAL",
+      "material": "audiologs",
+      "name_en": "Audio Logs",
+      "category": "Data"
+    },
+    {
+      "short": "MRDAQR",
+      "material": "airqualityreports",
+      "name_en": "Air Quality Reports",
+      "category": "Data"
+    },
+    {
+      "short": "MRDBALD",
+      "material": "ballisticsdata",
+      "name_en": "Ballistics Data",
+      "category": "Data"
+    },
+    {
+      "short": "MRDBIOD",
+      "material": "biometricdata",
+      "name_en": "Biometric Data",
+      "category": "Data"
+    },
+    {
+      "short": "MRDBTR",
+      "material": "bloodtestresults",
+      "name_en": "Blood Test Results",
+      "category": "Data"
+    },
+    {
+      "short": "MRDCED",
+      "material": "chemicalexperimentdata",
+      "name_en": "Chemical Experiment Data",
+      "category": "Data"
+    },
+    {
+      "short": "MRDCF",
+      "material": "chemicalformulae",
+      "name_en": "Chemical Formulae",
+      "category": "Data"
+    },
+    {
+      "short": "MRDCHEMPAT",
+      "material": "chemicalpatents",
+      "name_en": "Chemical Patents",
+      "category": "Data"
+    },
+    {
+      "short": "MRDCI",
+      "material": "chemicalinventory",
+      "name_en": "Chemical Inventory",
+      "category": "Data"
+    },
+    {
+      "short": "MRDCOMBPERF",
+      "material": "combatantperformance",
+      "name_en": "Combatant Performance",
+      "category": "Data"
+    },
+    {
+      "short": "MRDCTM",
+      "material": "combattrainingmaterial",
+      "name_en": "Combat Training Material",
+      "category": "Data"
+    },
+    {
+      "short": "MRDCTR",
+      "material": "medicaltrialrecords",
+      "name_en": "Clinical Trial Records",
+      "category": "Data"
+    },
+    {
+      "short": "MRDDD",
+      "material": "digitaldesigns",
+      "name_en": "Digital Designs",
+      "category": "Data"
+    },
+    {
+      "short": "MRDEP",
+      "material": "evacuationprotocols",
+      "name_en": "Evacuation Protocols",
+      "category": "Data"
+    },
+    {
+      "short": "MRDEYD",
+      "material": "extractionyielddata",
+      "name_en": "Extraction Yield Data",
+      "category": "Data"
+    },
+    {
+      "short": "MRDGR",
+      "material": "geneticresearch",
+      "name_en": "Genetic Research",
+      "category": "Data"
+    },
+    {
+      "short": "MRDGSD",
+      "material": "genesequencingdata",
+      "name_en": "Gene Sequencing Data",
+      "category": "Data"
+    },
+    {
+      "short": "MRDMA",
+      "material": "mininganalytics",
+      "name_en": "Mining Analytics",
+      "category": "Data"
+    },
+    {
+      "short": "MRDMI",
+      "material": "manufacturinginstructions",
+      "name_en": "Manufacturing Instructions",
+      "category": "Data"
+    },
+    {
+      "short": "MRDML",
+      "material": "maintenancelogs",
+      "name_en": "Maintenance Logs",
+      "category": "Data"
+    },
+    {
+      "short": "MRDMR",
+      "material": "medicalrecords",
+      "name_en": "Medical Records",
+      "category": "Data"
+    },
+    {
+      "short": "MRDMS",
+      "material": "mineralsurvey",
+      "name_en": "Mineral Survey",
+      "category": "Data"
+    },
+    {
+      "short": "MRDNOCD",
+      "material": "nocdata",
+      "name_en": "NOC Data",
+      "category": "Data"
+    },
+    {
+      "short": "MRDOM",
+      "material": "operationalmanual",
+      "name_en": "Operational Manual",
+      "category": "Data"
+    },
+    {
+      "short": "MRDPATR",
+      "material": "patrolroutes",
+      "name_en": "Patrol Routes",
+      "category": "Data"
+    },
+    {
+      "short": "MRDPP",
+      "material": "pharmaceuticalpatents",
+      "name_en": "Pharmaceutical Patents",
+      "category": "Data"
+    },
+    {
+      "short": "MRDPRODREP",
+      "material": "productionreports",
+      "name_en": "Production Reports",
+      "category": "Data"
+    },
+    {
+      "short": "MRDPS",
+      "material": "productionschedule",
+      "name_en": "Production Schedule",
+      "category": "Data"
+    },
+    {
+      "short": "MRDRA",
+      "material": "riskassessments",
+      "name_en": "Risk Assessments",
+      "category": "Data"
+    },
+    {
+      "short": "MRDRD",
+      "material": "radioactivitydata",
+      "name_en": "Radioactivity Data",
+      "category": "Data"
+    },
+    {
+      "short": "MRDRL",
+      "material": "recyclinglogs",
+      "name_en": "Recycling Logs",
+      "category": "Data"
+    },
+    {
+      "short": "MRDROR",
+      "material": "reactoroutputreview",
+      "name_en": "Reactor Output Review",
+      "category": "Data"
+    },
+    {
+      "short": "MRDSAD",
+      "material": "spectralanalysisdata",
+      "name_en": "Spectral Analysis Data",
+      "category": "Data"
+    },
+    {
+      "short": "MRDSAL",
+      "material": "stellaractivitylogs",
+      "name_en": "Stellar Activity Logs",
+      "category": "Data"
+    },
+    {
+      "short": "MRDSAP",
+      "material": "settlementassaultplans",
+      "name_en": "Settlement Assault Plans",
+      "category": "Data"
+    },
+    {
+      "short": "MRDSL",
+      "material": "surveilleancelogs",
+      "name_en": "Surveillance Logs",
+      "category": "Data"
+    },
+    {
+      "short": "MRDTACP",
+      "material": "tacticalplans",
+      "name_en": "Tactical Plans",
+      "category": "Data"
+    },
+    {
+      "short": "MRDTDR",
+      "material": "troopdeploymentrecords",
+      "name_en": "Troop Deployment Records",
+      "category": "Data"
+    },
+    {
+      "short": "MRDTS",
+      "material": "topographicalsurveys",
+      "name_en": "Topographical Surveys",
+      "category": "Data"
+    },
+    {
+      "short": "MRDWI",
+      "material": "weaponinventory",
+      "name_en": "Weapon Inventory",
+      "category": "Data"
+    },
+    {
+      "short": "MRICLG",
+      "material": "compressionliquefiedgas",
+      "name_en": "Compression-Liquefied Gas",
+      "category": "Item"
+    },
+    {
+      "short": "MRIGM",
+      "material": "gmeds",
+      "name_en": "G-Meds",
+      "category": "Item"
+    },
+    {
+      "short": "MRIHM",
+      "material": "healthmonitor",
+      "name_en": "Health Monitor",
+      "category": "Item"
+    },
+    {
+      "short": "MRIIG",
+      "material": "ionisedgas",
+      "name_en": "Ionised Gas",
+      "category": "Item"
+    },
+    {
+      "short": "MRISE",
+      "material": "surveillanceequipment",
+      "name_en": "Surveillance Equipment",
+      "category": "Item"
+    },
+    {
+      "short": "MRISuitSch",
+      "material": "suitschematic",
+      "name_en": "Suit Schematic",
+      "category": "Item"
+    },
+    {
+      "short": "MRIWS",
+      "material": "weaponschematic",
+      "name_en": "Weapon Schematic",
+      "category": "Item"
+    },
+    {
+      "short": "MRSECEXP",
+      "material": "securityexpenses",
+      "name_en": "Security Expenses",
+      "category": "Data"
+    },
+    {
+      "short": "MRWTD",
+      "material": "weapontestdata",
+      "name_en": "Weapon Test Data",
+      "category": "Data"
+    },
+    {
+      "short": "MS",
+      "material": "mechanicalscrap",
+      "name_en": "Mechanical Scrap",
+      "category": "Manufactured"
+    },
+    {
+      "short": "MSC",
+      "material": "militarysupercapacitors",
+      "name_en": "Military Supercapacitors",
+      "category": "Manufactured"
+    },
+    {
+      "short": "MWCH",
+      "material": "coolinghoses",
+      "name_en": "Micro-Weave Cooling Hoses",
+      "category": "Commodity"
+    },
+    {
+      "short": "Mn",
+      "material": "manganese",
+      "name_en": "Manganese",
+      "category": "Raw"
+    },
+    {
+      "short": "Mo",
+      "material": "molybdenum",
+      "name_en": "Molybdenum",
+      "category": "Raw"
+    },
+    {
+      "short": "NFI",
+      "material": "neofabricinsulation",
+      "name_en": "Neofabric Insulation",
+      "category": "Commodity"
+    },
+    {
+      "short": "Nb",
+      "material": "niobium",
+      "name_en": "Niobium",
+      "category": "Raw"
+    },
+    {
+      "short": "Ni",
+      "material": "nickel",
+      "name_en": "Nickel",
+      "category": "Raw"
+    },
+    {
+      "short": "OSK",
+      "material": "symmetrickeys",
+      "name_en": "Open Symmetric Keys",
+      "category": "Encoded"
+    },
+    {
+      "short": "OSM",
+      "material": "osmium",
+      "name_en": "Osmium",
+      "category": "Commodity"
+    },
+    {
+      "short": "P",
+      "material": "phosphorus",
+      "name_en": "Phosphorus",
+      "category": "Raw"
+    },
+    {
+      "short": "PA",
+      "material": "phasealloys",
+      "name_en": "Phase Alloys",
+      "category": "Manufactured"
+    },
+    {
+      "short": "PAOD",
+      "material": "ancientbiologicaldata",
+      "name_en": "Pattern Alpha Obelisk Data",
+      "category": "Encoded"
+    },
+    {
+      "short": "PAll",
+      "material": "precipitatedalloys",
+      "name_en": "Precipitated Alloys",
+      "category": "Manufactured"
+    },
+    {
+      "short": "PBOD",
+      "material": "ancientculturaldata",
+      "name_en": "Pattern Beta Obelisk Data",
+      "category": "Encoded"
+    },
+    {
+      "short": "PC",
+      "material": "powerconverter",
+      "name_en": "Power Converter",
+      "category": "Commodity"
+    },
+    {
+      "short": "PCa",
+      "material": "polymercapacitors",
+      "name_en": "Polymer Capacitors",
+      "category": "Manufactured"
+    },
+    {
+      "short": "PDOD",
+      "material": "ancientlanguagedata",
+      "name_en": "Pattern Delta Obelisk Data",
+      "category": "Encoded"
+    },
+    {
+      "short": "PE",
+      "material": "tg_propulsionelement",
+      "name_en": "Propulsion Elements",
+      "category": "Manufactured"
+    },
+    {
+      "short": "PEOD",
+      "material": "ancienttechnologicaldata",
+      "name_en": "Pattern Epsilon Obelisk Data",
+      "category": "Encoded"
+    },
+    {
+      "short": "PGOD",
+      "material": "ancienthistoricaldata",
+      "name_en": "Pattern Gamma Obelisk Data",
+      "category": "Encoded"
+    },
+    {
+      "short": "PHR",
+      "material": "protoheatradiators",
+      "name_en": "Proto Heat Radiators",
+      "category": "Manufactured"
+    },
+    {
+      "short": "PI",
+      "material": "pharmaceuticalisolators",
+      "name_en": "Pharmaceutical Isolators",
+      "category": "Manufactured"
+    },
+    {
+      "short": "PLA",
+      "material": "protolightalloys",
+      "name_en": "Proto Light Alloys",
+      "category": "Manufactured"
+    },
+    {
+      "short": "PRA",
+      "material": "protoradiolicalloys",
+      "name_en": "Proto Radiolic Alloys",
+      "category": "Manufactured"
+    },
+    {
+      "short": "PSFD",
+      "material": "shieldfrequencydata",
+      "name_en": "Peculiar Shield Frequency Data",
+      "category": "Encoded"
+    },
+    {
+      "short": "PTB",
+      "material": "powertransferconduits",
+      "name_en": "Power Transfer Bus",
+      "category": "Commodity"
+    },
+    {
+      "short": "Po",
+      "material": "polonium",
+      "name_en": "Polonium",
+      "category": "Raw"
+    },
+    {
+      "short": "RB",
+      "material": "radiationbaffle",
+      "name_en": "Radiation Baffle",
+      "category": "Commodity"
+    },
+    {
+      "short": "RFC",
+      "material": "refinedfocuscrystals",
+      "name_en": "Refined Focus Crystals",
+      "category": "Manufactured"
+    },
+    {
+      "short": "RMP",
+      "material": "reinforcedmountingplate",
+      "name_en": "Reinforced Mounting Plate",
+      "category": "Commodity"
+    },
+    {
+      "short": "Re",
+      "material": "rhenium",
+      "name_en": "Rhenium",
+      "category": "Raw"
+    },
+    {
+      "short": "Ru",
+      "material": "ruthenium",
+      "name_en": "Ruthenium",
+      "category": "Raw"
+    },
+    {
+      "short": "S",
+      "material": "sulphur",
+      "name_en": "Sulphur",
+      "category": "Raw"
+    },
+    {
+      "short": "SAll",
+      "material": "salvagedalloys",
+      "name_en": "Salvaged Alloys",
+      "category": "Manufactured"
+    },
+    {
+      "short": "SFP",
+      "material": "securityfirmware",
+      "name_en": "Security Firmware Patch",
+      "category": "Encoded"
+    },
+    {
+      "short": "SHE",
+      "material": "shieldemitters",
+      "name_en": "Shield Emitters",
+      "category": "Manufactured"
+    },
+    {
+      "short": "SLF",
+      "material": "legacyfirmware",
+      "name_en": "Specialised Legacy Firmware",
+      "category": "Encoded"
+    },
+    {
+      "short": "SS",
+      "material": "shieldingsensors",
+      "name_en": "Shielding Sensors",
+      "category": "Manufactured"
+    },
+    {
+      "short": "SSD",
+      "material": "tg_shipsystemsdata",
+      "name_en": "Ship Systems Data",
+      "category": "Encoded"
+    },
+    {
+      "short": "SWS",
+      "material": "wakesolutions",
+      "name_en": "Strange Wake Solutions",
+      "category": "Encoded"
+    },
+    {
+      "short": "Sb",
+      "material": "antimony",
+      "name_en": "Antimony",
+      "category": "Raw"
+    },
+    {
+      "short": "Se",
+      "material": "selenium",
+      "name_en": "Selenium",
+      "category": "Raw"
+    },
+    {
+      "short": "Sn",
+      "material": "tin",
+      "name_en": "Tin",
+      "category": "Raw"
+    },
+    {
+      "short": "TCC",
+      "material": "unknowncorechip",
+      "name_en": "Tactical Core Chip",
+      "category": "Manufactured"
+    },
+    {
+      "short": "TCU",
+      "material": "thermalcoolingunits",
+      "name_en": "Thermal Cooling Units",
+      "category": "Commodity"
+    },
+    {
+      "short": "TDC",
+      "material": "thargoidtitandrivecomponent",
+      "name_en": "Titan Drive Component",
+      "category": "Commodity"
+    },
+    {
+      "short": "TEC",
+      "material": "encryptioncodes",
+      "name_en": "Tagged Encryption Codes",
+      "category": "Encoded"
+    },
+    {
+      "short": "TGWC",
+      "material": "tg_wreckagecomponents",
+      "name_en": "Wreckage Components",
+      "category": "Manufactured"
+    },
+    {
+      "short": "THH",
+      "material": "thargoidheart",
+      "name_en": "Thargoid Heart",
+      "category": "Commodity"
+    },
+    {
+      "short": "Tc",
+      "material": "technetium",
+      "name_en": "Technetium",
+      "category": "Raw"
+    },
+    {
+      "short": "Te",
+      "material": "tellurium",
+      "name_en": "Tellurium",
+      "category": "Raw"
+    },
+    {
+      "short": "TeA",
+      "material": "temperedalloys",
+      "name_en": "Tempered Alloys",
+      "category": "Manufactured"
+    },
+    {
+      "short": "ThA",
+      "material": "thermicalloys",
+      "name_en": "Thermic Alloys",
+      "category": "Manufactured"
+    },
+    {
+      "short": "UED",
+      "material": "emissiondata",
+      "name_en": "Unexpected Emission Data",
+      "category": "Encoded"
+    },
+    {
+      "short": "UEF",
+      "material": "encryptedfiles",
+      "name_en": "Unusual Encrypted Files",
+      "category": "Encoded"
+    },
+    {
+      "short": "UES",
+      "material": "unknownenergysource",
+      "name_en": "Sensor Fragment",
+      "category": "Manufactured"
+    },
+    {
+      "short": "UKEC",
+      "material": "unknownenergycell",
+      "name_en": "Thargoid Energy Cell",
+      "category": "Manufactured"
+    },
+    {
+      "short": "UKOC",
+      "material": "unknownorganiccircuitry",
+      "name_en": "Thargoid Organic Circuitry",
+      "category": "Manufactured"
+    },
+    {
+      "short": "USA",
+      "material": "scanarchives",
+      "name_en": "Unidentified Scan Archives",
+      "category": "Encoded"
+    },
+    {
+      "short": "USS",
+      "material": "shielddensityreports",
+      "name_en": "Untypical Shield Scans",
+      "category": "Encoded"
+    },
+    {
+      "short": "V",
+      "material": "vanadium",
+      "name_en": "Vanadium",
+      "category": "Raw"
+    },
+    {
+      "short": "W",
+      "material": "tungsten",
+      "name_en": "Tungsten",
+      "category": "Raw"
+    },
+    {
+      "short": "WP",
+      "material": "tg_weaponparts",
+      "name_en": "Weapon Parts",
+      "category": "Manufactured"
+    },
+    {
+      "short": "WSE",
+      "material": "wornshieldemitters",
+      "name_en": "Worn Shield Emitters",
+      "category": "Manufactured"
+    },
+    {
+      "short": "Y",
+      "material": "yttrium",
+      "name_en": "Yttrium",
+      "category": "Raw"
+    },
+    {
+      "short": "Zn",
+      "material": "zinc",
+      "name_en": "Zinc",
+      "category": "Raw"
+    },
+    {
+      "short": "Zr",
+      "material": "zirconium",
+      "name_en": "Zirconium",
+      "category": "Raw"
+    }
+  ],
+  "aliases": [
+    {
+      "module_type": "abrasionblaster",
+      "alias": "abrasionblaster_abrasionblaster_farreaching",
+      "canonical": "abrasionblaster_farreaching"
+    },
+    {
+      "module_type": "abrasionblaster",
+      "alias": "abrasionblaster_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "abrasionblaster",
+      "alias": "weapon_abrasionblaster_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "armour",
+      "alias": "armour_armour_advanced",
+      "canonical": "armour_advanced"
+    },
+    {
+      "module_type": "armour",
+      "alias": "armour_armour_explosive",
+      "canonical": "armour_explosive"
+    },
+    {
+      "module_type": "armour",
+      "alias": "armour_armour_heavyduty",
+      "canonical": "armour_heavyduty"
+    },
+    {
+      "module_type": "armour",
+      "alias": "armour_armour_kinetic",
+      "canonical": "armour_kinetic"
+    },
+    {
+      "module_type": "armour",
+      "alias": "armour_armour_thermic",
+      "canonical": "armour_thermic"
+    },
+    {
+      "module_type": "autofieldmaintenanceunit",
+      "alias": "afm_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "autofieldmaintenanceunit",
+      "alias": "misc_autofieldmaintenanceunit_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "axmissilerack_green",
+      "canonical": "decorative_green"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "axmissilerack_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "axmissilerack_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "axmissilerack_overcharged",
+      "canonical": "weapon_overcharged"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "axmissilerack_pink",
+      "canonical": "decorative_pink"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "axmissilerack_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "axmissilerack_red",
+      "canonical": "decorative_red"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "axmissilerack_sturdy",
+      "canonical": "guardianmodule_sturdy"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "axmissilerack_yellow",
+      "canonical": "decorative_yellow"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "decorative_axmissilerack_green",
+      "canonical": "decorative_green"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "decorative_axmissilerack_pink",
+      "canonical": "decorative_pink"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "decorative_axmissilerack_red",
+      "canonical": "decorative_red"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "decorative_axmissilerack_yellow",
+      "canonical": "decorative_yellow"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "guardianmodule_axmissilerack_sturdy",
+      "canonical": "guardianmodule_sturdy"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "weapon_axmissilerack_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "weapon_axmissilerack_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "weapon_axmissilerack_overcharged",
+      "canonical": "weapon_overcharged"
+    },
+    {
+      "module_type": "axmissilerack",
+      "alias": "weapon_axmissilerack_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "beamlaser",
+      "alias": "beamlaser_beamlaser_overloaded",
+      "canonical": "beamlaser_overloaded"
+    },
+    {
+      "module_type": "beamlaser",
+      "alias": "beamlaser_beamlaser_thermalplasmaconversion",
+      "canonical": "beamlaser_thermalplasmaconversion"
+    },
+    {
+      "module_type": "beamlaser",
+      "alias": "beamlaser_efficient",
+      "canonical": "weapon_efficient"
+    },
+    {
+      "module_type": "beamlaser",
+      "alias": "beamlaser_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "beamlaser",
+      "alias": "beamlaser_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "beamlaser",
+      "alias": "beamlaser_overcharged",
+      "canonical": "weapon_overcharged"
+    },
+    {
+      "module_type": "beamlaser",
+      "alias": "beamlaser_shortrange",
+      "canonical": "weapon_shortrange"
+    },
+    {
+      "module_type": "beamlaser",
+      "alias": "beamlaser_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "beamlaser",
+      "alias": "weapon_beamlaser_efficient",
+      "canonical": "weapon_efficient"
+    },
+    {
+      "module_type": "beamlaser",
+      "alias": "weapon_beamlaser_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "beamlaser",
+      "alias": "weapon_beamlaser_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "beamlaser",
+      "alias": "weapon_beamlaser_overcharged",
+      "canonical": "weapon_overcharged"
+    },
+    {
+      "module_type": "beamlaser",
+      "alias": "weapon_beamlaser_shortrange",
+      "canonical": "weapon_shortrange"
+    },
+    {
+      "module_type": "beamlaser",
+      "alias": "weapon_beamlaser_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "burstlaser_burstlaser_regenerative",
+      "canonical": "burstlaser_regenerative"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "burstlaser_burstlaser_thermalplasmaconversion",
+      "canonical": "burstlaser_thermalplasmaconversion"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "burstlaser_efficient",
+      "canonical": "weapon_efficient"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "burstlaser_focused",
+      "canonical": "weapon_focused"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "burstlaser_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "burstlaser_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "burstlaser_overcharged",
+      "canonical": "weapon_overcharged"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "burstlaser_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "burstlaser_shortrange",
+      "canonical": "weapon_shortrange"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "burstlaser_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "weapon_burstlaser_efficient",
+      "canonical": "weapon_efficient"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "weapon_burstlaser_focused",
+      "canonical": "weapon_focused"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "weapon_burstlaser_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "weapon_burstlaser_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "weapon_burstlaser_overcharged",
+      "canonical": "weapon_overcharged"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "weapon_burstlaser_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "weapon_burstlaser_shortrange",
+      "canonical": "weapon_shortrange"
+    },
+    {
+      "module_type": "burstlaser",
+      "alias": "weapon_burstlaser_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "cannon",
+      "alias": "cannon_cannon_forceimpact",
+      "canonical": "cannon_forceimpact"
+    },
+    {
+      "module_type": "cannon",
+      "alias": "cannon_efficient",
+      "canonical": "weapon_efficient"
+    },
+    {
+      "module_type": "cannon",
+      "alias": "cannon_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "cannon",
+      "alias": "cannon_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "cannon",
+      "alias": "cannon_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "cannon",
+      "alias": "cannon_overcharged",
+      "canonical": "weapon_overcharged"
+    },
+    {
+      "module_type": "cannon",
+      "alias": "cannon_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "cannon",
+      "alias": "cannon_shortrange",
+      "canonical": "weapon_shortrange"
+    },
+    {
+      "module_type": "cannon",
+      "alias": "cannon_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "cannon",
+      "alias": "weapon_cannon_efficient",
+      "canonical": "weapon_efficient"
+    },
+    {
+      "module_type": "cannon",
+      "alias": "weapon_cannon_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "cannon",
+      "alias": "weapon_cannon_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "cannon",
+      "alias": "weapon_cannon_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "cannon",
+      "alias": "weapon_cannon_overcharged",
+      "canonical": "weapon_overcharged"
+    },
+    {
+      "module_type": "cannon",
+      "alias": "weapon_cannon_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "cannon",
+      "alias": "weapon_cannon_shortrange",
+      "canonical": "weapon_shortrange"
+    },
+    {
+      "module_type": "cannon",
+      "alias": "weapon_cannon_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "cargorack",
+      "alias": "cargorack_cargorack_increasedcapacity",
+      "canonical": "cargorack_increasedcapacity"
+    },
+    {
+      "module_type": "cargorack",
+      "alias": "cargoracks5c1_cargorack_extended",
+      "canonical": "cargoracks5c1_extended"
+    },
+    {
+      "module_type": "cargorack",
+      "alias": "cargoracks6c1_cargorack_extended",
+      "canonical": "cargoracks6c1_extended"
+    },
+    {
+      "module_type": "cargoscanner",
+      "alias": "cargoscanner_fastscan",
+      "canonical": "sensor_fastscan"
+    },
+    {
+      "module_type": "cargoscanner",
+      "alias": "cargoscanner_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "cargoscanner",
+      "alias": "cargoscanner_longrange",
+      "canonical": "sensor_longrange"
+    },
+    {
+      "module_type": "cargoscanner",
+      "alias": "cargoscanner_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "cargoscanner",
+      "alias": "cargoscanner_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "cargoscanner",
+      "alias": "cargoscanner_wideangle",
+      "canonical": "sensor_wideangle"
+    },
+    {
+      "module_type": "cargoscanner",
+      "alias": "misc_cargoscanner_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "cargoscanner",
+      "alias": "misc_cargoscanner_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "cargoscanner",
+      "alias": "misc_cargoscanner_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "cargoscanner",
+      "alias": "sensor_cargoscanner_fastscan",
+      "canonical": "sensor_fastscan"
+    },
+    {
+      "module_type": "cargoscanner",
+      "alias": "sensor_cargoscanner_longrange",
+      "canonical": "sensor_longrange"
+    },
+    {
+      "module_type": "cargoscanner",
+      "alias": "sensor_cargoscanner_wideangle",
+      "canonical": "sensor_wideangle"
+    },
+    {
+      "module_type": "causticsinklauncher",
+      "alias": "causticsinklauncher_heatsinkcapacity",
+      "canonical": "misc_heatsinkcapacity"
+    },
+    {
+      "module_type": "causticsinklauncher",
+      "alias": "causticsinklauncher_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "causticsinklauncher",
+      "alias": "causticsinklauncher_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "causticsinklauncher",
+      "alias": "causticsinklauncher_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "causticsinklauncher",
+      "alias": "misc_causticsinklauncher_heatsinkcapacity",
+      "canonical": "misc_heatsinkcapacity"
+    },
+    {
+      "module_type": "causticsinklauncher",
+      "alias": "misc_causticsinklauncher_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "causticsinklauncher",
+      "alias": "misc_causticsinklauncher_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "causticsinklauncher",
+      "alias": "misc_causticsinklauncher_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "chafflauncher",
+      "alias": "chafflauncher_chaffcapacity",
+      "canonical": "misc_chaffcapacity"
+    },
+    {
+      "module_type": "chafflauncher",
+      "alias": "chafflauncher_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "chafflauncher",
+      "alias": "chafflauncher_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "chafflauncher",
+      "alias": "chafflauncher_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "chafflauncher",
+      "alias": "misc_chafflauncher_chaffcapacity",
+      "canonical": "misc_chaffcapacity"
+    },
+    {
+      "module_type": "chafflauncher",
+      "alias": "misc_chafflauncher_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "chafflauncher",
+      "alias": "misc_chafflauncher_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "chafflauncher",
+      "alias": "misc_chafflauncher_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "collectorlimpetcontroller",
+      "alias": "collectionlimpet_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "collectorlimpetcontroller",
+      "alias": "collectionlimpet_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "collectorlimpetcontroller",
+      "alias": "collectionlimpet_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "collectorlimpetcontroller",
+      "alias": "misc_collectorlimpetcontroller_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "collectorlimpetcontroller",
+      "alias": "misc_collectorlimpetcontroller_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "collectorlimpetcontroller",
+      "alias": "misc_collectorlimpetcontroller_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "electroniccountermeasure",
+      "alias": "electroniccountermeasure_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "electroniccountermeasure",
+      "alias": "electroniccountermeasure_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "electroniccountermeasure",
+      "alias": "electroniccountermeasure_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "electroniccountermeasure",
+      "alias": "misc_electroniccountermeasure_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "electroniccountermeasure",
+      "alias": "misc_electroniccountermeasure_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "electroniccountermeasure",
+      "alias": "misc_electroniccountermeasure_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "engine",
+      "alias": "engine_thrusters_dirty",
+      "canonical": "engine_dirty"
+    },
+    {
+      "module_type": "engine",
+      "alias": "engine_thrusters_reinforced",
+      "canonical": "engine_reinforced"
+    },
+    {
+      "module_type": "engine",
+      "alias": "engine_thrusters_tuned",
+      "canonical": "engine_tuned"
+    },
+    {
+      "module_type": "engine",
+      "alias": "thrusters_dirty",
+      "canonical": "engine_dirty"
+    },
+    {
+      "module_type": "engine",
+      "alias": "thrusters_reinforced",
+      "canonical": "engine_reinforced"
+    },
+    {
+      "module_type": "engine",
+      "alias": "thrusters_tuned",
+      "canonical": "engine_tuned"
+    },
+    {
+      "module_type": "enzymemissilerack",
+      "alias": "enzymemissilerack_enzymemissilerack_highyield",
+      "canonical": "enzymemissilerack_highyield"
+    },
+    {
+      "module_type": "fragmentcannon",
+      "alias": "fragmentcannon_doubleshot",
+      "canonical": "weapon_doubleshot"
+    },
+    {
+      "module_type": "fragmentcannon",
+      "alias": "fragmentcannon_efficient",
+      "canonical": "weapon_efficient"
+    },
+    {
+      "module_type": "fragmentcannon",
+      "alias": "fragmentcannon_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "fragmentcannon",
+      "alias": "fragmentcannon_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "fragmentcannon",
+      "alias": "fragmentcannon_overcharged",
+      "canonical": "weapon_overcharged"
+    },
+    {
+      "module_type": "fragmentcannon",
+      "alias": "fragmentcannon_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "fragmentcannon",
+      "alias": "fragmentcannon_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "fragmentcannon",
+      "alias": "fragmentcannonlarge_fragmentcannon_doublescreaming",
+      "canonical": "fragmentcannonlarge_doublescreaming"
+    },
+    {
+      "module_type": "fragmentcannon",
+      "alias": "fragmentcannonsmall_fragmentcannon_doublescreaming",
+      "canonical": "fragmentcannonsmall_doublescreaming"
+    },
+    {
+      "module_type": "fragmentcannon",
+      "alias": "weapon_fragmentcannon_doubleshot",
+      "canonical": "weapon_doubleshot"
+    },
+    {
+      "module_type": "fragmentcannon",
+      "alias": "weapon_fragmentcannon_efficient",
+      "canonical": "weapon_efficient"
+    },
+    {
+      "module_type": "fragmentcannon",
+      "alias": "weapon_fragmentcannon_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "fragmentcannon",
+      "alias": "weapon_fragmentcannon_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "fragmentcannon",
+      "alias": "weapon_fragmentcannon_overcharged",
+      "canonical": "weapon_overcharged"
+    },
+    {
+      "module_type": "fragmentcannon",
+      "alias": "weapon_fragmentcannon_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "fragmentcannon",
+      "alias": "weapon_fragmentcannon_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "frameshiftdriveinterdictor",
+      "alias": "frameshiftdriveinterdictor_expanded",
+      "canonical": "fsdinterdictor_expanded"
+    },
+    {
+      "module_type": "frameshiftdriveinterdictor",
+      "alias": "frameshiftdriveinterdictor_longrange",
+      "canonical": "fsdinterdictor_longrange"
+    },
+    {
+      "module_type": "frameshiftdriveinterdictor",
+      "alias": "fsdinterdictor_frameshiftdriveinterdictor_expanded",
+      "canonical": "fsdinterdictor_expanded"
+    },
+    {
+      "module_type": "frameshiftdriveinterdictor",
+      "alias": "fsdinterdictor_frameshiftdriveinterdictor_longrange",
+      "canonical": "fsdinterdictor_longrange"
+    },
+    {
+      "module_type": "fsd",
+      "alias": "frameshiftdrive_fastboot",
+      "canonical": "fsd_fastboot"
+    },
+    {
+      "module_type": "fsd",
+      "alias": "frameshiftdrive_longrange",
+      "canonical": "fsd_longrange"
+    },
+    {
+      "module_type": "fsd",
+      "alias": "frameshiftdrive_shielded",
+      "canonical": "fsd_shielded"
+    },
+    {
+      "module_type": "fsd",
+      "alias": "fsd_frameshiftdrive_fastboot",
+      "canonical": "fsd_fastboot"
+    },
+    {
+      "module_type": "fsd",
+      "alias": "fsd_frameshiftdrive_longrange",
+      "canonical": "fsd_longrange"
+    },
+    {
+      "module_type": "fsd",
+      "alias": "fsd_frameshiftdrive_shielded",
+      "canonical": "fsd_shielded"
+    },
+    {
+      "module_type": "fuelscoop",
+      "alias": "fuelscoop_fuelscoop_efficiency",
+      "canonical": "fuelscoop_efficiency"
+    },
+    {
+      "module_type": "fuelscoop",
+      "alias": "fuelscoop_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "fuelscoop",
+      "alias": "misc_fuelscoop_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "fueltransferlimpetcontroller",
+      "alias": "fueltransferlimpetcontroller_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "fueltransferlimpetcontroller",
+      "alias": "fueltransferlimpetcontroller_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "fueltransferlimpetcontroller",
+      "alias": "fueltransferlimpetcontroller_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "fueltransferlimpetcontroller",
+      "alias": "misc_fueltransferlimpetcontroller_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "fueltransferlimpetcontroller",
+      "alias": "misc_fueltransferlimpetcontroller_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "fueltransferlimpetcontroller",
+      "alias": "misc_fueltransferlimpetcontroller_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "hatchbreakerlimpetcontroller",
+      "alias": "hatchbreakerlimpetcontroller_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "hatchbreakerlimpetcontroller",
+      "alias": "hatchbreakerlimpetcontroller_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "hatchbreakerlimpetcontroller",
+      "alias": "hatchbreakerlimpetcontroller_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "hatchbreakerlimpetcontroller",
+      "alias": "misc_hatchbreakerlimpetcontroller_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "hatchbreakerlimpetcontroller",
+      "alias": "misc_hatchbreakerlimpetcontroller_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "hatchbreakerlimpetcontroller",
+      "alias": "misc_hatchbreakerlimpetcontroller_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "heatsinklauncher",
+      "alias": "heatsinklauncher_heatsinkcapacity",
+      "canonical": "misc_heatsinkcapacity"
+    },
+    {
+      "module_type": "heatsinklauncher",
+      "alias": "heatsinklauncher_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "heatsinklauncher",
+      "alias": "heatsinklauncher_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "heatsinklauncher",
+      "alias": "heatsinklauncher_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "heatsinklauncher",
+      "alias": "misc_heatsinklauncher_heatsinkcapacity",
+      "canonical": "misc_heatsinkcapacity"
+    },
+    {
+      "module_type": "heatsinklauncher",
+      "alias": "misc_heatsinklauncher_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "heatsinklauncher",
+      "alias": "misc_heatsinklauncher_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "heatsinklauncher",
+      "alias": "misc_heatsinklauncher_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "hullreinforcementpackage",
+      "alias": "hullreinforcement_hullreinforcementpackage_advanced",
+      "canonical": "hullreinforcement_advanced"
+    },
+    {
+      "module_type": "hullreinforcementpackage",
+      "alias": "hullreinforcement_hullreinforcementpackage_explosive",
+      "canonical": "hullreinforcement_explosive"
+    },
+    {
+      "module_type": "hullreinforcementpackage",
+      "alias": "hullreinforcement_hullreinforcementpackage_heavyduty",
+      "canonical": "hullreinforcement_heavyduty"
+    },
+    {
+      "module_type": "hullreinforcementpackage",
+      "alias": "hullreinforcement_hullreinforcementpackage_kinetic",
+      "canonical": "hullreinforcement_kinetic"
+    },
+    {
+      "module_type": "hullreinforcementpackage",
+      "alias": "hullreinforcement_hullreinforcementpackage_thermic",
+      "canonical": "hullreinforcement_thermic"
+    },
+    {
+      "module_type": "hullreinforcementpackage",
+      "alias": "hullreinforcementpackage_advanced",
+      "canonical": "hullreinforcement_advanced"
+    },
+    {
+      "module_type": "hullreinforcementpackage",
+      "alias": "hullreinforcementpackage_explosive",
+      "canonical": "hullreinforcement_explosive"
+    },
+    {
+      "module_type": "hullreinforcementpackage",
+      "alias": "hullreinforcementpackage_heavyduty",
+      "canonical": "hullreinforcement_heavyduty"
+    },
+    {
+      "module_type": "hullreinforcementpackage",
+      "alias": "hullreinforcementpackage_kinetic",
+      "canonical": "hullreinforcement_kinetic"
+    },
+    {
+      "module_type": "hullreinforcementpackage",
+      "alias": "hullreinforcementpackage_thermic",
+      "canonical": "hullreinforcement_thermic"
+    },
+    {
+      "module_type": "killwarrantscanner",
+      "alias": "killwarrantscanner_fastscan",
+      "canonical": "sensor_fastscan"
+    },
+    {
+      "module_type": "killwarrantscanner",
+      "alias": "killwarrantscanner_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "killwarrantscanner",
+      "alias": "killwarrantscanner_longrange",
+      "canonical": "sensor_longrange"
+    },
+    {
+      "module_type": "killwarrantscanner",
+      "alias": "killwarrantscanner_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "killwarrantscanner",
+      "alias": "killwarrantscanner_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "killwarrantscanner",
+      "alias": "killwarrantscanner_wideangle",
+      "canonical": "sensor_wideangle"
+    },
+    {
+      "module_type": "killwarrantscanner",
+      "alias": "misc_killwarrantscanner_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "killwarrantscanner",
+      "alias": "misc_killwarrantscanner_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "killwarrantscanner",
+      "alias": "misc_killwarrantscanner_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "killwarrantscanner",
+      "alias": "sensor_killwarrantscanner_fastscan",
+      "canonical": "sensor_fastscan"
+    },
+    {
+      "module_type": "killwarrantscanner",
+      "alias": "sensor_killwarrantscanner_longrange",
+      "canonical": "sensor_longrange"
+    },
+    {
+      "module_type": "killwarrantscanner",
+      "alias": "sensor_killwarrantscanner_wideangle",
+      "canonical": "sensor_wideangle"
+    },
+    {
+      "module_type": "lifesupport",
+      "alias": "lifesupport_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "lifesupport",
+      "alias": "lifesupport_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "lifesupport",
+      "alias": "lifesupport_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "lifesupport",
+      "alias": "lifesupport_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "lifesupport",
+      "alias": "lifesupport_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "lifesupport",
+      "alias": "misc_lifesupport_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "lifesupport",
+      "alias": "misc_lifesupport_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "lifesupport",
+      "alias": "misc_lifesupport_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "lifesupport",
+      "alias": "weapon_lifesupport_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "lifesupport",
+      "alias": "weapon_lifesupport_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "lifesupport",
+      "alias": "weapon_lifesupport_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "lifesupport",
+      "alias": "weapon_lifesupport_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "minelauncher",
+      "alias": "minelauncher_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "minelauncher",
+      "alias": "minelauncher_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "minelauncher",
+      "alias": "minelauncher_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "minelauncher",
+      "alias": "minelauncher_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "minelauncher",
+      "alias": "weapon_minelauncher_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "minelauncher",
+      "alias": "weapon_minelauncher_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "minelauncher",
+      "alias": "weapon_minelauncher_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "minelauncher",
+      "alias": "weapon_minelauncher_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "mininglaser",
+      "alias": "mininglaser_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "mininglaser",
+      "alias": "mininglaser_mininglaser_longrange",
+      "canonical": "mininglaser_longrange"
+    },
+    {
+      "module_type": "mininglaser",
+      "alias": "weapon_mininglaser_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "missilerack",
+      "alias": "missilerack_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "missilerack",
+      "alias": "missilerack_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "missilerack",
+      "alias": "missilerack_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "missilerack",
+      "alias": "missilerack_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "missilerack",
+      "alias": "weapon_missilerack_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "missilerack",
+      "alias": "weapon_missilerack_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "missilerack",
+      "alias": "weapon_missilerack_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "missilerack",
+      "alias": "weapon_missilerack_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "modulereinforcementpackage",
+      "alias": "modulereinforcement_modulereinforcementpackage_heavyduty",
+      "canonical": "modulereinforcement_heavyduty"
+    },
+    {
+      "module_type": "modulereinforcementpackage",
+      "alias": "modulereinforcementpackage_heavyduty",
+      "canonical": "modulereinforcement_heavyduty"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "multi_cannon_efficient",
+      "canonical": "weapon_efficient"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "multi_cannon_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "multi_cannon_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "multi_cannon_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "multi_cannon_overcharged",
+      "canonical": "weapon_overcharged"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "multi_cannon_rapid",
+      "canonical": "multicannon_rapid"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "multi_cannon_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "multi_cannon_shortrange",
+      "canonical": "weapon_shortrange"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "multi_cannon_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "multicannon_multi_cannon_rapid",
+      "canonical": "multicannon_rapid"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "weapon_multi_cannon_efficient",
+      "canonical": "weapon_efficient"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "weapon_multi_cannon_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "weapon_multi_cannon_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "weapon_multi_cannon_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "weapon_multi_cannon_overcharged",
+      "canonical": "weapon_overcharged"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "weapon_multi_cannon_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "weapon_multi_cannon_shortrange",
+      "canonical": "weapon_shortrange"
+    },
+    {
+      "module_type": "multi_cannon",
+      "alias": "weapon_multi_cannon_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "plasmaaccelerator",
+      "alias": "plasmaaccelerator_efficient",
+      "canonical": "weapon_efficient"
+    },
+    {
+      "module_type": "plasmaaccelerator",
+      "alias": "plasmaaccelerator_focused",
+      "canonical": "weapon_focused"
+    },
+    {
+      "module_type": "plasmaaccelerator",
+      "alias": "plasmaaccelerator_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "plasmaaccelerator",
+      "alias": "plasmaaccelerator_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "plasmaaccelerator",
+      "alias": "plasmaaccelerator_overcharged",
+      "canonical": "weapon_overcharged"
+    },
+    {
+      "module_type": "plasmaaccelerator",
+      "alias": "plasmaaccelerator_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "plasmaaccelerator",
+      "alias": "plasmaaccelerator_shortrange",
+      "canonical": "weapon_shortrange"
+    },
+    {
+      "module_type": "plasmaaccelerator",
+      "alias": "plasmaaccelerator_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "plasmaaccelerator",
+      "alias": "weapon_plasmaaccelerator_efficient",
+      "canonical": "weapon_efficient"
+    },
+    {
+      "module_type": "plasmaaccelerator",
+      "alias": "weapon_plasmaaccelerator_focused",
+      "canonical": "weapon_focused"
+    },
+    {
+      "module_type": "plasmaaccelerator",
+      "alias": "weapon_plasmaaccelerator_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "plasmaaccelerator",
+      "alias": "weapon_plasmaaccelerator_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "plasmaaccelerator",
+      "alias": "weapon_plasmaaccelerator_overcharged",
+      "canonical": "weapon_overcharged"
+    },
+    {
+      "module_type": "plasmaaccelerator",
+      "alias": "weapon_plasmaaccelerator_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "plasmaaccelerator",
+      "alias": "weapon_plasmaaccelerator_shortrange",
+      "canonical": "weapon_shortrange"
+    },
+    {
+      "module_type": "plasmaaccelerator",
+      "alias": "weapon_plasmaaccelerator_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "pointdefence",
+      "alias": "misc_pointdefence_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "pointdefence",
+      "alias": "misc_pointdefence_pointdefensecapacity",
+      "canonical": "misc_pointdefensecapacity"
+    },
+    {
+      "module_type": "pointdefence",
+      "alias": "misc_pointdefence_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "pointdefence",
+      "alias": "misc_pointdefence_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "pointdefence",
+      "alias": "pointdefence_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "pointdefence",
+      "alias": "pointdefence_pointdefensecapacity",
+      "canonical": "misc_pointdefensecapacity"
+    },
+    {
+      "module_type": "pointdefence",
+      "alias": "pointdefence_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "pointdefence",
+      "alias": "pointdefence_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "powerdistributor",
+      "alias": "powerdistributor_powerdistributor_balanced",
+      "canonical": "powerdistributor_balanced"
+    },
+    {
+      "module_type": "powerdistributor",
+      "alias": "powerdistributor_powerdistributor_highcapacity",
+      "canonical": "powerdistributor_highcapacity"
+    },
+    {
+      "module_type": "powerdistributor",
+      "alias": "powerdistributor_powerdistributor_highfrequency",
+      "canonical": "powerdistributor_highfrequency"
+    },
+    {
+      "module_type": "powerdistributor",
+      "alias": "powerdistributor_powerdistributor_priorityengines",
+      "canonical": "powerdistributor_priorityengines"
+    },
+    {
+      "module_type": "powerdistributor",
+      "alias": "powerdistributor_powerdistributor_prioritysystems",
+      "canonical": "powerdistributor_prioritysystems"
+    },
+    {
+      "module_type": "powerdistributor",
+      "alias": "powerdistributor_powerdistributor_priorityweapons",
+      "canonical": "powerdistributor_priorityweapons"
+    },
+    {
+      "module_type": "powerdistributor",
+      "alias": "powerdistributor_powerdistributor_shielded",
+      "canonical": "powerdistributor_shielded"
+    },
+    {
+      "module_type": "powerdistributor",
+      "alias": "powerdistributors3c2_powerdistributor_supportfocused",
+      "canonical": "powerdistributors3c2_supportfocused"
+    },
+    {
+      "module_type": "powerdistributor",
+      "alias": "powerdistributors3c5_powerdistributor_supportfocused",
+      "canonical": "powerdistributors3c5_supportfocused"
+    },
+    {
+      "module_type": "powerdistributor",
+      "alias": "powerdistributors4c2_powerdistributor_supportfocused",
+      "canonical": "powerdistributors4c2_supportfocused"
+    },
+    {
+      "module_type": "powerdistributor",
+      "alias": "powerdistributors4c5_powerdistributor_supportfocused",
+      "canonical": "powerdistributors4c5_supportfocused"
+    },
+    {
+      "module_type": "powerdistributor",
+      "alias": "powerdistributors6c5_powerdistributor_supportfocused",
+      "canonical": "powerdistributors6c5_supportfocused"
+    },
+    {
+      "module_type": "powerplant",
+      "alias": "powerplant_powerplant_armoured",
+      "canonical": "powerplant_armoured"
+    },
+    {
+      "module_type": "powerplant",
+      "alias": "powerplant_powerplant_boosted",
+      "canonical": "powerplant_boosted"
+    },
+    {
+      "module_type": "powerplant",
+      "alias": "powerplant_powerplant_stealth",
+      "canonical": "powerplant_stealth"
+    },
+    {
+      "module_type": "prismaticshieldgenerator",
+      "alias": "prismaticshieldgenerator_kinetic",
+      "canonical": "shieldgenerator_kinetic"
+    },
+    {
+      "module_type": "prismaticshieldgenerator",
+      "alias": "prismaticshieldgenerator_optimised",
+      "canonical": "shieldgenerator_optimised"
+    },
+    {
+      "module_type": "prismaticshieldgenerator",
+      "alias": "prismaticshieldgenerator_reinforced",
+      "canonical": "shieldgenerator_reinforced"
+    },
+    {
+      "module_type": "prismaticshieldgenerator",
+      "alias": "prismaticshieldgenerator_thermic",
+      "canonical": "shieldgenerator_thermic"
+    },
+    {
+      "module_type": "prismaticshieldgenerator",
+      "alias": "shieldgenerator_prismaticshieldgenerator_kinetic",
+      "canonical": "shieldgenerator_kinetic"
+    },
+    {
+      "module_type": "prismaticshieldgenerator",
+      "alias": "shieldgenerator_prismaticshieldgenerator_optimised",
+      "canonical": "shieldgenerator_optimised"
+    },
+    {
+      "module_type": "prismaticshieldgenerator",
+      "alias": "shieldgenerator_prismaticshieldgenerator_reinforced",
+      "canonical": "shieldgenerator_reinforced"
+    },
+    {
+      "module_type": "prismaticshieldgenerator",
+      "alias": "shieldgenerator_prismaticshieldgenerator_thermic",
+      "canonical": "shieldgenerator_thermic"
+    },
+    {
+      "module_type": "prospectorlimpetcontroller",
+      "alias": "misc_prospectorlimpetcontroller_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "prospectorlimpetcontroller",
+      "alias": "misc_prospectorlimpetcontroller_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "prospectorlimpetcontroller",
+      "alias": "misc_prospectorlimpetcontroller_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "prospectorlimpetcontroller",
+      "alias": "prospectorlimpetcontroller_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "prospectorlimpetcontroller",
+      "alias": "prospectorlimpetcontroller_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "prospectorlimpetcontroller",
+      "alias": "prospectorlimpetcontroller_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "pulselaser",
+      "alias": "pulselaser_efficient",
+      "canonical": "weapon_efficient"
+    },
+    {
+      "module_type": "pulselaser",
+      "alias": "pulselaser_focused",
+      "canonical": "weapon_focused"
+    },
+    {
+      "module_type": "pulselaser",
+      "alias": "pulselaser_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "pulselaser",
+      "alias": "pulselaser_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "pulselaser",
+      "alias": "pulselaser_overcharged",
+      "canonical": "weapon_overcharged"
+    },
+    {
+      "module_type": "pulselaser",
+      "alias": "pulselaser_pulselaser_thermalplasmaconversion",
+      "canonical": "pulselaser_thermalplasmaconversion"
+    },
+    {
+      "module_type": "pulselaser",
+      "alias": "pulselaser_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "pulselaser",
+      "alias": "pulselaser_shortrange",
+      "canonical": "weapon_shortrange"
+    },
+    {
+      "module_type": "pulselaser",
+      "alias": "pulselaser_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "pulselaser",
+      "alias": "weapon_pulselaser_efficient",
+      "canonical": "weapon_efficient"
+    },
+    {
+      "module_type": "pulselaser",
+      "alias": "weapon_pulselaser_focused",
+      "canonical": "weapon_focused"
+    },
+    {
+      "module_type": "pulselaser",
+      "alias": "weapon_pulselaser_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "pulselaser",
+      "alias": "weapon_pulselaser_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "pulselaser",
+      "alias": "weapon_pulselaser_overcharged",
+      "canonical": "weapon_overcharged"
+    },
+    {
+      "module_type": "pulselaser",
+      "alias": "weapon_pulselaser_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "pulselaser",
+      "alias": "weapon_pulselaser_shortrange",
+      "canonical": "weapon_shortrange"
+    },
+    {
+      "module_type": "pulselaser",
+      "alias": "weapon_pulselaser_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "railgun",
+      "alias": "railgun_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "railgun",
+      "alias": "railgun_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "railgun",
+      "alias": "railgun_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "railgun",
+      "alias": "railgun_railgun_longshot",
+      "canonical": "railgun_longshot"
+    },
+    {
+      "module_type": "railgun",
+      "alias": "railgun_shortrange",
+      "canonical": "weapon_shortrange"
+    },
+    {
+      "module_type": "railgun",
+      "alias": "railgun_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "railgun",
+      "alias": "weapon_railgun_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "railgun",
+      "alias": "weapon_railgun_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "railgun",
+      "alias": "weapon_railgun_longrange",
+      "canonical": "weapon_longrange"
+    },
+    {
+      "module_type": "railgun",
+      "alias": "weapon_railgun_shortrange",
+      "canonical": "weapon_shortrange"
+    },
+    {
+      "module_type": "railgun",
+      "alias": "weapon_railgun_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "refinery",
+      "alias": "misc_refinery_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "refinery",
+      "alias": "refinery_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "seekermissilerack",
+      "alias": "seekermissilerack_exposingmissiles",
+      "canonical": "seekermissileracklarge_exposingmissiles"
+    },
+    {
+      "module_type": "seekermissilerack",
+      "alias": "seekermissilerack_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "seekermissilerack",
+      "alias": "seekermissilerack_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "seekermissilerack",
+      "alias": "seekermissilerack_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "seekermissilerack",
+      "alias": "seekermissilerack_seekermissilerack_drag",
+      "canonical": "seekermissilerack_drag"
+    },
+    {
+      "module_type": "seekermissilerack",
+      "alias": "seekermissilerack_seekermissilerack_lightweightthermal",
+      "canonical": "seekermissilerack_lightweightthermal"
+    },
+    {
+      "module_type": "seekermissilerack",
+      "alias": "seekermissilerack_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "seekermissilerack",
+      "alias": "seekermissileracklarge_seekermissilerack_exposingmissiles",
+      "canonical": "seekermissileracklarge_exposingmissiles"
+    },
+    {
+      "module_type": "seekermissilerack",
+      "alias": "seekermissileracklarge_seekermissilerack_lockdown",
+      "canonical": "seekermissileracklarge_lockdown"
+    },
+    {
+      "module_type": "seekermissilerack",
+      "alias": "seekermissilerackmedium_seekermissilerack_lockdown",
+      "canonical": "seekermissilerackmedium_lockdown"
+    },
+    {
+      "module_type": "seekermissilerack",
+      "alias": "weapon_seekermissilerack_highcapacity",
+      "canonical": "weapon_highcapacity"
+    },
+    {
+      "module_type": "seekermissilerack",
+      "alias": "weapon_seekermissilerack_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "seekermissilerack",
+      "alias": "weapon_seekermissilerack_rapidfire",
+      "canonical": "weapon_rapidfire"
+    },
+    {
+      "module_type": "seekermissilerack",
+      "alias": "weapon_seekermissilerack_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "sensor",
+      "alias": "sensor_sensor_lightweight",
+      "canonical": "sensor_lightweight"
+    },
+    {
+      "module_type": "sensor",
+      "alias": "sensor_sensor_longrange",
+      "canonical": "sensor_longrange"
+    },
+    {
+      "module_type": "sensor",
+      "alias": "sensor_sensor_wideangle",
+      "canonical": "sensor_wideangle"
+    },
+    {
+      "module_type": "shieldbooster",
+      "alias": "shieldbooster_shieldbooster_explosive",
+      "canonical": "shieldbooster_explosive"
+    },
+    {
+      "module_type": "shieldbooster",
+      "alias": "shieldbooster_shieldbooster_heavyduty",
+      "canonical": "shieldbooster_heavyduty"
+    },
+    {
+      "module_type": "shieldbooster",
+      "alias": "shieldbooster_shieldbooster_kinetic",
+      "canonical": "shieldbooster_kinetic"
+    },
+    {
+      "module_type": "shieldbooster",
+      "alias": "shieldbooster_shieldbooster_resistive",
+      "canonical": "shieldbooster_resistive"
+    },
+    {
+      "module_type": "shieldbooster",
+      "alias": "shieldbooster_shieldbooster_thermic",
+      "canonical": "shieldbooster_thermic"
+    },
+    {
+      "module_type": "shieldcellbank",
+      "alias": "shieldcellbank_shieldcellbank_rapid",
+      "canonical": "shieldcellbank_rapid"
+    },
+    {
+      "module_type": "shieldcellbank",
+      "alias": "shieldcellbank_shieldcellbank_specialised",
+      "canonical": "shieldcellbank_specialised"
+    },
+    {
+      "module_type": "shieldgenerator",
+      "alias": "shieldgenerator_shieldgenerator_kinetic",
+      "canonical": "shieldgenerator_kinetic"
+    },
+    {
+      "module_type": "shieldgenerator",
+      "alias": "shieldgenerator_shieldgenerator_optimised",
+      "canonical": "shieldgenerator_optimised"
+    },
+    {
+      "module_type": "shieldgenerator",
+      "alias": "shieldgenerator_shieldgenerator_reinforced",
+      "canonical": "shieldgenerator_reinforced"
+    },
+    {
+      "module_type": "shieldgenerator",
+      "alias": "shieldgenerator_shieldgenerator_thermic",
+      "canonical": "shieldgenerator_thermic"
+    },
+    {
+      "module_type": "surfacescanner",
+      "alias": "detailedsurfacescanner_surfacescanner_longrange",
+      "canonical": "detailedsurfacescanner_longrange"
+    },
+    {
+      "module_type": "surfacescanner",
+      "alias": "sensor_surfacescanner_expanded",
+      "canonical": "sensor_expanded"
+    },
+    {
+      "module_type": "surfacescanner",
+      "alias": "sensor_surfacescanner_fastscan",
+      "canonical": "sensor_fastscan"
+    },
+    {
+      "module_type": "surfacescanner",
+      "alias": "surfacescanner_expanded",
+      "canonical": "sensor_expanded"
+    },
+    {
+      "module_type": "surfacescanner",
+      "alias": "surfacescanner_fastscan",
+      "canonical": "sensor_fastscan"
+    },
+    {
+      "module_type": "surfacescanner",
+      "alias": "surfacescanner_longrange",
+      "canonical": "detailedsurfacescanner_longrange"
+    },
+    {
+      "module_type": "torpedopylon",
+      "alias": "torpedopylon_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "torpedopylon",
+      "alias": "torpedopylon_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "torpedopylon",
+      "alias": "weapon_torpedopylon_lightweight",
+      "canonical": "weapon_lightweight"
+    },
+    {
+      "module_type": "torpedopylon",
+      "alias": "weapon_torpedopylon_sturdy",
+      "canonical": "weapon_sturdy"
+    },
+    {
+      "module_type": "wakescanner",
+      "alias": "misc_wakescanner_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "wakescanner",
+      "alias": "misc_wakescanner_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "wakescanner",
+      "alias": "misc_wakescanner_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "wakescanner",
+      "alias": "sensor_wakescanner_fastscan",
+      "canonical": "sensor_fastscan"
+    },
+    {
+      "module_type": "wakescanner",
+      "alias": "sensor_wakescanner_longrange",
+      "canonical": "sensor_longrange"
+    },
+    {
+      "module_type": "wakescanner",
+      "alias": "sensor_wakescanner_wideangle",
+      "canonical": "sensor_wideangle"
+    },
+    {
+      "module_type": "wakescanner",
+      "alias": "wakescanner_fastscan",
+      "canonical": "sensor_fastscan"
+    },
+    {
+      "module_type": "wakescanner",
+      "alias": "wakescanner_lightweight",
+      "canonical": "misc_lightweight"
+    },
+    {
+      "module_type": "wakescanner",
+      "alias": "wakescanner_longrange",
+      "canonical": "sensor_longrange"
+    },
+    {
+      "module_type": "wakescanner",
+      "alias": "wakescanner_reinforced",
+      "canonical": "misc_reinforced"
+    },
+    {
+      "module_type": "wakescanner",
+      "alias": "wakescanner_shielded",
+      "canonical": "misc_shielded"
+    },
+    {
+      "module_type": "wakescanner",
+      "alias": "wakescanner_wideangle",
+      "canonical": "sensor_wideangle"
+    }
+  ],
+  "ambiguous_aliases_excluded": [
+    {
+      "module_type": "cargorack",
+      "alias": "cargorack_extended",
+      "candidates": [
+        "cargoracks5c1_extended",
+        "cargoracks6c1_extended"
+      ]
+    },
+    {
+      "module_type": "fragmentcannon",
+      "alias": "fragmentcannon_doublescreaming",
+      "candidates": [
+        "fragmentcannonlarge_doublescreaming",
+        "fragmentcannonsmall_doublescreaming"
+      ]
+    },
+    {
+      "module_type": "lifesupport",
+      "alias": "lifesupport_lightweight",
+      "candidates": [
+        "misc_lightweight",
+        "weapon_lightweight"
+      ]
+    },
+    {
+      "module_type": "powerdistributor",
+      "alias": "powerdistributor_supportfocused",
+      "candidates": [
+        "powerdistributors3c2_supportfocused",
+        "powerdistributors3c5_supportfocused",
+        "powerdistributors4c2_supportfocused",
+        "powerdistributors4c5_supportfocused",
+        "powerdistributors6c5_supportfocused"
+      ]
+    },
+    {
+      "module_type": "seekermissilerack",
+      "alias": "seekermissilerack_lockdown",
+      "candidates": [
+        "seekermissileracklarge_lockdown",
+        "seekermissilerackmedium_lockdown"
+      ]
+    }
+  ]
+}

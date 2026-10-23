@@ -51,6 +51,31 @@ pub fn keys(lang: &str) -> BTreeSet<String> {
         .collect()
 }
 
+/// Claves cuyo nombre aún no está confirmado en ese idioma (atributo `.pending`).
+pub fn pending_keys(lang: &str) -> BTreeSet<String> {
+    resources(supported_language(lang))
+        .iter()
+        .flat_map(pending_ids)
+        .collect()
+}
+
+fn pending_ids(resource: &FluentResource) -> Vec<String> {
+    resource
+        .entries()
+        .filter_map(|entry| match entry {
+            Entry::Message(message)
+                if message
+                    .attributes
+                    .iter()
+                    .any(|attribute| attribute.id.name == "pending") =>
+            {
+                Some(message.id.name.to_owned())
+            }
+            _ => None,
+        })
+        .collect()
+}
+
 fn supported_language(lang: &str) -> &str {
     if LANGUAGES.contains(&lang) {
         lang
@@ -248,6 +273,7 @@ mod tests {
             let mut args = FluentArgs::new();
             for (name, value) in [
                 ("pct", FluentValue::from(25)),
+                ("progress", FluentValue::from("50 %")),
                 ("module", FluentValue::from("dashboard")),
                 ("system", FluentValue::from("Sol")),
                 ("done", FluentValue::from(3)),
@@ -305,6 +331,21 @@ mod tests {
                 ("contribution", FluentValue::from(500)),
                 ("tier", FluentValue::from(3)),
                 ("percentile", FluentValue::from(25)),
+                ("grade", FluentValue::from(3)),
+                ("have", FluentValue::from(4)),
+                ("need", FluentValue::from(6)),
+                ("missing", FluentValue::from(2)),
+                ("engineer", FluentValue::from("Felicity Farseer")),
+                ("blueprint", FluentValue::from("Dirty Drive Tuning")),
+                ("experimental", FluentValue::from("Drag Drives")),
+                ("give", FluentValue::from(6)),
+                ("receive", FluentValue::from(1)),
+                ("max", FluentValue::from(300)),
+                ("rolls", FluentValue::from(4)),
+                ("goal", FluentValue::from("fsd_longrange G5")),
+                ("grades", FluentValue::from("G1, G2")),
+                ("reason", FluentValue::from("Receta ambigua")),
+                ("type", FluentValue::from("Manufacturados")),
             ] {
                 args.set(name, value);
             }
@@ -548,6 +589,54 @@ other = 3
         assert_eq!(problems.len(), 2, "{problems:?}");
         assert!(problems[0].contains("b.ftl"));
         assert!(problems[1].contains("good"));
+    }
+
+    #[test]
+    fn engineering_base_resources_load_in_all_languages() {
+        let required = [
+            "nav-engineering",
+            "layout-engineering",
+            "settings-engineering-rolls",
+            "panel-engineering-materials",
+            "panel-engineering-locker",
+            "panel-engineering-engineers",
+            "panel-engineering-ship",
+            "panel-engineering-flow",
+            "panel-engineering-shopping",
+            "panel-engineering-trades",
+            "panel-engineering-sources",
+            "panel-engineering-alerts",
+            "engineering-at-max",
+            "engineering-stock",
+            "engineering-no-data",
+            "engineering-unverified",
+        ];
+        for lang in LANGUAGES {
+            let available = keys(lang);
+            for key in required {
+                assert!(available.contains(key), "{lang}: {key}");
+            }
+        }
+    }
+
+    #[test]
+    fn pending_names_are_marked_and_english() {
+        for lang in LANGUAGES {
+            let i18n = I18n::new(lang);
+            let english = I18n::new("en");
+            for key in pending_keys(lang) {
+                assert_eq!(i18n.t(&key, &[]), english.t(&key, &[]), "{lang}: {key}");
+            }
+        }
+        let resource = FluentResource::try_new(
+            "a = A
+    .pending = 1
+b = B
+"
+            .into(),
+        )
+        .unwrap();
+        assert_eq!(pending_ids(&resource), ["a"]);
     }
 
     #[test]

@@ -7,6 +7,7 @@
   import Panel from '../shell/Panel.svelte';
   import { diag } from '../lib/diag.svelte';
   import Pairing from './Pairing.svelte';
+  import { integer } from '../lib/format';
 
   const DEFAULT_MINERALS = ['platinum', 'painite', 'lowtemperaturediamond', 'opal', 'alexandrite',
     'grandidierite', 'monazite', 'musgravite', 'rhodplumsite', 'serendibite', 'benitoite'];
@@ -14,6 +15,9 @@
   const MAX_KEYS = 30;
   const MAX_KEY_LEN = 40;
   const MAX_THRESHOLD = 1_000_000_000;
+  const DEFAULT_ROLLS = [1, 1, 1, 1, 4];
+  const validRolls = (value: unknown): value is number[] => Array.isArray(value)
+    && value.length === 5 && value.every((n) => Number.isInteger(n) && n >= 1 && n <= 10);
 
   interface ConfigDto {
     language?: string;
@@ -29,6 +33,7 @@
     sell_search_radius_ly?: number;
     eddn_radius_ly?: number;
     tourism_reference_cr_ly?: number;
+    engineering_rolls?: number[];
     server?: {
       port?: number;
       lan?: boolean;
@@ -48,6 +53,11 @@
   let miningThreshold = $state<number | undefined>(1000000);
   let sellRadius = $state<number | undefined>(100);
   let extraMineral = $state('');
+  let engineeringRolls = $state<(number | undefined)[]>([...DEFAULT_ROLLS]);
+  let rollsInvalid = $state(false);
+  let rollsEdits = 0;
+  let draftRevision = 0;
+  let lastSubmitted: ConfigDto | undefined;
   const knownMinerals = $derived([...DEFAULT_MINERALS, ...miningInterest.filter((k) => !DEFAULT_MINERALS.includes(k))]);
   let fullConfig = $state<ConfigDto>({});
   let saveError = $state(false);
@@ -80,13 +90,21 @@
     }
   }
 
-  onMount(async () => {
+  onMount(() => {
+    lastSubmitted = currentConfig();
+    saveQueue = readConfig();
+  });
+
+  async function readConfig() {
     try {
       const res = await fetch('/api/config');
       diag('ui.fetch.result', { kind: 'config-get', ok: res.ok, status: res.status });
       if (res.ok) {
         const cfg = (await res.json()) as ConfigDto;
         fullConfig = cfg;
+        // Sin envíos pendientes, comparar la primera edición con lo leído del
+        // servidor. Los envíos hechos antes del GET conservan su propia referencia.
+        if (saveRevision === 0) lastSubmitted = undefined;
         loadPrefs(cfg);
         onlineServices = cfg.online_services ?? true;
         mapThreshold = cfg.map_value_threshold ?? 500000;
@@ -96,6 +114,7 @@
         sellRadius = cfg.sell_search_radius_ly ?? 100;
         eddnRadius = cfg.eddn_radius_ly ?? 200;
         tourismReference = cfg.tourism_reference_cr_ly ?? 100000;
+        if (rollsEdits === 0) engineeringRolls = [...(validRolls(cfg.engineering_rolls) ? cfg.engineering_rolls : DEFAULT_ROLLS)];
         if (cfg.language) {
           language = cfg.language;
           setLocale(cfg.language);
@@ -115,10 +134,16 @@
       // Offline or unconfigured
       diag('ui.fetch.result', { kind: 'config-get', ok: false, status: 0 });
     }
-  });
+  }
+
+  function applyConfirmedPreferences() {
+    language = fullConfig.language ?? getLocale();
+    themeMode = fullConfig.theme_mode === 'classic' || fullConfig.theme_mode === 'contrast' ? fullConfig.theme_mode : 'hud';
+    setLocale(language);
+    applySelectedTheme(themeMode);
+  }
 
   function restoreSavedConfig() {
-    language = fullConfig.language ?? getLocale();
     autoCopy = fullConfig.auto_copy_next_system ?? true;
     onlineServices = fullConfig.online_services ?? true;
     mapThreshold = fullConfig.map_value_threshold ?? 500000;
@@ -129,9 +154,7 @@
     sellRadius = fullConfig.sell_search_radius_ly ?? 100;
     eddnRadius = fullConfig.eddn_radius_ly ?? 200;
     tourismReference = fullConfig.tourism_reference_cr_ly ?? 100000;
-    themeMode = fullConfig.theme_mode === 'classic' || fullConfig.theme_mode === 'contrast' ? fullConfig.theme_mode : 'hud';
-    setLocale(language);
-    applySelectedTheme(themeMode);
+    engineeringRolls = [...(validRolls(fullConfig.engineering_rolls) ? fullConfig.engineering_rolls : DEFAULT_ROLLS)];
   }
 
   function mineralLabel(key: string): string {
@@ -157,8 +180,37 @@
     toggleMineral(key, true);
   }
 
+  function currentConfig(): ConfigDto {
+    return {
+      language,
+      auto_copy_next_system: autoCopy,
+      auto_companion: prefs.autoCompanion,
+      online_services: onlineServices,
+      map_value_threshold: mapThreshold,
+      default_neutron_efficiency: plannerEfficiency,
+      theme_mode: themeMode,
+      mining_interest: [...miningInterest],
+      mining_threshold_cr: miningThreshold,
+      sell_search_radius_ly: sellRadius,
+      eddn_radius_ly: eddnRadius,
+      tourism_reference_cr_ly: tourismReference,
+      engineering_rolls: [...engineeringRolls] as number[],
+      server: {
+        lan: lanEnabled,
+      },
+    };
+  }
+
+  function restoreConfirmedRolls(submitted: number[]) {
+    const saved = validRolls(fullConfig.engineering_rolls) ? fullConfig.engineering_rolls : DEFAULT_ROLLS;
+    // Revierte solo los grados que no se han vuelto a editar durante el PUT.
+    engineeringRolls = engineeringRolls.map((value, index) => value === submitted[index] ? saved[index] : value);
+  }
+
   function saveConfig() {
     validationError = false;
+    rollsInvalid = !validRolls(engineeringRolls);
+    if (rollsInvalid) return;
     if (mapThreshold === undefined || !Number.isSafeInteger(mapThreshold) || mapThreshold < 0
       || plannerEfficiency === undefined || !Number.isInteger(plannerEfficiency)
       || plannerEfficiency < 0 || plannerEfficiency > 100
@@ -169,41 +221,37 @@
       || tourismReference === undefined || !Number.isInteger(tourismReference) || tourismReference < 1000 || tourismReference > 10_000_000) { validationError = true; return; }
     saveError = false;
     const revision = ++saveRevision;
-    const updated: ConfigDto = {
-      ...fullConfig,
-      language,
-      auto_copy_next_system: autoCopy,
-      auto_companion: prefs.autoCompanion,
-      online_services: onlineServices,
-      map_value_threshold: mapThreshold,
-      default_neutron_efficiency: plannerEfficiency,
-      theme_mode: themeMode,
-      mining_interest: miningInterest,
-      mining_threshold_cr: miningThreshold,
-      sell_search_radius_ly: sellRadius,
-      eddn_radius_ly: eddnRadius,
-      tourism_reference_cr_ly: tourismReference,
-      server: {
-        ...(fullConfig.server ?? {}),
-        lan: lanEnabled,
-      },
-    };
+    const draft = draftRevision;
+    const updated = currentConfig();
+    // Solo se encolan los campos editados desde el envío anterior. Un error en
+    // tiradas no debe reaplicarse al guardar después otro ajuste.
+    const patch = Object.fromEntries(Object.entries(updated).filter(([key, value]) =>
+      JSON.stringify(value) !== JSON.stringify((lastSubmitted ?? fullConfig)[key as keyof ConfigDto]))) as ConfigDto;
+    lastSubmitted = updated;
     saveQueue = saveQueue.then(async () => {
       try {
         const res = await fetch('/api/config', {
           method: 'PUT',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(updated),
+          body: JSON.stringify({ ...fullConfig, ...patch, server: { ...fullConfig.server, ...patch.server } }),
         });
         // Nunca se vuelca la configuración: contiene el token LAN en `server`.
         diag('ui.fetch.result', { kind: 'config-put', ok: res.ok, status: res.status, lan: lanEnabled });
         if (!res.ok) throw new Error('config-save-failed');
         fullConfig = (await res.json()) as ConfigDto;
-        if (revision === saveRevision) restoreSavedConfig();
+        if (revision === saveRevision) {
+          applyConfirmedPreferences();
+          if (draft === draftRevision) restoreSavedConfig();
+          else restoreConfirmedRolls(updated.engineering_rolls!);
+          lastSubmitted = undefined;
+        }
       } catch {
         diag('ui.fetch.result', { kind: 'config-put', ok: false, status: 0, lan: lanEnabled });
         if (revision === saveRevision) {
-          restoreSavedConfig();
+          applyConfirmedPreferences();
+          if (draft === draftRevision) restoreSavedConfig();
+          else restoreConfirmedRolls(updated.engineering_rolls!);
+          lastSubmitted = undefined;
           saveError = true;
         }
       }
@@ -214,7 +262,7 @@
 <Panel titleKey="nav-settings">
   {#if validationError}<p role="alert" data-testid="validation-error">{t('settings-mining-invalid')}</p>{/if}
   {#if saveError}<p role="alert">{t('settings-save-error')}</p>{/if}
-  <div class="settings-form">
+  <div class="settings-form" oninput={() => { draftRevision++; }}>
     <label class="field-row">
       <span>{t('settings-language')}</span>
       <select bind:value={language} onchange={saveConfig}>
@@ -300,6 +348,20 @@
       <input type="number" min="1000" max="10000000" step="1" bind:value={tourismReference} onchange={saveConfig} data-testid="tourism-reference" />
     </label>
 
+    <fieldset class="minerals engineering-rolls" data-testid="engineering-rolls">
+      <legend>{t('settings-engineering-rolls')}</legend>
+      {#each [1, 2, 3, 4, 5] as grade}
+        <label class="field-row" for={`engineering-rolls-${grade}`}>
+          <span>{t('engineering-grade', { grade: integer(grade) })}</span>
+          <input id={`engineering-rolls-${grade}`} data-testid={`engineering-rolls-${grade}`}
+            type="number" min="1" max="10" step="1" bind:value={engineeringRolls[grade - 1]}
+            aria-invalid={rollsInvalid} aria-describedby={rollsInvalid ? 'engineering-rolls-error' : undefined}
+            oninput={() => { rollsEdits++; }} onchange={saveConfig} />
+        </label>
+      {/each}
+      {#if rollsInvalid}<p id="engineering-rolls-error" role="alert" data-testid="engineering-rolls-error">{t('settings-engineering-rolls-invalid')}</p>{/if}
+    </fieldset>
+
     <Pairing />
   </div>
 </Panel>
@@ -328,6 +390,14 @@
 
   .minerals { border: 1px solid var(--hud-border); display: flex; flex-direction: column; gap: 0.3rem; }
   .mineral { display: flex; gap: 0.5rem; align-items: center; }
+
+  .engineering-rolls input {
+    background: var(--hud-bg);
+    color: var(--hud-text);
+    border: 1px solid var(--hud-border);
+    border-radius: 3px;
+    padding: 0.3rem 0.5rem;
+  }
 
   .help-text {
     margin: 0;

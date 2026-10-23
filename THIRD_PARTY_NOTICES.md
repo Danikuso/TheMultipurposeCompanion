@@ -363,3 +363,68 @@ Versión 1, licencia de datos propios del proyecto **PolyForm Noncommercial 1.0.
 |---|---|---|
 | `crates/tmc-modules/data/rare_goods.json` | Selección inicial incompleta de mercancías raras (origen y distancia de venta recomendada); redacción propia de TMC. | `verified: false`; símbolos desconocidos devuelven «sin dato». |
 | `crates/tmc-modules/data/cabins.json` | Cuatro cabinas de referencia (clase y plazas); redacción propia de TMC. | `verified: false`; pendiente de comprobación en el juego. |
+
+### EDEngineer (catálogo de materiales y nombres traducidos, F4)
+- Fuente: https://github.com/msarilar/EDEngineer, commit `2cadd66d19509221ea2e5c2c132b8f04dc8167c8` (2024-03-22). Licencia: **MIT**, «Copyright (c) 2016 Max». Decisión del propietario del 2026-10-21 (opción A para estos datos).
+- Usado de `EDEngineer/Resources/Data/entryData.json`: lista de materiales de nave (Raw, Manufactured y Encoded: nombre en inglés, rareza → grado 1–5 y grupo) → `crates/tmc-modules/data/materials.json` (139 materiales; `source: "EDEngineer 2cadd66 (MIT)"`). Las claves del diario de 22 datos codificados no coinciden con el `FormattedName` de EDEngineer y se contrastaron con los símbolos del diario (FDevIDs, solo identificadores). Familia, intercambiabilidad (`tradeable`) y pistas (`hints`) son datos propios de TMC. Los materiales a pie (Odyssey) y las mercancías no se incorporan. La asociación de la clave del diario `special_engine_overloaded` con Drag Drives se contrastó consultando coriolis-data (sin incorporar datos suyos). `verified: true` en materiales significa identidad, categoría y grado contrastados con la fuente; familia, `tradeable` y `hints` son datos propios. Los 13 materiales guardianes van con `verified: false` porque EDEngineer y FDevIDs discrepan en el grado.
+- Usado de `EDEngineer/Resources/Data/localization.json`: nombres traducidos (es, fr, de, pt) de blueprints y experimentales → `locales/{es,fr,de,pt}/engineering-data.ftl`. Son traducciones comunitarias de la aplicación; los nombres ausentes se dejan en inglés con `.pending = 1`.
+- No se usan las recetas de blueprints, los ingenieros ni las pistas de obtención de EDEngineer (datos propios).
+- Aviso: la licencia MIT cubre el repositorio de EDEngineer; sus datos son hechos del juego (propiedad intelectual de Frontier Developments) recopilados por la comunidad y `blueprints.json` de EDEngineer deriva de coriolis-data. TMC asume el mismo riesgo residual que EDEngineer.
+
+Texto de la licencia (EDEngineer):
+
+```
+MIT License
+
+Copyright (c) 2016 Max
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+### EDDiscovery / EliteDangerousCore (recetas, ingenieros y símbolos de ingeniería, F4 catálogo completo)
+- Fuente: https://github.com/EDDiscovery/EliteDangerousCore, revisión `7d30920e6822d4836e0d6dd5c91026ec7e2ab4c7` (2026-10-22). Licencia: **Apache-2.0**. Cabeceras de copyright de los archivos usados: «Copyright 2016-2024 EDDiscovery development team» (`RecipesEngineering.cs`, `Modules.cs`), «Copyright 2022-2024 EDDiscovery development team» (`Engineers.cs`), «Copyright 2016-2025 EDDiscovery development team» (`MCMRType.cs`) y «Copyright 2026-2026 EDDiscovery development team» (`RecipeFDName.cs`). No hay archivo `NOTICE` en esa revisión. Decisión del propietario del 2026-10-22 («Aprobar EDDiscovery como fuente A»).
+- Archivos copiados sin modificar, solo como entrada fija y verificable del importador: `crates/tmc-modules/data/import/engineering/snapshot/eddiscovery-*` (SHA-256, URL con commit, licencia y copyright por archivo en `sources.json`; texto de licencia en `eddiscovery-LICENSE`). El código C# no se compila ni se ejecuta; solo se tokeniza el subconjunto de datos.
+- Datos derivados (modificados por TMC: convertidos a JSON normalizado, expandidos por módulo y grado, reclasificados y con identificadores propios) en `crates/tmc-modules/data/import/engineering/staging/`. Cada artefacto lleva un bloque `provenance` con este aviso de modificación. Las entradas quedan `verified: false` hasta contrastarlas con el juego.
+
+### EDCD/EDDI (solo pares ID/nombre de ingenieros, F4 catálogo completo)
+- Fuente: https://github.com/EDCD/EDDI, revisión `d3b964ea7c8bb959ad6537f55b308f293a326905`, archivo `DataDefinitions/Engineer.cs`. Licencia: **Apache-2.0** (`LICENSE.md` y `LicenseFile.txt` de esa revisión). Copyright: «Copyright 2017 by the EDCD organization EDDI development team». No hay archivo `NOTICE` en esa revisión. Aprobación separada del propietario del 2026-10-22.
+- Uso limitado a los 38 pares `(EngineerID, nombre)`; no se usan sus especialidades ni sus recetas. Archivo y licencias fijados en `crates/tmc-modules/data/import/engineering/snapshot/eddi-*`; el cruce exacto 38/38 con EDDiscovery lo repite el importador en cada ejecución.
+- Procedimiento: `node scripts/import-engineering-catalogue.mjs --source-dir crates/tmc-modules/data/import/engineering/snapshot --out-dir crates/tmc-modules/data/import/engineering/staging` (o `--check`, que no escribe). Sin dependencias nuevas ni acceso a red.
+
+## Servicios de red y dependencias de F4 (ingenieros y materiales)
+
+### Spansh API y Ardent API (servicios de red para comerciantes y brokers, no incorporados)
+- **Spansh API (`POST /api/stations/search`):** consultas HTTP de solo lectura desde `tmc-net` para localizar el comerciante de materiales tipado (`Raw`, `Manufactured`, `Encoded`) o broker de tecnología tipado (`Guardian`, `Human`) más cercano al sistema de referencia. No envía datos del comandante ni del jugador. Solo lectura por red; no se copian datos ni código de terceros.
+- **Ardent API (`nearest/material-trader` y `nearest/technology-broker`):** servicio de red AGPL usado únicamente como cliente HTTP de solo lectura para comerciantes de materiales y brokers no tipados (cuando no se especifica tipo). Aplica las mismas salvaguardas de F1–F3: sin incorporar código ni bases de datos, respuestas transitorias en caché local con caducidad.
+- **Opt-out y modo Legacy:** si las consultas a servicios en línea están desactivadas por configuración o el jugador está en la galaxia Legacy, no se emite ninguna petición de red y TMC devuelve «sin datos» de inmediato.
+- En compilaciones de depuración e integración e2e existe un transporte de pruebas que redirige estas peticiones al servidor local simulado (`Redirect::post_json` y `Redirect::get`).
+
+### Dependencias nuevas en F4
+- Ninguna (`git diff main -- Cargo.lock ui/package.json` arroja cero cambios en dependencias externas directas o transitivas respecto a `main`).
+
+### Datos estáticos propios e importados de F4
+Versión 1, licencia de datos propios del proyecto **PolyForm Noncommercial 1.0.0**; sin datasets incompatibles ni GPL/AGPL.
+
+| Archivo | Contenido y procedencia declarada | Verificación |
+|---|---|---|
+| `crates/tmc-modules/data/materials.json` | 141 materiales (Raw, Manufactured, Encoded); nombres y grados base de EDEngineer (MIT), familias, `tradeable` y `hints` propios de TMC. | Identidad, categoría y grado contrastados (`verified: true` salvo materiales especiales/Guardianes sin verificar). |
+| `crates/tmc-modules/data/trader_rules.json` | Reglas de intercambio entre comerciantes y multiplicadores entre familias del mismo tipo; hechos del juego transcritos por TMC. | Verificado contra las mecánicas y tasas oficiales de Elite Dangerous. |
+| `crates/tmc-modules/data/blueprints.json` | 89 blueprints, 87 efectos experimentales y 15 variantes con costes, bases explícitas y requisitos; convertidos desde EDDiscovery (Apache-2.0). | Importación determinista (`--check` byte a byte); `verified: false` hasta contraste en vuelo. |
+| `crates/tmc-modules/data/engineers.json` | 38 ingenieros con ubicación, taller, estado, progresión, IDs canónicos (EDDI, Apache-2.0) y capacidades detalladas por módulo y grado (EDDiscovery, Apache-2.0). | Cruce 38/38 exacto y sin duplicados; `verified: false` hasta contraste en vuelo. |
+

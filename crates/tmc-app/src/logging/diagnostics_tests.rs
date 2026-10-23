@@ -781,6 +781,20 @@ fn d3_sql_reports_types_and_outcomes_without_positional_values_or_error_text() {
                 .query_json("SELECT 'CANARY-INTERPOLATED' FROM absent", &[])
                 .is_err()
         );
+        store
+            .exec_json("CREATE TABLE canary_batch (v TEXT)", &[])
+            .unwrap();
+        store
+            .exec_batch_json(&[(
+                "INSERT INTO canary_batch VALUES (?1)",
+                vec![json!("CANARY-BATCH")],
+            )])
+            .unwrap();
+        assert!(
+            store
+                .exec_batch_json(&[("SELECT ?1", vec![json!({"secret":"CANARY-BATCH-BAD"})])])
+                .is_err()
+        );
         store.kv_set("CANARY-KEY", "CANARY-VALUE");
         assert_eq!(store.kv_get("CANARY-KEY").as_deref(), Some("CANARY-VALUE"));
         store
@@ -796,6 +810,15 @@ fn d3_sql_reports_types_and_outcomes_without_positional_values_or_error_text() {
     assert_eq!(
         payload_for(&records, "store.query.failed")["failure_class"],
         "sqlite"
+    );
+    payload_for(&records, "store.exec_batch.started");
+    assert_eq!(
+        payload_for(&records, "store.exec_batch.completed")["statements"],
+        1
+    );
+    assert_eq!(
+        payload_for(&records, "store.exec_batch.failed")["failure_class"],
+        "unsupported"
     );
     payload_for(&records, "store.cache.hit");
     payload_for(&records, "store.kv.get");
@@ -845,6 +868,11 @@ fn d3_import_checkpoints_deduplicate_and_redact_embedded_events() {
 #[test]
 fn d3_config_bootstrap_is_retained_until_logger_and_consumed_once() {
     let dir = tempfile::tempdir().unwrap();
+    // Un arranque previo puede haber dejado su primer informe en el búfer global.
+    let previous = dir.path().join("previous.toml");
+    crate::Config::default().save_to(&previous).unwrap();
+    crate::Config::load_from_or_default(&previous);
+    crate::config::emit_bootstrap_report();
     let path = dir.path().join("config.toml");
     fs::write(
         &path,

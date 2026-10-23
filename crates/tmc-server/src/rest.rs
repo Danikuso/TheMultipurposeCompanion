@@ -188,3 +188,92 @@ pub async fn put_config(State(state): State<AppState>, Json(payload): Json<Value
         }
     }
 }
+
+/// Detalles de ingenieria consultados al actor; nunca se reconstruyen desde SQLite.
+pub async fn get_engineering_goals(
+    State(state): State<AppState>,
+    query: Result<Query<tmc_core::ModulePageQuery>, axum::extract::rejection::QueryRejection>,
+) -> Response {
+    engineering_page(&state, "goals", query).await
+}
+pub async fn get_engineering_locker(
+    State(state): State<AppState>,
+    query: Result<Query<tmc_core::ModulePageQuery>, axum::extract::rejection::QueryRejection>,
+) -> Response {
+    engineering_page(&state, "locker", query).await
+}
+pub async fn get_engineering_catalogue(
+    State(state): State<AppState>,
+    query: Result<Query<tmc_core::ModulePageQuery>, axum::extract::rejection::QueryRejection>,
+) -> Response {
+    engineering_page(&state, "catalogue", query).await
+}
+pub async fn get_engineering_engineers(
+    State(state): State<AppState>,
+    query: Result<Query<tmc_core::ModulePageQuery>, axum::extract::rejection::QueryRejection>,
+) -> Response {
+    engineering_page(&state, "engineers", query).await
+}
+pub async fn get_engineering_flow(
+    State(state): State<AppState>,
+    query: Result<Query<tmc_core::ModulePageQuery>, axum::extract::rejection::QueryRejection>,
+) -> Response {
+    engineering_page(&state, "flow", query).await
+}
+async fn engineering_page(
+    state: &AppState,
+    resource: &str,
+    query: Result<Query<tmc_core::ModulePageQuery>, axum::extract::rejection::QueryRejection>,
+) -> Response {
+    use tmc_core::ModuleQueryError;
+    let result = match query {
+        Ok(Query(query)) => {
+            state
+                .core
+                .query_module("engineering", resource, query)
+                .await
+        }
+        Err(_) => Err(ModuleQueryError::InvalidQuery),
+    };
+    let mut response = match result {
+        Ok(value) => Json(value).into_response(),
+        Err(error) => {
+            let (status, code) = match error {
+                ModuleQueryError::NotFound => (StatusCode::NOT_FOUND, "not-found"),
+                ModuleQueryError::InvalidQuery => (StatusCode::BAD_REQUEST, "invalid-query"),
+                ModuleQueryError::StaleRevision => (StatusCode::CONFLICT, "stale-revision"),
+                ModuleQueryError::Unavailable => (StatusCode::SERVICE_UNAVAILABLE, "unavailable"),
+                ModuleQueryError::ItemTooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "item-too-large"),
+            };
+            (status, Json(json!({"error":code}))).into_response()
+        }
+    };
+    response.headers_mut().insert(
+        axum::http::header::CACHE_CONTROL,
+        axum::http::HeaderValue::from_static("no-store"),
+    );
+    response
+}
+
+/// Includes security and router rejections for these live resources only.
+pub(crate) async fn no_store_engineering_pages(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> Response {
+    let no_store = matches!(
+        request.uri().path(),
+        "/api/engineering/goals"
+            | "/api/engineering/locker"
+            | "/api/engineering/catalogue"
+            | "/api/engineering/engineers"
+            | "/api/engineering/flow"
+    );
+    let mut response = next.run(request).await;
+    if no_store {
+        response.headers_mut().insert(
+            axum::http::header::CACHE_CONTROL,
+            axum::http::HeaderValue::from_static("no-store"),
+        );
+    }
+    response
+}

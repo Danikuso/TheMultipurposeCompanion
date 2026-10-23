@@ -19,6 +19,9 @@ pub use wiring::{Running, start, start_custom, start_full, start_with_transport}
 mod e2e_tests;
 
 #[cfg(test)]
+mod engineering_pages_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use axum::body::Body;
@@ -253,6 +256,54 @@ mining_threshold_cr = 2000000
         assert_eq!(actions.put_config(ok).unwrap()["eddn_radius_ly"], 500);
     }
 
+    #[test]
+    fn f3_config_without_f4_fields_loads_with_defaults() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(
+            &path,
+            "language = \"en\"
+eddn_radius_ly = 250
+tourism_reference_cr_ly = 200000
+",
+        )
+        .unwrap();
+        let cfg = Config::load_from_or_default(&path);
+        assert_eq!(cfg.eddn_radius_ly, 250);
+        assert_eq!(cfg.engineering_rolls, [1, 1, 1, 1, 4]);
+        assert_eq!(cfg.module_settings().engineering_rolls, [1, 1, 1, 1, 4]);
+    }
+
+    #[test]
+    fn config_snapshot_includes_engineering_rolls() {
+        assert_eq!(
+            Config::default().diagnostic_snapshot()["engineering_rolls"],
+            json!([1, 1, 1, 1, 4])
+        );
+    }
+
+    #[tokio::test]
+    async fn put_config_rejects_rolls_out_of_range() {
+        let dir = tempdir().unwrap();
+        let (actions, _core, _online) = runtime_actions(dir.path());
+        let before = actions.get_config();
+        for rolls in [json!([1, 1, 1, 1, 0]), json!([1, 1, 1, 1, 11])] {
+            let mut cfg = before.clone();
+            cfg["engineering_rolls"] = rolls;
+            match actions.put_config(cfg) {
+                Err(ActionError::Failed(m)) => assert_eq!(m, "invalid-engineering-rolls"),
+                other => panic!("{other:?}"),
+            }
+        }
+        assert_eq!(actions.get_config(), before);
+        let mut ok = before.clone();
+        ok["engineering_rolls"] = json!([2, 3, 4, 5, 10]);
+        assert_eq!(
+            actions.put_config(ok).unwrap()["engineering_rolls"],
+            json!([2, 3, 4, 5, 10])
+        );
+    }
+
     #[tokio::test]
     async fn put_config_normalizes_interest_list() {
         let dir = tempdir().unwrap();
@@ -422,6 +473,53 @@ mining_threshold_cr = 2000000
                 "missions.reset_session"
             ])
         );
+    }
+
+    #[tokio::test]
+    async fn engineering_actions_reach_core() {
+        let dir = tempdir().unwrap();
+        let core = tmc_core::spawn_core(
+            vec![Box::new(ActionProbe(Vec::new()))],
+            None,
+            Duration::from_millis(100),
+        );
+        let online = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+        let (events, _rx) = tokio::sync::mpsc::channel(8);
+        let net = spawn_net_service(
+            std::sync::Arc::new(tmc_net::NetClient::new(std::sync::Arc::new(
+                tmc_net::ReqwestTransport::new().unwrap(),
+            ))),
+            tmc_core::Store::open_in_memory().unwrap(),
+            events,
+            online.clone(),
+        );
+        let actions = AppActions::with_runtime(Config::default(), core.events.clone(), online, net)
+            .with_save_path(dir.path().join("config.toml"));
+        let snap = BTreeMap::new();
+        let names = [
+            "engineering.select_module",
+            "engineering.preview",
+            "engineering.close_flow",
+            "engineering.pin_goal",
+            "engineering.unpin_goal",
+            "engineering.move_goal",
+            "engineering.select_engineer",
+            "engineering.dismiss_alert",
+            "engineering.reset_session",
+        ];
+        for name in names {
+            let out = actions.run_action_with(name, &json!({}), &snap);
+            assert!(out.is_ok(), "{name}: {out:?}");
+        }
+        let mut seen = Value::Null;
+        for _ in 0..50 {
+            seen = core.snapshot().await["actionprobe.actions"].clone();
+            if seen.as_array().is_some_and(|a| a.len() == names.len()) {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+        assert_eq!(seen, json!(names));
     }
 
     #[test]

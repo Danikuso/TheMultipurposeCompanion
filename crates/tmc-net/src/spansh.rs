@@ -6,8 +6,9 @@ use chrono::{DateTime, Utc};
 use serde_json::Value;
 use tmc_model::market::is_fleet_carrier;
 use tmc_model::net::{
-    GalaxyRouteParams, NetFailure, NeutronRouteParams, PadSize, PlannedHop, PlannedRoute,
-    RemoteSystem, SystemSuggestion, TradeCommodity, TradeRouteParams, TradeRoutePlan, TradeStop,
+    BrokerKind, GalaxyRouteParams, NearbyService, NetFailure, NeutronRouteParams, PadSize,
+    PlannedHop, PlannedRoute, RemoteStation, RemoteSystem, SystemSuggestion, TradeCommodity,
+    TradeRouteParams, TradeRoutePlan, TradeStop, TraderKind,
 };
 
 pub const BASE: &str = "https://spansh.co.uk/api";
@@ -430,6 +431,109 @@ pub fn parse_autocomplete(body: &str) -> Result<Vec<SystemSuggestion>, NetFailur
     Ok(out)
 }
 
+/// Máximo de estaciones que se piden y se devuelven.
+const MAX_STATIONS: usize = 5;
+
+/// Búsqueda de estaciones (`POST`, cuerpo JSON).
+pub fn station_search_url() -> String {
+    format!("{BASE}/stations/search")
+}
+
+/// Cuerpo de `POST /stations/search`: las estaciones más cercanas a
+/// `reference_system` con el servicio y el tipo pedidos. Sin tipo concreto
+/// (otros servicios) no se añade ningún filtro de servicio.
+pub fn station_search_body(reference_system: &str, service: NearbyService) -> Value {
+    let filters = match service {
+        NearbyService::MaterialTrader(Some(k)) => {
+            let kind = match k {
+                TraderKind::Raw => "Raw",
+                TraderKind::Manufactured => "Manufactured",
+                TraderKind::Encoded => "Encoded",
+            };
+            serde_json::json!({"material_trader": {"value": [kind]}})
+        }
+        NearbyService::TechnologyBroker(Some(b)) => {
+            let kind = match b {
+                BrokerKind::Guardian => "Guardian",
+                BrokerKind::Human => "Human",
+            };
+            serde_json::json!({"technology_broker": {"value": [kind]}})
+        }
+        _ => serde_json::json!({}),
+    };
+    serde_json::json!({
+        "filters": filters,
+        "sort": [{"distance": {"direction": "asc"}}],
+        "size": MAX_STATIONS,
+        "page": 0,
+        "reference_system": reference_system,
+    })
+}
+
+fn opt_count(o: &jsonx::Obj, k: &str) -> Result<u64, NetFailure> {
+    Ok(jsonx::opt_u64(o, k)?.unwrap_or(0))
+}
+
+/// Estaciones de `/stations/search` (máx. 5, por distancia asc). Spansh solo da
+/// el número de plataformas de cada tamaño: la máxima se deriva de ellas. Se
+/// descartan carriers y obras, y lo que no admite `min_pad` (re-comprobado en local).
+pub fn parse_station_search(
+    body: &str,
+    min_pad: PadSize,
+) -> Result<Vec<RemoteStation>, NetFailure> {
+    let v = jsonx::parse(body)?;
+    let root = jsonx::as_obj(&v)?;
+    let items = jsonx::req_array(root, "results")?;
+    let (total, mut bad) = (items.len(), 0);
+    let mut out = Vec::new();
+    for item in items {
+        let parsed = (|| -> Result<Option<RemoteStation>, NetFailure> {
+            let o = jsonx::as_obj(item)?;
+            let name = jsonx::req_str(o, "name")?;
+            let station_type = jsonx::opt_str(o, "type")?;
+            let market_id = jsonx::opt_u64(o, "market_id")?;
+            let max_pad = if opt_count(o, "large_pads")? > 0 {
+                Some(PadSize::Large)
+            } else if opt_count(o, "medium_pads")? > 0 {
+                Some(PadSize::Medium)
+            } else if opt_count(o, "small_pads")? > 0 {
+                Some(PadSize::Small)
+            } else {
+                None
+            };
+            let updated = jsonx::opt_str(o, "market_updated_at")?
+                .or(jsonx::opt_str(o, "updated_at")?)
+                .and_then(|s| s.parse().ok());
+            let st = RemoteStation {
+                system_name: jsonx::req_str(o, "system_name")?,
+                distance_ly: jsonx::req_f64(o, "distance")?,
+                distance_to_arrival_ls: match o.get("distance_to_arrival") {
+                    None | Some(Value::Null) => None,
+                    Some(d) => Some(d.as_f64().ok_or(NetFailure::Malformed)?),
+                },
+                max_pad,
+                updated_at: updated,
+                station_name: name,
+            };
+            let skip =
+                crate::ardent::excluded(&st.station_name, station_type.as_deref(), market_id);
+            let keep = !skip && st.max_pad.is_some_and(|p| p.fits(min_pad));
+            Ok(keep.then_some(st))
+        })();
+        match parsed {
+            Ok(Some(st)) => out.push(st),
+            Ok(None) => {}
+            Err(_) => bad += 1,
+        }
+    }
+    if total > 0 && bad == total {
+        return Err(NetFailure::Malformed);
+    }
+    out.sort_by(|a, b| a.distance_ly.total_cmp(&b.distance_ly));
+    out.truncate(MAX_STATIONS);
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -802,6 +906,74 @@ mod tests {
                 stops: vec![],
                 total_profit: 0
             }))
+        );
+    }
+
+    const STATIONS: &str =
+        include_str!("../../../tests/fixtures/net/spansh_stations_material_trader.json");
+
+    #[test]
+    fn typed_trader_request_is_spansh_station_search() {
+        assert_eq!(
+            station_search_url(),
+            "https://spansh.co.uk/api/stations/search"
+        );
+        let b = station_search_body("Sol", NearbyService::MaterialTrader(Some(TraderKind::Raw)));
+        assert_eq!(
+            b["filters"]["material_trader"]["value"],
+            serde_json::json!(["Raw"])
+        );
+        assert_eq!(b["size"], 5);
+        assert_eq!(b["page"], 0);
+        assert_eq!(b["sort"][0]["distance"]["direction"], "asc");
+        assert_eq!(b["reference_system"], "Sol");
+        assert!(b["filters"].get("technology_broker").is_none());
+    }
+
+    #[test]
+    fn typed_broker_request_is_spansh_station_search() {
+        let b = station_search_body(
+            "Sol",
+            NearbyService::TechnologyBroker(Some(BrokerKind::Guardian)),
+        );
+        assert_eq!(
+            b["filters"]["technology_broker"]["value"],
+            serde_json::json!(["Guardian"])
+        );
+        assert!(b["filters"].get("material_trader").is_none());
+    }
+
+    #[test]
+    fn parses_spansh_station_search_fixture() {
+        let s = parse_station_search(STATIONS, PadSize::Small).unwrap();
+        assert!(s.len() <= 5);
+        assert_eq!(s[0].station_name, "Mercader Ficticio");
+        assert_eq!(s[0].system_name, "Testia Alfa");
+        assert_eq!(s[0].max_pad, Some(PadSize::Large));
+        assert_eq!(s[1].max_pad, Some(PadSize::Medium));
+        assert!(s.windows(2).all(|w| w[0].distance_ly <= w[1].distance_ly));
+        assert!(s[0].updated_at.is_some());
+        // El re-filtro local de plataforma descarta el puesto sin plataformas grandes.
+        let l = parse_station_search(STATIONS, PadSize::Large).unwrap();
+        assert!(l.iter().all(|x| x.max_pad == Some(PadSize::Large)));
+        assert!(l.len() < s.len());
+    }
+
+    #[test]
+    fn station_search_drops_carriers_and_rejects_garbage() {
+        let body = r#"{"results":[
+            {"name":"K7Q-B2X","market_id":3700000123,"type":"Drake-Class Carrier","system_name":"S","distance":1.0,"large_pads":1},
+            {"name":"Real","market_id":123,"type":"Outpost","system_name":"S","distance":2.0,"medium_pads":1,"small_pads":2}]}"#;
+        let s = parse_station_search(body, PadSize::Small).unwrap();
+        assert_eq!(s.len(), 1);
+        assert_eq!(s[0].max_pad, Some(PadSize::Medium));
+        assert_eq!(
+            parse_station_search("not json", PadSize::Small),
+            Err(NetFailure::Malformed)
+        );
+        assert_eq!(
+            parse_station_search(r#"{"foo":1}"#, PadSize::Small),
+            Err(NetFailure::Malformed)
         );
     }
 }

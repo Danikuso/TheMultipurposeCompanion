@@ -2,7 +2,7 @@
 
 use crate::ardent;
 use std::time::Duration;
-use tmc_model::net::{NearbyService, NetQuery, PadSize};
+use tmc_model::net::{BrokerKind, NearbyService, NetQuery, PadSize, TraderKind};
 
 const HOUR: u64 = 3600;
 
@@ -67,6 +67,21 @@ fn pad_tag(p: PadSize) -> &'static str {
         PadSize::Small => "s",
         PadSize::Medium => "m",
         PadSize::Large => "l",
+    }
+}
+
+fn trader_tag(k: TraderKind) -> &'static str {
+    match k {
+        TraderKind::Raw => "raw",
+        TraderKind::Manufactured => "manufactured",
+        TraderKind::Encoded => "encoded",
+    }
+}
+
+fn broker_tag(k: BrokerKind) -> &'static str {
+    match k {
+        BrokerKind::Human => "human",
+        BrokerKind::Guardian => "guardian",
     }
 }
 
@@ -136,16 +151,48 @@ pub fn cache_keys(q: &NetQuery) -> Vec<(CacheKind, String)> {
             system_address,
             service,
             min_pad,
-        } => vec![(
-            CacheKind::ArdentNearest,
-            format!(
-                "ardent:nearest:{system_address}:{}:{}",
-                match service {
-                    NearbyService::InterstellarFactors => "interstellar-factors",
-                },
-                pad_tag(*min_pad)
-            ),
-        )],
+            ..
+        } => match service {
+            NearbyService::InterstellarFactors => vec![(
+                CacheKind::ArdentNearest,
+                format!(
+                    "ardent:nearest:{system_address}:interstellar-factors:{}",
+                    pad_tag(*min_pad)
+                ),
+            )],
+            // Sin tipo: Ardent. Con tipo: Spansh (la clave incluye servicio, tipo y plataforma).
+            // Todos comparten la política de 1 h de `ArdentNearest`.
+            NearbyService::MaterialTrader(None) => vec![(
+                CacheKind::ArdentNearest,
+                format!(
+                    "ardent:nearest:{system_address}:material-trader:{}",
+                    pad_tag(*min_pad)
+                ),
+            )],
+            NearbyService::TechnologyBroker(None) => vec![(
+                CacheKind::ArdentNearest,
+                format!(
+                    "ardent:nearest:{system_address}:technology-broker:{}",
+                    pad_tag(*min_pad)
+                ),
+            )],
+            NearbyService::MaterialTrader(Some(k)) => vec![(
+                CacheKind::ArdentNearest,
+                format!(
+                    "spansh:stations:{system_address}:material-trader:{}:{}",
+                    trader_tag(*k),
+                    pad_tag(*min_pad)
+                ),
+            )],
+            NearbyService::TechnologyBroker(Some(b)) => vec![(
+                CacheKind::ArdentNearest,
+                format!(
+                    "spansh:stations:{system_address}:technology-broker:{}:{}",
+                    broker_tag(*b),
+                    pad_tag(*min_pad)
+                ),
+            )],
+        },
     }
 }
 
@@ -153,7 +200,9 @@ pub fn cache_keys(q: &NetQuery) -> Vec<(CacheKind, String)> {
 mod tests {
     use super::*;
     use std::time::Duration;
-    use tmc_model::net::{NearbyService, NetQuery, NeutronRouteParams, PadSize};
+    use tmc_model::net::{
+        BrokerKind, NearbyService, NetQuery, NeutronRouteParams, PadSize, TraderKind,
+    };
 
     const H: u64 = 3600;
 
@@ -193,6 +242,7 @@ mod tests {
         assert_eq!(
             cache_keys(&NetQuery::NearestService {
                 system_address: 7,
+                system_name: "Sol".into(),
                 service: NearbyService::InterstellarFactors,
                 min_pad: PadSize::Medium,
             }),
@@ -201,6 +251,62 @@ mod tests {
                 "ardent:nearest:7:interstellar-factors:m".to_string()
             )]
         );
+    }
+
+    #[test]
+    fn cache_key_differs_per_service_kind_and_pad() {
+        let key = |service, min_pad| {
+            cache_keys(&NetQuery::NearestService {
+                system_address: 7,
+                system_name: "Sol".into(),
+                service,
+                min_pad,
+            })
+        };
+        let all = [
+            key(
+                NearbyService::MaterialTrader(Some(TraderKind::Raw)),
+                PadSize::Medium,
+            ),
+            key(
+                NearbyService::MaterialTrader(Some(TraderKind::Encoded)),
+                PadSize::Medium,
+            ),
+            key(
+                NearbyService::MaterialTrader(Some(TraderKind::Raw)),
+                PadSize::Large,
+            ),
+            key(NearbyService::MaterialTrader(None), PadSize::Medium),
+            key(NearbyService::TechnologyBroker(None), PadSize::Medium),
+            key(
+                NearbyService::TechnologyBroker(Some(BrokerKind::Guardian)),
+                PadSize::Medium,
+            ),
+            key(
+                NearbyService::TechnologyBroker(Some(BrokerKind::Human)),
+                PadSize::Medium,
+            ),
+            key(NearbyService::InterstellarFactors, PadSize::Medium),
+        ];
+        for (i, a) in all.iter().enumerate() {
+            assert_eq!(a.len(), 1);
+            for b in &all[i + 1..] {
+                assert_ne!(a, b);
+            }
+        }
+    }
+
+    #[test]
+    fn material_trader_cached_one_hour() {
+        let k = cache_keys(&NetQuery::NearestService {
+            system_address: 7,
+            system_name: "Sol".into(),
+            service: NearbyService::MaterialTrader(Some(TraderKind::Raw)),
+            min_pad: PadSize::Small,
+        });
+        let ttl = ttl_for(k[0].0);
+        assert_eq!(ttl.fresh, Duration::from_secs(3600));
+        assert_eq!(ttl.max_stale, Duration::from_secs(3600));
     }
 
     #[test]

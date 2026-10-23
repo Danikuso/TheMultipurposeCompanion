@@ -302,6 +302,7 @@ fn live_event_requests_ledger_rebuild_once_and_if_search() {
         reqs[0].query,
         NetQuery::NearestService {
             system_address: 2,
+            system_name: "Beta".into(),
             service: NearbyService::InterstellarFactors,
             min_pad: PadSize::Medium,
         }

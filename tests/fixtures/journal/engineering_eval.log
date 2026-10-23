@@ -1,0 +1,15 @@
+{"timestamp":"2026-10-22T10:00:00Z","event":"Fileheader","part":1,"gameversion":"4.1"}
+{"timestamp":"2026-10-22T10:00:01Z","event":"Commander","FID":"F0000000","Name":"CMDR EVAL SYNTHETIC"}
+{"timestamp":"2026-10-22T10:00:02Z","event":"Materials","Raw":[{"Name":"iron","Count":299},{"Name":"polonium","Count":150}],"Manufactured":[{"Name":"conductiveceramics","Count":3}],"Encoded":[{"Name":"shieldpatternanalysis","Count":5}]}
+{"timestamp":"2026-10-22T10:00:03Z","event":"LoadGame","Commander":"CMDR EVAL SYNTHETIC","FID":"F0000000","Ship":"asp","GameMode":"Solo"}
+{"timestamp":"2026-10-22T10:00:04Z","event":"MaterialCollected","Category":"Raw","Name":"iron","Count":3}
+{"timestamp":"2026-10-22T10:00:05Z","event":"MaterialCollected","Category":"Raw","Name":"polonium","Count":2}
+{"timestamp":"2026-10-22T10:00:06Z","event":"MaterialTrade","Paid":{"Material":"iron","Category":"Raw","Quantity":6},"Received":{"Material":"carbon","Category":"Raw","Quantity":1}}
+{"timestamp":"2026-10-22T10:00:07Z","event":"Synthesis","Name":"Synthetic","Materials":[{"Name":"conductiveceramics","Count":1}]}
+{"timestamp":"2026-10-22T10:00:08Z","event":"EngineerCraft","Ingredients":[{"Name":"iron","Count":2}],"BlueprintName":"Synthetic","Level":1}
+{"timestamp":"2026-10-22T10:00:09Z","event":"MissionCompleted","MissionID":9000000,"MaterialsReward":[{"Name":"conductiveceramics","Category":"$MICRORESOURCE_CATEGORY_Manufactured;","Count":2}]}
+{"timestamp":"2026-10-22T10:00:10Z","event":"MaterialDiscarded","Category":"Manufactured","Name":"conductiveceramics","Count":1}
+{"timestamp":"2026-10-22T10:00:11Z","event":"MaterialCollected","Category":"Encoded","Name":"shieldpatternanalysis","Count":2}
+{"timestamp":"2026-10-22T10:00:12Z","event":"SyntheticUntyped","Message":"PRIVATE CHAT CANARY"}
+{"timestamp":"2026-10-22T10:00:13Z","event":"Materials","Raw":[{"Name":"iron","Count":292},{"Name":"polonium","Count":150},{"Name":"carbon","Count":1}],"Manufactured":[{"Name":"conductiveceramics","Count":3}],"Encoded":[{"Name":"shieldpatternanalysis","Count":7}]}
+{"timestamp":"2026-10-22T10:00:14Z","event":"SyntheticTrailingUntyped"}

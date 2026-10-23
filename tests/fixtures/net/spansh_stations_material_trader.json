@@ -1,0 +1,197 @@
+{
+  "count": 3,
+  "from": 0,
+  "reference": {
+    "id64": 10477373803,
+    "name": "Sol",
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0
+  },
+  "results": [
+    {
+      "allegiance": "Federation",
+      "controlling_minor_faction": "Faccion Inventada",
+      "controlling_minor_faction_influence": 0.481,
+      "controlling_minor_faction_state": "Expansion",
+      "distance": 5.2,
+      "distance_to_arrival": 50.0,
+      "economies": [
+        {
+          "name": "Industrial",
+          "share": 12.0
+        },
+        {
+          "name": "Refinery",
+          "share": 88.0
+        }
+      ],
+      "government": "Confederacy",
+      "has_large_pad": true,
+      "has_market": true,
+      "has_outfitting": true,
+      "has_shipyard": true,
+      "id": "9300000001",
+      "is_planetary": false,
+      "large_pads": 6,
+      "market_id": 9300000001,
+      "market_updated_at": "2026-10-18T12:00:00Z",
+      "material_trader": "Raw",
+      "medium_pads": 12,
+      "name": "Mercader Ficticio",
+      "outfitting_updated_at": "2026-10-18T12:00:00Z",
+      "primary_economy": "Refinery",
+      "secondary_economy": "Industrial",
+      "shipyard_updated_at": "2026-10-18T12:00:00Z",
+      "small_pads": 10,
+      "system_controlling_power": null,
+      "system_id64": 9000000000001,
+      "system_is_being_colonised": false,
+      "system_is_colonised": false,
+      "system_name": "Testia Alfa",
+      "system_population": 8274043,
+      "system_power_state": null,
+      "system_primary_economy": "Refinery",
+      "system_secondary_economy": "Industrial",
+      "system_x": 0.0,
+      "system_y": 1.0,
+      "system_z": -0.5,
+      "type": "Orbis Starport",
+      "updated_at": "2026-10-18T12:00:00Z",
+      "services": [
+        {
+          "name": "Dock"
+        },
+        {
+          "name": "Market"
+        },
+        {
+          "name": "Material Trader"
+        }
+      ]
+    },
+    {
+      "controlling_minor_faction": "Faccion Inventada",
+      "controlling_minor_faction_influence": 0.413968,
+      "controlling_minor_faction_state": "Expansion",
+      "distance": 9.1,
+      "distance_to_arrival": 300.0,
+      "economies": [
+        {
+          "name": "Industrial",
+          "share": 12.0
+        },
+        {
+          "name": "Refinery",
+          "share": 88.0
+        }
+      ],
+      "government": "Cooperative",
+      "has_large_pad": false,
+      "has_market": true,
+      "has_outfitting": true,
+      "has_shipyard": true,
+      "id": "9300000002",
+      "is_planetary": false,
+      "large_pads": 0,
+      "market_id": 9300000002,
+      "market_updated_at": "2026-10-18T12:00:00Z",
+      "material_trader": "Manufactured",
+      "medium_pads": 2,
+      "name": "Puesto Inventado",
+      "outfitting_updated_at": "2026-10-18T12:00:00Z",
+      "primary_economy": "Refinery",
+      "secondary_economy": "Industrial",
+      "shipyard_updated_at": "2026-10-18T12:00:00Z",
+      "small_pads": 3,
+      "state": "DamagedHuman",
+      "system_controlling_power": null,
+      "system_id64": 9000000000002,
+      "system_is_being_colonised": false,
+      "system_is_colonised": false,
+      "system_name": "Testia Beta",
+      "system_population": 3608745,
+      "system_power_state": null,
+      "system_primary_economy": "Refinery",
+      "system_secondary_economy": "Industrial",
+      "system_x": 0.5,
+      "system_y": 1.0,
+      "system_z": -0.5,
+      "type": "Outpost",
+      "updated_at": "2026-10-18T12:00:00Z",
+      "services": [
+        {
+          "name": "Dock"
+        },
+        {
+          "name": "Market"
+        },
+        {
+          "name": "Material Trader"
+        }
+      ]
+    },
+    {
+      "controlling_minor_faction": "Faccion Inventada",
+      "controlling_minor_faction_influence": 0.433433,
+      "controlling_minor_faction_state": "Boom",
+      "distance": 14.7,
+      "distance_to_arrival": 1200.5,
+      "economies": [
+        {
+          "name": "Extraction",
+          "share": 24.0
+        },
+        {
+          "name": "Refinery",
+          "share": 76.0
+        }
+      ],
+      "government": "Dictatorship",
+      "has_large_pad": true,
+      "has_market": true,
+      "has_outfitting": true,
+      "has_shipyard": true,
+      "id": "9300000003",
+      "is_planetary": false,
+      "large_pads": 4,
+      "market_id": 9300000003,
+      "market_updated_at": "2026-10-18T12:00:00Z",
+      "material_trader": "Encoded",
+      "medium_pads": 8,
+      "name": "Base de Prueba",
+      "outfitting_updated_at": "2026-10-18T12:00:00Z",
+      "primary_economy": "Refinery",
+      "secondary_economy": "Extraction",
+      "shipyard_updated_at": "2026-10-18T12:00:00Z",
+      "small_pads": 6,
+      "state": "DamagedHuman",
+      "system_controlling_power": null,
+      "system_id64": 9000000000003,
+      "system_is_being_colonised": false,
+      "system_is_colonised": false,
+      "system_name": "Testia Gamma",
+      "system_population": 5035423,
+      "system_power_state": null,
+      "system_primary_economy": "Refinery",
+      "system_secondary_economy": "Extraction",
+      "system_x": 1.0,
+      "system_y": 1.0,
+      "system_z": -0.5,
+      "type": "Coriolis Starport",
+      "updated_at": "2026-10-18T12:00:00Z",
+      "services": [
+        {
+          "name": "Dock"
+        },
+        {
+          "name": "Market"
+        },
+        {
+          "name": "Material Trader"
+        }
+      ]
+    }
+  ],
+  "search_reference": "ficticio"
+}

@@ -603,6 +603,29 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn watcher_emits_ship_locker_companion_after_trigger_event() {
+        let dir = tempdir().unwrap();
+        fs::write(
+            dir.path().join("ShipLocker.json"),
+            r#"{"Items":[{"Name":"healthpack","OwnerID":0,"Count":2}],"Components":[],"Consumables":[],"Data":[]}"#,
+        )
+        .unwrap();
+        fs::write(
+            dir.path().join(A),
+            "{\"timestamp\":\"2026-10-17T18:00:00Z\",\"event\":\"ShipLocker\"}\n",
+        )
+        .unwrap();
+        let (mut rx, handle) = start(dir.path());
+        assert_eq!(journal(&mut rx).await.0, "ShipLocker");
+        assert!(matches!(
+            next(&mut rx).await,
+            SourceEvent::Companion(CompanionFile::Raw(CompanionKind::ShipLocker, v))
+                if v["Items"][0]["Count"] == 2
+        ));
+        stop(rx, handle).await;
+    }
+
+    #[tokio::test]
     async fn invalid_line_is_skipped_not_fatal() {
         let dir = tempdir().unwrap();
         fs::write(dir.path().join(A), format!("{{broken\n{}", line(2))).unwrap();
