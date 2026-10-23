@@ -56,6 +56,7 @@
     colonisation: '🏗️',
     powerplay: '👑',
     bgs: '🌐',
+    accounts: '📡',
   };
 </script>
 

@@ -40,6 +40,14 @@ pub trait Transport: Send + Sync {
     fn post_json(&self, _url: &str, _body: &str) -> BoxFut<'_, Result<HttpReply, TransportError>> {
         Box::pin(async { Err(TransportError::Connect("post_json no soportado".into())) })
     }
+    /// GET con cabecera `Authorization: Bearer <token>`.
+    fn get_with_auth(
+        &self,
+        _url: &str,
+        _token: &str,
+    ) -> BoxFut<'_, Result<HttpReply, TransportError>> {
+        Box::pin(async { Err(TransportError::Connect("get_with_auth no soportado".into())) })
+    }
 }
 
 const TIMEOUT: Duration = Duration::from_secs(5);
@@ -105,6 +113,18 @@ impl Transport for ReqwestTransport {
             .post(url)
             .header(reqwest::header::CONTENT_TYPE, "application/json")
             .body(body.to_owned());
+        Box::pin(finish(req))
+    }
+
+    fn get_with_auth(
+        &self,
+        url: &str,
+        token: &str,
+    ) -> BoxFut<'_, Result<HttpReply, TransportError>> {
+        let req = self
+            .client
+            .get(url)
+            .header(reqwest::header::AUTHORIZATION, format!("Bearer {token}"));
         Box::pin(finish(req))
     }
 }

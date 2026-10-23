@@ -66,6 +66,16 @@ pub trait ActionHost: Send + Sync + 'static {
     fn put_config(&self, _v: Value) -> Result<Value, ActionError> {
         Err(ActionError::NotFound)
     }
+
+    /// Inicia el flujo OAuth2 PKCE devolviendo la URL de login y el estado generado.
+    fn frontier_login_url(&self, _redirect_uri: &str) -> ActionFut {
+        Box::pin(async { Err(ActionError::NotFound) })
+    }
+
+    /// Canjea el código de autorización de Frontier OAuth2 por credenciales persistentes.
+    fn frontier_exchange_code(&self, _code: &str, _state: &str, _redirect_uri: &str) -> ActionFut {
+        Box::pin(async { Err(ActionError::NotFound) })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -184,6 +194,14 @@ pub fn build_router(
         .route(
             "/api/engineering/flow",
             axum::routing::get(rest::get_engineering_flow),
+        )
+        .route(
+            "/api/auth/frontier/login",
+            axum::routing::get(rest::get_frontier_login),
+        )
+        .route(
+            "/api/auth/frontier/callback",
+            axum::routing::get(rest::get_frontier_callback),
         )
         .route("/api/pairing", axum::routing::get(pairing::get_pairing))
         .fallback(axum::routing::get(assets::serve_asset))

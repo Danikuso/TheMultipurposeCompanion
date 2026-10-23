@@ -433,4 +433,10 @@ Versión 1, licencia de datos propios del proyecto **PolyForm Noncommercial 1.0.
 - Licencia: **MIT** (Copyright (c) 2015 Eric "SpyTec" Gustavsson y colaboradores de EDAssets).
 - Usada por: `ui/src/assets/icons/` (vectores SVG comunitarios y del juego para Potencias de Powerplay, Superpotencias, Fabricantes de naves, Estaciones, Grados de ingeniería e Iconos de navegación). Uso legítimo no comercial de ayuda en cabina conforme a la política de Frontier Developments.
 
+### sha2
+- Versión: 0.10.9
+- Licencia: MIT OR Apache-2.0
+- Usada por: `tmc-net` (seudonimización determinista e irreversible de `uploaderID` para envíos a EDDN y generación de PKCE para CAPI)
+
+
 
