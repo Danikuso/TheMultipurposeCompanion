@@ -33,6 +33,7 @@ macro_rules! decide_if {
 }
 
 pub mod carrier;
+pub mod colonisation;
 pub mod combat;
 pub mod dashboard;
 pub mod data;
