@@ -8,6 +8,7 @@ pub mod canonn;
 pub mod client;
 pub mod eddn_sender;
 pub mod edsm;
+pub mod edsm_sync;
 pub mod health;
 mod jsonx;
 pub mod limiter;
