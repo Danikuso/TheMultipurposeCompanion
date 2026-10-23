@@ -1,0 +1,15 @@
+nav-powerplay = Powerplay 2.0
+panel-powerplay-status = Powerplay-Status
+panel-powerplay-session = Verdienste der Sitzung
+powerplay-pledged-to = Eingeschworen auf
+powerplay-rank = Rang
+powerplay-merits = Gesammelte Verdienste
+powerplay-next-rank = Nächster Rang
+powerplay-merits-needed = Verbleibende Verdienste
+powerplay-rank-progress = Rangfortschritt
+powerplay-time-pledged = Wochen der Treue
+powerplay-session-merits = In dieser Sitzung erzielt
+powerplay-merits-rate = Verdienste/Stunde-Rate
+powerplay-cycle-ends = Ende des wöchentlichen Zyklus
+powerplay-cycle-thursday = Donnerstags 07:00 UTC
+powerplay-no-pledge = Keiner Macht angeschlossen
