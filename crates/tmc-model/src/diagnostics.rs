@@ -240,6 +240,14 @@ const TOPICS: &[&str] = &[
     "engineering.goals",
     "engineering.sources",
     "engineering.alerts",
+    "carrier.overview",
+    "carrier.jump",
+    "carrier.finances",
+    "colonisation.depot",
+    "powerplay.status",
+    "powerplay.session",
+    "bgs.system",
+    "bgs.tick",
 ];
 const MODULES: &[&str] = &[
     "dashboard",
@@ -251,6 +259,10 @@ const MODULES: &[&str] = &[
     "trade",
     "missions",
     "engineering",
+    "carrier",
+    "colonisation",
+    "powerplay",
+    "bgs",
 ];
 const ACTIONS: &[&str] = &[
     "clipboard.copy-next-system",
@@ -743,7 +755,12 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
         "module" => registered(text, MODULES) != REDACTED,
         "action" => registered(text, ACTIONS) != REDACTED,
         "event" => registered(text, EVENTS) != REDACTED,
-        "source" | "provider" => matches!(text, "Spansh" | "Edsm" | "Canonn" | "Ardent" | "Cache"),
+        "source" | "provider" => {
+            matches!(
+                text,
+                "Spansh" | "Edsm" | "Canonn" | "Ardent" | "Cache" | "Edcd"
+            )
+        }
         "endpoint" => {
             matches!(
                 context,
@@ -754,6 +771,7 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
                     | "spansh.route.job"
                     | "spansh.route.results"
                     | "spansh.autocomplete"
+                    | "edcd.ticks"
                     | "edsm.system"
                     | "canonn.codex_ref"
                     | "canonn.system_poi"

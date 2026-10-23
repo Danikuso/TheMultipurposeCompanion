@@ -4,10 +4,11 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 /// Semáforo de salud financiera y semanas de mantenimiento cubiertas.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MaintenanceHealth {
     /// Seguro: más de 4 semanas de mantenimiento cubiertas en el saldo disponible.
+    #[default]
     Safe,
     /// Advertencia: entre 2 y 4 semanas de mantenimiento cubiertas.
     Warning,
@@ -114,6 +115,34 @@ pub struct CarrierStats {
     pub module_packs: Vec<CarrierPack>,
 }
 
+impl CarrierStats {
+    /// Estima el coste semanal total de mantenimiento sumando el coste base del carrier (5M Cr)
+    /// y el mantenimiento de cada servicio de tripulación activo instalado.
+    #[must_use]
+    pub fn estimated_weekly_upkeep(&self) -> i64 {
+        let mut total = 5_000_000i64;
+        for c in &self.crew {
+            if c.activated {
+                let cost = match c.crew_role.to_lowercase().as_str() {
+                    "refuel" | "refuelling" => 40_000,
+                    "repair" => 40_000,
+                    "rearm" | "armory" => 50_000,
+                    "shipyard" => 6_500_000,
+                    "outfitting" => 5_000_000,
+                    "universalcartographics" | "exploration" => 1_800_000,
+                    "vistagenomics" | "genomics" => 1_500_000,
+                    "pioneersupplies" => 1_500_000,
+                    "bartender" => 1_250_000,
+                    "securetrading" | "blackmarket" => 2_000_000,
+                    _ => 100_000,
+                };
+                total += cost;
+            }
+        }
+        total
+    }
+}
+
 impl Default for CarrierStats {
     fn default() -> Self {
         Self {
@@ -183,6 +212,36 @@ pub struct CarrierFinance {
     pub tax_rate_refuel: Option<u8>,
     #[serde(rename = "TaxRate_repair")]
     pub tax_rate_repair: Option<u8>,
+}
+
+impl CarrierFinance {
+    /// Calcula las semanas de mantenimiento que cubre el saldo disponible dado un coste semanal estimado.
+    #[must_use]
+    pub fn weeks_covered(&self, weekly_upkeep: i64) -> f64 {
+        if weekly_upkeep <= 0 {
+            return 999.0;
+        }
+        if self.carrier_balance <= 0 {
+            return 0.0;
+        }
+        self.carrier_balance as f64 / weekly_upkeep as f64
+    }
+
+    /// Evalúa el semáforo de salud según las semanas cubiertas:
+    /// - > 4.0 semanas: `Safe`
+    /// - 2.0 ..= 4.0 semanas: `Warning`
+    /// - < 2.0 semanas: `Critical`
+    #[must_use]
+    pub fn health(&self, weekly_upkeep: i64) -> MaintenanceHealth {
+        let weeks = self.weeks_covered(weekly_upkeep);
+        if weeks > 4.0 {
+            MaintenanceHealth::Safe
+        } else if weeks >= 2.0 {
+            MaintenanceHealth::Warning
+        } else {
+            MaintenanceHealth::Critical
+        }
+    }
 }
 
 /// Evento del diario: `CarrierDecommission` cuando se programa la venta/desguace del carrier.
