@@ -24,6 +24,7 @@ pub enum CacheKind {
     SpanshTrade,
     ArdentExports,
     SystemCoords,
+    BgsTick,
 }
 
 pub fn ttl_for(kind: CacheKind) -> TtlPolicy {
@@ -58,6 +59,11 @@ pub fn ttl_for(kind: CacheKind) -> TtlPolicy {
         CacheKind::SystemCoords => TtlPolicy {
             fresh: secs(30 * 24),
             max_stale: secs(30 * 24),
+        },
+        // Tick de BGS: fresco 30 min, utilizable hasta 60 min.
+        CacheKind::BgsTick => TtlPolicy {
+            fresh: Duration::from_secs(30 * 60),
+            max_stale: Duration::from_secs(60 * 60),
         },
     }
 }
@@ -134,6 +140,7 @@ pub fn cache_keys(q: &NetQuery) -> Vec<(CacheKind, String)> {
             CacheKind::SystemCoords,
             format!("coords:{}", name.trim().to_lowercase()),
         )],
+        NetQuery::BgsTick => vec![(CacheKind::BgsTick, "edcd:bgs_tick".to_string())],
         NetQuery::CommodityImportsNearby {
             system_address,
             commodity,
