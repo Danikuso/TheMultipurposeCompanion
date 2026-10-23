@@ -372,7 +372,7 @@ impl ActionHost for AppActions {
     }
 }
 
-const MODULE_PREFIXES: [&str; 8] = [
+const MODULE_PREFIXES: [&str; 12] = [
     "navigation.",
     "exploration.",
     "exobiology.",
@@ -381,6 +381,10 @@ const MODULE_PREFIXES: [&str; 8] = [
     "trade.",
     "missions.",
     "engineering.",
+    "carrier.",
+    "colonisation.",
+    "powerplay.",
+    "bgs.",
 ];
 
 #[cfg(test)]
