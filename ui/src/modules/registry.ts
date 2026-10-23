@@ -8,6 +8,7 @@ import { miningPanels } from './mining';
 import { tradePanels } from './trade';
 import { missionsPanels } from './missions';
 import { engineeringPanels } from './engineering';
+import { carrierPanels } from './carrier';
 
 export interface UiModuleDef {
   id: string;
@@ -65,5 +66,11 @@ export const modules: UiModuleDef[] = [
     icon: 'clipboard-list',
     titleKey: 'nav-missions',
     panels: missionsPanels,
+  },
+  {
+    id: 'carrier',
+    icon: 'anchor',
+    titleKey: 'nav-carrier',
+    panels: carrierPanels,
   },
 ];
