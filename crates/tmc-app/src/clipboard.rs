@@ -119,6 +119,7 @@ pub struct AppActions {
     runtime: Option<Runtime>,
     save_path: Option<PathBuf>,
     settings_watch: Option<tokio::sync::watch::Sender<tmc_model::settings::ModuleSettings>>,
+    capi_service: Option<Arc<crate::capi_service::CapiService>>,
 }
 
 impl AppActions {
@@ -138,6 +139,7 @@ impl AppActions {
             runtime: None,
             save_path: None,
             settings_watch: None,
+            capi_service: None,
         }
     }
 
@@ -148,6 +150,7 @@ impl AppActions {
             runtime: None,
             save_path: None,
             settings_watch: None,
+            capi_service: None,
         }
     }
 
@@ -178,6 +181,15 @@ impl AppActions {
     /// Guarda la configuración en `path` en vez de en la ruta de usuario (tests).
     pub fn with_save_path(mut self, path: PathBuf) -> Self {
         self.save_path = Some(path);
+        self
+    }
+
+    /// Conecta el servicio de autenticación y flota de Frontier CAPI.
+    pub fn with_capi_service(
+        mut self,
+        capi_service: Arc<crate::capi_service::CapiService>,
+    ) -> Self {
+        self.capi_service = Some(capi_service);
         self
     }
 
@@ -311,6 +323,12 @@ impl ActionHost for AppActions {
                 self.clipboard.set_text(next).map_err(ActionError::Failed)?;
                 Ok(json!({ "system": next }))
             }
+            "frontier.logout" => {
+                let capi = self.capi_service.as_ref().ok_or(ActionError::NotFound)?;
+                capi.clear_session()
+                    .map_err(|e| ActionError::Failed(e.to_string()))?;
+                Ok(json!({ "ok": true }))
+            }
             _ => Err(ActionError::NotFound),
         }
     }
@@ -321,6 +339,24 @@ impl ActionHost for AppActions {
         args: &Value,
         snapshot: &BTreeMap<String, Value>,
     ) -> Result<Value, ActionError> {
+        match name {
+            "frontier.login" => {
+                let redirect_uri = args
+                    .get("redirect_uri")
+                    .and_then(|u| u.as_str())
+                    .unwrap_or("http://localhost:47320/api/auth/frontier/callback");
+                let capi = self.capi_service.as_ref().ok_or(ActionError::NotFound)?;
+                let (url, state) = capi.start_login(redirect_uri);
+                return Ok(json!({ "url": url, "state": state }));
+            }
+            "frontier.logout" => {
+                let capi = self.capi_service.as_ref().ok_or(ActionError::NotFound)?;
+                capi.clear_session()
+                    .map_err(|e| ActionError::Failed(e.to_string()))?;
+                return Ok(json!({ "ok": true }));
+            }
+            _ => {}
+        }
         if !MODULE_PREFIXES.iter().any(|p| name.starts_with(p)) {
             return self.run_action(name, snapshot);
         }
@@ -370,9 +406,42 @@ impl ActionHost for AppActions {
     fn put_config(&self, v: Value) -> Result<Value, ActionError> {
         ConfigHost::put_config(self, v)
     }
+
+    fn frontier_login_url(&self, redirect_uri: &str) -> ActionFut {
+        let capi = self.capi_service.clone();
+        let redirect_uri = redirect_uri.to_owned();
+        Box::pin(async move {
+            let Some(capi) = capi else {
+                return Err(ActionError::NotFound);
+            };
+            let (url, state) = capi.start_login(&redirect_uri);
+            Ok(json!({ "url": url, "state": state }))
+        })
+    }
+
+    fn frontier_exchange_code(&self, code: &str, state: &str, redirect_uri: &str) -> ActionFut {
+        let capi = self.capi_service.clone();
+        let code = code.to_owned();
+        let state = state.to_owned();
+        let redirect_uri = redirect_uri.to_owned();
+        Box::pin(async move {
+            let Some(capi) = capi else {
+                return Err(ActionError::NotFound);
+            };
+            let token = capi
+                .handle_callback(&code, &state, &redirect_uri)
+                .await
+                .map_err(|e| ActionError::Failed(e.to_string()))?;
+            Ok(json!({
+                "ok": true,
+                "token_type": token.token_type,
+                "expires_in": token.expires_in,
+            }))
+        })
+    }
 }
 
-const MODULE_PREFIXES: [&str; 12] = [
+const MODULE_PREFIXES: [&str; 13] = [
     "navigation.",
     "exploration.",
     "exobiology.",
@@ -385,6 +454,7 @@ const MODULE_PREFIXES: [&str; 12] = [
     "colonisation.",
     "powerplay.",
     "bgs.",
+    "accounts.",
 ];
 
 #[cfg(test)]

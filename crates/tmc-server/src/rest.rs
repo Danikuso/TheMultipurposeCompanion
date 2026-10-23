@@ -277,3 +277,230 @@ pub(crate) async fn no_store_engineering_pages(
     }
     response
 }
+
+#[derive(Debug, Deserialize, Default)]
+pub struct FrontierLoginQuery {
+    pub redirect: Option<bool>,
+}
+
+pub async fn get_frontier_login(
+    State(state): State<AppState>,
+    Query(query): Query<FrontierLoginQuery>,
+    headers: axum::http::HeaderMap,
+) -> Response {
+    let port = state.port;
+    let redirect_uri = format!("http://localhost:{port}/api/auth/frontier/callback");
+    match state.host.frontier_login_url(&redirect_uri).await {
+        Ok(v) => {
+            let auth_url = v
+                .get("url")
+                .and_then(|u| u.as_str())
+                .unwrap_or_default()
+                .to_owned();
+            let wants_json = query.redirect == Some(false)
+                || headers
+                    .get(axum::http::header::ACCEPT)
+                    .and_then(|a| a.to_str().ok())
+                    .is_some_and(|a| a.contains("application/json"));
+            if wants_json {
+                Json(v).into_response()
+            } else {
+                axum::response::Redirect::temporary(&auth_url).into_response()
+            }
+        }
+        Err(e) => {
+            let (status, msg) = match e {
+                ActionError::NotFound => (StatusCode::NOT_FOUND, "frontier-auth-not-supported"),
+                ActionError::Failed(ref m) => (StatusCode::BAD_REQUEST, m.as_str()),
+            };
+            (status, Json(json!({ "error": msg }))).into_response()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct FrontierCallbackParams {
+    pub code: Option<String>,
+    pub state: Option<String>,
+    pub error: Option<String>,
+    pub error_description: Option<String>,
+}
+
+pub async fn get_frontier_callback(
+    State(state): State<AppState>,
+    Query(params): Query<FrontierCallbackParams>,
+    headers: axum::http::HeaderMap,
+) -> Response {
+    let wants_json = headers
+        .get(axum::http::header::ACCEPT)
+        .and_then(|a| a.to_str().ok())
+        .is_some_and(|a| a.contains("application/json"));
+
+    if let Some(err) = params.error {
+        let desc = params.error_description.unwrap_or(err);
+        if wants_json {
+            return (StatusCode::BAD_REQUEST, Json(json!({ "error": desc }))).into_response();
+        }
+        return render_oauth_html_response(false, &format!("Error de autenticación: {desc}"));
+    }
+
+    let (Some(code), Some(auth_state)) = (params.code, params.state) else {
+        if wants_json {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "missing-code-or-state" })),
+            )
+                .into_response();
+        }
+        return render_oauth_html_response(
+            false,
+            "Parámetros requeridos ausentes en la respuesta de Frontier.",
+        );
+    };
+
+    let redirect_uri = format!("http://localhost:{}/api/auth/frontier/callback", state.port);
+    match state
+        .host
+        .frontier_exchange_code(&code, &auth_state, &redirect_uri)
+        .await
+    {
+        Ok(res) => {
+            if wants_json {
+                Json(res).into_response()
+            } else {
+                render_oauth_html_response(
+                    true,
+                    "Tu cuenta de Frontier Store ha sido vinculada con éxito. Ya puedes cerrar esta ventana y regresar a TMC.",
+                )
+            }
+        }
+        Err(e) => {
+            let msg = match e {
+                ActionError::Failed(m) => m,
+                ActionError::NotFound => "Servicio CAPI no configurado".to_string(),
+            };
+            if wants_json {
+                (StatusCode::BAD_REQUEST, Json(json!({ "error": msg }))).into_response()
+            } else {
+                render_oauth_html_response(
+                    false,
+                    &format!("No se pudo completar la vinculación: {msg}"),
+                )
+            }
+        }
+    }
+}
+
+fn render_oauth_html_response(success: bool, message: &str) -> Response {
+    let title = if success {
+        "TMC — Frontier Store Conectado"
+    } else {
+        "TMC — Error de Vinculación"
+    };
+    let accent_color = if success { "#00d4b2" } else { "#ff6644" };
+    let icon = if success { "✓" } else { "✕" };
+    let subtitle = if success {
+        "VINCULACIÓN EXITOSA"
+    } else {
+        "ERROR DE AUTENTICACIÓN"
+    };
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{title}</title>
+    <style>
+        :root {{
+            --bg: #080c10;
+            --surface: rgba(14, 22, 33, 0.85);
+            --border: rgba(0, 212, 178, 0.25);
+            --text-main: #e6f1ff;
+            --text-dim: #7e9bb5;
+            --accent: {accent_color};
+        }}
+        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+        body {{
+            background: var(--bg);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }}
+        .card {{
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 32px 40px;
+            max-width: 480px;
+            text-align: center;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(12px);
+        }}
+        .icon {{
+            font-size: 48px;
+            color: var(--accent);
+            margin-bottom: 16px;
+            line-height: 1;
+        }}
+        .badge {{
+            display: inline-block;
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }}
+        h1 {{
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-main);
+        }}
+        p {{
+            font-size: 14px;
+            color: var(--text-dim);
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }}
+        .footer {{
+            font-size: 12px;
+            color: #4f6b85;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding-top: 16px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">{icon}</div>
+        <div class="badge">{subtitle}</div>
+        <h1>{title}</h1>
+        <p>{message}</p>
+        <div class="footer">The Multipurpose Companion · Elite Dangerous</div>
+    </div>
+</body>
+</html>"#
+    );
+
+    let status = if success {
+        StatusCode::OK
+    } else {
+        StatusCode::BAD_REQUEST
+    };
+    (
+        status,
+        [(axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8")],
+        html,
+    )
+        .into_response()
+}
