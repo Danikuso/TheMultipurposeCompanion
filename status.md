@@ -2,17 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-23 01:30 (Europe/Madrid) · Antigravity
-- **Fase actual:** F4 — Ingenieros y materiales (✅ completada; Rediseño global de la interfaz «TMC Glass HUD» 100% completado en sus 10 tareas; guía de diseño formalizada en `docs/design-system-glass-hud.md`; filosofía de AYUDANTE fijada en `AGENTS.md` §0; guía de desbloqueo en `EngineerFlow.svelte`; 378/378 Vitest PASS, svelte-check 0 errores, cargo test workspace PASS, binario debug `TMC.exe` actualizado con assets embebidos).
-- **Spec activa:** [`docs/specs/2026-10-22-tmc-ui-rediseno-global-design.md`](docs/specs/2026-10-22-tmc-ui-rediseno-global-design.md) — Rediseño global de interfaz «TMC Glass HUD»; base F4: [`docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md`](docs/specs/2026-10-21-tmc-f4-ingenieros-materiales-design.md).
-- **Plan activo:** [`docs/plans/2026-10-22-tmc-ui-rediseno-global.md`](docs/plans/2026-10-22-tmc-ui-rediseno-global.md) — 10 tareas en 5 bloques (todas completadas).
-- **Rama de trabajo:** `fase/f4-ingenieros-materiales`
+- **Última actualización:** 2026-10-23 09:55 (Europe/Madrid) · Antigravity
+- **Fase actual:** F5 — Fleet Carrier, Colonización, Powerplay 2.0 y BGS (activa; F4 fusionada formalmente en `main`; spec de diseño redactada en `docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md`; pendiente de aprobación del propietario para derivar el plan).
+- **Spec activa:** [`docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md`](docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md) — Fleet Carrier, Colonización, Powerplay 2.0 y BGS.
+- **Plan activo:** Pendiente de aprobación de la spec de F5.
+- **Rama de trabajo:** `fase/f5-carrier-colonizacion-powerplay`
 
 ## Puntero actual
 
-- **Tarea:** Verificación integral, cierre del plan de rediseño visual global y preparación del ejecutable para pruebas en vuelo.
-- **Último paso completado:** Ejecutadas de corrido las 10 tareas del plan de rediseño global (`docs/plans/2026-10-22-tmc-ui-rediseno-global.md`): tokens CSS y glass HUD en base/shell, navegación/exploración/exobiología, combate/minería, comercio/misiones/pasajeros, y verificación global (378/378 Vitest en verde, svelte-check 0 errores, 100% Rust workspace tests pasando, `npm run build` y `cargo build -p tmc-desktop` completados con `TMC.exe` fresco).
-- **Siguiente acción:** Informar al propietario y lanzar el ejecutable debug para pruebas con el simulador abierto.
+- **Tarea:** Revisión y aprobación de la especificación de diseño de F5 por el propietario.
+- **Último paso completado:** F4 fusionada en `main` con `--no-ff`. Creada la rama de trabajo `fase/f5-carrier-colonizacion-powerplay`. Redactada la especificación completa de diseño de F5 ([`docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md`](docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md)) abarcando Fleet Carrier (saltos, tritio, finanzas y mantenimiento semanal), Colonización (progreso de obra, compras y viajes restantes), Powerplay 2.0 (méritos de sesión, rango y ventajas), BGS (facciones locales y tick diario con `tick.edcd.io`) y soporte a pie (Odyssey).
+- **Siguiente acción:** Aprobación del propietario de la spec de F5 para redactar el plan de tareas TDD en `docs/plans/`.
 
 ## Rediseño visual global de TMC («TMC Glass HUD»)
 
@@ -117,8 +117,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | F1 | Navegación, exploración, exobiología | ✅ completada y fusionada (b96fecf) |
 | F2 | Cazarrecompensas/combate (incl. AX), minería | ✅ completada y fusionada (e069a14) |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ✅ completada y fusionada (6dc09d9) |
-| F4 | Ingenieros y materiales | ✅ completada (pendiente de merge) |
-| F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | ⬜ |
+| F4 | Ingenieros y materiales | ✅ completada y fusionada en main |
+| F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | 🔄 en propuesta de spec |
 | F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | ⬜ |
 | F7 | Voz (KokoroTTS; alemán sin voz) | ⬜ |
 | F8 | Overlay ligero e integrado | ⬜ |
@@ -351,6 +351,12 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-23 09:55 (Europe/Madrid) · Antigravity · Fusión formal de F4 en `main`, inicio de F5 y redacción de su especificación:
+  - `fase/f4-ingenieros-materiales` fusionada en `main` con `--no-ff` tras completarse íntegramente las 28 tareas de F4, el catálogo extendido C0-C10, y el rediseño global «TMC Glass HUD» con 100% de tests en verde.
+  - Creada la rama de trabajo `fase/f5-carrier-colonizacion-powerplay`.
+  - Redactada la especificación de diseño: `docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md`, abarcando Fleet Carrier (saltos, tritio, finanzas y mantenimiento semanal), Colonización (progreso de obra, compras y viajes restantes), Powerplay 2.0 (méritos de sesión, rango y ventajas), BGS (facciones locales y tick diario con `tick.edcd.io`) y soporte a pie (Odyssey).
+  - Siguiente: Aprobación del propietario para desglosar el plan de ejecución TDD de F5.
 
 - 2026-10-23 01:30 (Europe/Madrid) · Antigravity · Ejecución completa y de corrido del Plan de Rediseño Visual Global de TMC («TMC Glass HUD»):
   - Sistema de diseño normativo redactado y commiteado en `docs/design-system-glass-hud.md` (`ea5f3b7`), vinculado normativamente en `AGENTS.md` §0.
