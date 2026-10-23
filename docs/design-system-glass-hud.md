@@ -140,6 +140,17 @@ Estructura obligatoria cuando se requiere desbloquear prerrequisitos antes de ac
 3. Stepper de pasos de desbloqueo ordenados (1. Descubrimiento, 2. Invitación, 3. Tarea/Donación).
 4. Sección de recursos o materiales requeridos **tras** el desbloqueo.
 
+### 4.8 Tarjetas Compactas, Desplegables y Acordeones por Defecto (`.compact-by-default`, `.glass-select`)
+**Principio del Espacio Vital en Cabina:** En la cabina de un comandante, el espacio vertical es un recurso crítico. Queda expresamente prohibido presentar por defecto listas kilométricas de decenas de filas o tarjetas extendidas que obliguen a hacer scroll continuo o desplacen herramientas esenciales:
+1. **Selector Desplegable por Defecto (`<select class="glass-select">`):**
+   - Cuando un panel gestiona colecciones de elementos seleccionables (módulos de nave, flota remota, objetivos de misión, materias primas), la selección primaria se realiza mediante un desplegable compacto o chips de selección rápida.
+   - El elemento seleccionado se resume inmediatamente en una **Tarjeta Activa Compacta** que muestra solo la información crítica de cabina.
+2. **Acordeón Colapsado por Defecto:**
+   - Para comandantes que deseen una inspección tabular completa o panorámica, se proporciona un botón de alternancia o acordeón (`[ ▼ Ver lista completa ({total}) / ▲ Ocultar lista ]`).
+   - El acordeón debe iniciar **siempre en estado colapsado** (`expanded = false`).
+3. **Filtrado Estricto de Elementos Irrelevantes:**
+   - Cualquier elemento que no sea aplicable a la vista o sobre el que no se pueda actuar (por ejemplo, módulos que no admiten ingeniería en el panel de naves) debe ser **completamente excluido** del renderizado para evitar ruido y optimizar el rendimiento.
+
 ---
 
 ## 5. Requisitos Técnicos y Preservación de Contratos
