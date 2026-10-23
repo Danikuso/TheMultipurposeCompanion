@@ -2,10 +2,12 @@
 #![forbid(unsafe_code)]
 
 pub mod carrier;
+pub mod colonisation;
 pub mod companion;
 pub mod events;
 pub mod market;
 pub mod net;
+pub mod powerplay;
 pub mod settings;
 pub mod source;
 pub mod state;

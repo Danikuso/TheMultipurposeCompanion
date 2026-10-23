@@ -5,7 +5,11 @@ use crate::carrier::{
     CarrierBankTransfer, CarrierCrewServices, CarrierDecommission, CarrierDepositFuel,
     CarrierFinance, CarrierJumpCancelled, CarrierJumpRequest, CarrierStats,
 };
+use crate::colonisation::{ColonisationConstructionDepot, ColonisationContribution};
 use crate::net::PadSize;
+use crate::powerplay::{
+    Powerplay, PowerplayDefect, PowerplayJoin, PowerplayLeave, PowerplayMerits, PowerplayVote,
+};
 use chrono::{DateTime, Utc};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -1809,6 +1813,14 @@ pub enum EventKind {
     CarrierDecommission(CarrierDecommission),
     CarrierBankTransfer(CarrierBankTransfer),
     CarrierCrewServices(CarrierCrewServices),
+    ColonisationConstructionDepot(Box<ColonisationConstructionDepot>),
+    ColonisationContribution(ColonisationContribution),
+    Powerplay(Box<Powerplay>),
+    PowerplayMerits(PowerplayMerits),
+    PowerplayVote(PowerplayVote),
+    PowerplayDefect(PowerplayDefect),
+    PowerplayLeave(PowerplayLeave),
+    PowerplayJoin(PowerplayJoin),
     Other,
 }
 
@@ -1950,6 +1962,17 @@ fn classify(name: &str, raw: &RawValue) -> EventKind {
         "CarrierDecommission" => de(name, raw).map(EventKind::CarrierDecommission),
         "CarrierBankTransfer" => de(name, raw).map(EventKind::CarrierBankTransfer),
         "CarrierCrewServices" => de(name, raw).map(EventKind::CarrierCrewServices),
+        "ColonisationConstructionDepot" | "ConstructionDepot" => {
+            de::<ColonisationConstructionDepot>(name, raw)
+                .map(|d| EventKind::ColonisationConstructionDepot(Box::new(d)))
+        }
+        "ColonisationContribution" => de(name, raw).map(EventKind::ColonisationContribution),
+        "Powerplay" => de::<Powerplay>(name, raw).map(|p| EventKind::Powerplay(Box::new(p))),
+        "PowerplayMerits" => de(name, raw).map(EventKind::PowerplayMerits),
+        "PowerplayVote" => de(name, raw).map(EventKind::PowerplayVote),
+        "PowerplayDefect" => de(name, raw).map(EventKind::PowerplayDefect),
+        "PowerplayLeave" => de(name, raw).map(EventKind::PowerplayLeave),
+        "PowerplayJoin" => de(name, raw).map(EventKind::PowerplayJoin),
         _ => None,
     };
     kind.unwrap_or(EventKind::Other)
@@ -2067,6 +2090,76 @@ mod tests {
                 assert_eq!(c.crew_name.as_deref(), Some("Elena Vance"));
             }
             other => panic!("esperado CarrierCrewServices, recibido {:?}", other),
+        }
+    }
+
+    #[test]
+    fn colonisation_and_powerplay_events_classify_correctly() {
+        let depot_line = r#"{"timestamp":"2026-04-10T21:00:00Z","event":"ColonisationConstructionDepot","MarketID":3800000000,"StationName":"Outpost Beta","ConstructionProgress":0.75,"ResourcesRequired":[{"Name":"titanium","RequiredAmount":1000,"ProvidedAmount":750}]}"#;
+        match kind(depot_line) {
+            EventKind::ColonisationConstructionDepot(d) => {
+                assert_eq!(d.market_id, Some(3800000000));
+                assert_eq!(d.station_name.as_deref(), Some("Outpost Beta"));
+                assert_eq!(d.construction_progress, 0.75);
+                assert_eq!(d.resources_required.len(), 1);
+                assert_eq!(d.total_remaining_tonnes(), 250);
+            }
+            other => panic!(
+                "esperado ColonisationConstructionDepot, recibido {:?}",
+                other
+            ),
+        }
+
+        let contrib_line = r#"{"timestamp":"2026-04-10T21:05:00Z","event":"ColonisationContribution","MarketID":3800000000,"Commodity":"titanium","Amount":250,"RewardCredits":500000}"#;
+        match kind(contrib_line) {
+            EventKind::ColonisationContribution(c) => {
+                assert_eq!(c.market_id, Some(3800000000));
+                assert_eq!(c.commodity, "titanium");
+                assert_eq!(c.amount, 250);
+                assert_eq!(c.reward_credits, Some(500000));
+            }
+            other => panic!("esperado ColonisationContribution, recibido {:?}", other),
+        }
+
+        let pp_line = r#"{"timestamp":"2026-04-10T21:10:00Z","event":"Powerplay","Power":"Aisling Duval","Rank":4,"Merits":9420,"TimePledged":8467200}"#;
+        match kind(pp_line) {
+            EventKind::Powerplay(p) => {
+                assert_eq!(p.power, "Aisling Duval");
+                assert_eq!(p.rank, 4);
+                assert_eq!(p.merits, 9420);
+                assert_eq!(p.weeks_pledged(), 14);
+            }
+            other => panic!("esperado Powerplay, recibido {:?}", other),
+        }
+
+        let merits_line = r#"{"timestamp":"2026-04-10T21:15:00Z","event":"PowerplayMerits","Power":"Aisling Duval","MeritsEarned":200,"TotalMerits":9620,"Activity":"Combat"}"#;
+        match kind(merits_line) {
+            EventKind::PowerplayMerits(m) => {
+                assert_eq!(m.power, "Aisling Duval");
+                assert_eq!(m.merits_earned, 200);
+                assert_eq!(m.total_merits, 9620);
+                assert_eq!(m.activity.as_deref(), Some("Combat"));
+            }
+            other => panic!("esperado PowerplayMerits, recibido {:?}", other),
+        }
+
+        let vote_line = r#"{"timestamp":"2026-04-10T21:20:00Z","event":"PowerplayVote","Power":"Aisling Duval","Votes":5,"System":"Cubeo"}"#;
+        match kind(vote_line) {
+            EventKind::PowerplayVote(v) => {
+                assert_eq!(v.power, "Aisling Duval");
+                assert_eq!(v.votes, 5);
+                assert_eq!(v.system, "Cubeo");
+            }
+            other => panic!("esperado PowerplayVote, recibido {:?}", other),
+        }
+
+        let defect_line = r#"{"timestamp":"2026-04-10T21:25:00Z","event":"PowerplayDefect","FromPower":"Zachary Hudson","ToPower":"Aisling Duval"}"#;
+        match kind(defect_line) {
+            EventKind::PowerplayDefect(d) => {
+                assert_eq!(d.from_power, "Zachary Hudson");
+                assert_eq!(d.to_power, "Aisling Duval");
+            }
+            other => panic!("esperado PowerplayDefect, recibido {:?}", other),
         }
     }
 
