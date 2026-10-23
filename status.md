@@ -10,9 +10,9 @@
 
 ## Puntero actual
 
-- **Tarea:** Tarea 5 de F5 — Módulo `colonisation` en Rust (`tmc-modules`).
-- **Último paso completado:** Tarea 4 de F5 completada (`d22a65e`): módulo `carrier` en `tmc-modules` con telemetría de ubicación y combustible (depósito + bodega), saltos de 500 al, cuenta atrás de 15 minutos con estados (countingdown, locked, cooldown, idle), semáforo financiero (safe, warning, critical), cálculo del próximo cobro los jueves 07:00 UTC y relevancia reactiva (`Hidden` sin carrier, `Active` a bordo o en salto) (13 tests PASS en `carrier`, 802 tests PASS en `tmc-modules`).
-- **Siguiente acción:** Implementar módulo `colonisation` en `tmc-modules` con topic `colonisation.depot` (progreso de obra, recursos requeridos y entregados, porcentaje completado), viajes restantes según la bodega actual de la nave (`ceil(faltante / capacidad)`) y enlaces de compra cercana.
+- **Tarea:** Tarea 6 de F5 — Módulo `powerplay` en Rust (`tmc-modules`).
+- **Último paso completado:** Tarea 5 de F5 completada (`4c2a185`): módulo `colonisation` en `tmc-modules` con topic `colonisation.depot` (progreso de obra, recursos requeridos y entregados, porcentaje completado), viajes restantes según la bodega actual de la nave (`ceil(faltante / capacidad)`), actualización por entregas (`ColonisationContribution`) y relevancia automática (`Hidden` sin proyecto, `Active` atracado en depósito) (3 tests PASS en `colonisation`, 805 tests PASS en `tmc-modules`).
+- **Siguiente acción:** Implementar módulo `powerplay` en `tmc-modules` con topic `powerplay.status` (potencia, rango 1..100 con la fórmula oficial de Powerplay 2.0 Ascendancy, méritos acumulados, progreso porcentual, lealtad en semanas), topic `powerplay.session` (méritos ganados en la sesión, tasa méritos/hora) y temporizador al tick semanal de los jueves 07:00 UTC.
 
 ## Rediseño visual global de TMC («TMC Glass HUD»)
 
@@ -43,9 +43,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 2 | Tipado de eventos de Colonización y Powerplay 2.0 (`tmc-model`) | ✅ hecha | `ce5da4a` | `ColonisationConstructionDepot`, `Powerplay`, `PowerplayMerits`, viajes |
 | 3 | Cliente para endpoint de tick de BGS (`tmc-net`) | ✅ hecha | `9c0973f` | `https://tick.edcd.io/api/ticks`, caché 30m, degradación offline |
 | 4 | Módulo `carrier` en Rust (`tmc-modules`) | ✅ hecha | `d22a65e` | Telemetría, combustible, saltos de 500 al, cuenta atrás y semáforo financiero |
-| 5 | Módulo `colonisation` en Rust (`tmc-modules`) | 🔄 en curso | — | Depósitos en obra, viajes restantes según bodega y sourcing de compras |
-| 5 | Módulo `colonisation` en Rust (`tmc-modules`) | ⬜ pendiente | — | Depósitos en obra, viajes restantes según bodega y sourcing de compras |
-| 6 | Módulo `powerplay` en Rust (`tmc-modules`) | ⬜ pendiente | — | Méritos de sesión, tasa méritos/h, fórmula oficial de rangos y tick semanal |
+| 5 | Módulo `colonisation` en Rust (`tmc-modules`) | ✅ hecha | `4c2a185` | Depósitos en obra, viajes restantes según bodega y sourcing de compras |
+| 6 | Módulo `powerplay` en Rust (`tmc-modules`) | 🔄 en curso | — | Méritos de sesión, tasa méritos/h, fórmula oficial de rangos y tick semanal |
 | 7 | Módulo `bgs` en Rust (`tmc-modules`) | ⬜ pendiente | — | Facciones locales, influencias, estados y hora del último tick galáctico |
 | 8 | Cadenas y localización en los 5 idiomas (`locales/`) | ⬜ pendiente | — | `carrier.ftl`, `colonisation.ftl`, `powerplay.ftl`, `bgs.ftl` en es/en/fr/de/pt |
 | 9 | Componentes y paneles Glass HUD de Fleet Carrier | ⬜ pendiente | — | Medidor dual de tritio, cuenta atrás de 15 min y tarjeta de mantenimiento |
