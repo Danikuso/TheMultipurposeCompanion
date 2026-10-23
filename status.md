@@ -10,9 +10,9 @@
 
 ## Puntero actual
 
-- **Tarea:** Validación de la maqueta F5 con iconografía oficial de ED por el propietario para inicio de ejecución TDD.
-- **Último paso completado:** Descarga, normalización vectorial (`fill="currentColor"`) y almacenamiento de los activos oficiales de ED en `ui/src/assets/icons/` (11 potencias de Powerplay, 3 superpotencias, 6 fabricantes de naves, estaciones y grados de ingeniería) procedentes del repositorio MIT `Venefilyn/EDAssets`. Maqueta interactiva (`f5_carrier_colonisation_powerplay_mockups.html`) actualizada con el emblema vectorial de Aisling Duval (con alternador a retrato oficial), águila imperial, estrella federal en Sol, Gutamaya en Imperial Cutter, estaciones en las pestañas y modal de biblioteca de iconos. `THIRD_PARTY_NOTICES.md` actualizado; 378/378 vitest PASS y `svelte-check` 0 errores.
-- **Siguiente acción:** Aprobación del propietario sobre la maqueta y los iconos para iniciar la Tarea 1 de F5 (tipado de eventos de Fleet Carrier en `tmc-model`).
+- **Tarea:** Tarea 3 de F5 — Cliente para endpoint de tick de BGS (`tick.edcd.io`) en `tmc-net`.
+- **Último paso completado:** Tarea 2 de F5 completada (`ce5da4a`): definidos modelos y eventos de Colonización (`ColonisationConstructionDepot`, `ColonisationResource`, `ColonisationContribution`) con cálculo de viajes restantes por bodega, y Powerplay 2.0 (`Powerplay`, `PowerplayMerits`, `PowerplayVote`, `PowerplayDefect`, `PowerplayLeave`, `PowerplayJoin`) con umbrales y progresión de rangos oficial, lealtad en semanas e integración en `EventKind` (160 tests PASS).
+- **Siguiente acción:** Escribir tests TDD de cliente HTTP para consulta de tick galáctico del BGS (`https://tick.edcd.io/api/ticks`) con caché de 30 minutos y tolerancia offline en `tmc-net`.
 
 ## Rediseño visual global de TMC («TMC Glass HUD»)
 
@@ -39,8 +39,9 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 | # | Tarea | Estado | Commit | Notas |
 |---|---|---|---|---|
-| 1 | Tipado de eventos de Fleet Carrier (`tmc-model`) | ⬜ pendiente | — | `CarrierStats`, `CarrierJumpRequest`, `CarrierFinance`, combustible y saltos |
-| 2 | Tipado de eventos de Colonización y Powerplay 2.0 (`tmc-model`) | ⬜ pendiente | — | `ColonisationConstructionDepot`, `Powerplay`, `PowerplayMerits` |
+| 1 | Tipado de eventos de Fleet Carrier (`tmc-model`) | ✅ hecha | `3052983` | `CarrierStats`, `CarrierJumpRequest`, `CarrierFinance`, combustible y saltos |
+| 2 | Tipado de eventos de Colonización y Powerplay 2.0 (`tmc-model`) | ✅ hecha | `ce5da4a` | `ColonisationConstructionDepot`, `Powerplay`, `PowerplayMerits`, viajes |
+| 3 | Cliente para endpoint de tick de BGS (`tmc-net`) | 🔄 en curso | — | `https://tick.edcd.io/api/ticks`, caché 30m, degradación offline |
 | 3 | Cliente para endpoint de tick de BGS (`tmc-net`) | ⬜ pendiente | — | `https://tick.edcd.io/api/ticks`, caché 30m, degradación offline |
 | 4 | Módulo `carrier` en Rust (`tmc-modules`) | ⬜ pendiente | — | Telemetría, combustible, saltos de 500 al, cuenta atrás y semáforo financiero |
 | 5 | Módulo `colonisation` en Rust (`tmc-modules`) | ⬜ pendiente | — | Depósitos en obra, viajes restantes según bodega y sourcing de compras |
