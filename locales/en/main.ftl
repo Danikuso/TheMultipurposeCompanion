@@ -116,3 +116,7 @@ auto-companion-tooltip = On: TMC switches layout and context panel automatically
 layout-engineering = Engineering
 settings-engineering-rolls = Engineering rolls per grade (G1–G5, 1–10)
 settings-engineering-rolls-invalid = Invalid value: each grade needs between 1 and 10 rolls.
+layout-carrier = Fleet Carrier
+layout-colonisation = Colonisation
+layout-powerplay = Powerplay 2.0
+layout-bgs = BGS

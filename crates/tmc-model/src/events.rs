@@ -1,7 +1,15 @@
 //! Eventos tipados del diario de Elite Dangerous.
 
 use crate::ParseError;
+use crate::carrier::{
+    CarrierBankTransfer, CarrierCrewServices, CarrierDecommission, CarrierDepositFuel,
+    CarrierFinance, CarrierJumpCancelled, CarrierJumpRequest, CarrierStats,
+};
+use crate::colonisation::{ColonisationConstructionDepot, ColonisationContribution};
 use crate::net::PadSize;
+use crate::powerplay::{
+    Powerplay, PowerplayDefect, PowerplayJoin, PowerplayLeave, PowerplayMerits, PowerplayVote,
+};
 use chrono::{DateTime, Utc};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -117,6 +125,10 @@ fn lenient_factions<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<Factio
         .map(|o| FactionInfo {
             name: l_str(o.get("Name")).unwrap_or_default(),
             faction_state: l_str(o.get("FactionState")),
+            influence: l_f64(o.get("Influence")),
+            allegiance: l_str(o.get("Allegiance")),
+            government: l_str(o.get("Government")),
+            happiness_localised: l_str(o.get("Happiness_Localised")),
             active_states: o
                 .get("ActiveStates")
                 .and_then(Json::as_array)
@@ -171,6 +183,11 @@ pub struct ThargoidWar {
 pub struct FactionInfo {
     pub name: String,
     pub faction_state: Option<String>,
+    pub influence: Option<f64>,
+    pub allegiance: Option<String>,
+    pub government: Option<String>,
+    #[serde(rename = "Happiness_Localised")]
+    pub happiness_localised: Option<String>,
     pub active_states: Vec<StateRef>,
 }
 
@@ -1797,6 +1814,22 @@ pub enum EventKind {
     EngineerContribution(EngineerContribution),
     TechnologyBroker(TechnologyBroker),
     BackpackChange(BackpackChange),
+    CarrierStats(Box<CarrierStats>),
+    CarrierJumpRequest(CarrierJumpRequest),
+    CarrierJumpCancelled(CarrierJumpCancelled),
+    CarrierDepositFuel(CarrierDepositFuel),
+    CarrierFinance(CarrierFinance),
+    CarrierDecommission(CarrierDecommission),
+    CarrierBankTransfer(CarrierBankTransfer),
+    CarrierCrewServices(CarrierCrewServices),
+    ColonisationConstructionDepot(Box<ColonisationConstructionDepot>),
+    ColonisationContribution(ColonisationContribution),
+    Powerplay(Box<Powerplay>),
+    PowerplayMerits(PowerplayMerits),
+    PowerplayVote(PowerplayVote),
+    PowerplayDefect(PowerplayDefect),
+    PowerplayLeave(PowerplayLeave),
+    PowerplayJoin(PowerplayJoin),
     Other,
 }
 
@@ -1928,6 +1961,27 @@ fn classify(name: &str, raw: &RawValue) -> EventKind {
         "EngineerContribution" => de(name, raw).map(EventKind::EngineerContribution),
         "TechnologyBroker" => de(name, raw).map(EventKind::TechnologyBroker),
         "BackpackChange" => de(name, raw).map(EventKind::BackpackChange),
+        "CarrierStats" => {
+            de::<CarrierStats>(name, raw).map(|s| EventKind::CarrierStats(Box::new(s)))
+        }
+        "CarrierJumpRequest" => de(name, raw).map(EventKind::CarrierJumpRequest),
+        "CarrierJumpCancelled" => de(name, raw).map(EventKind::CarrierJumpCancelled),
+        "CarrierDepositFuel" => de(name, raw).map(EventKind::CarrierDepositFuel),
+        "CarrierFinance" => de(name, raw).map(EventKind::CarrierFinance),
+        "CarrierDecommission" => de(name, raw).map(EventKind::CarrierDecommission),
+        "CarrierBankTransfer" => de(name, raw).map(EventKind::CarrierBankTransfer),
+        "CarrierCrewServices" => de(name, raw).map(EventKind::CarrierCrewServices),
+        "ColonisationConstructionDepot" | "ConstructionDepot" => {
+            de::<ColonisationConstructionDepot>(name, raw)
+                .map(|d| EventKind::ColonisationConstructionDepot(Box::new(d)))
+        }
+        "ColonisationContribution" => de(name, raw).map(EventKind::ColonisationContribution),
+        "Powerplay" => de::<Powerplay>(name, raw).map(|p| EventKind::Powerplay(Box::new(p))),
+        "PowerplayMerits" => de(name, raw).map(EventKind::PowerplayMerits),
+        "PowerplayVote" => de(name, raw).map(EventKind::PowerplayVote),
+        "PowerplayDefect" => de(name, raw).map(EventKind::PowerplayDefect),
+        "PowerplayLeave" => de(name, raw).map(EventKind::PowerplayLeave),
+        "PowerplayJoin" => de(name, raw).map(EventKind::PowerplayJoin),
         _ => None,
     };
     kind.unwrap_or(EventKind::Other)
@@ -1966,6 +2020,156 @@ mod tests {
 
     fn kind(line: &str) -> EventKind {
         parse_line(line).unwrap().kind
+    }
+
+    #[test]
+    fn carrier_events_classify_correctly() {
+        let stats_line = r#"{"timestamp":"2026-04-10T20:00:00Z","event":"CarrierStats","CarrierID":3700000000,"Callsign":"ABC-123","Name":"AURA","FuelLevel":500}"#;
+        match kind(stats_line) {
+            EventKind::CarrierStats(s) => {
+                assert_eq!(s.carrier_id, 3700000000);
+                assert_eq!(s.callsign, "ABC-123");
+                assert_eq!(s.name, "AURA");
+                assert_eq!(s.fuel_level, 500);
+            }
+            other => panic!("esperado CarrierStats, recibido {:?}", other),
+        }
+
+        let jump_req_line = r#"{"timestamp":"2026-04-10T20:01:00Z","event":"CarrierJumpRequest","CarrierID":3700000000,"SystemName":"Sol","DepartureTime":"2026-04-10T20:16:00Z"}"#;
+        match kind(jump_req_line) {
+            EventKind::CarrierJumpRequest(r) => {
+                assert_eq!(r.carrier_id, 3700000000);
+                assert_eq!(r.system_name, "Sol");
+                assert!(r.departure_time.is_some());
+            }
+            other => panic!("esperado CarrierJumpRequest, recibido {:?}", other),
+        }
+
+        let cancel_line = r#"{"timestamp":"2026-04-10T20:02:00Z","event":"CarrierJumpCancelled","CarrierID":3700000000}"#;
+        match kind(cancel_line) {
+            EventKind::CarrierJumpCancelled(c) => assert_eq!(c.carrier_id, 3700000000),
+            other => panic!("esperado CarrierJumpCancelled, recibido {:?}", other),
+        }
+
+        let fuel_line = r#"{"timestamp":"2026-04-10T20:03:00Z","event":"CarrierDepositFuel","CarrierID":3700000000,"Amount":100,"Total":600}"#;
+        match kind(fuel_line) {
+            EventKind::CarrierDepositFuel(f) => {
+                assert_eq!(f.carrier_id, 3700000000);
+                assert_eq!(f.amount, 100);
+                assert_eq!(f.total, 600);
+            }
+            other => panic!("esperado CarrierDepositFuel, recibido {:?}", other),
+        }
+
+        let fin_line = r#"{"timestamp":"2026-04-10T20:04:00Z","event":"CarrierFinance","CarrierID":3700000000,"CarrierBalance":500000000,"ReserveBalance":50000000,"AvailableBalance":450000000,"ReservePercent":10}"#;
+        match kind(fin_line) {
+            EventKind::CarrierFinance(f) => {
+                assert_eq!(f.carrier_id, 3700000000);
+                assert_eq!(f.carrier_balance, 500000000);
+                assert_eq!(f.reserve_percent, 10);
+            }
+            other => panic!("esperado CarrierFinance, recibido {:?}", other),
+        }
+
+        let decom_line = r#"{"timestamp":"2026-04-10T20:05:00Z","event":"CarrierDecommission","CarrierID":3700000000,"ScrapRefund":4500000000,"ScrapTime":1584360000}"#;
+        match kind(decom_line) {
+            EventKind::CarrierDecommission(d) => {
+                assert_eq!(d.carrier_id, 3700000000);
+                assert_eq!(d.scrap_refund, 4500000000);
+            }
+            other => panic!("esperado CarrierDecommission, recibido {:?}", other),
+        }
+
+        let bank_line = r#"{"timestamp":"2026-04-10T20:06:00Z","event":"CarrierBankTransfer","CarrierID":3700000000,"Deposit":20000000,"CarrierBalance":520000000,"PlayerBalance":300000000}"#;
+        match kind(bank_line) {
+            EventKind::CarrierBankTransfer(b) => {
+                assert_eq!(b.carrier_id, 3700000000);
+                assert_eq!(b.deposit, Some(20000000));
+                assert_eq!(b.carrier_balance, 520000000);
+            }
+            other => panic!("esperado CarrierBankTransfer, recibido {:?}", other),
+        }
+
+        let crew_line = r#"{"timestamp":"2026-04-10T20:07:00Z","event":"CarrierCrewServices","CarrierID":3700000000,"CrewRole":"refuel","Operation":"activate","CrewName":"Elena Vance"}"#;
+        match kind(crew_line) {
+            EventKind::CarrierCrewServices(c) => {
+                assert_eq!(c.carrier_id, 3700000000);
+                assert_eq!(c.crew_role, "refuel");
+                assert_eq!(c.operation, "activate");
+                assert_eq!(c.crew_name.as_deref(), Some("Elena Vance"));
+            }
+            other => panic!("esperado CarrierCrewServices, recibido {:?}", other),
+        }
+    }
+
+    #[test]
+    fn colonisation_and_powerplay_events_classify_correctly() {
+        let depot_line = r#"{"timestamp":"2026-04-10T21:00:00Z","event":"ColonisationConstructionDepot","MarketID":3800000000,"StationName":"Outpost Beta","ConstructionProgress":0.75,"ResourcesRequired":[{"Name":"titanium","RequiredAmount":1000,"ProvidedAmount":750}]}"#;
+        match kind(depot_line) {
+            EventKind::ColonisationConstructionDepot(d) => {
+                assert_eq!(d.market_id, Some(3800000000));
+                assert_eq!(d.station_name.as_deref(), Some("Outpost Beta"));
+                assert_eq!(d.construction_progress, 0.75);
+                assert_eq!(d.resources_required.len(), 1);
+                assert_eq!(d.total_remaining_tonnes(), 250);
+            }
+            other => panic!(
+                "esperado ColonisationConstructionDepot, recibido {:?}",
+                other
+            ),
+        }
+
+        let contrib_line = r#"{"timestamp":"2026-04-10T21:05:00Z","event":"ColonisationContribution","MarketID":3800000000,"Commodity":"titanium","Amount":250,"RewardCredits":500000}"#;
+        match kind(contrib_line) {
+            EventKind::ColonisationContribution(c) => {
+                assert_eq!(c.market_id, Some(3800000000));
+                assert_eq!(c.commodity, "titanium");
+                assert_eq!(c.amount, 250);
+                assert_eq!(c.reward_credits, Some(500000));
+            }
+            other => panic!("esperado ColonisationContribution, recibido {:?}", other),
+        }
+
+        let pp_line = r#"{"timestamp":"2026-04-10T21:10:00Z","event":"Powerplay","Power":"Aisling Duval","Rank":4,"Merits":9420,"TimePledged":8467200}"#;
+        match kind(pp_line) {
+            EventKind::Powerplay(p) => {
+                assert_eq!(p.power, "Aisling Duval");
+                assert_eq!(p.rank, 4);
+                assert_eq!(p.merits, 9420);
+                assert_eq!(p.weeks_pledged(), 14);
+            }
+            other => panic!("esperado Powerplay, recibido {:?}", other),
+        }
+
+        let merits_line = r#"{"timestamp":"2026-04-10T21:15:00Z","event":"PowerplayMerits","Power":"Aisling Duval","MeritsEarned":200,"TotalMerits":9620,"Activity":"Combat"}"#;
+        match kind(merits_line) {
+            EventKind::PowerplayMerits(m) => {
+                assert_eq!(m.power, "Aisling Duval");
+                assert_eq!(m.merits_earned, 200);
+                assert_eq!(m.total_merits, 9620);
+                assert_eq!(m.activity.as_deref(), Some("Combat"));
+            }
+            other => panic!("esperado PowerplayMerits, recibido {:?}", other),
+        }
+
+        let vote_line = r#"{"timestamp":"2026-04-10T21:20:00Z","event":"PowerplayVote","Power":"Aisling Duval","Votes":5,"System":"Cubeo"}"#;
+        match kind(vote_line) {
+            EventKind::PowerplayVote(v) => {
+                assert_eq!(v.power, "Aisling Duval");
+                assert_eq!(v.votes, 5);
+                assert_eq!(v.system, "Cubeo");
+            }
+            other => panic!("esperado PowerplayVote, recibido {:?}", other),
+        }
+
+        let defect_line = r#"{"timestamp":"2026-04-10T21:25:00Z","event":"PowerplayDefect","FromPower":"Zachary Hudson","ToPower":"Aisling Duval"}"#;
+        match kind(defect_line) {
+            EventKind::PowerplayDefect(d) => {
+                assert_eq!(d.from_power, "Zachary Hudson");
+                assert_eq!(d.to_power, "Aisling Duval");
+            }
+            other => panic!("esperado PowerplayDefect, recibido {:?}", other),
+        }
     }
 
     #[test]

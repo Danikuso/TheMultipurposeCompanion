@@ -485,6 +485,7 @@ fn api_cache_key(query: &NetQuery) -> Option<(CacheKind, String)> {
         | NetQuery::TradeRoute(_)
         | NetQuery::CommodityExportsNearby { .. }
         | NetQuery::SystemCoordsByName { .. }
+        | NetQuery::BgsTick
         | NetQuery::BodyBio { .. } => cache_keys(query).into_iter().next(),
         _ => None,
     }
@@ -508,6 +509,7 @@ async fn read_api_cache(store: &Store, query: &NetQuery) -> Option<(NetOutcome, 
         CacheKind::SpanshTrade => NetOutcome::TradeRoute(serde_json::from_str(&entry.value).ok()?),
         CacheKind::ArdentExports => NetOutcome::Exports(serde_json::from_str(&entry.value).ok()?),
         CacheKind::SystemCoords => NetOutcome::Coords(serde_json::from_str(&entry.value).ok()?),
+        CacheKind::BgsTick => NetOutcome::BgsTick(serde_json::from_str(&entry.value).ok()?),
         _ => NetOutcome::Stations(serde_json::from_str(&entry.value).ok()?),
     };
     Some((outcome, entry.fetched_at))
@@ -524,6 +526,7 @@ async fn write_api_cache(store: &Store, query: &NetQuery, outcome: &NetOutcome, 
         NetOutcome::TradeRoute(plan) => serde_json::to_string(plan),
         NetOutcome::Exports(items) => serde_json::to_string(items),
         NetOutcome::Coords(coords) => serde_json::to_string(coords),
+        NetOutcome::BgsTick(tick) => serde_json::to_string(tick),
         _ => return,
     };
     let Ok(json) = json else {

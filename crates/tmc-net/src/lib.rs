@@ -2,6 +2,7 @@
 //! cliente asíncrono que los compone.
 
 pub mod ardent;
+pub mod bgs_tick;
 pub mod cache_policy;
 pub mod canonn;
 pub mod client;

@@ -232,6 +232,7 @@ fn source_of(service: Service) -> NetSource {
         Service::Edsm => NetSource::Edsm,
         Service::Canonn => NetSource::Canonn,
         Service::Ardent => NetSource::Ardent,
+        Service::Edcd => NetSource::Edcd,
     }
 }
 
@@ -256,6 +257,7 @@ impl NetClient {
             Service::Edsm,
             Service::Canonn,
             Service::Ardent,
+            Service::Edcd,
         ];
         NetClient {
             transport,
@@ -463,6 +465,16 @@ impl NetClient {
                 (NetSource::Ardent, out)
             }
             NetQuery::SystemCoordsByName { name } => self.coords(name, online).await,
+            NetQuery::BgsTick => {
+                let req = Req::Get(crate::bgs_tick::BGS_TICK_URL.to_string());
+                let out = self
+                    .fetch(Service::Edcd, req, online, |b| {
+                        crate::bgs_tick::parse_ticks(b, Utc::now())
+                            .map(|opt| opt.map(NetOutcome::BgsTick))
+                    })
+                    .await;
+                (NetSource::Edcd, out)
+            }
         }
     }
 
@@ -2116,6 +2128,37 @@ mod tests {
 
     fn coords_query(name: &str) -> NetQuery {
         NetQuery::SystemCoordsByName { name: name.into() }
+    }
+
+    fn bgs_tick_query() -> NetQuery {
+        NetQuery::BgsTick
+    }
+
+    #[tokio::test]
+    async fn bgs_tick_query_returns_tick_info() {
+        let t = FakeTransport::new();
+        let payload = r#"[{"time": "2026-10-23T04:15:00Z", "updated_at": "2026-10-23T04:15:30Z"}]"#;
+        t.script("tick.edcd.io", vec![ok(200, payload)]);
+        let c = client(&t);
+        let (src, out) = c.execute(&bgs_tick_query()).await;
+        assert_eq!(src, NetSource::Edcd);
+        match out {
+            NetOutcome::BgsTick(info) => {
+                assert_eq!(info.latest_tick.to_rfc3339(), "2026-10-23T04:15:00+00:00");
+                assert_eq!(info.updated_at.to_rfc3339(), "2026-10-23T04:15:30+00:00");
+            }
+            other => panic!("expected BgsTick, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn bgs_tick_offline_optout_disabled() {
+        let t = FakeTransport::new();
+        let c = client(&t);
+        let guard = AtomicBool::new(false);
+        let (src, out) = c.execute_with_online(&bgs_tick_query(), &guard).await;
+        assert_eq!(src, NetSource::Cache);
+        assert_eq!(out, NetOutcome::Disabled);
     }
 
     #[tokio::test(start_paused = true)]

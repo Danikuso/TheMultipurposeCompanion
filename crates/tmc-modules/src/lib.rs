@@ -32,6 +32,9 @@ macro_rules! decide_if {
     }};
 }
 
+pub mod bgs;
+pub mod carrier;
+pub mod colonisation;
 pub mod combat;
 pub mod dashboard;
 pub mod data;
@@ -44,6 +47,7 @@ pub mod inflight;
 pub mod mining;
 pub mod missions;
 pub mod navigation;
+pub mod powerplay;
 pub mod registry;
 pub(crate) mod topicx;
 pub mod trade;
