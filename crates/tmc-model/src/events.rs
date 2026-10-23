@@ -125,6 +125,10 @@ fn lenient_factions<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<Factio
         .map(|o| FactionInfo {
             name: l_str(o.get("Name")).unwrap_or_default(),
             faction_state: l_str(o.get("FactionState")),
+            influence: l_f64(o.get("Influence")),
+            allegiance: l_str(o.get("Allegiance")),
+            government: l_str(o.get("Government")),
+            happiness_localised: l_str(o.get("Happiness_Localised")),
             active_states: o
                 .get("ActiveStates")
                 .and_then(Json::as_array)
@@ -179,6 +183,11 @@ pub struct ThargoidWar {
 pub struct FactionInfo {
     pub name: String,
     pub faction_state: Option<String>,
+    pub influence: Option<f64>,
+    pub allegiance: Option<String>,
+    pub government: Option<String>,
+    #[serde(rename = "Happiness_Localised")]
+    pub happiness_localised: Option<String>,
     pub active_states: Vec<StateRef>,
 }
 
