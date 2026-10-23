@@ -1,4 +1,5 @@
 use crate::carrier::Carrier;
+use crate::colonisation::Colonisation;
 use crate::combat::Combat;
 use crate::dashboard::Dashboard;
 use crate::engineering::Engineering;
@@ -22,6 +23,7 @@ pub fn all_modules() -> Vec<Box<dyn Module>> {
         Box::new(Missions::new()),
         Box::new(Engineering::new()),
         Box::new(Carrier::new()),
+        Box::new(Colonisation::new()),
     ]
 }
 
