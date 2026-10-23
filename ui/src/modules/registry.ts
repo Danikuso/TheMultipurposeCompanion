@@ -9,6 +9,7 @@ import { tradePanels } from './trade';
 import { missionsPanels } from './missions';
 import { engineeringPanels } from './engineering';
 import { carrierPanels } from './carrier';
+import { colonisationPanels } from './colonisation';
 
 export interface UiModuleDef {
   id: string;
@@ -72,5 +73,11 @@ export const modules: UiModuleDef[] = [
     icon: 'anchor',
     titleKey: 'nav-carrier',
     panels: carrierPanels,
+  },
+  {
+    id: 'colonisation',
+    icon: 'hammer',
+    titleKey: 'nav-colonisation',
+    panels: colonisationPanels,
   },
 ];

@@ -842,6 +842,8 @@ const UI_PANELS: &[&str] = &[
     "panel-carrier-finances",
     "panel-carrier-jump",
     "panel-carrier-overview",
+    "panel-colonisation-depot",
+    "panel-colonisation-supply",
     "panel-engineering-materials",
     "panel-engineering-engineers",
     "panel-engineering-ship",
