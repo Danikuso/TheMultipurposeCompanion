@@ -1,6 +1,10 @@
 //! Eventos tipados del diario de Elite Dangerous.
 
 use crate::ParseError;
+use crate::carrier::{
+    CarrierBankTransfer, CarrierCrewServices, CarrierDecommission, CarrierDepositFuel,
+    CarrierFinance, CarrierJumpCancelled, CarrierJumpRequest, CarrierStats,
+};
 use crate::net::PadSize;
 use chrono::{DateTime, Utc};
 use serde::de::DeserializeOwned;
@@ -1797,6 +1801,14 @@ pub enum EventKind {
     EngineerContribution(EngineerContribution),
     TechnologyBroker(TechnologyBroker),
     BackpackChange(BackpackChange),
+    CarrierStats(Box<CarrierStats>),
+    CarrierJumpRequest(CarrierJumpRequest),
+    CarrierJumpCancelled(CarrierJumpCancelled),
+    CarrierDepositFuel(CarrierDepositFuel),
+    CarrierFinance(CarrierFinance),
+    CarrierDecommission(CarrierDecommission),
+    CarrierBankTransfer(CarrierBankTransfer),
+    CarrierCrewServices(CarrierCrewServices),
     Other,
 }
 
@@ -1928,6 +1940,16 @@ fn classify(name: &str, raw: &RawValue) -> EventKind {
         "EngineerContribution" => de(name, raw).map(EventKind::EngineerContribution),
         "TechnologyBroker" => de(name, raw).map(EventKind::TechnologyBroker),
         "BackpackChange" => de(name, raw).map(EventKind::BackpackChange),
+        "CarrierStats" => {
+            de::<CarrierStats>(name, raw).map(|s| EventKind::CarrierStats(Box::new(s)))
+        }
+        "CarrierJumpRequest" => de(name, raw).map(EventKind::CarrierJumpRequest),
+        "CarrierJumpCancelled" => de(name, raw).map(EventKind::CarrierJumpCancelled),
+        "CarrierDepositFuel" => de(name, raw).map(EventKind::CarrierDepositFuel),
+        "CarrierFinance" => de(name, raw).map(EventKind::CarrierFinance),
+        "CarrierDecommission" => de(name, raw).map(EventKind::CarrierDecommission),
+        "CarrierBankTransfer" => de(name, raw).map(EventKind::CarrierBankTransfer),
+        "CarrierCrewServices" => de(name, raw).map(EventKind::CarrierCrewServices),
         _ => None,
     };
     kind.unwrap_or(EventKind::Other)
@@ -1966,6 +1988,86 @@ mod tests {
 
     fn kind(line: &str) -> EventKind {
         parse_line(line).unwrap().kind
+    }
+
+    #[test]
+    fn carrier_events_classify_correctly() {
+        let stats_line = r#"{"timestamp":"2026-04-10T20:00:00Z","event":"CarrierStats","CarrierID":3700000000,"Callsign":"ABC-123","Name":"AURA","FuelLevel":500}"#;
+        match kind(stats_line) {
+            EventKind::CarrierStats(s) => {
+                assert_eq!(s.carrier_id, 3700000000);
+                assert_eq!(s.callsign, "ABC-123");
+                assert_eq!(s.name, "AURA");
+                assert_eq!(s.fuel_level, 500);
+            }
+            other => panic!("esperado CarrierStats, recibido {:?}", other),
+        }
+
+        let jump_req_line = r#"{"timestamp":"2026-04-10T20:01:00Z","event":"CarrierJumpRequest","CarrierID":3700000000,"SystemName":"Sol","DepartureTime":"2026-04-10T20:16:00Z"}"#;
+        match kind(jump_req_line) {
+            EventKind::CarrierJumpRequest(r) => {
+                assert_eq!(r.carrier_id, 3700000000);
+                assert_eq!(r.system_name, "Sol");
+                assert!(r.departure_time.is_some());
+            }
+            other => panic!("esperado CarrierJumpRequest, recibido {:?}", other),
+        }
+
+        let cancel_line = r#"{"timestamp":"2026-04-10T20:02:00Z","event":"CarrierJumpCancelled","CarrierID":3700000000}"#;
+        match kind(cancel_line) {
+            EventKind::CarrierJumpCancelled(c) => assert_eq!(c.carrier_id, 3700000000),
+            other => panic!("esperado CarrierJumpCancelled, recibido {:?}", other),
+        }
+
+        let fuel_line = r#"{"timestamp":"2026-04-10T20:03:00Z","event":"CarrierDepositFuel","CarrierID":3700000000,"Amount":100,"Total":600}"#;
+        match kind(fuel_line) {
+            EventKind::CarrierDepositFuel(f) => {
+                assert_eq!(f.carrier_id, 3700000000);
+                assert_eq!(f.amount, 100);
+                assert_eq!(f.total, 600);
+            }
+            other => panic!("esperado CarrierDepositFuel, recibido {:?}", other),
+        }
+
+        let fin_line = r#"{"timestamp":"2026-04-10T20:04:00Z","event":"CarrierFinance","CarrierID":3700000000,"CarrierBalance":500000000,"ReserveBalance":50000000,"AvailableBalance":450000000,"ReservePercent":10}"#;
+        match kind(fin_line) {
+            EventKind::CarrierFinance(f) => {
+                assert_eq!(f.carrier_id, 3700000000);
+                assert_eq!(f.carrier_balance, 500000000);
+                assert_eq!(f.reserve_percent, 10);
+            }
+            other => panic!("esperado CarrierFinance, recibido {:?}", other),
+        }
+
+        let decom_line = r#"{"timestamp":"2026-04-10T20:05:00Z","event":"CarrierDecommission","CarrierID":3700000000,"ScrapRefund":4500000000,"ScrapTime":1584360000}"#;
+        match kind(decom_line) {
+            EventKind::CarrierDecommission(d) => {
+                assert_eq!(d.carrier_id, 3700000000);
+                assert_eq!(d.scrap_refund, 4500000000);
+            }
+            other => panic!("esperado CarrierDecommission, recibido {:?}", other),
+        }
+
+        let bank_line = r#"{"timestamp":"2026-04-10T20:06:00Z","event":"CarrierBankTransfer","CarrierID":3700000000,"Deposit":20000000,"CarrierBalance":520000000,"PlayerBalance":300000000}"#;
+        match kind(bank_line) {
+            EventKind::CarrierBankTransfer(b) => {
+                assert_eq!(b.carrier_id, 3700000000);
+                assert_eq!(b.deposit, Some(20000000));
+                assert_eq!(b.carrier_balance, 520000000);
+            }
+            other => panic!("esperado CarrierBankTransfer, recibido {:?}", other),
+        }
+
+        let crew_line = r#"{"timestamp":"2026-04-10T20:07:00Z","event":"CarrierCrewServices","CarrierID":3700000000,"CrewRole":"refuel","Operation":"activate","CrewName":"Elena Vance"}"#;
+        match kind(crew_line) {
+            EventKind::CarrierCrewServices(c) => {
+                assert_eq!(c.carrier_id, 3700000000);
+                assert_eq!(c.crew_role, "refuel");
+                assert_eq!(c.operation, "activate");
+                assert_eq!(c.crew_name.as_deref(), Some("Elena Vance"));
+            }
+            other => panic!("esperado CarrierCrewServices, recibido {:?}", other),
+        }
     }
 
     #[test]
