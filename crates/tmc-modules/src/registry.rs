@@ -1,3 +1,4 @@
+use crate::accounts::AccountsModule;
 use crate::bgs::Bgs;
 use crate::carrier::Carrier;
 use crate::colonisation::Colonisation;
@@ -28,6 +29,7 @@ pub fn all_modules() -> Vec<Box<dyn Module>> {
         Box::new(Colonisation::new()),
         Box::new(PowerplayModule::new()),
         Box::new(Bgs::new()),
+        Box::new(AccountsModule::new()),
     ]
 }
 

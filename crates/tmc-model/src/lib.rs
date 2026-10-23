@@ -1,6 +1,7 @@
 //! Modelo de dominio de TMC.
 #![forbid(unsafe_code)]
 
+pub mod accounts;
 pub mod carrier;
 pub mod colonisation;
 pub mod companion;

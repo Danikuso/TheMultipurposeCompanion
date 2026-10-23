@@ -168,6 +168,9 @@ pub enum NetSource {
     Canonn,
     Ardent,
     Edcd,
+    Eddn,
+    Inara,
+    Capi,
     Cache,
 }
 
