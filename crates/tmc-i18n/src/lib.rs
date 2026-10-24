@@ -346,6 +346,9 @@ mod tests {
                 ("grades", FluentValue::from("G1, G2")),
                 ("reason", FluentValue::from("Receta ambigua")),
                 ("type", FluentValue::from("Manufacturados")),
+                ("amount", FluentValue::from("10.000")),
+                ("hours", FluentValue::from(1)),
+                ("minutes", FluentValue::from(30)),
             ] {
                 args.set(name, value);
             }
