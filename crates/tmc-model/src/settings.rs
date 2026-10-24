@@ -20,6 +20,8 @@ pub struct ModuleSettings {
     pub tourism_reference_cr_ly: u64,
     /// Tiradas por defecto de ingeniería por grado (G1..G5) al calcular materiales.
     pub engineering_rolls: [u8; 5],
+    /// Configuración del copiloto auditivo y avisos de voz (F7).
+    pub tts: crate::tts::TtsSettings,
 }
 
 /// Tiradas por defecto de ingeniería por grado (G1..G5).
@@ -56,6 +58,7 @@ impl Default for ModuleSettings {
             eddn_radius_ly: 200,
             tourism_reference_cr_ly: 100_000,
             engineering_rolls: DEFAULT_ENGINEERING_ROLLS,
+            tts: crate::tts::TtsSettings::default(),
         }
     }
 }
