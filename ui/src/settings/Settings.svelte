@@ -8,6 +8,7 @@
   import { diag } from '../lib/diag.svelte';
   import Pairing from './Pairing.svelte';
   import { integer } from '../lib/format';
+  import { voiceAssistant } from '../lib/voiceAssistant.svelte';
 
   const DEFAULT_MINERALS = ['platinum', 'painite', 'lowtemperaturediamond', 'opal', 'alexandrite',
     'grandidierite', 'monazite', 'musgravite', 'rhodplumsite', 'serendibite', 'benitoite'];
@@ -164,6 +165,7 @@
   onMount(() => {
     lastSubmitted = currentConfig();
     saveQueue = readConfig();
+    void voiceAssistant.fetchVoiceAttackStatus();
   });
 
   async function readConfig() {
@@ -607,6 +609,80 @@
       {/if}
     </fieldset>
 
+    <!-- Asistencia por Voz e Integración («TMC Glass HUD») -->
+    <fieldset class="tts-section voice-assistant-section">
+      <legend>🎙️ {t('voice-assistant-title')}</legend>
+      <div class="field-row">
+        <label for="voice-assistant-toggle">
+          <span>{t('voice-assistant-enable')}</span>
+          <small class="field-hint">{t('voice-assistant-enable-desc')}</small>
+        </label>
+        <input
+          id="voice-assistant-toggle"
+          type="checkbox"
+          data-testid="voice-assistant-toggle"
+          checked={voiceAssistant.enabled}
+          onchange={(e) => voiceAssistant.setEnabled(e.currentTarget.checked)}
+        />
+      </div>
+
+      {#if voiceAssistant.enabled}
+        <div class="field-row">
+          <label for="voice-mode-select">
+            <span>{t('voice-assistant-mode')}</span>
+          </label>
+          <select
+            id="voice-mode-select"
+            data-testid="voice-mode-select"
+            value={voiceAssistant.mode}
+            onchange={(e) => voiceAssistant.setMode(e.currentTarget.value as 'continuous' | 'ptt')}
+          >
+            <option value="continuous">{t('voice-assistant-mode-continuous')}</option>
+            <option value="ptt">{t('voice-assistant-mode-ptt')}</option>
+          </select>
+        </div>
+
+        {#if voiceAssistant.lastQuery}
+          <div class="voice-feedback-row">
+            <span class="feedback-label">{t('voice-assistant-last-query')}:</span>
+            <span class="feedback-val font-mono">"{voiceAssistant.lastQuery}"</span>
+          </div>
+        {/if}
+      {/if}
+
+      <!-- Integración con VoiceAttack -->
+      <div class="voiceattack-box">
+        <div class="voiceattack-header">
+          <span class="va-title">⚡ {t('voiceattack-section-title')}</span>
+          <span
+            class="badge"
+            class:badge-success={voiceAssistant.voiceAttackStatus?.installed}
+            class:badge-muted={!voiceAssistant.voiceAttackStatus?.installed}
+            data-testid="voiceattack-badge"
+          >
+            {voiceAssistant.voiceAttackStatus?.installed
+              ? (voiceAssistant.voiceAttackStatus?.running
+                  ? `${t('voiceattack-status-detected')} (${t('voiceattack-status-running')})`
+                  : `${t('voiceattack-status-detected')} (${t('voiceattack-status-stopped')})`)
+              : t('voiceattack-status-not-detected')}
+          </span>
+        </div>
+
+        <p class="va-desc">{t('voiceattack-help-desc')}</p>
+
+        <div class="va-actions">
+          <a
+            href="/api/voice/voiceattack/profile"
+            download="TMC-Copiloto.vap"
+            class="btn-download-vap"
+            data-testid="download-vap-btn"
+          >
+            📥 {t('voiceattack-download-profile')}
+          </a>
+        </div>
+      </div>
+    </fieldset>
+
     <Pairing />
   </div>
 </Panel>
@@ -718,5 +794,88 @@
   .btn-test-voice:disabled {
     opacity: 0.5;
     cursor: wait;
+  }
+
+  .voice-assistant-section {
+    border-color: rgba(0, 212, 178, 0.25);
+  }
+
+  .voice-assistant-section legend {
+    color: var(--hud-cyan, #00d4b2);
+  }
+
+  .voice-feedback-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    background: rgba(0, 212, 178, 0.08);
+    border: 1px dashed rgba(0, 212, 178, 0.3);
+    border-radius: 4px;
+    font-size: 0.8rem;
+  }
+
+  .feedback-label {
+    color: var(--hud-muted);
+  }
+
+  .feedback-val {
+    color: var(--hud-cyan, #00d4b2);
+  }
+
+  .voiceattack-box {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: var(--hud-surface-card, rgba(20, 25, 35, 0.6));
+    border: 1px solid var(--hud-border-subtle, rgba(255, 255, 255, 0.08));
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .voiceattack-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .va-title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--hud-text);
+  }
+
+  .va-desc {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--hud-muted);
+    line-height: 1.4;
+  }
+
+  .va-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.25rem;
+  }
+
+  .btn-download-vap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(0, 212, 178, 0.12);
+    color: var(--hud-cyan, #00d4b2);
+    border: 1px solid rgba(0, 212, 178, 0.3);
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.15s ease;
+  }
+
+  .btn-download-vap:hover {
+    background: var(--hud-cyan, #00d4b2);
+    color: #000;
   }
 </style>

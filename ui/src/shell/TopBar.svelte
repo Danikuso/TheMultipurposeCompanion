@@ -4,6 +4,7 @@
   import { prefs, setAutoCompanion } from '../lib/prefs.svelte';
   import { live, topic } from '../lib/ws.svelte';
   import { diag, diagOn } from '../lib/diag.svelte';
+  import { voiceAssistant } from '../lib/voiceAssistant.svelte';
 
   interface LocationTopic {
     system?: string;
@@ -127,6 +128,36 @@
   </div>
 
   <div class="topbar-status">
+    <button
+      type="button"
+      class="voice-mic-pill"
+      class:active={voiceAssistant.enabled}
+      class:listening={voiceAssistant.state === 'listening'}
+      class:processing={voiceAssistant.state === 'processing'}
+      class:speaking={voiceAssistant.state === 'speaking'}
+      data-testid="topbar-voice-mic"
+      title={voiceAssistant.lastQuery ? `${t('voice-assistant-last-query')}: "${voiceAssistant.lastQuery}"` : t('voice-assistant-mic-toggle-tooltip')}
+      onclick={() => voiceAssistant.toggleEnabled()}
+    >
+      <span class="mic-icon" aria-hidden="true">🎙️</span>
+      <span class="mic-label">
+        {#if !voiceAssistant.enabled}
+          VOZ OFF
+        {:else if voiceAssistant.state === 'listening'}
+          {t('voice-assistant-status-listening')}
+        {:else if voiceAssistant.state === 'processing'}
+          {t('voice-assistant-status-processing')}
+        {:else if voiceAssistant.state === 'speaking'}
+          {t('voice-assistant-status-speaking')}
+        {:else}
+          VOZ ON
+        {/if}
+      </span>
+      {#if voiceAssistant.enabled && voiceAssistant.state !== 'inactive'}
+        <span class="mic-wave" aria-hidden="true"></span>
+      {/if}
+    </button>
+
     <label class="auto-switch" title={t('auto-companion-tooltip')}>
       <input type="checkbox" role="switch" data-testid="auto-companion" checked={prefs.autoCompanion}
         onchange={(e) => { void setAutoCompanion(e.currentTarget.checked); }} />
@@ -228,6 +259,74 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
+  }
+
+  .voice-mic-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--hud-surface-card);
+    border: 1px solid var(--hud-border-subtle);
+    border-radius: 20px;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--hud-muted);
+    cursor: pointer;
+    transition: all 150ms ease;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .voice-mic-pill:hover {
+    border-color: var(--hud-border);
+    background: var(--hud-surface-hover);
+  }
+
+  .voice-mic-pill.active {
+    background: rgba(0, 212, 178, 0.1);
+    border-color: rgba(0, 212, 178, 0.4);
+    color: var(--hud-cyan, #00d4b2);
+  }
+
+  .voice-mic-pill.listening {
+    border-color: var(--hud-cyan, #00d4b2);
+    box-shadow: 0 0 10px rgba(0, 212, 178, 0.35);
+    animation: mic-pulse 1.5s infinite ease-in-out;
+  }
+
+  .voice-mic-pill.processing {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: var(--hud-warning, #f59e0b);
+    color: var(--hud-warning, #f59e0b);
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
+  }
+
+  .voice-mic-pill.speaking {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: var(--hud-success, #22c55e);
+    color: var(--hud-success, #22c55e);
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.35);
+  }
+
+  .mic-icon {
+    font-size: 0.85rem;
+    line-height: 1;
+  }
+
+  .mic-label {
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  @keyframes mic-pulse {
+    0%, 100% {
+      box-shadow: 0 0 4px rgba(0, 212, 178, 0.2);
+    }
+    50% {
+      box-shadow: 0 0 12px rgba(0, 212, 178, 0.6);
+    }
   }
 
   .auto-switch {
