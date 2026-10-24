@@ -5207,6 +5207,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tmc-tts"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tmc-model",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "tokio"
 version = "1.53.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
