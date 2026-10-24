@@ -19,6 +19,21 @@
   const validRolls = (value: unknown): value is number[] => Array.isArray(value)
     && value.length === 5 && value.every((n) => Number.isInteger(n) && n >= 1 && n <= 10);
 
+  interface TtsSettingsDto {
+    enabled?: boolean;
+    engine?: 'native' | 'kokoro';
+    voice?: string;
+    volume?: number;
+    rate?: number;
+    channels?: {
+      combat?: boolean;
+      navigation?: boolean;
+      exploration?: boolean;
+      mining?: boolean;
+      carrier?: boolean;
+    };
+  }
+
   interface ConfigDto {
     language?: string;
     auto_copy_next_system?: boolean;
@@ -34,6 +49,7 @@
     eddn_radius_ly?: number;
     tourism_reference_cr_ly?: number;
     engineering_rolls?: number[];
+    tts?: TtsSettingsDto;
     server?: {
       port?: number;
       lan?: boolean;
@@ -58,6 +74,61 @@
   let rollsEdits = 0;
   let draftRevision = 0;
   let lastSubmitted: ConfigDto | undefined;
+
+  let ttsEnabled = $state(false);
+  let ttsEngine = $state<'native' | 'kokoro'>('native');
+  let ttsVoice = $state('');
+  let ttsVolume = $state(80);
+  let ttsRate = $state(100);
+  let ttsChannels = $state({
+    combat: true,
+    navigation: true,
+    exploration: true,
+    mining: true,
+    carrier: true,
+  });
+  let ttsVoicesList = $state<Array<{ id: string; name: string; lang: string; gender?: string }>>([]);
+  let ttsTesting = $state(false);
+
+  async function loadTtsVoices(engine: 'native' | 'kokoro') {
+    try {
+      const res = await fetch(`/api/tts/voices?engine=${engine}`);
+      if (res.ok) {
+        const data = await res.json();
+        ttsVoicesList = data.voices ?? [];
+      }
+    } catch {
+      // offline / mock
+    }
+  }
+
+  function onEngineChange() {
+    ttsVoice = '';
+    void loadTtsVoices(ttsEngine);
+    saveConfig();
+  }
+
+  async function testTtsVoice() {
+    ttsTesting = true;
+    try {
+      await fetch('/api/tts/test', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          engine: ttsEngine,
+          voice: ttsVoice || undefined,
+          volume: ttsVolume,
+          rate: ttsRate,
+        }),
+      });
+    } catch {
+      // ignore
+    } finally {
+      setTimeout(() => {
+        ttsTesting = false;
+      }, 2000);
+    }
+  }
   const knownMinerals = $derived([...DEFAULT_MINERALS, ...miningInterest.filter((k) => !DEFAULT_MINERALS.includes(k))]);
   let fullConfig = $state<ConfigDto>({});
   let saveError = $state(false);
@@ -129,6 +200,23 @@
           themeMode = cfg.theme_mode;
           applySelectedTheme(themeMode);
         }
+        if (cfg.tts) {
+          ttsEnabled = cfg.tts.enabled ?? false;
+          ttsEngine = cfg.tts.engine ?? 'native';
+          ttsVoice = cfg.tts.voice ?? '';
+          ttsVolume = cfg.tts.volume ?? 80;
+          ttsRate = cfg.tts.rate ?? 100;
+          if (cfg.tts.channels) {
+            ttsChannels = {
+              combat: cfg.tts.channels.combat ?? true,
+              navigation: cfg.tts.channels.navigation ?? true,
+              exploration: cfg.tts.channels.exploration ?? true,
+              mining: cfg.tts.channels.mining ?? true,
+              carrier: cfg.tts.channels.carrier ?? true,
+            };
+          }
+        }
+        void loadTtsVoices(ttsEngine);
       }
     } catch {
       // Offline or unconfigured
@@ -155,6 +243,22 @@
     eddnRadius = fullConfig.eddn_radius_ly ?? 200;
     tourismReference = fullConfig.tourism_reference_cr_ly ?? 100000;
     engineeringRolls = [...(validRolls(fullConfig.engineering_rolls) ? fullConfig.engineering_rolls : DEFAULT_ROLLS)];
+    if (fullConfig.tts) {
+      ttsEnabled = fullConfig.tts.enabled ?? false;
+      ttsEngine = fullConfig.tts.engine ?? 'native';
+      ttsVoice = fullConfig.tts.voice ?? '';
+      ttsVolume = fullConfig.tts.volume ?? 80;
+      ttsRate = fullConfig.tts.rate ?? 100;
+      if (fullConfig.tts.channels) {
+        ttsChannels = {
+          combat: fullConfig.tts.channels.combat ?? true,
+          navigation: fullConfig.tts.channels.navigation ?? true,
+          exploration: fullConfig.tts.channels.exploration ?? true,
+          mining: fullConfig.tts.channels.mining ?? true,
+          carrier: fullConfig.tts.channels.carrier ?? true,
+        };
+      }
+    }
   }
 
   function mineralLabel(key: string): string {
@@ -195,6 +299,14 @@
       eddn_radius_ly: eddnRadius,
       tourism_reference_cr_ly: tourismReference,
       engineering_rolls: [...engineeringRolls] as number[],
+      tts: {
+        enabled: ttsEnabled,
+        engine: ttsEngine,
+        voice: ttsVoice || undefined,
+        volume: ttsVolume,
+        rate: ttsRate,
+        channels: { ...ttsChannels },
+      },
       server: {
         lan: lanEnabled,
       },
@@ -362,6 +474,139 @@
       {#if rollsInvalid}<p id="engineering-rolls-error" role="alert" data-testid="engineering-rolls-error">{t('settings-engineering-rolls-invalid')}</p>{/if}
     </fieldset>
 
+    <fieldset class="minerals tts-section" data-testid="tts-settings">
+      <legend>{t('settings-tts-title')}</legend>
+      <p class="help-text">{t('settings-tts-description')}</p>
+
+      <label class="field-row">
+        <span>{t('settings-tts-enabled')}</span>
+        <input
+          type="checkbox"
+          role="switch"
+          data-testid="tts-enabled"
+          bind:checked={ttsEnabled}
+          onchange={saveConfig}
+        />
+      </label>
+
+      {#if ttsEnabled}
+        <label class="field-row">
+          <span>{t('settings-tts-engine')}</span>
+          <select
+            data-testid="tts-engine"
+            bind:value={ttsEngine}
+            onchange={onEngineChange}
+          >
+            <option value="native">{t('settings-tts-engine-native')}</option>
+            <option value="kokoro">{t('settings-tts-engine-kokoro')}</option>
+          </select>
+        </label>
+
+        <label class="field-row">
+          <span>{t('settings-tts-voice')}</span>
+          <select
+            data-testid="tts-voice"
+            bind:value={ttsVoice}
+            onchange={saveConfig}
+          >
+            <option value="">(Predeterminada)</option>
+            {#each ttsVoicesList as v (v.id)}
+              <option value={v.id}>{v.name} ({v.lang})</option>
+            {/each}
+          </select>
+        </label>
+
+        <label class="field-row">
+          <span>{t('settings-tts-volume')} ({ttsVolume}%)</span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="5"
+            data-testid="tts-volume"
+            bind:value={ttsVolume}
+            onchange={saveConfig}
+          />
+        </label>
+
+        <label class="field-row">
+          <span>{t('settings-tts-rate')} ({ttsRate}%)</span>
+          <input
+            type="range"
+            min="80"
+            max="150"
+            step="5"
+            data-testid="tts-rate"
+            bind:value={ttsRate}
+            onchange={saveConfig}
+          />
+        </label>
+
+        <div class="tts-channels">
+          <span class="channels-title">{t('settings-tts-channels')}</span>
+          <div class="channels-grid">
+            <label class="channel-item">
+              <input
+                type="checkbox"
+                data-testid="tts-channel-combat"
+                bind:checked={ttsChannels.combat}
+                onchange={saveConfig}
+              />
+              <span>{t('settings-tts-channel-combat')}</span>
+            </label>
+            <label class="channel-item">
+              <input
+                type="checkbox"
+                data-testid="tts-channel-navigation"
+                bind:checked={ttsChannels.navigation}
+                onchange={saveConfig}
+              />
+              <span>{t('settings-tts-channel-navigation')}</span>
+            </label>
+            <label class="channel-item">
+              <input
+                type="checkbox"
+                data-testid="tts-channel-exploration"
+                bind:checked={ttsChannels.exploration}
+                onchange={saveConfig}
+              />
+              <span>{t('settings-tts-channel-exploration')}</span>
+            </label>
+            <label class="channel-item">
+              <input
+                type="checkbox"
+                data-testid="tts-channel-mining"
+                bind:checked={ttsChannels.mining}
+                onchange={saveConfig}
+              />
+              <span>{t('settings-tts-channel-mining')}</span>
+            </label>
+            <label class="channel-item">
+              <input
+                type="checkbox"
+                data-testid="tts-channel-carrier"
+                bind:checked={ttsChannels.carrier}
+                onchange={saveConfig}
+              />
+              <span>{t('settings-tts-channel-carrier')}</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="test-row">
+          <button
+            type="button"
+            class="btn-test-voice"
+            data-testid="tts-test-btn"
+            disabled={ttsTesting}
+            onclick={testTtsVoice}
+          >
+            {ttsTesting ? t('settings-tts-test-playing') : t('settings-tts-test-button')}
+          </button>
+        </div>
+      {/if}
+    </fieldset>
+
     <Pairing />
   </div>
 </Panel>
@@ -403,5 +648,75 @@
     margin: 0;
     font-size: 0.8rem;
     color: var(--hud-muted);
+  }
+
+  .tts-section {
+    border: 1px solid var(--hud-border);
+    padding: 0.75rem;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .tts-section legend {
+    font-weight: 600;
+    color: var(--hud-primary, #ff7100);
+    padding: 0 0.4rem;
+  }
+
+  .tts-channels {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-top: 0.3rem;
+  }
+
+  .channels-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--hud-primary, #ff7100);
+  }
+
+  .channels-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding-left: 0.5rem;
+  }
+
+  .channel-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .test-row {
+    margin-top: 0.5rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .btn-test-voice {
+    background: var(--hud-bg);
+    color: var(--hud-primary, #ff7100);
+    border: 1px solid var(--hud-border);
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.15s ease;
+  }
+
+  .btn-test-voice:hover:not(:disabled) {
+    background: var(--hud-primary, #ff7100);
+    color: var(--hud-bg, #000);
+  }
+
+  .btn-test-voice:disabled {
+    opacity: 0.5;
+    cursor: wait;
   }
 </style>
