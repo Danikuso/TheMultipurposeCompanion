@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
@@ -61,6 +61,25 @@ if (ardentPort > 0) {
   };
   fakeServer = http.createServer((req, res) => {
     const url = req.url ?? '';
+    if (req.method === 'POST' && url === '/__restart' && fixtureName === 'engineering_session.log') {
+      headless.once('exit', () => { headless = launchHeadless(); send(res, 200, { ok: true }); });
+      restarting = true;
+      headless.kill();
+      return;
+    }
+    if (req.method === 'POST' && url === '/api/stations/search') {
+      let data = '';
+      req.on('data', (chunk) => (data += chunk));
+      req.on('end', () => {
+        const query = JSON.parse(data);
+        const body = JSON.parse(fs.readFileSync(path.join(fixtures, 'spansh_stations_material_trader.json'), 'utf8'));
+        const type = query.filters?.material_trader?.value;
+        body.results = body.results.filter((row) => type?.includes(row.material_trader));
+        body.count = body.results.length;
+        send(res, 200, body);
+      });
+      return;
+    }
     if (req.method === 'POST' && url.startsWith('/__journal')) {
       let data = '';
       req.on('data', (c) => (data += c));
@@ -118,27 +137,38 @@ const replayBin = path.resolve(uiDir, `../target/debug/tmc-replay${exeSuffix}`);
 const headlessBin = path.resolve(uiDir, `../target/debug/tmc-headless${exeSuffix}`);
 
 // Solo los escenarios de F3 (comercio/misiones/EDDN) simulan «juego en marcha».
-const f3Scenario = ['trade_session.log', 'missions_session.log'].includes(fixtureName);
+const f3Scenario = ['trade_session.log', 'missions_session.log', 'engineering_session.log'].includes(fixtureName);
 const childEnv = { ...process.env };
 if (f3Scenario) childEnv.TMC_E2E_GAME_RUNNING = '1';
 else delete childEnv.TMC_E2E_GAME_RUNNING;
 if (relayPort > 0) childEnv.TMC_E2E_EDDN_RELAY = `tcp://127.0.0.1:${relayPort}`;
 if (ardentPort > 0) childEnv.TMC_E2E_ARDENT_BASE = `http://127.0.0.1:${ardentPort}`;
 
-const headless = fs.existsSync(headlessBin)
-  ? spawn(
+let restarting = false;
+function launchHeadless() {
+ if (!fs.existsSync(headlessBin)) {
+   // Compila antes: Cargo no debe ser el proceso controlado al reiniciar o cerrar.
+   const build = spawnSync('cargo', [
+     'build', '--manifest-path', path.resolve(uiDir, '../Cargo.toml'), '-p', 'tmc-headless',
+     '--target-dir', path.resolve(uiDir, '../target'),
+   ], { stdio: 'inherit', env: childEnv, windowsHide: true });
+   if (build.error || build.status !== 0 || !fs.existsSync(headlessBin)) {
+     fakeServer?.close();
+     throw new Error(`No se pudo compilar el headless de pruebas: ${build.error?.message ?? build.status}`);
+   }
+ }
+ const child = spawn(
       headlessBin,
       ['--config', configPath, '--journal-dir', journalDir, '--ui-dir', path.resolve(uiDir, 'dist')],
-      { stdio: 'inherit', env: childEnv },
-    )
-  : spawn(
-      'cargo',
-      [
-        'run', '--manifest-path', path.resolve(uiDir, '../Cargo.toml'), '-p', 'tmc-headless', '--',
-        '--config', configPath, '--journal-dir', journalDir, '--ui-dir', path.resolve(uiDir, 'dist'),
-      ],
-      { stdio: 'inherit', env: childEnv },
+      { stdio: 'inherit', env: childEnv, windowsHide: true },
     );
+ child.on('exit', (code) => {
+   if (restarting) restarting = false;
+   else process.exit(code ?? 0);
+ });
+ return child;
+}
+let headless = launchHeadless();
 
 setTimeout(() => {
   if (fs.existsSync(replayBin)) {
@@ -199,6 +229,3 @@ function cleanup() {
 
 process.on('SIGINT', cleanup);
 process.on('SIGTERM', cleanup);
-headless.on('exit', (code) => {
-  process.exit(code ?? 0);
-});

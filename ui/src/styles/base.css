@@ -45,3 +45,159 @@ button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* =====================================================================
+   TMC Glass HUD — Clases Comunes del Sistema de Diseño
+   ===================================================================== */
+
+/* Tarjetas Métricas */
+.metric-card {
+  background: var(--hud-surface-card);
+  border: 1px solid var(--hud-border-subtle);
+  border-radius: 4px;
+  padding: 0.65rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.metric-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--hud-muted);
+}
+.metric-val {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--hud-text);
+}
+.metric-val.gold { color: #fbbf24; }
+.metric-val.green { color: var(--hud-success); }
+.metric-val.cyan { color: var(--hud-cyan); }
+.metric-val.danger { color: var(--hud-danger); }
+
+/* Medidores y Barras de Llenado */
+.hud-meter-track {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--hud-border-subtle);
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+  position: relative;
+}
+.hud-meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 150ms ease;
+}
+.fill-orange { background: linear-gradient(90deg, #d97706, #ff7100); }
+.fill-green { background: linear-gradient(90deg, #059669, #10b981); }
+.fill-cyan { background: linear-gradient(90deg, #0284c7, #06b6d4); }
+.fill-purple { background: linear-gradient(90deg, #7c3aed, #a855f7); }
+.fill-danger { background: linear-gradient(90deg, #b91c1c, #ef4444); }
+
+/* Píldoras y Badges Semánticos */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.18rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.badge-orange { background: rgba(255, 113, 0, 0.15); border: 1px solid rgba(255, 113, 0, 0.4); color: var(--hud-primary); }
+.badge-green { background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.4); color: var(--hud-success); }
+.badge-cyan { background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.4); color: var(--hud-cyan); }
+.badge-amber { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: var(--hud-warning); }
+.badge-danger { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: var(--hud-danger); }
+.badge-purple { background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: var(--hud-purple); }
+
+/* Steppers Horizontales de Progreso */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--hud-surface-card);
+  padding: 0.65rem 0.85rem;
+  border-radius: 4px;
+  border: 1px solid var(--hud-border-subtle);
+}
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  opacity: 0.45;
+  font-size: 0.8rem;
+}
+.step-item.active { opacity: 1; color: var(--hud-primary); font-weight: 700; }
+.step-item.done { opacity: 0.85; color: var(--hud-success); }
+.step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.step-item.active .step-num { background: var(--hud-primary); color: #000; }
+.step-item.done .step-num { background: var(--hud-success); color: #000; }
+.step-divider { flex: 1; height: 1px; background: var(--hud-border-subtle); }
+
+/* Filas Interactivas de Lista */
+.hud-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--hud-surface-card);
+  border: 1px solid var(--hud-border-subtle);
+  border-radius: 4px;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.45rem;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+.hud-list-row:hover {
+  background: #1d243a;
+  border-color: rgba(255, 113, 0, 0.4);
+}
+.hud-list-row.highlight {
+  border-left: 3px solid var(--hud-primary);
+}
+
+/* Botones HUD */
+.hud-btn {
+  background: var(--hud-surface-card);
+  border: 1px solid var(--hud-border);
+  color: var(--hud-primary);
+  padding: 0.35rem 0.75rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+  white-space: nowrap;
+}
+.hud-btn:hover:not(:disabled) {
+  background: var(--hud-primary);
+  color: #000;
+}
+.hud-btn.btn-sm {
+  padding: 0.2rem 0.45rem;
+  font-size: 0.73rem;
+}
+

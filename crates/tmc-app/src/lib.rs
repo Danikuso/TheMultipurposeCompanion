@@ -1,6 +1,7 @@
 //! Composición del núcleo, configuración, logs y portapapeles de TMC.
 #![forbid(unsafe_code)]
 
+pub mod capi_service;
 pub mod clipboard;
 pub mod config;
 pub mod eddn_service;
@@ -9,6 +10,7 @@ pub mod logging;
 pub mod net_service;
 pub mod wiring;
 
+pub use capi_service::CapiService;
 pub use clipboard::{AppActions, Clipboard};
 pub use config::{Config, ServerSection, config_path, data_dir};
 pub use logging::{LoggingGuards, init_logging};
@@ -17,6 +19,9 @@ pub use wiring::{Running, start, start_custom, start_full, start_with_transport}
 
 #[cfg(all(test, debug_assertions))]
 mod e2e_tests;
+
+#[cfg(test)]
+mod engineering_pages_tests;
 
 #[cfg(test)]
 mod tests {
@@ -253,6 +258,54 @@ mining_threshold_cr = 2000000
         assert_eq!(actions.put_config(ok).unwrap()["eddn_radius_ly"], 500);
     }
 
+    #[test]
+    fn f3_config_without_f4_fields_loads_with_defaults() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(
+            &path,
+            "language = \"en\"
+eddn_radius_ly = 250
+tourism_reference_cr_ly = 200000
+",
+        )
+        .unwrap();
+        let cfg = Config::load_from_or_default(&path);
+        assert_eq!(cfg.eddn_radius_ly, 250);
+        assert_eq!(cfg.engineering_rolls, [1, 1, 1, 1, 4]);
+        assert_eq!(cfg.module_settings().engineering_rolls, [1, 1, 1, 1, 4]);
+    }
+
+    #[test]
+    fn config_snapshot_includes_engineering_rolls() {
+        assert_eq!(
+            Config::default().diagnostic_snapshot()["engineering_rolls"],
+            json!([1, 1, 1, 1, 4])
+        );
+    }
+
+    #[tokio::test]
+    async fn put_config_rejects_rolls_out_of_range() {
+        let dir = tempdir().unwrap();
+        let (actions, _core, _online) = runtime_actions(dir.path());
+        let before = actions.get_config();
+        for rolls in [json!([1, 1, 1, 1, 0]), json!([1, 1, 1, 1, 11])] {
+            let mut cfg = before.clone();
+            cfg["engineering_rolls"] = rolls;
+            match actions.put_config(cfg) {
+                Err(ActionError::Failed(m)) => assert_eq!(m, "invalid-engineering-rolls"),
+                other => panic!("{other:?}"),
+            }
+        }
+        assert_eq!(actions.get_config(), before);
+        let mut ok = before.clone();
+        ok["engineering_rolls"] = json!([2, 3, 4, 5, 10]);
+        assert_eq!(
+            actions.put_config(ok).unwrap()["engineering_rolls"],
+            json!([2, 3, 4, 5, 10])
+        );
+    }
+
     #[tokio::test]
     async fn put_config_normalizes_interest_list() {
         let dir = tempdir().unwrap();
@@ -422,6 +475,53 @@ mining_threshold_cr = 2000000
                 "missions.reset_session"
             ])
         );
+    }
+
+    #[tokio::test]
+    async fn engineering_actions_reach_core() {
+        let dir = tempdir().unwrap();
+        let core = tmc_core::spawn_core(
+            vec![Box::new(ActionProbe(Vec::new()))],
+            None,
+            Duration::from_millis(100),
+        );
+        let online = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+        let (events, _rx) = tokio::sync::mpsc::channel(8);
+        let net = spawn_net_service(
+            std::sync::Arc::new(tmc_net::NetClient::new(std::sync::Arc::new(
+                tmc_net::ReqwestTransport::new().unwrap(),
+            ))),
+            tmc_core::Store::open_in_memory().unwrap(),
+            events,
+            online.clone(),
+        );
+        let actions = AppActions::with_runtime(Config::default(), core.events.clone(), online, net)
+            .with_save_path(dir.path().join("config.toml"));
+        let snap = BTreeMap::new();
+        let names = [
+            "engineering.select_module",
+            "engineering.preview",
+            "engineering.close_flow",
+            "engineering.pin_goal",
+            "engineering.unpin_goal",
+            "engineering.move_goal",
+            "engineering.select_engineer",
+            "engineering.dismiss_alert",
+            "engineering.reset_session",
+        ];
+        for name in names {
+            let out = actions.run_action_with(name, &json!({}), &snap);
+            assert!(out.is_ok(), "{name}: {out:?}");
+        }
+        let mut seen = Value::Null;
+        for _ in 0..50 {
+            seen = core.snapshot().await["actionprobe.actions"].clone();
+            if seen.as_array().is_some_and(|a| a.len() == names.len()) {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+        assert_eq!(seen, json!(names));
     }
 
     #[test]
@@ -948,5 +1048,248 @@ mining_threshold_cr = 2000000
         assert_eq!(health["ok"], true);
 
         running.server.shutdown();
+    }
+
+    #[tokio::test]
+    async fn frontier_oauth_login_and_callback_endpoints_work() {
+        use std::sync::Arc;
+        use tmc_net::transport::{BoxFut, HttpReply, TransportError};
+        use tower::ServiceExt;
+        let store = tmc_store::Store::open_in_memory().unwrap();
+
+        let token_json = r#"{
+            "access_token": "capi_test_access_123",
+            "refresh_token": "capi_test_refresh_456",
+            "token_type": "Bearer",
+            "expires_in": 3600
+        }"#;
+
+        struct MockCapiTransport {
+            reply: std::sync::Mutex<Option<Result<HttpReply, TransportError>>>,
+        }
+
+        impl tmc_net::Transport for MockCapiTransport {
+            fn get(&self, _url: &str) -> BoxFut<'_, Result<HttpReply, TransportError>> {
+                let res = self
+                    .reply
+                    .lock()
+                    .unwrap()
+                    .take()
+                    .unwrap_or_else(|| Err(TransportError::Connect("no reply".into())));
+                Box::pin(async move { res })
+            }
+            fn post_form(
+                &self,
+                _url: &str,
+                _params: &[(String, String)],
+            ) -> BoxFut<'_, Result<HttpReply, TransportError>> {
+                let res = self
+                    .reply
+                    .lock()
+                    .unwrap()
+                    .take()
+                    .unwrap_or_else(|| Err(TransportError::Connect("no reply".into())));
+                Box::pin(async move { res })
+            }
+            fn get_with_auth(
+                &self,
+                _url: &str,
+                _token: &str,
+            ) -> BoxFut<'_, Result<HttpReply, TransportError>> {
+                let res = self
+                    .reply
+                    .lock()
+                    .unwrap()
+                    .take()
+                    .unwrap_or_else(|| Err(TransportError::Connect("no reply".into())));
+                Box::pin(async move { res })
+            }
+        }
+
+        let transport = Arc::new(MockCapiTransport {
+            reply: std::sync::Mutex::new(Some(Ok(HttpReply {
+                status: 200,
+                body: token_json.to_string(),
+            }))),
+        });
+
+        let capi_service = Arc::new(CapiService::new(
+            store.clone(),
+            transport,
+            Some("tmc_test_client".to_string()),
+        ));
+
+        let actions = Arc::new(AppActions::new().with_capi_service(capi_service));
+
+        let core = tmc_core::spawn_core(vec![], None, Duration::from_millis(100));
+
+        let router = tmc_server::build_router(
+            tmc_server::ServerConfig {
+                port: 47320,
+                lan: false,
+                token: String::new(),
+                ui_dir: None,
+            },
+            "127.0.0.1".into(),
+            core,
+            store.clone(),
+            actions,
+        );
+
+        // 1. Probar GET /api/auth/frontier/login pidiendo JSON
+        let mut req_login = Request::builder()
+            .uri("/api/auth/frontier/login")
+            .header(header::HOST, "127.0.0.1:47320")
+            .header(header::ACCEPT, "application/json")
+            .body(Body::empty())
+            .unwrap();
+        req_login.extensions_mut().insert(ConnectInfo(
+            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
+        ));
+
+        let resp_login = router.clone().oneshot(req_login).await.unwrap();
+        assert_eq!(resp_login.status(), StatusCode::OK);
+        let body_bytes = axum::body::to_bytes(resp_login.into_body(), 4096)
+            .await
+            .unwrap();
+        let login_json: Value = serde_json::from_slice(&body_bytes).unwrap();
+        let auth_url = login_json["url"].as_str().unwrap();
+        let auth_state = login_json["state"].as_str().unwrap();
+
+        assert!(auth_url.contains("https://auth.frontierstore.net/auth"));
+        assert!(auth_url.contains("client_id=tmc_test_client"));
+        assert!(auth_url.contains(&format!("state={auth_state}")));
+
+        // 2. Probar GET /api/auth/frontier/callback con estado inválido
+        let mut req_bad = Request::builder()
+            .uri("/api/auth/frontier/callback?code=abc&state=wrong_state")
+            .header(header::HOST, "127.0.0.1:47320")
+            .body(Body::empty())
+            .unwrap();
+        req_bad.extensions_mut().insert(ConnectInfo(
+            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
+        ));
+        let resp_bad = router.clone().oneshot(req_bad).await.unwrap();
+        assert_eq!(resp_bad.status(), StatusCode::BAD_REQUEST);
+
+        // 3. Probar GET /api/auth/frontier/callback con estado legítimo y respuesta HTML
+        let mut req_cb = Request::builder()
+            .uri(format!(
+                "/api/auth/frontier/callback?code=mock_code_xyz&state={auth_state}"
+            ))
+            .header(header::HOST, "127.0.0.1:47320")
+            .body(Body::empty())
+            .unwrap();
+        req_cb.extensions_mut().insert(ConnectInfo(
+            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
+        ));
+        let resp_cb = router.clone().oneshot(req_cb).await.unwrap();
+        assert_eq!(resp_cb.status(), StatusCode::OK);
+        let cb_bytes = axum::body::to_bytes(resp_cb.into_body(), 8192)
+            .await
+            .unwrap();
+        let html_str = String::from_utf8_lossy(&cb_bytes);
+        assert!(html_str.contains("Frontier Store Conectado"));
+        assert!(html_str.contains("VINCULACIÓN EXITOSA"));
+
+        // 4. Verificar que el token se guardó en la base de datos
+        let cred = store
+            .get_account_credential("frontier_capi")
+            .unwrap()
+            .unwrap();
+        assert!(cred.token_json.unwrap().contains("capi_test_access_123"));
+
+        // 5. Probar acción frontier.logout
+        let mut req_logout = Request::builder()
+            .method("POST")
+            .uri("/api/actions/frontier.logout")
+            .header(header::HOST, "127.0.0.1:47320")
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from("{}"))
+            .unwrap();
+        req_logout.extensions_mut().insert(ConnectInfo(
+            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
+        ));
+        let resp_logout = router.clone().oneshot(req_logout).await.unwrap();
+        assert_eq!(resp_logout.status(), StatusCode::OK);
+        assert_eq!(store.get_account_credential("frontier_capi").unwrap(), None);
+    }
+
+    #[tokio::test]
+    async fn tts_rest_endpoints_and_config_persistence() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        let core = tmc_core::spawn_core(vec![], None, Duration::from_millis(100));
+        let store = tmc_store::Store::open_in_memory().unwrap();
+        let actions = std::sync::Arc::new(
+            AppActions::with_config(Config::default()).with_save_path(path.clone()),
+        );
+
+        let router = tmc_server::build_router(
+            tmc_server::ServerConfig {
+                port: 47320,
+                lan: false,
+                token: String::new(),
+                ui_dir: None,
+            },
+            "127.0.0.1".into(),
+            core,
+            store,
+            actions,
+        );
+
+        // 1. Probar GET /api/tts/voices
+        let mut req_voices = Request::builder()
+            .uri("/api/tts/voices")
+            .header(header::HOST, "127.0.0.1:47320")
+            .body(Body::empty())
+            .unwrap();
+        req_voices.extensions_mut().insert(ConnectInfo(
+            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
+        ));
+        let resp_voices = router.clone().oneshot(req_voices).await.unwrap();
+        assert_eq!(resp_voices.status(), StatusCode::OK);
+        let bytes = axum::body::to_bytes(resp_voices.into_body(), 16384)
+            .await
+            .unwrap();
+        let voices_json: Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(voices_json["voices"].is_array());
+
+        // 2. Probar POST /api/tts/test
+        let mut req_test = Request::builder()
+            .method("POST")
+            .uri("/api/tts/test")
+            .header(header::HOST, "127.0.0.1:47320")
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(
+                r#"{"text":"Aviso de prueba","volume":80,"rate":100}"#,
+            ))
+            .unwrap();
+        req_test.extensions_mut().insert(ConnectInfo(
+            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
+        ));
+        let resp_test = router.clone().oneshot(req_test).await.unwrap();
+        assert_eq!(resp_test.status(), StatusCode::OK);
+
+        // 3. Probar PUT /api/config modificando tts
+        let mut req_cfg = Request::builder()
+            .method("PUT")
+            .uri("/api/config")
+            .header(header::HOST, "127.0.0.1:47320")
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(
+                r#"{"tts":{"enabled":true,"volume":90,"rate":110}}"#,
+            ))
+            .unwrap();
+        req_cfg.extensions_mut().insert(ConnectInfo(
+            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
+        ));
+        let resp_cfg = router.oneshot(req_cfg).await.unwrap();
+        assert_eq!(resp_cfg.status(), StatusCode::OK);
+
+        let reloaded = Config::load_from_or_default(&path);
+        assert!(reloaded.tts.enabled);
+        assert_eq!(reloaded.tts.volume, 90);
+        assert_eq!(reloaded.tts.rate, 110);
     }
 }

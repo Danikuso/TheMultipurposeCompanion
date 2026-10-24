@@ -16,6 +16,202 @@ use tmc_net::{BoxFut, HttpReply, Transport, TransportError};
 /// Serializa las pruebas e2e del archivo: comparten el interruptor global de «juego en marcha».
 static E2E_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
+const ENGINEERING_FIXTURE: &str =
+    include_str!("../../../tests/fixtures/journal/engineering_session.log");
+
+#[test]
+fn every_line_of_f4_fixture_is_typed() {
+    use tmc_model::events::{EventKind, parse_line};
+    let mut other = Vec::new();
+    for (index, line) in ENGINEERING_FIXTURE.lines().enumerate() {
+        let event = parse_line(line).unwrap_or_else(|e| panic!("line {}: {e:?}", index + 1));
+        if matches!(event.kind, EventKind::Other) {
+            other.push(index + 1);
+        }
+    }
+    const EXPECTED_OTHER: &[usize] = &[];
+    assert_eq!(other, EXPECTED_OTHER);
+    assert_eq!(ENGINEERING_FIXTURE.lines().count(), 21);
+}
+
+#[test]
+fn fixture_inventory_criterion_2() {
+    use tmc_model::events::{MaterialCategory, parse_line};
+    use tmc_modules::engineering::inventory::{ChangeOrigin, MaterialInventory};
+    let mut inventory = MaterialInventory::default();
+    let mut changes = Vec::new();
+    for line in ENGINEERING_FIXTURE.lines() {
+        let event = parse_line(line).unwrap();
+        changes.extend(inventory.apply_event(&event.kind, event.timestamp));
+    }
+    // Snapshot + collect - trade - synthesis + mission - craft, calculated by hand.
+    use MaterialCategory::{Encoded, Manufactured, Raw};
+    let expected = BTreeMap::from([
+        ((Raw, 1, "iron"), 117),
+        ((Raw, 4, "polonium"), 150),
+        ((Raw, 1, "carbon"), 1),
+        ((Manufactured, 3, "conductiveceramics"), 26),
+        ((Manufactured, 5, "pharmaceuticalisolators"), 8),
+        ((Manufactured, 4, "heatvanes"), 3),
+        ((Manufactured, 5, "protoheatradiators"), 2),
+        ((Manufactured, 5, "biotechconductors"), 4),
+        ((Encoded, 4, "shieldpatternanalysis"), 14),
+        ((Encoded, 0, "foo_new"), 4),
+        ((Encoded, 5, "dataminedwake"), 3),
+        ((Encoded, 4, "hyperspacetrajectories"), 6),
+    ]);
+    let rows = inventory.by_category();
+    let actual: BTreeMap<_, _> = rows
+        .iter()
+        .flat_map(|(category, grades)| {
+            grades.iter().flat_map(move |(grade, rows)| {
+                rows.iter()
+                    .map(move |row| ((*category, *grade, row.key.as_str()), row.count))
+            })
+        })
+        .collect();
+    assert_eq!(actual, expected);
+    assert_eq!(
+        rows[&tmc_model::events::MaterialCategory::Raw][&1][1].key,
+        "iron"
+    );
+    assert_eq!(
+        rows[&tmc_model::events::MaterialCategory::Encoded][&0][0].key,
+        "foo_new"
+    );
+    assert_eq!(inventory.at_max(), ["polonium"]);
+    let overflow = changes.iter().find(|c| c.key == "polonium").unwrap();
+    assert_eq!(
+        (overflow.delta, overflow.lost, overflow.origin),
+        (0, 2, ChangeOrigin::Mining)
+    );
+}
+
+#[test]
+fn fixture_engineers_criterion_3() {
+    use tmc_model::events::{EngineerStatus, parse_line};
+    use tmc_modules::engineering::engineers::EngineerBook;
+    let mut book = EngineerBook::default();
+    for line in ENGINEERING_FIXTURE.lines() {
+        book.apply_journal(&parse_line(line).unwrap().kind, line);
+    }
+    assert_eq!(book.position(), Some([134.925, -0.8125, -47.28125]));
+    let rows = book.rows();
+    let farseer = rows.iter().find(|r| r.id == 300100).unwrap();
+    assert_eq!(
+        (farseer.status, farseer.rank, farseer.rank_progress),
+        (EngineerStatus::Unlocked, Some(5), Some(0))
+    );
+    assert!((farseer.distance_ly.unwrap() - 12.3).abs() < 0.000001);
+    assert_eq!(
+        book.status(300160).unwrap().progress,
+        EngineerStatus::Unlocked
+    );
+    assert_eq!(book.status(300260).unwrap().progress, EngineerStatus::Known);
+}
+
+#[test]
+fn engineering_inventory_parked_journal_edges() {
+    use tmc_model::events::{EventKind, parse_line};
+    use tmc_modules::engineering::inventory::{ChangeOrigin, MaterialInventory};
+    let mut inventory = MaterialInventory::default();
+    let mut apply = |body: &str| {
+        let event =
+            parse_line(&format!(r#"{{"timestamp":"2026-10-21T12:00:00Z",{body}}}"#)).unwrap();
+        assert!(!matches!(event.kind, EventKind::Other));
+        inventory.apply_event(&event.kind, event.timestamp)
+    };
+    apply(r#""event":"Materials","Raw":[{"Name":"iron","Count":2},{"Name":"iron","Count":3}]"#);
+    let discarded =
+        apply(r#""event":"MaterialDiscarded","Name":"iron","Category":"Raw","Count":1"#);
+    assert_eq!(
+        (discarded[0].delta, discarded[0].origin),
+        (-1, ChangeOrigin::Discarded)
+    );
+    let donation = apply(
+        r#""event":"EngineerContribution","Engineer":"Synthetic Engineer","Type":"Material","Material":"iron","Quantity":2"#,
+    );
+    assert_eq!(
+        (donation[0].delta, donation[0].origin),
+        (-2, ChangeOrigin::Engineering)
+    );
+    let alias = apply(
+        r#""event":"Synthesis","Name":"Synthetic recipe","Materials":[{"Material":"iron","Count":1}]"#,
+    );
+    assert_eq!((alias[0].key.as_str(), alias[0].delta), ("iron", -1));
+    assert_eq!(inventory.count("iron"), 1);
+}
+
+#[test]
+fn engineering_trade_parked_rounding_and_caps() {
+    use tmc_modules::{
+        data::{TraderRules, materials},
+        engineering::trades::{Rate, plan_trades, rate},
+    };
+    let rules = TraderRules::default();
+    // Different families, down two grades: 6:9 reduces to 2:3.
+    assert_eq!(
+        rate(
+            &materials()["pharmaceuticalisolators"],
+            &materials()["heatexchangers"],
+            &rules
+        ),
+        Some(Rate { give: 2, get: 3 })
+    );
+    let missing = BTreeMap::from([("carbon".into(), 1)]);
+    let surplus = BTreeMap::from([("vanadium".into(), 1)]);
+    let overshoot = plan_trades(&missing, &surplus, &|_| 0, &rules);
+    assert_eq!(
+        (overshoot.proposals[0].give, overshoot.proposals[0].get),
+        (1, 3)
+    );
+    assert!(overshoot.uncovered.is_empty());
+    // Only two spaces remain; a 1:3 lot cannot fit and must never overfill.
+    let capped = plan_trades(&missing, &surplus, &|_| 298, &rules);
+    assert!(capped.proposals.is_empty());
+    assert_eq!(capped.uncovered, missing);
+}
+
+#[test]
+fn engineering_plan_parked_quality_and_experimental() {
+    use tmc_modules::{
+        data::blueprints,
+        engineering::{
+            plan::{PlanRequest, plan_cost, start_grade},
+            ship::CurrentEng,
+        },
+    };
+    let mut current = CurrentEng {
+        blueprint: "engine_dirty".into(),
+        level: 3,
+        quality: 0.998,
+        experimental: Some("another_experimental".into()),
+    };
+    let request = PlanRequest {
+        module_type: "engine".into(),
+        blueprint: "engine_dirty".into(),
+        experimental: Some("special_engine_overloaded".into()),
+        target_grade: 5,
+        rolls: [1, 1, 1, 1, 4],
+    };
+    assert_eq!(
+        (
+            start_grade(Some(&current), "engine_dirty", &request.rolls).grade,
+            start_grade(Some(&current), "engine_dirty", &request.rolls).partial_rolls
+        ),
+        (3, Some(1))
+    );
+    current.quality = 0.999;
+    assert_eq!(
+        start_grade(Some(&current), "engine_dirty", &request.rolls).grade,
+        4
+    );
+    let catalog = blueprints();
+    let cost = plan_cost(catalog, "int_engine_size5_class5", Some(&current), &request);
+    assert_eq!(cost.per_grade.keys().copied().collect::<Vec<_>>(), [4, 5]);
+    assert_eq!(cost.experimental.unwrap().values().sum::<u32>(), 9);
+}
+
 /// Simula el proceso del juego mientras vive y restaura el valor anterior al soltarse.
 struct GameRunning(bool);
 impl GameRunning {

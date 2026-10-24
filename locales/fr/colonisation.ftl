@@ -1,0 +1,16 @@
+nav-colonisation = Colonisation
+panel-colonisation-depot = Dépôt de construction
+panel-colonisation-supply = Approvisionnement et achats
+colonisation-construction-progress = Progression de la construction
+colonisation-resources-required = Ressources requises
+colonisation-trips-left = Trajets estimés
+colonisation-current-hold = Soute actuelle ({ $capacity } t)
+colonisation-col-resource = Ressource
+colonisation-col-required = Requis
+colonisation-col-provided = Livré
+colonisation-col-remaining = Restant
+colonisation-market-id = ID de marché
+colonisation-nearby-suppliers = Marchés proches avec stock
+colonisation-no-depot = Aucun dépôt de colonisation actif
+colonisation-copy-station = Copier le marché
+colonisation-copied = Copié !

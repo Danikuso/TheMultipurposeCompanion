@@ -13,6 +13,14 @@ import {
 import type {
   MassacreTopic, PassengersTopic, TourismTopic, CommunityGoalsTopic,
 } from '../modules/missions/types';
+import {
+  MaterialsPanel, EngineersPanel, ShipPanel as EngineeringShipPanel, EngineerFlow,
+  ShoppingPanel, TradesPanel, SourcesPanel, EngineeringAlerts,
+} from '../modules/engineering';
+import { CarrierOverviewPanel, CarrierJumpPanel, CarrierFinancesPanel } from '../modules/carrier';
+import { ColonisationProgressPanel, ColonisationSupplyPanel } from '../modules/colonisation';
+import { PowerplayPanel } from '../modules/powerplay';
+import { BgsPanel } from '../modules/bgs';
 import { topic } from '../lib/ws.svelte';
 
 export interface LayoutCtx {
@@ -60,19 +68,42 @@ const tourismVisible = () => (topic<TourismTopic>('missions.tourism')?.trips?.le
 const cgVisible = () => (topic<CommunityGoalsTopic>('missions.community_goals')?.goals?.length ?? 0) > 0;
 const czVisible = () => (topic<unknown>('combat.conflict_zone') ?? null) !== null;
 
-type AutoLayout = 'exploration' | 'combat' | 'mining' | 'missions' | 'trade';
-const MANUAL: string[] = ['exploration', 'combat', 'mining', 'missions', 'trade'];
+type AutoLayout =
+  | 'exploration'
+  | 'combat'
+  | 'mining'
+  | 'engineering'
+  | 'missions'
+  | 'trade'
+  | 'carrier'
+  | 'colonisation'
+  | 'powerplay';
+const MANUAL: string[] = [
+  'exploration',
+  'combat',
+  'mining',
+  'engineering',
+  'missions',
+  'trade',
+  'carrier',
+  'colonisation',
+  'powerplay',
+];
 
-/** Disposición elegida por relevancia: manual > combate > minería > misiones > comercio > exploración > null. */
+/** Disposición elegida por relevancia: manual > carrier > combate > colonización > minería > ingeniería > misiones > comercio > powerplay > exploración > null. */
 export function autoLayout(
   mods: { id: string; relevance: string }[],
   manual: string | null,
 ): AutoLayout | null {
   if (manual !== null && MANUAL.includes(manual)) return manual as AutoLayout;
+  if (isActive(rel(mods, 'carrier'))) return 'carrier';
   if (isActive(rel(mods, 'combat'))) return 'combat';
+  if (isActive(rel(mods, 'colonisation'))) return 'colonisation';
   if (rel(mods, 'mining') === 'active') return 'mining';
+  if (isActive(rel(mods, 'engineering'))) return 'engineering';
   if (isActive(rel(mods, 'missions'))) return 'missions';
   if (isActive(rel(mods, 'trade'))) return 'trade';
+  if (isActive(rel(mods, 'powerplay'))) return 'powerplay';
   if (isActive(rel(mods, 'exploration')) || isActive(rel(mods, 'exobiology'))) return 'exploration';
   return null;
 }
@@ -138,5 +169,45 @@ export const layouts: LayoutDef[] = [{
     { id: 'tourism', panel: TourismPanel, span: 2, when: tourismVisible },
     { id: 'rewards', panel: RewardsPanel, span: 1 },
     { id: 'community-goals', panel: CommunityGoalsPanel, span: 1, when: cgVisible },
+  ],
+}, {
+  id: 'engineering',
+  titleKey: 'layout-engineering',
+  icon: 'wrench',
+  slots: [
+    { id: 'materials', panel: MaterialsPanel, span: 2 },
+    { id: 'engineers', panel: EngineersPanel, span: 1 },
+    { id: 'eng-alerts', panel: EngineeringAlerts, span: 1 },
+    { id: 'eng-ship', panel: EngineeringShipPanel, span: 1 },
+    { id: 'eng-flow', panel: EngineerFlow, span: 2,
+      when: () => topic<{ slot?: string | null }>('engineering.flow')?.slot != null },
+    { id: 'shopping', panel: ShoppingPanel, span: 2 },
+    { id: 'trades', panel: TradesPanel, span: 1 },
+    { id: 'sources', panel: SourcesPanel, span: 1 },
+  ],
+}, {
+  id: 'carrier',
+  titleKey: 'layout-carrier',
+  icon: 'anchor',
+  slots: [
+    { id: 'carrier-overview', panel: CarrierOverviewPanel, span: 2 },
+    { id: 'carrier-jump', panel: CarrierJumpPanel, span: 1 },
+    { id: 'carrier-finances', panel: CarrierFinancesPanel, span: 1 },
+  ],
+}, {
+  id: 'colonisation',
+  titleKey: 'layout-colonisation',
+  icon: 'hammer',
+  slots: [
+    { id: 'colonisation-progress', panel: ColonisationProgressPanel, span: 2 },
+    { id: 'colonisation-supply', panel: ColonisationSupplyPanel, span: 1 },
+  ],
+}, {
+  id: 'powerplay',
+  titleKey: 'layout-powerplay',
+  icon: 'crown',
+  slots: [
+    { id: 'powerplay-status', panel: PowerplayPanel, span: 2 },
+    { id: 'bgs-system', panel: BgsPanel, span: 2 },
   ],
 }];

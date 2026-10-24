@@ -42,8 +42,13 @@ export default defineConfig({
     { name: 'missions', testMatch: 'missions.spec.ts', use: { baseURL: `http://127.0.0.1:${missionsPort}`, channel } },
     { name: 'massacre', testMatch: 'massacre.spec.ts', use: { baseURL: `http://127.0.0.1:${massacrePort}`, channel } },
     { name: 'tourism', testMatch: 'tourism.spec.ts', use: { baseURL: `http://127.0.0.1:${tourismPort}`, channel } },
+    { name: 'engineering', testMatch: 'engineering.spec.ts', use: { baseURL: `http://127.0.0.1:${port + 16}`, channel }, workers: 1 },
   ],
   webServer: [
+    server(port + 16, {
+      TMC_E2E_FIXTURE: 'engineering_session.log', TMC_E2E_SHIFT: 'true',
+      TMC_E2E_ONLINE: 'true', TMC_E2E_ARDENT_PORT: String(port + 17),
+    }),
     {
       command: 'node scripts/e2e-server.mjs',
       url: `http://127.0.0.1:${port}/api/health`,

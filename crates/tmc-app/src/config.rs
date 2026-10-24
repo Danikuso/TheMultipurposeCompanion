@@ -4,7 +4,7 @@ use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tmc_model::events::commodity_key;
-use tmc_model::settings::{DEFAULT_MINING_INTEREST, ModuleSettings};
+use tmc_model::settings::{DEFAULT_ENGINEERING_ROLLS, DEFAULT_MINING_INTEREST, ModuleSettings};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -44,6 +44,10 @@ pub struct Config {
     pub sell_search_radius_ly: u32,
     pub eddn_radius_ly: u32,
     pub tourism_reference_cr_ly: u64,
+    /// Tiradas por defecto de ingeniería por grado (G1..G5), cada una en 1..=10.
+    pub engineering_rolls: [u8; 5],
+    /// Configuración del copiloto auditivo y avisos de voz (F7).
+    pub tts: tmc_model::tts::TtsSettings,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub theme_mode: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -72,6 +76,8 @@ impl Default for Config {
             sell_search_radius_ly: 100,
             eddn_radius_ly: 200,
             tourism_reference_cr_ly: 100_000,
+            engineering_rolls: DEFAULT_ENGINEERING_ROLLS,
+            tts: tmc_model::tts::TtsSettings::default(),
             theme_mode: None,
             data_dir: None,
             ui_dir: None,
@@ -139,6 +145,7 @@ impl Config {
                     || normalize_interest(&cfg.mining_interest).is_none();
                 cfg.sanitize_f2();
                 cfg.sanitize_f3();
+                cfg.sanitize_f4();
                 #[cfg(debug_assertions)]
                 cfg.record_bootstrap(
                     serde_json::json!({"fallback":false,"loaded":true,"normalized":normalized}),
@@ -157,9 +164,9 @@ impl Config {
         }
     }
 
-    #[cfg(debug_assertions)]
+    #[cfg(any(debug_assertions, test))]
     pub(crate) fn diagnostic_snapshot(&self) -> serde_json::Value {
-        serde_json::json!({"language":self.language,"port":self.server.port,"lan":self.server.lan,"online_services":self.online_services,"alerts_enabled":self.alerts_enabled,"auto_copy_next_system":self.auto_copy_next_system,"auto_companion":self.auto_companion,"map_value_threshold":self.map_value_threshold,"default_neutron_efficiency":self.default_neutron_efficiency,"mining_interest_count":self.mining_interest.len(),"mining_threshold_cr":self.mining_threshold_cr,"sell_search_radius_ly":self.sell_search_radius_ly,"eddn_radius_ly":self.eddn_radius_ly,"tourism_reference_cr_ly":self.tourism_reference_cr_ly,"journal_configured":self.journal_dir.is_some(),"data_configured":self.data_dir.is_some(),"ui_configured":self.ui_dir.is_some()})
+        serde_json::json!({"language":self.language,"port":self.server.port,"lan":self.server.lan,"online_services":self.online_services,"alerts_enabled":self.alerts_enabled,"auto_copy_next_system":self.auto_copy_next_system,"auto_companion":self.auto_companion,"map_value_threshold":self.map_value_threshold,"default_neutron_efficiency":self.default_neutron_efficiency,"mining_interest_count":self.mining_interest.len(),"mining_threshold_cr":self.mining_threshold_cr,"sell_search_radius_ly":self.sell_search_radius_ly,"eddn_radius_ly":self.eddn_radius_ly,"tourism_reference_cr_ly":self.tourism_reference_cr_ly,"engineering_rolls":self.engineering_rolls,"journal_configured":self.journal_dir.is_some(),"data_configured":self.data_dir.is_some(),"ui_configured":self.ui_dir.is_some()})
     }
 
     #[cfg(debug_assertions)]
@@ -194,6 +201,14 @@ impl Config {
         }
         if !(1_000..=10_000_000).contains(&self.tourism_reference_cr_ly) {
             return Err("invalid-tourism-reference");
+        }
+        Ok(())
+    }
+
+    /// Valida los campos de F4 (tiradas de ingeniería por grado, 1..=10).
+    pub fn validate_f4(&self) -> Result<(), &'static str> {
+        if self.engineering_rolls.iter().any(|r| !(1..=10).contains(r)) {
+            return Err("invalid-engineering-rolls");
         }
         Ok(())
     }
@@ -243,6 +258,14 @@ impl Config {
         }
     }
 
+    /// Al cargar: tiradas inválidas vuelven a su valor por defecto, sin fallar.
+    fn sanitize_f4(&mut self) {
+        if self.validate_f4().is_err() {
+            tracing::warn!("engineering_rolls inválido; se usa el valor por defecto");
+            self.engineering_rolls = DEFAULT_ENGINEERING_ROLLS;
+        }
+    }
+
     pub fn save(&self) -> anyhow::Result<()> {
         self.save_to(&config_path())
     }
@@ -282,6 +305,8 @@ impl Config {
             sell_search_radius_ly: self.sell_search_radius_ly,
             eddn_radius_ly: self.eddn_radius_ly,
             tourism_reference_cr_ly: self.tourism_reference_cr_ly,
+            engineering_rolls: self.engineering_rolls,
+            tts: self.tts.clone(),
         }
     }
 

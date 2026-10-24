@@ -4,6 +4,7 @@
 
 use crate::combat::vouchers::{VoucherKind, VoucherLedger, declared_amount, redeem_kind};
 use crate::data::{FsdTable, bio_rules, fsd_table, species_table};
+use crate::engineering::inventory::MaterialInventory;
 use crate::exobiology::first_logged_estimate;
 use crate::exobiology::predict::{
     BioRules, BodyProfileKey, HistoryStats, Likelihood, body_profile, is_primary_star, predict,
@@ -158,6 +159,7 @@ pub struct MassacreReport {
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct EvalReport {
+    pub inventory: InventoryReport,
     pub cost: CostReport,
     pub massacre: MassacreReport,
     pub vouchers: VoucherReport,
@@ -187,11 +189,133 @@ pub(crate) fn eval_with(
     species: &SpeciesTable,
 ) -> EvalReport {
     let mut run = Run::new(fsd, rules, species);
+    let mut inventory = InventoryEval::default();
     for event in events {
         run.apply(&event.kind);
         run.track_economy(&event);
+        inventory.apply(&event);
     }
-    run.finish()
+    let mut report = run.finish();
+    report.inventory = inventory.finish();
+    report
+}
+
+/// Conciliación de Materials: agregados sobre la unión de existencias positivas
+/// de predicción e instantánea, con cantidad cero para una clave ausente.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct InventoryReport {
+    pub intervals: u32,
+    pub materials: u32,
+    pub exact: u32,
+    pub exact_ratio: f64,
+    pub mean_abs_diff: f64,
+    pub max_abs_diff: u32,
+    /// Solo eventos Other entre dos instantáneas comparables.
+    pub untyped_events: u32,
+}
+
+#[derive(Default)]
+struct InventoryEval {
+    inventory: MaterialInventory,
+    report: InventoryReport,
+    diff_sum: u64,
+    open_untyped: u32,
+    owner: Option<(Option<String>, Option<String>)>,
+    /// Un archivo nuevo no tiene dueño hasta Commander/LoadGame. Sus eventos
+    /// tipados se retienen para resolver Materials anterior a la identidad.
+    pending: Vec<(EventKind, chrono::DateTime<chrono::Utc>)>,
+    awaiting_owner: bool,
+}
+
+impl InventoryEval {
+    fn apply(&mut self, event: &JournalEvent) {
+        if matches!(event.kind, EventKind::Fileheader(_)) {
+            if self.awaiting_owner {
+                // Un archivo sin identidad interrumpe la continuidad: sus cambios
+                // no se pueden atribuir al dueño del inventario anterior.
+                self.inventory = MaterialInventory::default();
+                self.open_untyped = 0;
+            }
+            self.awaiting_owner = true;
+            self.pending.clear();
+            return;
+        }
+        let identity = match &event.kind {
+            EventKind::Commander(c) => Some((&c.fid, &c.name)),
+            EventKind::LoadGame(c) => Some((&c.fid, &c.commander)),
+            _ => None,
+        };
+        if let Some((fid, name)) = identity {
+            let fid = fid.as_ref().filter(|s| !s.is_empty()).cloned();
+            let name = name.as_ref().filter(|s| !s.is_empty()).cloned();
+            if fid.is_some() || name.is_some() {
+                let same_owner =
+                    self.owner
+                        .as_ref()
+                        .is_some_and(|(old_fid, old_name)| match (old_fid, &fid) {
+                            (Some(a), Some(b)) => a == b,
+                            _ => old_name.is_some() && *old_name == name,
+                        });
+                if !same_owner {
+                    self.inventory = MaterialInventory::default();
+                    self.open_untyped = 0;
+                    self.owner = Some((fid, name));
+                } else if let Some((old_fid, old_name)) = &mut self.owner {
+                    // LoadGame puede omitir FID; conservar la identidad más completa.
+                    *old_fid = fid.or_else(|| old_fid.take());
+                    *old_name = name.or_else(|| old_name.take());
+                }
+                self.awaiting_owner = false;
+                for (kind, at) in std::mem::take(&mut self.pending) {
+                    self.apply_known(&kind, at);
+                }
+            }
+        }
+        if self.awaiting_owner || self.owner.is_none() {
+            self.pending.push((event.kind.clone(), event.timestamp));
+        } else {
+            self.apply_known(&event.kind, event.timestamp);
+        }
+    }
+
+    fn apply_known(&mut self, kind: &EventKind, at: chrono::DateTime<chrono::Utc>) {
+        if matches!(kind, EventKind::Materials(_)) {
+            if self.inventory.has_snapshot() {
+                // La instantánea se carga con el mismo inventario de producción.
+                let mut actual = MaterialInventory::default();
+                actual.apply_event(kind, at);
+                let keys: BTreeSet<String> = [&self.inventory, &actual]
+                    .into_iter()
+                    .flat_map(|inv| inv.by_category().into_values())
+                    .flat_map(|grades| grades.into_values())
+                    .flatten()
+                    .map(|line| line.key)
+                    .collect();
+                self.report.intervals += 1;
+                self.report.untyped_events += self.open_untyped;
+                for key in keys {
+                    let diff = self.inventory.count(&key).abs_diff(actual.count(&key));
+                    self.report.materials += 1;
+                    self.report.exact += u32::from(diff == 0);
+                    self.diff_sum += u64::from(diff);
+                    self.report.max_abs_diff = self.report.max_abs_diff.max(diff);
+                }
+            }
+            self.open_untyped = 0;
+        } else if matches!(kind, EventKind::Other) && self.inventory.has_snapshot() {
+            self.open_untyped += 1;
+        }
+        // Nunca duplicar los deltas: producción es la única fuente de verdad.
+        self.inventory.apply_event(kind, at);
+    }
+
+    fn finish(mut self) -> InventoryReport {
+        self.report.exact_ratio = ratio(self.report.exact, self.report.materials);
+        if self.report.materials > 0 {
+            self.report.mean_abs_diff = self.diff_sum as f64 / f64::from(self.report.materials);
+        }
+        self.report
+    }
 }
 
 type BodyKey = (u64, u32);
@@ -776,6 +900,7 @@ impl<'a> Run<'a> {
             }
         }
         EvalReport {
+            inventory: InventoryReport::default(),
             cost: self.cost,
             massacre: self.massacre,
             vouchers,
@@ -805,6 +930,107 @@ mod tests {
 
     fn events(lines: &[String]) -> Vec<JournalEvent> {
         lines.iter().map(|l| parse_line(l).unwrap()).collect()
+    }
+
+    fn inventory_events(rows: &[&str]) -> Vec<JournalEvent> {
+        rows.iter()
+            .map(|row| {
+                parse_line(&format!(r#"{{"timestamp":"2026-10-22T10:00:00Z",{row}}}"#)).unwrap()
+            })
+            .collect()
+    }
+
+    #[test]
+    fn inventory_drift_is_measured_before_resync_and_missing_keys_are_zero() {
+        let rows = inventory_events(&[
+            r#""event":"Commander","FID":"F1","Name":"Private Commander""#,
+            r#""event":"FutureBefore""#,
+            r#""event":"Materials","Raw":[{"Name":"iron","Count":10},{"Name":"carbon","Count":2}]"#,
+            r#""event":"MaterialCollected","Category":"Raw","Name":"iron","Count":2"#,
+            r#""event":"FutureMiddle""#,
+            r#""event":"Materials","Raw":[{"Name":"iron","Count":9},{"Name":"sulphur","Count":4}]"#,
+            r#""event":"Materials","Raw":[{"Name":"iron","Count":9},{"Name":"sulphur","Count":4}]"#,
+            r#""event":"FutureAfter""#,
+        ]);
+        let r = eval_events(rows.into_iter()).inventory;
+        assert_eq!((r.intervals, r.materials, r.exact), (2, 5, 2));
+        assert_eq!(r.exact_ratio, 0.4);
+        assert_eq!(r.mean_abs_diff, 1.8);
+        assert_eq!(r.max_abs_diff, 4);
+        assert_eq!(r.untyped_events, 1);
+    }
+
+    #[test]
+    fn inventory_retains_same_owner_between_files_and_resolves_late_identity() {
+        for identity in [
+            r#""event":"Commander","FID":"F1","Name":"Private Commander""#,
+            r#""event":"LoadGame","Commander":"Private Commander""#,
+        ] {
+            let rows = inventory_events(&[
+                r#""event":"Fileheader","part":1"#,
+                r#""event":"Commander","FID":"F1","Name":"Private Commander""#,
+                r#""event":"Materials","Raw":[{"Name":"iron","Count":10}]"#,
+                r#""event":"MaterialCollected","Category":"Raw","Name":"iron","Count":2"#,
+                r#""event":"Fileheader","part":1"#,
+                r#""event":"Materials","Raw":[{"Name":"iron","Count":12}]"#,
+                identity,
+            ]);
+            let r = eval_events(rows.into_iter()).inventory;
+            assert_eq!((r.intervals, r.materials, r.exact), (1, 1, 1));
+        }
+    }
+
+    #[test]
+    fn inventory_never_compares_different_or_unknown_owners() {
+        for identity in [
+            r#""event":"Commander","FID":"F2","Name":"Private Other""#,
+            r#""event":"LoadGame","FID":"F2","Commander":"Private Other""#,
+            r#""event":"LoadGame""#,
+        ] {
+            let rows = inventory_events(&[
+                r#""event":"Commander","FID":"F1","Name":"Private Commander""#,
+                r#""event":"Materials","Raw":[{"Name":"iron","Count":10}]"#,
+                r#""event":"Fileheader","part":1"#,
+                r#""event":"FutureUnknown""#,
+                r#""event":"Materials","Raw":[{"Name":"iron","Count":80}]"#,
+                identity,
+            ]);
+            assert_eq!(eval_events(rows.into_iter()).inventory.intervals, 0);
+        }
+        let rows = inventory_events(&[
+            r#""event":"Materials","Raw":[{"Name":"iron","Count":10}]"#,
+            r#""event":"Materials","Raw":[{"Name":"iron","Count":12}]"#,
+        ]);
+        assert_eq!(eval_events(rows.into_iter()).inventory.intervals, 0);
+    }
+
+    #[test]
+    fn inventory_load_game_preserves_startup_snapshot_and_empty_intervals_are_finite() {
+        let rows = inventory_events(&[
+            r#""event":"Commander","FID":"F1","Name":"Private Commander""#,
+            r#""event":"Materials","Raw":[]"#,
+            r#""event":"LoadGame","Commander":"Private Commander""#,
+            r#""event":"Materials","Raw":[]"#,
+        ]);
+        let r = eval_events(rows.into_iter()).inventory;
+        assert_eq!(r.intervals, 1);
+        assert_eq!(r.materials, 0);
+        assert_eq!(r.mean_abs_diff, 0.0);
+        assert_eq!(r.exact_ratio, 0.0);
+    }
+
+    #[test]
+    fn inventory_unknown_file_breaks_continuity_before_same_owner_returns() {
+        let rows = inventory_events(&[
+            r#""event":"Commander","FID":"F1""#,
+            r#""event":"Materials","Raw":[{"Name":"iron","Count":10}]"#,
+            r#""event":"Fileheader","part":1"#,
+            r#""event":"Materials","Raw":[{"Name":"iron","Count":50}]"#,
+            r#""event":"Fileheader","part":1"#,
+            r#""event":"Commander","FID":"F1""#,
+            r#""event":"Materials","Raw":[{"Name":"iron","Count":60}]"#,
+        ]);
+        assert_eq!(eval_events(rows.into_iter()).inventory.intervals, 0);
     }
 
     fn loadout_line(

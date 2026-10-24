@@ -1,15 +1,21 @@
 //! Modelo de dominio de TMC.
 #![forbid(unsafe_code)]
 
+pub mod accounts;
+pub mod carrier;
+pub mod colonisation;
 pub mod companion;
+pub mod crime;
 pub mod events;
 pub mod market;
 pub mod net;
+pub mod powerplay;
 pub mod settings;
 pub mod source;
 pub mod state;
 pub mod status;
 pub mod theme;
+pub mod tts;
 
 /// Error de análisis compartido por Status.json y los eventos del diario.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]

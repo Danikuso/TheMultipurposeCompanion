@@ -6,11 +6,13 @@ pub mod alert;
 pub mod debug_hooks;
 pub mod module;
 pub mod topics;
+pub mod voice_advisor;
 
 pub use actor::{CoreHandle, CoreMessage, CoreOptions, spawn_core, spawn_core_with};
 pub use alert::{Alert, Severity};
-pub use module::{Module, ModuleCtx, Relevance, StoreTask};
+pub use module::{Module, ModuleCtx, ModulePageQuery, ModuleQueryError, Relevance, StoreTask};
 pub use tmc_store::{
     CachedEntry, EventQuery, EventRow, EventWriter, Migration, Store, StoreError, StoredEvent,
 };
 pub use topics::TopicSet;
+pub use voice_advisor::VoiceAdvisor;

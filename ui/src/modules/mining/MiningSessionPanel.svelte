@@ -72,14 +72,20 @@
   {#if !s}
     <p class="muted" data-testid="session-empty">{t('mining-no-data')}</p>
   {:else}
-    {#if elapsed}<p class="muted" data-testid="session-time">{t('mining-session-time', { time: elapsed })}</p>{/if}
-    <div class="big">
-      <strong data-testid="tons-total">{t('mining-tons', { tons: decimal(totalTons, 0) })}</strong>
-      <span class="muted" data-testid="tons-hour">· {tonsPerHour == null ? '—' : t('mining-tons-per-hour', { rate: decimal(tonsPerHour, 1) })}</span>
-    </div>
-    <div>
-      <span data-testid="credits-total">{s.est_credits == null ? '—' : t('mining-credits-total', { credits: credits(s.est_credits) })}</span>
-      <span class="muted" data-testid="credits-hour">· {creditsPerHour == null ? '—' : t('mining-credits-per-hour', { credits: credits(Math.round(creditsPerHour)) })}</span>
+    {#if elapsed}<p class="muted session-header" data-testid="session-time">{t('mining-session-time', { time: elapsed })}</p>{/if}
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="big">
+          <strong data-testid="tons-total">{t('mining-tons', { tons: decimal(totalTons, 0) })}</strong>
+        </div>
+        <div class="rate-sub muted" data-testid="tons-hour">· {tonsPerHour == null ? '—' : t('mining-tons-per-hour', { rate: decimal(tonsPerHour, 1) })}</div>
+      </div>
+      <div class="metric-card">
+        <div class="credits-val">
+          <span data-testid="credits-total">{s.est_credits == null ? '—' : t('mining-credits-total', { credits: credits(s.est_credits) })}</span>
+        </div>
+        <div class="rate-sub muted" data-testid="credits-hour">· {creditsPerHour == null ? '—' : t('mining-credits-per-hour', { credits: credits(Math.round(creditsPerHour)) })}</div>
+      </div>
     </div>
 
     <table>
@@ -131,24 +137,165 @@
       aria-valuenow={Math.round(cargoPct)}
     ><i style:width={cssPct(cargoPct)}></i></div>
 
-    <button type="button" data-testid="reset-session" onclick={reset}>{t('mining-reset')}</button>
+    <button type="button" class="btn-reset" data-testid="reset-session" onclick={reset}>{t('mining-reset')}</button>
     {#if failed}<p class="err" role="alert">{t('mining-reset-failed')}</p>{/if}
   {/if}
 </Panel>
 
 <style>
-  .muted { color: var(--hud-muted); margin: 0; }
-  .mono { font-family: var(--font-mono); }
-  .big { font-size: 1.4em; }
-  .sub { margin-top: 0.6rem; }
-  table { border-collapse: collapse; width: 100%; margin-top: 0.4rem; }
-  th, td { text-align: left; padding: 0.1rem 0.5rem 0.1rem 0; }
-  th { color: var(--hud-muted); font-weight: normal; border-bottom: 1px solid var(--hud-border); }
-  .bins { list-style: none; margin: 0.25rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.25rem; }
-  .bin { border: 1px solid var(--hud-border); height: 2.6rem; position: relative; font-size: 0.7em; text-align: center; }
-  .bin i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--hud-primary); opacity: 0.35; }
-  .bin span { position: relative; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 0.1rem; }
-  .bar { height: 0.9rem; background: var(--hud-surface-alt); border: 1px solid var(--hud-border); position: relative; margin: 0.2rem 0 0.6rem; }
-  .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--hud-primary); }
-  .err { color: var(--hud-danger); }
+  .muted {
+    color: var(--hud-muted);
+    margin: 0;
+  }
+  .mono {
+    font-family: var(--font-mono);
+  }
+  .session-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.6rem;
+    font-size: 0.85rem;
+  }
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+  }
+  .metric-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--hud-border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.65rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .big {
+    font-size: 1.25rem;
+    color: var(--hud-primary);
+    line-height: 1.2;
+  }
+  .credits-val {
+    font-size: 1.1rem;
+    color: var(--hud-cyan);
+    font-weight: 600;
+  }
+  .rate-sub {
+    font-size: 0.8rem;
+    color: var(--hud-muted);
+  }
+  .sub {
+    margin-top: 0.75rem;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--hud-muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 0.4rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.25rem 0.5rem 0.25rem 0;
+    font-size: 0.88rem;
+  }
+  th {
+    color: var(--hud-muted);
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    border-bottom: 1px solid var(--hud-border-subtle);
+  }
+  .bins {
+    list-style: none;
+    margin: 0.35rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.35rem;
+  }
+  .bin {
+    border: 1px solid var(--hud-border-subtle);
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 2px;
+    height: 2.8rem;
+    position: relative;
+    font-size: 0.72rem;
+    text-align: center;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  .bin i {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, rgba(255, 150, 50, 0.7), var(--hud-primary));
+    opacity: 0.5;
+    transition: height var(--transition-fast);
+  }
+  .bin span {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0.15rem 0.2rem;
+    z-index: 1;
+    font-weight: 500;
+  }
+  .bar {
+    height: 0.65rem;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--hud-border-subtle);
+    border-radius: 2px;
+    position: relative;
+    margin: 0.3rem 0 0.75rem;
+    overflow: hidden;
+  }
+  .bar i {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, #ff9933, var(--hud-primary));
+    box-shadow: 0 0 6px rgba(255, 119, 0, 0.4);
+    border-radius: 1px;
+    transition: width var(--transition-fast);
+  }
+  .btn-reset {
+    margin-top: 0.5rem;
+    width: 100%;
+    padding: 0.45rem 0.8rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--hud-border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--hud-muted);
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  .btn-reset:hover {
+    background: rgba(255, 119, 0, 0.12);
+    border-color: var(--hud-primary);
+    color: var(--hud-primary);
+    box-shadow: 0 0 8px rgba(255, 119, 0, 0.25);
+  }
+  .err {
+    color: var(--hud-danger);
+    font-size: 0.85rem;
+    margin-top: 0.4rem;
+  }
 </style>

@@ -230,6 +230,26 @@ const TOPICS: &[&str] = &[
     "missions.passengers",
     "missions.tourism",
     "missions.community_goals",
+    "engineering.catalogue",
+    "engineering.inventory",
+    "engineering.locker",
+    "engineering.session",
+    "engineering.engineers",
+    "engineering.ship",
+    "engineering.flow",
+    "engineering.goals",
+    "engineering.sources",
+    "engineering.alerts",
+    "carrier.overview",
+    "carrier.jump",
+    "carrier.finances",
+    "colonisation.depot",
+    "powerplay.status",
+    "powerplay.session",
+    "bgs.system",
+    "bgs.tick",
+    "accounts.status",
+    "crime.status",
 ];
 const MODULES: &[&str] = &[
     "dashboard",
@@ -240,9 +260,17 @@ const MODULES: &[&str] = &[
     "mining",
     "trade",
     "missions",
+    "engineering",
+    "carrier",
+    "colonisation",
+    "powerplay",
+    "bgs",
+    "accounts",
+    "crime",
 ];
 const ACTIONS: &[&str] = &[
     "clipboard.copy-next-system",
+    "crime.copy_system",
     "navigation.plan",
     "navigation.recalculate",
     "navigation.accept-plan",
@@ -256,6 +284,20 @@ const ACTIONS: &[&str] = &[
     "missions.to_route",
     "missions.dismiss_alert",
     "missions.reset_session",
+    "engineering.select_module",
+    "engineering.preview",
+    "engineering.close_flow",
+    "engineering.pin_goal",
+    "engineering.unpin_goal",
+    "engineering.move_goal",
+    "engineering.select_engineer",
+    "engineering.dismiss_alert",
+    "engineering.reset_session",
+    "accounts.sync_now",
+    "accounts.set_settings",
+    "frontier.login",
+    "frontier.logout",
+    "frontier.fleet",
 ];
 const EVENTS: &[&str] = &[
     "Fileheader",
@@ -333,6 +375,20 @@ const EVENTS: &[&str] = &[
     "RepairAll",
     "Repair",
     "ScanBody",
+    "Materials",
+    "MaterialCollected",
+    "MaterialDiscarded",
+    "MaterialTrade",
+    "Synthesis",
+    "EngineerProgress",
+    "EngineerCraft",
+    "EngineerContribution",
+    "TechnologyBroker",
+    "BackpackChange",
+    "CommitCrime",
+    "CrimeVictim",
+    "PayFines",
+    "PayBounties",
 ];
 /// Indica si un tema está en el registro de diagnóstico (si no, su nombre se redacta).
 pub fn is_registered_topic(name: &str) -> bool {
@@ -512,6 +568,11 @@ fn route_template(text: &str) -> bool {
             | "/api/history/events"
             | "/api/actions/{name}"
             | "/api/navigation/autocomplete"
+            | "/api/engineering/goals"
+            | "/api/engineering/locker"
+            | "/api/engineering/catalogue"
+            | "/api/engineering/engineers"
+            | "/api/engineering/flow"
             | "/api/pairing"
             | "<asset>"
             | "<unmatched>"
@@ -522,10 +583,81 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
     if matches!(context, DiagnosticContext::Auth) {
         return false;
     }
+    let engineering_label = match context {
+        DiagnosticContext::Topic {
+            name: "engineering.flow",
+        } => match path {
+            "moduletype" | "request.moduletype" => matches!(text, "engine" | "fsd"),
+            "request.blueprint" => matches!(text, "engine_dirty" | "fsd_longrange"),
+            "request.experimental" => text == "special_engine_overloaded",
+            "status" => matches!(text, "idle" | "ok" | "no_data"),
+            "lines.state" => matches!(text, "ok" | "trade" | "missing"),
+            "engineer.nearestunlocked.status" | "engineer.nearestany.status" => matches!(
+                text,
+                "Unknown" | "Known" | "Invited" | "Acquainted" | "Unlocked" | "Barred"
+            ),
+            _ => false,
+        },
+        DiagnosticContext::Topic {
+            name: "engineering.goals",
+        } => path == "status" && matches!(text, "ok" | "too_many"),
+        DiagnosticContext::Topic {
+            name: "engineering.engineers",
+        } => {
+            path == "engineers.status"
+                && matches!(
+                    text,
+                    "Unknown" | "Known" | "Invited" | "Acquainted" | "Unlocked" | "Barred"
+                )
+        }
+        DiagnosticContext::Topic {
+            name: "engineering.session",
+        } => match path {
+            "recent.origin" => matches!(
+                text,
+                "Collected"
+                    | "Scan"
+                    | "Mining"
+                    | "Trade"
+                    | "Synthesis"
+                    | "Engineering"
+                    | "Mission"
+                    | "Discarded"
+            ),
+            "recent.category" => matches!(text, "Raw" | "Manufactured" | "Encoded"),
+            _ => false,
+        },
+        DiagnosticContext::Topic {
+            name: "engineering.sources",
+        } => {
+            matches!(
+                path,
+                "traders.raw"
+                    | "traders.manufactured"
+                    | "traders.encoded"
+                    | "brokers.human"
+                    | "brokers.guardian"
+            ) && matches!(text, "Loading" | "NoData" | "Disabled")
+        }
+        _ => false,
+    };
+    if engineering_label {
+        return true;
+    }
     if matches!(context, DiagnosticContext::NetOutcome)
         && ((matches!(path, "" | "outcome") && matches!(text, "NoData" | "Disabled"))
             || (matches!(path, "failed" | "outcome.failed")
                 && matches!(text, "Timeout" | "Malformed" | "Down" | "RateLimited")))
+    {
+        return true;
+    }
+    // Tipos cerrados de los servicios cercanos de F4 (comerciante / bróker).
+    if matches!(context, DiagnosticContext::NetQuery)
+        && match key {
+            "materialtrader" => matches!(text, "Raw" | "Manufactured" | "Encoded"),
+            "technologybroker" => matches!(text, "Human" | "Guardian"),
+            _ => false,
+        }
     {
         return true;
     }
@@ -637,7 +769,12 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
         "module" => registered(text, MODULES) != REDACTED,
         "action" => registered(text, ACTIONS) != REDACTED,
         "event" => registered(text, EVENTS) != REDACTED,
-        "source" | "provider" => matches!(text, "Spansh" | "Edsm" | "Canonn" | "Ardent" | "Cache"),
+        "source" | "provider" => {
+            matches!(
+                text,
+                "Spansh" | "Edsm" | "Canonn" | "Ardent" | "Cache" | "Edcd"
+            )
+        }
         "endpoint" => {
             matches!(
                 context,
@@ -648,11 +785,16 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
                     | "spansh.route.job"
                     | "spansh.route.results"
                     | "spansh.autocomplete"
+                    | "edcd.ticks"
                     | "edsm.system"
                     | "canonn.codex_ref"
                     | "canonn.system_poi"
                     | "ardent.nearby.imports"
                     | "ardent.nearest.service"
+                    | "ardent.nearest.material_trader"
+                    | "ardent.nearest.technology_broker"
+                    | "spansh.stations.material_trader"
+                    | "spansh.stations.technology_broker"
                     | "spansh.trade.job"
                     | "ardent.nearby.exports"
                     | "ardent.system.coords"
@@ -665,15 +807,34 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
 }
 /// Disposiciones de la UI (`ui/src/shell/layouts.ts`); `none` cuando no hay ninguna activa.
 const UI_LAYOUTS: &[&str] = &[
-    "none",
-    "exploration",
+    "carrier",
+    "colonisation",
     "combat",
+    "engineering",
+    "exploration",
     "mining",
-    "trade",
     "missions",
+    "none",
+    "powerplay",
+    "trade",
 ];
 /// Ranuras de las disposiciones (`ui/src/shell/layouts.ts`).
 const UI_SLOTS: &[&str] = &[
+    "bgs-system",
+    "carrier-finances",
+    "carrier-jump",
+    "carrier-overview",
+    "colonisation-progress",
+    "colonisation-supply",
+    "powerplay-status",
+    "materials",
+    "engineers",
+    "eng-alerts",
+    "eng-ship",
+    "eng-flow",
+    "shopping",
+    "trades",
+    "sources",
     "route",
     "context-bodies",
     "context-exobiology",
@@ -702,7 +863,23 @@ const UI_SLOTS: &[&str] = &[
 ];
 /// Claves de título de los paneles (`titleKey` en `ui/src`); un test de la UI las mantiene sincronizadas.
 const UI_PANELS: &[&str] = &[
+    "panel-accounts",
+    "panel-bgs-system",
+    "panel-carrier-finances",
+    "panel-carrier-jump",
+    "panel-carrier-overview",
+    "panel-colonisation-depot",
+    "panel-colonisation-supply",
+    "panel-engineering-materials",
+    "panel-engineering-engineers",
+    "panel-engineering-ship",
+    "panel-engineering-flow",
+    "panel-engineering-shopping",
+    "panel-engineering-trades",
+    "panel-engineering-sources",
+    "panel-engineering-alerts",
     "combat-target",
+    "crime-title",
     "nav-settings",
     "panel-alerts",
     "panel-cmdr",
@@ -724,6 +901,7 @@ const UI_PANELS: &[&str] = &[
     "panel-missions-rewards",
     "panel-missions-tourism",
     "panel-planner",
+    "panel-powerplay-status",
     "panel-route",
     "panel-route-strip",
     "panel-session",
@@ -1262,6 +1440,114 @@ mod tests {
     }
 
     #[test]
+    fn engineering_topic_public_fields_and_nested_private_canaries() {
+        let context = DiagnosticContext::Topic {
+            name: "engineering.flow",
+        };
+        let raw = json!({"status":"ok","module_type":"engine","request":{"blueprint":"engine_dirty","experimental":"special_engine_overloaded"},
+            "lines":[{"state":"trade","category":"Raw"}],"unknown":{"status":"CANARY","blueprint":"CANARY"},
+            "cmdr":{"name":"CANARY","credits":42},"ship":{"name":"CANARY","ident":"CANARY"},
+            "token":{"blueprint":"CANARY","module_type":"CANARY","status":"ok"}});
+        let safe = redact_diagnostic(&raw, context);
+        assert_eq!(safe["status"], "ok");
+        assert_eq!(safe["request"]["blueprint"], "engine_dirty");
+        assert_eq!(safe["request"]["experimental"], "special_engine_overloaded");
+        assert_eq!(safe["module_type"], "engine");
+        assert_eq!(safe["lines"][0]["state"], "trade");
+        assert_eq!(safe["token"]["status"], REDACTED);
+        assert!(!safe.to_string().contains("CANARY"));
+        assert_eq!(
+            redact_diagnostic(&raw, DiagnosticContext::Topic { name: "unknown" })["status"],
+            REDACTED
+        );
+        for (topic, path) in [
+            ("engineering.session", "recent"),
+            ("engineering.inventory", "by_category"),
+        ] {
+            let raw = if path == "recent" {
+                json!({"recent":[{"key":"iron","origin":"Scan","category":"Raw"}],"token":{"recent":[{"key":"CANARY"}]},"unknown":{"key":"CANARY"}})
+            } else {
+                json!({"by_category":{"Raw":{"1":[{"key":"iron","name_localised":"Hierro"}]}},"token":{"key":"CANARY"},"unknown":{"key":"CANARY"}})
+            };
+            let safe = redact_diagnostic(&raw, DiagnosticContext::Topic { name: topic });
+            if path == "recent" {
+                assert_eq!(safe["recent"][0]["key"], REDACTED);
+                assert_eq!(safe["recent"][0]["origin"], "Scan");
+            } else {
+                assert_eq!(safe["by_category"]["Raw"]["1"][0]["key"], REDACTED);
+                assert_eq!(
+                    safe["by_category"]["Raw"]["1"][0]["name_localised"],
+                    REDACTED
+                );
+            }
+            assert!(!safe.to_string().contains("CANARY"));
+        }
+    }
+
+    #[test]
+    fn engineering_topics_actions_and_module_registered_and_canary_redacted() {
+        for topic in [
+            "engineering.catalogue",
+            "engineering.inventory",
+            "engineering.locker",
+            "engineering.session",
+            "engineering.engineers",
+            "engineering.ship",
+            "engineering.flow",
+            "engineering.goals",
+            "engineering.sources",
+            "engineering.alerts",
+        ] {
+            assert_eq!(DiagnosticContext::Topic { name: topic }.schema(), topic);
+        }
+        for action in [
+            "engineering.select_module",
+            "engineering.preview",
+            "engineering.close_flow",
+            "engineering.pin_goal",
+            "engineering.unpin_goal",
+            "engineering.move_goal",
+            "engineering.select_engineer",
+            "engineering.dismiss_alert",
+            "engineering.reset_session",
+        ] {
+            assert_eq!(DiagnosticContext::Action { name: action }.schema(), action);
+        }
+        let safe = redact_diagnostic(
+            &json!({"topic":"engineering.CANARY","action":"engineering.CANARY","module":"engineering","cmdr":"CMDR TESTER"}),
+            DiagnosticContext::State,
+        );
+        assert_eq!(safe["module"], "engineering");
+        assert_eq!(safe["topic"], REDACTED);
+        assert_eq!(safe["action"], REDACTED);
+        assert!(!safe.to_string().contains("CANARY"));
+        assert!(!safe.to_string().contains("CMDR TESTER"));
+    }
+
+    #[test]
+    fn material_events_are_allowlisted_and_canary_is_redacted() {
+        let safe = redact_diagnostic(
+            &json!({"event":"MaterialTrade","other":{"event":"MaterialTrade.CANARY"}}),
+            DiagnosticContext::State,
+        );
+        assert_eq!(safe["event"], "MaterialTrade");
+        assert_eq!(safe["other"]["event"], REDACTED);
+        for e in [
+            "Materials",
+            "MaterialCollected",
+            "MaterialDiscarded",
+            "Synthesis",
+            "EngineerProgress",
+            "EngineerCraft",
+            "EngineerContribution",
+            "TechnologyBroker",
+            "BackpackChange",
+        ] {
+            assert_eq!(DiagnosticContext::Journal { event: e }.schema(), e);
+        }
+    }
+
+    #[test]
     fn missions_module_is_allowlisted_and_canary_is_redacted() {
         let safe = redact_diagnostic(
             &json!({"module":"missions","view":"missions","other":{"module":"missions.CANARY"}}),
@@ -1329,6 +1615,57 @@ mod tests {
         );
         assert_eq!(query["SystemCoordsByName"]["name"], REDACTED);
     }
+    #[test]
+    fn nearby_service_variants_have_closed_diag_labels() {
+        let ctx = DiagnosticContext::NetQuery;
+        let safe = redact_diagnostic(
+            &json!({"NearestService":{"service":{"MaterialTrader":"Raw"},"system_name":"Sol",
+                "service2":{"TechnologyBroker":"Guardian"}}}),
+            ctx,
+        );
+        assert_eq!(safe["NearestService"]["service"]["MaterialTrader"], "Raw");
+        // `system_name` es público (nombre de sistema del juego): se conserva.
+        assert_eq!(safe["NearestService"]["system_name"], "Sol");
+        assert_eq!(
+            safe["NearestService"]["service2"]["TechnologyBroker"],
+            "Guardian"
+        );
+        let safe = redact_diagnostic(
+            &json!({"NearestService":{"service":{"MaterialTrader":"CANARY"},
+                "service2":{"TechnologyBroker":"CANARY"}}}),
+            ctx,
+        );
+        assert_eq!(
+            safe["NearestService"]["service"]["MaterialTrader"],
+            REDACTED
+        );
+        assert_eq!(
+            safe["NearestService"]["service2"]["TechnologyBroker"],
+            REDACTED
+        );
+        // Un tipo de bróker no vale como tipo de comerciante.
+        let safe = redact_diagnostic(&json!({"MaterialTrader":"Guardian"}), ctx);
+        assert_eq!(safe["MaterialTrader"], REDACTED);
+    }
+
+    #[test]
+    fn new_endpoint_labels_are_closed_set() {
+        let ctx = DiagnosticContext::NetOutcome;
+        for label in [
+            "ardent.nearest.material_trader",
+            "ardent.nearest.technology_broker",
+            "spansh.stations.material_trader",
+            "spansh.stations.technology_broker",
+        ] {
+            let safe = redact_diagnostic(&json!({ "endpoint": label }), ctx);
+            assert_eq!(safe["endpoint"], label);
+        }
+        for canary in ["spansh.stations.CANARY", "ardent.nearest.CANARY"] {
+            let safe = redact_diagnostic(&json!({ "endpoint": canary }), ctx);
+            assert_eq!(safe["endpoint"], REDACTED);
+        }
+    }
+
     #[test]
     fn network_outcomes_keep_finite_statuses_and_cache_source() {
         use crate::net::{NetFailure, NetOutcome, NetSource};
@@ -1439,5 +1776,29 @@ mod tests {
         // Fuera del contexto UI el mismo valor no se relaja.
         let other = redact_diagnostic(&json!({"tab": "layout:combat"}), DiagnosticContext::Http);
         assert_eq!(other["tab"], REDACTED);
+    }
+    #[test]
+    fn engineering_page_routes_are_finite_and_never_expose_queries() {
+        for route in [
+            "/api/engineering/goals",
+            "/api/engineering/locker",
+            "/api/engineering/catalogue",
+            "/api/engineering/engineers",
+            "/api/engineering/flow",
+        ] {
+            let safe = redact_diagnostic(
+                &json!({"route":route,"url":format!("{route}?revision=1&section=CANARY"),"section":"CANARY","key":"CANARY","name":"CANARY"}),
+                DiagnosticContext::Http,
+            );
+            assert_eq!(safe["route"], route);
+            assert!(!safe.to_string().contains("CANARY"));
+        }
+        for route in [
+            "/api/engineering/CANARY",
+            "/api/engineering/goals?revision=1",
+        ] {
+            let safe = redact_diagnostic(&json!({"route":route}), DiagnosticContext::Http);
+            assert_eq!(safe["route"], REDACTED);
+        }
     }
 }

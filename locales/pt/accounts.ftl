@@ -1,0 +1,51 @@
+accounts-title = Contas e Sincronização Externa
+accounts-desc = Copiloto universal para compartilhar descobertas, registros de voo e telemetria de frota, sempre respeitando sua privacidade.
+accounts-companion-privacy-notice = Privacidade inegociável: o TMC nunca transmite dados na galáxia Legacy, nunca compartilha bate-papos privados ou saldos de créditos sem autorização e pseudonimiza sua identidade no EDDN por meio de salt criptográfico local.
+
+accounts-eddn-title = Elite Dangerous Data Network (EDDN)
+accounts-eddn-desc = Compartilhe dados públicos de mercados, equipamentos, estaleiros e saltos com a comunidade galáctica.
+accounts-eddn-switch = Transmissão EDDN ativa
+accounts-eddn-uploader-id = Uploader ID (Pseudonimizado)
+accounts-eddn-messages-sent = Mensagens transmitidas na sessão:
+accounts-eddn-last-upload = Último envio:
+accounts-eddn-connected = Conectado ao Gateway
+accounts-eddn-disconnected = Desconectado
+
+accounts-edsm-title = Elite Dangerous Star Map (EDSM)
+accounts-edsm-desc = Registro universal de voo, primeiras descobertas e coordenadas estelares.
+accounts-edsm-switch = Sincronização EDSM ativa
+accounts-edsm-cmdr-label = Comandante EDSM
+accounts-edsm-api-key-label = Chave de API do EDSM
+accounts-edsm-api-key-placeholder = Chave de API obtida em edsm.net
+accounts-edsm-last-sync = Última sincronização:
+accounts-edsm-btn-save = Salvar credenciais
+accounts-edsm-btn-sync = Sincronizar agora
+accounts-edsm-status-configured = Vinculado e pronto
+accounts-edsm-status-pending = Chave de API ausente
+
+accounts-inara-title = Inara (InAPI v1)
+accounts-inara-desc = Presença de perfil, componentes de engenharia, armário Odyssey e Community Goals.
+accounts-inara-switch = Sincronização Inara ativa
+accounts-inara-cmdr-label = Comandante Inara
+accounts-inara-api-key-label = Chave InAPI pessoal
+accounts-inara-api-key-placeholder = Chave gerada em inara.cz/settings-api
+accounts-inara-rate-limit-title = Limite estrito de solicitações
+accounts-inara-rate-limit-desc = Máximo de 2 solicitações a cada 60 segundos (cota oficial).
+accounts-inara-pending-batch = Eventos pendentes no lote:
+accounts-inara-next-slot = Próximo envio disponível em:
+accounts-inara-btn-save = Salvar credenciais
+accounts-inara-btn-send = Transmitir lote agora
+
+accounts-capi-title = Frontier Companion API (CAPI)
+accounts-capi-desc = Frota remota armazenada em estaleiros galácticos e status oficial da conta via OAuth2 PKCE.
+accounts-capi-switch = Integração Frontier CAPI ativa
+accounts-capi-status-linked = Conta oficialmente vinculada
+accounts-capi-status-unlinked = Não vinculada
+accounts-capi-remote-fleet-title = Frota Remota Armazenada
+accounts-capi-remote-fleet-empty = Nenhuma nave armazenada em estaleiros remotos encontrada.
+accounts-capi-remote-fleet-count = Naves em estaleiros:
+accounts-capi-btn-link = Vincular com Frontier Store
+accounts-capi-btn-opening = Abrindo navegador...
+accounts-capi-btn-unlink = Desvincular conta
+accounts-capi-btn-refresh-fleet = Atualizar frota
+accounts-capi-auth-notice = A autorização é concluída com total segurança no seu navegador web oficial da Frontier.

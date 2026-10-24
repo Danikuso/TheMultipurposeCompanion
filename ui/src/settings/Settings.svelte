@@ -7,6 +7,7 @@
   import Panel from '../shell/Panel.svelte';
   import { diag } from '../lib/diag.svelte';
   import Pairing from './Pairing.svelte';
+  import { integer } from '../lib/format';
 
   const DEFAULT_MINERALS = ['platinum', 'painite', 'lowtemperaturediamond', 'opal', 'alexandrite',
     'grandidierite', 'monazite', 'musgravite', 'rhodplumsite', 'serendibite', 'benitoite'];
@@ -14,6 +15,24 @@
   const MAX_KEYS = 30;
   const MAX_KEY_LEN = 40;
   const MAX_THRESHOLD = 1_000_000_000;
+  const DEFAULT_ROLLS = [1, 1, 1, 1, 4];
+  const validRolls = (value: unknown): value is number[] => Array.isArray(value)
+    && value.length === 5 && value.every((n) => Number.isInteger(n) && n >= 1 && n <= 10);
+
+  interface TtsSettingsDto {
+    enabled?: boolean;
+    engine?: 'native' | 'kokoro';
+    voice?: string;
+    volume?: number;
+    rate?: number;
+    channels?: {
+      combat?: boolean;
+      navigation?: boolean;
+      exploration?: boolean;
+      mining?: boolean;
+      carrier?: boolean;
+    };
+  }
 
   interface ConfigDto {
     language?: string;
@@ -29,6 +48,8 @@
     sell_search_radius_ly?: number;
     eddn_radius_ly?: number;
     tourism_reference_cr_ly?: number;
+    engineering_rolls?: number[];
+    tts?: TtsSettingsDto;
     server?: {
       port?: number;
       lan?: boolean;
@@ -48,6 +69,66 @@
   let miningThreshold = $state<number | undefined>(1000000);
   let sellRadius = $state<number | undefined>(100);
   let extraMineral = $state('');
+  let engineeringRolls = $state<(number | undefined)[]>([...DEFAULT_ROLLS]);
+  let rollsInvalid = $state(false);
+  let rollsEdits = 0;
+  let draftRevision = 0;
+  let lastSubmitted: ConfigDto | undefined;
+
+  let ttsEnabled = $state(false);
+  let ttsEngine = $state<'native' | 'kokoro'>('native');
+  let ttsVoice = $state('');
+  let ttsVolume = $state(80);
+  let ttsRate = $state(100);
+  let ttsChannels = $state({
+    combat: true,
+    navigation: true,
+    exploration: true,
+    mining: true,
+    carrier: true,
+  });
+  let ttsVoicesList = $state<Array<{ id: string; name: string; lang: string; gender?: string }>>([]);
+  let ttsTesting = $state(false);
+
+  async function loadTtsVoices(engine: 'native' | 'kokoro') {
+    try {
+      const res = await fetch(`/api/tts/voices?engine=${engine}`);
+      if (res.ok) {
+        const data = await res.json();
+        ttsVoicesList = data.voices ?? [];
+      }
+    } catch {
+      // offline / mock
+    }
+  }
+
+  function onEngineChange() {
+    ttsVoice = '';
+    void loadTtsVoices(ttsEngine);
+    saveConfig();
+  }
+
+  async function testTtsVoice() {
+    ttsTesting = true;
+    try {
+      await fetch('/api/tts/test', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          engine: ttsEngine,
+          voice: ttsVoice || undefined,
+          volume: ttsVolume,
+          rate: ttsRate,
+        }),
+      });
+    } catch {
+      // ignore
+    } finally {
+      setTimeout(() => {
+        ttsTesting = false;
+      }, 2000);
+    }
+  }
   const knownMinerals = $derived([...DEFAULT_MINERALS, ...miningInterest.filter((k) => !DEFAULT_MINERALS.includes(k))]);
   let fullConfig = $state<ConfigDto>({});
   let saveError = $state(false);
@@ -80,13 +161,21 @@
     }
   }
 
-  onMount(async () => {
+  onMount(() => {
+    lastSubmitted = currentConfig();
+    saveQueue = readConfig();
+  });
+
+  async function readConfig() {
     try {
       const res = await fetch('/api/config');
       diag('ui.fetch.result', { kind: 'config-get', ok: res.ok, status: res.status });
       if (res.ok) {
         const cfg = (await res.json()) as ConfigDto;
         fullConfig = cfg;
+        // Sin envíos pendientes, comparar la primera edición con lo leído del
+        // servidor. Los envíos hechos antes del GET conservan su propia referencia.
+        if (saveRevision === 0) lastSubmitted = undefined;
         loadPrefs(cfg);
         onlineServices = cfg.online_services ?? true;
         mapThreshold = cfg.map_value_threshold ?? 500000;
@@ -96,6 +185,7 @@
         sellRadius = cfg.sell_search_radius_ly ?? 100;
         eddnRadius = cfg.eddn_radius_ly ?? 200;
         tourismReference = cfg.tourism_reference_cr_ly ?? 100000;
+        if (rollsEdits === 0) engineeringRolls = [...(validRolls(cfg.engineering_rolls) ? cfg.engineering_rolls : DEFAULT_ROLLS)];
         if (cfg.language) {
           language = cfg.language;
           setLocale(cfg.language);
@@ -110,15 +200,38 @@
           themeMode = cfg.theme_mode;
           applySelectedTheme(themeMode);
         }
+        if (cfg.tts) {
+          ttsEnabled = cfg.tts.enabled ?? false;
+          ttsEngine = cfg.tts.engine ?? 'native';
+          ttsVoice = cfg.tts.voice ?? '';
+          ttsVolume = cfg.tts.volume ?? 80;
+          ttsRate = cfg.tts.rate ?? 100;
+          if (cfg.tts.channels) {
+            ttsChannels = {
+              combat: cfg.tts.channels.combat ?? true,
+              navigation: cfg.tts.channels.navigation ?? true,
+              exploration: cfg.tts.channels.exploration ?? true,
+              mining: cfg.tts.channels.mining ?? true,
+              carrier: cfg.tts.channels.carrier ?? true,
+            };
+          }
+        }
+        void loadTtsVoices(ttsEngine);
       }
     } catch {
       // Offline or unconfigured
       diag('ui.fetch.result', { kind: 'config-get', ok: false, status: 0 });
     }
-  });
+  }
+
+  function applyConfirmedPreferences() {
+    language = fullConfig.language ?? getLocale();
+    themeMode = fullConfig.theme_mode === 'classic' || fullConfig.theme_mode === 'contrast' ? fullConfig.theme_mode : 'hud';
+    setLocale(language);
+    applySelectedTheme(themeMode);
+  }
 
   function restoreSavedConfig() {
-    language = fullConfig.language ?? getLocale();
     autoCopy = fullConfig.auto_copy_next_system ?? true;
     onlineServices = fullConfig.online_services ?? true;
     mapThreshold = fullConfig.map_value_threshold ?? 500000;
@@ -129,9 +242,23 @@
     sellRadius = fullConfig.sell_search_radius_ly ?? 100;
     eddnRadius = fullConfig.eddn_radius_ly ?? 200;
     tourismReference = fullConfig.tourism_reference_cr_ly ?? 100000;
-    themeMode = fullConfig.theme_mode === 'classic' || fullConfig.theme_mode === 'contrast' ? fullConfig.theme_mode : 'hud';
-    setLocale(language);
-    applySelectedTheme(themeMode);
+    engineeringRolls = [...(validRolls(fullConfig.engineering_rolls) ? fullConfig.engineering_rolls : DEFAULT_ROLLS)];
+    if (fullConfig.tts) {
+      ttsEnabled = fullConfig.tts.enabled ?? false;
+      ttsEngine = fullConfig.tts.engine ?? 'native';
+      ttsVoice = fullConfig.tts.voice ?? '';
+      ttsVolume = fullConfig.tts.volume ?? 80;
+      ttsRate = fullConfig.tts.rate ?? 100;
+      if (fullConfig.tts.channels) {
+        ttsChannels = {
+          combat: fullConfig.tts.channels.combat ?? true,
+          navigation: fullConfig.tts.channels.navigation ?? true,
+          exploration: fullConfig.tts.channels.exploration ?? true,
+          mining: fullConfig.tts.channels.mining ?? true,
+          carrier: fullConfig.tts.channels.carrier ?? true,
+        };
+      }
+    }
   }
 
   function mineralLabel(key: string): string {
@@ -157,8 +284,45 @@
     toggleMineral(key, true);
   }
 
+  function currentConfig(): ConfigDto {
+    return {
+      language,
+      auto_copy_next_system: autoCopy,
+      auto_companion: prefs.autoCompanion,
+      online_services: onlineServices,
+      map_value_threshold: mapThreshold,
+      default_neutron_efficiency: plannerEfficiency,
+      theme_mode: themeMode,
+      mining_interest: [...miningInterest],
+      mining_threshold_cr: miningThreshold,
+      sell_search_radius_ly: sellRadius,
+      eddn_radius_ly: eddnRadius,
+      tourism_reference_cr_ly: tourismReference,
+      engineering_rolls: [...engineeringRolls] as number[],
+      tts: {
+        enabled: ttsEnabled,
+        engine: ttsEngine,
+        voice: ttsVoice || undefined,
+        volume: ttsVolume,
+        rate: ttsRate,
+        channels: { ...ttsChannels },
+      },
+      server: {
+        lan: lanEnabled,
+      },
+    };
+  }
+
+  function restoreConfirmedRolls(submitted: number[]) {
+    const saved = validRolls(fullConfig.engineering_rolls) ? fullConfig.engineering_rolls : DEFAULT_ROLLS;
+    // Revierte solo los grados que no se han vuelto a editar durante el PUT.
+    engineeringRolls = engineeringRolls.map((value, index) => value === submitted[index] ? saved[index] : value);
+  }
+
   function saveConfig() {
     validationError = false;
+    rollsInvalid = !validRolls(engineeringRolls);
+    if (rollsInvalid) return;
     if (mapThreshold === undefined || !Number.isSafeInteger(mapThreshold) || mapThreshold < 0
       || plannerEfficiency === undefined || !Number.isInteger(plannerEfficiency)
       || plannerEfficiency < 0 || plannerEfficiency > 100
@@ -169,41 +333,37 @@
       || tourismReference === undefined || !Number.isInteger(tourismReference) || tourismReference < 1000 || tourismReference > 10_000_000) { validationError = true; return; }
     saveError = false;
     const revision = ++saveRevision;
-    const updated: ConfigDto = {
-      ...fullConfig,
-      language,
-      auto_copy_next_system: autoCopy,
-      auto_companion: prefs.autoCompanion,
-      online_services: onlineServices,
-      map_value_threshold: mapThreshold,
-      default_neutron_efficiency: plannerEfficiency,
-      theme_mode: themeMode,
-      mining_interest: miningInterest,
-      mining_threshold_cr: miningThreshold,
-      sell_search_radius_ly: sellRadius,
-      eddn_radius_ly: eddnRadius,
-      tourism_reference_cr_ly: tourismReference,
-      server: {
-        ...(fullConfig.server ?? {}),
-        lan: lanEnabled,
-      },
-    };
+    const draft = draftRevision;
+    const updated = currentConfig();
+    // Solo se encolan los campos editados desde el envío anterior. Un error en
+    // tiradas no debe reaplicarse al guardar después otro ajuste.
+    const patch = Object.fromEntries(Object.entries(updated).filter(([key, value]) =>
+      JSON.stringify(value) !== JSON.stringify((lastSubmitted ?? fullConfig)[key as keyof ConfigDto]))) as ConfigDto;
+    lastSubmitted = updated;
     saveQueue = saveQueue.then(async () => {
       try {
         const res = await fetch('/api/config', {
           method: 'PUT',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(updated),
+          body: JSON.stringify({ ...fullConfig, ...patch, server: { ...fullConfig.server, ...patch.server } }),
         });
         // Nunca se vuelca la configuración: contiene el token LAN en `server`.
         diag('ui.fetch.result', { kind: 'config-put', ok: res.ok, status: res.status, lan: lanEnabled });
         if (!res.ok) throw new Error('config-save-failed');
         fullConfig = (await res.json()) as ConfigDto;
-        if (revision === saveRevision) restoreSavedConfig();
+        if (revision === saveRevision) {
+          applyConfirmedPreferences();
+          if (draft === draftRevision) restoreSavedConfig();
+          else restoreConfirmedRolls(updated.engineering_rolls!);
+          lastSubmitted = undefined;
+        }
       } catch {
         diag('ui.fetch.result', { kind: 'config-put', ok: false, status: 0, lan: lanEnabled });
         if (revision === saveRevision) {
-          restoreSavedConfig();
+          applyConfirmedPreferences();
+          if (draft === draftRevision) restoreSavedConfig();
+          else restoreConfirmedRolls(updated.engineering_rolls!);
+          lastSubmitted = undefined;
           saveError = true;
         }
       }
@@ -214,7 +374,7 @@
 <Panel titleKey="nav-settings">
   {#if validationError}<p role="alert" data-testid="validation-error">{t('settings-mining-invalid')}</p>{/if}
   {#if saveError}<p role="alert">{t('settings-save-error')}</p>{/if}
-  <div class="settings-form">
+  <div class="settings-form" oninput={() => { draftRevision++; }}>
     <label class="field-row">
       <span>{t('settings-language')}</span>
       <select bind:value={language} onchange={saveConfig}>
@@ -300,6 +460,153 @@
       <input type="number" min="1000" max="10000000" step="1" bind:value={tourismReference} onchange={saveConfig} data-testid="tourism-reference" />
     </label>
 
+    <fieldset class="minerals engineering-rolls" data-testid="engineering-rolls">
+      <legend>{t('settings-engineering-rolls')}</legend>
+      {#each [1, 2, 3, 4, 5] as grade}
+        <label class="field-row" for={`engineering-rolls-${grade}`}>
+          <span>{t('engineering-grade', { grade: integer(grade) })}</span>
+          <input id={`engineering-rolls-${grade}`} data-testid={`engineering-rolls-${grade}`}
+            type="number" min="1" max="10" step="1" bind:value={engineeringRolls[grade - 1]}
+            aria-invalid={rollsInvalid} aria-describedby={rollsInvalid ? 'engineering-rolls-error' : undefined}
+            oninput={() => { rollsEdits++; }} onchange={saveConfig} />
+        </label>
+      {/each}
+      {#if rollsInvalid}<p id="engineering-rolls-error" role="alert" data-testid="engineering-rolls-error">{t('settings-engineering-rolls-invalid')}</p>{/if}
+    </fieldset>
+
+    <fieldset class="minerals tts-section" data-testid="tts-settings">
+      <legend>{t('settings-tts-title')}</legend>
+      <p class="help-text">{t('settings-tts-description')}</p>
+
+      <label class="field-row">
+        <span>{t('settings-tts-enabled')}</span>
+        <input
+          type="checkbox"
+          role="switch"
+          data-testid="tts-enabled"
+          bind:checked={ttsEnabled}
+          onchange={saveConfig}
+        />
+      </label>
+
+      {#if ttsEnabled}
+        <label class="field-row">
+          <span>{t('settings-tts-engine')}</span>
+          <select
+            data-testid="tts-engine"
+            bind:value={ttsEngine}
+            onchange={onEngineChange}
+          >
+            <option value="native">{t('settings-tts-engine-native')}</option>
+            <option value="kokoro">{t('settings-tts-engine-kokoro')}</option>
+          </select>
+        </label>
+
+        <label class="field-row">
+          <span>{t('settings-tts-voice')}</span>
+          <select
+            data-testid="tts-voice"
+            bind:value={ttsVoice}
+            onchange={saveConfig}
+          >
+            <option value="">(Predeterminada)</option>
+            {#each ttsVoicesList as v (v.id)}
+              <option value={v.id}>{v.name} ({v.lang})</option>
+            {/each}
+          </select>
+        </label>
+
+        <label class="field-row">
+          <span>{t('settings-tts-volume')} ({ttsVolume}%)</span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="5"
+            data-testid="tts-volume"
+            bind:value={ttsVolume}
+            onchange={saveConfig}
+          />
+        </label>
+
+        <label class="field-row">
+          <span>{t('settings-tts-rate')} ({ttsRate}%)</span>
+          <input
+            type="range"
+            min="80"
+            max="150"
+            step="5"
+            data-testid="tts-rate"
+            bind:value={ttsRate}
+            onchange={saveConfig}
+          />
+        </label>
+
+        <div class="tts-channels">
+          <span class="channels-title">{t('settings-tts-channels')}</span>
+          <div class="channels-grid">
+            <label class="channel-item">
+              <input
+                type="checkbox"
+                data-testid="tts-channel-combat"
+                bind:checked={ttsChannels.combat}
+                onchange={saveConfig}
+              />
+              <span>{t('settings-tts-channel-combat')}</span>
+            </label>
+            <label class="channel-item">
+              <input
+                type="checkbox"
+                data-testid="tts-channel-navigation"
+                bind:checked={ttsChannels.navigation}
+                onchange={saveConfig}
+              />
+              <span>{t('settings-tts-channel-navigation')}</span>
+            </label>
+            <label class="channel-item">
+              <input
+                type="checkbox"
+                data-testid="tts-channel-exploration"
+                bind:checked={ttsChannels.exploration}
+                onchange={saveConfig}
+              />
+              <span>{t('settings-tts-channel-exploration')}</span>
+            </label>
+            <label class="channel-item">
+              <input
+                type="checkbox"
+                data-testid="tts-channel-mining"
+                bind:checked={ttsChannels.mining}
+                onchange={saveConfig}
+              />
+              <span>{t('settings-tts-channel-mining')}</span>
+            </label>
+            <label class="channel-item">
+              <input
+                type="checkbox"
+                data-testid="tts-channel-carrier"
+                bind:checked={ttsChannels.carrier}
+                onchange={saveConfig}
+              />
+              <span>{t('settings-tts-channel-carrier')}</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="test-row">
+          <button
+            type="button"
+            class="btn-test-voice"
+            data-testid="tts-test-btn"
+            disabled={ttsTesting}
+            onclick={testTtsVoice}
+          >
+            {ttsTesting ? t('settings-tts-test-playing') : t('settings-tts-test-button')}
+          </button>
+        </div>
+      {/if}
+    </fieldset>
+
     <Pairing />
   </div>
 </Panel>
@@ -329,9 +636,87 @@
   .minerals { border: 1px solid var(--hud-border); display: flex; flex-direction: column; gap: 0.3rem; }
   .mineral { display: flex; gap: 0.5rem; align-items: center; }
 
+  .engineering-rolls input {
+    background: var(--hud-bg);
+    color: var(--hud-text);
+    border: 1px solid var(--hud-border);
+    border-radius: 3px;
+    padding: 0.3rem 0.5rem;
+  }
+
   .help-text {
     margin: 0;
     font-size: 0.8rem;
     color: var(--hud-muted);
+  }
+
+  .tts-section {
+    border: 1px solid var(--hud-border);
+    padding: 0.75rem;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .tts-section legend {
+    font-weight: 600;
+    color: var(--hud-primary, #ff7100);
+    padding: 0 0.4rem;
+  }
+
+  .tts-channels {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-top: 0.3rem;
+  }
+
+  .channels-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--hud-primary, #ff7100);
+  }
+
+  .channels-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding-left: 0.5rem;
+  }
+
+  .channel-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .test-row {
+    margin-top: 0.5rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .btn-test-voice {
+    background: var(--hud-bg);
+    color: var(--hud-primary, #ff7100);
+    border: 1px solid var(--hud-border);
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.15s ease;
+  }
+
+  .btn-test-voice:hover:not(:disabled) {
+    background: var(--hud-primary, #ff7100);
+    color: var(--hud-bg, #000);
+  }
+
+  .btn-test-voice:disabled {
+    opacity: 0.5;
+    cursor: wait;
   }
 </style>

@@ -41,7 +41,7 @@ use crate::limiter::{RateLimiter, Service};
 use crate::spansh::{self, RoutePoll, TradePoll};
 use crate::transport::{HttpReply, Transport, TransportError};
 use chrono::{DateTime, Utc};
-use tmc_model::net::{NetFailure, NetOutcome, NetQuery, NetSource};
+use tmc_model::net::{NearbyService, NetFailure, NetOutcome, NetQuery, NetSource};
 
 const POLL_EVERY: Duration = Duration::from_secs(2);
 const MAX_TRANSIENT_POLL_FAILURES: u32 = 2;
@@ -76,7 +76,7 @@ pub fn query_fingerprint(q: &NetQuery) -> u64 {
 /// Plantilla de endpoint (nunca URL ni query string) para los registros de diagnóstico.
 #[cfg(debug_assertions)]
 fn endpoint_of(req: &Req) -> &'static str {
-    let (Req::Get(url) | Req::Post(url, _)) = req;
+    let (Req::Get(url) | Req::Post(url, _) | Req::PostJson(url, _)) = req;
     let path = url.split('?').next().unwrap_or("");
     if let Some(rest) = path.strip_prefix(spansh::BASE) {
         return match rest {
@@ -85,6 +85,20 @@ fn endpoint_of(req: &Req) -> &'static str {
             "/trade/route" => "spansh.trade.job",
             r if r.starts_with("/results/") => "spansh.route.results",
             r if r.starts_with("/systems/") => "spansh.autocomplete",
+            "/stations/search" => {
+                let body = match req {
+                    Req::PostJson(_, body) => serde_json::from_str::<serde_json::Value>(body).ok(),
+                    _ => None,
+                };
+                let has = |k: &str| body.as_ref().and_then(|b| b.pointer(k)).is_some();
+                if has("/filters/technology_broker") {
+                    "spansh.stations.technology_broker"
+                } else if has("/filters/material_trader") {
+                    "spansh.stations.material_trader"
+                } else {
+                    "unknown"
+                }
+            }
             _ => "unknown",
         };
     }
@@ -109,6 +123,10 @@ fn endpoint_of(req: &Req) -> &'static str {
             "ardent.nearby.exports"
         } else if path.contains("/system/name/") {
             "ardent.system.coords"
+        } else if path.contains("/nearest/material-trader") {
+            "ardent.nearest.material_trader"
+        } else if path.contains("/nearest/technology-broker") {
+            "ardent.nearest.technology_broker"
         } else {
             "ardent.nearest.service"
         };
@@ -162,6 +180,8 @@ enum Step {
 enum Req {
     Get(String),
     Post(String, Vec<(String, String)>),
+    /// `POST` con cuerpo JSON ya serializado.
+    PostJson(String, String),
 }
 
 struct State {
@@ -194,12 +214,28 @@ fn online_allowed(online: Option<&AtomicBool>) -> bool {
     online.is_none_or(|online| online.load(Ordering::Acquire))
 }
 
+/// Consulta de comerciante/bróker con tipo concreto: la atiende Spansh.
+fn is_typed_station_search(q: &NetQuery) -> bool {
+    matches!(
+        q,
+        NetQuery::NearestService {
+            service: NearbyService::MaterialTrader(Some(_))
+                | NearbyService::TechnologyBroker(Some(_)),
+            ..
+        }
+    )
+}
+
 fn source_of(service: Service) -> NetSource {
     match service {
         Service::Spansh => NetSource::Spansh,
         Service::Edsm => NetSource::Edsm,
         Service::Canonn => NetSource::Canonn,
         Service::Ardent => NetSource::Ardent,
+        Service::Edcd => NetSource::Edcd,
+        Service::Eddn => NetSource::Eddn,
+        Service::Inara => NetSource::Inara,
+        Service::Capi => NetSource::Capi,
     }
 }
 
@@ -224,6 +260,10 @@ impl NetClient {
             Service::Edsm,
             Service::Canonn,
             Service::Ardent,
+            Service::Edcd,
+            Service::Eddn,
+            Service::Inara,
+            Service::Capi,
         ];
         NetClient {
             transport,
@@ -358,9 +398,34 @@ impl NetClient {
                 (NetSource::Ardent, out)
             }
             NetQuery::NearestService {
+                service:
+                    service @ (NearbyService::MaterialTrader(Some(_))
+                    | NearbyService::TechnologyBroker(Some(_))),
+                system_name,
+                min_pad,
+                ..
+            } => {
+                // Con tipo solo Spansh lo conoce; si falla, «sin datos» (nunca se infiere
+                // el tipo por la economía ni se cae a Ardent sin tipo).
+                let body = spansh::station_search_body(system_name, *service).to_string();
+                let req = Req::PostJson(spansh::station_search_url(), body);
+                let pad = *min_pad;
+                let out = self
+                    .fetch(Service::Spansh, req, online, |b| {
+                        spansh::parse_station_search(b, pad).map(|s| Some(NetOutcome::Stations(s)))
+                    })
+                    .await;
+                let out = match out {
+                    NetOutcome::Failed(_) => NetOutcome::NoData,
+                    other => other,
+                };
+                (NetSource::Spansh, out)
+            }
+            NetQuery::NearestService {
                 system_address,
                 service,
                 min_pad,
+                ..
             } => {
                 let url = ardent::nearest_url(*system_address, *service, *min_pad);
                 let pad = *min_pad;
@@ -406,6 +471,16 @@ impl NetClient {
                 (NetSource::Ardent, out)
             }
             NetQuery::SystemCoordsByName { name } => self.coords(name, online).await,
+            NetQuery::BgsTick => {
+                let req = Req::Get(crate::bgs_tick::BGS_TICK_URL.to_string());
+                let out = self
+                    .fetch(Service::Edcd, req, online, |b| {
+                        crate::bgs_tick::parse_ticks(b, Utc::now())
+                            .map(|opt| opt.map(NetOutcome::BgsTick))
+                    })
+                    .await;
+                (NetSource::Edcd, out)
+            }
         }
     }
 
@@ -777,6 +852,7 @@ impl NetClient {
             }
             Req::Get(url) => self.transport.get(url).await,
             Req::Post(url, form) => self.transport.post_form(url, form).await,
+            Req::PostJson(url, body) => self.transport.post_json(url, body).await,
         };
         net_event!("net.http.response", {"endpoint": endpoint, "source": source_of(service),
             "duration_ms": sent_at.elapsed().as_millis() as u64,
@@ -860,6 +936,7 @@ impl NetClient {
         let down = |s: Service| st.health.get(&s).is_none_or(|h| h.is_down(t));
         let (service, fallback) = match q {
             NetQuery::BodyBio { .. } => (Service::Canonn, false),
+            q if is_typed_station_search(q) => (Service::Spansh, false),
             NetQuery::CommodityImportsNearby { .. }
             | NetQuery::NearestService { .. }
             | NetQuery::CommodityExportsNearby { .. } => (Service::Ardent, false),
@@ -882,6 +959,7 @@ impl NetClient {
     pub fn is_down_for(&self, q: &NetQuery) -> bool {
         match q {
             NetQuery::BodyBio { .. } => self.is_down(Service::Canonn),
+            q if is_typed_station_search(q) => self.is_down(Service::Spansh),
             NetQuery::System { .. } => self.is_down(Service::Spansh) && self.is_down(Service::Edsm),
             NetQuery::SystemCoordsByName { .. } => {
                 self.is_down(Service::Ardent) && self.is_down(Service::Edsm)
@@ -960,6 +1038,7 @@ mod tests {
         calls: Mutex<Vec<String>>,
         timeouts: Mutex<Vec<(String, Duration)>>,
         forms: Mutex<Vec<Vec<(String, String)>>>,
+        json_bodies: Mutex<Vec<String>>,
     }
 
     impl FakeTransport {
@@ -1016,6 +1095,11 @@ mod tests {
         }
         fn post_form(&self, url: &str, form: &[(String, String)]) -> BoxFut<'_, Reply> {
             self.forms.lock().unwrap().push(form.to_vec());
+            let r = self.serve(format!("POST {url}"), url);
+            Box::pin(async move { r })
+        }
+        fn post_json(&self, url: &str, body: &str) -> BoxFut<'_, Reply> {
+            self.json_bodies.lock().unwrap().push(body.to_string());
             let r = self.serve(format!("POST {url}"), url);
             Box::pin(async move { r })
         }
@@ -1795,9 +1879,100 @@ mod tests {
     fn nearest_query() -> NetQuery {
         NetQuery::NearestService {
             system_address: 10477373803,
+            system_name: "Sol".into(),
             service: NearbyService::InterstellarFactors,
             min_pad: PadSize::Large,
         }
+    }
+
+    const ARDENT_TRADER: &str =
+        include_str!("../../../tests/fixtures/net/ardent_nearest_material_trader.json");
+    const SPANSH_STATIONS: &str =
+        include_str!("../../../tests/fixtures/net/spansh_stations_material_trader.json");
+
+    fn service_query(service: NearbyService) -> NetQuery {
+        NetQuery::NearestService {
+            system_address: 10477373803,
+            system_name: "Sol".into(),
+            service,
+            min_pad: PadSize::Medium,
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn untyped_trader_uses_ardent_material_trader_segment() {
+        let t = FakeTransport::new();
+        t.script("/nearest/material-trader", vec![ok(200, ARDENT_TRADER)]);
+        let (src, out) = ardent_client(&t)
+            .execute(&service_query(NearbyService::MaterialTrader(None)))
+            .await;
+        assert_eq!(src, NetSource::Ardent);
+        let NetOutcome::Stations(s) = out else {
+            panic!("{out:?}")
+        };
+        assert!(!s.is_empty() && s.len() <= 5);
+        assert_eq!(
+            t.log(),
+            [
+                "GET https://api.ardent-insight.com/v2/system/address/10477373803/nearest/material-trader?minLandingPadSize=2"
+            ]
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn typed_trader_posts_json_to_spansh_and_reports_spansh() {
+        let t = FakeTransport::new();
+        t.script("/api/stations/search", vec![ok(200, SPANSH_STATIONS)]);
+        let (src, out) = ardent_client(&t)
+            .execute(&service_query(NearbyService::MaterialTrader(Some(
+                tmc_model::net::TraderKind::Raw,
+            ))))
+            .await;
+        assert_eq!(src, NetSource::Spansh);
+        let NetOutcome::Stations(s) = out else {
+            panic!("{out:?}")
+        };
+        assert_eq!(s[0].station_name, "Mercader Ficticio");
+        assert_eq!(t.log(), ["POST https://spansh.co.uk/api/stations/search"]);
+        let body: serde_json::Value =
+            serde_json::from_str(&t.json_bodies.lock().unwrap()[0]).unwrap();
+        assert_eq!(body["reference_system"], "Sol");
+        assert_eq!(body["filters"]["material_trader"]["value"][0], "Raw");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn spansh_failure_for_typed_service_is_no_data() {
+        let t = FakeTransport::new();
+        t.script("/api/stations/search", vec![ok(500, "boom")]);
+        let q = service_query(NearbyService::TechnologyBroker(Some(
+            tmc_model::net::BrokerKind::Guardian,
+        )));
+        let (src, out) = ardent_client(&t).execute(&q).await;
+        assert_eq!((src, out), (NetSource::Spansh, NetOutcome::NoData));
+        // Nunca se cae a Ardent sin tipo.
+        assert_eq!(t.count("ardent"), 0);
+        // Cuerpo corrupto: también «sin datos».
+        let t = FakeTransport::new();
+        t.script("/api/stations/search", vec![ok(200, "{nope")]);
+        let (_, out) = ardent_client(&t).execute(&q).await;
+        assert_eq!(out, NetOutcome::NoData);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn typed_service_search_respects_opt_out() {
+        use std::sync::atomic::AtomicBool;
+        let t = FakeTransport::new();
+        let off = AtomicBool::new(false);
+        let (_, out) = ardent_client(&t)
+            .execute_with_online(
+                &service_query(NearbyService::MaterialTrader(Some(
+                    tmc_model::net::TraderKind::Encoded,
+                ))),
+                &off,
+            )
+            .await;
+        assert_eq!(out, NetOutcome::Disabled);
+        assert_eq!(t.total(), 0);
     }
 
     #[tokio::test(start_paused = true)]
@@ -1961,6 +2136,37 @@ mod tests {
         NetQuery::SystemCoordsByName { name: name.into() }
     }
 
+    fn bgs_tick_query() -> NetQuery {
+        NetQuery::BgsTick
+    }
+
+    #[tokio::test]
+    async fn bgs_tick_query_returns_tick_info() {
+        let t = FakeTransport::new();
+        let payload = r#"[{"time": "2026-10-23T04:15:00Z", "updated_at": "2026-10-23T04:15:30Z"}]"#;
+        t.script("tick.edcd.io", vec![ok(200, payload)]);
+        let c = client(&t);
+        let (src, out) = c.execute(&bgs_tick_query()).await;
+        assert_eq!(src, NetSource::Edcd);
+        match out {
+            NetOutcome::BgsTick(info) => {
+                assert_eq!(info.latest_tick.to_rfc3339(), "2026-10-23T04:15:00+00:00");
+                assert_eq!(info.updated_at.to_rfc3339(), "2026-10-23T04:15:30+00:00");
+            }
+            other => panic!("expected BgsTick, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn bgs_tick_offline_optout_disabled() {
+        let t = FakeTransport::new();
+        let c = client(&t);
+        let guard = AtomicBool::new(false);
+        let (src, out) = c.execute_with_online(&bgs_tick_query(), &guard).await;
+        assert_eq!(src, NetSource::Cache);
+        assert_eq!(out, NetOutcome::Disabled);
+    }
+
     #[tokio::test(start_paused = true)]
     async fn trade_route_polls_and_returns_plan() {
         let t = FakeTransport::new();
@@ -2093,6 +2299,46 @@ mod tests {
                 .unwrap();
             let c = client(t);
             capture(|| rt.block_on(c.execute(&q))).1
+        }
+
+        #[test]
+        fn station_endpoints_have_closed_labels_and_hide_system_name_in_requests() {
+            use tmc_model::net::{BrokerKind, TraderKind};
+            let cases = [
+                (
+                    NearbyService::MaterialTrader(None),
+                    "ardent.nearest.material_trader",
+                ),
+                (
+                    NearbyService::TechnologyBroker(None),
+                    "ardent.nearest.technology_broker",
+                ),
+                (
+                    NearbyService::MaterialTrader(Some(TraderKind::Raw)),
+                    "spansh.stations.material_trader",
+                ),
+                (
+                    NearbyService::TechnologyBroker(Some(BrokerKind::Human)),
+                    "spansh.stations.technology_broker",
+                ),
+            ];
+            for (service, label) in cases {
+                let t = FakeTransport::new();
+                t.script("/nearest/", vec![ok(500, "x")]);
+                t.script("/stations/search", vec![ok(500, "x")]);
+                let records = run(
+                    &t,
+                    NetQuery::NearestService {
+                        system_address: 1,
+                        system_name: "Sol".into(),
+                        service,
+                        min_pad: PadSize::Small,
+                    },
+                );
+                let all: String = records.iter().map(|r| r.payload.clone()).collect();
+                assert!(all.contains(label), "{label} no emitido en {all}");
+                assert!(!all.contains("https://"), "{all}");
+            }
         }
 
         #[test]

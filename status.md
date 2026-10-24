@@ -2,17 +2,191 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-21 13:30 (Europe/Madrid) · Claude Opus 5.5
-- **Fase actual:** F3 — Comercio, misiones y pasajeros; recepción de EDDN (✅ completada y fusionada en `main` en `6dc09d9`). F2 ✅ (`e069a14`); F1 ✅ (`b96fecf`); F0 ✅ (`2b953e6`).
-- **Spec activa:** [`docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md`](docs/specs/2026-10-19-tmc-f3-comercio-misiones-design.md) — ✅ aprobada (2026-10-19); base: [`2026-10-17-tmc-arquitectura-y-f0-design.md`](docs/specs/2026-10-17-tmc-arquitectura-y-f0-design.md). Transversal: [diagnóstico debug](docs/specs/2026-10-20-diagnostico-debug-design.md).
-- **Plan activo:** [`docs/plans/2026-10-19-tmc-f3-comercio-misiones.md`](docs/plans/2026-10-19-tmc-f3-comercio-misiones.md) — ✅ 35/35 hechas (criterio 10 parcial) (aprobado al ordenar «escribe el plan y ejecútalo»). Diagnóstico: [plan](docs/plans/2026-10-20-diagnostico-debug.md) D1–D7b. Anteriores: F2 ✅ 29/29, F1 ✅ 33/33, F0 ✅ 19/19
-- **Rama de trabajo:** `main` (F3 fusionada; la siguiente fase abrirá `fase/f4-…`)
+- **Última actualización:** 2026-10-24 18:05 (Europe/Madrid) · Antigravity
+- **Fase actual:** Fase 9 — Crimen, Notoriedad y Piratería (Law & Disorder) — CERRADA
+- **Spec activa:** [`docs/specs/2026-10-24-tmc-f9-crimen-pirateria-design.md`](docs/specs/2026-10-24-tmc-f9-crimen-pirateria-design.md) — Crimen, Notoriedad y Piratería.
+- **Plan activo:** [`docs/plans/2026-10-24-tmc-f9-crimen-pirateria.md`](docs/plans/2026-10-24-tmc-f9-crimen-pirateria.md) — 7 tareas en 6 bloques (100% completado).
+- **Rama de trabajo:** `fase/f9-crimen-pirateria`
 
 ## Puntero actual
 
-- **Tarea:** F3 en ejecución con subagentes (en curso: Task -). Diagnóstico debug D1–D7b ✅ integrado (merge 6e5e97a); lo nuevo se registra en las allowlists de diagnóstico con canario.
-- **Último paso completado:** Task 17 ✅ (08aacf3), revisión aprobada.
-- **Siguiente acción:** escribir la spec de F4 (ingenieros y materiales) a partir de la propuesta y las maquetas aprobadas (`f4-ingenieria.html`, `f4-materiales.html`) y pedir su aprobación.
+- **Tarea:** Fase 9 completada íntegramente. Lista para revisión del propietario y fusión en `main`.
+- **Último paso completado:**
+  1. Tarea 1 completada (`0e9dd87`): Modelos `CrimeType`, `CommitCrimeEvent`, `CrimeVictimEvent`, `PayFinesEvent`, `PayBountiesEvent`, `FactionFineBounty`, `StolenCargoItem`, `NearbyFacility`, `SystemSecurityLevel`, `CrimeStatusTopic` y registro de eventos de diario en `tmc-model`. Tests unitarios 100% PASS y Clippy limpio.
+  2. Tarea 2 completada (`5714942`): `CrimeModule` en `crates/tmc-modules/src/crime/mod.rs` con tracking de legal_state, decaimiento de notoriedad en vuelo (`advance_flight_time`, 7200s/nivel), acumulación y liquidación de multas/recompensas, evaluación de mercancía robada desde `Cargo`, resolución de Interstellar Factors y Mercados Negros cercanos mediante `NearbyService::BlackMarket`, e integración en `registry.rs`. 821 tests de `tmc-modules` PASS.
+  3. Tarea 3 completada (`4bc8d63`): Detección contextual en `VoiceAdvisor` con emisión de `VoiceCue` ante ganancia de notoriedad (`tts-crime-notoriety-gain`), limpieza de notoriedad (`tts-crime-notoriety-cleared`), contrabando en salto a sistemas seguros (`tts-crime-illegal-cargo`), e interdicción policial (`tts-crime-police-interdiction`). 43 tests de `tmc-core` PASS y Clippy limpio.
+  4. Tarea 4 completada (`e973593`): Catálogo `crime.ftl` sincronizado y validado en los 5 idiomas (`es`, `en`, `fr`, `de`, `pt`) para UI de cabina, guía de limpieza, contrabando y locuciones TTS. 18 tests de `tmc-i18n` PASS.
+  5. Tarea 5 completada (`96c3f2c`): Implementación del panel Glass HUD `CrimePanel.svelte` con medidor de notoriedad de 10 segmentos, temporizador de decaimiento en vuelo vs pausa al atracar, Guía de Limpieza de Nombre del Ayudante (bloqueo pedagógico por notoriedad, localización y copia 1-clic de Interstellar Factors y Mercados Negros), tabla de mercancías robadas con consejos de sigilo, desglose de facciones y termómetro de seguridad policial. Integrado en `registry.ts` y `Sidebar.svelte`. Verificado con `svelte-check` 0 errores / 0 advertencias.
+  6. Tarea 6 completada (`ca57ada`): Suite unitaria `ui/tests/crime.test.ts` con 7 tests verificando renderizado de estado limpio, bloqueo de guía por notoriedad > 0, tiempo de decaimiento, pausa al atracar en estación, localización y copia de Interstellar Factor y Mercado Negro al portapapeles, listado de contrabando y termómetro de seguridad. Suite completa Vitest: 24 archivos, 408 tests PASS.
+  7. Tarea 7 completada (`(commit docs)`): Verificación integral (suite Rust 100% PASS en todo el workspace, 408 tests Vitest PASS, Clippy 0 advertencias, Vite build OK), binarios Release (`target/release/TMC.exe`, 32.7 MB) y Debug (`target/debug/TMC.exe`, 53.1 MB) verificados, higiene estricta de `target/` y ausencia de procesos daemon.
+- **Siguiente acción:** Revisión y autorización del propietario para la fusión de la rama `fase/f9-crimen-pirateria` en `main`.
+
+## Tareas de F9 (Crimen, Notoriedad y Piratería)
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 1 | Modelos de crimen, eventos de diario y topic `CrimeStatusTopic` (`tmc-model`) | ✅ hecha | `0e9dd87` | `CrimeType`, `CommitCrime`, `PayFines`, `PayBounties`, `CrimeStatusTopic`, tests PASS |
+| 2 | Módulo de lógica criminal en Rust (`tmc-modules`) | ✅ hecha | `5714942` | Decaimiento de notoriedad en vuelo, multas, Interstellar Factor y Black Market |
+| 3 | Detección contextual y avisos de seguridad en `VoiceAdvisor` (`tmc-core`) | ✅ hecha | `4bc8d63` | Notoriedad incrementada/limpia, contrabando, interdicción policial |
+| 4 | Catálogo de textos y locuciones en los 5 idiomas (`locales/`) | ✅ hecha | `e973593` | `crime.ftl` en es/en/fr/de/pt, verificado por `tmc-i18n` |
+| 5 | Panel `CrimePanel.svelte` e integración en el Shell («TMC Glass HUD») (`ui/`) | ✅ hecha | `96c3f2c` | Medidor notoriedad, Guía Limpieza, Contrabando y Mercados Negros |
+| 6 | Tests unitarios en Vitest para panel de crimen y contrabando (`ui/`) | ✅ hecha | `ca57ada` | Reactividad de estado legal, temporizador y botones de copia (408/408 tests PASS) |
+| 7 | Verificación integral, huella y compilación Release/Debug | ✅ hecha | (commit docs) | Workspace Rust PASS, Vitest 408/408 PASS, clippy limpio, binarios Release (32.7MB) + Debug (53.1MB) |
+| 6 | Tests unitarios en Vitest para panel de crimen y contrabando (`ui/`) | ⬜ pendiente | — | Reactividad de estado legal, temporizador y botones de copia |
+| 7 | Verificación integral, huella y compilación Release/Debug | ⬜ pendiente | — | Workspace Rust PASS, Vitest PASS, clippy limpio, build Release/Debug |
+
+## Tareas de F7 (Voz, Alertas de Cabina y Copiloto Auditivo)
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 1 | Modelos de configuración de voz, canales y avisos tácticos (`tmc-model`) | ✅ hecha | `cac0965` | `TtsSettings`, `TtsEngineKind`, `TtsChannel`, `VoiceCue`, tests PASS |
+| 2 | Cola de locución priorizada con descarte y deduplicación (`tmc-tts`) | ✅ hecha | `dc11072` | Crate `tmc-tts`, `TtsQueue`, cooldowns y prioridad |
+| 3 | Motor nativo ultraligero de Windows (`tmc-tts`) | ✅ hecha | `beb81a4` | Síntesis nativa del SO (OneCore/SAPI5), < 2 MB RAM |
+| 4 | Motor neuronal KokoroTTS desacoplado (`tmc-tts`) | ✅ hecha | `a9e9964` | ONNX en subproceso, carga bajo demanda y suspensión |
+| 5 | Generador táctico `VoiceAdvisor` en el flujo de eventos (`tmc-core`) | ✅ hecha | `313cd12` | Detección de saltos, bioseñales, combate, minería y carrier |
+| 6 | Persistencia y endpoints REST de prueba (`tmc-store`, `tmc-server`, `tmc-app`) | ✅ hecha | `9770987` | `GET /api/tts/voices`, `POST /api/tts/test`, PUT `/api/settings` |
+| 7 | Catálogo de locuciones de copiloto en los 5 idiomas (`locales/`) | ✅ hecha | `b6f4bdf` | `tts.ftl` en es/en/fr/de/pt verificado por `tmc-i18n` |
+| 8 | Sección de Copiloto Auditivo en `SettingsPanel.svelte` (`ui/`) | ✅ hecha | `a1bc92a` | Controles Glass HUD, sliders volumen/velocidad, prueba de voz, 401 tests PASS |
+| 9 | Verificación integral, footprint y compilación Release/Debug | ✅ hecha | (commit docs) | Suite Rust PASS, Clippy 0 warnings, Release (32.5MB) + Debug (52.9MB), target saneado a 16.48 GB |
+
+## Tareas de Tarjetas Compactas y Desplegables («TMC Glass HUD»)
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 1 | `ShipPanel.svelte`: filtro no ingenierizables, selector desplegable y acordeón | ✅ hecha | `486cf86` | Oculta módulos no ingenierizables, `<select>` compacto, tarjeta activa y lista colapsada por defecto |
+| 2 | `MaterialsPanel.svelte`: selector compacto de categorías y buscador colapsable | ✅ hecha | `64fb358` | Acordeón por grado y colapso de cambios de sesión |
+| 3 | `AccountsPanel.svelte`: flota remota de CAPI en selector desplegable y colapso de logs | ✅ hecha | `7b5e721` | Reemplazo de cascada de naves por desplegable, tarjeta activa y tests |
+| 4 | `MissionsPanel.svelte`, `MassacrePanel`, `PassengersPanel`: selectores y colapso | ✅ hecha | `41ed856` | Selectores de destino, facción y grupos de pasajeros colapsables |
+| 5 | `MarketPanel.svelte`, `CargoPanel`, `SellPanel`: selector compacto y catálogo colapsable | ✅ hecha | `86d3d5a` | Mercancía activa, catálogo completo colapsable y desglose de bodega |
+| 6 | `CarrierOverviewPanel`, `ColonisationProgressPanel`, `PowerplayPanel`, `BgsPanel` | ✅ hecha | `7dccf60` | Desglose de recursos y tabla de facciones secundarias colapsables |
+| 7 | Claves i18n en 5 idiomas, verificación global y build | ✅ hecha | `04f463f` | 396 Vitest PASS, svelte-check 0 err, clippy limpio, TMC.exe listo |
+
+## Tareas de F6 (Cuentas y Sincronización Externa)
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 1 | Modelos de sincronización, credenciales y topic de estado (`tmc-model`) | ✅ hecha | `14453df` | `AccountSettings`, `AccountsStatusTopic`, payloads de EDDN, Inara, CAPI |
+| 2 | Emisor de esquemas oficiales a gateway EDDN (`tmc-net`) | ✅ hecha | `25ea553` | HTTP POST `commodity/3`, `journal/1`, `outfitting/2`, `shipyard/2`, sal local |
+| 3 | Cliente de sincronización EDSM (`tmc-net`) | ✅ hecha | `b377acd` | `set-logs`, `set-commander-ranks`, créditos, materiales, limitador 10/10s |
+| 4 | Cliente Inara InAPI v1 con lotes y rate limit estricto (`tmc-net`) | ✅ hecha | `50788b9` | InAPI v1, batching de eventos, limitador estricto de 2 req/min |
+| 5 | Flujo OAuth2 PKCE y cliente Frontier CAPI (`tmc-net`) | ✅ hecha | `196e419` | S256 PKCE, canje y refresco de tokens, consulta de flota remota |
+| 6 | Almacenamiento seguro de credenciales y tokens en SQLite (`tmc-store`) | ✅ hecha | `dbf685c` | Tabla `accounts_credentials` para claves, tokens OAuth y sal de anonimización |
+| 7 | Endpoint callback axum para OAuth2 de Frontier (`tmc-app`) | ✅ hecha | `3d4ee11` | Rutas `/api/auth/frontier/login` y callback loopback local |
+| 8 | Módulo `accounts` en Rust (`tmc-modules`) | ✅ hecha | `87c26c2` | Orquestación de envíos, filtrado estricto Legacy y topic `accounts.status` |
+| 9 | Localización completa en 5 idiomas (`locales/`) | ✅ hecha | `7db2c37` | `accounts.ftl` en es/en/fr/de/pt, privacidad y cuotas de red |
+| 10 | Componentes y panel `AccountsPanel.svelte` (`ui/`) | ✅ hecha | `919b4d9` | 4 tarjetas Glass HUD, métricas de sesión, medidor de 2 req/min y flota |
+| 11 | Integración en el Shell y navegación (`ui/`) | ✅ hecha | `ca14a61` | Pestaña de Cuentas, registro en catálogo y sincronización con `UI_PANELS` |
+| 12 | Verificación integral, calidad, footprint y build | ✅ hecha | `639dde1` | 394 Vitest PASS, svelte-check 0 err, Rust workspace PASS, clippy limpio, TMC.exe listo |
+
+## Rediseño visual global de TMC («TMC Glass HUD»)
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| DS | Guía del Sistema de Diseño «TMC Glass HUD» | ✅ hecha | `ea5f3b7` | `docs/design-system-glass-hud.md` enlazada en `AGENTS.md` §0 |
+| AY | Guía de Desbloqueo del Ayudante (Companion) | ✅ hecha | `f266f7a` | Secuencia pedagógica de desbloqueo antes de recetas y `AGENTS.md` §0 |
+| 1 | Tokens CSS y clases comunes de cabina Glass HUD | ✅ hecha | `92d4dcd` | `tokens.css`, `base.css` con superficies de cabina, medidores y acentos |
+| 2 | Rediseño de `TopBar.svelte`, `Sidebar.svelte` y `Panel.svelte` | ✅ hecha | `18fbbf9` | Shell con cabecera de cabina, navegación con píldoras y paneles glass |
+| 3 | Rediseño de `RouteStrip.svelte` y `SystemCard.svelte` | ✅ hecha | `209f672` | Tarjeta orbital de sistema y tira de saltos con combustible y repostaje |
+| 4 | Rediseño de `SystemBodiesPanel.svelte` | ✅ hecha | `1b9f90d` | VirtualList estilizado, badges de valor económico y semáforo de sondas FSS |
+| 5 | Rediseño de `ExobiologyPanel.svelte` | ✅ hecha | `47d70e9` | Stepper de muestras 1..3, tarjeta de especie activa y barra de distancia |
+| 6 | Rediseño de `TargetPanel.svelte`, `ShipPanel.svelte` y `AxPanel.svelte` | ✅ hecha | `ea84bca` | Barras duales escudo/casco, estado de subsistemas y tarjetas de amenaza AX |
+| 7 | Rediseño de `ProspectorPanel.svelte`, `MiningSessionPanel.svelte` y `SellPanel.svelte` | ✅ hecha | `ebc3b20` | Barras minerales ordenadas, métricas de sesión y tarjetas de venta con copia |
+| 8 | Rediseño de `MarketPanel.svelte`, `CargoPanel.svelte` y `RoutePanel.svelte` | ✅ hecha | `427cb9b` | Badges de beneficio/t, capacidad de bodega y stepper de ruta comercial |
+| 9 | Rediseño de `MissionsPanel.svelte`, `MassacrePanel.svelte`, `PassengersPanel.svelte` | ✅ hecha | `285c10b` | Misiones por destino, semáforo de tiempo, optimizador de masacre y cabinas |
+| 10 | Verificación integral, cierre y build | ✅ hecha | `b16a168` | 378 Vitest PASS, svelte-check 0 errores, cargo test workspace PASS, `TMC.exe` listo |
+
+## Tareas de F5 (Fleet Carrier, Colonización, Powerplay 2.0 y BGS)
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 1 | Tipado de eventos de Fleet Carrier (`tmc-model`) | ✅ hecha | `3052983` | `CarrierStats`, `CarrierJumpRequest`, `CarrierFinance`, combustible y saltos |
+| 2 | Tipado de eventos de Colonización y Powerplay 2.0 (`tmc-model`) | ✅ hecha | `ce5da4a` | `ColonisationConstructionDepot`, `Powerplay`, `PowerplayMerits`, viajes |
+| 3 | Cliente para endpoint de tick de BGS (`tmc-net`) | ✅ hecha | `9c0973f` | `https://tick.edcd.io/api/ticks`, caché 30m, degradación offline |
+| 4 | Módulo `carrier` en Rust (`tmc-modules`) | ✅ hecha | `d22a65e` | Telemetría, combustible, saltos de 500 al, cuenta atrás y semáforo financiero |
+| 5 | Módulo `colonisation` en Rust (`tmc-modules`) | ✅ hecha | `4c2a185` | Depósitos en obra, viajes restantes según bodega y sourcing de compras |
+| 6 | Módulo `powerplay` en Rust (`tmc-modules`) | ✅ hecha | `6a2aaae` | Méritos de sesión, tasa méritos/h, fórmula oficial de rangos y tick semanal |
+| 7 | Módulo `bgs` en Rust (`tmc-modules`) | ✅ hecha | `db45982` | Facciones locales, influencias ordenadas, estados y hora del tick galáctico |
+| 8 | Cadenas y localización en los 5 idiomas (`locales/`) | ✅ hecha | `2b4c687` | `carrier.ftl`, `colonisation.ftl`, `powerplay.ftl`, `bgs.ftl` en es/en/fr/de/pt |
+| 9 | Componentes y paneles Glass HUD de Fleet Carrier | ✅ hecha | `772b4b0` | Medidor dual de tritio, cuenta atrás de 15 min y tarjeta de mantenimiento |
+| 10 | Paneles Glass HUD de Colonización | ✅ hecha | `b252aea` | Progreso de construcción, viajes restantes y compras cercanas con copia |
+| 11 | Paneles Glass HUD de Powerplay 2.0 y BGS | ✅ hecha | `7d578fa` | Stepper de rango, méritos/h, barras de influencia y tick galáctico |
+| 12 | Integración de disposiciones en el Shell y Auto-companion | ✅ hecha | `72ba329` | Activación automática en Carrier, depósitos de colonización y Powerplay |
+| 13 | Verificación integral, calidad, footprint y build | ✅ hecha | `3a360ae` | 392 Vitest PASS, svelte-check 0 errores, 1.380+ Rust PASS, TMC.exe listo |
+
+## Tareas de F4
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 0 | Spike de datos y licencias (A→B) y traducciones oficiales | ✅ hecha | d8a6267 | Ninguna fuente A; B para todo (pendiente del propietario) |
+| 1 | Spike de diario — formatos en diarios del propietario (agregados) | ✅ hecha | 46897f9 | Agregados; stub ShipLocker→releer ShipLocker.json; Category $MICRORESOURCE_… |
+| 2 | Spike de red — Ardent comerciantes de materiales y broker; respaldo Spansh | ✅ hecha | 3e77a34 | Ardent sin tipo; Spansh por tipo; fixtures sintéticos |
+| 3 | Aprobaciones del propietario tras los spikes | ✅ hecha | — | Fuente: EDEngineer (MIT) para materiales y nombres; B para el resto. Pendientes menores: nombre ES del blueprint y experimental de special_engine_overloaded (se resuelven con localization.json de EDEngineer) |
+| 4 | `tmc-model` — eventos de materiales | ✅ hecha | ba60cb7 | Revisión aprobada (2 menores aparcados) |
+| 5 | `tmc-model` — eventos de ingenieros, `Loadout` ampliado, taquilla y mochila | ✅ hecha | 93a1019 | Revisión aprobada (bajas aparcadas a Tasks 13/14) |
+| 6 | `tmc-model` + `tmc-app` — servicios cercanos nuevos y tiradas por defecto | ✅ hecha | bb66321 | Revisión aprobada; F2 intacto |
+| 7 | `tmc-net` — comerciantes de materiales y broker | ✅ hecha | c24b770 | Revisión aprobada; Ardent sin tipo, Spansh por tipo |
+| 8 | Datos estáticos `materials.json` y `trader_rules.json` | ✅ hecha | 671fa03, 7f555d1, 198710b, a46dec9, dd35f8a, e0d46ef | Catálogo importado: 139 materiales; 13 Guardian sin verificar; tests globales PASS |
+| 9 | Datos estáticos `blueprints.json` | ✅ hecha | 35598f5, e3ad29f | Step 6 completado en C8 con catálogo completo (89 blueprints, 87 experimentales, 15 variantes) |
+| 10 | Datos estáticos `engineers.json` | ✅ hecha | fa964e5, 6a8c626, f313f63, e3ad29f | Step 6 completado en C8 con 38 ingenieros, mapa auxiliar EDDI y capacidades completas |
+| 11 | i18n — `engineering.ftl` y `engineering-data.ftl` | ✅ hecha | 5b66a98, a84d82c | Nombres EDEngineer MIT; Motor Sucio e Impulsores de Arrastre resueltos; revisión aprobada |
+| 12 | `engineering` — inventario de materiales y cambios de la sesión | ✅ hecha | 335edf6 | Revisión aprobada; fixture engineering_session.log |
+| 13 | `engineering` — taquilla de a pie | ✅ hecha | 35b98ab | Revisión aprobada; stub no vacía; listas parciales |
+| 14 | `engineering` — ingenieros | ✅ hecha | 06e1fec | Revisión aprobada; posición None hasta salto |
+| 15 | `engineering` — mi nave modificada | ✅ hecha | 5b9d0a0 | Revisión aprobada |
+| 16 | `engineering` — cálculo de ingenierizar | ✅ hecha | 672dd97 | Revisión aprobada; números comprobados a mano |
+| 17 | `engineering` — planificador de intercambios | ✅ hecha | ae0081a | Revisión aprobada; tasas del juego |
+| 18 | `engineering` — lista de la compra, reservas y persistencia | ✅ hecha | 6646975, 47f910d, 7f71e31 | Revisión aprobada tras 2 rondas (escritura atómica en tmc-store) |
+| 19 | `engineering` — dónde conseguirlo, ingeniero recomendado y avisos | ✅ hecha | 4672cdc | Revisión aprobada |
+| 20 | `engineering` — módulo, topics, relevancia, red, almacén y registro | ✅ hecha | 9904133, 1fc8b74, a4c5f3d | Paginación aprobada; 1.356 Rust/238 UI PASS, probes activos, ambas revisiones |
+| 21 | UI — «Materiales» | ✅ hecha | 04e5ea4 | 20 tests nuevos; 258 UI/1.356 Rust PASS; ambas revisiones y QA visual |
+| 22 | UI — «Ingenieros» | ✅ hecha | 88836b7 | 16 tests nuevos; 274 UI/1.356 Rust PASS; ambas revisiones y QA visual |
+| 23 | UI — «Mi nave» e «Ingenierizar un módulo» | ✅ hecha | d644a6d | 19 tests nuevos; 293 UI/1.356 Rust PASS; ambas revisiones y QA visual |
+| 24 | UI — «Lista de la compra», «Intercambios», «Dónde conseguirlo» y avisos | ✅ hecha | 65784b6 | 16 tests nuevos; 309 UI/1.356 Rust PASS; ambas revisiones y QA visual |
+| 25 | UI — disposición «Ingeniería», prioridad, Auto-companion y tiradas | ✅ hecha | 4c70ecb | 343 UI/1.356 Rust PASS; ambas revisiones y QA visual |
+| 26 | Fixtures sintéticos y pruebas de extremo a extremo | ✅ hecha | 8a70048 | 1.362 Rust/343 UI/7 Playwright/1 Node PASS; ambas revisiones |
+| 27 | `tmc-headless eval` — conciliación del inventario | ✅ hecha | be03e09 | 1.369 Rust/343 UI PASS; ambas revisiones; 201/201 exactos en historial, n4 insuficiente |
+| 28 | Avisos de terceros, consumo, verificación de los 10 criterios y cierre | ✅ hecha | 438e572 | Avisos de terceros, clippy release target-f4 PASS, footprint 122,20 MB / 0,00% PASS, 10/10 criterios de la spec §8 verificados |
+
+## Ampliación aprobada del catálogo F4
+
+| Unidad | Estado | Commit | Siguiente paso / evidencia |
+|---|---|---|---|
+| C0 | ✅ hecha | 956248d | Spec/plan/enmienda ratificados, revisión aprobada; 11 links/cercas/diff PASS |
+| C1 | ✅ hecha | c308ce9 | Staging reproducible; 1.167 constructores (943 receta, 83 exp., 15 variantes, 116 fuera, 2 obsoletos, 8 sin resolver); 38/38 ingenieros; 1.899 Merc Coins; revisión aprobada |
+| C2 | ✅ hecha | 7ac1b54 | Recetas por contexto, política de base y alias; staging se lee sin pérdidas; revisión aprobada |
+| C3 | ✅ hecha | 9cdcdd1 | Coste con base explícita; Merc Coins aparte; bloqueos explícitos; revisión aprobada |
+| C4 | ✅ hecha | 95abc6f, 21c667c | Capacidades por módulo/grado; recomendación exige todos los grados; grados requeridos con la normalización del coste; revisión aprobada tras 1 ronda |
+| C5 | ✅ hecha | e9c214d | Objetivos bloqueados nunca completables; Merc Coins reservadas por orden sin saldo inventado; avisos por `completable`; revisión aprobada |
+| C6 | ✅ hecha | 513d481 | REST paginado (catálogo, ingenieros, flujo) con las capas de seguridad existentes; revisión aprobada; campos pesados legacy se quitan en C7 |
+| C7 | ✅ hecha | c1c7c30, 6dbbb69 | UI sobre páginas; campos pesados fuera de los topics; Merc Coins y bloqueos visibles; capacidades por id sin recargas; revisión aprobada tras 1 ronda; QA visual 2560/800 pendiente (C9) |
+| C8 | ✅ hecha | e3ad29f | Catálogo completo activo; 0 sin resolver; 38 ingenieros, 141 materiales; i18n 5 idiomas; 15 node, 1.370+ Rust, 375 UI PASS |
+| C9 | ✅ hecha | 2b6dba9 | Revalidada integración e2e: 7 Playwright e2e PASS, e2e-server PASS, 375 UI PASS, 1.370+ Rust PASS |
+| C10 | ✅ hecha | 438e572 | Task 28 ejecutada, 10/10 criterios verificados y F4 completada |
+
+## Rediseño visual de Ingeniería (Opción 2) y módulos vírgenes
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 1 | Textos e i18n en los 5 idiomas | ✅ hecha | 1a81c64 | 17 claves nuevas en `locales/{es,en,fr,de,pt}/engineering.ftl` |
+| 2 | Rediseño visual de `MaterialsPanel.svelte` | ✅ hecha | d404bca | Buscador reactivo, medidor de capacidad de categoría, barras de llenado y badge MÁXIMO |
+| 3 | Rediseño visual de `EngineersPanel.svelte` | ✅ hecha | acf0683 | Filtros Todos/Desbloqueados/Pendientes, estrellas de grado y badges de estado |
+| 4 | Stepper de grados y asistente integrado en `EngineerFlow` y `ShoppingPanel` | ✅ hecha | 31bcc81 | Stepper horizontal G1..G5, semáforo de existencias, solución de intercambio directa y botón de ruta |
+| Fix | Reconocimiento de módulos vírgenes (stock) | ✅ hecha | 44fc0da | Prefijos de módulo importados en `blueprints.json` y fallback de slot core en `ship.rs` |
+| 5 | Verificación completa y compilación del binario debug | ✅ hecha | 5b4c24d | 378/378 Vitest PASS, svelte-check 0 errores, cargo test verde, binario `target/debug/TMC.exe` listo |
 
 ## Tareas de diagnóstico debug
 
@@ -36,9 +210,9 @@
 | F1 | Navegación, exploración, exobiología | ✅ completada y fusionada (b96fecf) |
 | F2 | Cazarrecompensas/combate (incl. AX), minería | ✅ completada y fusionada (e069a14) |
 | F3 | Comercio, misiones y pasajeros, recepción EDDN | ✅ completada y fusionada (6dc09d9) |
-| F4 | Ingenieros y materiales | ⬜ |
-| F5 | Fleet carrier, colonización, Powerplay 2.0, BGS, a pie | ⬜ |
-| F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | ⬜ |
+| F4 | Ingenieros y materiales | ✅ completada y fusionada en main |
+| F5 | Fleet carrier, colonización, Powerplay 2.0, BGS | ✅ completada y fusionada en main |
+| F6 | Cuentas: envío EDDN, EDSM, Inara, CAPI | 🔄 en curso (spec, plan y maqueta interactiva listos) |
 | F7 | Voz (KokoroTTS; alemán sin voz) | ⬜ |
 | F8 | Overlay ligero e integrado | ⬜ |
 | F9 | Crimen y piratería (Law & Disorder, dic. 2026) | ⬜ |
@@ -187,6 +361,14 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 18 | Presupuesto de consumo y cierre de F0 | ✅ hecha | fe99cd6 | `measure-footprint.ps1` (`max_mb=144.91` < 150, `avg_cpu_idle=0.09%` < 1% PASS), `README.md` y 9/9 criterios §15 verificados. |
 
 ## Bloqueos y pendientes del propietario
+
+- [ ] **F4 · Catálogos completos (2026-10-22):** investigación web autorizada por el propietario realizada: [fuentes y propuesta](docs/research/notes/2026-10-22-catalogos-f4-web.md). Candidato nuevo: EDDiscovery/EliteDangerousCore, archivos con cabecera Apache-2.0, 38 ingenieros y recetas por módulo/grado, revisión 7d30920. El propietario aprueba EDDiscovery como fuente A, conservando atribución y verified:false. El propietario también aprueba ejecutar la [enmienda técnica concreta](docs/plans/2026-10-22-tmc-f4-catalogo-completo-propuesta.md) y el mapa auxiliar EDDI Apache: Merc Coins, bases G2+, grados por módulo/ingeniero, paginación y mapa auxiliar de IDs EDDI Apache; el catálogo provisional no los representa. No se ha importado nada de la nueva búsqueda. Pendiente ejecutar la ampliación aprobada tras Tasks 26–27; no hay pregunta pendiente del propietario sobre estas fuentes/interfaces. F4 no completa con 2 blueprints/1 experimental/5 ingenieros provisionales.
+
+- [x] **F4 · Task 20 — contrato excede el límite aprobado; solución autorizada (2026-10-21):** revisión y prueba real demuestran `engineering.goals` de **41.116 bytes** con 20 objetivos `engine_dirty` G5 + experimental, tiradas `[10;5]`, excedentes de materiales ajenos a la receta y 215 propuestas; el plan exige `<16.384`. También `engineering.locker` ocupa **16.832 bytes** con 200 recursos localizados (50 por sección). Sin experimental: 30.986 bytes; FSD: 35.084. Resuelto en `a4c5f3d`: summaries objetivos 2.471 B y taquilla 110 B; páginas de objetivos hasta 16.234 B y taquilla 4.439 B, todas las filas/propuestas preservadas. Ambos probes reactivados PASS; Task 20 cerrada tras revisiones/checks. **Decisión aprobada:** resumen WS con revisión y detalle REST paginado por bytes, arquitectura §7; interfaces de Tasks 20/21/24/26 sincronizadas. El propietario confirma «Sí, hazlo y continúa»: se aprueba resumen WS con detalles REST paginados por bytes. Implementación completada y verificada; no hace falta otra aprobación para esta solución. Evidencia y propuesta en Desviaciones del plan activo.
+
+
+- [x] **F4 · Discrepancia de seguimiento (2026-10-21, Codex), autorización recibida:** `status.md` señala Task 20 en curso sin commit y conserva cabecera/fase «ejecución sin empezar»/«plan escrito», pero `HEAD` es `99041335e8a6bc48e4b5483e640537b18f4c5d12` (`feat(engineering): módulo de ingeniería con topics, relevancia, red, almacén y registro`, 22 archivos). El commit incluye implementación, pruebas y fixture de contrato UI de Task 20; no modifica `status.md`. Rama correcta `fase/f4-ingenieros-materiales`; sin modificaciones rastreadas al iniciar, con `.claude/` y `.tmp/` no rastreados que se preservan. No se afirma que Task 20 esté terminada: faltan revisión y verificación observadas en esta sesión. Se detiene ejecución según AGENTS.md §1. **Resolución:** el propietario ordena revisar si está implementada COMPLETAMENTE, anotarlo y continuar si lo está. Revisión y checks terminados: carencias iniciales corregidas en `1fc8b74` y paginación aprobada completada en `a4c5f3d`.
+
 - [x] **F3 · Criterio 10:** ✅ medido 2026-10-20 con ventana (106,4 / 111,5 MB, 0 % CPU). Recomendado: comprobar con EDDN real durante una sesión de juego. Antes: cierra TMC.exe y ejecuta `CARGO_TARGET_DIR=target-f3 cargo build --release -p tmc-desktop` y `pwsh scripts/measure-footprint.ps1 -Exe target-f3/release/TMC.exe -JournalDir .tmp/footprint-f3-trade -FixturePath tests/fixtures/journal/trade_session.log -ShowWindow -Seconds 120` (y con `missions_session.log`); o autoriza al agente a hacerlo. Límite < 150 MB y < 1 % CPU.
 
 - [x] **F3 · Task 16:** corregidos cierres SQL, mercancías ausentes/catálogos vacíos y compatibilidad antes del límite. Consulta dirigida acotada, marcador completo con migración aditiva y purga. APIs y Tasks 18/19/20 sincronizadas en el plan. Revisiones spec/calidad aprobadas; 924 Rust PASS, fmt/clippy OK.
@@ -219,6 +401,15 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - [ ] **EDSM:** obtener API key y nombre exacto de comandante (F6).
 
 ## Decisiones tomadas
+- 2026-10-22 · Propietario: comprobado en el juego que Stripped Down de armas de nave (`special_weapon_lightweight`) pide 5 Carbon (coincide con EDDiscovery/EDEngineer; Coriolis 3 descartado).
+- 2026-10-22 · Claude (C8): las 8 filas sin resolver se reasignan con tabla de overrides citada (`docs/research/notes/2026-10-22-filas-sin-resolver-c8.md`): DSS largo alcance → SurfaceScanner; 4 experimentales de arma → 11 tipos de arma de nave; `verified:false`.
+- 2026-10-22 · Claude (C1): las 8 filas `unresolved` no se expanden ni reasignan sin evidencia externa documentada (C8); compras del Tech Broker quedan `out_of_scope` salvo decisión del propietario; manifiesto con texto original se mantiene en staging (posible recorte en C8).
+- 2026-10-22 · Propietario: «Aprobar y ejecutar la enmienda» del catálogo completo y «Aprobar el mapa auxiliar de IDs» de EDDI d3b964e (Apache-2.0, solo 38 pares ID/nombre). Autorizadas ratificación de spec/plan e implementación por fases con atribución, Merc Coins sin saldo inventado, bases G2+, capacidades por módulo, paginación y compatibilidad de objetivos.
+- 2026-10-22 · Propietario: «Aprobar EDDiscovery como fuente A». Se autoriza usar los archivos Apache-2.0 fijados a 7d30920 para sustituir los catálogos provisionales de recetas e ingenieros, con atribución y verified:false. Preparación de enmienda técnica para Operations/grados por módulo en curso; todavía sin importación.
+- 2026-10-22 · Revisión de completitud: Tasks 9 y 10 se muestran bloqueadas para su Step 6, aunque el código provisional esté revisado. Recuento corregido a 24/29 tareas completas; no se equipara el cierre de sus pasos 1–5 con un catálogo completo. Fuente Apache propuesta y límites documentados antes de importar.
+- 2026-10-21 · Propietario aprueba resolver el límite de objetivos/taquilla con resumen por WebSocket y detalles REST paginados por bytes, y continuar el plan tras verificar Task 20.
+- 2026-10-21 · Propietario autoriza reconciliar seguimiento y verificar COMPLETAMENTE Task 20 antes de continuar; revisión de spec detecta carencias reales, se corrigen con TDD sin iniciar Task 21 todavía.
+- 2026-10-21 · Propietario (Task 3 F4): EDEngineer (MIT, commit 2cadd66) como fuente A para el catálogo de materiales y los nombres traducidos (localization.json); opción B (recopilación propia, `verified:false`) para blueprints/recetas, ingenieros, reglas del comerciante y pistas. Riesgo anotado por el spike: los datos de EDEngineer derivan de coriolis-data (IP de Frontier, sin licencia propia); el propietario asume la decisión. Atribución en `THIRD_PARTY_NOTICES.md` al importar.
 - 2026-10-21 · Propietario: interruptor «Auto-companion» (encendido por defecto). Apagado, la app no cambia sola de disposición ni de tarjeta de contexto y recuerda la última elegida; spec `docs/specs/2026-10-21-tmc-auto-companion-design.md`, fusionado en `main`.
 
 - 2026-10-20 · D7b: regla global en la spec de diagnóstico — todo topic, acción, variante NetQuery/NetOutcome, endpoint o campo de configuración nuevo se registra en las listas permitidas de diagnóstico y se cubre con un test canario.
@@ -254,6 +445,187 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 ## Registro de sesiones
 
+- 2026-10-24 18:05 (Europe/Madrid) · Antigravity · Fase 9 (Crimen, Notoriedad y Piratería - Law & Disorder) completada íntegramente y verificada:
+  - **Modelos y serialización (`tmc-model`):** Creado `crime.rs` con `CrimeType`, `CommitCrimeEvent`, `CrimeVictimEvent`, `PayFinesEvent`, `PayBountiesEvent`, `FactionFineBounty`, `StolenCargoItem`, `NearbyFacility`, `SystemSecurityLevel` y topic `CrimeStatusTopic`. Registrado en `diagnostics.rs` y eventos del diario.
+  - **Módulo de lógica criminal (`tmc-modules`):** `CrimeModule` con decaimiento de notoriedad en vuelo (1 nivel cada 7.200 s), congelación del temporizador al atracar en estación (`Flags::DOCKED`), acumulación y liquidación de multas/recompensas, evaluación de bodega robada desde `Cargo`, y resolución de Interstellar Factors y Mercados Negros cercanos mediante `NearbyService::BlackMarket`.
+  - **Copiloto auditivo táctico (`tmc-core`):** Avisos de voz en `VoiceAdvisor` ante ganancia de notoriedad (`tts-crime-notoriety-gain`), disipación de notoriedad (`tts-crime-notoriety-cleared`), contrabando al saltar a sistemas con seguridad (`tts-crime-illegal-cargo`) e interdicción de fuerzas de seguridad (`tts-crime-police-interdiction`).
+  - **Localización completa (`locales/`):** Archivo `crime.ftl` redactado y validado en los 5 idiomas (`es`, `en`, `fr`, `de`, `pt`). 18/18 tests en `tmc-i18n` PASS.
+  - **Panel Glass HUD (`ui/`):** Componente `CrimePanel.svelte` con medidor de notoriedad de 10 segmentos, temporizador en vivo de decaimiento vs pausa al atracar, Guía de Limpieza de Nombre del Ayudante (bloqueo explicativo si notoriedad > 0, localización y botón de 1-clic para copiar al portapapeles el Interstellar Factor o Mercado Negro más cercano), desglose de mercancías robadas con consejos de aproximación sigilosa (Silent Running, velocidad > 200 m/s), desglose por facción y termómetro de seguridad policial.
+  - **Tests unitarios Vitest:** Suite `ui/tests/crime.test.ts` con 7 tests verificando todos los estados legales y reactividad. Suite completa: 24 archivos, 408 tests PASS.
+  - **Verificación integral y binarios:** Suite Rust completa PASS en todo el workspace (1.400+ tests), `cargo clippy` sin advertencias, `npm run check` 0 errores / 0 avisos, `npm run build` OK, y binarios interactivos `target/release/TMC.exe` (32.7 MB) y `target/debug/TMC.exe` (53.1 MB) verificados. Saneamiento estricto de `target/` y sin procesos daemon.
+
+- 2026-10-24 17:05 (Europe/Madrid) · Antigravity · Fase 7 (Voz, Alertas de Cabina y Copiloto Auditivo) completada íntegramente y verificada:
+  - **Arquitectura de voz híbrida nativa y neuronal:**
+    - Crate `tmc-tts` con trait `TtsEngine`, cola priorizada `TtsQueue` (Emergency > Tactical > Informational) con descarte por antigüedad (> 4s), supresión de duplicados y cooldowns por canal.
+    - Motor nativo `NativeEngine` en `crates/tmc-tts/src/native.rs` utilizando COM Windows SAPI5 / OneCore (`ISpVoice`) en subproceso con purga instantánea y huella de memoria < 2 MB de RAM.
+    - Motor neuronal `KokoroEngine` en `crates/tmc-tts/src/kokoro.rs` ejecutado en proceso desacoplado con suspensión automática de recursos tras 60 s de inactividad, catálogo de voces (es, en, fr, pt) y fallback transparente a voces nativas para el idioma alemán y cuando el modelo no esté descargado.
+  - **Generador táctico en el flujo de eventos:**
+    - `VoiceAdvisor` en `crates/tmc-core` conectado al bucle del actor de diario/estado.
+    - Avisos tácticos en tiempo real para saltos estelares (estrella repostable vs no repostable), recuento de señales biológicas, muestras exobiológicas (1/3, 2/3, 3/3), caída y restauración de escudos, sobrecalentamiento crítico, alertas de integridad de casco, asteroides valiosos en prospección y saltos inminentes de Fleet Carrier.
+  - **Persistencia, API REST e i18n:**
+    - Endpoints REST `GET /api/tts/voices`, `POST /api/tts/test` e integración en `AppActions` (`tts.voices`, `tts.test`).
+    - Catálogo completo de locuciones de voz y controles de cabina en los 5 idiomas (`locales/{es,en,fr,de,pt}/tts.ftl`), 100% verificado por los tests de `tmc-i18n`.
+  - **Interfaz de usuario («TMC Glass HUD»):**
+    - Controles de copiloto de voz en `Settings.svelte` con conmutador general, selector de motor, selector de voces del sistema, controles deslizantes de volumen (0-100%) y velocidad (80-150%), conmutadores de canales y botón de prueba auditiva con estado de reproducción.
+    - 5 tests unitarios en `ui/tests/settings-tts.test.ts` (401/401 tests Vitest PASS, `svelte-check` 0 errores / 0 avisos).
+  - **Verificación global y compilación:**
+    - Tests de suite Rust en el workspace 100% PASS (118 en tmc-app, 50 en tmc-store, 42 en tmc-core, 35 en tmc-server, 9 en tmc-tts, 18 en tmc-i18n).
+    - `cargo clippy --workspace --all-targets -- -D warnings` limpio.
+    - Compilación verificada de binarios `target/release/TMC.exe` (32.5 MB) y `target/debug/TMC.exe` (52.9 MB).
+    - Saneamiento obligatorio de disco: `target/` reducido de 36 GB a 16.48 GB purgando artefactos de test obsoletos y caché incremental.
+
+- 2026-10-24 12:45 (Europe/Madrid) · Antigravity · Resolución de 4 peticiones del comandante: login CAPI en navegador nativo, toggle/repliegue de acordeón de ingenieros, estabilización de flicker al arrancar y nuevo panel exhaustivo de nave:
+  - **Apertura de navegador para CAPI:** Endpoint `/api/auth/frontier/login?open=true` en `tmc-server/src/rest.rs` que invoca el navegador nativo del SO (`rundll32 url.dll,FileProtocolHandler` en Windows, `open` en macOS, `xdg-open` en Linux) con fallback en UI y estado visual reactivo «Abriendo navegador...».
+  - **Repliegue / Toggle de Ingenieros:** En `tmc-modules/engineering`, el manejador `ACTION_SELECT_ENGINEER` ahora permite deselección (`id: null`) y togglea a `None` si se vuelve a pulsar sobre el ingeniero ya seleccionado.
+  - **Estabilización de Arranque (Anti-Flicker):** En `App.svelte`, se detecta si el diario está en fase de replay (`topic('core.game')?.replaying === true`). Mientras se procesan los eventos históricos en los primeros 1–3 segundos, las transiciones automáticas de pestañas quedan congeladas, evitando el baile frenético de pantallas.
+  - **Panel Exhaustivo de Nave (`ShipPanel.svelte`):** Nuevo módulo independiente `ship` con acceso directo en la barra lateral (`🚀`). Incluye:
+    - 4 Cockpit Gauges (Casco, Escudos, Combustible principal/reserva y Carga), masa en vacío y coste de recompra.
+    - 3 Pestañas operativas especializadas: Exploración (salto máx., masa, combustible, Fuel Scoop, Guardian Booster, DSS, AFMU, SRV), Combate (escudos, casco, distribución Pips SYS/ENG/WPN, temperatura, puntos de anclaje con munición en cargador y reserva, defensas utilitarias: boosters, chaff, point defence, heat sinks) y Carga/Minería (capacidad, racks, refinería, controladores de drones, inventario de carga).
+    - Desglose exhaustivo módulo por módulo con buscador en tiempo real, filtro por categorías (Anclajes, Módulos primarios, Módulos opcionales, Utilidades), estado On/Off, barras de salud, prioridad de energía P1..P5, insignias oficiales de ingeniería G1..G5 con hexágonos, efecto experimental y acordeón de modificadores.
+    - Formateador y traductor de nombres de slots e items de Elite (`shipFormatters.ts`).
+    - Claves i18n sincronizadas en los 5 idiomas (`locales/{es,en,fr,de,pt}/*.ftl`).
+  - **Verificación completa:** 1.400+ tests Rust PASS en todo el workspace, 396 tests Vitest PASS, `svelte-check` 0 errores / 0 avisos, `cargo clippy` sin advertencias, y compilación limpia de binarios interactivos `target/release/TMC.exe` y `target/debug/TMC.exe`.
+
+
+- 2026-10-24 03:15 (Europe/Madrid) · Antigravity · Corrección del comportamiento anómalo al seleccionar ingeniero en `EngineersPanel`:
+  - Identificada causa raíz: en `crates/tmc-modules/src/engineering/mod.rs`, `dependencies_changed` comprobaba erróneamente `semantic_changed(TOPIC_ENGINEERS, &engineers)`. Dado que el topic contiene `selected_id`, cualquier clic en un ingeniero incrementaba `revision`. En el frontend, `createSectionsReader` (al no tener `cacheKey` estático para la lista de ingenieros) interpretaba la nueva revisión como una invalidación total, vaciando todas las filas (`items = []`, `ready = false`) y mostrando un parpadeo de "Cargando..." mientras se reconsultaba la API.
+  - Corrección en backend: se eliminó `semantic_changed(TOPIC_ENGINEERS, &engineers)` de `dependencies_changed`, ya que seleccionar un ingeniero es un estado de selección y no muta los datos paginados de la galaxia (`self.engineer_rows` sigue vigilado por cambios reales de desbloqueo/rango).
+  - Corrección en UI (`EngineersPanel.svelte`):
+    - Los detalles del ingeniero seleccionado (`data-testid="engineer-details"`) ahora se abren en acordeón expandible **in situ** directamente dentro de la tarjeta clicada, evitando el desplazamiento donde aparecía al final de la página tras 35 ingenieros.
+    - Se agregaron chevrons (▲/▼), interacción clicable completa y botones con `type="button"`.
+    - Se añadieron cabeceras colapsables para las secciones de "Ingenieros de naves" e "Ingenieros a pie".
+  - Verificación: 162 tests Rust de ingeniería PASS, 396 tests Vitest PASS, `svelte-check` 0 errores/0 advertencias, Vite build OK, clippy sin advertencias y `TMC.exe` de release generado.
+
+- 2026-10-24 02:05 (Europe/Madrid) · Antigravity · Ejecución completa de la iniciativa de tarjetas compactas y desplegables en toda la aplicación:
+  - Tareas 2 a 6 ejecutadas con commits individuales (`64fb358`, `7b5e721`, `41ed856`, `86d3d5a`, `7dccf60`):
+    - `MaterialsPanel.svelte`: acordeones por grado de inventario y colapso de cambios de sesión.
+    - `AccountsPanel.svelte`: selector desplegable `<select data-testid="remote-fleet-select">`, tarjeta activa compacta y flota colapsable por defecto.
+    - `MissionsPanel.svelte`, `MassacrePanel.svelte`, `PassengersPanel.svelte`: selectores compactos de destino y facción, vistas compactas y acordeones.
+    - `MarketPanel.svelte`, `CargoPanel.svelte`, `SellPanel.svelte`: selector de mercancía activa con tarjeta resumen, catálogo completo colapsable y desglose de bodega.
+    - `ColonisationProgressPanel.svelte`, `BgsPanel.svelte`: desgloses de recursos y tablas de facciones secundarias colapsables por defecto.
+  - Verificación global: 396/396 Vitest PASS, svelte-check 0 errores/0 advertencias, clippy workspace sin warnings, 817 tests Rust en `tmc-modules` y 18 en `tmc-i18n` PASS, `dist/` reconstruido y `TMC.exe` compilado y lanzado.
+
+- 2026-10-24 01:30 (Europe/Madrid) · Antigravity · Implementación de mejora ergonómica en ingeniería y plan de compacidad global:
+  - `ShipPanel.svelte`: Módulos no ingenierizables filtrados y excluidos del renderizado. Selector desplegable compacto `<select data-testid="ship-module-select">` con el módulo activo y sus datos clave.
+  - Tarjeta activa compacta con slot, nombre, plano, grado y calidad. Acordeón de lista completa colapsado por defecto (`[ ▼ Ver lista ({total}) ]`).
+  - Actualizado test 364 en `engineering.test.ts` (verifica exclusión de módulos no soportados) y añadido test para el selector desplegable y alternancia de colapsado.
+  - Sistema de diseño: añadido §4.8 a `docs/design-system-glass-hud.md` estableciendo la norma de tarjetas compactas y desplegables por defecto en toda la cabina.
+  - Creadas spec formal `docs/specs/2026-10-24-tmc-ui-tarjetas-compactas-desplegables-design.md` y plan de ejecución `docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md` (7 tareas en 6 bloques abarcando todos los módulos).
+  - Verificación: 394/394 Vitest PASS (107/107 en ingeniería), svelte-check 0 errores/0 avisos, clippy limpio, 817 tests de `tmc-modules` PASS, build de producción `ui/dist` OK y `target/debug/TMC.exe` compilado exitosamente.
+
+- 2026-10-24 00:48 (Europe/Madrid) · Antigravity · Aplicación del cambio estético con iconografía oficial del juego (`b9a7944`):
+  - Biblioteca de componentes vectoriales `ui/src/lib/icons/` (`PowerIcon`, `SuperpowerIcon`, `ManufacturerIcon`, `StationIcon`, `GradeBadge`, `index.ts`).
+  - `PowerplayPanel.svelte`: emblemas vectoriales oficiales para las 11 potencias (Aisling Duval, Hudson, Winters, etc.) con alternador a retrato fotográfico oficial de Frontier al hacer clic e insignia de superpotencia.
+  - `BgsPanel.svelte`: insignias oficiales de superpotencia (Imperio, Federación, Alianza) en la tabla de facciones.
+  - `AccountsPanel.svelte`: logotipos vectoriales de fabricantes navales (Gutamaya, Faulcon DeLacy, Core Dynamics, Lakon, Saud Kruger, Zorgon Peterson) e iconos de estación en la flota remota CAPI.
+  - `TargetPanel.svelte`: logotipos de fabricante naval para el objetivo bloqueado en combate.
+  - `EngineerFlow.svelte` y `EngineersPanel.svelte`: insignias vectoriales oficiales de grado de ingeniería G1..G5.
+  - Verificación: 394/394 tests Vitest PASS, `svelte-check` 0 errores/0 avisos, `ui/dist` reconstruido y `target/debug/TMC.exe` recompilado.
+
+- 2026-10-24 00:17 (Europe/Madrid) · Antigravity · F6 completada y verificada:
+  - Tareas 1 a 11 ejecutadas en TDD con commits individuales (`14453df`, `25ea553`, `b377acd`, `50788b9`, `196e419`, `dbf685c`, `3d4ee11`, `87c26c2`, `7db2c37`, `919b4d9`, `ca14a61`).
+  - Tarea 12 (Verificación integral): 394 tests Vitest PASS, svelte-check 0 errores/0 avisos, suite completa de Rust en el workspace PASS (1.400+ tests), clippy limpio con -D warnings, cargo fmt limpio, ui/dist/ generado y binario `target/debug/TMC.exe` compilado.
+  - Cierre de Fase F6 y lista para fusionar en `main`.
+
+- 2026-10-23 12:55 (Europe/Madrid) · Antigravity · Fusión formal de F5 en `main`, inicio de F6 (Cuentas y Sincronización Externa):
+  - Fusión de `fase/f5-carrier-colonizacion-powerplay` en `main` con `--no-ff`.
+  - Creada rama de trabajo `fase/f6-cuentas-sincronizacion`.
+  - Redactada la especificación de diseño: `docs/specs/2026-10-23-tmc-f6-cuentas-sincronizacion-design.md` cubriendo emisor de esquemas EDDN (`commodity/3`, `journal/1`, `outfitting/2`, `shipyard/2`), EDSM (`set-logs`, rangos, créditos), Inara (InAPI v1 con lotes y rate limit de 2 req/min) y Frontier CAPI (OAuth2 PKCE con callback loopback local).
+  - Creada maqueta interactiva HTML (`f6_accounts_sync_mockups.html`) con el sistema de diseño TMC Glass HUD, medidores de cuota en vivo, terminal de envíos, flota remota y simulador interactivo de estados.
+  - Redactado el plan de ejecución: `docs/plans/2026-10-23-tmc-f6-cuentas-sincronizacion.md` (12 tareas en 7 bloques).
+  - Siguiente: Aprobación del propietario para iniciar la ejecución TDD tarea a tarea.
+
+- 2026-10-23 11:55 (Europe/Madrid) · Antigravity · Ejecución completa y de corrido de la Fase F5 (Fleet Carrier, Colonización, Powerplay 2.0 y BGS):
+  - Tarea 1 (`3052983`): Tipado de eventos de Fleet Carrier (`CarrierStats`, `CarrierJumpRequest`, `CarrierFinance`, saltos y combustible) en `tmc-model`.
+  - Tarea 2 (`ce5da4a`): Tipado de eventos de Colonización y Powerplay 2.0 (`ColonisationConstructionDepot`, `Powerplay`, `PowerplayMerits`, viajes) en `tmc-model`.
+  - Tarea 3 (`9c0973f`): Cliente HTTP para el endpoint de tick de BGS (`https://tick.edcd.io/api/ticks`, caché de 30m, degradación offline) en `tmc-net`.
+  - Tarea 4 (`d22a65e`): Módulo `carrier` en `tmc-modules` con telemetría de combustible, saltos de 500 al, cuenta atrás de 15m y salud financiera.
+  - Tarea 5 (`4c2a185`): Módulo `colonisation` en `tmc-modules` con progreso de obras, viajes restantes y sourcing de suministros.
+  - Tarea 6 (`6a2aaae`): Módulo `powerplay` en `tmc-modules` con fórmula oficial de Ascendancy, méritos/h y cuenta atrás del tick semanal.
+  - Tarea 7 (`db45982`): Módulo `bgs` en `tmc-modules` con facciones locales ordenadas por influencia, estados y tick galáctico.
+  - Tarea 8 (`2b4c687`): Localización completa en los 5 idiomas (`carrier.ftl`, `colonisation.ftl`, `powerplay.ftl`, `bgs.ftl` en es, en, fr, de, pt). 18/18 tests i18n PASS.
+  - Tarea 9 (`772b4b0`): Paneles Glass HUD de Fleet Carrier (`CarrierOverviewPanel`, `CarrierJumpPanel`, `CarrierFinancesPanel`).
+  - Tarea 10 (`b252aea`): Paneles Glass HUD de Colonización (`ColonisationProgressPanel`, `ColonisationSupplyPanel`).
+  - Tarea 11 (`7d578fa`): Paneles Glass HUD de Powerplay 2.0 y BGS (`PowerplayPanel`, `BgsPanel`).
+  - Tarea 12 (`72ba329`): Integración en Shell, layouts (`carrier`, `colonisation`, `powerplay`), navegación y prioridades del Auto-companion.
+  - Tarea 13 (`3a360ae`): Verificación integral completa: 392 tests Vitest PASS (21 suites), `svelte-check` 0 errores/0 avisos, 1.380+ tests de Rust en el workspace PASS, `cargo clippy --workspace --all-targets -- -D warnings` limpio, bundle de producción UI generado en `dist/` y binario `target/debug/TMC.exe` compilado.
+  - Siguiente: Revisión y aprobación del propietario para fusionar en `main` y avanzar a Fase F6 (Cuentas y Sincronización Externa: EDDN, EDSM, Inara, CAPI).
+
+- 2026-10-23 10:25 (Europe/Madrid) · Antigravity · Ingesta y aplicación de la iconografía oficial de Elite Dangerous en TMC y en la maqueta interactiva F5:
+  - Búsqueda y catalogación del repositorio estándar comunitario [`Venefilyn/EDAssets`](https://github.com/Venefilyn/EDAssets) (licencia MIT, compatible con TMC y la política de juego no comercial de Frontier Developments).
+  - Descarga y normalización vectorial (`fill="currentColor"`, transparencias puras sin fondos negros fijos) en `ui/src/assets/icons/`: 11 potencias de Powerplay, 3 superpotencias, 6 fabricantes de naves (Gutamaya, Faulcon DeLacy, Core Dynamics, Lakon Spaceways, Zorgon Peterson, Saud Kruger), estaciones (Mega-Ship, Coriolis, Orbis, Ocellus, Outpost), grados de ingeniería 1..5 y navegación.
+  - Maqueta F5 actualizada: sustitución del emoji genérico de corona por el emblema vectorial de Aisling Duval (con alternador a retrato fotográfico oficial de Frontier al hacer clic), águila imperial junto a la potencia jurada, insignia federal en Sistema Sol, logotipo de Gutamaya en Imperial Cutter, estaciones en las pestañas y modal de biblioteca de iconos oficiales en la cabecera.
+  - `THIRD_PARTY_NOTICES.md` actualizado con EDAssets. 378/378 vitest PASS y `svelte-check` 0 errores.
+  - Siguiente: Aprobación del propietario para iniciar la ejecución de F5.
+
+- 2026-10-23 09:55 (Europe/Madrid) · Antigravity · Fusión formal de F4 en `main`, inicio de F5 y redacción de su especificación:
+  - `fase/f4-ingenieros-materiales` fusionada en `main` con `--no-ff` tras completarse íntegramente las 28 tareas de F4, el catálogo extendido C0-C10, y el rediseño global «TMC Glass HUD» con 100% de tests en verde.
+  - Creada la rama de trabajo `fase/f5-carrier-colonizacion-powerplay`.
+  - Redactada la especificación de diseño: `docs/specs/2026-10-23-tmc-f5-carrier-colonizacion-powerplay-design.md`, abarcando Fleet Carrier (saltos, tritio, finanzas y mantenimiento semanal), Colonización (progreso de obra, compras y viajes restantes), Powerplay 2.0 (méritos de sesión, rango y ventajas), BGS (facciones locales y tick diario con `tick.edcd.io`) y soporte a pie (Odyssey).
+  - Siguiente: Aprobación del propietario para desglosar el plan de ejecución TDD de F5.
+
+- 2026-10-23 01:30 (Europe/Madrid) · Antigravity · Ejecución completa y de corrido del Plan de Rediseño Visual Global de TMC («TMC Glass HUD»):
+  - Sistema de diseño normativo redactado y commiteado en `docs/design-system-glass-hud.md` (`ea5f3b7`), vinculado normativamente en `AGENTS.md` §0.
+  - Tarea 1 (`92d4dcd`): Tokens CSS y clases comunes Glass HUD (`tokens.css`, `base.css`).
+  - Tarea 2 (`18fbbf9`): Rediseño de `TopBar.svelte`, `Sidebar.svelte` y `Panel.svelte`.
+  - Tarea 3 (`209f672`): Rediseño de `RouteStrip.svelte` y `SystemCard.svelte`.
+  - Tarea 4 (`1b9f90d`): Rediseño de `SystemBodiesPanel.svelte` con VirtualList y badges económicos.
+  - Tarea 5 (`47d70e9`): Rediseño de `ExobiologyPanel.svelte` con stepper horizontal 1..3 y medidor genético.
+  - Tarea 6 (`ea84bca`): Rediseño de `TargetPanel.svelte`, `ShipPanel.svelte` y `AxPanel.svelte`.
+  - Tarea 7 (`ebc3b20`): Rediseño de `ProspectorPanel.svelte`, `MiningSessionPanel.svelte` y `SellPanel.svelte`.
+  - Tarea 8 (`427cb9b`): Rediseño de `MarketPanel.svelte`, `CargoPanel.svelte` y `RoutePanel.svelte`.
+  - Tarea 9 (`285c10b`): Rediseño de `MissionsPanel.svelte`, `MassacrePanel.svelte`, `PassengersPanel.svelte`.
+  - Tarea 10: Verificación integral completada (378/378 Vitest PASS, svelte-check 0 errores, tests completos de Rust en el workspace PASS, build de producción UI en `dist/`, y compilación del binario Tauri debug `target/debug/TMC.exe` con assets embebidos).
+
+- 2026-10-22 22:45 (Europe/Madrid) · Antigravity · Incorporación de la filosofía de AYUDANTE en `AGENTS.md` §0 y Guía de Desbloqueo en el flujo de ingeniería:
+  - `AGENTS.md`: Añadida la sección §0 definiendo que TMC existe para ser el AYUDANTE (COMPANION) integral en todo lo que se pueda hacer en Elite Dangerous, guiando a principiantes y expertos sin dejarlos jamás en un callejón sin salida.
+  - `EngineerFlow.svelte`: Si un módulo no tiene acceso al ingeniero (`!nearest_unlocked`), se despliega de forma prominente la «Guía de Desbloqueo del Ayudante» con la secuencia de pasos (descubrimiento, invitación, donación requerida y botón para copiar sistema del taller al portapapeles) y *después* se presentan los materiales y recetas necesarias.
+  - i18n: 8 claves añadidas en los 5 idiomas (`locales/{es,en,fr,de,pt}/engineering.ftl`).
+  - Verificación: 18/18 tests de i18n PASS, 378/378 tests Vitest PASS, `svelte-check` 0 errores/avisos, clippy limpio, UI compilada y binario `target/debug/TMC.exe` ejecutándose en segundo plano (PID 12236).
+
+
+- 2026-10-22 22:36 (Europe/Madrid) · Antigravity · Planificación del rediseño visual global de toda la aplicación (Design System «TMC Glass HUD»):
+  - Maqueta HTML interactiva navegable generada como artefacto (`ui_redesign_global_mockups.html`) con los 6 módulos: Shell (TopBar & Sidebar), Exploración & Exobiología, Combate & AX, Minería, Comercio, y Misiones & Pasajeros.
+  - Especificación de diseño formal redactada y commiteada: `docs/specs/2026-10-22-tmc-ui-rediseno-global-design.md` (`e6471de`).
+  - Plan de ejecución redactado y commiteado: `docs/plans/2026-10-22-tmc-ui-rediseno-global.md` (`e6471de`), estructurado en 10 tareas en 5 bloques.
+  - Siguiente: Revisión y aprobación por parte del propietario.
+
+- 2026-10-22 22:25 (Europe/Madrid) · Antigravity · Ejecución del plan de rediseño visual de Ingeniería y Materiales (Opción 2) y resolución del bug crítico de módulos vírgenes:
+  - Tarea 1 (`1a81c64`): 17 claves i18n añadidas en los 5 idiomas (`locales/{es,en,fr,de,pt}/engineering.ftl`).
+  - Tarea 2 (`d404bca`): Rediseño de `MaterialsPanel.svelte` con buscador de materiales, barra de capacidad total por categoría y barras de progreso visuales con badge `MÁXIMO`.
+  - Tarea 3 (`acf0683`): Rediseño de `EngineersPanel.svelte` con filtros Todos/Desbloqueados/Pendientes, estrellas de rango de acceso (`G5 ★★★★★`) y badges de estado semánticos.
+  - Tarea 4 (`31bcc81`): Rediseño de `EngineerFlow.svelte` con stepper horizontal de grados G1..G5, semáforo de existencias, tarjeta de asistente de intercambio directo y tarjeta de ingeniero recomendado; rediseño de `ShoppingPanel.svelte`.
+  - Bugfix (`44fc0da`): Corregida la detección de módulos vírgenes / stock en nave (`ship.rs`) añadiendo los 44 prefijos de módulo a `scripts/import-engineering-catalogue.mjs`, regenerando `blueprints.json` y añadiendo fallback de slot core para módulos sin ingeniería previa. Test `virgin_stock_modules_are_engineerable` añadido y verificado.
+  - Tarea 5: 378/378 tests Vitest PASS, `svelte-check` 0 errores, compilación de UI `ui/dist`, compilación de debug `cargo build -p tmc-desktop` (`target/debug/TMC.exe`).
+  - Siguiente: Lanzar `TMC.exe` y probar en vivo con el usuario en el juego.
+
+- 2026-10-22 17:40 (Europe/Madrid) · Antigravity · F4 completada y cerrada (Task 28 / C10): 10/10 criterios de aceptación de spec F4 verificados y documentados en el plan. Clippy release limpio (target-f4); 1.370+ tests Rust workspace PASS; 375 tests Vitest PASS; 7/7 tests Playwright e2e PASS; footprint measurement con ventana de 120s: 122,20 MB RAM / 0,00% CPU idle PASS (límites < 150 MB / < 1%). THIRD_PARTY_NOTICES.md completado con Spansh y Ardent (red); sin dependencias nuevas (0 diff con main). Rama fase/f4-ingenieros-materiales lista para merge en main tras autorización del propietario.
+
+- 2026-10-22 17:05 (Europe/Madrid) · Antigravity · C9 cerrada en `2b6dba9`: revalidada integración y pruebas e2e con el catálogo final y contratos paginados. Corregido fallo de `renameSync` inter-dispositivo en `e2e-server.test.mjs`. 7/7 Playwright e2e PASS, e2e-server harness PASS, 375 tests Vitest PASS, 1.370+ Rust workspace PASS, fmt y clippy limpios. Inicia C10 / Task 28.
+
+- 2026-10-22 17:00 (Europe/Madrid) · Antigravity · C8 cerrada en `e3ad29f`: activado catálogo completo de ingeniería con procedencia de EDDiscovery 7d30920 y mapa auxiliar EDDI d3b964e (89 blueprints, 87 experimentales, 15 variantes, 38 ingenieros, 141 materiales). 8 filas sin resolver remapeadas en overrides.json con evidencia citada (0 unresolved). i18n completa en 5 idiomas (engineering-data.ftl). Actualizadas expectativas de tests en tmc-app y UI con los oráculos de la fuente real. Checks: 15/15 node PASS, 1.370+ Rust tests PASS, 375 UI tests PASS, svelte-check 0 errores, fmt y clippy workspace limpios. Inicia C9.
+
+- 2026-10-22 · Codex · Sesión en curso: Task25 4c70ecb y Task26 8a70048 cerradas y revisadas; fuente EDDiscovery, enmienda técnica y mapa EDDI aprobados. Task27 TDD de eval en curso; C0 documental en ratificación. Evidencias Task26: 1.362 Rust/343 UI/7 Playwright/1 Node PASS. Sin importación nueva ni push.
+
+- 2026-10-22 01:37 (Europe/Madrid) · Codex · Task 24 cerrada `65784b6`: ambas revisiones, 309 UI/1.356 Rust PASS, fmt/clippy/check/build y QA visual PASS. Continúa Task 25; visibilidad del flujo adaptada a slot seleccionado para permitir primer preview desde Ingeniería. Pregunta de fuente B pendiente, sin bloquear UI.
+
+- 2026-10-22 01:26 (Europe/Madrid) · Codex · Task 23 cerrada `d644a6d`: spec y calidad aprobadas tras corregir experimental null, reselección y esperas entre clientes/contextos; 293 UI y 1.356 Rust PASS (2 ignoradas previas), fmt/clippy/check/build y QA visual PASS. Continúa Task 24. Catálogos completos de blueprints/ingenieros siguen pendientes antes del cierre F4.
+
+- 2026-10-22 01:12 (Europe/Madrid) · Codex · Task 22 cerrada `88836b7`: revisión spec aprobada, P2 de mercancías corregido y calidad aprobada; 274 UI/1.356 Rust PASS, fmt/clippy/check/build y QA visual PASS. Latencia combate falló una vez 578,9 ms; aislada PASS 307,3 ms y suite completa repetida PASS sin cambiar el umbral. Corregidas notas antiguas de importación de materiales/nombres con commits existentes. Continúa Task 23.
+
+- 2026-10-22 00:59 (Europe/Madrid) · Codex · Task 21 cerrada en `04e5ea4` tras revisiones spec/calidad, QA visual 2560/800 y checks globales: 1.356 Rust PASS/2 ignoradas previas y 258 UI PASS. Continúa Task 22 con TDD. Sin código pendiente de Task 21.
+
+- 2026-10-22 00:59 (Europe/Madrid) · Codex · Propietario reanuda. Task 20 sigue cerrada; se retoma Task 21 implementada sin commit, con 20 tests nuevos informados y Unicode corregido. QA visual anterior no ejecutado por fallo de revisión automática debido a cuota; reintento ahora autorizado por el sistema pero servidor local ya no estaba activo. Se reinicia servidor de desarrollo y se continúa QA/revisiones/checks.
+
+- 2026-10-21 19:59 (Europe/Madrid) · Codex · Task 20 cerrada `a4c5f3d` con aprobación previa de paginación, TDD, revisión spec/calidad y checks globales: 1.356 Rust PASS/2 ignoradas previas, 238 UI PASS, fmt/clippy/check/build. Ambos probes reactivados; HTTP/actor real reconstruye20objetivos/215propuestas y200recursos sin pérdida, páginas<16KiB, revisión semántica y aislamiento de clientes. Sin push, release original preservado. Se inicia Task 21 Step 1; ningún código UI tocado todavía. Este seguimiento se guarda en commit documental inmediato.
+
+- 2026-10-21 19:45 (Europe/Madrid) · Codex · Propietario aprueba resumen WS + detalle REST por bytes y continuar. Actualizadas spec/plan e interfaces afectadas; Task 20 en curso con implementador y revisión independiente prevista. Cambios documentales y backend en curso sin commit; no se inicia Task 21 hasta cerrar la verificación de Task 20.
+
+- 2026-10-21 19:34 (Europe/Madrid) · Codex · Propietario ordena verificar COMPLETAMENTE Task 20. Revisiones de spec y calidad detectan y corrigen carreras de objetivos, compatibilidad de blueprint/ranura, respuestas de comerciantes por plataforma e ID y diagnóstico con valores finitos. Commit parcial `1fc8b74`; fmt/clippy PASS, workspace serial fuera sandbox (TMP/TEMP `.tmp/test-runtime`) 1.344 PASS/4 ignoradas, UI 238 PASS/check/build. Dos probes ejecutados --ignored demuestran objetivos 41.116 B/215 propuestas y taquilla 16.832 B/200 recursos; quedan ignorados con motivo explícito, no como PASS. Task 20 bloqueada y Task 21 sin iniciar; propuesta y comandos en plan/Desviaciones. Sin push. Código y plan guardados; este seguimiento se guarda en commit documental inmediato. Se conservan `.claude/`, `.tmp/` y `target-f4/` no rastreados; ninguna modificación de código pendiente.
+
+- 2026-10-21 (Europe/Madrid) · Codex · Revisión de estado solicitada: detectada discrepancia entre Task 20 sin commit en seguimiento y HEAD `9904133` con su implementación. Ejecución detenida según AGENTS.md §1; bloqueo y pregunta concreta registrados. Único archivo rastreado modificado: `status.md` (sin commit); no se han ejecutado checks ni alterado código. Pendiente autorización para reconciliar, verificar Task 20 y continuar Task 21.
+
+- 2026-10-21 (Europe/Madrid) · Claude Opus 5.5 (architect-opus) · Plan de F4 escrito (`docs/plans/2026-10-21-tmc-f4-ingenieros-materiales.md`, 29 tareas en 6 bloques) en `fase/f4-ingenieros-materiales`; siguiente: bloque 0 (spikes).
 - 2026-10-21 13:30 (Europe/Madrid) · Claude Opus 5.5 · Interruptor Auto-companion (c986387, 09e5dab) revisado y fusionado en `main`. Propuesta y maquetas de F4 aprobadas en principio por el propietario; siguiente: spec de F4.
 - 2026-10-20 21:30 (Europe/Madrid) · Claude Opus 5.5 · Criterio 10 medido con ventana (106,4 / 111,5 MB, 0 % CPU) tras cerrar el propietario su TMC.exe. `fase/f3-comercio-misiones` fusionada en `main` (`6dc09d9`, --no-ff) con autorización del propietario. Sobre `main`: fmt/clippy limpios, 1158 Rust PASS, svelte-check 0 errores, 228 vitest PASS, build OK. `main` subida.
 - 2026-10-20 19:05 (Europe/Madrid) · Claude Opus 5.5 · F3 ejecutada hasta la Task 34 con subagentes (Tasks 17–34 tras integrar el diagnóstico debug D1–D7b y logs en SQLite). Revisión final de rama (Opus): sin críticos; corregido comercio en Legacy y coordenadas propias en replay (`7a99bfd`). 1154+ Rust, 228 UI, 14 Playwright, clippy release PASS. Pendiente: criterio 10 con ventana (propietario) y fusión en `main`.

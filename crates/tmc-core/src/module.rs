@@ -1,5 +1,26 @@
 use crate::{Alert, TopicSet};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ModulePageQuery {
+    pub revision: u64,
+    #[serde(default)]
+    pub cursor: usize,
+    pub section: Option<String>,
+    /// Filtro opcional de filas por ingeniero (solo `engineering/engineers`).
+    #[serde(default)]
+    pub engineer_id: Option<u64>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModuleQueryError {
+    NotFound,
+    InvalidQuery,
+    StaleRevision,
+    Unavailable,
+    ItemTooLarge,
+}
+
 use tmc_model::{
     net::{NetQuery, NetRequest},
     source::SourceEvent,
@@ -15,6 +36,13 @@ pub trait Module: Send {
     fn on_event(&mut self, ev: &SourceEvent, state: &GameState, ctx: &mut ModuleCtx) -> TopicSet;
     fn topic_value(&self, topic: &str) -> Option<serde_json::Value>;
     fn topics(&self) -> Vec<String>;
+    fn query(
+        &self,
+        _resource: &str,
+        _query: &ModulePageQuery,
+    ) -> Result<serde_json::Value, ModuleQueryError> {
+        Err(ModuleQueryError::NotFound)
+    }
     fn relevance(&self, _state: &GameState) -> Relevance {
         Relevance::Normal
     }

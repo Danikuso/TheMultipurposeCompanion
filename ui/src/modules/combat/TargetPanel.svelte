@@ -3,6 +3,7 @@
   import { credits, pct } from '../../lib/format';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
+  import ManufacturerIcon from '../../lib/icons/ManufacturerIcon.svelte';
   import type { SubsystemKind, TargetTopic } from './types';
 
   const LOST_TTL_MS = 10_000;
@@ -48,7 +49,10 @@
   {:else}
     <div class="head">
       <div>
-        <strong class="ship">{tgt.ship_name ?? '—'}</strong>
+        <div class="target-title-row">
+          <strong class="ship">{tgt.ship_name ?? '—'}</strong>
+          <ManufacturerIcon shipType={tgt.ship_name ?? tgt.ship_key} size={16} />
+        </div>
         {#if tgt.pilot}<div class="dim">{tgt.pilot}{tgt.rank ? ` · ${tgt.rank}` : ''}</div>{/if}
         {#if tgt.faction}<div class="dim">{t('combat-target-faction', { faction: tgt.faction })}</div>{/if}
       </div>
@@ -85,24 +89,138 @@
 </Panel>
 
 <style>
-  .empty { color: var(--hud-muted); margin: 0; }
-  .dim { color: var(--hud-muted); }
-  .mono { font-family: var(--font-mono); }
-  .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.6rem; }
-  .ship { font-size: var(--font-title-lg); color: var(--hud-primary); }
-  .badge { border: 2px solid currentColor; padding: 0.2rem 0.7rem; font-weight: bold; font-size: 1.2em; white-space: nowrap; }
-  .badge[data-kind='wanted'] { color: var(--hud-danger); }
-  .badge[data-kind='clean'] { color: var(--hud-ok); }
-  .badge[data-kind='scanning'], .badge[data-kind='unknown'] { color: var(--hud-muted); }
-  .badge[data-kind='lawless'], .badge[data-kind='enemy'] { color: var(--hud-warning); }
-  .bar-row { display: grid; grid-template-columns: 5rem 1fr 4rem; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; }
-  .bar { height: 0.6rem; border: 1px solid var(--hud-border); }
-  .bar i { display: block; height: 100%; }
-  .shield { background: var(--hud-secondary); }
-  .hull { background: var(--hud-primary); }
-  .subbar { background: var(--hud-warning); }
-  .sub { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.7rem; padding: 0.6rem; border: 1px solid var(--hud-warning); }
-  .icon { font-size: 1.8em; color: var(--hud-warning); }
-  .sub-body { flex: 1; }
-  .sub-name { font-size: var(--font-title-lg); }
+  .empty {
+    color: var(--hud-muted);
+    margin: 0;
+    font-style: italic;
+    padding: 1rem 0;
+  }
+  .dim {
+    color: var(--hud-muted);
+    font-size: 0.85rem;
+  }
+  .mono {
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--hud-border-subtle);
+  }
+  .ship {
+    font-size: 1.15rem;
+    color: var(--hud-primary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .target-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .badge {
+    display: inline-block;
+    border: 1px solid currentColor;
+    border-radius: var(--radius-sm);
+    padding: 0.25rem 0.65rem;
+    font-weight: 700;
+    font-size: 0.82rem;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    text-transform: uppercase;
+    backdrop-filter: blur(4px);
+  }
+  .badge[data-kind='wanted'] {
+    color: var(--hud-danger);
+    background: rgba(255, 68, 68, 0.12);
+    box-shadow: 0 0 10px rgba(255, 68, 68, 0.25);
+  }
+  .badge[data-kind='clean'] {
+    color: var(--hud-ok);
+    background: rgba(68, 255, 136, 0.12);
+    box-shadow: 0 0 10px rgba(68, 255, 136, 0.2);
+  }
+  .badge[data-kind='scanning'], .badge[data-kind='unknown'] {
+    color: var(--hud-muted);
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .badge[data-kind='lawless'], .badge[data-kind='enemy'] {
+    color: var(--hud-warning);
+    background: rgba(255, 170, 0, 0.12);
+    box-shadow: 0 0 10px rgba(255, 170, 0, 0.2);
+  }
+  .bars {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.8rem;
+  }
+  .bar-row {
+    display: grid;
+    grid-template-columns: 5.2rem 1fr 3.5rem;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .bar-row .dim {
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+  }
+  .bar {
+    height: 0.65rem;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--hud-border-subtle);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar i {
+    display: block;
+    height: 100%;
+    transition: width var(--transition-fast);
+  }
+  .shield {
+    background: linear-gradient(90deg, #0088aa, var(--hud-cyan));
+    box-shadow: 0 0 8px rgba(0, 217, 255, 0.45);
+  }
+  .hull {
+    background: linear-gradient(90deg, #b34700, var(--hud-primary));
+    box-shadow: 0 0 8px rgba(255, 119, 0, 0.45);
+  }
+  .subbar {
+    background: linear-gradient(90deg, #b37400, var(--hud-warning));
+    box-shadow: 0 0 6px rgba(255, 170, 0, 0.45);
+  }
+  .sub {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-top: 0.6rem;
+    padding: 0.65rem 0.85rem;
+    background: rgba(255, 170, 0, 0.04);
+    border: 1px solid rgba(255, 170, 0, 0.28);
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 0 12px rgba(255, 170, 0, 0.03);
+  }
+  .icon {
+    font-size: 1.6em;
+    color: var(--hud-warning);
+    filter: drop-shadow(0 0 4px rgba(255, 170, 0, 0.4));
+  }
+  .sub-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .sub-name {
+    font-size: 0.95rem;
+    color: var(--hud-text);
+    font-weight: 600;
+  }
 </style>
