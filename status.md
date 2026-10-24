@@ -2,27 +2,36 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-24 12:45 (Europe/Madrid) · Antigravity
-- **Fase actual:** Correcciones Críticas de UX, Estabilización de Arranque y Panel Exhaustivo de Nave («TMC Glass HUD») [Completada y Verificada].
-- **Spec activa:** [`docs/specs/2026-10-24-tmc-ui-tarjetas-compactas-desplegables-design.md`](docs/specs/2026-10-24-tmc-ui-tarjetas-compactas-desplegables-design.md) — Tarjetas compactas, desplegables y acordeones por defecto.
-- **Plan activo:** [`docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md`](docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md) — 7 tareas en 6 bloques [Todas completadas].
-- **Rama de trabajo:** `main`
+- **Última actualización:** 2026-10-24 16:05 (Europe/Madrid) · Antigravity
+- **Fase actual:** Fase 7 — Voz, Alertas de Cabina y Copiloto Auditivo (Híbrido Nativo / KokoroTTS)
+- **Spec activa:** [`docs/specs/2026-10-24-tmc-f7-voz-copiloto-design.md`](docs/specs/2026-10-24-tmc-f7-voz-copiloto-design.md) — Voz, Alertas de Cabina y Copiloto Auditivo.
+- **Plan activo:** [`docs/plans/2026-10-24-tmc-f7-voz-copiloto.md`](docs/plans/2026-10-24-tmc-f7-voz-copiloto.md) — 9 tareas en 7 bloques.
+- **Rama de trabajo:** `fase/f7-voz-copiloto`
 
 ## Puntero actual
 
-- **Tarea:** Resolución integral de las 4 peticiones del comandante: apertura web CAPI, toggle de ingenieros, eliminación del flicker de arranque y panel exhaustivo de nave.
+- **Tarea:** Tarea 2: Cola de locución priorizada con descarte y deduplicación (`tmc-tts`).
 - **Último paso completado:**
-  1. **Apertura de navegador para CAPI:** Endpoint `/api/auth/frontier/login?open=true` en `tmc-server` que invoca el navegador nativo del sistema operativo (`rundll32 url.dll,FileProtocolHandler` en Windows, `open` en macOS, `xdg-open` en Linux) con fallback en UI y estado visual reactivo «Abriendo navegador...».
-  2. **Repliegue / Toggle de Ingenieros:** En `tmc-modules/engineering`, el manejador `ACTION_SELECT_ENGINEER` ahora permite deselección (`id: null`) y togglea a `None` si se vuelve a clicar el ingeniero ya seleccionado.
-  3. **Estabilización de Arranque (Anti-Flicker):** En `App.svelte`, se detecta si el diario está en fase de replay (`topic('core.game')?.replaying === true`). Mientras se procesan los eventos históricos en los primeros 1–3 segundos, las transiciones automáticas de pestañas quedan congeladas, evitando el baile frenético de pantallas.
-  4. **Panel Exhaustivo de Nave (`ShipPanel.svelte`):** Nuevo módulo independiente `ship` con acceso directo en la barra lateral (`🚀`). Incluye:
-     - 4 Cockpit Gauges (Casco, Escudos, Combustible principal/reserva y Carga), masa en vacío y coste de recompra.
-     - 3 Pestañas especializadas: Exploración (salto máx., masa, combustible, Fuel Scoop, Guardian Booster, DSS, AFMU, SRV), Combate (escudos, casco, distribución Pips SYS/ENG/WPN, temperatura, puntos de anclaje con munición en cargador y reserva, defensas utilitarias: boosters, chaff, point defence, heat sinks) y Carga/Minería (capacidad, racks, refinería, controladores de drones, inventario de carga).
-     - Desglose exhaustivo módulo por módulo con buscador en tiempo real, filtro por categorías (Anclajes, Módulos primarios, Módulos opcionales, Utilidades), estado On/Off, barras de salud, prioridad de energía P1..P5, insignias oficiales de ingeniería G1..G5 con hexágonos, efecto experimental y acordeón de modificadores.
-     - Formateador y traductor de nombres de slots e items de Elite (`shipFormatters.ts`).
-     - Claves i18n sincronizadas en los 5 idiomas (`locales/{es,en,fr,de,pt}/*.ftl`).
-  5. **Verificación total y compilación:** 1.400+ tests Rust PASS, 396 tests Vitest PASS, `svelte-check` 0 errores / 0 avisos, `cargo clippy` limpio sin advertencias, y compilación de binarios interactivos `target/release/TMC.exe` y `target/debug/TMC.exe`.
-- **Siguiente acción:** Notificar al comandante y poner a su disposición los ejecutables actualizados.
+  1. Spec de F7 y Plan de ejecución aprobados y redactados.
+  2. Rama `fase/f7-voz-copiloto` creada y seleccionada.
+  3. Tarea 1 completada: Implementados `TtsEngineKind`, `TtsChannel`, `TtsPriority`, `TtsSettings`, `VoiceCue` y `VoiceInfo` en `tmc-model::tts`, integrados en `ModuleSettings` y `Config`, con tests unitarios y serde roundtrip pasando al 100%.
+- **Siguiente acción:** Crear el crate `tmc-tts` con el trait `TtsEngine`, cola priorizada `TtsQueue`, cooldowns y descarte de mensajes obsoletos.
+
+## Tareas de F7 (Voz, Alertas de Cabina y Copiloto Auditivo)
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 1 | Modelos de configuración de voz, canales y avisos tácticos (`tmc-model`) | ✅ hecha | `[commit-t1]` | `TtsSettings`, `TtsEngineKind`, `TtsChannel`, `VoiceCue`, tests PASS |
+| 2 | Cola de locución priorizada con descarte y deduplicación (`tmc-tts`) | 🔄 en curso | — | Crate `tmc-tts`, `TtsQueue`, cooldowns y prioridad |
+| 3 | Motor nativo ultraligero de Windows (`tmc-tts`) | ⬜ pendiente | — | Síntesis nativa del SO (OneCore/SAPI5), < 2 MB RAM |
+| 4 | Motor neuronal KokoroTTS desacoplado (`tmc-tts`) | ⬜ pendiente | — | ONNX en subproceso, carga bajo demanda y suspensión |
+| 5 | Generador táctico `VoiceAdvisor` en el flujo de eventos (`tmc-core`) | ⬜ pendiente | — | Detección de saltos, bioseñales, combate, minería y carrier |
+| 6 | Persistencia y endpoints REST de prueba (`tmc-store`, `tmc-server`, `tmc-app`) | ⬜ pendiente | — | `GET /api/tts/voices`, `POST /api/tts/test`, PUT `/api/settings` |
+| 7 | Catálogo de locuciones de copiloto en los 5 idiomas (`locales/`) | ⬜ pendiente | — | `tts.ftl` en es/en/fr/de/pt verificado por `tmc-i18n` |
+| 8 | Sección de Copiloto Auditivo en `SettingsPanel.svelte` (`ui/`) | ⬜ pendiente | — | Controles Glass HUD, sliders volumen/velocidad, prueba de voz |
+| 9 | Verificación integral, footprint y compilación Release/Debug | ⬜ pendiente | — | Tests workspace, clippy, check, footprint < 150 MB, build |
 
 ## Tareas de Tarjetas Compactas y Desplegables («TMC Glass HUD»)
 
