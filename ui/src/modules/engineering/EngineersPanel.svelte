@@ -61,7 +61,8 @@
     const current = ++selectionGeneration;
     failed = false;
     try {
-      await action('engineering.select_engineer', { id });
+      const targetId = selectedId === id ? null : id;
+      await action('engineering.select_engineer', { id: targetId });
     } catch {
       if (current === selectionGeneration) failed = true;
     }

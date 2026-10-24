@@ -44,6 +44,8 @@
   };
 
   const MOD_ICONS: Record<string, string> = {
+    dashboard: '📊',
+    ship: '🚀',
     navigation: '🛰️',
     exploration: '🪐',
     exobiology: '🧬',

@@ -45,6 +45,7 @@ accounts-capi-remote-fleet-title = Frota Remota Armazenada
 accounts-capi-remote-fleet-empty = Nenhuma nave armazenada em estaleiros remotos encontrada.
 accounts-capi-remote-fleet-count = Naves em estaleiros:
 accounts-capi-btn-link = Vincular com Frontier Store
+accounts-capi-btn-opening = Abrindo navegador...
 accounts-capi-btn-unlink = Desvincular conta
 accounts-capi-btn-refresh-fleet = Atualizar frota
 accounts-capi-auth-notice = A autorização é concluída com total segurança no seu navegador web oficial da Frontier.

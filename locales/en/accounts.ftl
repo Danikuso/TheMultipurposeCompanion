@@ -45,6 +45,7 @@ accounts-capi-remote-fleet-title = Remote Stored Fleet
 accounts-capi-remote-fleet-empty = No stored ships found in remote shipyards.
 accounts-capi-remote-fleet-count = Ships in shipyards:
 accounts-capi-btn-link = Link with Frontier Store
+accounts-capi-btn-opening = Opening browser...
 accounts-capi-btn-unlink = Unlink account
 accounts-capi-btn-refresh-fleet = Refresh fleet
 accounts-capi-auth-notice = Authorization is completed securely in your official Frontier web browser.

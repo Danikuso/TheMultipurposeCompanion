@@ -1,7 +1,7 @@
 //! Estado de juego derivado: reductores puros de eventos, Status y archivos compañeros.
 
 use crate::companion::{CargoItem, CompanionFile, RouteHop};
-use crate::events::{EventKind, JournalEvent, LocationInfo, Rank};
+use crate::events::{EventKind, JournalEvent, LoadoutModule, LocationInfo, Rank};
 use crate::status::{Flags, Flags2, Status};
 use bitflags::bitflags;
 use chrono::{DateTime, Utc};
@@ -142,8 +142,10 @@ pub struct ShipState {
     pub cargo_capacity: Option<u32>,
     pub rebuy: Option<i64>,
     pub max_jump_range: Option<f64>,
+    pub unladen_mass: Option<f64>,
     /// Módulos con salud < 1.0 (nombre del ítem, o ranura si no hay ítem).
     pub damaged_modules: Vec<String>,
+    pub modules: Vec<LoadoutModule>,
     pub cargo: Vec<CargoItem>,
 }
 
@@ -538,6 +540,8 @@ impl GameState {
                 ch |= set_some(&mut ship.hull_health, l.hull_health);
                 ch |= set(&mut ship.cargo_capacity, l.cargo_capacity);
                 ch |= set(&mut ship.max_jump_range, l.max_jump_range);
+                ch |= set(&mut ship.unladen_mass, l.unladen_mass);
+                ch |= set(&mut ship.modules, l.modules.clone());
                 ch |= set(&mut ship.rebuy, l.rebuy.and_then(|r| i64::try_from(r).ok()));
                 if let Some(fc) = &l.fuel_capacity {
                     ch |= set(&mut ship.fuel_capacity_main, fc.main);

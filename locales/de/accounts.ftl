@@ -45,6 +45,7 @@ accounts-capi-remote-fleet-title = Gespeicherte Remote-Flotte
 accounts-capi-remote-fleet-empty = Keine gespeicherten Schiffe in entfernten Werften gefunden.
 accounts-capi-remote-fleet-count = Schiffe in Werften:
 accounts-capi-btn-link = Mit Frontier Store verknüpfen
+accounts-capi-btn-opening = Browser wird geöffnet...
 accounts-capi-btn-unlink = Konto trennen
 accounts-capi-btn-refresh-fleet = Flotte aktualisieren
 accounts-capi-auth-notice = Die Autorisierung wird sicher in Ihrem offiziellen Frontier-Webbrowser durchgeführt.

@@ -45,6 +45,7 @@ accounts-capi-remote-fleet-title = Flotte distante stockée
 accounts-capi-remote-fleet-empty = Aucun vaisseau stocké dans les chantiers distants.
 accounts-capi-remote-fleet-count = Vaisseaux dans les chantiers :
 accounts-capi-btn-link = Lier avec Frontier Store
+accounts-capi-btn-opening = Ouverture du navigateur...
 accounts-capi-btn-unlink = Dissocier le compte
 accounts-capi-btn-refresh-fleet = Actualiser la flotte
 accounts-capi-auth-notice = L'autorisation est effectuée de manière sécurisée dans votre navigateur web Frontier officiel.
