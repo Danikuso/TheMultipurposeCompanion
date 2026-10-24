@@ -298,6 +298,8 @@ const ACTIONS: &[&str] = &[
     "frontier.login",
     "frontier.logout",
     "frontier.fleet",
+    "voice.intent",
+    "voice.voiceattack",
 ];
 const EVENTS: &[&str] = &[
     "Fileheader",
