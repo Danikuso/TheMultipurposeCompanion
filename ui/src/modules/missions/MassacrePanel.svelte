@@ -8,14 +8,48 @@
   const m = $derived(topic<MassacreTopic>('missions.massacre'));
   const piles = $derived(m?.piles ?? []);
   const pct = (k: number, n: number) => (n > 0 ? Math.min(100, (k / n) * 100) : 0);
+  let selectedPileIndex = $state<number>(0);
+  let showAllPiles = $state(false);
 </script>
 
 <Panel titleKey="panel-missions-massacre" span={2}>
   {#if piles.length === 0}
     <p class="muted" data-testid="massacre-empty">{t('missions-massacre-none')}</p>
   {:else}
+    {#if piles.length > 1}
+      <div class="massacre-controls">
+        <label class="compact-selector-label" for="massacre-faction-select">
+          <span class="label-text">Objetivo ({piles.length}):</span>
+          <select
+            id="massacre-faction-select"
+            class="glass-select"
+            data-testid="massacre-faction-select"
+            bind:value={selectedPileIndex}
+          >
+            {#each piles as p, pi}
+              <option value={pi}>
+                {p.target_faction} · {p.kills_remaining} bajas restantes
+              </option>
+            {/each}
+          </select>
+        </label>
+        <button
+          type="button"
+          class="glass-btn-secondary list-toggle-btn"
+          data-testid="toggle-massacre-view"
+          onclick={() => (showAllPiles = !showAllPiles)}
+        >
+          {showAllPiles ? '▲ Vista compacta' : `▼ Ver todos (${piles.length})`}
+        </button>
+      </div>
+    {/if}
+
     {#each piles as p, i (p.target_faction + i)}
-      <div class="pile" data-testid="massacre-pile">
+      <div
+        class="pile"
+        class:is-hidden={!showAllPiles && piles.length > 1 && i !== selectedPileIndex}
+        data-testid="massacre-pile"
+      >
         <div class="target-title"><b>{t('missions-massacre-target', { faction: p.target_faction })}</b></div>
         <div class="stack">
           {#each p.issuers as s, j (s.faction + j)}
@@ -61,6 +95,60 @@
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid var(--hud-border-subtle);
     border-radius: var(--radius-sm);
+  }
+  .pile.is-hidden {
+    display: none;
+  }
+  .massacre-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+    flex-wrap: wrap;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--hud-border-subtle);
+  }
+  .compact-selector-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--hud-muted);
+    flex: 1;
+    min-width: 220px;
+  }
+  .compact-selector-label .label-text {
+    white-space: nowrap;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+  }
+  .glass-select {
+    flex: 1;
+    background: rgba(10, 16, 26, 0.9);
+    border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.3));
+    color: var(--hud-primary, #00e5ff);
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    outline: none;
+    cursor: pointer;
+  }
+  .list-toggle-btn {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.25));
+    color: var(--hud-text, #c9d7e5);
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .list-toggle-btn:hover {
+    background: rgba(0, 229, 255, 0.12);
+    border-color: var(--hud-primary, #00e5ff);
+    color: var(--hud-primary, #00e5ff);
   }
   .target-title {
     font-size: 0.95rem;

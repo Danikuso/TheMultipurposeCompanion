@@ -8,6 +8,7 @@
   const p = $derived(topic<PassengersTopic>('missions.passengers'));
   const classes: CabinClass[] = ['Economy', 'Business', 'First', 'Luxury'];
   const entries = $derived(classes.flatMap((c) => (p?.cabins.by_class[c] ? [[c, p.cabins.by_class[c]!] as const] : [])));
+  let showPaxTable = $state(false);
 
   function cabinLabel(c: CabinClass): string {
     return t(`missions-cabin-${c === 'Economy' ? 'economy' : c === 'Business' ? 'business' : c === 'First' ? 'first' : 'luxury'}`);
@@ -29,7 +30,18 @@
       {/each}
     </div>
     {#if p.groups.length > 0}
-      <div class="table-wrap">
+      <div class="pax-header-row">
+        <span class="sub bold">Grupos ({p.groups.length})</span>
+        <button
+          type="button"
+          class="glass-btn-secondary list-toggle-btn"
+          data-testid="toggle-pax-table"
+          onclick={() => (showPaxTable = !showPaxTable)}
+        >
+          {showPaxTable ? '▲ Ocultar lista' : `▼ Ver lista (${p.groups.length})`}
+        </button>
+      </div>
+      <div class="table-wrap" class:is-collapsed={!showPaxTable}>
       <table>
         <thead>
           <tr><th>{t('missions-col-destination')}</th><th class="n">{t('missions-col-passengers')}</th><th></th></tr>
@@ -93,6 +105,32 @@
   }
   .table-wrap {
     overflow-x: auto;
+  }
+  .table-wrap.is-collapsed {
+    display: none;
+  }
+  .pax-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.75rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid var(--hud-border-subtle);
+  }
+  .list-toggle-btn {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.25));
+    color: var(--hud-text, #c9d7e5);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .list-toggle-btn:hover {
+    background: rgba(0, 229, 255, 0.12);
+    border-color: var(--hud-primary, #00e5ff);
+    color: var(--hud-primary, #00e5ff);
   }
   table {
     border-collapse: collapse;

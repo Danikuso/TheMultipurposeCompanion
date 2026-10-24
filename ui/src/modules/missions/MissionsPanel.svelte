@@ -15,6 +15,9 @@
     () => groups.flatMap((g) => g.missions.map((m) => m.expiry)),
   );
 
+  let selectedGroupIndex = $state<number>(0);
+  let showAllGroups = $state(false);
+
   function toRoute(system: string) {
     void action('missions.to_route', { system }).catch(() => {});
   }
@@ -24,8 +27,41 @@
   {#if !a || groups.length === 0}
     <p class="muted" data-testid="missions-empty">{t('missions-none-active')}</p>
   {:else}
+    {#if groups.length > 1}
+      <div class="missions-controls">
+        <label class="compact-selector-label" for="mission-dest-select">
+          <span class="label-text">Destino ({groups.length}):</span>
+          <select
+            id="mission-dest-select"
+            class="glass-select"
+            data-testid="mission-dest-select"
+            bind:value={selectedGroupIndex}
+          >
+            {#each groups as g, gi}
+              <option value={gi}>
+                {g.system ?? t('missions-no-destination')}{g.station ? ` (${g.station})` : ''} · {g.missions.length} mis.{g.next ? ' ★' : ''}
+              </option>
+            {/each}
+          </select>
+        </label>
+        <button
+          type="button"
+          class="glass-btn-secondary list-toggle-btn"
+          data-testid="toggle-missions-view"
+          onclick={() => (showAllGroups = !showAllGroups)}
+        >
+          {showAllGroups ? '▲ Vista compacta' : `▼ Ver todos (${groups.length})`}
+        </button>
+      </div>
+    {/if}
+
     {#each groups as g, gi (`${g.system}|${g.station}|${gi}`)}
-      <div class="dest" class:next={g.next} data-testid="missions-group">
+      <div
+        class="dest"
+        class:next={g.next}
+        class:is-hidden={!showAllGroups && groups.length > 1 && gi !== selectedGroupIndex}
+        data-testid="missions-group"
+      >
         <h5>
           {#if g.next}<span class="warn" aria-hidden="true">▶</span>{/if}
           <b class:warn={g.next}>{g.system ?? t('missions-no-destination')}</b>
@@ -97,6 +133,60 @@
     padding: 0.65rem 0.85rem;
     margin: 0.65rem 0;
     transition: all var(--transition-fast);
+  }
+  .dest.is-hidden {
+    display: none;
+  }
+  .missions-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+    flex-wrap: wrap;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--hud-border-subtle);
+  }
+  .compact-selector-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--hud-muted);
+    flex: 1;
+    min-width: 220px;
+  }
+  .compact-selector-label .label-text {
+    white-space: nowrap;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+  }
+  .glass-select {
+    flex: 1;
+    background: rgba(10, 16, 26, 0.9);
+    border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.3));
+    color: var(--hud-primary, #00e5ff);
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    outline: none;
+    cursor: pointer;
+  }
+  .list-toggle-btn {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.25));
+    color: var(--hud-text, #c9d7e5);
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .list-toggle-btn:hover {
+    background: rgba(0, 229, 255, 0.12);
+    border-color: var(--hud-primary, #00e5ff);
+    color: var(--hud-primary, #00e5ff);
   }
   .dest.next {
     border-left-color: var(--hud-primary);
