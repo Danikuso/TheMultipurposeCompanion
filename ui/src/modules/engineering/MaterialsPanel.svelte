@@ -16,6 +16,12 @@
   let section = $state<LockerSection>('components');
   let searchQuery = $state('');
   let visible = $state(!document.hidden);
+  let showSession = $state(false);
+  let collapsedGrades = $state<Record<string, boolean>>({});
+
+  function toggleGrade(grade: string) {
+    collapsedGrades[grade] = !collapsedGrades[grade];
+  }
 
   const inventory = $derived(topic<InventoryTopic>('engineering.inventory'));
   const session = $derived(topic<SessionTopic>('engineering.session'));
@@ -160,12 +166,22 @@
     {/if}
 
     {#each grades as [grade, rows] (grade)}
+      {@const isCollapsed = collapsedGrades[grade] ?? false}
       <div class="grade-section">
         <h3 class="grade-header">
-          <span class="grade-pill grade-pill-{grade}">G{grade}</span>
-          <span>{Number(grade) > 0 ? t('engineering-grade', { grade: integer(Number(grade)) }) : t('engineering-no-data')}</span>
+          <button
+            type="button"
+            class="grade-toggle-btn"
+            data-testid={`toggle-grade-${grade}`}
+            onclick={() => toggleGrade(grade)}
+            aria-expanded={!isCollapsed}
+          >
+            <span class="grade-pill grade-pill-{grade}">G{grade}</span>
+            <span>{Number(grade) > 0 ? t('engineering-grade', { grade: integer(Number(grade)) }) : t('engineering-no-data')}</span>
+            <span class="fold-arrow">{isCollapsed ? '▼' : '▲'}</span>
+          </button>
         </h3>
-        <ul class="material-list">
+        <ul class="material-list" class:is-collapsed={isCollapsed}>
           {#each rows as row (row.key)}
             {@const maxCap = inventory?.caps[grade] ?? 0}
             {@const isAtMax = inventory?.at_max.includes(row.key)}
@@ -202,8 +218,18 @@
   {/if}
 
   <div class="session-section">
-    <h3>{t('engineering-session-changes')}</h3>
-    <ul class="session-list">
+    <div class="session-header-row">
+      <h3>{t('engineering-session-changes')}</h3>
+      <button
+        type="button"
+        class="glass-btn-secondary list-toggle-btn"
+        data-testid="toggle-session-section"
+        onclick={() => (showSession = !showSession)}
+      >
+        {showSession ? '▲ Ocultar' : `▼ Ver (${Object.keys(session?.totals ?? {}).length})`}
+      </button>
+    </div>
+    <ul class="session-list" class:is-collapsed={!showSession}>
       {#each Object.entries(session?.totals ?? {}) as [origin, counts] (origin)}
         <li data-origin={origin} class="session-item">
           <span>{originLabel(origin)}</span>
@@ -217,6 +243,13 @@
 <style>
   .tabs-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .6rem; margin-bottom: .8rem; }
   .tabs { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .grade-toggle-btn { background: none; border: none; padding: 0; color: inherit; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font: inherit; }
+  .fold-arrow { font-size: 0.75rem; color: var(--hud-muted); }
+  .material-list.is-collapsed { display: none; }
+  .session-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
+  .session-list.is-collapsed { display: none; }
+  .list-toggle-btn { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.25)); color: var(--hud-text); padding: 0.2rem 0.5rem; font-size: 0.75rem; border-radius: 4px; cursor: pointer; }
+  .list-toggle-btn:hover { border-color: var(--hud-primary); color: var(--hud-primary); }
   button, select, .search-input { color: var(--hud-text); background: var(--hud-bg); border: 1px solid var(--hud-muted); padding: .3rem .6rem; border-radius: 4px; font-size: .85rem; }
   button[aria-selected='true'] { border-color: var(--hud-primary); color: var(--hud-primary); background: rgba(255, 113, 0, 0.12); font-weight: 600; }
   
