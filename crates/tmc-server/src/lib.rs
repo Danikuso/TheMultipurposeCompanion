@@ -159,6 +159,8 @@ pub fn build_router(
     let router = Router::new()
         .route("/ws", axum::routing::get(ws::ws_handler))
         .route("/api/health", axum::routing::get(rest::get_health))
+        .route("/api/tts/voices", axum::routing::get(rest::get_tts_voices))
+        .route("/api/tts/test", axum::routing::post(rest::post_tts_test))
         .route(
             "/api/config",
             axum::routing::get(rest::get_config).put(rest::put_config),
