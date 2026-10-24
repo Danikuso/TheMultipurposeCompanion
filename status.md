@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-24 17:18 (Europe/Madrid) · Antigravity
+- **Última actualización:** 2026-10-24 17:23 (Europe/Madrid) · Antigravity
 - **Fase actual:** Fase 9 — Crimen, Notoriedad y Piratería (Law & Disorder)
 - **Spec activa:** [`docs/specs/2026-10-24-tmc-f9-crimen-pirateria-design.md`](docs/specs/2026-10-24-tmc-f9-crimen-pirateria-design.md) — Crimen, Notoriedad y Piratería.
 - **Plan activo:** [`docs/plans/2026-10-24-tmc-f9-crimen-pirateria.md`](docs/plans/2026-10-24-tmc-f9-crimen-pirateria.md) — 7 tareas en 6 bloques.
@@ -10,13 +10,10 @@
 
 ## Puntero actual
 
-- **Tarea:** Inicio de Fase 9 — Tarea 1: Modelos de crimen, eventos de diario y topic `CrimeStatusTopic` (`tmc-model`).
+- **Tarea:** Tarea 2: Módulo de lógica criminal en Rust (`tmc-modules`).
 - **Último paso completado:**
-  1. Fase 7 fusionada en `main` con `--no-ff`.
-  2. Creada la rama de trabajo `fase/f9-crimen-pirateria`.
-  3. Redactada la especificación de diseño: `docs/specs/2026-10-24-tmc-f9-crimen-pirateria-design.md`.
-  4. Redactado el plan de ejecución: `docs/plans/2026-10-24-tmc-f9-crimen-pirateria.md` (7 tareas en 6 bloques).
-- **Siguiente acción:** Aprobación del propietario para iniciar la ejecución TDD tarea a tarea de Fase 9.
+  1. Tarea 1 completada (`0e9dd87`): Modelos `CrimeType`, `CommitCrimeEvent`, `CrimeVictimEvent`, `PayFinesEvent`, `PayBountiesEvent`, `FactionFineBounty`, `StolenCargoItem`, `NearbyFacility`, `SystemSecurityLevel`, `CrimeStatusTopic` y registro de eventos de diario en `tmc-model`. Tests unitarios 100% PASS y Clippy limpio.
+- **Siguiente acción:** Implementar `CrimeModule` en `crates/tmc-modules/src/crime/mod.rs` con cálculo de decaimiento de notoriedad en vuelo, agregación de multas/recompensas, evaluación de cargamento robado y resolución de factores interestelares y mercados negros.
 
 ## Tareas de F9 (Crimen, Notoriedad y Piratería)
 
@@ -24,8 +21,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 | # | Tarea | Estado | Commit | Notas |
 |---|---|---|---|---|
-| 1 | Modelos de crimen, eventos de diario y topic `CrimeStatusTopic` (`tmc-model`) | ⬜ pendiente | — | `CrimeType`, `CommitCrime`, `PayFines`, `PayBounties`, `CrimeStatusTopic` |
-| 2 | Módulo de lógica criminal en Rust (`tmc-modules`) | ⬜ pendiente | — | Decaimiento de notoriedad en vuelo, multas, Interstellar Factor y Black Market |
+| 1 | Modelos de crimen, eventos de diario y topic `CrimeStatusTopic` (`tmc-model`) | ✅ hecha | `0e9dd87` | `CrimeType`, `CommitCrime`, `PayFines`, `PayBounties`, `CrimeStatusTopic`, tests PASS |
+| 2 | Módulo de lógica criminal en Rust (`tmc-modules`) | 🔄 en curso | — | Decaimiento de notoriedad en vuelo, multas, Interstellar Factor y Black Market |
 | 3 | Detección contextual y avisos de seguridad en `VoiceAdvisor` (`tmc-core`) | ⬜ pendiente | — | Notoriedad incrementada/limpia, contrabando, interdicción policial |
 | 4 | Catálogo de textos y locuciones en los 5 idiomas (`locales/`) | ⬜ pendiente | — | `crime.ftl` en es/en/fr/de/pt, verificado por `tmc-i18n` |
 | 5 | Panel `CrimePanel.svelte` e integración en el Shell («TMC Glass HUD») (`ui/`) | ⬜ pendiente | — | Medidor notoriedad, Guía Limpieza, Contrabando y Mercados Negros |
