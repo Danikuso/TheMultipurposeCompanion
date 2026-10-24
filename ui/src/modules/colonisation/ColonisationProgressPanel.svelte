@@ -8,6 +8,7 @@
 
   const depot = $derived(topic<ColonisationDepotTopic>('colonisation.depot'));
   const progressPct = $derived(depot ? Math.min(100, Math.max(0, depot.progress_percent)) : 0);
+  let showResources = $state(false);
 </script>
 
 <Panel titleKey="panel-colonisation-depot" span={2}>
@@ -75,7 +76,18 @@
     </div>
 
     <!-- Desglose de Recursos -->
-    <div class="table-wrap">
+    <div class="resources-head-bar">
+      <span class="sub bold">{t('colonisation-col-resource')} ({depot.resources.length})</span>
+      <button
+        type="button"
+        class="glass-btn-secondary list-toggle-btn"
+        data-testid="toggle-resources-table"
+        onclick={() => (showResources = !showResources)}
+      >
+        {showResources ? '▲ Ocultar desglose' : `▼ Ver desglose (${depot.resources.length})`}
+      </button>
+    </div>
+    <div class="table-wrap" class:is-collapsed={!showResources}>
       <table data-testid="resources-table">
         <thead>
           <tr>
@@ -205,6 +217,31 @@
   }
   .cyan {
     color: var(--hud-cyan);
+  }
+  .resources-head-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+    margin-bottom: 0.4rem;
+  }
+  .table-wrap.is-collapsed {
+    display: none;
+  }
+  .list-toggle-btn {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.25));
+    color: var(--hud-text, #c9d7e5);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .list-toggle-btn:hover {
+    background: rgba(0, 229, 255, 0.12);
+    border-color: var(--hud-primary, #00e5ff);
+    color: var(--hud-primary, #00e5ff);
   }
   .muted {
     color: var(--hud-muted);
