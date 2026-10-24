@@ -10,13 +10,14 @@
 
 ## Puntero actual
 
-- **Tarea:** Tarea 5: Generador táctico `VoiceAdvisor` en el flujo de eventos (`tmc-core`).
+- **Tarea:** Tarea 6: Persistencia y endpoints REST de prueba (`tmc-store`, `tmc-server`, `tmc-app`).
 - **Último paso completado:**
   1. Tarea 1 completada (`cac0965`): Modelos `TtsSettings`, `TtsEngineKind`, `TtsChannel`, `TtsPriority`, `VoiceCue` y `VoiceInfo`.
   2. Tarea 2 completada (`dc11072`): Crate `tmc-tts` con trait `TtsEngine`, cola priorizada `TtsQueue`, descarte por antigüedad (> 4s), deduplicación y cooldowns.
   3. Tarea 3 completada (`beb81a4`): `NativeEngine` en `crates/tmc-tts/src/native.rs` con COM SAPI5 / OneCore de Windows.
-  4. Tarea 4 completada: `KokoroEngine` en `crates/tmc-tts/src/kokoro.rs` con arquitectura neuronal desacoplada, catálogo de voces (es, en, fr, pt), suspensión automática tras inactividad (60s), fallback nativo para alemán (R12) y degradación suave si el worker no está presente.
-- **Siguiente acción:** Implementar `VoiceAdvisor` en `crates/tmc-core/src/voice_advisor.rs` para capturar eventos de navegación, bioseñales, combate, minería y carrier y despachar avisos prioritarios a la cola de TTS.
+  4. Tarea 4 completada (`a9e9964`): `KokoroEngine` en `crates/tmc-tts/src/kokoro.rs` con arquitectura neuronal desacoplada y suspensión automática tras inactividad (60s).
+  5. Tarea 5 completada: `VoiceAdvisor` en `crates/tmc-core/src/voice_advisor.rs` integrado en el actor con detección de saltos scoopable/unscoopable, bioseñales, progreso de muestras exobiológicas (1/3, 2/3, 3/3), caída y restauración de escudos, sobrecalentamiento, asteroides valiosos y carrier, con emisión de `CoreMessage::VoiceCue`.
+- **Siguiente acción:** Implementar persistencia de `tts_settings` en SQLite y endpoints REST `GET /api/tts/voices`, `POST /api/tts/test` y actualización en vivo en `tmc-server` / `tmc-app`.
 
 ## Tareas de F7 (Voz, Alertas de Cabina y Copiloto Auditivo)
 
@@ -27,9 +28,9 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 1 | Modelos de configuración de voz, canales y avisos tácticos (`tmc-model`) | ✅ hecha | `cac0965` | `TtsSettings`, `TtsEngineKind`, `TtsChannel`, `VoiceCue`, tests PASS |
 | 2 | Cola de locución priorizada con descarte y deduplicación (`tmc-tts`) | ✅ hecha | `dc11072` | Crate `tmc-tts`, `TtsQueue`, cooldowns y prioridad |
 | 3 | Motor nativo ultraligero de Windows (`tmc-tts`) | ✅ hecha | `beb81a4` | Síntesis nativa del SO (OneCore/SAPI5), < 2 MB RAM |
-| 4 | Motor neuronal KokoroTTS desacoplado (`tmc-tts`) | ✅ hecha | `PENDING_COMMIT` | ONNX en subproceso, carga bajo demanda y suspensión |
-| 5 | Generador táctico `VoiceAdvisor` en el flujo de eventos (`tmc-core`) | 🔄 en curso | — | Detección de saltos, bioseñales, combate, minería y carrier |
-| 6 | Persistencia y endpoints REST de prueba (`tmc-store`, `tmc-server`, `tmc-app`) | ⬜ pendiente | — | `GET /api/tts/voices`, `POST /api/tts/test`, PUT `/api/settings` |
+| 4 | Motor neuronal KokoroTTS desacoplado (`tmc-tts`) | ✅ hecha | `a9e9964` | ONNX en subproceso, carga bajo demanda y suspensión |
+| 5 | Generador táctico `VoiceAdvisor` en el flujo de eventos (`tmc-core`) | ✅ hecha | `PENDING_COMMIT` | Detección de saltos, bioseñales, combate, minería y carrier |
+| 6 | Persistencia y endpoints REST de prueba (`tmc-store`, `tmc-server`, `tmc-app`) | 🔄 en curso | — | `GET /api/tts/voices`, `POST /api/tts/test`, PUT `/api/settings` |
 | 7 | Catálogo de locuciones de copiloto en los 5 idiomas (`locales/`) | ⬜ pendiente | — | `tts.ftl` en es/en/fr/de/pt verificado por `tmc-i18n` |
 | 8 | Sección de Copiloto Auditivo en `SettingsPanel.svelte` (`ui/`) | ⬜ pendiente | — | Controles Glass HUD, sliders volumen/velocidad, prueba de voz |
 | 9 | Verificación integral, footprint y compilación Release/Debug | ⬜ pendiente | — | Tests workspace, clippy, check, footprint < 150 MB, build |
