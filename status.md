@@ -10,12 +10,13 @@
 
 ## Puntero actual
 
-- **Tarea:** Tarea 4: Motor neuronal KokoroTTS desacoplado (`tmc-tts`).
+- **Tarea:** Tarea 5: Generador táctico `VoiceAdvisor` en el flujo de eventos (`tmc-core`).
 - **Último paso completado:**
   1. Tarea 1 completada (`cac0965`): Modelos `TtsSettings`, `TtsEngineKind`, `TtsChannel`, `TtsPriority`, `VoiceCue` y `VoiceInfo`.
   2. Tarea 2 completada (`dc11072`): Crate `tmc-tts` con trait `TtsEngine`, cola priorizada `TtsQueue`, descarte por antigüedad (> 4s), deduplicación y cooldowns.
-  3. Tarea 3 completada: `NativeEngine` en `crates/tmc-tts/src/native.rs` con COM SAPI5 / OneCore de Windows, enumeración de voces, síntesis asíncrona no bloqueante e interrupción instantánea.
-- **Siguiente acción:** Implementar `KokoroEngine` en `crates/tmc-tts/src/kokoro.rs` con subproceso/worker desacoplado, carga bajo demanda y suspensión tras inactividad.
+  3. Tarea 3 completada (`beb81a4`): `NativeEngine` en `crates/tmc-tts/src/native.rs` con COM SAPI5 / OneCore de Windows.
+  4. Tarea 4 completada: `KokoroEngine` en `crates/tmc-tts/src/kokoro.rs` con arquitectura neuronal desacoplada, catálogo de voces (es, en, fr, pt), suspensión automática tras inactividad (60s), fallback nativo para alemán (R12) y degradación suave si el worker no está presente.
+- **Siguiente acción:** Implementar `VoiceAdvisor` en `crates/tmc-core/src/voice_advisor.rs` para capturar eventos de navegación, bioseñales, combate, minería y carrier y despachar avisos prioritarios a la cola de TTS.
 
 ## Tareas de F7 (Voz, Alertas de Cabina y Copiloto Auditivo)
 
@@ -25,9 +26,9 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 |---|---|---|---|---|
 | 1 | Modelos de configuración de voz, canales y avisos tácticos (`tmc-model`) | ✅ hecha | `cac0965` | `TtsSettings`, `TtsEngineKind`, `TtsChannel`, `VoiceCue`, tests PASS |
 | 2 | Cola de locución priorizada con descarte y deduplicación (`tmc-tts`) | ✅ hecha | `dc11072` | Crate `tmc-tts`, `TtsQueue`, cooldowns y prioridad |
-| 3 | Motor nativo ultraligero de Windows (`tmc-tts`) | ✅ hecha | `PENDING_COMMIT` | Síntesis nativa del SO (OneCore/SAPI5), < 2 MB RAM |
-| 4 | Motor neuronal KokoroTTS desacoplado (`tmc-tts`) | 🔄 en curso | — | ONNX en subproceso, carga bajo demanda y suspensión |
-| 5 | Generador táctico `VoiceAdvisor` en el flujo de eventos (`tmc-core`) | ⬜ pendiente | — | Detección de saltos, bioseñales, combate, minería y carrier |
+| 3 | Motor nativo ultraligero de Windows (`tmc-tts`) | ✅ hecha | `beb81a4` | Síntesis nativa del SO (OneCore/SAPI5), < 2 MB RAM |
+| 4 | Motor neuronal KokoroTTS desacoplado (`tmc-tts`) | ✅ hecha | `PENDING_COMMIT` | ONNX en subproceso, carga bajo demanda y suspensión |
+| 5 | Generador táctico `VoiceAdvisor` en el flujo de eventos (`tmc-core`) | 🔄 en curso | — | Detección de saltos, bioseñales, combate, minería y carrier |
 | 6 | Persistencia y endpoints REST de prueba (`tmc-store`, `tmc-server`, `tmc-app`) | ⬜ pendiente | — | `GET /api/tts/voices`, `POST /api/tts/test`, PUT `/api/settings` |
 | 7 | Catálogo de locuciones de copiloto en los 5 idiomas (`locales/`) | ⬜ pendiente | — | `tts.ftl` en es/en/fr/de/pt verificado por `tmc-i18n` |
 | 8 | Sección de Copiloto Auditivo en `SettingsPanel.svelte` (`ui/`) | ⬜ pendiente | — | Controles Glass HUD, sliders volumen/velocidad, prueba de voz |
