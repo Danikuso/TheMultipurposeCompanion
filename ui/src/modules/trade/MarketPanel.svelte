@@ -13,6 +13,9 @@
   // Hora del diario; `null` si no se conoce (se ocultan las antigüedades).
   const now = $derived(skew == null ? null : tick + skew);
   const rows = $derived(m?.rows ?? []);
+  let selectedIndex = $state<number>(0);
+  let showFullCatalog = $state(false);
+  const activeRow = $derived(rows[selectedIndex] ?? rows[0]);
 
   // Un único setInterval de 30 s para las antigüedades; no corre sin filas.
   $effect(() => {
@@ -34,7 +37,53 @@
       <span class="station-title" data-testid="market-station">{m.station} · {m.system}</span>
       <span class="window-note">{t('trade-sale-window')}</span>
     </div>
-    <div class="table-wrap">
+
+    <div class="market-controls">
+      <label class="compact-selector-label" for="market-commodity-select">
+        <span class="label-text">Mercancía ({rows.length}):</span>
+        <select
+          id="market-commodity-select"
+          class="glass-select"
+          data-testid="market-commodity-select"
+          bind:value={selectedIndex}
+        >
+          {#each rows as r, ri}
+            <option value={ri}>
+              {commodityName(r.commodity, r.name_localised)} · {credits(r.buy_price)}
+            </option>
+          {/each}
+        </select>
+      </label>
+
+      <button
+        type="button"
+        class="glass-btn-secondary list-toggle-btn"
+        data-testid="toggle-market-list"
+        onclick={() => (showFullCatalog = !showFullCatalog)}
+      >
+        {showFullCatalog ? '▲ Ocultar catálogo' : `▼ Ver catálogo (${rows.length})`}
+      </button>
+    </div>
+
+    {#if activeRow}
+      {@const best = activeRow.best_sell}
+      <div class="active-commodity-card">
+        <div class="active-head">
+          <span class="comm-title bold">{commodityName(activeRow.commodity, activeRow.name_localised)}</span>
+          <span class="mono cyan bold">{credits(activeRow.buy_price)} ({decimal(activeRow.stock, 0)} t)</span>
+        </div>
+        {#if best}
+          <div class="best-dest-sub sub">
+            <span>Venta: <b>{best.station_name}</b> ({best.system_name})</span>
+            {#if activeRow.profit_per_ton != null}
+              <span class="mono gold bold">+{credits(activeRow.profit_per_ton)}/t</span>
+            {/if}
+          </div>
+        {/if}
+      </div>
+    {/if}
+
+    <div class="table-wrap" class:is-collapsed={!showFullCatalog}>
     <table>
       <thead>
         <tr>
@@ -149,6 +198,85 @@
     margin-left: 0.35rem;
     letter-spacing: 0.04em;
     font-weight: 600;
+  }
+  .table-wrap.is-collapsed {
+    display: none;
+  }
+  .market-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0.6rem 0;
+    flex-wrap: wrap;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--hud-border-subtle);
+  }
+  .compact-selector-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--hud-muted);
+    flex: 1;
+    min-width: 220px;
+  }
+  .compact-selector-label .label-text {
+    white-space: nowrap;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+  }
+  .glass-select {
+    flex: 1;
+    background: rgba(10, 16, 26, 0.9);
+    border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.3));
+    color: var(--hud-primary, #00e5ff);
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    outline: none;
+    cursor: pointer;
+  }
+  .active-commodity-card {
+    background: rgba(14, 22, 38, 0.8);
+    border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.3));
+    border-left: 3px solid var(--hud-primary, #00e5ff);
+    border-radius: 4px;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 0.6rem;
+  }
+  .active-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .comm-title {
+    font-size: 0.92rem;
+    color: var(--hud-text-bright, #fff);
+  }
+  .best-dest-sub {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.35rem;
+    font-size: 0.8rem;
+  }
+  .list-toggle-btn {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.25));
+    color: var(--hud-text, #c9d7e5);
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .list-toggle-btn:hover {
+    background: rgba(0, 229, 255, 0.12);
+    border-color: var(--hud-primary, #00e5ff);
+    color: var(--hud-primary, #00e5ff);
   }
   .origin-tag {
     font-size: 0.72rem;

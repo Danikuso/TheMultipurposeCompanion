@@ -9,14 +9,27 @@
   const c = $derived(topic<CargoTopic>('trade.cargo'));
   const lines = $derived(c?.lines ?? []);
   const holdPct = $derived(c && c.capacity ? Math.min(100, (c.used / c.capacity) * 100) : 0);
+  let showCargoTable = $state(false);
 </script>
 
 <Panel titleKey="panel-trade-cargo" span={2}>
   {#if !c || (lines.length === 0 && !c.used)}
     <p class="muted" data-testid="cargo-empty">{t('trade-no-data')}</p>
   {:else}
-    <div class="sub" data-testid="hold">
-      {#if c.capacity}<b>{t('trade-cargo-capacity', { used: decimal(c.used, 0), capacity: decimal(c.capacity, 0) })}</b>{:else}<b>{decimal(c.used, 0)} t</b>{/if}
+    <div class="cargo-controls">
+      <div class="sub" data-testid="hold">
+        {#if c.capacity}<b>{t('trade-cargo-capacity', { used: decimal(c.used, 0), capacity: decimal(c.capacity, 0) })}</b>{:else}<b>{decimal(c.used, 0)} t</b>{/if}
+      </div>
+      {#if lines.length > 0}
+        <button
+          type="button"
+          class="glass-btn-secondary list-toggle-btn"
+          data-testid="toggle-cargo-list"
+          onclick={() => (showCargoTable = !showCargoTable)}
+        >
+          {showCargoTable ? '▲ Ocultar lista' : `▼ Ver desglose (${lines.length})`}
+        </button>
+      {/if}
     </div>
     <div
       class="bar"
@@ -27,7 +40,7 @@
       aria-valuemax={c.capacity ?? c.used}
       aria-valuenow={c.used}
     ><i style:width={cssPct(holdPct)}></i></div>
-    <div class="table-wrap">
+    <div class="table-wrap" class:is-collapsed={!showCargoTable}>
     <table>
       <thead>
         <tr>
@@ -94,6 +107,30 @@
   }
   .table-wrap {
     overflow-x: auto;
+  }
+  .table-wrap.is-collapsed {
+    display: none;
+  }
+  .cargo-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.4rem;
+  }
+  .list-toggle-btn {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.25));
+    color: var(--hud-text, #c9d7e5);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .list-toggle-btn:hover {
+    background: rgba(0, 229, 255, 0.12);
+    border-color: var(--hud-primary, #00e5ff);
+    color: var(--hud-primary, #00e5ff);
   }
   table {
     border-collapse: collapse;

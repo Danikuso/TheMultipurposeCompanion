@@ -13,6 +13,7 @@
   // Hora del diario; `null` si no se conoce (se ocultan las antigüedades).
   const now = $derived(skew == null ? null : tick + skew);
   let copiedSystem = $state<string | null>(null);
+  let showAllSellOptions = $state(false);
 
   // Un único setInterval de 30 s para las antigüedades; no corre sin plan.
   $effect(() => {
@@ -70,8 +71,16 @@
     {#each groups as [key, opts] (key)}
       <div class="commodity-header">
         <h3 data-testid="sell-commodity">{materialName(key, names)}</h3>
+        <button
+          type="button"
+          class="glass-btn-secondary list-toggle-btn"
+          data-testid="toggle-sell-options"
+          onclick={() => (showAllSellOptions = !showAllSellOptions)}
+        >
+          {showAllSellOptions ? '▲ Ocultar opciones' : `▼ Ver opciones (${opts.length})`}
+        </button>
       </div>
-      <div class="table-container">
+      <div class="table-container" class:is-collapsed={!showAllSellOptions}>
         <table>
           <thead>
             <tr>
@@ -135,9 +144,30 @@
     filter: drop-shadow(0 0 6px rgba(255, 170, 0, 0.5));
   }
   .commodity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin: 0.65rem 0 0.35rem;
-    padding-bottom: 0.2rem;
+    padding-bottom: 0.3rem;
     border-bottom: 1px solid var(--hud-border-subtle);
+  }
+  .table-container.is-collapsed {
+    display: none;
+  }
+  .list-toggle-btn {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.25));
+    color: var(--hud-text, #c9d7e5);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .list-toggle-btn:hover {
+    background: rgba(0, 229, 255, 0.12);
+    border-color: var(--hud-primary, #00e5ff);
+    color: var(--hud-primary, #00e5ff);
   }
   h3 {
     margin: 0;
