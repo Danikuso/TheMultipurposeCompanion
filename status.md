@@ -2,22 +2,24 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-24 19:02 (Europe/Madrid) · Antigravity
-- **Fase actual:** Fase 10 — Asistencia e Integración de Voz (Zero-Friction Voice Assistant)
+- **Última actualización:** 2026-10-24 19:12 (Europe/Madrid) · Antigravity
+- **Fase actual:** Fase 10 — Asistencia e Integración de Voz (Zero-Friction Voice Assistant) [FASE 10 COMPLETADA]
 - **Spec activa:** [`docs/specs/2026-10-24-tmc-f10-asistencia-voz-integracion-design.md`](docs/specs/2026-10-24-tmc-f10-asistencia-voz-integracion-design.md) — Asistencia e Integración de Voz.
 - **Plan activo:** [`docs/plans/2026-10-24-tmc-f10-asistencia-voz-integracion.md`](docs/plans/2026-10-24-tmc-f10-asistencia-voz-integracion.md) — 7 tareas en 6 bloques.
 - **Rama de trabajo:** `fase/f10-asistencia-voz-integracion`
 
 ## Puntero actual
 
-- **Tarea:** Tarea 6: Tests unitarios en Vitest para la asistencia de voz (`ui/`).
+- **Tarea:** Tarea 7 completada: Verificación global, compilación de binarios Release/Debug y cierre de Fase 10.
 - **Último paso completado:**
   1. Tarea 1 completada (`251abe3`): Creado `crates/tmc-model/src/voice_intent.rs` con tipos `VoiceIntent`, `VoiceCommandRequest`, `VoiceCommandResponse` y `VoiceAttackStatus`, exportados en `tmc-model` y registrados en el catálogo de diagnóstico de Rust. 179 tests PASS y Clippy limpio.
   2. Tarea 2 completada (`6e540a0`): Implementado `VoiceIntentResolver` en `crates/tmc-core/src/voice_intent_resolver.rs` con normalización léxica tolerante, comprensión semántica en 5 idiomas (es, en, fr, de, pt) y resolución contextualizada contra el `GameState` (estado de nave, combustible, siguiente salto, copia al portapapeles, factores interestelares, mercados negros, multas y bio-señales). 48 tests de `tmc-core` PASS y Clippy limpio.
   3. Tarea 3 completada (`b00606c`): Creado detector y generador de perfiles VoiceAttack en `crates/tmc-app/src/voiceattack.rs`, integradas acciones en `AppActions` (`voice.status`, `voice.profile`, `clipboard.copy`, `voice.speak`), montados los endpoints REST `POST /api/voice/intent`, `GET /api/voice/voiceattack` y `GET /api/voice/voiceattack/profile` en `tmc-server`. 37 tests de `tmc-server`, 120 tests de `tmc-app` y 49 tests de `tmc-core` PASS y Clippy limpio.
   4. Tarea 4 completada (`78fc37a`): Creado catálogo `voice_assistant.ftl` en `locales/{es,en,fr,de,pt}/` con todas las cadenas de interfaz de voz, controles HUD de micrófono, monitor de integración con VoiceAttack y consultas de cabina. 18 tests de `tmc-i18n` PASS.
   5. Tarea 5 completada (`b0ee73f`): Creado `ui/src/lib/voiceAssistant.svelte.ts` con integración Web Speech API y despacho REST, añadida píldora animada de micrófono en `TopBar.svelte` y subsección de asistencia de voz con monitor y descarga de perfil VoiceAttack en `Settings.svelte`. `svelte-check` 0 errores y 0 avisos.
-- **Siguiente acción:** Desarrollar `ui/tests/voice_assistant.test.ts` con tests unitarios en Vitest cubriendo reactividad, transiciones de estado, peticiones al endpoint y preferencias.
+  6. Tarea 6 completada (`f18f85d`): Creado `ui/tests/voice_assistant.test.ts` cubriendo reactividad, alternancia de estados HUD, peticiones REST al endpoint de voz y descarga de perfiles VoiceAttack. 413/413 tests de Vitest PASS.
+  7. Tarea 7 completada: Verificación integral de la suite Rust (`cargo test --workspace` 100% PASS), Clippy limpio en todo el workspace (`0 warnings`), bundle de producción UI Vite generado (`0 errors`), binarios interactivos `target/release/TMC.exe` (32.9MB) y `target/debug/TMC.exe` (53.3MB) construidos y listos, y caché incremental saneada (target < 20 GB).
+- **Siguiente acción:** Preparar PR y merge en `main` tras validación interactiva por el comandante.
 
 ## Tareas de F10 (Asistencia e Integración de Voz)
 
@@ -30,8 +32,8 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 3 | Endpoints REST de voz y generador de perfil VoiceAttack (`tmc-server`, `tmc-app`) | ✅ hecha | `b00606c` | `POST /api/voice/intent`, `GET /api/voice/voiceattack`, perfil `.vap` |
 | 4 | Catálogo i18n de respuestas vocales y textos de cabina en 5 idiomas (`locales/`) | ✅ hecha | `78fc37a` | `voice_assistant.ftl` en es/en/fr/de/pt, verificado por `tmc-i18n` |
 | 5 | Asistente de voz en TopBar, escucha continua y controles en ajustes (`ui/`) | ✅ hecha | `b0ee73f` | Indicador de micro HUD, gestión de escucha y toggle en ajustes |
-| 6 | Tests unitarios en Vitest para la asistencia de voz (`ui/`) | 🔄 en curso | — | Reactividad de escucha, conexión al endpoint de voz y preferencias |
-| 7 | Verificación integral, compilación Release/Debug y cierre | ⬜ pendiente | — | Workspace Rust PASS, Vitest PASS, clippy limpio, build Release/Debug |
+| 6 | Tests unitarios en Vitest para la asistencia de voz (`ui/`) | ✅ hecha | `f18f85d` | Reactividad de escucha, conexión al endpoint de voz y preferencias (413/413 PASS) |
+| 7 | Verificación integral, compilación Release/Debug y cierre | ✅ hecha | — | Workspace Rust PASS, Vitest 413/413 PASS, clippy limpio, binarios Release (32.9MB) + Debug (53.3MB) |
 
 ## Tareas de F9 (Crimen, Notoriedad y Piratería) — FUSIONADA EN MAIN
 
