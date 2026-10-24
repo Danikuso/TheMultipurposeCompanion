@@ -879,6 +879,7 @@ const UI_PANELS: &[&str] = &[
     "panel-engineering-sources",
     "panel-engineering-alerts",
     "combat-target",
+    "crime-title",
     "nav-settings",
     "panel-alerts",
     "panel-cmdr",
