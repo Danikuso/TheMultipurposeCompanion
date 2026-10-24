@@ -1,8 +1,10 @@
 //! Crate de síntesis de voz (TTS) y copiloto auditivo para TMC.
 
+pub mod kokoro;
 pub mod native;
 pub mod queue;
 
+pub use kokoro::KokoroEngine;
 pub use native::NativeEngine;
 pub use queue::{QueuedSpeech, TtsQueue};
 use tmc_model::tts::VoiceInfo;
