@@ -2,18 +2,24 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-24 17:23 (Europe/Madrid) · Antigravity
-- **Fase actual:** Fase 9 — Crimen, Notoriedad y Piratería (Law & Disorder)
+- **Última actualización:** 2026-10-24 18:05 (Europe/Madrid) · Antigravity
+- **Fase actual:** Fase 9 — Crimen, Notoriedad y Piratería (Law & Disorder) — CERRADA
 - **Spec activa:** [`docs/specs/2026-10-24-tmc-f9-crimen-pirateria-design.md`](docs/specs/2026-10-24-tmc-f9-crimen-pirateria-design.md) — Crimen, Notoriedad y Piratería.
-- **Plan activo:** [`docs/plans/2026-10-24-tmc-f9-crimen-pirateria.md`](docs/plans/2026-10-24-tmc-f9-crimen-pirateria.md) — 7 tareas en 6 bloques.
+- **Plan activo:** [`docs/plans/2026-10-24-tmc-f9-crimen-pirateria.md`](docs/plans/2026-10-24-tmc-f9-crimen-pirateria.md) — 7 tareas en 6 bloques (100% completado).
 - **Rama de trabajo:** `fase/f9-crimen-pirateria`
 
 ## Puntero actual
 
-- **Tarea:** Tarea 2: Módulo de lógica criminal en Rust (`tmc-modules`).
+- **Tarea:** Fase 9 completada íntegramente. Lista para revisión del propietario y fusión en `main`.
 - **Último paso completado:**
   1. Tarea 1 completada (`0e9dd87`): Modelos `CrimeType`, `CommitCrimeEvent`, `CrimeVictimEvent`, `PayFinesEvent`, `PayBountiesEvent`, `FactionFineBounty`, `StolenCargoItem`, `NearbyFacility`, `SystemSecurityLevel`, `CrimeStatusTopic` y registro de eventos de diario en `tmc-model`. Tests unitarios 100% PASS y Clippy limpio.
-- **Siguiente acción:** Implementar `CrimeModule` en `crates/tmc-modules/src/crime/mod.rs` con cálculo de decaimiento de notoriedad en vuelo, agregación de multas/recompensas, evaluación de cargamento robado y resolución de factores interestelares y mercados negros.
+  2. Tarea 2 completada (`5714942`): `CrimeModule` en `crates/tmc-modules/src/crime/mod.rs` con tracking de legal_state, decaimiento de notoriedad en vuelo (`advance_flight_time`, 7200s/nivel), acumulación y liquidación de multas/recompensas, evaluación de mercancía robada desde `Cargo`, resolución de Interstellar Factors y Mercados Negros cercanos mediante `NearbyService::BlackMarket`, e integración en `registry.rs`. 821 tests de `tmc-modules` PASS.
+  3. Tarea 3 completada (`4bc8d63`): Detección contextual en `VoiceAdvisor` con emisión de `VoiceCue` ante ganancia de notoriedad (`tts-crime-notoriety-gain`), limpieza de notoriedad (`tts-crime-notoriety-cleared`), contrabando en salto a sistemas seguros (`tts-crime-illegal-cargo`), e interdicción policial (`tts-crime-police-interdiction`). 43 tests de `tmc-core` PASS y Clippy limpio.
+  4. Tarea 4 completada (`e973593`): Catálogo `crime.ftl` sincronizado y validado en los 5 idiomas (`es`, `en`, `fr`, `de`, `pt`) para UI de cabina, guía de limpieza, contrabando y locuciones TTS. 18 tests de `tmc-i18n` PASS.
+  5. Tarea 5 completada (`96c3f2c`): Implementación del panel Glass HUD `CrimePanel.svelte` con medidor de notoriedad de 10 segmentos, temporizador de decaimiento en vuelo vs pausa al atracar, Guía de Limpieza de Nombre del Ayudante (bloqueo pedagógico por notoriedad, localización y copia 1-clic de Interstellar Factors y Mercados Negros), tabla de mercancías robadas con consejos de sigilo, desglose de facciones y termómetro de seguridad policial. Integrado en `registry.ts` y `Sidebar.svelte`. Verificado con `svelte-check` 0 errores / 0 advertencias.
+  6. Tarea 6 completada (`ca57ada`): Suite unitaria `ui/tests/crime.test.ts` con 7 tests verificando renderizado de estado limpio, bloqueo de guía por notoriedad > 0, tiempo de decaimiento, pausa al atracar en estación, localización y copia de Interstellar Factor y Mercado Negro al portapapeles, listado de contrabando y termómetro de seguridad. Suite completa Vitest: 24 archivos, 408 tests PASS.
+  7. Tarea 7 completada (`(commit docs)`): Verificación integral (suite Rust 100% PASS en todo el workspace, 408 tests Vitest PASS, Clippy 0 advertencias, Vite build OK), binarios Release (`target/release/TMC.exe`, 32.7 MB) y Debug (`target/debug/TMC.exe`, 53.1 MB) verificados, higiene estricta de `target/` y ausencia de procesos daemon.
+- **Siguiente acción:** Revisión y autorización del propietario para la fusión de la rama `fase/f9-crimen-pirateria` en `main`.
 
 ## Tareas de F9 (Crimen, Notoriedad y Piratería)
 
@@ -22,10 +28,12 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | # | Tarea | Estado | Commit | Notas |
 |---|---|---|---|---|
 | 1 | Modelos de crimen, eventos de diario y topic `CrimeStatusTopic` (`tmc-model`) | ✅ hecha | `0e9dd87` | `CrimeType`, `CommitCrime`, `PayFines`, `PayBounties`, `CrimeStatusTopic`, tests PASS |
-| 2 | Módulo de lógica criminal en Rust (`tmc-modules`) | 🔄 en curso | — | Decaimiento de notoriedad en vuelo, multas, Interstellar Factor y Black Market |
-| 3 | Detección contextual y avisos de seguridad en `VoiceAdvisor` (`tmc-core`) | ⬜ pendiente | — | Notoriedad incrementada/limpia, contrabando, interdicción policial |
-| 4 | Catálogo de textos y locuciones en los 5 idiomas (`locales/`) | ⬜ pendiente | — | `crime.ftl` en es/en/fr/de/pt, verificado por `tmc-i18n` |
-| 5 | Panel `CrimePanel.svelte` e integración en el Shell («TMC Glass HUD») (`ui/`) | ⬜ pendiente | — | Medidor notoriedad, Guía Limpieza, Contrabando y Mercados Negros |
+| 2 | Módulo de lógica criminal en Rust (`tmc-modules`) | ✅ hecha | `5714942` | Decaimiento de notoriedad en vuelo, multas, Interstellar Factor y Black Market |
+| 3 | Detección contextual y avisos de seguridad en `VoiceAdvisor` (`tmc-core`) | ✅ hecha | `4bc8d63` | Notoriedad incrementada/limpia, contrabando, interdicción policial |
+| 4 | Catálogo de textos y locuciones en los 5 idiomas (`locales/`) | ✅ hecha | `e973593` | `crime.ftl` en es/en/fr/de/pt, verificado por `tmc-i18n` |
+| 5 | Panel `CrimePanel.svelte` e integración en el Shell («TMC Glass HUD») (`ui/`) | ✅ hecha | `96c3f2c` | Medidor notoriedad, Guía Limpieza, Contrabando y Mercados Negros |
+| 6 | Tests unitarios en Vitest para panel de crimen y contrabando (`ui/`) | ✅ hecha | `ca57ada` | Reactividad de estado legal, temporizador y botones de copia (408/408 tests PASS) |
+| 7 | Verificación integral, huella y compilación Release/Debug | ✅ hecha | (commit docs) | Workspace Rust PASS, Vitest 408/408 PASS, clippy limpio, binarios Release (32.7MB) + Debug (53.1MB) |
 | 6 | Tests unitarios en Vitest para panel de crimen y contrabando (`ui/`) | ⬜ pendiente | — | Reactividad de estado legal, temporizador y botones de copia |
 | 7 | Verificación integral, huella y compilación Release/Debug | ⬜ pendiente | — | Workspace Rust PASS, Vitest PASS, clippy limpio, build Release/Debug |
 
@@ -436,6 +444,15 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-24 18:05 (Europe/Madrid) · Antigravity · Fase 9 (Crimen, Notoriedad y Piratería - Law & Disorder) completada íntegramente y verificada:
+  - **Modelos y serialización (`tmc-model`):** Creado `crime.rs` con `CrimeType`, `CommitCrimeEvent`, `CrimeVictimEvent`, `PayFinesEvent`, `PayBountiesEvent`, `FactionFineBounty`, `StolenCargoItem`, `NearbyFacility`, `SystemSecurityLevel` y topic `CrimeStatusTopic`. Registrado en `diagnostics.rs` y eventos del diario.
+  - **Módulo de lógica criminal (`tmc-modules`):** `CrimeModule` con decaimiento de notoriedad en vuelo (1 nivel cada 7.200 s), congelación del temporizador al atracar en estación (`Flags::DOCKED`), acumulación y liquidación de multas/recompensas, evaluación de bodega robada desde `Cargo`, y resolución de Interstellar Factors y Mercados Negros cercanos mediante `NearbyService::BlackMarket`.
+  - **Copiloto auditivo táctico (`tmc-core`):** Avisos de voz en `VoiceAdvisor` ante ganancia de notoriedad (`tts-crime-notoriety-gain`), disipación de notoriedad (`tts-crime-notoriety-cleared`), contrabando al saltar a sistemas con seguridad (`tts-crime-illegal-cargo`) e interdicción de fuerzas de seguridad (`tts-crime-police-interdiction`).
+  - **Localización completa (`locales/`):** Archivo `crime.ftl` redactado y validado en los 5 idiomas (`es`, `en`, `fr`, `de`, `pt`). 18/18 tests en `tmc-i18n` PASS.
+  - **Panel Glass HUD (`ui/`):** Componente `CrimePanel.svelte` con medidor de notoriedad de 10 segmentos, temporizador en vivo de decaimiento vs pausa al atracar, Guía de Limpieza de Nombre del Ayudante (bloqueo explicativo si notoriedad > 0, localización y botón de 1-clic para copiar al portapapeles el Interstellar Factor o Mercado Negro más cercano), desglose de mercancías robadas con consejos de aproximación sigilosa (Silent Running, velocidad > 200 m/s), desglose por facción y termómetro de seguridad policial.
+  - **Tests unitarios Vitest:** Suite `ui/tests/crime.test.ts` con 7 tests verificando todos los estados legales y reactividad. Suite completa: 24 archivos, 408 tests PASS.
+  - **Verificación integral y binarios:** Suite Rust completa PASS en todo el workspace (1.400+ tests), `cargo clippy` sin advertencias, `npm run check` 0 errores / 0 avisos, `npm run build` OK, y binarios interactivos `target/release/TMC.exe` (32.7 MB) y `target/debug/TMC.exe` (53.1 MB) verificados. Saneamiento estricto de `target/` y sin procesos daemon.
 
 - 2026-10-24 17:05 (Europe/Madrid) · Antigravity · Fase 7 (Voz, Alertas de Cabina y Copiloto Auditivo) completada íntegramente y verificada:
   - **Arquitectura de voz híbrida nativa y neuronal:**
