@@ -1102,8 +1102,7 @@ impl Engineering {
         if let Some(o) = engineers.as_object_mut() {
             o.insert("total".into(), json!(engineer_rows.len()));
         }
-        let dependencies_changed = semantic_changed(TOPIC_INVENTORY, &inventory)
-            || semantic_changed(TOPIC_ENGINEERS, &engineers);
+        let dependencies_changed = semantic_changed(TOPIC_INVENTORY, &inventory);
         let mut details = self.render_goals(shopping, verified);
         let mut goal_pages = BTreeMap::new();
         goal_pages.insert(

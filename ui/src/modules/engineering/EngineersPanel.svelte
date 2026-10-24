@@ -15,6 +15,8 @@
 
   // Filter state
   let statusFilter = $state<'all' | 'unlocked' | 'pending'>('all');
+  let shipOpen = $state(true);
+  let onFootOpen = $state(true);
 
   // Lectores privados
   const list = createSectionsReader<EngineerRows>('engineers', ['engineers'], () => ({ revision: data?.revision, commander, enabled: true }));
@@ -159,64 +161,13 @@
   </div>
 
   <div class="engineers-container">
-    {#each [false, true] as onFoot}
-      {@const filtered = rows.filter((row) => row.on_foot === onFoot && matchesFilter(row))}
-      <section data-testid={onFoot ? 'engineers-on-foot' : 'engineers-ship'} class="engineers-section">
-        <h3 class="section-title">{t(onFoot ? 'engineering-engineer-on-foot' : 'engineering-engineer-ship')}</h3>
-        <ul class="engineers">
-          {#each filtered as row (row.id)}
-            <li data-engineer-id={row.id} class="engineer-card" class:selected={selectedId === row.id}>
-              <div class="card-top">
-                <button
-                  class="engineer-button"
-                  onclick={() => selectEngineer(row.id)}
-                  aria-pressed={selectedId === row.id}
-                >
-                  <span class="engineer-name">{row.name}</span>
-                </button>
-                <span class="status-badge {statusClass(row.status)}">
-                  {engineerStatusLabel(row.status)}
-                </span>
-              </div>
-
-              <div class="card-details">
-                <div class="rank-info">
-                  {#if row.rank != null && row.rank > 0}
-                    <GradeBadge grade={row.rank} size={15} />
-                  {/if}
-                  <span class="rank-label">{t('engineering-col-rank')}: {row.rank == null ? t('engineering-no-data') : integer(row.rank)}</span>
-                  {#if row.rank != null && row.rank > 0}
-                    <span class="rank-stars" title={String(row.rank)}>{rankStars(row.rank)}</span>
-                  {/if}
-                  <span class="rank-progress">
-                    {t('engineering-engineer-rank-progress', {
-                      progress: row.rank_progress == null ? t('engineering-no-data') : `${integer(row.rank_progress)} %`,
-                    })}
-                  </span>
-                </div>
-
-                <div class="location-info">
-                  <span class="system-name">{row.system ?? t('engineering-no-data')}</span>
-                  <span class="mono distance-val">{distance(row)}</span>
-                </div>
-              </div>
-
-              {#if !row.verified}
-                <small class="muted unverified-tag">{t('engineering-unverified')}</small>
-              {/if}
-            </li>
-          {/each}
-        </ul>
-      </section>
-    {/each}
-
-    {#if selectedId !== null && selectedName !== undefined}
+    {#snippet engineerDetails(name: string, row: EngineerRow | undefined)}
       <section class="details" data-testid="engineer-details">
         <div class="details-header">
-          <h3 class="details-name">{selectedName}</h3>
-          {#if selectedRow}
-            <span class="status-badge {statusClass(selectedRow.status)}">
-              {engineerStatusLabel(selectedRow.status)}
+          <h3 class="details-name">{name}</h3>
+          {#if row}
+            <span class="status-badge {statusClass(row.status)}">
+              {engineerStatusLabel(row.status)}
             </span>
           {/if}
         </div>
@@ -276,6 +227,88 @@
           </p>
         {/if}
       </section>
+    {/snippet}
+    {#each [false, true] as onFoot}
+      {@const filtered = rows.filter((row) => row.on_foot === onFoot && matchesFilter(row))}
+      {@const isOpen = onFoot ? onFootOpen : shipOpen}
+      <section data-testid={onFoot ? 'engineers-on-foot' : 'engineers-ship'} class="engineers-section">
+        <button
+          type="button"
+          class="section-toggle"
+          onclick={() => { if (onFoot) onFootOpen = !onFootOpen; else shipOpen = !shipOpen; }}
+          aria-expanded={isOpen}
+        >
+          <h3 class="section-title">
+            {t(onFoot ? 'engineering-engineer-on-foot' : 'engineering-engineer-ship')}
+            <span class="section-count">({filtered.length})</span>
+          </h3>
+          <span class="chevron" aria-hidden="true">{isOpen ? '▲' : '▼'}</span>
+        </button>
+
+        {#if isOpen}
+          <ul class="engineers">
+            {#each filtered as row (row.id)}
+              <li data-engineer-id={row.id} class="engineer-card" class:selected={selectedId === row.id}>
+                <div
+                  class="card-top"
+                  onclick={() => selectEngineer(row.id)}
+                  role="button"
+                  tabindex="0"
+                  onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectEngineer(row.id); } }}
+                >
+                  <button
+                    type="button"
+                    class="engineer-button"
+                    onclick={(e) => { e.stopPropagation(); selectEngineer(row.id); }}
+                    aria-pressed={selectedId === row.id}
+                    aria-expanded={selectedId === row.id}
+                  >
+                    <span class="engineer-name">{row.name}</span>
+                    <span class="chevron-sm" aria-hidden="true">{selectedId === row.id ? '▲' : '▼'}</span>
+                  </button>
+                  <span class="status-badge {statusClass(row.status)}">
+                    {engineerStatusLabel(row.status)}
+                  </span>
+                </div>
+
+                <div class="card-details">
+                  <div class="rank-info">
+                    {#if row.rank != null && row.rank > 0}
+                      <GradeBadge grade={row.rank} size={15} />
+                    {/if}
+                    <span class="rank-label">{t('engineering-col-rank')}: {row.rank == null ? t('engineering-no-data') : integer(row.rank)}</span>
+                    {#if row.rank != null && row.rank > 0}
+                      <span class="rank-stars" title={String(row.rank)}>{rankStars(row.rank)}</span>
+                    {/if}
+                    <span class="rank-progress">
+                      {t('engineering-engineer-rank-progress', {
+                        progress: row.rank_progress == null ? t('engineering-no-data') : `${integer(row.rank_progress)} %`,
+                      })}
+                    </span>
+                  </div>
+
+                  <div class="location-info">
+                    <span class="system-name">{row.system ?? t('engineering-no-data')}</span>
+                    <span class="mono distance-val">{distance(row)}</span>
+                  </div>
+                </div>
+
+                {#if !row.verified}
+                  <small class="muted unverified-tag">{t('engineering-unverified')}</small>
+                {/if}
+
+                {#if selectedId === row.id && selectedName !== undefined}
+                  {@render engineerDetails(selectedName, selectedRow)}
+                {/if}
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </section>
+    {/each}
+
+    {#if selectedId !== null && selectedName !== undefined && !rows.some((r) => r.id === selectedId && matchesFilter(r))}
+      {@render engineerDetails(selectedName, selectedRow)}
     {/if}
   </div>
 </Panel>
@@ -287,7 +320,11 @@
 
   .engineers-container { display: flex; flex-direction: column; gap: 1rem; }
   .engineers-section { display: flex; flex-direction: column; gap: .4rem; }
-  .section-title { color: var(--hud-primary); font-size: .95rem; margin: .4rem 0 .2rem; }
+  .section-toggle { display: flex; justify-content: space-between; align-items: center; width: 100%; background: none; border: none; padding: .3rem 0; cursor: pointer; text-align: left; }
+  .section-title { color: var(--hud-primary); font-size: .95rem; margin: .4rem 0 .2rem; display: flex; align-items: center; gap: .4rem; }
+  .section-count { font-size: .8rem; opacity: .7; }
+  .chevron { font-size: .75rem; color: var(--hud-primary); opacity: .8; }
+  .chevron-sm { font-size: .65rem; color: var(--hud-primary); opacity: .7; margin-left: .2rem; }
 
   ul { list-style: none; padding: 0; margin: 0; }
   .engineers { display: flex; flex-direction: column; gap: .4rem; }
@@ -296,8 +333,8 @@
   .engineer-card:hover { border-color: rgba(255, 113, 0, 0.4); }
   .engineer-card.selected { border-color: var(--hud-primary); background: rgba(255, 113, 0, 0.08); }
 
-  .card-top { display: flex; justify-content: space-between; align-items: center; gap: .6rem; }
-  .engineer-button { color: var(--hud-text); background: transparent; border: none; padding: 0; text-align: left; cursor: pointer; }
+  .card-top { display: flex; justify-content: space-between; align-items: center; gap: .6rem; cursor: pointer; }
+  .engineer-button { color: var(--hud-text); background: transparent; border: none; padding: 0; text-align: left; cursor: pointer; display: flex; align-items: center; gap: .3rem; }
   .engineer-name { font-size: .95rem; font-weight: 600; color: var(--hud-primary); }
   .engineer-card:hover .engineer-name { text-decoration: underline; }
 

@@ -2301,7 +2301,7 @@ fn engineer_pages_flatten_capabilities_and_unlock_steps() {
     assert_eq!(summary["revision"], json!(before));
     h.action(ACTION_SELECT_ENGINEER, json!({"id": 300100}));
     assert_eq!(h.val("engineering.engineers")["selected_id"], json!(300100));
-    assert!(h.m.revision > before);
+    assert_eq!(h.m.revision, before);
     let default =
         h.m.query(
             "engineers",
