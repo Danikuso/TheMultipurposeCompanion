@@ -444,6 +444,67 @@ impl ActionHost for AppActions {
 
                 return Ok(json!({ "ok": true }));
             }
+            "voice.status" => {
+                let status = crate::voiceattack::detect_voiceattack();
+                return serde_json::to_value(&status)
+                    .map_err(|e| ActionError::Failed(e.to_string()));
+            }
+            "voice.profile" => {
+                let port = args
+                    .get("port")
+                    .and_then(|p| p.as_u64())
+                    .map(|p| p as u16)
+                    .unwrap_or(47320);
+                let xml = crate::voiceattack::generate_vap_profile(port);
+                return Ok(json!({ "xml": xml }));
+            }
+            "clipboard.copy" => {
+                let text = args
+                    .get("text")
+                    .and_then(|t| t.as_str())
+                    .unwrap_or_default();
+                if !text.is_empty() {
+                    self.clipboard.set_text(text).map_err(ActionError::Failed)?;
+                    return Ok(json!({ "copied": text }));
+                }
+                return Err(ActionError::Failed("empty-text".into()));
+            }
+            "voice.speak" => {
+                let (engine_kind, default_voice, default_vol, default_rate) = {
+                    let cfg = self.config.lock().unwrap();
+                    (
+                        cfg.tts.engine,
+                        cfg.tts.voice.clone(),
+                        cfg.tts.volume,
+                        cfg.tts.rate,
+                    )
+                };
+
+                let text = args
+                    .get("text")
+                    .and_then(|t| t.as_str())
+                    .unwrap_or_default();
+                if text.is_empty() {
+                    return Ok(json!({ "ok": true, "spoken": false }));
+                }
+
+                let rate_f32 = default_rate as f32 / 100.0;
+                match engine_kind {
+                    tmc_model::tts::TtsEngineKind::Kokoro => {
+                        if let Ok(mut engine) = tmc_tts::KokoroEngine::new() {
+                            let _ =
+                                engine.speak(text, default_voice.as_deref(), default_vol, rate_f32);
+                        }
+                    }
+                    tmc_model::tts::TtsEngineKind::Native => {
+                        if let Ok(mut engine) = tmc_tts::NativeEngine::new() {
+                            let _ =
+                                engine.speak(text, default_voice.as_deref(), default_vol, rate_f32);
+                        }
+                    }
+                }
+                return Ok(json!({ "ok": true, "spoken": true }));
+            }
             _ => {}
         }
         if !MODULE_PREFIXES.iter().any(|p| name.starts_with(p)) {

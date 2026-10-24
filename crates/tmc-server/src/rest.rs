@@ -575,3 +575,166 @@ pub async fn post_tts_test(State(state): State<AppState>, Json(payload): Json<Va
             .into_response(),
     }
 }
+
+#[derive(Debug, Deserialize, Default)]
+pub struct VoiceAttackQueryParams {
+    pub download: Option<bool>,
+    pub format: Option<String>,
+}
+
+/// Estado de la integración con VoiceAttack y disponibilidad de perfiles.
+pub async fn get_voiceattack_status(
+    State(state): State<AppState>,
+    Query(params): Query<VoiceAttackQueryParams>,
+) -> Response {
+    let snapshot = state.core.snapshot().await;
+    if params.download == Some(true) || params.format.as_deref() == Some("xml") {
+        return serve_vap_profile(&state, &snapshot).await;
+    }
+    match state
+        .host
+        .run_action_with("voice.status", &Value::Null, &snapshot)
+    {
+        Ok(val) => (StatusCode::OK, Json(val)).into_response(),
+        Err(ActionError::NotFound) => {
+            let status = tmc_model::voice_intent::VoiceAttackStatus {
+                installed: false,
+                running: false,
+                profile_available: true,
+                install_path: None,
+            };
+            (
+                StatusCode::OK,
+                Json(serde_json::to_value(status).unwrap_or(Value::Null)),
+            )
+                .into_response()
+        }
+        Err(ActionError::Failed(err)) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": err })),
+        )
+            .into_response(),
+    }
+}
+
+/// Descarga directa del perfil XML oficial `.vap` de TMC para VoiceAttack.
+pub async fn get_voiceattack_profile(State(state): State<AppState>) -> Response {
+    let snapshot = state.core.snapshot().await;
+    serve_vap_profile(&state, &snapshot).await
+}
+
+async fn serve_vap_profile(
+    state: &AppState,
+    snapshot: &std::collections::BTreeMap<String, Value>,
+) -> Response {
+    let xml = match state.host.run_action_with(
+        "voice.profile",
+        &serde_json::json!({ "port": state.port }),
+        snapshot,
+    ) {
+        Ok(v) => v.get("xml").and_then(|s| s.as_str()).map(String::from),
+        Err(_) => None,
+    }
+    .unwrap_or_else(|| {
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<Profile><Name>TMC - The Multipurpose Companion</Name></Profile>".to_string()
+    });
+
+    (
+        StatusCode::OK,
+        [
+            (
+                axum::http::header::CONTENT_TYPE,
+                "application/xml; charset=utf-8",
+            ),
+            (
+                axum::http::header::CONTENT_DISPOSITION,
+                "attachment; filename=\"TMC-Copiloto.vap\"",
+            ),
+        ],
+        xml,
+    )
+        .into_response()
+}
+
+/// Intérprete y ejecutor del asistente de voz de cabina.
+pub async fn post_voice_intent(
+    State(state): State<AppState>,
+    Json(payload): Json<tmc_model::voice_intent::VoiceCommandRequest>,
+) -> Response {
+    let query = payload.query.trim();
+    if query.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({ "error": "empty-query" })),
+        )
+            .into_response();
+    }
+
+    let snapshot = state.core.snapshot().await;
+    let game_state = state.core.game_state().await;
+
+    let locale = payload
+        .locale
+        .filter(|l| matches!(l.as_str(), "es" | "en" | "fr" | "de" | "pt"))
+        .unwrap_or_else(|| {
+            state
+                .store
+                .kv_get("locale")
+                .unwrap_or_else(|| "es".to_string())
+        });
+
+    let (notoriety, total_fines, total_bounties, nearest_factor, nearest_bm) = snapshot
+        .get("crime.status")
+        .map(|c| {
+            let n = c.get("notoriety").and_then(|v| v.as_u64()).unwrap_or(0) as u8;
+            let f = c.get("total_fines").and_then(|v| v.as_u64()).unwrap_or(0);
+            let b = c
+                .get("total_bounties")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let if_fac = c
+                .get("nearest_interstellar_factor")
+                .and_then(|v| serde_json::from_value(v.clone()).ok());
+            let bm_fac = c
+                .get("nearest_black_market")
+                .and_then(|v| serde_json::from_value(v.clone()).ok());
+            (n, f, b, if_fac, bm_fac)
+        })
+        .unwrap_or_default();
+
+    let bio_count = snapshot
+        .get("exobiology.body")
+        .and_then(|v| v.get("signals"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0) as u32;
+
+    let ctx = tmc_core::VoiceResolverContext {
+        locale,
+        nearest_interstellar_factor: nearest_factor,
+        nearest_black_market: nearest_bm,
+        total_fines,
+        total_bounties,
+        notoriety,
+        bio_signal_bodies_count: bio_count,
+    };
+
+    let response = tmc_core::VoiceIntentResolver::resolve(query, &game_state, &ctx);
+
+    if let Some(target) = &response.clipboard_copied {
+        let _ = state.host.run_action_with(
+            "clipboard.copy",
+            &serde_json::json!({ "text": target }),
+            &snapshot,
+        );
+    }
+
+    if !response.spoken_text.is_empty() {
+        let _ = state.host.run_action_with(
+            "voice.speak",
+            &serde_json::json!({ "text": response.spoken_text }),
+            &snapshot,
+        );
+    }
+
+    (StatusCode::OK, Json(response)).into_response()
+}
