@@ -89,6 +89,7 @@ impl PadSize {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NearbyService {
     InterstellarFactors,
+    BlackMarket,
     /// Comerciante de materiales; `None` = cualquier tipo (Ardent), `Some` = tipo concreto (Spansh).
     MaterialTrader(Option<TraderKind>),
     /// Bróker de tecnología; `None` = cualquier tipo (Ardent), `Some` = tipo concreto (Spansh).

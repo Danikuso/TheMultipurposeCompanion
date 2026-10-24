@@ -167,6 +167,13 @@ pub fn cache_keys(q: &NetQuery) -> Vec<(CacheKind, String)> {
                     pad_tag(*min_pad)
                 ),
             )],
+            NearbyService::BlackMarket => vec![(
+                CacheKind::ArdentNearest,
+                format!(
+                    "ardent:nearest:{system_address}:black-market:{}",
+                    pad_tag(*min_pad)
+                ),
+            )],
             // Sin tipo: Ardent. Con tipo: Spansh (la clave incluye servicio, tipo y plataforma).
             // Todos comparten la política de 1 h de `ArdentNearest`.
             NearbyService::MaterialTrader(None) => vec![(

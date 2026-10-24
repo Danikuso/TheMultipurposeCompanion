@@ -85,6 +85,7 @@ pub fn system_name_url(name: &str) -> String {
 pub fn nearest_url(system_address: u64, service: NearbyService, min_pad: PadSize) -> String {
     let svc = match service {
         NearbyService::InterstellarFactors => "interstellar-factors",
+        NearbyService::BlackMarket => "black-market",
         NearbyService::MaterialTrader(_) => "material-trader",
         NearbyService::TechnologyBroker(_) => "technology-broker",
     };
