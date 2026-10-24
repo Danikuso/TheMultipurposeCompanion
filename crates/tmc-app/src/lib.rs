@@ -8,6 +8,7 @@ pub mod eddn_service;
 mod eddn_wiring;
 pub mod logging;
 pub mod net_service;
+pub mod voiceattack;
 pub mod wiring;
 
 pub use capi_service::CapiService;
@@ -15,6 +16,7 @@ pub use clipboard::{AppActions, Clipboard};
 pub use config::{Config, ServerSection, config_path, data_dir};
 pub use logging::{LoggingGuards, init_logging};
 pub use net_service::{NetServiceHandle, spawn_net_service};
+pub use voiceattack::{detect_voiceattack, generate_vap_profile};
 pub use wiring::{Running, start, start_custom, start_full, start_with_transport};
 
 #[cfg(all(test, debug_assertions))]
