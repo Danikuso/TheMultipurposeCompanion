@@ -162,6 +162,18 @@ pub fn build_router(
         .route("/api/tts/voices", axum::routing::get(rest::get_tts_voices))
         .route("/api/tts/test", axum::routing::post(rest::post_tts_test))
         .route(
+            "/api/voice/intent",
+            axum::routing::post(rest::post_voice_intent),
+        )
+        .route(
+            "/api/voice/voiceattack",
+            axum::routing::get(rest::get_voiceattack_status),
+        )
+        .route(
+            "/api/voice/voiceattack/profile",
+            axum::routing::get(rest::get_voiceattack_profile),
+        )
+        .route(
             "/api/config",
             axum::routing::get(rest::get_config).put(rest::put_config),
         )
@@ -312,6 +324,28 @@ mod tests {
                 }
                 "fail" => Err(ActionError::Failed("boom".into())),
                 _ => Err(ActionError::NotFound),
+            }
+        }
+
+        fn run_action_with(
+            &self,
+            name: &str,
+            args: &Value,
+            snapshot: &BTreeMap<String, Value>,
+        ) -> Result<Value, ActionError> {
+            match name {
+                "voice.status" => Ok(serde_json::json!({
+                    "installed": true,
+                    "running": false,
+                    "profile_available": true,
+                    "install_path": "C:\\Program Files\\VoiceAttack"
+                })),
+                "voice.profile" => Ok(serde_json::json!({
+                    "xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<Profile><Name>TMC - The Multipurpose Companion</Name></Profile>"
+                })),
+                "clipboard.copy" => Ok(serde_json::json!({ "copied": args["text"] })),
+                "voice.speak" => Ok(serde_json::json!({ "spoken": true })),
+                _ => self.run_action(name, snapshot),
             }
         }
     }
@@ -1831,5 +1865,91 @@ mod tests {
             .find(|r| r.code == "ws.backpressure.lagged")
             .unwrap_or_else(|| panic!("sin lagged: {all}"));
         assert!(lagged.payload.contains("skipped"));
+    }
+
+    #[tokio::test]
+    async fn post_voice_intent_resolves_and_copies_and_speaks() {
+        let (app, _core, _store) = test_router(false, "");
+        let req = with_peer(
+            Request::builder()
+                .method("POST")
+                .uri("/api/voice/intent")
+                .header(header::HOST, "127.0.0.1:47320")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(
+                    r#"{"query":"¿Estado de la nave?","locale":"es"}"#,
+                ))
+                .unwrap(),
+            "127.0.0.1:55000",
+        );
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(resp.into_body(), 1024 * 64)
+            .await
+            .unwrap();
+        let json: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["intent"], "ship_status");
+        assert!(json["spoken_text"].as_str().unwrap().contains("Casco"));
+
+        // Consulta vacía devuelve 400 Bad Request
+        let req_empty = with_peer(
+            Request::builder()
+                .method("POST")
+                .uri("/api/voice/intent")
+                .header(header::HOST, "127.0.0.1:47320")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(r#"{"query":"   ","locale":"es"}"#))
+                .unwrap(),
+            "127.0.0.1:55000",
+        );
+        let resp_empty = app.oneshot(req_empty).await.unwrap();
+        assert_eq!(resp_empty.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn get_voiceattack_status_and_profile_endpoints() {
+        let (app, _core, _store) = test_router(false, "");
+        // 1. Status JSON
+        let req_status = with_peer(
+            Request::builder()
+                .uri("/api/voice/voiceattack")
+                .header(header::HOST, "127.0.0.1:47320")
+                .body(Body::empty())
+                .unwrap(),
+            "127.0.0.1:55000",
+        );
+        let resp_status = app.clone().oneshot(req_status).await.unwrap();
+        assert_eq!(resp_status.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(resp_status.into_body(), 1024 * 64)
+            .await
+            .unwrap();
+        let json: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["profile_available"], true);
+        assert_eq!(json["installed"], true);
+
+        // 2. Profile XML
+        let req_profile = with_peer(
+            Request::builder()
+                .uri("/api/voice/voiceattack/profile")
+                .header(header::HOST, "127.0.0.1:47320")
+                .body(Body::empty())
+                .unwrap(),
+            "127.0.0.1:55000",
+        );
+        let resp_profile = app.oneshot(req_profile).await.unwrap();
+        assert_eq!(resp_profile.status(), StatusCode::OK);
+        let ct = resp_profile
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert!(ct.contains("application/xml"));
+        let body_xml = axum::body::to_bytes(resp_profile.into_body(), 1024 * 64)
+            .await
+            .unwrap();
+        let xml_str = std::str::from_utf8(&body_xml).unwrap();
+        assert!(xml_str.contains("<Profile"));
+        assert!(xml_str.contains("TMC - The Multipurpose Companion"));
     }
 }

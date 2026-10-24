@@ -16,6 +16,7 @@ pub mod state;
 pub mod status;
 pub mod theme;
 pub mod tts;
+pub mod voice_intent;
 
 /// Error de análisis compartido por Status.json y los eventos del diario.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]

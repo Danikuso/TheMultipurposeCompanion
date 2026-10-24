@@ -30,6 +30,7 @@ tracing-appender.workspace = true
 anyhow.workspace = true
 uuid.workspace = true
 rusqlite.workspace = true
+sysinfo.workspace = true
 
 [dev-dependencies]
 zeromq.workspace = true

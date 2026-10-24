@@ -36,6 +36,7 @@ pub enum CoreMessage {
 
 enum ControlRequest {
     Snapshot(oneshot::Sender<BTreeMap<String, Value>>),
+    GameState(oneshot::Sender<GameState>),
     ModuleQuery {
         module: String,
         resource: String,
@@ -81,6 +82,18 @@ impl CoreHandle {
             .is_err()
         {
             return BTreeMap::new();
+        }
+        receiver.await.unwrap_or_default()
+    }
+    pub async fn game_state(&self) -> GameState {
+        let (sender, receiver) = oneshot::channel();
+        if self
+            .snapshots
+            .send(ControlRequest::GameState(sender))
+            .await
+            .is_err()
+        {
+            return GameState::default();
         }
         receiver.await.unwrap_or_default()
     }
@@ -594,6 +607,9 @@ impl Actor {
                 );
                 let _ = reply.send(self.topics.clone());
             }
+            ControlRequest::GameState(reply) => {
+                let _ = reply.send(self.state.clone());
+            }
             ControlRequest::ModuleQuery {
                 module,
                 resource,
@@ -940,6 +956,14 @@ mod tests {
         }
         assert_eq!(snapshot["core.theme"]["primary"], "#ff7100");
         assert_eq!(snapshot["core.modules"][0]["relevance"], "normal");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn game_state_returns_current_game_state() {
+        let core = spawn_core(vec![], None, Duration::from_millis(100));
+        let state = core.game_state().await;
+        assert!(state.cmdr.is_none());
+        assert!(state.ship.is_none());
     }
 
     #[tokio::test(start_paused = true)]
