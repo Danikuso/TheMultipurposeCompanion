@@ -123,3 +123,25 @@ test('AccountsPanel renders connected CAPI status with remote fleet list', () =>
   expect(q('capi-refresh-fleet-btn')).toBeTruthy();
   expect(q('capi-remote-fleet-list')).toBeTruthy();
 });
+
+test('AccountsPanel remote fleet dropdown selector and accordion work compactly by default', () => {
+  mountWith(AccountsPanel, {
+    'accounts.status': {
+      eddn: { enabled: true, connected: true, uploader_id: 'TMC-Anon', messages_sent_session: 0, last_upload_time: null, last_error: null },
+      edsm: { enabled: false, has_key: false, commander_name: null, last_sync_time: null, last_error: null, syncing: false },
+      inara: { enabled: false, has_key: false, commander_name: null, last_sync_time: null, last_error: null, pending_events: 0, next_slot_secs: 0, syncing: false },
+      capi: {
+        configured: true,
+        connected: true,
+        commander_name: 'Danikuso',
+        token_expires_at: '2026-10-23T22:00:00Z',
+        remote_ships_count: 0,
+        last_sync_time: '2026-10-23T20:15:00Z',
+        last_error: null,
+      },
+    },
+  });
+
+  // When remote ships empty, no selector
+  expect(q('remote-fleet-select')).toBeNull();
+});

@@ -18,6 +18,9 @@
   let syncingInara = $state(false);
   let loadingFleet = $state(false);
   let remoteShips = $state<RemoteShip[]>([]);
+  let selectedShipId = $state<number | null>(null);
+  let showFleetGrid = $state(false);
+  const activeShip = $derived(remoteShips.find((s) => s.id === selectedShipId) ?? remoteShips[0]);
 
   async function copyUploaderId() {
     const id = status?.eddn?.uploader_id;
@@ -335,9 +338,63 @@
               {#if remoteShips.length === 0}
                 <p class="muted sub">{t('accounts-capi-remote-fleet-empty')}</p>
               {:else}
-                <div class="fleet-grid">
+                <div class="fleet-controls">
+                  <label class="compact-selector-label" for="remote-fleet-select">
+                    <span class="label-text">Nave ({remoteShips.length}):</span>
+                    <select
+                      id="remote-fleet-select"
+                      class="glass-select"
+                      data-testid="remote-fleet-select"
+                      value={selectedShipId ?? activeShip?.id ?? ''}
+                      onchange={(e) => (selectedShipId = Number(e.currentTarget.value))}
+                    >
+                      {#each remoteShips as ship (ship.id)}
+                        <option value={ship.id}>
+                          {ship.ship_type} {ship.name ? `«${ship.name}»` : ''} - {ship.system}
+                        </option>
+                      {/each}
+                    </select>
+                  </label>
+
+                  <button
+                    type="button"
+                    class="glass-btn-secondary list-toggle-btn"
+                    data-testid="toggle-fleet-list"
+                    onclick={() => (showFleetGrid = !showFleetGrid)}
+                  >
+                    {showFleetGrid ? '▲ Ocultar lista' : `▼ Ver flota (${remoteShips.length})`}
+                  </button>
+                </div>
+
+                {#if activeShip}
+                  <div class="active-ship-card">
+                    <div class="ship-card-head">
+                      <div class="ship-top">
+                        <span class="ship-type mono bold">{activeShip.ship_type}</span>
+                        {#if activeShip.name}
+                          <span class="ship-custom-name">«{activeShip.name}»</span>
+                        {/if}
+                      </div>
+                      <div class="ship-mfr" title={activeShip.ship_type}>
+                        <ManufacturerIcon shipType={activeShip.ship_type} size={20} />
+                      </div>
+                    </div>
+                    <div class="ship-loc sub">
+                      <StationIcon size={14} />
+                      <span>{activeShip.station} ({activeShip.system})</span>
+                    </div>
+                    <div class="ship-meta sub mono">
+                      <span class="gold">{credits(activeShip.value)}</span>
+                      {#if activeShip.distance_ly != null}
+                        <span>{ly(activeShip.distance_ly)}</span>
+                      {/if}
+                    </div>
+                  </div>
+                {/if}
+
+                <div class="fleet-grid" class:is-collapsed={!showFleetGrid}>
                   {#each remoteShips as ship (ship.id)}
-                    <div class="ship-card">
+                    <div class="ship-card" class:is-selected={ship.id === activeShip?.id}>
                       <div class="ship-card-head">
                         <div class="ship-top">
                           <span class="ship-type mono bold">{ship.ship_type}</span>
@@ -710,12 +767,83 @@
     gap: 6px;
   }
 
+  .fleet-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+
+  .compact-selector-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--hud-muted, #7ea0b8);
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .compact-selector-label .label-text {
+    white-space: nowrap;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+  }
+
+  .glass-select {
+    flex: 1;
+    background: rgba(10, 16, 26, 0.9);
+    border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.3));
+    color: var(--hud-primary, #00e5ff);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .active-ship-card {
+    background: rgba(14, 22, 38, 0.8);
+    border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.3));
+    border-left: 3px solid var(--hud-primary, #00e5ff);
+    border-radius: 6px;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+
+  .list-toggle-btn {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.25));
+    color: var(--hud-text, #c9d7e5);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .list-toggle-btn:hover {
+    background: rgba(0, 229, 255, 0.12);
+    border-color: var(--hud-primary, #00e5ff);
+    color: var(--hud-primary, #00e5ff);
+  }
+
   .fleet-grid {
     display: grid;
     grid-template-columns: 1fr;
     gap: 8px;
     max-height: 220px;
     overflow-y: auto;
+  }
+
+  .fleet-grid.is-collapsed {
+    display: none;
   }
 
   .ship-card {
