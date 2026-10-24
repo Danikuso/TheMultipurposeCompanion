@@ -8,6 +8,7 @@ use std::sync::{
 };
 use tmc_model::source::SourceEvent;
 use tmc_server::{ActionError, ActionFut, ActionHost, ConfigHost};
+use tmc_tts::TtsEngine;
 use tokio::sync::mpsc;
 
 /// Por dónde acabó la copia.
@@ -353,6 +354,94 @@ impl ActionHost for AppActions {
                 let capi = self.capi_service.as_ref().ok_or(ActionError::NotFound)?;
                 capi.clear_session()
                     .map_err(|e| ActionError::Failed(e.to_string()))?;
+                return Ok(json!({ "ok": true }));
+            }
+            "tts.voices" => {
+                let engine_kind = args
+                    .get("engine")
+                    .and_then(|e| e.as_str())
+                    .map(|s| match s {
+                        "kokoro" => tmc_model::tts::TtsEngineKind::Kokoro,
+                        _ => tmc_model::tts::TtsEngineKind::Native,
+                    })
+                    .unwrap_or_else(|| {
+                        let cfg = self.config.lock().unwrap();
+                        cfg.tts.engine
+                    });
+
+                let voices = match engine_kind {
+                    tmc_model::tts::TtsEngineKind::Kokoro => tmc_tts::KokoroEngine::new()
+                        .map(|e| e.available_voices())
+                        .unwrap_or_default(),
+                    tmc_model::tts::TtsEngineKind::Native => tmc_tts::NativeEngine::new()
+                        .map(|e| e.available_voices())
+                        .unwrap_or_default(),
+                };
+
+                return Ok(json!({ "voices": voices }));
+            }
+            "tts.test" => {
+                let (engine_kind, default_voice, default_vol, default_rate) = {
+                    let cfg = self.config.lock().unwrap();
+                    (
+                        cfg.tts.engine,
+                        cfg.tts.voice.clone(),
+                        cfg.tts.volume,
+                        cfg.tts.rate,
+                    )
+                };
+
+                let chosen_engine = args
+                    .get("engine")
+                    .and_then(|e| e.as_str())
+                    .map(|s| match s {
+                        "kokoro" => tmc_model::tts::TtsEngineKind::Kokoro,
+                        _ => tmc_model::tts::TtsEngineKind::Native,
+                    })
+                    .unwrap_or(engine_kind);
+
+                let voice = args
+                    .get("voice")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+                    .or(default_voice);
+
+                let volume = args
+                    .get("volume")
+                    .and_then(|v| v.as_u64())
+                    .map(|v| v as u8)
+                    .unwrap_or(default_vol);
+
+                let rate = args
+                    .get("rate")
+                    .and_then(|r| r.as_u64())
+                    .map(|r| r as u8)
+                    .unwrap_or(default_rate);
+
+                let text = args
+                    .get("text")
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("Copiloto de TMC activo y listo para la navegación.");
+
+                let rate_f32 = rate as f32 / 100.0;
+
+                match chosen_engine {
+                    tmc_model::tts::TtsEngineKind::Kokoro => {
+                        let mut engine = tmc_tts::KokoroEngine::new()
+                            .map_err(|e| ActionError::Failed(e.to_string()))?;
+                        engine
+                            .speak(text, voice.as_deref(), volume, rate_f32)
+                            .map_err(|e| ActionError::Failed(e.to_string()))?;
+                    }
+                    tmc_model::tts::TtsEngineKind::Native => {
+                        let mut engine = tmc_tts::NativeEngine::new()
+                            .map_err(|e| ActionError::Failed(e.to_string()))?;
+                        engine
+                            .speak(text, voice.as_deref(), volume, rate_f32)
+                            .map_err(|e| ActionError::Failed(e.to_string()))?;
+                    }
+                }
+
                 return Ok(json!({ "ok": true }));
             }
             _ => {}

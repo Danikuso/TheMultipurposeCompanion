@@ -536,3 +536,42 @@ fn render_oauth_html_response(success: bool, message: &str) -> Response {
     )
         .into_response()
 }
+
+/// Consulta de voces disponibles según el motor TTS activo.
+pub async fn get_tts_voices(State(state): State<AppState>) -> Response {
+    let snapshot = state.core.snapshot().await;
+    match state
+        .host
+        .run_action_with("tts.voices", &Value::Null, &snapshot)
+    {
+        Ok(val) => (StatusCode::OK, Json(val)).into_response(),
+        Err(ActionError::NotFound) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({ "error": "not-found" })),
+        )
+            .into_response(),
+        Err(ActionError::Failed(err)) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": err })),
+        )
+            .into_response(),
+    }
+}
+
+/// Prueba inmediata de locución del copiloto de voz.
+pub async fn post_tts_test(State(state): State<AppState>, Json(payload): Json<Value>) -> Response {
+    let snapshot = state.core.snapshot().await;
+    match state.host.run_action_with("tts.test", &payload, &snapshot) {
+        Ok(val) => (StatusCode::OK, Json(val)).into_response(),
+        Err(ActionError::NotFound) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({ "error": "not-found" })),
+        )
+            .into_response(),
+        Err(ActionError::Failed(err)) => (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({ "error": err })),
+        )
+            .into_response(),
+    }
+}

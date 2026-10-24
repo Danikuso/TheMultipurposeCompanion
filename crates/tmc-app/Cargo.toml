@@ -15,6 +15,7 @@ tmc-net = { path = "../tmc-net" }
 tmc-eddn = { path = "../tmc-eddn" }
 tmc-modules = { path = "../tmc-modules" }
 tmc-i18n = { path = "../tmc-i18n" }
+tmc-tts = { path = "../tmc-tts" }
 tmc-server = { path = "../tmc-server", features = ["embed-ui"] }
 tokio.workspace = true
 serde.workspace = true
