@@ -1,5 +1,5 @@
 import type { Component } from 'svelte';
-import { dashboardPanels } from './dashboard';
+import { dashboardPanels, ShipPanel } from './dashboard';
 import { navigationPanels } from './navigation';
 import { explorationPanels } from './exploration';
 import { exobiologyPanels } from './exobiology';
@@ -7,6 +7,13 @@ import { combatPanels } from './combat';
 import { miningPanels } from './mining';
 import { tradePanels } from './trade';
 import { missionsPanels } from './missions';
+import { engineeringPanels } from './engineering';
+import { carrierPanels } from './carrier';
+import { colonisationPanels } from './colonisation';
+import { powerplayPanels } from './powerplay';
+import { bgsPanels } from './bgs';
+import { accountsPanels } from './accounts';
+import { crimePanels } from './crime';
 
 export interface UiModuleDef {
   id: string;
@@ -16,11 +23,18 @@ export interface UiModuleDef {
 }
 
 export const modules: UiModuleDef[] = [
+  { id: 'engineering', icon: 'wrench', titleKey: 'nav-engineering', panels: engineeringPanels },
   {
     id: 'dashboard',
     icon: 'gauge',
     titleKey: 'nav-dashboard',
     panels: dashboardPanels,
+  },
+  {
+    id: 'ship',
+    icon: 'rocket',
+    titleKey: 'nav-ship',
+    panels: [ShipPanel],
   },
   {
     id: 'navigation',
@@ -63,5 +77,41 @@ export const modules: UiModuleDef[] = [
     icon: 'clipboard-list',
     titleKey: 'nav-missions',
     panels: missionsPanels,
+  },
+  {
+    id: 'carrier',
+    icon: 'anchor',
+    titleKey: 'nav-carrier',
+    panels: carrierPanels,
+  },
+  {
+    id: 'colonisation',
+    icon: 'hammer',
+    titleKey: 'nav-colonisation',
+    panels: colonisationPanels,
+  },
+  {
+    id: 'powerplay',
+    icon: 'crown',
+    titleKey: 'nav-powerplay',
+    panels: powerplayPanels,
+  },
+  {
+    id: 'bgs',
+    icon: 'network',
+    titleKey: 'nav-bgs',
+    panels: bgsPanels,
+  },
+  {
+    id: 'accounts',
+    icon: 'globe',
+    titleKey: 'nav-accounts',
+    panels: accountsPanels,
+  },
+  {
+    id: 'crime',
+    icon: 'scale',
+    titleKey: 'nav-crime',
+    panels: crimePanels,
   },
 ];

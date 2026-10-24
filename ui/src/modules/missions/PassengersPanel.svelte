@@ -8,6 +8,7 @@
   const p = $derived(topic<PassengersTopic>('missions.passengers'));
   const classes: CabinClass[] = ['Economy', 'Business', 'First', 'Luxury'];
   const entries = $derived(classes.flatMap((c) => (p?.cabins.by_class[c] ? [[c, p.cabins.by_class[c]!] as const] : [])));
+  let showPaxTable = $state(false);
 
   function cabinLabel(c: CabinClass): string {
     return t(`missions-cabin-${c === 'Economy' ? 'economy' : c === 'Business' ? 'business' : c === 'First' ? 'first' : 'luxury'}`);
@@ -29,6 +30,18 @@
       {/each}
     </div>
     {#if p.groups.length > 0}
+      <div class="pax-header-row">
+        <span class="sub bold">Grupos ({p.groups.length})</span>
+        <button
+          type="button"
+          class="glass-btn-secondary list-toggle-btn"
+          data-testid="toggle-pax-table"
+          onclick={() => (showPaxTable = !showPaxTable)}
+        >
+          {showPaxTable ? '▲ Ocultar lista' : `▼ Ver lista (${p.groups.length})`}
+        </button>
+      </div>
+      <div class="table-wrap" class:is-collapsed={!showPaxTable}>
       <table>
         <thead>
           <tr><th>{t('missions-col-destination')}</th><th class="n">{t('missions-col-passengers')}</th><th></th></tr>
@@ -46,23 +59,130 @@
           {/each}
         </tbody>
       </table>
+      </div>
     {/if}
     {#if p.wanted}
-      <div class="bad" role="alert" data-testid="missions-wanted-warning">⚠ {t('missions-alert-wanted-passenger')}</div>
+      <div class="wanted-alert bad" role="alert" data-testid="missions-wanted-warning">⚠ {t('missions-alert-wanted-passenger')}</div>
     {/if}
   {/if}
 </Panel>
 
 <style>
-  .muted { color: var(--hud-muted); margin: 0.2rem 0; }
-  .mono { font-family: var(--font-mono); }
-  .cab { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; margin: 0.4rem 0; }
-  .cab div { border: 1px solid var(--hud-border); padding: 0.2rem; text-align: center; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { text-align: left; padding: 0.15rem 0.5rem 0.15rem 0; white-space: nowrap; }
-  th { color: var(--hud-muted); font-weight: normal; border-bottom: 1px solid var(--hud-border); }
-  .n { text-align: right; }
-  .tag { font-size: 0.75em; padding: 0 0.3rem; border: 1px solid currentColor; margin-left: 0.3rem; }
-  .warn { color: var(--hud-warning); }
-  .bad { color: var(--hud-danger); margin-top: 0.4rem; }
+  .muted {
+    color: var(--hud-muted);
+    margin: 0.2rem 0;
+  }
+  .mono {
+    font-family: var(--font-mono);
+  }
+  .sub {
+    margin-bottom: 0.45rem;
+    font-size: 0.92rem;
+    color: var(--hud-text);
+  }
+  .cab {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.45rem;
+    margin: 0.5rem 0 0.75rem;
+  }
+  .cab div {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--hud-border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 0.4rem 0.25rem;
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--hud-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .cab div b {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.95rem;
+    color: var(--hud-primary);
+  }
+  .table-wrap {
+    overflow-x: auto;
+  }
+  .table-wrap.is-collapsed {
+    display: none;
+  }
+  .pax-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.75rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid var(--hud-border-subtle);
+  }
+  .list-toggle-btn {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.25));
+    color: var(--hud-text, #c9d7e5);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .list-toggle-btn:hover {
+    background: rgba(0, 229, 255, 0.12);
+    border-color: var(--hud-primary, #00e5ff);
+    color: var(--hud-primary, #00e5ff);
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 0.35rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.3rem 0.5rem 0.3rem 0;
+    white-space: nowrap;
+    font-size: 0.88rem;
+  }
+  th {
+    color: var(--hud-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    border-bottom: 1px solid var(--hud-border-subtle);
+    padding-bottom: 0.35rem;
+  }
+  .n {
+    text-align: right;
+  }
+  .tag {
+    font-size: 0.72rem;
+    padding: 0.1rem 0.4rem;
+    border: 1px solid currentColor;
+    border-radius: 2px;
+    margin-left: 0.35rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .warn {
+    color: var(--hud-warning);
+    background: rgba(255, 170, 0, 0.12);
+  }
+  .bad {
+    color: var(--hud-danger);
+    background: rgba(255, 68, 68, 0.12);
+    box-shadow: 0 0 6px rgba(255, 68, 68, 0.2);
+  }
+  .wanted-alert {
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: rgba(255, 68, 68, 0.12);
+    border: 1px solid var(--hud-danger);
+    border-radius: var(--radius-sm);
+    color: var(--hud-danger);
+    font-weight: 700;
+    font-size: 0.88rem;
+    box-shadow: 0 0 12px rgba(255, 68, 68, 0.25);
+  }
 </style>

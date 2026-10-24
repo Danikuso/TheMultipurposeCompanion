@@ -3,6 +3,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::events::MaterialCategory;
 use crate::market::PriceOrigin;
 
 /// Consulta de red emitida por un módulo.
@@ -37,6 +38,8 @@ pub enum NetQuery {
     /// Estación más cercana con un servicio (Ardent; filtra en servidor).
     NearestService {
         system_address: u64,
+        /// Nombre del sistema de referencia (Spansh busca por nombre).
+        system_name: String,
         service: NearbyService,
         min_pad: PadSize,
     },
@@ -53,6 +56,8 @@ pub enum NetQuery {
     SystemCoordsByName {
         name: String,
     },
+    /// Consulta del último tick galáctico del BGS (EDCD).
+    BgsTick,
 }
 
 /// Tamaño de plataforma de aterrizaje.
@@ -84,6 +89,36 @@ impl PadSize {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NearbyService {
     InterstellarFactors,
+    BlackMarket,
+    /// Comerciante de materiales; `None` = cualquier tipo (Ardent), `Some` = tipo concreto (Spansh).
+    MaterialTrader(Option<TraderKind>),
+    /// Bróker de tecnología; `None` = cualquier tipo (Ardent), `Some` = tipo concreto (Spansh).
+    TechnologyBroker(Option<BrokerKind>),
+}
+
+/// Tipo de comerciante de materiales.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum TraderKind {
+    Raw,
+    Manufactured,
+    Encoded,
+}
+
+impl From<MaterialCategory> for TraderKind {
+    fn from(c: MaterialCategory) -> Self {
+        match c {
+            MaterialCategory::Raw => Self::Raw,
+            MaterialCategory::Manufactured => Self::Manufactured,
+            MaterialCategory::Encoded => Self::Encoded,
+        }
+    }
+}
+
+/// Tipo de bróker de tecnología.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum BrokerKind {
+    Human,
+    Guardian,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -133,6 +168,10 @@ pub enum NetSource {
     Edsm,
     Canonn,
     Ardent,
+    Edcd,
+    Eddn,
+    Inara,
+    Capi,
     Cache,
 }
 
@@ -158,6 +197,7 @@ pub enum NetOutcome {
     TradeRoute(TradeRoutePlan),
     Exports(Vec<RemoteExport>),
     Coords(SystemCoords),
+    BgsTick(BgsTickInfo),
     NoData,
     Disabled,
     Failed(NetFailure),
@@ -176,6 +216,7 @@ impl NetOutcome {
             Self::TradeRoute(plan) => ("trade_route", plan.stops.len()),
             Self::Exports(v) => ("exports", v.len()),
             Self::Coords(_) => ("coords", 1),
+            Self::BgsTick(_) => ("bgs_tick", 1),
             Self::NoData => ("no_data", 0),
             Self::Disabled => ("disabled", 0),
             Self::Failed(_) => ("failed", 0),
@@ -345,6 +386,13 @@ pub struct SystemCoords {
     pub star_pos: [f64; 3],
 }
 
+/// Información del último tick galáctico del BGS (EDCD).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BgsTickInfo {
+    pub latest_tick: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RemoteStation {
     pub station_name: String,
@@ -428,6 +476,7 @@ mod tests {
         assert_eq!(back, q);
         let n = NetQuery::NearestService {
             system_address: 1,
+            system_name: "Sol".into(),
             service: NearbyService::InterstellarFactors,
             min_pad: PadSize::Medium,
         };
@@ -464,6 +513,23 @@ mod tests {
         }]));
         let back: NetResponse = serde_json::from_str(&serde_json::to_string(&st).unwrap()).unwrap();
         assert_eq!(back, st);
+    }
+
+    #[test]
+    fn trader_kind_from_category() {
+        assert_eq!(
+            TraderKind::from(MaterialCategory::Encoded),
+            TraderKind::Encoded
+        );
+        assert_eq!(TraderKind::from(MaterialCategory::Raw), TraderKind::Raw);
+        let q = NetQuery::NearestService {
+            system_address: 1,
+            system_name: "Sol".into(),
+            service: NearbyService::MaterialTrader(Some(TraderKind::Raw)),
+            min_pad: PadSize::Small,
+        };
+        let back: NetQuery = serde_json::from_str(&serde_json::to_string(&q).unwrap()).unwrap();
+        assert_eq!(back, q);
     }
 
     #[test]

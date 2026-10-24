@@ -1,0 +1,16 @@
+nav-colonisation = Kolonisation
+panel-colonisation-depot = Baudepot
+panel-colonisation-supply = Versorgung & Beschaffung
+colonisation-construction-progress = Baufortschritt
+colonisation-resources-required = Benötigte Ressourcen
+colonisation-trips-left = Geschätzte Fahrten
+colonisation-current-hold = Frachtraum des Schiffes ({ $capacity } t)
+colonisation-col-resource = Ressource
+colonisation-col-required = Benötigt
+colonisation-col-provided = Geliefert
+colonisation-col-remaining = Verbleibend
+colonisation-market-id = Markt-ID
+colonisation-nearby-suppliers = Nahe Märkte mit Bestand
+colonisation-no-depot = Kein aktives Kolonisationsdepot
+colonisation-copy-station = Markt kopieren
+colonisation-copied = Kopiert!

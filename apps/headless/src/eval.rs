@@ -260,6 +260,7 @@ pub fn render(
     render_yield(&mut out, &report.mining);
     render_cost(&mut out, &report.cost);
     render_massacre(&mut out, &report.massacre);
+    render_inventory(&mut out, &report.inventory);
 
     if let Some(t) = timings {
         let _ = writeln!(
@@ -319,6 +320,41 @@ fn cost_verdict(c: &tmc_modules::eval::CostReport) -> Verdict {
     } else {
         Verdict::Pass
     }
+}
+
+fn inventory_verdict(i: &tmc_modules::eval::InventoryReport) -> Verdict {
+    if i.intervals < MIN_CASES || i.materials == 0 {
+        Verdict::Insufficient
+    } else if i.exact < i.materials {
+        Verdict::Fail
+    } else {
+        Verdict::Pass
+    }
+}
+
+fn render_inventory(out: &mut String, i: &tmc_modules::eval::InventoryReport) {
+    let _ = writeln!(
+        out,
+        "\nF4, conciliación del inventario: {}",
+        inventory_verdict(i).label(i.intervals)
+    );
+    let _ = writeln!(
+        out,
+        "  intervalos={} materiales={} exactos={} ({:.1} %)",
+        i.intervals,
+        i.materials,
+        i.exact,
+        i.exact_ratio * 100.0
+    );
+    let _ = writeln!(
+        out,
+        "  diferencia_media={:.2} diferencia_max={} eventos_no_tipados={}",
+        i.mean_abs_diff, i.max_abs_diff, i.untyped_events
+    );
+    let _ = writeln!(
+        out,
+        "  nota: comparación antes de resincronizar; unión de existencias positivas, ausentes=0; porcentajes y media ponderados por material; solo mismo comandante identificado; archivos sin identidad excluidos"
+    );
 }
 
 fn massacre_verdict(m: &tmc_modules::eval::MassacreReport) -> Verdict {
@@ -484,6 +520,53 @@ pub fn run(args: impl Iterator<Item = String>) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn eval_inventory_reconciles_on_fixture() {
+        let report = fixture_report("engineering_eval.log");
+        let text = render(&report, (1, 15, 0), None);
+        assert!(
+            text.contains("F4, conciliación del inventario: INSUFICIENTE (1 casos)"),
+            "{text}"
+        );
+        assert!(
+            text.contains("intervalos=1 materiales=5 exactos=5 (100.0 %)"),
+            "{text}"
+        );
+        assert!(
+            text.contains("diferencia_media=0.00 diferencia_max=0 eventos_no_tipados=1"),
+            "{text}"
+        );
+        for forbidden in [
+            "CMDR EVAL SYNTHETIC",
+            "F0000000",
+            "PRIVATE CHAT CANARY",
+            "iron",
+        ] {
+            assert!(!text.contains(forbidden), "{forbidden} in {text}");
+        }
+    }
+
+    #[test]
+    fn inventory_verdict_needs_five_nonempty_intervals_and_exact_counts() {
+        use tmc_modules::eval::InventoryReport;
+        let mut i = InventoryReport {
+            intervals: 4,
+            materials: 20,
+            exact: 20,
+            ..Default::default()
+        };
+        assert_eq!(inventory_verdict(&i), Verdict::Insufficient);
+        i.exact = 19;
+        assert_eq!(inventory_verdict(&i), Verdict::Insufficient);
+        i.intervals = 5;
+        assert_eq!(inventory_verdict(&i), Verdict::Fail);
+        i.exact = 20;
+        assert_eq!(inventory_verdict(&i), Verdict::Pass);
+        i.materials = 0;
+        i.exact = 0;
+        assert_eq!(inventory_verdict(&i), Verdict::Insufficient);
+    }
 
     fn fixture_dir() -> std::path::PathBuf {
         let dir = tempfile::tempdir().unwrap().keep();

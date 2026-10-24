@@ -1,0 +1,15 @@
+nav-powerplay = Powerplay 2.0
+panel-powerplay-status = Estado do Powerplay
+panel-powerplay-session = Méritos da Sessão
+powerplay-pledged-to = Alinhado com
+powerplay-rank = Posição
+powerplay-merits = Méritos Acumulados
+powerplay-next-rank = Próxima Posição
+powerplay-merits-needed = Méritos Restantes
+powerplay-rank-progress = Progresso da Posição
+powerplay-time-pledged = Semanas de Lealdade
+powerplay-session-merits = Obtidos Nesta Sessão
+powerplay-merits-rate = Taxa de Méritos/Hora
+powerplay-cycle-ends = Fim do Ciclo Semanal
+powerplay-cycle-thursday = Quintas-feiras às 07:00 UTC
+powerplay-no-pledge = Não alinhado com nenhuma potência

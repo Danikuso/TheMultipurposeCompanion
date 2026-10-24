@@ -2,11 +2,16 @@
 //! cliente asíncrono que los compone.
 
 pub mod ardent;
+pub mod bgs_tick;
 pub mod cache_policy;
 pub mod canonn;
+pub mod capi;
 pub mod client;
+pub mod eddn_sender;
 pub mod edsm;
+pub mod edsm_sync;
 pub mod health;
+pub mod inara;
 mod jsonx;
 pub mod limiter;
 pub mod spansh;

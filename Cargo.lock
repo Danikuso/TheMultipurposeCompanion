@@ -5015,6 +5015,7 @@ dependencies = [
  "tmc-net",
  "tmc-server",
  "tmc-store",
+ "tmc-tts",
  "tokio",
  "toml 1.1.8+spec-1.1.0",
  "tower",
@@ -5145,7 +5146,10 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "reqwest",
+ "serde",
  "serde_json",
+ "sha2 0.10.9",
+ "thiserror 2.0.21",
  "tmc-model",
  "tokio",
  "tracing",
@@ -5193,12 +5197,28 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "rusqlite",
+ "serde",
  "serde_json",
  "tempfile",
  "thiserror 2.0.21",
  "tmc-journal",
  "tmc-model",
  "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "tmc-tts"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tmc-model",
+ "tokio",
+ "tracing",
+ "windows 0.62.2",
 ]
 
 [[package]]

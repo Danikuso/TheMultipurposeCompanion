@@ -195,7 +195,8 @@ async fn start_inner(
     let (net_events, mut net_events_rx) = tokio::sync::mpsc::channel::<SourceEvent>(64);
     let net = spawn_net_service(
         Arc::new(
-            NetClient::new(transport).with_codex_persist(Arc::new(CodexRefStore(store.clone()))),
+            NetClient::new(transport.clone())
+                .with_codex_persist(Arc::new(CodexRefStore(store.clone()))),
         ),
         store.clone(),
         net_events,
@@ -395,6 +396,11 @@ async fn start_inner(
         token,
         ui_dir: config.ui_dir.clone(),
     };
+    let capi_service = Arc::new(crate::capi_service::CapiService::new(
+        store.clone(),
+        transport.clone(),
+        None,
+    ));
     let server = serve(
         server_cfg,
         core.clone(),
@@ -402,7 +408,8 @@ async fn start_inner(
         Arc::new(
             AppActions::with_runtime(config, core.events.clone(), online, net)
                 .with_clipboard(clipboard.clone())
-                .with_settings_watch(settings_tx),
+                .with_settings_watch(settings_tx)
+                .with_capi_service(capi_service),
         ),
     )
     .await?;

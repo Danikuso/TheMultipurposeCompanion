@@ -1,10 +1,17 @@
+use crate::accounts::AccountsModule;
+use crate::bgs::Bgs;
+use crate::carrier::Carrier;
+use crate::colonisation::Colonisation;
 use crate::combat::Combat;
+use crate::crime::Crime;
 use crate::dashboard::Dashboard;
+use crate::engineering::Engineering;
 use crate::exobiology::Exobiology;
 use crate::exploration::Exploration;
 use crate::mining::Mining;
 use crate::missions::Missions;
 use crate::navigation::Navigation;
+use crate::powerplay::PowerplayModule;
 use crate::trade::Trade;
 use tmc_core::Module;
 
@@ -18,6 +25,13 @@ pub fn all_modules() -> Vec<Box<dyn Module>> {
         Box::new(Mining::new()),
         Box::new(Trade::new()),
         Box::new(Missions::new()),
+        Box::new(Engineering::new()),
+        Box::new(Carrier::new()),
+        Box::new(Colonisation::new()),
+        Box::new(PowerplayModule::new()),
+        Box::new(Bgs::new()),
+        Box::new(AccountsModule::new()),
+        Box::new(Crime::new()),
     ]
 }
 

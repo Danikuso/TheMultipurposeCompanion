@@ -8,6 +8,7 @@ use std::sync::{
 };
 use tmc_model::source::SourceEvent;
 use tmc_server::{ActionError, ActionFut, ActionHost, ConfigHost};
+use tmc_tts::TtsEngine;
 use tokio::sync::mpsc;
 
 /// Por dónde acabó la copia.
@@ -119,6 +120,7 @@ pub struct AppActions {
     runtime: Option<Runtime>,
     save_path: Option<PathBuf>,
     settings_watch: Option<tokio::sync::watch::Sender<tmc_model::settings::ModuleSettings>>,
+    capi_service: Option<Arc<crate::capi_service::CapiService>>,
 }
 
 impl AppActions {
@@ -138,6 +140,7 @@ impl AppActions {
             runtime: None,
             save_path: None,
             settings_watch: None,
+            capi_service: None,
         }
     }
 
@@ -148,6 +151,7 @@ impl AppActions {
             runtime: None,
             save_path: None,
             settings_watch: None,
+            capi_service: None,
         }
     }
 
@@ -178,6 +182,15 @@ impl AppActions {
     /// Guarda la configuración en `path` en vez de en la ruta de usuario (tests).
     pub fn with_save_path(mut self, path: PathBuf) -> Self {
         self.save_path = Some(path);
+        self
+    }
+
+    /// Conecta el servicio de autenticación y flota de Frontier CAPI.
+    pub fn with_capi_service(
+        mut self,
+        capi_service: Arc<crate::capi_service::CapiService>,
+    ) -> Self {
+        self.capi_service = Some(capi_service);
         self
     }
 
@@ -236,6 +249,9 @@ impl ConfigHost for AppActions {
             .map_err(|e| ActionError::Failed(e.into()))?;
         updated
             .validate_f3()
+            .map_err(|e| ActionError::Failed(e.into()))?;
+        updated
+            .validate_f4()
             .map_err(|e| ActionError::Failed(e.into()))?;
         if updated.server.lan {
             updated.ensure_lan_token();
@@ -308,6 +324,12 @@ impl ActionHost for AppActions {
                 self.clipboard.set_text(next).map_err(ActionError::Failed)?;
                 Ok(json!({ "system": next }))
             }
+            "frontier.logout" => {
+                let capi = self.capi_service.as_ref().ok_or(ActionError::NotFound)?;
+                capi.clear_session()
+                    .map_err(|e| ActionError::Failed(e.to_string()))?;
+                Ok(json!({ "ok": true }))
+            }
             _ => Err(ActionError::NotFound),
         }
     }
@@ -318,6 +340,112 @@ impl ActionHost for AppActions {
         args: &Value,
         snapshot: &BTreeMap<String, Value>,
     ) -> Result<Value, ActionError> {
+        match name {
+            "frontier.login" => {
+                let redirect_uri = args
+                    .get("redirect_uri")
+                    .and_then(|u| u.as_str())
+                    .unwrap_or("http://localhost:47320/api/auth/frontier/callback");
+                let capi = self.capi_service.as_ref().ok_or(ActionError::NotFound)?;
+                let (url, state) = capi.start_login(redirect_uri);
+                return Ok(json!({ "url": url, "state": state }));
+            }
+            "frontier.logout" => {
+                let capi = self.capi_service.as_ref().ok_or(ActionError::NotFound)?;
+                capi.clear_session()
+                    .map_err(|e| ActionError::Failed(e.to_string()))?;
+                return Ok(json!({ "ok": true }));
+            }
+            "tts.voices" => {
+                let engine_kind = args
+                    .get("engine")
+                    .and_then(|e| e.as_str())
+                    .map(|s| match s {
+                        "kokoro" => tmc_model::tts::TtsEngineKind::Kokoro,
+                        _ => tmc_model::tts::TtsEngineKind::Native,
+                    })
+                    .unwrap_or_else(|| {
+                        let cfg = self.config.lock().unwrap();
+                        cfg.tts.engine
+                    });
+
+                let voices = match engine_kind {
+                    tmc_model::tts::TtsEngineKind::Kokoro => tmc_tts::KokoroEngine::new()
+                        .map(|e| e.available_voices())
+                        .unwrap_or_default(),
+                    tmc_model::tts::TtsEngineKind::Native => tmc_tts::NativeEngine::new()
+                        .map(|e| e.available_voices())
+                        .unwrap_or_default(),
+                };
+
+                return Ok(json!({ "voices": voices }));
+            }
+            "tts.test" => {
+                let (engine_kind, default_voice, default_vol, default_rate) = {
+                    let cfg = self.config.lock().unwrap();
+                    (
+                        cfg.tts.engine,
+                        cfg.tts.voice.clone(),
+                        cfg.tts.volume,
+                        cfg.tts.rate,
+                    )
+                };
+
+                let chosen_engine = args
+                    .get("engine")
+                    .and_then(|e| e.as_str())
+                    .map(|s| match s {
+                        "kokoro" => tmc_model::tts::TtsEngineKind::Kokoro,
+                        _ => tmc_model::tts::TtsEngineKind::Native,
+                    })
+                    .unwrap_or(engine_kind);
+
+                let voice = args
+                    .get("voice")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+                    .or(default_voice);
+
+                let volume = args
+                    .get("volume")
+                    .and_then(|v| v.as_u64())
+                    .map(|v| v as u8)
+                    .unwrap_or(default_vol);
+
+                let rate = args
+                    .get("rate")
+                    .and_then(|r| r.as_u64())
+                    .map(|r| r as u8)
+                    .unwrap_or(default_rate);
+
+                let text = args
+                    .get("text")
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("Copiloto de TMC activo y listo para la navegación.");
+
+                let rate_f32 = rate as f32 / 100.0;
+
+                match chosen_engine {
+                    tmc_model::tts::TtsEngineKind::Kokoro => {
+                        let mut engine = tmc_tts::KokoroEngine::new()
+                            .map_err(|e| ActionError::Failed(e.to_string()))?;
+                        engine
+                            .speak(text, voice.as_deref(), volume, rate_f32)
+                            .map_err(|e| ActionError::Failed(e.to_string()))?;
+                    }
+                    tmc_model::tts::TtsEngineKind::Native => {
+                        let mut engine = tmc_tts::NativeEngine::new()
+                            .map_err(|e| ActionError::Failed(e.to_string()))?;
+                        engine
+                            .speak(text, voice.as_deref(), volume, rate_f32)
+                            .map_err(|e| ActionError::Failed(e.to_string()))?;
+                    }
+                }
+
+                return Ok(json!({ "ok": true }));
+            }
+            _ => {}
+        }
         if !MODULE_PREFIXES.iter().any(|p| name.starts_with(p)) {
             return self.run_action(name, snapshot);
         }
@@ -367,9 +495,42 @@ impl ActionHost for AppActions {
     fn put_config(&self, v: Value) -> Result<Value, ActionError> {
         ConfigHost::put_config(self, v)
     }
+
+    fn frontier_login_url(&self, redirect_uri: &str) -> ActionFut {
+        let capi = self.capi_service.clone();
+        let redirect_uri = redirect_uri.to_owned();
+        Box::pin(async move {
+            let Some(capi) = capi else {
+                return Err(ActionError::NotFound);
+            };
+            let (url, state) = capi.start_login(&redirect_uri);
+            Ok(json!({ "url": url, "state": state }))
+        })
+    }
+
+    fn frontier_exchange_code(&self, code: &str, state: &str, redirect_uri: &str) -> ActionFut {
+        let capi = self.capi_service.clone();
+        let code = code.to_owned();
+        let state = state.to_owned();
+        let redirect_uri = redirect_uri.to_owned();
+        Box::pin(async move {
+            let Some(capi) = capi else {
+                return Err(ActionError::NotFound);
+            };
+            let token = capi
+                .handle_callback(&code, &state, &redirect_uri)
+                .await
+                .map_err(|e| ActionError::Failed(e.to_string()))?;
+            Ok(json!({
+                "ok": true,
+                "token_type": token.token_type,
+                "expires_in": token.expires_in,
+            }))
+        })
+    }
 }
 
-const MODULE_PREFIXES: [&str; 7] = [
+const MODULE_PREFIXES: [&str; 13] = [
     "navigation.",
     "exploration.",
     "exobiology.",
@@ -377,6 +538,12 @@ const MODULE_PREFIXES: [&str; 7] = [
     "mining.",
     "trade.",
     "missions.",
+    "engineering.",
+    "carrier.",
+    "colonisation.",
+    "powerplay.",
+    "bgs.",
+    "accounts.",
 ];
 
 #[cfg(test)]
