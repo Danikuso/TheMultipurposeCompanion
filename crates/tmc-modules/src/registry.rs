@@ -3,6 +3,7 @@ use crate::bgs::Bgs;
 use crate::carrier::Carrier;
 use crate::colonisation::Colonisation;
 use crate::combat::Combat;
+use crate::crime::Crime;
 use crate::dashboard::Dashboard;
 use crate::engineering::Engineering;
 use crate::exobiology::Exobiology;
@@ -30,6 +31,7 @@ pub fn all_modules() -> Vec<Box<dyn Module>> {
         Box::new(PowerplayModule::new()),
         Box::new(Bgs::new()),
         Box::new(AccountsModule::new()),
+        Box::new(Crime::new()),
     ]
 }
 

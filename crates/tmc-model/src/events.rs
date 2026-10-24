@@ -57,6 +57,8 @@ pub struct LocationInfo {
     pub system_economy_localised: Option<String>,
     #[serde(rename = "SystemSecondEconomy_Localised")]
     pub system_second_economy_localised: Option<String>,
+    #[serde(default)]
+    pub system_security: Option<String>,
     #[serde(rename = "SystemSecurity_Localised")]
     pub system_security_localised: Option<String>,
     pub population: Option<u64>,

@@ -37,6 +37,7 @@ pub mod bgs;
 pub mod carrier;
 pub mod colonisation;
 pub mod combat;
+pub mod crime;
 pub mod dashboard;
 pub mod data;
 pub mod engineering;
