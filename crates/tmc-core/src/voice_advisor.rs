@@ -241,7 +241,7 @@ impl VoiceAdvisor {
                                         TtsChannel::Mining,
                                         "tts-mining-valuable-find",
                                     )
-                                    .with_arg("mineral", display_name)
+                                    .with_arg("material", display_name)
                                     .with_arg("pct", pct_val.to_string())
                                     .with_cooldown("valuable_asteroid"),
                                 );
@@ -473,7 +473,7 @@ mod tests {
         let cues = advisor.process_event(&asteroid_ev, &state);
         assert_eq!(cues.len(), 1);
         assert_eq!(cues[0].text_key, "tts-mining-valuable-find");
-        assert_eq!(cues[0].args.get("mineral").unwrap(), "Platinum");
+        assert_eq!(cues[0].args.get("material").unwrap(), "Platinum");
         assert_eq!(cues[0].args.get("pct").unwrap(), "35");
         assert_eq!(cues[0].channel, TtsChannel::Mining);
     }
