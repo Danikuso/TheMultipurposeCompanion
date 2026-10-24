@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-24 03:15 (Europe/Madrid) · Antigravity
+- **Última actualización:** 2026-10-24 11:55 (Europe/Madrid) · Antigravity
 - **Fase actual:** Mejora Ergonómica Global — Tarjetas Compactas, Desplegables y Acordeones por Defecto («TMC Glass HUD») [Completada y Verificada].
 - **Spec activa:** [`docs/specs/2026-10-24-tmc-ui-tarjetas-compactas-desplegables-design.md`](docs/specs/2026-10-24-tmc-ui-tarjetas-compactas-desplegables-design.md) — Tarjetas compactas, desplegables y acordeones por defecto.
 - **Plan activo:** [`docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md`](docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md) — 7 tareas en 6 bloques [Todas completadas].
@@ -10,13 +10,13 @@
 
 ## Puntero actual
 
-- **Tarea:** Corrección de comportamiento anómalo al seleccionar ingeniero en `EngineersPanel` y backend.
+- **Tarea:** Higiene integral de disco (liberación de 75 GB), reglas preventivas en `AGENTS.md` y compilación limpia de binarios Release y Debug de TMC.
 - **Último paso completado:**
-  1. Se eliminó la invalidación errónea de `revision` en `crates/tmc-modules/src/engineering/mod.rs` (`dependencies_changed`), ya que seleccionar un ingeniero es un cambio de estado de selección del topic `engineering.engineers` y no muta las colecciones paginadas REST (`self.engineer_rows`). Esto evita que el cliente WebSocket reciba un incremento de revisión que forzaba a `createSectionsReader` a vaciar la lista de 30 ingenieros y mostrar un parpadeo de "Cargando...".
-  2. En `EngineersPanel.svelte`, los detalles del ingeniero seleccionado (`data-testid="engineer-details"`, próximo paso y capacidades) ahora se renderizan **in situ** directamente dentro de la tarjeta del ingeniero seleccionado (acordeón expandible con chevron ▲/▼), eliminando el desplazamiento y desconexión donde los detalles aparecían 2500px más abajo al final de la pantalla fuera de la vista. Se mantiene fallback si la fila estuviese filtrada.
-  3. Se añadieron cabeceras colapsables para "Ingenieros de naves" e "Ingenieros a pie" con recuento y toggle acorde con la norma de compacidad de cabina.
-  4. Verificación completa: 396 tests Vitest PASS, `svelte-check` 0 errores / 0 advertencias, Vite production build OK, 162 tests Rust de ingeniería PASS, `cargo fmt` y `cargo clippy` limpios, y binario de release `TMC.exe` generado exitosamente.
-- **Siguiente acción:** Informar al comandante y verificar en vivo.
+  1. **Análisis de espacio en disco (75 GB consumidos):** Se identificó que la carpeta del proyecto consumía 75 GB debido a la acumulación descontrolada de artefactos: `target/` con 66,05 GB (33,6 GB en `incremental` y 24,3 GB en `deps` por miles de binarios de test con símbolos PDB de todas las fases anteriores), carpetas ad-hoc obsoletas (`target-f3/` con 3,28 GB y `target-f4/` con 5,49 GB) y carpetas temporales huérfanas (`.tmp/` con 122 MB, `.superpowers/` con 12 MB).
+  2. **Limpieza profunda (75 GB liberados):** Se eliminaron las carpetas obsoletas `target-f3`, `target-f4`, `.tmp` y `.superpowers` (~9 GB), y se ejecutó `cargo clean` eliminando 99.439 archivos y 66,0 GiB de artefactos viejos.
+  3. **Normas vinculantes en `AGENTS.md` (§10):** Se añadió la sección de *Higiene de disco, compilación y procesos* prohibiendo carpetas target ad-hoc, exigiendo saneamiento periódico de tests si `target/` supera 15-20 GB, obligando a la eliminación inmediata de carpetas temporales, y prohibiendo terminantemente lanzar ejecutables gráficos (`TMC.exe`, `tmc-desktop`) como tareas en segundo plano (daemon) en sesiones no interactivas.
+  4. **Compilación limpia de binarios:** Generación limpia de `target/release/TMC.exe` y `target/debug/TMC.exe` para ejecución directa por parte del usuario.
+- **Siguiente acción:** Informar al comandante y verificar que el espacio total del repositorio se mantiene reducido y controlado.
 
 ## Tareas de Tarjetas Compactas y Desplegables («TMC Glass HUD»)
 
