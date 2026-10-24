@@ -2,17 +2,17 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-24 01:30 (Europe/Madrid) · Antigravity
-- **Fase actual:** Mejora Ergonómica Global — Tarjetas Compactas, Desplegables y Acordeones por Defecto («TMC Glass HUD»).
+- **Última actualización:** 2026-10-24 02:05 (Europe/Madrid) · Antigravity
+- **Fase actual:** Mejora Ergonómica Global — Tarjetas Compactas, Desplegables y Acordeones por Defecto («TMC Glass HUD») [Completada y Verificada].
 - **Spec activa:** [`docs/specs/2026-10-24-tmc-ui-tarjetas-compactas-desplegables-design.md`](docs/specs/2026-10-24-tmc-ui-tarjetas-compactas-desplegables-design.md) — Tarjetas compactas, desplegables y acordeones por defecto.
-- **Plan activo:** [`docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md`](docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md) — 7 tareas en 6 bloques.
+- **Plan activo:** [`docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md`](docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md) — 7 tareas en 6 bloques [Todas completadas].
 - **Rama de trabajo:** `main`
 
 ## Puntero actual
 
-- **Tarea:** Tarea 1 completada (`ShipPanel.svelte` con filtro de no ingenierizables, selector desplegable `<select data-testid="ship-module-select">` y acordeón colapsado por defecto). Spec y Plan formalizados.
-- **Último paso completado:** Verificación integral de tests: 394 tests Vitest PASS (107/107 en ingeniería), svelte-check 0 errores/0 advertencias, clippy limpio, tests Rust en workspace PASS (817 en `tmc-modules`), `dist/` reconstruido y `target/debug/TMC.exe` compilado exitosamente.
-- **Siguiente acción:** Aprobación del propietario para continuar con las Tareas 2 a 7 del plan (Materiales, Cuentas/Flota, Misiones, Mercado, Carrier/Colonización/Powerplay e i18n).
+- **Tarea:** Iniciativa de compacidad y desplegables completada en todos los módulos y pantallas.
+- **Último paso completado:** Verificación integral de tests: 396 tests Vitest PASS (suite completa), svelte-check 0 errores/0 advertencias, clippy limpio, tests Rust en workspace PASS (817 en `tmc-modules`, 18 en `tmc-i18n`), `dist/` reconstruido y `target/debug/TMC.exe` compilado exitosamente.
+- **Siguiente acción:** Probar en vivo en cabina con el comandante y definir la siguiente fase según hoja de ruta.
 
 ## Tareas de Tarjetas Compactas y Desplegables («TMC Glass HUD»)
 
@@ -21,12 +21,12 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | # | Tarea | Estado | Commit | Notas |
 |---|---|---|---|---|
 | 1 | `ShipPanel.svelte`: filtro no ingenierizables, selector desplegable y acordeón | ✅ hecha | `486cf86` | Oculta módulos no ingenierizables, `<select>` compacto, tarjeta activa y lista colapsada por defecto |
-| 2 | `MaterialsPanel.svelte`: selector compacto de categorías y buscador colapsable | ⬜ pendiente | — | Selector de categoría y colapso de inventarios |
-| 3 | `AccountsPanel.svelte`: flota remota de CAPI en selector desplegable y colapso de logs | ⬜ pendiente | — | Reemplazo de cascada de naves por desplegable y tarjeta activa |
-| 4 | `MissionsPanel.svelte`, `MassacrePanel`, `PassengersPanel`: selectores y colapso | ⬜ pendiente | — | Selector de misión/objetivo/cabina y tarjeta condensada |
-| 5 | `MarketPanel.svelte`, `CargoPanel`, `SellPanel`: selector compacto y catálogo colapsable | ⬜ pendiente | — | Top 5 mercancías y acordeón de catálogo completo |
-| 6 | `CarrierOverviewPanel`, `ColonisationProgressPanel`, `PowerplayPanel`, `BgsPanel` | ⬜ pendiente | — | Desplegables de servicios, proyectos de colonización y potencias |
-| 7 | Claves i18n en 5 idiomas, verificación global y build | ⬜ pendiente | — | Claves de acordeón y verificación de suite y memoria |
+| 2 | `MaterialsPanel.svelte`: selector compacto de categorías y buscador colapsable | ✅ hecha | `64fb358` | Acordeón por grado y colapso de cambios de sesión |
+| 3 | `AccountsPanel.svelte`: flota remota de CAPI en selector desplegable y colapso de logs | ✅ hecha | `7b5e721` | Reemplazo de cascada de naves por desplegable, tarjeta activa y tests |
+| 4 | `MissionsPanel.svelte`, `MassacrePanel`, `PassengersPanel`: selectores y colapso | ✅ hecha | `41ed856` | Selectores de destino, facción y grupos de pasajeros colapsables |
+| 5 | `MarketPanel.svelte`, `CargoPanel`, `SellPanel`: selector compacto y catálogo colapsable | ✅ hecha | `86d3d5a` | Mercancía activa, catálogo completo colapsable y desglose de bodega |
+| 6 | `CarrierOverviewPanel`, `ColonisationProgressPanel`, `PowerplayPanel`, `BgsPanel` | ✅ hecha | `7dccf60` | Desglose de recursos y tabla de facciones secundarias colapsables |
+| 7 | Claves i18n en 5 idiomas, verificación global y build | ✅ hecha | `04f463f` | 396 Vitest PASS, svelte-check 0 err, clippy limpio, TMC.exe listo |
 
 ## Tareas de F6 (Cuentas y Sincronización Externa)
 
@@ -405,6 +405,15 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-24 02:05 (Europe/Madrid) · Antigravity · Ejecución completa de la iniciativa de tarjetas compactas y desplegables en toda la aplicación:
+  - Tareas 2 a 6 ejecutadas con commits individuales (`64fb358`, `7b5e721`, `41ed856`, `86d3d5a`, `7dccf60`):
+    - `MaterialsPanel.svelte`: acordeones por grado de inventario y colapso de cambios de sesión.
+    - `AccountsPanel.svelte`: selector desplegable `<select data-testid="remote-fleet-select">`, tarjeta activa compacta y flota colapsable por defecto.
+    - `MissionsPanel.svelte`, `MassacrePanel.svelte`, `PassengersPanel.svelte`: selectores compactos de destino y facción, vistas compactas y acordeones.
+    - `MarketPanel.svelte`, `CargoPanel.svelte`, `SellPanel.svelte`: selector de mercancía activa con tarjeta resumen, catálogo completo colapsable y desglose de bodega.
+    - `ColonisationProgressPanel.svelte`, `BgsPanel.svelte`: desgloses de recursos y tablas de facciones secundarias colapsables por defecto.
+  - Verificación global: 396/396 Vitest PASS, svelte-check 0 errores/0 advertencias, clippy workspace sin warnings, 817 tests Rust en `tmc-modules` y 18 en `tmc-i18n` PASS, `dist/` reconstruido y `TMC.exe` compilado y lanzado.
 
 - 2026-10-24 01:30 (Europe/Madrid) · Antigravity · Implementación de mejora ergonómica en ingeniería y plan de compacidad global:
   - `ShipPanel.svelte`: Módulos no ingenierizables filtrados y excluidos del renderizado. Selector desplegable compacto `<select data-testid="ship-module-select">` con el módulo activo y sus datos clave.
