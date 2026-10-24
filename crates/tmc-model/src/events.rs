@@ -1834,6 +1834,10 @@ pub enum EventKind {
     PowerplayDefect(PowerplayDefect),
     PowerplayLeave(PowerplayLeave),
     PowerplayJoin(PowerplayJoin),
+    CommitCrime(Box<crate::crime::CommitCrimeEvent>),
+    CrimeVictim(Box<crate::crime::CrimeVictimEvent>),
+    PayFines(Box<crate::crime::PayFinesEvent>),
+    PayBounties(Box<crate::crime::PayBountiesEvent>),
     Other,
 }
 
@@ -1986,6 +1990,15 @@ fn classify(name: &str, raw: &RawValue) -> EventKind {
         "PowerplayDefect" => de(name, raw).map(EventKind::PowerplayDefect),
         "PowerplayLeave" => de(name, raw).map(EventKind::PowerplayLeave),
         "PowerplayJoin" => de(name, raw).map(EventKind::PowerplayJoin),
+        "CommitCrime" => de::<crate::crime::CommitCrimeEvent>(name, raw)
+            .map(|c| EventKind::CommitCrime(Box::new(c))),
+        "CrimeVictim" => de::<crate::crime::CrimeVictimEvent>(name, raw)
+            .map(|c| EventKind::CrimeVictim(Box::new(c))),
+        "PayFines" => {
+            de::<crate::crime::PayFinesEvent>(name, raw).map(|p| EventKind::PayFines(Box::new(p)))
+        }
+        "PayBounties" | "PayBounty" => de::<crate::crime::PayBountiesEvent>(name, raw)
+            .map(|p| EventKind::PayBounties(Box::new(p))),
         _ => None,
     };
     kind.unwrap_or(EventKind::Other)
@@ -3587,5 +3600,24 @@ mod tests {
             panic!("Cargo")
         };
         assert!(!c.inventory.unwrap()[0].is_mission());
+    }
+
+    #[test]
+    fn crime_events_parse_cleanly() {
+        let EventKind::CommitCrime(cc) = ev(
+            r#"{"timestamp":"2026-10-24T20:00:00Z","event":"CommitCrime","CrimeType":"assault","Faction":"Independent Pilots","Victim":"Security","Fine":1000}"#,
+        ) else {
+            panic!("CommitCrime")
+        };
+        assert_eq!(cc.crime_type, crate::crime::CrimeType::Assault);
+        assert_eq!(cc.fine, Some(1000));
+
+        let EventKind::PayFines(pf) = ev(
+            r#"{"timestamp":"2026-10-24T20:10:00Z","event":"PayFines","Amount":1000,"AllFines":true}"#,
+        ) else {
+            panic!("PayFines")
+        };
+        assert_eq!(pf.amount, 1000);
+        assert!(pf.all_fines);
     }
 }

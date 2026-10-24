@@ -5,6 +5,7 @@ pub mod accounts;
 pub mod carrier;
 pub mod colonisation;
 pub mod companion;
+pub mod crime;
 pub mod events;
 pub mod market;
 pub mod net;
