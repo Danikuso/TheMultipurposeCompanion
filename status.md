@@ -2,26 +2,36 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-24 18:05 (Europe/Madrid) · Antigravity
-- **Fase actual:** Fase 9 — Crimen, Notoriedad y Piratería (Law & Disorder) — CERRADA
-- **Spec activa:** [`docs/specs/2026-10-24-tmc-f9-crimen-pirateria-design.md`](docs/specs/2026-10-24-tmc-f9-crimen-pirateria-design.md) — Crimen, Notoriedad y Piratería.
-- **Plan activo:** [`docs/plans/2026-10-24-tmc-f9-crimen-pirateria.md`](docs/plans/2026-10-24-tmc-f9-crimen-pirateria.md) — 7 tareas en 6 bloques (100% completado).
-- **Rama de trabajo:** `fase/f9-crimen-pirateria`
+- **Última actualización:** 2026-10-24 18:57 (Europe/Madrid) · Antigravity
+- **Fase actual:** Fase 10 — Asistencia e Integración de Voz (Zero-Friction Voice Assistant)
+- **Spec activa:** [`docs/specs/2026-10-24-tmc-f10-asistencia-voz-integracion-design.md`](docs/specs/2026-10-24-tmc-f10-asistencia-voz-integracion-design.md) — Asistencia e Integración de Voz.
+- **Plan activo:** [`docs/plans/2026-10-24-tmc-f10-asistencia-voz-integracion.md`](docs/plans/2026-10-24-tmc-f10-asistencia-voz-integracion.md) — 7 tareas en 6 bloques.
+- **Rama de trabajo:** `fase/f10-asistencia-voz-integracion`
 
 ## Puntero actual
 
-- **Tarea:** Fase 9 completada íntegramente. Lista para revisión del propietario y fusión en `main`.
+- **Tarea:** Tarea 4: Catálogo i18n en los 5 idiomas (`locales/`).
 - **Último paso completado:**
-  1. Tarea 1 completada (`0e9dd87`): Modelos `CrimeType`, `CommitCrimeEvent`, `CrimeVictimEvent`, `PayFinesEvent`, `PayBountiesEvent`, `FactionFineBounty`, `StolenCargoItem`, `NearbyFacility`, `SystemSecurityLevel`, `CrimeStatusTopic` y registro de eventos de diario en `tmc-model`. Tests unitarios 100% PASS y Clippy limpio.
-  2. Tarea 2 completada (`5714942`): `CrimeModule` en `crates/tmc-modules/src/crime/mod.rs` con tracking de legal_state, decaimiento de notoriedad en vuelo (`advance_flight_time`, 7200s/nivel), acumulación y liquidación de multas/recompensas, evaluación de mercancía robada desde `Cargo`, resolución de Interstellar Factors y Mercados Negros cercanos mediante `NearbyService::BlackMarket`, e integración en `registry.rs`. 821 tests de `tmc-modules` PASS.
-  3. Tarea 3 completada (`4bc8d63`): Detección contextual en `VoiceAdvisor` con emisión de `VoiceCue` ante ganancia de notoriedad (`tts-crime-notoriety-gain`), limpieza de notoriedad (`tts-crime-notoriety-cleared`), contrabando en salto a sistemas seguros (`tts-crime-illegal-cargo`), e interdicción policial (`tts-crime-police-interdiction`). 43 tests de `tmc-core` PASS y Clippy limpio.
-  4. Tarea 4 completada (`e973593`): Catálogo `crime.ftl` sincronizado y validado en los 5 idiomas (`es`, `en`, `fr`, `de`, `pt`) para UI de cabina, guía de limpieza, contrabando y locuciones TTS. 18 tests de `tmc-i18n` PASS.
-  5. Tarea 5 completada (`96c3f2c`): Implementación del panel Glass HUD `CrimePanel.svelte` con medidor de notoriedad de 10 segmentos, temporizador de decaimiento en vuelo vs pausa al atracar, Guía de Limpieza de Nombre del Ayudante (bloqueo pedagógico por notoriedad, localización y copia 1-clic de Interstellar Factors y Mercados Negros), tabla de mercancías robadas con consejos de sigilo, desglose de facciones y termómetro de seguridad policial. Integrado en `registry.ts` y `Sidebar.svelte`. Verificado con `svelte-check` 0 errores / 0 advertencias.
-  6. Tarea 6 completada (`ca57ada`): Suite unitaria `ui/tests/crime.test.ts` con 7 tests verificando renderizado de estado limpio, bloqueo de guía por notoriedad > 0, tiempo de decaimiento, pausa al atracar en estación, localización y copia de Interstellar Factor y Mercado Negro al portapapeles, listado de contrabando y termómetro de seguridad. Suite completa Vitest: 24 archivos, 408 tests PASS.
-  7. Tarea 7 completada (`(commit docs)`): Verificación integral (suite Rust 100% PASS en todo el workspace, 408 tests Vitest PASS, Clippy 0 advertencias, Vite build OK), binarios Release (`target/release/TMC.exe`, 32.7 MB) y Debug (`target/debug/TMC.exe`, 53.1 MB) verificados, higiene estricta de `target/` y ausencia de procesos daemon.
-- **Siguiente acción:** Revisión y autorización del propietario para la fusión de la rama `fase/f9-crimen-pirateria` en `main`.
+  1. Tarea 1 completada (`251abe3`): Creado `crates/tmc-model/src/voice_intent.rs` con tipos `VoiceIntent`, `VoiceCommandRequest`, `VoiceCommandResponse` y `VoiceAttackStatus`, exportados en `tmc-model` y registrados en el catálogo de diagnóstico de Rust. 179 tests PASS y Clippy limpio.
+  2. Tarea 2 completada (`6e540a0`): Implementado `VoiceIntentResolver` en `crates/tmc-core/src/voice_intent_resolver.rs` con normalización léxica tolerante, comprensión semántica en 5 idiomas (es, en, fr, de, pt) y resolución contextualizada contra el `GameState` (estado de nave, combustible, siguiente salto, copia al portapapeles, factores interestelares, mercados negros, multas y bio-señales). 48 tests de `tmc-core` PASS y Clippy limpio.
+  3. Tarea 3 completada (`b00606c`): Creado detector y generador de perfiles VoiceAttack en `crates/tmc-app/src/voiceattack.rs`, integradas acciones en `AppActions` (`voice.status`, `voice.profile`, `clipboard.copy`, `voice.speak`), montados los endpoints REST `POST /api/voice/intent`, `GET /api/voice/voiceattack` y `GET /api/voice/voiceattack/profile` en `tmc-server`. 37 tests de `tmc-server`, 120 tests de `tmc-app` y 49 tests de `tmc-core` PASS y Clippy limpio.
+- **Siguiente acción:** Desarrollar el catálogo `voice_assistant.ftl` en `locales/{es,en,fr,de,pt}/` con todas las cadenas de interfaz y locuciones en los 5 idiomas, verificado por `cargo test -p tmc-i18n`.
 
-## Tareas de F9 (Crimen, Notoriedad y Piratería)
+## Tareas de F10 (Asistencia e Integración de Voz)
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 1 | Modelos de intenciones de voz, petición/respuesta y estado VoiceAttack (`tmc-model`) | ✅ hecha | `251abe3` | `VoiceIntent`, `VoiceCommandRequest`, `VoiceCommandResponse`, `VoiceAttackStatus`, tests PASS |
+| 2 | `VoiceIntentResolver` semántico contra el estado de juego en Rust (`tmc-core`) | ✅ hecha | `6e540a0` | Comprensión léxica multilingüe y resolución de consultas de cabina |
+| 3 | Endpoints REST de voz y generador de perfil VoiceAttack (`tmc-server`, `tmc-app`) | ✅ hecha | `b00606c` | `POST /api/voice/intent`, `GET /api/voice/voiceattack`, perfil `.vap` |
+| 4 | Catálogo i18n de respuestas vocales y textos de cabina en 5 idiomas (`locales/`) | 🔄 en curso | — | `voice_assistant.ftl` en es/en/fr/de/pt, verificado por `tmc-i18n` |
+| 5 | Asistente de voz en TopBar, escucha continua y controles en ajustes (`ui/`) | ⬜ pendiente | — | Indicador de micro HUD, gestión de escucha y toggle en ajustes |
+| 6 | Tests unitarios en Vitest para la asistencia de voz (`ui/`) | ⬜ pendiente | — | Reactividad de escucha, conexión al endpoint de voz y preferencias |
+| 7 | Verificación integral, compilación Release/Debug y cierre | ⬜ pendiente | — | Workspace Rust PASS, Vitest PASS, clippy limpio, build Release/Debug |
+
+## Tareas de F9 (Crimen, Notoriedad y Piratería) — FUSIONADA EN MAIN
 
 Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
 
@@ -33,7 +43,7 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 | 4 | Catálogo de textos y locuciones en los 5 idiomas (`locales/`) | ✅ hecha | `e973593` | `crime.ftl` en es/en/fr/de/pt, verificado por `tmc-i18n` |
 | 5 | Panel `CrimePanel.svelte` e integración en el Shell («TMC Glass HUD») (`ui/`) | ✅ hecha | `96c3f2c` | Medidor notoriedad, Guía Limpieza, Contrabando y Mercados Negros |
 | 6 | Tests unitarios en Vitest para panel de crimen y contrabando (`ui/`) | ✅ hecha | `ca57ada` | Reactividad de estado legal, temporizador y botones de copia (408/408 tests PASS) |
-| 7 | Verificación integral, huella y compilación Release/Debug | ✅ hecha | (commit docs) | Workspace Rust PASS, Vitest 408/408 PASS, clippy limpio, binarios Release (32.7MB) + Debug (53.1MB) |
+| 7 | Verificación integral, huella y compilación Release/Debug | ✅ hecha | `6de3226` | Workspace Rust PASS, Vitest 408/408 PASS, clippy limpio, binarios Release (32.7MB) + Debug (53.1MB) |
 | 6 | Tests unitarios en Vitest para panel de crimen y contrabando (`ui/`) | ⬜ pendiente | — | Reactividad de estado legal, temporizador y botones de copia |
 | 7 | Verificación integral, huella y compilación Release/Debug | ⬜ pendiente | — | Workspace Rust PASS, Vitest PASS, clippy limpio, build Release/Debug |
 
