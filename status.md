@@ -2,21 +2,27 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-24 11:55 (Europe/Madrid) · Antigravity
-- **Fase actual:** Mejora Ergonómica Global — Tarjetas Compactas, Desplegables y Acordeones por Defecto («TMC Glass HUD») [Completada y Verificada].
+- **Última actualización:** 2026-10-24 12:45 (Europe/Madrid) · Antigravity
+- **Fase actual:** Correcciones Críticas de UX, Estabilización de Arranque y Panel Exhaustivo de Nave («TMC Glass HUD») [Completada y Verificada].
 - **Spec activa:** [`docs/specs/2026-10-24-tmc-ui-tarjetas-compactas-desplegables-design.md`](docs/specs/2026-10-24-tmc-ui-tarjetas-compactas-desplegables-design.md) — Tarjetas compactas, desplegables y acordeones por defecto.
 - **Plan activo:** [`docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md`](docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md) — 7 tareas en 6 bloques [Todas completadas].
 - **Rama de trabajo:** `main`
 
 ## Puntero actual
 
-- **Tarea:** Higiene integral de disco (liberación de 75 GB), reglas preventivas en `AGENTS.md` y compilación limpia de binarios Release y Debug de TMC.
+- **Tarea:** Resolución integral de las 4 peticiones del comandante: apertura web CAPI, toggle de ingenieros, eliminación del flicker de arranque y panel exhaustivo de nave.
 - **Último paso completado:**
-  1. **Análisis de espacio en disco (75 GB consumidos):** Se identificó que la carpeta del proyecto consumía 75 GB debido a la acumulación descontrolada de artefactos: `target/` con 66,05 GB (33,6 GB en `incremental` y 24,3 GB en `deps` por miles de binarios de test con símbolos PDB de todas las fases anteriores), carpetas ad-hoc obsoletas (`target-f3/` con 3,28 GB y `target-f4/` con 5,49 GB) y carpetas temporales huérfanas (`.tmp/` con 122 MB, `.superpowers/` con 12 MB).
-  2. **Limpieza profunda (75 GB liberados):** Se eliminaron las carpetas obsoletas `target-f3`, `target-f4`, `.tmp` y `.superpowers` (~9 GB), y se ejecutó `cargo clean` eliminando 99.439 archivos y 66,0 GiB de artefactos viejos.
-  3. **Normas vinculantes en `AGENTS.md` (§10):** Se añadió la sección de *Higiene de disco, compilación y procesos* prohibiendo carpetas target ad-hoc, exigiendo saneamiento periódico de tests si `target/` supera 15-20 GB, obligando a la eliminación inmediata de carpetas temporales, y prohibiendo terminantemente lanzar ejecutables gráficos (`TMC.exe`, `tmc-desktop`) como tareas en segundo plano (daemon) en sesiones no interactivas.
-  4. **Compilación limpia de binarios:** Generación limpia de `target/release/TMC.exe` y `target/debug/TMC.exe` para ejecución directa por parte del usuario.
-- **Siguiente acción:** Informar al comandante y verificar que el espacio total del repositorio se mantiene reducido y controlado.
+  1. **Apertura de navegador para CAPI:** Endpoint `/api/auth/frontier/login?open=true` en `tmc-server` que invoca el navegador nativo del sistema operativo (`rundll32 url.dll,FileProtocolHandler` en Windows, `open` en macOS, `xdg-open` en Linux) con fallback en UI y estado visual reactivo «Abriendo navegador...».
+  2. **Repliegue / Toggle de Ingenieros:** En `tmc-modules/engineering`, el manejador `ACTION_SELECT_ENGINEER` ahora permite deselección (`id: null`) y togglea a `None` si se vuelve a clicar el ingeniero ya seleccionado.
+  3. **Estabilización de Arranque (Anti-Flicker):** En `App.svelte`, se detecta si el diario está en fase de replay (`topic('core.game')?.replaying === true`). Mientras se procesan los eventos históricos en los primeros 1–3 segundos, las transiciones automáticas de pestañas quedan congeladas, evitando el baile frenético de pantallas.
+  4. **Panel Exhaustivo de Nave (`ShipPanel.svelte`):** Nuevo módulo independiente `ship` con acceso directo en la barra lateral (`🚀`). Incluye:
+     - 4 Cockpit Gauges (Casco, Escudos, Combustible principal/reserva y Carga), masa en vacío y coste de recompra.
+     - 3 Pestañas especializadas: Exploración (salto máx., masa, combustible, Fuel Scoop, Guardian Booster, DSS, AFMU, SRV), Combate (escudos, casco, distribución Pips SYS/ENG/WPN, temperatura, puntos de anclaje con munición en cargador y reserva, defensas utilitarias: boosters, chaff, point defence, heat sinks) y Carga/Minería (capacidad, racks, refinería, controladores de drones, inventario de carga).
+     - Desglose exhaustivo módulo por módulo con buscador en tiempo real, filtro por categorías (Anclajes, Módulos primarios, Módulos opcionales, Utilidades), estado On/Off, barras de salud, prioridad de energía P1..P5, insignias oficiales de ingeniería G1..G5 con hexágonos, efecto experimental y acordeón de modificadores.
+     - Formateador y traductor de nombres de slots e items de Elite (`shipFormatters.ts`).
+     - Claves i18n sincronizadas en los 5 idiomas (`locales/{es,en,fr,de,pt}/*.ftl`).
+  5. **Verificación total y compilación:** 1.400+ tests Rust PASS, 396 tests Vitest PASS, `svelte-check` 0 errores / 0 avisos, `cargo clippy` limpio sin advertencias, y compilación de binarios interactivos `target/release/TMC.exe` y `target/debug/TMC.exe`.
+- **Siguiente acción:** Notificar al comandante y poner a su disposición los ejecutables actualizados.
 
 ## Tareas de Tarjetas Compactas y Desplegables («TMC Glass HUD»)
 
@@ -409,6 +415,19 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-24 12:45 (Europe/Madrid) · Antigravity · Resolución de 4 peticiones del comandante: login CAPI en navegador nativo, toggle/repliegue de acordeón de ingenieros, estabilización de flicker al arrancar y nuevo panel exhaustivo de nave:
+  - **Apertura de navegador para CAPI:** Endpoint `/api/auth/frontier/login?open=true` en `tmc-server/src/rest.rs` que invoca el navegador nativo del SO (`rundll32 url.dll,FileProtocolHandler` en Windows, `open` en macOS, `xdg-open` en Linux) con fallback en UI y estado visual reactivo «Abriendo navegador...».
+  - **Repliegue / Toggle de Ingenieros:** En `tmc-modules/engineering`, el manejador `ACTION_SELECT_ENGINEER` ahora permite deselección (`id: null`) y togglea a `None` si se vuelve a pulsar sobre el ingeniero ya seleccionado.
+  - **Estabilización de Arranque (Anti-Flicker):** En `App.svelte`, se detecta si el diario está en fase de replay (`topic('core.game')?.replaying === true`). Mientras se procesan los eventos históricos en los primeros 1–3 segundos, las transiciones automáticas de pestañas quedan congeladas, evitando el baile frenético de pantallas.
+  - **Panel Exhaustivo de Nave (`ShipPanel.svelte`):** Nuevo módulo independiente `ship` con acceso directo en la barra lateral (`🚀`). Incluye:
+    - 4 Cockpit Gauges (Casco, Escudos, Combustible principal/reserva y Carga), masa en vacío y coste de recompra.
+    - 3 Pestañas operativas especializadas: Exploración (salto máx., masa, combustible, Fuel Scoop, Guardian Booster, DSS, AFMU, SRV), Combate (escudos, casco, distribución Pips SYS/ENG/WPN, temperatura, puntos de anclaje con munición en cargador y reserva, defensas utilitarias: boosters, chaff, point defence, heat sinks) y Carga/Minería (capacidad, racks, refinería, controladores de drones, inventario de carga).
+    - Desglose exhaustivo módulo por módulo con buscador en tiempo real, filtro por categorías (Anclajes, Módulos primarios, Módulos opcionales, Utilidades), estado On/Off, barras de salud, prioridad de energía P1..P5, insignias oficiales de ingeniería G1..G5 con hexágonos, efecto experimental y acordeón de modificadores.
+    - Formateador y traductor de nombres de slots e items de Elite (`shipFormatters.ts`).
+    - Claves i18n sincronizadas en los 5 idiomas (`locales/{es,en,fr,de,pt}/*.ftl`).
+  - **Verificación completa:** 1.400+ tests Rust PASS en todo el workspace, 396 tests Vitest PASS, `svelte-check` 0 errores / 0 avisos, `cargo clippy` sin advertencias, y compilación limpia de binarios interactivos `target/release/TMC.exe` y `target/debug/TMC.exe`.
+
 
 - 2026-10-24 03:15 (Europe/Madrid) · Antigravity · Corrección del comportamiento anómalo al seleccionar ingeniero en `EngineersPanel`:
   - Identificada causa raíz: en `crates/tmc-modules/src/engineering/mod.rs`, `dependencies_changed` comprobaba erróneamente `semantic_changed(TOPIC_ENGINEERS, &engineers)`. Dado que el topic contiene `selected_id`, cualquier clic en un ingeniero incrementaba `revision`. En el frontend, `createSectionsReader` (al no tener `cacheKey` estático para la lista de ingenieros) interpretaba la nueva revisión como una invalidación total, vaciando todas las filas (`items = []`, `ready = false`) y mostrando un parpadeo de "Cargando..." mientras se reconsultaba la API.

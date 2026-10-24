@@ -281,6 +281,28 @@ pub(crate) async fn no_store_engineering_pages(
 #[derive(Debug, Deserialize, Default)]
 pub struct FrontierLoginQuery {
     pub redirect: Option<bool>,
+    pub open: Option<bool>,
+}
+
+pub fn open_url_in_browser(url: &str) -> bool {
+    #[cfg(windows)]
+    {
+        std::process::Command::new("rundll32")
+            .args(["url.dll,FileProtocolHandler", url])
+            .spawn()
+            .is_ok()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open").arg(url).spawn().is_ok()
+    }
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(url)
+            .spawn()
+            .is_ok()
+    }
 }
 
 pub async fn get_frontier_login(
@@ -297,13 +319,23 @@ pub async fn get_frontier_login(
                 .and_then(|u| u.as_str())
                 .unwrap_or_default()
                 .to_owned();
+            let should_open = query.open.unwrap_or(false);
+            let mut opened = false;
+            if should_open && !auth_url.is_empty() {
+                opened = open_url_in_browser(&auth_url);
+            }
             let wants_json = query.redirect == Some(false)
+                || should_open
                 || headers
                     .get(axum::http::header::ACCEPT)
                     .and_then(|a| a.to_str().ok())
                     .is_some_and(|a| a.contains("application/json"));
             if wants_json {
-                Json(v).into_response()
+                let mut res = v;
+                if let Some(obj) = res.as_object_mut() {
+                    obj.insert("opened".to_owned(), serde_json::Value::Bool(opened));
+                }
+                Json(res).into_response()
             } else {
                 axum::response::Redirect::temporary(&auth_url).into_response()
             }

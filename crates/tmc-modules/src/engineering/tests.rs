@@ -631,6 +631,21 @@ fn select_engineer_shows_next_step_and_blueprints() {
         .map(|c| c["grade"].as_u64().unwrap())
         .collect();
     assert_eq!(grades, vec![1, 2, 3]);
+
+    // Volver a seleccionar el mismo ingeniero lo repliega/deselecciona.
+    h.action("engineering.select_engineer", json!({"id": 300100}));
+    let sel_toggled = h.val("engineering.engineers");
+    assert_eq!(sel_toggled["selected_id"], serde_json::Value::Null);
+
+    // Enviar id null también deselecciona.
+    h.action("engineering.select_engineer", json!({"id": 300100}));
+    assert_eq!(h.val("engineering.engineers")["selected_id"], json!(300100));
+    h.action("engineering.select_engineer", json!({"id": null}));
+    assert_eq!(
+        h.val("engineering.engineers")["selected_id"],
+        serde_json::Value::Null
+    );
+
     // Un id desconocido no cambia nada.
     let before = h.val("engineering.engineers");
     let dirty = h.action("engineering.select_engineer", json!({"id": 1}));

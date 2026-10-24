@@ -408,7 +408,11 @@ pub struct FuelCapacity {
 pub struct LoadoutModule {
     pub slot: Option<String>,
     pub item: Option<String>,
+    pub on: Option<bool>,
+    pub priority: Option<u8>,
     pub health: Option<f64>,
+    pub ammo_in_clip: Option<u32>,
+    pub ammo_in_hopper: Option<u32>,
     pub engineering: Option<Engineering>,
 }
 

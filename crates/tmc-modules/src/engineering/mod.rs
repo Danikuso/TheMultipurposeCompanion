@@ -1269,12 +1269,25 @@ impl Engineering {
                 true
             }
             ACTION_SELECT_ENGINEER => {
-                let id = args.get("id").and_then(Value::as_u64);
+                let id_val = args.get("id");
+                if id_val.is_some_and(|v| v.is_null()) {
+                    self.selected_engineer = None;
+                    return true;
+                }
+                let id = id_val.and_then(Value::as_u64);
+                if id == Some(0) {
+                    self.selected_engineer = None;
+                    return true;
+                }
                 let Some(id) = id.filter(|i| engineer(*i).is_some()) else {
                     decide!("engineering.select_engineer.rejected", {});
                     return false;
                 };
-                self.selected_engineer = Some(id);
+                if self.selected_engineer == Some(id) {
+                    self.selected_engineer = None;
+                } else {
+                    self.selected_engineer = Some(id);
+                }
                 true
             }
             ACTION_DISMISS_ALERT => {

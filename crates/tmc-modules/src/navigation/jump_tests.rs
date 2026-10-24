@@ -31,6 +31,7 @@ fn module(slot: &str, item: &str, mods: Vec<Modifier>) -> LoadoutModule {
             modifiers: mods,
             ..Default::default()
         }),
+        ..Default::default()
     }
 }
 

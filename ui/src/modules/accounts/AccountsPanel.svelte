@@ -17,6 +17,7 @@
   let syncingEdsm = $state(false);
   let syncingInara = $state(false);
   let loadingFleet = $state(false);
+  let loginOpening = $state(false);
   let remoteShips = $state<RemoteShip[]>([]);
   let selectedShipId = $state<number | null>(null);
   let showFleetGrid = $state(false);
@@ -79,9 +80,28 @@
     }
   }
 
-  function startFrontierLogin() {
-    if (typeof window !== 'undefined') {
-      window.open('/api/auth/frontier/login', '_blank');
+  async function startFrontierLogin() {
+    loginOpening = true;
+    try {
+      const res = await fetch('/api/auth/frontier/login?open=true', {
+        headers: { Accept: 'application/json' },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (!data.opened && data.url && typeof window !== 'undefined') {
+          window.open(data.url, '_blank');
+        }
+      } else if (typeof window !== 'undefined') {
+        window.open('/api/auth/frontier/login', '_blank');
+      }
+    } catch {
+      if (typeof window !== 'undefined') {
+        window.open('/api/auth/frontier/login', '_blank');
+      }
+    } finally {
+      setTimeout(() => {
+        loginOpening = false;
+      }, 2000);
     }
   }
 
@@ -316,8 +336,8 @@
           {#if !status?.capi?.connected}
             <div class="link-prompt">
               <p class="sub">{t('accounts-capi-auth-notice')}</p>
-              <button class="btn-primary" onclick={startFrontierLogin} data-testid="capi-link-btn">
-                {t('accounts-capi-btn-link')}
+              <button class="btn-primary" onclick={startFrontierLogin} disabled={loginOpening} data-testid="capi-link-btn">
+                {loginOpening ? t('accounts-capi-btn-opening') : t('accounts-capi-btn-link')}
               </button>
             </div>
           {:else}

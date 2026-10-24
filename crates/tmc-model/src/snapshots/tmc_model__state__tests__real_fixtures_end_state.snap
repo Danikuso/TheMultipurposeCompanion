@@ -45,7 +45,9 @@ expression: end_states
       "cargo_capacity": null,
       "rebuy": null,
       "max_jump_range": null,
+      "unladen_mass": null,
       "damaged_modules": [],
+      "modules": [],
       "cargo": []
     },
     "location": {
@@ -121,7 +123,200 @@ expression: end_states
       "cargo_capacity": 0,
       "rebuy": 0,
       "max_jump_range": 16.746778,
+      "unladen_mass": 485.0,
       "damaged_modules": [],
+      "modules": [
+        {
+          "Slot": "Armour",
+          "Item": "mediumtransport01_armour_grade1",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "PowerPlant",
+          "Item": "int_powerplant_size5_class1",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "MainEngines",
+          "Item": "int_engine_size6_class1",
+          "On": true,
+          "Priority": 2,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "FrameShiftDrive",
+          "Item": "int_hyperdrive_overcharge_size5_class1",
+          "On": true,
+          "Priority": 2,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "LifeSupport",
+          "Item": "int_lifesupport_size6_class1",
+          "On": true,
+          "Priority": 2,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "PowerDistributor",
+          "Item": "int_powerdistributor_size5_class1",
+          "On": true,
+          "Priority": 2,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "Radar",
+          "Item": "int_sensors_size3_class1",
+          "On": true,
+          "Priority": 2,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "FuelTank",
+          "Item": "int_fueltank_size5_class3",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "Slot01_Size6",
+          "Item": "int_shieldgenerator_size5_class1",
+          "On": true,
+          "Priority": 2,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "Slot02_Size5",
+          "Item": "int_passengercabin_size4_class1",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "Slot06_Size2",
+          "Item": "int_supercruiseassist",
+          "On": true,
+          "Priority": 2,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "Slot07_Size1",
+          "Item": "int_dockingcomputer_advanced",
+          "On": true,
+          "Priority": 2,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "Passenger01",
+          "Item": "int_passengercabin_size5_class1",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "Passenger02",
+          "Item": "int_passengercabin_size5_class1",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "Passenger03",
+          "Item": "int_passengercabin_size4_class1",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "PlanetaryApproachSuite",
+          "Item": "int_planetapproachsuite_advanced",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "VesselVoice",
+          "Item": "voicepack_verity",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "ShipCockpit",
+          "Item": "mediumtransport01_cockpit",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "CargoHatch",
+          "Item": "modularcargobaydoorfdl",
+          "On": true,
+          "Priority": 2,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        }
+      ],
       "cargo": []
     },
     "location": {
@@ -231,7 +426,200 @@ expression: end_states
       "cargo_capacity": 0,
       "rebuy": 0,
       "max_jump_range": 16.746778,
+      "unladen_mass": 485.0,
       "damaged_modules": [],
+      "modules": [
+        {
+          "Slot": "Armour",
+          "Item": "mediumtransport01_armour_grade1",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "PowerPlant",
+          "Item": "int_powerplant_size5_class1",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "MainEngines",
+          "Item": "int_engine_size6_class1",
+          "On": true,
+          "Priority": 0,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "FrameShiftDrive",
+          "Item": "int_hyperdrive_overcharge_size5_class1",
+          "On": true,
+          "Priority": 2,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "LifeSupport",
+          "Item": "int_lifesupport_size6_class1",
+          "On": true,
+          "Priority": 2,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "PowerDistributor",
+          "Item": "int_powerdistributor_size5_class1",
+          "On": true,
+          "Priority": 2,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "Radar",
+          "Item": "int_sensors_size3_class1",
+          "On": true,
+          "Priority": 2,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "FuelTank",
+          "Item": "int_fueltank_size5_class3",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "Slot01_Size6",
+          "Item": "int_shieldgenerator_size5_class1",
+          "On": true,
+          "Priority": 2,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "Slot02_Size5",
+          "Item": "int_passengercabin_size4_class1",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "Slot06_Size2",
+          "Item": "int_supercruiseassist",
+          "On": true,
+          "Priority": 2,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "Slot07_Size1",
+          "Item": "int_dockingcomputer_advanced",
+          "On": true,
+          "Priority": 2,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "Passenger01",
+          "Item": "int_passengercabin_size5_class1",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "Passenger02",
+          "Item": "int_passengercabin_size5_class1",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "Passenger03",
+          "Item": "int_passengercabin_size4_class1",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "PlanetaryApproachSuite",
+          "Item": "int_planetapproachsuite_advanced",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "VesselVoice",
+          "Item": "voicepack_verity",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "ShipCockpit",
+          "Item": "mediumtransport01_cockpit",
+          "On": true,
+          "Priority": 1,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        },
+        {
+          "Slot": "CargoHatch",
+          "Item": "modularcargobaydoorfdl",
+          "On": true,
+          "Priority": 2,
+          "Health": 1.0,
+          "AmmoInClip": null,
+          "AmmoInHopper": null,
+          "Engineering": null
+        }
+      ],
       "cargo": []
     },
     "location": {
