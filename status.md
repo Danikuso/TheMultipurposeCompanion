@@ -10,12 +10,11 @@
 
 ## Puntero actual
 
-- **Tarea:** Tarea 2: Cola de locución priorizada con descarte y deduplicación (`tmc-tts`).
+- **Tarea:** Tarea 3: Motor nativo ultraligero de Windows (`tmc-tts`).
 - **Último paso completado:**
-  1. Spec de F7 y Plan de ejecución aprobados y redactados.
-  2. Rama `fase/f7-voz-copiloto` creada y seleccionada.
-  3. Tarea 1 completada: Implementados `TtsEngineKind`, `TtsChannel`, `TtsPriority`, `TtsSettings`, `VoiceCue` y `VoiceInfo` en `tmc-model::tts`, integrados en `ModuleSettings` y `Config`, con tests unitarios y serde roundtrip pasando al 100%.
-- **Siguiente acción:** Crear el crate `tmc-tts` con el trait `TtsEngine`, cola priorizada `TtsQueue`, cooldowns y descarte de mensajes obsoletos.
+  1. Tarea 1 completada (`cac0965`): Modelos `TtsSettings`, `TtsEngineKind`, `TtsChannel`, `TtsPriority`, `VoiceCue` y `VoiceInfo`.
+  2. Tarea 2 completada: Crate `tmc-tts` con trait `TtsEngine`, cola priorizada `TtsQueue`, descarte por antigüedad (> 4s), deduplicación y cooldowns. Tests unitarios 100% pasando.
+- **Siguiente acción:** Implementar `NativeEngine` en `crates/tmc-tts/src/native.rs` para Windows (OneCore/SAPI5) con enumeración de voces y síntesis no bloqueante.
 
 ## Tareas de F7 (Voz, Alertas de Cabina y Copiloto Auditivo)
 
@@ -23,9 +22,9 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 
 | # | Tarea | Estado | Commit | Notas |
 |---|---|---|---|---|
-| 1 | Modelos de configuración de voz, canales y avisos tácticos (`tmc-model`) | ✅ hecha | `[commit-t1]` | `TtsSettings`, `TtsEngineKind`, `TtsChannel`, `VoiceCue`, tests PASS |
-| 2 | Cola de locución priorizada con descarte y deduplicación (`tmc-tts`) | 🔄 en curso | — | Crate `tmc-tts`, `TtsQueue`, cooldowns y prioridad |
-| 3 | Motor nativo ultraligero de Windows (`tmc-tts`) | ⬜ pendiente | — | Síntesis nativa del SO (OneCore/SAPI5), < 2 MB RAM |
+| 1 | Modelos de configuración de voz, canales y avisos tácticos (`tmc-model`) | ✅ hecha | `cac0965` | `TtsSettings`, `TtsEngineKind`, `TtsChannel`, `VoiceCue`, tests PASS |
+| 2 | Cola de locución priorizada con descarte y deduplicación (`tmc-tts`) | ✅ hecha | `a61b8f0` | Crate `tmc-tts`, `TtsQueue`, cooldowns y prioridad |
+| 3 | Motor nativo ultraligero de Windows (`tmc-tts`) | 🔄 en curso | — | Síntesis nativa del SO (OneCore/SAPI5), < 2 MB RAM |
 | 4 | Motor neuronal KokoroTTS desacoplado (`tmc-tts`) | ⬜ pendiente | — | ONNX en subproceso, carga bajo demanda y suspensión |
 | 5 | Generador táctico `VoiceAdvisor` en el flujo de eventos (`tmc-core`) | ⬜ pendiente | — | Detección de saltos, bioseñales, combate, minería y carrier |
 | 6 | Persistencia y endpoints REST de prueba (`tmc-store`, `tmc-server`, `tmc-app`) | ⬜ pendiente | — | `GET /api/tts/voices`, `POST /api/tts/test`, PUT `/api/settings` |
