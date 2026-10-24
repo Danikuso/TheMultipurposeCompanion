@@ -249,6 +249,7 @@ const TOPICS: &[&str] = &[
     "bgs.system",
     "bgs.tick",
     "accounts.status",
+    "crime.status",
 ];
 const MODULES: &[&str] = &[
     "dashboard",
@@ -265,9 +266,11 @@ const MODULES: &[&str] = &[
     "powerplay",
     "bgs",
     "accounts",
+    "crime",
 ];
 const ACTIONS: &[&str] = &[
     "clipboard.copy-next-system",
+    "crime.copy_system",
     "navigation.plan",
     "navigation.recalculate",
     "navigation.accept-plan",
@@ -382,6 +385,10 @@ const EVENTS: &[&str] = &[
     "EngineerContribution",
     "TechnologyBroker",
     "BackpackChange",
+    "CommitCrime",
+    "CrimeVictim",
+    "PayFines",
+    "PayBounties",
 ];
 /// Indica si un tema está en el registro de diagnóstico (si no, su nombre se redacta).
 pub fn is_registered_topic(name: &str) -> bool {
