@@ -1,8 +1,9 @@
 //! Crate de síntesis de voz (TTS) y copiloto auditivo para TMC.
-#![forbid(unsafe_code)]
 
+pub mod native;
 pub mod queue;
 
+pub use native::NativeEngine;
 pub use queue::{QueuedSpeech, TtsQueue};
 use tmc_model::tts::VoiceInfo;
 
