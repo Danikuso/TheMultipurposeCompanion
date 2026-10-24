@@ -36,6 +36,12 @@ pub struct VoiceAdvisor {
     last_overheating: bool,
     /// Si la nave estaba sufriendo interdicción en la última lectura.
     last_interdicted: bool,
+    /// Último estado legal conocido de la nave ("Clean", "Wanted", "IllegalCargo", etc.).
+    last_legal_state: Option<String>,
+    /// Si la nave porta actualmente mercancía robada en bodega.
+    has_illegal_cargo: bool,
+    /// Nivel de notoriedad estimado para detectar transiciones a limpia.
+    last_notoriety: u8,
     /// Lista de especies o muestras ya avisadas en el sistema actual para evitar duplicidad.
     pub processed_samples: BTreeSet<String>,
 }
@@ -97,6 +103,28 @@ impl VoiceAdvisor {
                             .with_arg("system", system)
                             .with_cooldown("nav_jump"),
                     );
+
+                    // Alerta de contrabando si portamos carga ilegal y el sistema tiene seguridad alta o media
+                    if self.has_illegal_cargo {
+                        let sec = event
+                            .get("SystemSecurity")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default();
+                        let is_high_or_med = sec.contains("High")
+                            || sec.contains("high")
+                            || sec.contains("Medium")
+                            || sec.contains("medium");
+                        if is_high_or_med {
+                            cues.push(
+                                VoiceCue::new(
+                                    TtsPriority::Tactical,
+                                    TtsChannel::Combat,
+                                    "tts-crime-illegal-cargo",
+                                )
+                                .with_cooldown("illegal_cargo_jump"),
+                            );
+                        }
+                    }
                 }
             }
 
@@ -264,6 +292,92 @@ impl VoiceAdvisor {
                 );
             }
 
+            // 8. Crimen y Notoriedad: Asesinato u homicidio
+            "CommitCrime" => {
+                let crime_type = event
+                    .get("CrimeType")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default();
+
+                if crime_type.to_ascii_lowercase().contains("murder") {
+                    self.last_notoriety = self.last_notoriety.saturating_add(1);
+                    cues.push(
+                        VoiceCue::new(
+                            TtsPriority::Emergency,
+                            TtsChannel::Combat,
+                            "tts-crime-notoriety-gain",
+                        )
+                        .with_cooldown("notoriety_gain"),
+                    );
+                } else if let Some(fine) = event.get("Fine").and_then(Value::as_u64) {
+                    cues.push(
+                        VoiceCue::new(
+                            TtsPriority::Informational,
+                            TtsChannel::Combat,
+                            "tts-crime-fine-incurred",
+                        )
+                        .with_arg("amount", fine.to_string())
+                        .with_cooldown("fine_incurred"),
+                    );
+                }
+            }
+
+            // 9. Contrabando: Detección de mercancías robadas en bodega
+            "Cargo" => {
+                if let Some(inv) = event.get("Inventory").and_then(Value::as_array) {
+                    let has_stolen = inv
+                        .iter()
+                        .any(|item| item.get("Stolen").and_then(Value::as_u64).unwrap_or(0) > 0);
+                    if has_stolen && !self.has_illegal_cargo {
+                        cues.push(
+                            VoiceCue::new(
+                                TtsPriority::Tactical,
+                                TtsChannel::Combat,
+                                "tts-crime-illegal-cargo",
+                            )
+                            .with_cooldown("illegal_cargo"),
+                        );
+                    }
+                    self.has_illegal_cargo = has_stolen;
+                }
+            }
+
+            // 10. Interdicción policial
+            "Interdicted" => {
+                let interdictor = event
+                    .get("Interdictor")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default();
+                let is_police = interdictor.to_ascii_lowercase().contains("police")
+                    || interdictor.to_ascii_lowercase().contains("security")
+                    || interdictor.to_ascii_lowercase().contains("enforcer")
+                    || interdictor.to_ascii_lowercase().contains("patrol")
+                    || interdictor.to_ascii_lowercase().contains("viper");
+                if is_police {
+                    cues.push(
+                        VoiceCue::new(
+                            TtsPriority::Emergency,
+                            TtsChannel::Combat,
+                            "tts-crime-police-interdiction",
+                        )
+                        .with_cooldown("interdiction_police"),
+                    );
+                }
+            }
+
+            // 11. Pago de recompensas / Limpieza de notoriedad
+            "PayBounties" if self.last_notoriety > 0 => {
+                self.last_notoriety = 0;
+                cues.push(
+                    VoiceCue::new(
+                        TtsPriority::Informational,
+                        TtsChannel::Combat,
+                        "tts-crime-notoriety-cleared",
+                    )
+                    .with_cooldown("notoriety_cleared"),
+                );
+            }
+
             _ => {}
         }
     }
@@ -304,12 +418,48 @@ impl VoiceAdvisor {
                     VoiceCue::new(
                         TtsPriority::Emergency,
                         TtsChannel::Combat,
-                        "tts-combat-shields-down", // Usamos alerta táctica de cabina
+                        "tts-crime-police-interdiction",
                     )
                     .with_cooldown("interdiction"),
                 );
             }
             self.last_interdicted = is_interdicted;
+
+            // Alerta de estado legal (contrabando o búsqueda y captura)
+            if let Some(ref ls) = status.legal_state
+                && self.last_legal_state.as_deref() != Some(ls.as_str())
+            {
+                if ls == "IllegalCargo" {
+                    cues.push(
+                        VoiceCue::new(
+                            TtsPriority::Tactical,
+                            TtsChannel::Combat,
+                            "tts-crime-illegal-cargo",
+                        )
+                        .with_cooldown("illegal_cargo"),
+                    );
+                } else if ls == "Wanted" {
+                    cues.push(
+                        VoiceCue::new(
+                            TtsPriority::Emergency,
+                            TtsChannel::Combat,
+                            "tts-crime-wanted",
+                        )
+                        .with_cooldown("status_wanted"),
+                    );
+                } else if ls == "Clean" && self.last_notoriety > 0 {
+                    self.last_notoriety = 0;
+                    cues.push(
+                        VoiceCue::new(
+                            TtsPriority::Informational,
+                            TtsChannel::Combat,
+                            "tts-crime-notoriety-cleared",
+                        )
+                        .with_cooldown("notoriety_cleared"),
+                    );
+                }
+            }
+            self.last_legal_state = status.legal_state.clone();
         }
     }
 
@@ -491,5 +641,66 @@ mod tests {
         assert_eq!(cues.len(), 1);
         assert_eq!(cues[0].text_key, "tts-carrier-jump-imminent");
         assert_eq!(cues[0].channel, TtsChannel::Carrier);
+    }
+
+    #[test]
+    fn crime_and_security_voice_cues() {
+        let mut advisor = VoiceAdvisor::new();
+        let state = GameState::default();
+
+        // 1. CommitCrime con Murder emite ganancia de notoriedad
+        let murder_ev = journal_ev(
+            r#"{"timestamp":"2026-10-24T12:00:00Z","event":"CommitCrime","CrimeType":"murder","Faction":"Independent Pilots","Bounty":10000}"#,
+        );
+        let cues = advisor.process_event(&murder_ev, &state);
+        assert_eq!(cues.len(), 1);
+        assert_eq!(cues[0].text_key, "tts-crime-notoriety-gain");
+        assert_eq!(cues[0].priority, TtsPriority::Emergency);
+
+        // 2. CommitCrime con multa menor emite fine incurred
+        let fine_ev = journal_ev(
+            r#"{"timestamp":"2026-10-24T12:05:00Z","event":"CommitCrime","CrimeType":"recklessWeaponsDischarge","Faction":"Federation","Fine":500}"#,
+        );
+        let cues2 = advisor.process_event(&fine_ev, &state);
+        assert_eq!(cues2.len(), 1);
+        assert_eq!(cues2[0].text_key, "tts-crime-fine-incurred");
+        assert_eq!(cues2[0].args.get("amount").unwrap(), "500");
+
+        // 3. Cargo con mercancía robada
+        let cargo_ev = journal_ev(
+            r#"{"timestamp":"2026-10-24T12:10:00Z","event":"Cargo","Inventory":[{"Name":"gold","Count":10,"Stolen":4}]}"#,
+        );
+        let cues3 = advisor.process_event(&cargo_ev, &state);
+        assert_eq!(cues3.len(), 1);
+        assert_eq!(cues3[0].text_key, "tts-crime-illegal-cargo");
+        assert_eq!(cues3[0].priority, TtsPriority::Tactical);
+
+        // 4. Salto a sistema de alta seguridad portando carga ilegal
+        let jump_ev = journal_ev(
+            r#"{"timestamp":"2026-10-24T12:15:00Z","event":"FSDJump","StarSystem":"Achenar","StarClass":"A","SystemSecurity":"$SYSTEM_SECURITY_high;","SystemAddress":789,"StarPos":[1.0,1.0,1.0]}"#,
+        );
+        let cues4 = advisor.process_event(&jump_ev, &state);
+        // Debe incluir aviso de carga ilegal
+        assert!(
+            cues4
+                .iter()
+                .any(|c| c.text_key == "tts-crime-illegal-cargo")
+        );
+
+        // 5. Interdicción policial
+        let interdict_ev = journal_ev(
+            r#"{"timestamp":"2026-10-24T12:20:00Z","event":"Interdicted","Submitted":false,"Interdictor":"Federal Security Service","IsPlayer":false,"Faction":"Federation"}"#,
+        );
+        let cues5 = advisor.process_event(&interdict_ev, &state);
+        assert_eq!(cues5.len(), 1);
+        assert_eq!(cues5[0].text_key, "tts-crime-police-interdiction");
+
+        // 6. Limpieza de notoriedad al pagar recompensas
+        let pay_bounties_ev = journal_ev(
+            r#"{"timestamp":"2026-10-24T12:25:00Z","event":"PayBounties","Amount":10000,"Faction":"Independent Pilots"}"#,
+        );
+        let cues6 = advisor.process_event(&pay_bounties_ev, &state);
+        assert_eq!(cues6.len(), 1);
+        assert_eq!(cues6[0].text_key, "tts-crime-notoriety-cleared");
     }
 }
