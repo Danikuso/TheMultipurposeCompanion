@@ -13,6 +13,7 @@ import { colonisationPanels } from './colonisation';
 import { powerplayPanels } from './powerplay';
 import { bgsPanels } from './bgs';
 import { accountsPanels } from './accounts';
+import { crimePanels } from './crime';
 
 export interface UiModuleDef {
   id: string;
@@ -106,5 +107,11 @@ export const modules: UiModuleDef[] = [
     icon: 'globe',
     titleKey: 'nav-accounts',
     panels: accountsPanels,
+  },
+  {
+    id: 'crime',
+    icon: 'scale',
+    titleKey: 'nav-crime',
+    panels: crimePanels,
   },
 ];

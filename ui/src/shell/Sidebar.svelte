@@ -59,6 +59,7 @@
     powerplay: '👑',
     bgs: '🌐',
     accounts: '📡',
+    crime: '⚖️',
   };
 </script>
 
