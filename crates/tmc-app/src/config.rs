@@ -46,6 +46,8 @@ pub struct Config {
     pub tourism_reference_cr_ly: u64,
     /// Tiradas por defecto de ingeniería por grado (G1..G5), cada una en 1..=10.
     pub engineering_rolls: [u8; 5],
+    /// Configuración del copiloto auditivo y avisos de voz (F7).
+    pub tts: tmc_model::tts::TtsSettings,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub theme_mode: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -75,6 +77,7 @@ impl Default for Config {
             eddn_radius_ly: 200,
             tourism_reference_cr_ly: 100_000,
             engineering_rolls: DEFAULT_ENGINEERING_ROLLS,
+            tts: tmc_model::tts::TtsSettings::default(),
             theme_mode: None,
             data_dir: None,
             ui_dir: None,
@@ -303,6 +306,7 @@ impl Config {
             eddn_radius_ly: self.eddn_radius_ly,
             tourism_reference_cr_ly: self.tourism_reference_cr_ly,
             engineering_rolls: self.engineering_rolls,
+            tts: self.tts.clone(),
         }
     }
 

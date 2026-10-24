@@ -1214,4 +1214,82 @@ tourism_reference_cr_ly = 200000
         assert_eq!(resp_logout.status(), StatusCode::OK);
         assert_eq!(store.get_account_credential("frontier_capi").unwrap(), None);
     }
+
+    #[tokio::test]
+    async fn tts_rest_endpoints_and_config_persistence() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        let core = tmc_core::spawn_core(vec![], None, Duration::from_millis(100));
+        let store = tmc_store::Store::open_in_memory().unwrap();
+        let actions = std::sync::Arc::new(
+            AppActions::with_config(Config::default()).with_save_path(path.clone()),
+        );
+
+        let router = tmc_server::build_router(
+            tmc_server::ServerConfig {
+                port: 47320,
+                lan: false,
+                token: String::new(),
+                ui_dir: None,
+            },
+            "127.0.0.1".into(),
+            core,
+            store,
+            actions,
+        );
+
+        // 1. Probar GET /api/tts/voices
+        let mut req_voices = Request::builder()
+            .uri("/api/tts/voices")
+            .header(header::HOST, "127.0.0.1:47320")
+            .body(Body::empty())
+            .unwrap();
+        req_voices.extensions_mut().insert(ConnectInfo(
+            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
+        ));
+        let resp_voices = router.clone().oneshot(req_voices).await.unwrap();
+        assert_eq!(resp_voices.status(), StatusCode::OK);
+        let bytes = axum::body::to_bytes(resp_voices.into_body(), 16384)
+            .await
+            .unwrap();
+        let voices_json: Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(voices_json["voices"].is_array());
+
+        // 2. Probar POST /api/tts/test
+        let mut req_test = Request::builder()
+            .method("POST")
+            .uri("/api/tts/test")
+            .header(header::HOST, "127.0.0.1:47320")
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(
+                r#"{"text":"Aviso de prueba","volume":80,"rate":100}"#,
+            ))
+            .unwrap();
+        req_test.extensions_mut().insert(ConnectInfo(
+            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
+        ));
+        let resp_test = router.clone().oneshot(req_test).await.unwrap();
+        assert_eq!(resp_test.status(), StatusCode::OK);
+
+        // 3. Probar PUT /api/config modificando tts
+        let mut req_cfg = Request::builder()
+            .method("PUT")
+            .uri("/api/config")
+            .header(header::HOST, "127.0.0.1:47320")
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(
+                r#"{"tts":{"enabled":true,"volume":90,"rate":110}}"#,
+            ))
+            .unwrap();
+        req_cfg.extensions_mut().insert(ConnectInfo(
+            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
+        ));
+        let resp_cfg = router.oneshot(req_cfg).await.unwrap();
+        assert_eq!(resp_cfg.status(), StatusCode::OK);
+
+        let reloaded = Config::load_from_or_default(&path);
+        assert!(reloaded.tts.enabled);
+        assert_eq!(reloaded.tts.volume, 90);
+        assert_eq!(reloaded.tts.rate, 110);
+    }
 }

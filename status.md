@@ -2,27 +2,42 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-24 12:45 (Europe/Madrid) · Antigravity
-- **Fase actual:** Correcciones Críticas de UX, Estabilización de Arranque y Panel Exhaustivo de Nave («TMC Glass HUD») [Completada y Verificada].
-- **Spec activa:** [`docs/specs/2026-10-24-tmc-ui-tarjetas-compactas-desplegables-design.md`](docs/specs/2026-10-24-tmc-ui-tarjetas-compactas-desplegables-design.md) — Tarjetas compactas, desplegables y acordeones por defecto.
-- **Plan activo:** [`docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md`](docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md) — 7 tareas en 6 bloques [Todas completadas].
-- **Rama de trabajo:** `main`
+- **Última actualización:** 2026-10-24 17:05 (Europe/Madrid) · Antigravity
+- **Fase actual:** Fase 7 — Voz, Alertas de Cabina y Copiloto Auditivo (Completada y Verificada)
+- **Spec activa:** [`docs/specs/2026-10-24-tmc-f7-voz-copiloto-design.md`](docs/specs/2026-10-24-tmc-f7-voz-copiloto-design.md) — Voz, Alertas de Cabina y Copiloto Auditivo.
+- **Plan activo:** [`docs/plans/2026-10-24-tmc-f7-voz-copiloto.md`](docs/plans/2026-10-24-tmc-f7-voz-copiloto.md) — 9 tareas en 7 bloques.
+- **Rama de trabajo:** `fase/f7-voz-copiloto`
 
 ## Puntero actual
 
-- **Tarea:** Resolución integral de las 4 peticiones del comandante: apertura web CAPI, toggle de ingenieros, eliminación del flicker de arranque y panel exhaustivo de nave.
+- **Tarea:** Tarea 9: Verificación completa de suite, huella de memoria y compilación Release/Debug (Fase 7 cerrada).
 - **Último paso completado:**
-  1. **Apertura de navegador para CAPI:** Endpoint `/api/auth/frontier/login?open=true` en `tmc-server` que invoca el navegador nativo del sistema operativo (`rundll32 url.dll,FileProtocolHandler` en Windows, `open` en macOS, `xdg-open` en Linux) con fallback en UI y estado visual reactivo «Abriendo navegador...».
-  2. **Repliegue / Toggle de Ingenieros:** En `tmc-modules/engineering`, el manejador `ACTION_SELECT_ENGINEER` ahora permite deselección (`id: null`) y togglea a `None` si se vuelve a clicar el ingeniero ya seleccionado.
-  3. **Estabilización de Arranque (Anti-Flicker):** En `App.svelte`, se detecta si el diario está en fase de replay (`topic('core.game')?.replaying === true`). Mientras se procesan los eventos históricos en los primeros 1–3 segundos, las transiciones automáticas de pestañas quedan congeladas, evitando el baile frenético de pantallas.
-  4. **Panel Exhaustivo de Nave (`ShipPanel.svelte`):** Nuevo módulo independiente `ship` con acceso directo en la barra lateral (`🚀`). Incluye:
-     - 4 Cockpit Gauges (Casco, Escudos, Combustible principal/reserva y Carga), masa en vacío y coste de recompra.
-     - 3 Pestañas especializadas: Exploración (salto máx., masa, combustible, Fuel Scoop, Guardian Booster, DSS, AFMU, SRV), Combate (escudos, casco, distribución Pips SYS/ENG/WPN, temperatura, puntos de anclaje con munición en cargador y reserva, defensas utilitarias: boosters, chaff, point defence, heat sinks) y Carga/Minería (capacidad, racks, refinería, controladores de drones, inventario de carga).
-     - Desglose exhaustivo módulo por módulo con buscador en tiempo real, filtro por categorías (Anclajes, Módulos primarios, Módulos opcionales, Utilidades), estado On/Off, barras de salud, prioridad de energía P1..P5, insignias oficiales de ingeniería G1..G5 con hexágonos, efecto experimental y acordeón de modificadores.
-     - Formateador y traductor de nombres de slots e items de Elite (`shipFormatters.ts`).
-     - Claves i18n sincronizadas en los 5 idiomas (`locales/{es,en,fr,de,pt}/*.ftl`).
-  5. **Verificación total y compilación:** 1.400+ tests Rust PASS, 396 tests Vitest PASS, `svelte-check` 0 errores / 0 avisos, `cargo clippy` limpio sin advertencias, y compilación de binarios interactivos `target/release/TMC.exe` y `target/debug/TMC.exe`.
-- **Siguiente acción:** Notificar al comandante y poner a su disposición los ejecutables actualizados.
+  1. Tarea 1 completada (`cac0965`): Modelos `TtsSettings`, `TtsEngineKind`, `TtsChannel`, `TtsPriority`, `VoiceCue` y `VoiceInfo`.
+  2. Tarea 2 completada (`dc11072`): Crate `tmc-tts` con trait `TtsEngine`, cola priorizada `TtsQueue`, descarte por antigüedad (> 4s), deduplicación y cooldowns.
+  3. Tarea 3 completada (`beb81a4`): `NativeEngine` en `crates/tmc-tts/src/native.rs` con COM SAPI5 / OneCore de Windows.
+  4. Tarea 4 completada (`a9e9964`): `KokoroEngine` en `crates/tmc-tts/src/kokoro.rs` con arquitectura neuronal desacoplada y suspensión automática tras inactividad (60s).
+  5. Tarea 5 completada (`313cd12`): `VoiceAdvisor` en `crates/tmc-core/src/voice_advisor.rs` integrado en el actor con detección de saltos scoopable/unscoopable, bioseñales, progreso de muestras exobiológicas (1/3, 2/3, 3/3), caída y restauración de escudos, sobrecalentamiento, asteroides valiosos y carrier, con emisión de `CoreMessage::VoiceCue`.
+  6. Tarea 6 completada (`9770987`): Endpoints REST `GET /api/tts/voices`, `POST /api/tts/test`, integración de `AppActions` con `tmc-tts` y persistencia en vivo de ajustes de voz en `PUT /api/config`.
+  7. Tarea 7 completada (`b6f4bdf`): Catálogos `locales/{es,en,fr,de,pt}/tts.ftl` con todas las claves de voz y UI de copiloto auditivo verificados al 100% por los tests de `tmc-i18n`.
+  8. Tarea 8 completada (`a1bc92a`): Sección de Copiloto Auditivo en `Settings.svelte` (`ui/`) con controles «TMC Glass HUD», selectores compactos, sliders y botón de prueba, con 401 tests de Vitest pasando al 100%.
+  9. Tarea 9 completada: Suite completa de Rust PASS, Clippy sin advertencias, compilación de binarios Release (`target/release/TMC.exe`, 32.5 MB) y Debug (`target/debug/TMC.exe`, 52.9 MB) y saneamiento de disco de 36 GB a 16.48 GB.
+- **Siguiente acción:** Fase 7 lista para revisión/fusión en `main`. Siguiente fase según roadmap (§13): Fase 8 — Modo VR / HUD espacial, o siguiente instrucción del propietario.
+
+## Tareas de F7 (Voz, Alertas de Cabina y Copiloto Auditivo)
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 1 | Modelos de configuración de voz, canales y avisos tácticos (`tmc-model`) | ✅ hecha | `cac0965` | `TtsSettings`, `TtsEngineKind`, `TtsChannel`, `VoiceCue`, tests PASS |
+| 2 | Cola de locución priorizada con descarte y deduplicación (`tmc-tts`) | ✅ hecha | `dc11072` | Crate `tmc-tts`, `TtsQueue`, cooldowns y prioridad |
+| 3 | Motor nativo ultraligero de Windows (`tmc-tts`) | ✅ hecha | `beb81a4` | Síntesis nativa del SO (OneCore/SAPI5), < 2 MB RAM |
+| 4 | Motor neuronal KokoroTTS desacoplado (`tmc-tts`) | ✅ hecha | `a9e9964` | ONNX en subproceso, carga bajo demanda y suspensión |
+| 5 | Generador táctico `VoiceAdvisor` en el flujo de eventos (`tmc-core`) | ✅ hecha | `313cd12` | Detección de saltos, bioseñales, combate, minería y carrier |
+| 6 | Persistencia y endpoints REST de prueba (`tmc-store`, `tmc-server`, `tmc-app`) | ✅ hecha | `9770987` | `GET /api/tts/voices`, `POST /api/tts/test`, PUT `/api/settings` |
+| 7 | Catálogo de locuciones de copiloto en los 5 idiomas (`locales/`) | ✅ hecha | `b6f4bdf` | `tts.ftl` en es/en/fr/de/pt verificado por `tmc-i18n` |
+| 8 | Sección de Copiloto Auditivo en `SettingsPanel.svelte` (`ui/`) | ✅ hecha | `a1bc92a` | Controles Glass HUD, sliders volumen/velocidad, prueba de voz, 401 tests PASS |
+| 9 | Verificación integral, footprint y compilación Release/Debug | ✅ hecha | (commit docs) | Suite Rust PASS, Clippy 0 warnings, Release (32.5MB) + Debug (52.9MB), target saneado a 16.48 GB |
 
 ## Tareas de Tarjetas Compactas y Desplegables («TMC Glass HUD»)
 
@@ -415,6 +430,26 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-24 17:05 (Europe/Madrid) · Antigravity · Fase 7 (Voz, Alertas de Cabina y Copiloto Auditivo) completada íntegramente y verificada:
+  - **Arquitectura de voz híbrida nativa y neuronal:**
+    - Crate `tmc-tts` con trait `TtsEngine`, cola priorizada `TtsQueue` (Emergency > Tactical > Informational) con descarte por antigüedad (> 4s), supresión de duplicados y cooldowns por canal.
+    - Motor nativo `NativeEngine` en `crates/tmc-tts/src/native.rs` utilizando COM Windows SAPI5 / OneCore (`ISpVoice`) en subproceso con purga instantánea y huella de memoria < 2 MB de RAM.
+    - Motor neuronal `KokoroEngine` en `crates/tmc-tts/src/kokoro.rs` ejecutado en proceso desacoplado con suspensión automática de recursos tras 60 s de inactividad, catálogo de voces (es, en, fr, pt) y fallback transparente a voces nativas para el idioma alemán y cuando el modelo no esté descargado.
+  - **Generador táctico en el flujo de eventos:**
+    - `VoiceAdvisor` en `crates/tmc-core` conectado al bucle del actor de diario/estado.
+    - Avisos tácticos en tiempo real para saltos estelares (estrella repostable vs no repostable), recuento de señales biológicas, muestras exobiológicas (1/3, 2/3, 3/3), caída y restauración de escudos, sobrecalentamiento crítico, alertas de integridad de casco, asteroides valiosos en prospección y saltos inminentes de Fleet Carrier.
+  - **Persistencia, API REST e i18n:**
+    - Endpoints REST `GET /api/tts/voices`, `POST /api/tts/test` e integración en `AppActions` (`tts.voices`, `tts.test`).
+    - Catálogo completo de locuciones de voz y controles de cabina en los 5 idiomas (`locales/{es,en,fr,de,pt}/tts.ftl`), 100% verificado por los tests de `tmc-i18n`.
+  - **Interfaz de usuario («TMC Glass HUD»):**
+    - Controles de copiloto de voz en `Settings.svelte` con conmutador general, selector de motor, selector de voces del sistema, controles deslizantes de volumen (0-100%) y velocidad (80-150%), conmutadores de canales y botón de prueba auditiva con estado de reproducción.
+    - 5 tests unitarios en `ui/tests/settings-tts.test.ts` (401/401 tests Vitest PASS, `svelte-check` 0 errores / 0 avisos).
+  - **Verificación global y compilación:**
+    - Tests de suite Rust en el workspace 100% PASS (118 en tmc-app, 50 en tmc-store, 42 en tmc-core, 35 en tmc-server, 9 en tmc-tts, 18 en tmc-i18n).
+    - `cargo clippy --workspace --all-targets -- -D warnings` limpio.
+    - Compilación verificada de binarios `target/release/TMC.exe` (32.5 MB) y `target/debug/TMC.exe` (52.9 MB).
+    - Saneamiento obligatorio de disco: `target/` reducido de 36 GB a 16.48 GB purgando artefactos de test obsoletos y caché incremental.
 
 - 2026-10-24 12:45 (Europe/Madrid) · Antigravity · Resolución de 4 peticiones del comandante: login CAPI en navegador nativo, toggle/repliegue de acordeón de ingenieros, estabilización de flicker al arrancar y nuevo panel exhaustivo de nave:
   - **Apertura de navegador para CAPI:** Endpoint `/api/auth/frontier/login?open=true` en `tmc-server/src/rest.rs` que invoca el navegador nativo del SO (`rundll32 url.dll,FileProtocolHandler` en Windows, `open` en macOS, `xdg-open` en Linux) con fallback en UI y estado visual reactivo «Abriendo navegador...».
