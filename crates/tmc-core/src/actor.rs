@@ -31,6 +31,7 @@ pub enum CoreMessage {
         done: u64,
         total: u64,
     },
+    VoiceCue(tmc_model::tts::VoiceCue),
 }
 
 enum ControlRequest {
@@ -203,6 +204,7 @@ struct Actor {
     // Los resultados vuelven por un canal propio, que no mantiene vivo al actor.
     task_tx: Option<std::sync::mpsc::Sender<StoreJob>>,
     next_request_id: u64,
+    advisor: crate::voice_advisor::VoiceAdvisor,
     // Último instante del diario publicado en `core.clock`.
     clock_published: Option<chrono::DateTime<chrono::Utc>>,
     #[cfg(debug_assertions)]
@@ -228,6 +230,7 @@ impl Actor {
             net: None,
             task_tx: None,
             next_request_id: 1,
+            advisor: crate::voice_advisor::VoiceAdvisor::new(),
             clock_published: None,
             #[cfg(debug_assertions)]
             diag: diag::ActorDiag::default(),
@@ -483,6 +486,13 @@ impl Actor {
             | SourceEvent::Stored { .. } => Changes::empty(),
         };
         self.update_core(changes);
+
+        // Evaluar avisos contextuales de copiloto de cabina
+        let voice_cues = self.advisor.process_event(&event, &self.state);
+        for cue in voice_cues {
+            let _ = self.updates.send(CoreMessage::VoiceCue(cue));
+        }
+
         let mut index = 0;
         while index < self.modules.len() {
             let slot = &mut self.modules[index];
@@ -860,7 +870,13 @@ mod tests {
             ))
             .await
             .unwrap();
-        match next(&mut rx).await {
+        let msg = loop {
+            match next(&mut rx).await {
+                CoreMessage::VoiceCue(_) => continue,
+                other => break other,
+            }
+        };
+        match msg {
             CoreMessage::Update { seq, topics } => {
                 assert_eq!(seq, 1);
                 assert_eq!(topics["core.location"]["system"], "Example");
@@ -1672,5 +1688,17 @@ mod tests {
             progress,
             serde_json::json!({"type":"import-progress","done":3,"total":9})
         );
+        let cue = serde_json::to_value(CoreMessage::VoiceCue(
+            tmc_model::tts::VoiceCue::new(
+                tmc_model::tts::TtsPriority::Tactical,
+                tmc_model::tts::TtsChannel::Navigation,
+                "tts-nav-jump-scoopable",
+            )
+            .with_arg("system", "Sol"),
+        ))
+        .unwrap();
+        assert_eq!(cue["type"], "voice-cue");
+        assert_eq!(cue["text_key"], "tts-nav-jump-scoopable");
+        assert_eq!(cue["priority"], "tactical");
     }
 }

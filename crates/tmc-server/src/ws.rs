@@ -309,6 +309,7 @@ async fn run_socket(
                         }
                         let _ = sent;
                     }
+                    Ok(CoreMessage::VoiceCue(_)) => {}
                     Err(broadcast::error::RecvError::Lagged(_skipped)) => {
                         tmc_model::diagnostic!(
                             tmc_model::diagnostics::DiagnosticContext::Http,
