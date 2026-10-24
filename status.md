@@ -2,7 +2,7 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-24 02:05 (Europe/Madrid) · Antigravity
+- **Última actualización:** 2026-10-24 03:15 (Europe/Madrid) · Antigravity
 - **Fase actual:** Mejora Ergonómica Global — Tarjetas Compactas, Desplegables y Acordeones por Defecto («TMC Glass HUD») [Completada y Verificada].
 - **Spec activa:** [`docs/specs/2026-10-24-tmc-ui-tarjetas-compactas-desplegables-design.md`](docs/specs/2026-10-24-tmc-ui-tarjetas-compactas-desplegables-design.md) — Tarjetas compactas, desplegables y acordeones por defecto.
 - **Plan activo:** [`docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md`](docs/plans/2026-10-24-tmc-ui-tarjetas-compactas-desplegables.md) — 7 tareas en 6 bloques [Todas completadas].
@@ -10,9 +10,13 @@
 
 ## Puntero actual
 
-- **Tarea:** Iniciativa de compacidad y desplegables completada en todos los módulos y pantallas.
-- **Último paso completado:** Verificación integral de tests: 396 tests Vitest PASS (suite completa), svelte-check 0 errores/0 advertencias, clippy limpio, tests Rust en workspace PASS (817 en `tmc-modules`, 18 en `tmc-i18n`), `dist/` reconstruido y `target/debug/TMC.exe` compilado exitosamente.
-- **Siguiente acción:** Probar en vivo en cabina con el comandante y definir la siguiente fase según hoja de ruta.
+- **Tarea:** Corrección de comportamiento anómalo al seleccionar ingeniero en `EngineersPanel` y backend.
+- **Último paso completado:**
+  1. Se eliminó la invalidación errónea de `revision` en `crates/tmc-modules/src/engineering/mod.rs` (`dependencies_changed`), ya que seleccionar un ingeniero es un cambio de estado de selección del topic `engineering.engineers` y no muta las colecciones paginadas REST (`self.engineer_rows`). Esto evita que el cliente WebSocket reciba un incremento de revisión que forzaba a `createSectionsReader` a vaciar la lista de 30 ingenieros y mostrar un parpadeo de "Cargando...".
+  2. En `EngineersPanel.svelte`, los detalles del ingeniero seleccionado (`data-testid="engineer-details"`, próximo paso y capacidades) ahora se renderizan **in situ** directamente dentro de la tarjeta del ingeniero seleccionado (acordeón expandible con chevron ▲/▼), eliminando el desplazamiento y desconexión donde los detalles aparecían 2500px más abajo al final de la pantalla fuera de la vista. Se mantiene fallback si la fila estuviese filtrada.
+  3. Se añadieron cabeceras colapsables para "Ingenieros de naves" e "Ingenieros a pie" con recuento y toggle acorde con la norma de compacidad de cabina.
+  4. Verificación completa: 396 tests Vitest PASS, `svelte-check` 0 errores / 0 advertencias, Vite production build OK, 162 tests Rust de ingeniería PASS, `cargo fmt` y `cargo clippy` limpios, y binario de release `TMC.exe` generado exitosamente.
+- **Siguiente acción:** Informar al comandante y verificar en vivo.
 
 ## Tareas de Tarjetas Compactas y Desplegables («TMC Glass HUD»)
 
@@ -405,6 +409,15 @@ Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ 
 - 2026-10-17 · Rulings de ejecución R1–R5 (writer no toca offset; ruta de locales en UI; trait ConfigHost; Task 0 la ejecuta el controlador; job `ui` de CI en Task 15).
 
 ## Registro de sesiones
+
+- 2026-10-24 03:15 (Europe/Madrid) · Antigravity · Corrección del comportamiento anómalo al seleccionar ingeniero en `EngineersPanel`:
+  - Identificada causa raíz: en `crates/tmc-modules/src/engineering/mod.rs`, `dependencies_changed` comprobaba erróneamente `semantic_changed(TOPIC_ENGINEERS, &engineers)`. Dado que el topic contiene `selected_id`, cualquier clic en un ingeniero incrementaba `revision`. En el frontend, `createSectionsReader` (al no tener `cacheKey` estático para la lista de ingenieros) interpretaba la nueva revisión como una invalidación total, vaciando todas las filas (`items = []`, `ready = false`) y mostrando un parpadeo de "Cargando..." mientras se reconsultaba la API.
+  - Corrección en backend: se eliminó `semantic_changed(TOPIC_ENGINEERS, &engineers)` de `dependencies_changed`, ya que seleccionar un ingeniero es un estado de selección y no muta los datos paginados de la galaxia (`self.engineer_rows` sigue vigilado por cambios reales de desbloqueo/rango).
+  - Corrección en UI (`EngineersPanel.svelte`):
+    - Los detalles del ingeniero seleccionado (`data-testid="engineer-details"`) ahora se abren en acordeón expandible **in situ** directamente dentro de la tarjeta clicada, evitando el desplazamiento donde aparecía al final de la página tras 35 ingenieros.
+    - Se agregaron chevrons (▲/▼), interacción clicable completa y botones con `type="button"`.
+    - Se añadieron cabeceras colapsables para las secciones de "Ingenieros de naves" e "Ingenieros a pie".
+  - Verificación: 162 tests Rust de ingeniería PASS, 396 tests Vitest PASS, `svelte-check` 0 errores/0 advertencias, Vite build OK, clippy sin advertencias y `TMC.exe` de release generado.
 
 - 2026-10-24 02:05 (Europe/Madrid) · Antigravity · Ejecución completa de la iniciativa de tarjetas compactas y desplegables en toda la aplicación:
   - Tareas 2 a 6 ejecutadas con commits individuales (`64fb358`, `7b5e721`, `41ed856`, `86d3d5a`, `7dccf60`):
