@@ -2,26 +2,35 @@
 
 > Lee primero [`AGENTS.md`](AGENTS.md). Este archivo indica el punto **exacto** del desarrollo. Actualízalo según las reglas de `AGENTS.md` §4.
 
-- **Última actualización:** 2026-10-24 17:05 (Europe/Madrid) · Antigravity
-- **Fase actual:** Fase 7 — Voz, Alertas de Cabina y Copiloto Auditivo (Completada y Verificada)
-- **Spec activa:** [`docs/specs/2026-10-24-tmc-f7-voz-copiloto-design.md`](docs/specs/2026-10-24-tmc-f7-voz-copiloto-design.md) — Voz, Alertas de Cabina y Copiloto Auditivo.
-- **Plan activo:** [`docs/plans/2026-10-24-tmc-f7-voz-copiloto.md`](docs/plans/2026-10-24-tmc-f7-voz-copiloto.md) — 9 tareas en 7 bloques.
-- **Rama de trabajo:** `fase/f7-voz-copiloto`
+- **Última actualización:** 2026-10-24 17:18 (Europe/Madrid) · Antigravity
+- **Fase actual:** Fase 9 — Crimen, Notoriedad y Piratería (Law & Disorder)
+- **Spec activa:** [`docs/specs/2026-10-24-tmc-f9-crimen-pirateria-design.md`](docs/specs/2026-10-24-tmc-f9-crimen-pirateria-design.md) — Crimen, Notoriedad y Piratería.
+- **Plan activo:** [`docs/plans/2026-10-24-tmc-f9-crimen-pirateria.md`](docs/plans/2026-10-24-tmc-f9-crimen-pirateria.md) — 7 tareas en 6 bloques.
+- **Rama de trabajo:** `fase/f9-crimen-pirateria`
 
 ## Puntero actual
 
-- **Tarea:** Tarea 9: Verificación completa de suite, huella de memoria y compilación Release/Debug (Fase 7 cerrada).
+- **Tarea:** Inicio de Fase 9 — Tarea 1: Modelos de crimen, eventos de diario y topic `CrimeStatusTopic` (`tmc-model`).
 - **Último paso completado:**
-  1. Tarea 1 completada (`cac0965`): Modelos `TtsSettings`, `TtsEngineKind`, `TtsChannel`, `TtsPriority`, `VoiceCue` y `VoiceInfo`.
-  2. Tarea 2 completada (`dc11072`): Crate `tmc-tts` con trait `TtsEngine`, cola priorizada `TtsQueue`, descarte por antigüedad (> 4s), deduplicación y cooldowns.
-  3. Tarea 3 completada (`beb81a4`): `NativeEngine` en `crates/tmc-tts/src/native.rs` con COM SAPI5 / OneCore de Windows.
-  4. Tarea 4 completada (`a9e9964`): `KokoroEngine` en `crates/tmc-tts/src/kokoro.rs` con arquitectura neuronal desacoplada y suspensión automática tras inactividad (60s).
-  5. Tarea 5 completada (`313cd12`): `VoiceAdvisor` en `crates/tmc-core/src/voice_advisor.rs` integrado en el actor con detección de saltos scoopable/unscoopable, bioseñales, progreso de muestras exobiológicas (1/3, 2/3, 3/3), caída y restauración de escudos, sobrecalentamiento, asteroides valiosos y carrier, con emisión de `CoreMessage::VoiceCue`.
-  6. Tarea 6 completada (`9770987`): Endpoints REST `GET /api/tts/voices`, `POST /api/tts/test`, integración de `AppActions` con `tmc-tts` y persistencia en vivo de ajustes de voz en `PUT /api/config`.
-  7. Tarea 7 completada (`b6f4bdf`): Catálogos `locales/{es,en,fr,de,pt}/tts.ftl` con todas las claves de voz y UI de copiloto auditivo verificados al 100% por los tests de `tmc-i18n`.
-  8. Tarea 8 completada (`a1bc92a`): Sección de Copiloto Auditivo en `Settings.svelte` (`ui/`) con controles «TMC Glass HUD», selectores compactos, sliders y botón de prueba, con 401 tests de Vitest pasando al 100%.
-  9. Tarea 9 completada: Suite completa de Rust PASS, Clippy sin advertencias, compilación de binarios Release (`target/release/TMC.exe`, 32.5 MB) y Debug (`target/debug/TMC.exe`, 52.9 MB) y saneamiento de disco de 36 GB a 16.48 GB.
-- **Siguiente acción:** Fase 7 lista para revisión/fusión en `main`. Siguiente fase según roadmap (§13): Fase 8 — Modo VR / HUD espacial, o siguiente instrucción del propietario.
+  1. Fase 7 fusionada en `main` con `--no-ff`.
+  2. Creada la rama de trabajo `fase/f9-crimen-pirateria`.
+  3. Redactada la especificación de diseño: `docs/specs/2026-10-24-tmc-f9-crimen-pirateria-design.md`.
+  4. Redactado el plan de ejecución: `docs/plans/2026-10-24-tmc-f9-crimen-pirateria.md` (7 tareas en 6 bloques).
+- **Siguiente acción:** Aprobación del propietario para iniciar la ejecución TDD tarea a tarea de Fase 9.
+
+## Tareas de F9 (Crimen, Notoriedad y Piratería)
+
+Leyenda: ⬜ pendiente · 🔄 en curso · ✅ hecha · ⛔ bloqueada · ⏭️ omitida
+
+| # | Tarea | Estado | Commit | Notas |
+|---|---|---|---|---|
+| 1 | Modelos de crimen, eventos de diario y topic `CrimeStatusTopic` (`tmc-model`) | ⬜ pendiente | — | `CrimeType`, `CommitCrime`, `PayFines`, `PayBounties`, `CrimeStatusTopic` |
+| 2 | Módulo de lógica criminal en Rust (`tmc-modules`) | ⬜ pendiente | — | Decaimiento de notoriedad en vuelo, multas, Interstellar Factor y Black Market |
+| 3 | Detección contextual y avisos de seguridad en `VoiceAdvisor` (`tmc-core`) | ⬜ pendiente | — | Notoriedad incrementada/limpia, contrabando, interdicción policial |
+| 4 | Catálogo de textos y locuciones en los 5 idiomas (`locales/`) | ⬜ pendiente | — | `crime.ftl` en es/en/fr/de/pt, verificado por `tmc-i18n` |
+| 5 | Panel `CrimePanel.svelte` e integración en el Shell («TMC Glass HUD») (`ui/`) | ⬜ pendiente | — | Medidor notoriedad, Guía Limpieza, Contrabando y Mercados Negros |
+| 6 | Tests unitarios en Vitest para panel de crimen y contrabando (`ui/`) | ⬜ pendiente | — | Reactividad de estado legal, temporizador y botones de copia |
+| 7 | Verificación integral, huella y compilación Release/Debug | ⬜ pendiente | — | Workspace Rust PASS, Vitest PASS, clippy limpio, build Release/Debug |
 
 ## Tareas de F7 (Voz, Alertas de Cabina y Copiloto Auditivo)
 
