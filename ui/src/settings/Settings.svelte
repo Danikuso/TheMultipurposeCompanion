@@ -377,365 +377,389 @@
   {#if validationError}<p role="alert" data-testid="validation-error">{t('settings-mining-invalid')}</p>{/if}
   {#if saveError}<p role="alert">{t('settings-save-error')}</p>{/if}
   <div class="settings-form" oninput={() => { draftRevision++; }}>
-    <label class="field-row">
-      <span>{t('settings-language')}</span>
-      <select bind:value={language} onchange={saveConfig}>
-        <option value="es">Español (es)</option>
-        <option value="en">English (en)</option>
-        <option value="fr">Français (fr)</option>
-        <option value="de">Deutsch (de)</option>
-        <option value="pt">Português (pt)</option>
-      </select>
-    </label>
+    <div class="settings-grid">
+      <!-- Columna 1: Configuración General, Minería y Tiradas de Ingeniería -->
+      <div class="settings-col">
+        <fieldset class="settings-card">
+          <legend>⚙️ {t('nav-settings')}</legend>
 
-    <label class="field-row">
-      <span>{t('settings-theme')}</span>
-      <select bind:value={themeMode} onchange={saveConfig}>
-        <option value="hud">{t('theme-hud')}</option>
-        <option value="classic">{t('theme-classic')}</option>
-        <option value="contrast">#FFFFFF / #000000</option>
-      </select>
-    </label>
-
-    <label class="field-row">
-      <span>{t('settings-auto-copy')}</span>
-      <input type="checkbox" bind:checked={autoCopy} onchange={saveConfig} />
-    </label>
-
-    <label class="field-row" title={t('auto-companion-tooltip')}>
-      <span>{t('auto-companion')}</span>
-      <input type="checkbox" role="switch" data-testid="settings-auto-companion" checked={prefs.autoCompanion}
-        onchange={(e) => { void setAutoCompanion(e.currentTarget.checked); }} />
-    </label>
-    <p class="help-text">{t('auto-companion-tooltip')}</p>
-
-    <label class="field-row">
-      <span>{t('settings-lan')}</span>
-      <input type="checkbox" bind:checked={lanEnabled} onchange={saveConfig} />
-    </label>
-    <p class="help-text">{t('settings-lan-help')}</p>
-
-    <label class="field-row">
-      <span>{t('settings-online-services')}</span>
-      <input type="checkbox" bind:checked={onlineServices} onchange={saveConfig} data-testid="online-services"
-        aria-describedby="online-services-help" />
-    </label>
-    <p id="online-services-help" class="help-text">{t('settings-online-services-help')}</p>
-    <label class="field-row">
-      <span>{t('settings-map-threshold')}</span>
-      <input type="number" min="0" step="1" bind:value={mapThreshold} onchange={saveConfig} data-testid="map-threshold" />
-    </label>
-    <label class="field-row">
-      <span>{t('settings-planner-efficiency')}</span>
-      <input type="number" min="0" max="100" step="1" bind:value={plannerEfficiency} onchange={saveConfig} data-testid="planner-efficiency" />
-    </label>
-
-    <fieldset class="minerals" data-testid="mining-interest">
-      <legend>{t('settings-mining-interest')}</legend>
-      {#each knownMinerals as key (key)}
-        <label class="mineral">
-          <input type="checkbox" data-mineral={key} checked={miningInterest.includes(key)}
-            onchange={(e) => toggleMineral(key, e.currentTarget.checked)} />
-          <span>{mineralLabel(key)}</span>
-        </label>
-      {/each}
-      <div class="field-row">
-        <input type="text" bind:value={extraMineral} data-testid="mining-extra" aria-label={t('settings-mining-add')}
-          onkeydown={(e) => { if (e.key === 'Enter') addMineral(); }} />
-        <button type="button" data-testid="mining-add" onclick={addMineral}>{t("settings-mining-add-button")}</button>
-      </div>
-    </fieldset>
-    <label class="field-row">
-      <span>{t('settings-mining-threshold')}</span>
-      <input type="number" min="0" max="1000000000" step="1" bind:value={miningThreshold} onchange={saveConfig} data-testid="mining-threshold" />
-    </label>
-    <label class="field-row">
-      <span>{t('settings-sell-radius')}</span>
-      <input type="number" min="10" max="500" step="1" bind:value={sellRadius} onchange={saveConfig} data-testid="sell-radius" />
-    </label>
-    <label class="field-row">
-      <span>{t('settings-eddn-radius')}</span>
-      <input type="number" min="20" max="500" step="1" bind:value={eddnRadius} onchange={saveConfig} data-testid="eddn-radius" />
-    </label>
-    <label class="field-row">
-      <span>{t('settings-tourism-reference')}</span>
-      <input type="number" min="1000" max="10000000" step="1" bind:value={tourismReference} onchange={saveConfig} data-testid="tourism-reference" />
-    </label>
-
-    <fieldset class="minerals engineering-rolls" data-testid="engineering-rolls">
-      <legend>{t('settings-engineering-rolls')}</legend>
-      {#each [1, 2, 3, 4, 5] as grade}
-        <label class="field-row" for={`engineering-rolls-${grade}`}>
-          <span>{t('engineering-grade', { grade: integer(grade) })}</span>
-          <input id={`engineering-rolls-${grade}`} data-testid={`engineering-rolls-${grade}`}
-            type="number" min="1" max="10" step="1" bind:value={engineeringRolls[grade - 1]}
-            aria-invalid={rollsInvalid} aria-describedby={rollsInvalid ? 'engineering-rolls-error' : undefined}
-            oninput={() => { rollsEdits++; }} onchange={saveConfig} />
-        </label>
-      {/each}
-      {#if rollsInvalid}<p id="engineering-rolls-error" role="alert" data-testid="engineering-rolls-error">{t('settings-engineering-rolls-invalid')}</p>{/if}
-    </fieldset>
-
-    <fieldset class="minerals tts-section" data-testid="tts-settings">
-      <legend>{t('settings-tts-title')}</legend>
-      <p class="help-text">{t('settings-tts-description')}</p>
-
-      <label class="field-row">
-        <span>{t('settings-tts-enabled')}</span>
-        <input
-          type="checkbox"
-          role="switch"
-          data-testid="tts-enabled"
-          bind:checked={ttsEnabled}
-          onchange={saveConfig}
-        />
-      </label>
-
-      {#if ttsEnabled}
-        <label class="field-row">
-          <span>{t('settings-tts-engine')}</span>
-          <select
-            data-testid="tts-engine"
-            bind:value={ttsEngine}
-            onchange={onEngineChange}
-          >
-            <option value="native">{t('settings-tts-engine-native')}</option>
-            <option value="kokoro">{t('settings-tts-engine-kokoro')}</option>
-          </select>
-        </label>
-
-        <label class="field-row">
-          <span>{t('settings-tts-voice')}</span>
-          <select
-            data-testid="tts-voice"
-            bind:value={ttsVoice}
-            onchange={saveConfig}
-          >
-            <option value="">(Predeterminada)</option>
-            {#each ttsVoicesList as v (v.id)}
-              <option value={v.id}>{v.name} ({v.lang})</option>
-            {/each}
-          </select>
-        </label>
-
-        <label class="field-row">
-          <span>{t('settings-tts-volume')} ({ttsVolume}%)</span>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            step="5"
-            data-testid="tts-volume"
-            bind:value={ttsVolume}
-            onchange={saveConfig}
-          />
-        </label>
-
-        <label class="field-row">
-          <span>{t('settings-tts-rate')} ({ttsRate}%)</span>
-          <input
-            type="range"
-            min="80"
-            max="150"
-            step="5"
-            data-testid="tts-rate"
-            bind:value={ttsRate}
-            onchange={saveConfig}
-          />
-        </label>
-
-        <div class="tts-channels">
-          <span class="channels-title">{t('settings-tts-channels')}</span>
-          <div class="channels-grid">
-            <label class="channel-item">
-              <input
-                type="checkbox"
-                data-testid="tts-channel-combat"
-                bind:checked={ttsChannels.combat}
-                onchange={saveConfig}
-              />
-              <span>{t('settings-tts-channel-combat')}</span>
-            </label>
-            <label class="channel-item">
-              <input
-                type="checkbox"
-                data-testid="tts-channel-navigation"
-                bind:checked={ttsChannels.navigation}
-                onchange={saveConfig}
-              />
-              <span>{t('settings-tts-channel-navigation')}</span>
-            </label>
-            <label class="channel-item">
-              <input
-                type="checkbox"
-                data-testid="tts-channel-exploration"
-                bind:checked={ttsChannels.exploration}
-                onchange={saveConfig}
-              />
-              <span>{t('settings-tts-channel-exploration')}</span>
-            </label>
-            <label class="channel-item">
-              <input
-                type="checkbox"
-                data-testid="tts-channel-mining"
-                bind:checked={ttsChannels.mining}
-                onchange={saveConfig}
-              />
-              <span>{t('settings-tts-channel-mining')}</span>
-            </label>
-            <label class="channel-item">
-              <input
-                type="checkbox"
-                data-testid="tts-channel-carrier"
-                bind:checked={ttsChannels.carrier}
-                onchange={saveConfig}
-              />
-              <span>{t('settings-tts-channel-carrier')}</span>
-            </label>
-          </div>
-        </div>
-
-        <div class="test-row">
-          <button
-            type="button"
-            class="btn-test-voice"
-            data-testid="tts-test-btn"
-            disabled={ttsTesting}
-            onclick={testTtsVoice}
-          >
-            {ttsTesting ? t('settings-tts-test-playing') : t('settings-tts-test-button')}
-          </button>
-        </div>
-      {/if}
-    </fieldset>
-
-    <!-- Asistencia por Voz e Integración («TMC Glass HUD») -->
-    <fieldset class="tts-section voice-assistant-section">
-      <legend>🎙️ {t('voice-assistant-title')}</legend>
-      <div class="field-row">
-        <label for="voice-assistant-toggle">
-          <span>{t('voice-assistant-enable')}</span>
-          <small class="field-hint">{t('voice-assistant-enable-desc')}</small>
-        </label>
-        <input
-          id="voice-assistant-toggle"
-          type="checkbox"
-          data-testid="voice-assistant-toggle"
-          checked={voiceAssistant.enabled}
-          onchange={(e) => voiceAssistant.setEnabled(e.currentTarget.checked)}
-        />
-      </div>
-
-      {#if voiceAssistant.enabled}
-        <div class="field-row">
-          <label for="voice-engine-select">
-            <span>{t('voice-assistant-engine')}</span>
+          <label class="field-row">
+            <span>{t('settings-language')}</span>
+            <select bind:value={language} onchange={saveConfig}>
+              <option value="es">Español (es)</option>
+              <option value="en">English (en)</option>
+              <option value="fr">Français (fr)</option>
+              <option value="de">Deutsch (de)</option>
+              <option value="pt">Português (pt)</option>
+            </select>
           </label>
-          <select
-            id="voice-engine-select"
-            data-testid="voice-engine-select"
-            value={voiceAssistant.sttEngine}
-            onchange={(e) => voiceAssistant.setSttEngine(e.currentTarget.value as 'whisper' | 'native')}
-          >
-            <option value="whisper">{t('voice-assistant-engine-whisper')}</option>
-            <option value="native">{t('voice-assistant-engine-native')}</option>
-          </select>
-        </div>
 
-        {#if voiceAssistant.sttEngine === 'whisper'}
-          <div class="whisper-status-card">
-            <div class="whisper-status-header">
-              <span class="whisper-title">🧠 Whisper AI Local</span>
-              <span
-                class="badge"
-                class:badge-success={voiceAssistant.whisperStatus === 'ready'}
-                class:badge-warning={voiceAssistant.whisperStatus === 'loading'}
-                class:badge-muted={voiceAssistant.whisperStatus === 'unloaded'}
-                data-testid="whisper-status-badge"
+          <label class="field-row">
+            <span>{t('settings-theme')}</span>
+            <select bind:value={themeMode} onchange={saveConfig}>
+              <option value="hud">{t('theme-hud')}</option>
+              <option value="classic">{t('theme-classic')}</option>
+              <option value="contrast">#FFFFFF / #000000</option>
+            </select>
+          </label>
+
+          <label class="field-row">
+            <span>{t('settings-auto-copy')}</span>
+            <input type="checkbox" role="switch" class="hud-switch" bind:checked={autoCopy} onchange={saveConfig} />
+          </label>
+
+          <div class="toggle-group">
+            <label class="field-row" title={t('auto-companion-tooltip')}>
+              <span>{t('auto-companion')}</span>
+              <input type="checkbox" role="switch" class="hud-switch" data-testid="settings-auto-companion" checked={prefs.autoCompanion}
+                onchange={(e) => { void setAutoCompanion(e.currentTarget.checked); }} />
+            </label>
+            <p class="help-text">{t('auto-companion-tooltip')}</p>
+          </div>
+
+          <div class="toggle-group">
+            <label class="field-row">
+              <span>{t('settings-lan')}</span>
+              <input type="checkbox" role="switch" class="hud-switch" bind:checked={lanEnabled} onchange={saveConfig} />
+            </label>
+            <p class="help-text">{t('settings-lan-help')}</p>
+          </div>
+
+          <div class="toggle-group">
+            <label class="field-row">
+              <span>{t('settings-online-services')}</span>
+              <input type="checkbox" role="switch" class="hud-switch" bind:checked={onlineServices} onchange={saveConfig} data-testid="online-services"
+                aria-describedby="online-services-help" />
+            </label>
+            <p id="online-services-help" class="help-text">{t('settings-online-services-help')}</p>
+          </div>
+
+          <label class="field-row">
+            <span>{t('settings-map-threshold')}</span>
+            <input type="number" min="0" step="1" bind:value={mapThreshold} onchange={saveConfig} data-testid="map-threshold" />
+          </label>
+          <label class="field-row">
+            <span>{t('settings-planner-efficiency')}</span>
+            <input type="number" min="0" max="100" step="1" bind:value={plannerEfficiency} onchange={saveConfig} data-testid="planner-efficiency" />
+          </label>
+        </fieldset>
+
+        <fieldset class="settings-card minerals" data-testid="mining-interest">
+          <legend>{t('settings-mining-interest')}</legend>
+          {#each knownMinerals as key (key)}
+            <label class="mineral">
+              <input type="checkbox" data-mineral={key} checked={miningInterest.includes(key)}
+                onchange={(e) => toggleMineral(key, e.currentTarget.checked)} />
+              <span>{mineralLabel(key)}</span>
+            </label>
+          {/each}
+          <div class="field-row">
+            <input type="text" bind:value={extraMineral} data-testid="mining-extra" aria-label={t('settings-mining-add')}
+              onkeydown={(e) => { if (e.key === 'Enter') addMineral(); }} />
+            <button type="button" data-testid="mining-add" onclick={addMineral}>{t("settings-mining-add-button")}</button>
+          </div>
+          <label class="field-row">
+            <span>{t('settings-mining-threshold')}</span>
+            <input type="number" min="0" max="1000000000" step="1" bind:value={miningThreshold} onchange={saveConfig} data-testid="mining-threshold" />
+          </label>
+          <label class="field-row">
+            <span>{t('settings-sell-radius')}</span>
+            <input type="number" min="10" max="500" step="1" bind:value={sellRadius} onchange={saveConfig} data-testid="sell-radius" />
+          </label>
+          <label class="field-row">
+            <span>{t('settings-eddn-radius')}</span>
+            <input type="number" min="20" max="500" step="1" bind:value={eddnRadius} onchange={saveConfig} data-testid="eddn-radius" />
+          </label>
+          <label class="field-row">
+            <span>{t('settings-tourism-reference')}</span>
+            <input type="number" min="1000" max="10000000" step="1" bind:value={tourismReference} onchange={saveConfig} data-testid="tourism-reference" />
+          </label>
+        </fieldset>
+
+        <fieldset class="settings-card minerals engineering-rolls" data-testid="engineering-rolls">
+          <legend>{t('settings-engineering-rolls')}</legend>
+          {#each [1, 2, 3, 4, 5] as grade}
+            <label class="field-row" for={`engineering-rolls-${grade}`}>
+              <span>{t('engineering-grade', { grade: integer(grade) })}</span>
+              <input id={`engineering-rolls-${grade}`} data-testid={`engineering-rolls-${grade}`}
+                type="number" min="1" max="10" step="1" bind:value={engineeringRolls[grade - 1]}
+                aria-invalid={rollsInvalid} aria-describedby={rollsInvalid ? 'engineering-rolls-error' : undefined}
+                oninput={() => { rollsEdits++; }} onchange={saveConfig} />
+            </label>
+          {/each}
+          {#if rollsInvalid}<p id="engineering-rolls-error" role="alert" data-testid="engineering-rolls-error">{t('settings-engineering-rolls-invalid')}</p>{/if}
+        </fieldset>
+      </div>
+
+      <!-- Columna 2: Copiloto Auditivo, Asistencia por Voz e Integración, y Emparejamiento QR -->
+      <div class="settings-col">
+        <fieldset class="settings-card minerals tts-section" data-testid="tts-settings">
+          <legend>{t('settings-tts-title')}</legend>
+          <p class="help-text">{t('settings-tts-description')}</p>
+
+          <label class="field-row">
+            <span>{t('settings-tts-enabled')}</span>
+            <input
+              type="checkbox"
+              role="switch"
+              class="hud-switch"
+              data-testid="tts-enabled"
+              bind:checked={ttsEnabled}
+              onchange={saveConfig}
+            />
+          </label>
+
+          {#if ttsEnabled}
+            <label class="field-row">
+              <span>{t('settings-tts-engine')}</span>
+              <select
+                data-testid="tts-engine"
+                bind:value={ttsEngine}
+                onchange={onEngineChange}
               >
-                {#if voiceAssistant.whisperStatus === 'ready'}
-                  {t('voice-assistant-whisper-ready')}
-                {:else if voiceAssistant.whisperStatus === 'loading'}
-                  {t('voice-assistant-whisper-loading', { pct: voiceAssistant.whisperProgress })}
-                {:else}
-                  Offline (~39MB)
-                {/if}
-              </span>
+                <option value="native">{t('settings-tts-engine-native')}</option>
+                <option value="kokoro">{t('settings-tts-engine-kokoro')}</option>
+              </select>
+            </label>
+
+            <label class="field-row">
+              <span>{t('settings-tts-voice')}</span>
+              <select
+                data-testid="tts-voice"
+                bind:value={ttsVoice}
+                onchange={saveConfig}
+              >
+                <option value="">(Predeterminada)</option>
+                {#each ttsVoicesList as v (v.id)}
+                  <option value={v.id}>{v.name} ({v.lang})</option>
+                {/each}
+              </select>
+            </label>
+
+            <label class="field-row">
+              <span>{t('settings-tts-volume')} ({ttsVolume}%)</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                data-testid="tts-volume"
+                bind:value={ttsVolume}
+                onchange={saveConfig}
+              />
+            </label>
+
+            <label class="field-row">
+              <span>{t('settings-tts-rate')} ({ttsRate}%)</span>
+              <input
+                type="range"
+                min="80"
+                max="150"
+                step="5"
+                data-testid="tts-rate"
+                bind:value={ttsRate}
+                onchange={saveConfig}
+              />
+            </label>
+
+            <div class="tts-channels">
+              <span class="channels-title">{t('settings-tts-channels')}</span>
+              <div class="channels-grid">
+                <label class="channel-item">
+                  <input
+                    type="checkbox"
+                    data-testid="tts-channel-combat"
+                    bind:checked={ttsChannels.combat}
+                    onchange={saveConfig}
+                  />
+                  <span>{t('settings-tts-channel-combat')}</span>
+                </label>
+                <label class="channel-item">
+                  <input
+                    type="checkbox"
+                    data-testid="tts-channel-navigation"
+                    bind:checked={ttsChannels.navigation}
+                    onchange={saveConfig}
+                  />
+                  <span>{t('settings-tts-channel-navigation')}</span>
+                </label>
+                <label class="channel-item">
+                  <input
+                    type="checkbox"
+                    data-testid="tts-channel-exploration"
+                    bind:checked={ttsChannels.exploration}
+                    onchange={saveConfig}
+                  />
+                  <span>{t('settings-tts-channel-exploration')}</span>
+                </label>
+                <label class="channel-item">
+                  <input
+                    type="checkbox"
+                    data-testid="tts-channel-mining"
+                    bind:checked={ttsChannels.mining}
+                    onchange={saveConfig}
+                  />
+                  <span>{t('settings-tts-channel-mining')}</span>
+                </label>
+                <label class="channel-item">
+                  <input
+                    type="checkbox"
+                    data-testid="tts-channel-carrier"
+                    bind:checked={ttsChannels.carrier}
+                    onchange={saveConfig}
+                  />
+                  <span>{t('settings-tts-channel-carrier')}</span>
+                </label>
+              </div>
             </div>
-            <p class="whisper-desc">{t('voice-assistant-whisper-model-info')}</p>
-            {#if voiceAssistant.whisperStatus !== 'ready'}
-              <div class="whisper-actions">
-                <button
-                  type="button"
-                  class="btn-preload-whisper"
-                  data-testid="preload-whisper-btn"
-                  disabled={voiceAssistant.whisperStatus === 'loading'}
-                  onclick={() => void voiceAssistant.preloadWhisperModel()}
-                >
-                  ⚡ {t('voice-assistant-whisper-preload')}
-                </button>
+
+            <div class="test-row">
+              <button
+                type="button"
+                class="btn-test-voice"
+                data-testid="tts-test-btn"
+                disabled={ttsTesting}
+                onclick={testTtsVoice}
+              >
+                {ttsTesting ? t('settings-tts-test-playing') : t('settings-tts-test-button')}
+              </button>
+            </div>
+          {/if}
+        </fieldset>
+
+        <!-- Asistencia por Voz e Integración («TMC Glass HUD») -->
+        <fieldset class="settings-card tts-section voice-assistant-section">
+          <legend>🎙️ {t('voice-assistant-title')}</legend>
+
+          <div class="field-row voice-toggle-row">
+            <label for="voice-assistant-toggle" class="voice-toggle-label">
+              <span class="toggle-title">{t('voice-assistant-enable')}</span>
+              <small class="field-hint">{t('voice-assistant-enable-desc')}</small>
+            </label>
+            <input
+              id="voice-assistant-toggle"
+              type="checkbox"
+              role="switch"
+              class="hud-switch"
+              data-testid="voice-assistant-toggle"
+              checked={voiceAssistant.enabled}
+              onchange={(e) => voiceAssistant.setEnabled(e.currentTarget.checked)}
+            />
+          </div>
+
+          {#if voiceAssistant.enabled}
+            <div class="field-stacked">
+              <label for="voice-engine-select" class="field-label">
+                {t('voice-assistant-engine')}
+              </label>
+              <select
+                id="voice-engine-select"
+                class="full-width"
+                data-testid="voice-engine-select"
+                value={voiceAssistant.sttEngine}
+                onchange={(e) => voiceAssistant.setSttEngine(e.currentTarget.value as 'whisper' | 'native')}
+              >
+                <option value="whisper">{t('voice-assistant-engine-whisper')}</option>
+                <option value="native">{t('voice-assistant-engine-native')}</option>
+              </select>
+            </div>
+
+            {#if voiceAssistant.sttEngine === 'whisper'}
+              <div class="whisper-status-card">
+                <div class="whisper-status-header">
+                  <span class="whisper-title">🧠 Whisper AI Local</span>
+                  <span
+                    class="badge"
+                    class:badge-success={voiceAssistant.whisperStatus === 'ready'}
+                    class:badge-warning={voiceAssistant.whisperStatus === 'loading'}
+                    class:badge-muted={voiceAssistant.whisperStatus === 'unloaded'}
+                    data-testid="whisper-status-badge"
+                  >
+                    {#if voiceAssistant.whisperStatus === 'ready'}
+                      {t('voice-assistant-whisper-ready')}
+                    {:else if voiceAssistant.whisperStatus === 'loading'}
+                      {t('voice-assistant-whisper-loading', { pct: voiceAssistant.whisperProgress })}
+                    {:else}
+                      Offline (~39MB)
+                    {/if}
+                  </span>
+                </div>
+                <p class="whisper-desc">{t('voice-assistant-whisper-model-info')}</p>
+                {#if voiceAssistant.whisperStatus !== 'ready'}
+                  <div class="whisper-actions">
+                    <button
+                      type="button"
+                      class="btn-preload-whisper"
+                      data-testid="preload-whisper-btn"
+                      disabled={voiceAssistant.whisperStatus === 'loading'}
+                      onclick={() => void voiceAssistant.preloadWhisperModel()}
+                    >
+                      ⚡ {t('voice-assistant-whisper-preload')}
+                    </button>
+                  </div>
+                {/if}
               </div>
             {/if}
+
+            <div class="field-row">
+              <label for="voice-mode-select">
+                <span>{t('voice-assistant-mode')}</span>
+              </label>
+              <select
+                id="voice-mode-select"
+                data-testid="voice-mode-select"
+                value={voiceAssistant.mode}
+                onchange={(e) => voiceAssistant.setMode(e.currentTarget.value as 'continuous' | 'ptt')}
+              >
+                <option value="continuous">{t('voice-assistant-mode-continuous')}</option>
+                <option value="ptt">{t('voice-assistant-mode-ptt')}</option>
+              </select>
+            </div>
+
+            {#if voiceAssistant.lastQuery}
+              <div class="voice-feedback-row">
+                <span class="feedback-label">{t('voice-assistant-last-query')}:</span>
+                <span class="feedback-val font-mono">"{voiceAssistant.lastQuery}"</span>
+              </div>
+            {/if}
+          {/if}
+
+          <!-- Integración con VoiceAttack -->
+          <div class="voiceattack-box">
+            <div class="voiceattack-header">
+              <span class="va-title">⚡ {t('voiceattack-section-title')}</span>
+              <span
+                class="badge"
+                class:badge-success={voiceAssistant.voiceAttackStatus?.installed}
+                class:badge-muted={!voiceAssistant.voiceAttackStatus?.installed}
+                data-testid="voiceattack-badge"
+              >
+                {voiceAssistant.voiceAttackStatus?.installed
+                  ? (voiceAssistant.voiceAttackStatus?.running
+                      ? `${t('voiceattack-status-detected')} (${t('voiceattack-status-running')})`
+                      : `${t('voiceattack-status-detected')} (${t('voiceattack-status-stopped')})`)
+                  : t('voiceattack-status-not-detected')}
+              </span>
+            </div>
+
+            <p class="va-desc">{t('voiceattack-help-desc')}</p>
+
+            <div class="va-actions">
+              <a
+                href="/api/voice/voiceattack/profile"
+                download="TMC-Copiloto.vap"
+                class="btn-download-vap"
+                data-testid="download-vap-btn"
+              >
+                📥 {t('voiceattack-download-profile')}
+              </a>
+            </div>
           </div>
-        {/if}
+        </fieldset>
 
-        <div class="field-row">
-          <label for="voice-mode-select">
-            <span>{t('voice-assistant-mode')}</span>
-          </label>
-          <select
-            id="voice-mode-select"
-            data-testid="voice-mode-select"
-            value={voiceAssistant.mode}
-            onchange={(e) => voiceAssistant.setMode(e.currentTarget.value as 'continuous' | 'ptt')}
-          >
-            <option value="continuous">{t('voice-assistant-mode-continuous')}</option>
-            <option value="ptt">{t('voice-assistant-mode-ptt')}</option>
-          </select>
-        </div>
-
-        {#if voiceAssistant.lastQuery}
-          <div class="voice-feedback-row">
-            <span class="feedback-label">{t('voice-assistant-last-query')}:</span>
-            <span class="feedback-val font-mono">"{voiceAssistant.lastQuery}"</span>
-          </div>
-        {/if}
-      {/if}
-
-      <!-- Integración con VoiceAttack -->
-      <div class="voiceattack-box">
-        <div class="voiceattack-header">
-          <span class="va-title">⚡ {t('voiceattack-section-title')}</span>
-          <span
-            class="badge"
-            class:badge-success={voiceAssistant.voiceAttackStatus?.installed}
-            class:badge-muted={!voiceAssistant.voiceAttackStatus?.installed}
-            data-testid="voiceattack-badge"
-          >
-            {voiceAssistant.voiceAttackStatus?.installed
-              ? (voiceAssistant.voiceAttackStatus?.running
-                  ? `${t('voiceattack-status-detected')} (${t('voiceattack-status-running')})`
-                  : `${t('voiceattack-status-detected')} (${t('voiceattack-status-stopped')})`)
-              : t('voiceattack-status-not-detected')}
-          </span>
-        </div>
-
-        <p class="va-desc">{t('voiceattack-help-desc')}</p>
-
-        <div class="va-actions">
-          <a
-            href="/api/voice/voiceattack/profile"
-            download="TMC-Copiloto.vap"
-            class="btn-download-vap"
-            data-testid="download-vap-btn"
-          >
-            📥 {t('voiceattack-download-profile')}
-          </a>
-        </div>
+        <Pairing />
       </div>
-    </fieldset>
-
-    <Pairing />
+    </div>
   </div>
 </Panel>
 
@@ -743,8 +767,40 @@
   .settings-form {
     display: flex;
     flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    max-width: 1240px;
+  }
+
+  .settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  .settings-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+  }
+
+  .settings-card {
+    border: 1px solid var(--hud-border-subtle, rgba(255, 255, 255, 0.08));
+    padding: 0.85rem 1rem;
+    border-radius: 6px;
+    background: var(--hud-surface-card, rgba(20, 25, 35, 0.5));
+    display: flex;
+    flex-direction: column;
     gap: 0.75rem;
-    max-width: 520px;
+  }
+
+  .settings-card legend {
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: var(--hud-primary, #ff7100);
+    padding: 0 0.4rem;
+    letter-spacing: 0.03em;
   }
 
   .field-row {
@@ -754,42 +810,67 @@
     gap: 1rem;
   }
 
-  select {
-    background: var(--hud-bg);
-    border: 1px solid var(--hud-border);
-    padding: 0.3rem 0.5rem;
-    border-radius: 3px;
+  .toggle-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
   }
 
-  .minerals { border: 1px solid var(--hud-border); display: flex; flex-direction: column; gap: 0.3rem; }
-  .mineral { display: flex; gap: 0.5rem; align-items: center; }
+  select {
+    background: var(--hud-surface-alt, #151a29);
+    color: var(--hud-text);
+    border: 1px solid var(--hud-border-subtle, rgba(255, 255, 255, 0.15));
+    padding: 0.4rem 0.65rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+
+  select:focus {
+    border-color: var(--hud-primary, #ff7100);
+  }
+
+  .minerals {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .mineral {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
 
   .engineering-rolls input {
-    background: var(--hud-bg);
+    background: var(--hud-surface-alt, #151a29);
     color: var(--hud-text);
-    border: 1px solid var(--hud-border);
-    border-radius: 3px;
-    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--hud-border-subtle, rgba(255, 255, 255, 0.15));
+    border-radius: 4px;
+    padding: 0.35rem 0.6rem;
+    width: 60px;
   }
 
   .help-text {
     margin: 0;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--hud-muted);
+    line-height: 1.35;
   }
 
   .tts-section {
-    border: 1px solid var(--hud-border);
-    padding: 0.75rem;
-    border-radius: 4px;
-    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--hud-border-subtle, rgba(255, 255, 255, 0.08));
+    padding: 0.85rem 1rem;
+    border-radius: 6px;
+    background: var(--hud-surface-card, rgba(20, 25, 35, 0.5));
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.75rem;
   }
 
   .tts-section legend {
-    font-weight: 600;
+    font-weight: 700;
     color: var(--hud-primary, #ff7100);
     padding: 0 0.4rem;
   }
@@ -802,15 +883,15 @@
   }
 
   .channels-title {
-    font-size: 0.85rem;
-    font-weight: 500;
+    font-size: 0.82rem;
+    font-weight: 600;
     color: var(--hud-primary, #ff7100);
   }
 
   .channels-grid {
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 0.35rem;
     padding-left: 0.5rem;
   }
 
@@ -828,19 +909,20 @@
   }
 
   .btn-test-voice {
-    background: var(--hud-bg);
+    background: var(--hud-surface-alt, #151a29);
     color: var(--hud-primary, #ff7100);
     border: 1px solid var(--hud-border);
-    padding: 0.4rem 0.8rem;
+    padding: 0.4rem 0.85rem;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 600;
     transition: all 0.15s ease;
   }
 
   .btn-test-voice:hover:not(:disabled) {
     background: var(--hud-primary, #ff7100);
-    color: var(--hud-bg, #000);
+    color: #000;
   }
 
   .btn-test-voice:disabled {
@@ -848,22 +930,83 @@
     cursor: wait;
   }
 
+  /* Asistencia por Voz («TMC Glass HUD») */
   .voice-assistant-section {
-    border-color: rgba(0, 212, 178, 0.25);
+    border-color: rgba(0, 212, 178, 0.28);
   }
 
   .voice-assistant-section legend {
     color: var(--hud-cyan, #00d4b2);
   }
 
+  .voice-assistant-section select:focus {
+    border-color: var(--hud-cyan, #00d4b2);
+  }
+
+  .voice-toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1.25rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid rgba(0, 212, 178, 0.15);
+  }
+
+  .voice-toggle-label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    cursor: pointer;
+    flex: 1;
+  }
+
+  .toggle-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--hud-text);
+  }
+
+  .field-hint {
+    font-size: 0.78rem;
+    color: var(--hud-muted);
+    line-height: 1.35;
+  }
+
+  .hud-switch,
+  input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+    accent-color: var(--hud-cyan, #00d4b2);
+  }
+
+  .field-stacked {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-top: 0.2rem;
+  }
+
+  .field-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--hud-muted);
+  }
+
+  select.full-width {
+    width: 100%;
+    max-width: 100%;
+  }
+
   .whisper-status-card {
-    padding: 0.6rem 0.75rem;
+    padding: 0.75rem 0.9rem;
     background: rgba(0, 212, 178, 0.05);
-    border: 1px solid rgba(0, 212, 178, 0.2);
+    border: 1px solid rgba(0, 212, 178, 0.22);
     border-radius: 6px;
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.45rem;
     margin: 0.25rem 0;
   }
 
@@ -871,6 +1014,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
   }
 
   .whisper-title {
@@ -881,9 +1026,9 @@
 
   .whisper-desc {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: 0.76rem;
     color: var(--hud-muted);
-    line-height: 1.35;
+    line-height: 1.4;
   }
 
   .whisper-actions {
@@ -899,7 +1044,7 @@
     background: rgba(0, 212, 178, 0.15);
     color: var(--hud-cyan, #00d4b2);
     border: 1px solid rgba(0, 212, 178, 0.4);
-    padding: 0.3rem 0.65rem;
+    padding: 0.35rem 0.75rem;
     border-radius: 4px;
     font-size: 0.75rem;
     font-weight: 600;
@@ -917,11 +1062,44 @@
     cursor: wait;
   }
 
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 3px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .badge-success {
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    color: var(--hud-success);
+  }
+
+  .badge-warning {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    color: var(--hud-warning);
+  }
+
+  .badge-muted {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--hud-muted);
+  }
+
   .voice-feedback-row {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.4rem 0.6rem;
+    padding: 0.45rem 0.75rem;
     background: rgba(0, 212, 178, 0.08);
     border: 1px dashed rgba(0, 212, 178, 0.3);
     border-radius: 4px;
@@ -938,19 +1116,21 @@
 
   .voiceattack-box {
     margin-top: 0.75rem;
-    padding: 0.75rem;
-    background: var(--hud-surface-card, rgba(20, 25, 35, 0.6));
+    padding: 0.8rem 0.9rem;
+    background: var(--hud-surface-alt, rgba(20, 25, 35, 0.7));
     border: 1px solid var(--hud-border-subtle, rgba(255, 255, 255, 0.08));
     border-radius: 6px;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.55rem;
   }
 
   .voiceattack-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
   }
 
   .va-title {
@@ -961,7 +1141,7 @@
 
   .va-desc {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: 0.76rem;
     color: var(--hud-muted);
     line-height: 1.4;
   }
@@ -978,12 +1158,13 @@
     gap: 0.4rem;
     background: rgba(0, 212, 178, 0.12);
     color: var(--hud-cyan, #00d4b2);
-    border: 1px solid rgba(0, 212, 178, 0.3);
-    padding: 0.35rem 0.75rem;
+    border: 1px solid rgba(0, 212, 178, 0.35);
+    padding: 0.45rem 0.85rem;
     border-radius: 4px;
     text-decoration: none;
     font-size: 0.8rem;
     font-weight: 600;
+    white-space: nowrap;
     transition: all 0.15s ease;
   }
 

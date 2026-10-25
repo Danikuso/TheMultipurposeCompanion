@@ -32,21 +32,23 @@
 
 <style>
   .pairing-box {
-    margin-top: 0.75rem;
-    padding: 0.75rem;
-    background: var(--hud-bg);
-    border: 1px solid var(--hud-border);
-    border-radius: 4px;
+    margin-top: 0;
+    padding: 0.85rem 1rem;
+    background: var(--hud-surface-card, rgba(20, 25, 35, 0.5));
+    border: 1px solid var(--hud-border-subtle, rgba(255, 255, 255, 0.08));
+    border-radius: 6px;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.5rem;
+    gap: 0.6rem;
   }
 
   .pairing-box h4 {
     margin: 0;
-    color: var(--hud-primary);
-    font-size: 0.85rem;
+    color: var(--hud-primary, #ff7100);
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
   }
 
   .qr-wrap {
@@ -65,7 +67,7 @@
   .pairing-url {
     font-family: var(--font-mono);
     font-size: 0.8rem;
-    color: var(--hud-secondary);
+    color: var(--hud-cyan, #00d4b2);
     word-break: break-all;
   }
 </style>

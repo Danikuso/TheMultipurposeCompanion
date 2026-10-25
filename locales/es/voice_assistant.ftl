@@ -13,7 +13,7 @@ voice-assistant-engine-whisper = Whisper AI Local (Neuronal ultraligero ~39MB, 1
 voice-assistant-engine-native = Nativo del navegador / Sistema
 voice-assistant-whisper-model-info = Modelo neuronal de alta precisión para cabina. Funciona en local sin enviar audio a la nube.
 voice-assistant-whisper-preload = Inicializar modelo Whisper AI
-voice-assistant-whisper-ready = Modelo Whisper AI listo en memoria
+voice-assistant-whisper-ready = Listo en memoria
 voice-assistant-whisper-loading = Descargando modelo Whisper AI ({ $pct }%)...
 voice-assistant-click-to-speak = Pulsar micro
 voice-assistant-ptt-key = Tecla rápida PTT
@@ -29,12 +29,12 @@ voice-assistant-clipboard-hint = Sistema copiado automáticamente al portapapele
 
 ## Integración con VoiceAttack
 voiceattack-section-title = Integración con VoiceAttack
-voiceattack-status-detected = VoiceAttack detectado
-voiceattack-status-not-detected = VoiceAttack no detectado
+voiceattack-status-detected = Detectado
+voiceattack-status-not-detected = No detectado
 voiceattack-status-running = En ejecución
 voiceattack-status-stopped = Detenido
 voiceattack-profile-ready = Perfil oficial «TMC-Copiloto.vap» listo
-voiceattack-download-profile = Descargar perfil TMC (.vap)
+voiceattack-download-profile = Descargar perfil (.vap)
 voiceattack-install-path = Ruta de instalación
 voiceattack-help-desc = TMC genera automáticamente el perfil XML compatible. Si usas VoiceAttack, simplemente importa el perfil para controlar TMC mediante comandos de voz externos.
 
