@@ -137,18 +137,34 @@
       class:speaking={voiceAssistant.state === 'speaking'}
       data-testid="topbar-voice-mic"
       title={voiceAssistant.lastQuery ? `${t('voice-assistant-last-query')}: "${voiceAssistant.lastQuery}"` : t('voice-assistant-mic-toggle-tooltip')}
-      onclick={() => voiceAssistant.toggleEnabled()}
+      onclick={() => {
+        if (!voiceAssistant.enabled) {
+          voiceAssistant.toggleEnabled();
+        } else if (voiceAssistant.sttEngine === 'whisper') {
+          if (voiceAssistant.state === 'inactive') {
+            void voiceAssistant.startListening();
+          } else if (voiceAssistant.state === 'listening') {
+            void voiceAssistant.stopListening();
+          }
+        } else {
+          voiceAssistant.toggleEnabled();
+        }
+      }}
     >
       <span class="mic-icon" aria-hidden="true">🎙️</span>
       <span class="mic-label">
         {#if !voiceAssistant.enabled}
           VOZ OFF
+        {:else if voiceAssistant.whisperStatus === 'loading'}
+          IA {voiceAssistant.whisperProgress}%
         {:else if voiceAssistant.state === 'listening'}
           {t('voice-assistant-status-listening')}
         {:else if voiceAssistant.state === 'processing'}
           {t('voice-assistant-status-processing')}
         {:else if voiceAssistant.state === 'speaking'}
           {t('voice-assistant-status-speaking')}
+        {:else if voiceAssistant.sttEngine === 'whisper'}
+          {t('voice-assistant-click-to-speak')}
         {:else}
           VOZ ON
         {/if}

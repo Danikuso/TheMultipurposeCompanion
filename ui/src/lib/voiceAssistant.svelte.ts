@@ -1,8 +1,10 @@
 // Motor del Asistente de Voz y Reconocimiento de Cabina («TMC Glass HUD»)
 import { getLocale } from './i18n';
+import { whisperEngine, type AudioRecorderHandle, type WhisperModelStatus } from './whisperEngine';
 
 export type ListeningState = 'inactive' | 'listening' | 'processing' | 'speaking';
 export type ListeningMode = 'continuous' | 'ptt';
+export type SttEngineKind = 'whisper' | 'native';
 
 export interface VoiceCommandResponse {
   intent: string;
@@ -22,16 +24,22 @@ export interface VoiceAttackStatus {
 class VoiceAssistantService {
   enabled = $state(false);
   mode = $state<ListeningMode>('continuous');
+  sttEngine = $state<SttEngineKind>('whisper');
   state = $state<ListeningState>('inactive');
   lastQuery = $state<string | null>(null);
   lastResponse = $state<VoiceCommandResponse | null>(null);
   voiceAttackStatus = $state<VoiceAttackStatus | null>(null);
   error = $state<string | null>(null);
 
+  // Estado del modelo neuronal local Whisper AI (~39MB)
+  whisperStatus = $state<WhisperModelStatus>('unloaded');
+  whisperProgress = $state(0);
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private recognition: any = null;
   private isBrowserSupported = false;
   private resetTimer: ReturnType<typeof setTimeout> | null = null;
+  private activeRecorder: AudioRecorderHandle | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -43,6 +51,12 @@ class VoiceAssistantService {
         this.mode = savedMode;
       }
 
+      const savedEngine = localStorage.getItem('tmc.voice.stt_engine');
+      if (savedEngine === 'whisper' || savedEngine === 'native') {
+        this.sttEngine = savedEngine;
+      }
+
+      // Soporte nativo como respaldo secundario opcional
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRec) {
@@ -73,14 +87,13 @@ class VoiceAssistantService {
           };
 
           this.recognition.onend = () => {
-            if (this.enabled && this.mode === 'continuous' && this.state === 'listening') {
-              // Reinicio automático de escucha continua
+            if (this.enabled && this.mode === 'continuous' && this.state === 'listening' && this.sttEngine === 'native') {
               try {
                 this.recognition.start();
               } catch {
-                // ignorar si ya arrancó
+                // ignorar
               }
-            } else if (this.state === 'listening') {
+            } else if (this.state === 'listening' && this.sttEngine === 'native') {
               this.state = 'inactive';
             }
           };
@@ -92,7 +105,11 @@ class VoiceAssistantService {
   }
 
   get isSupported(): boolean {
-    return this.isBrowserSupported;
+    return true; // Whisper AI local soporta todos los navegadores/WebViews con Web Audio API
+  }
+
+  get isRecordingAudio(): boolean {
+    return this.activeRecorder !== null;
   }
 
   toggleEnabled(): void {
@@ -105,7 +122,10 @@ class VoiceAssistantService {
       localStorage.setItem('tmc.voice.enabled', String(val));
     }
     if (val) {
-      if (this.mode === 'continuous') {
+      if (this.sttEngine === 'whisper' && !whisperEngine.isReady()) {
+        void this.preloadWhisperModel();
+      }
+      if (this.mode === 'continuous' && this.sttEngine === 'native') {
         this.startListening();
       }
     } else {
@@ -118,7 +138,7 @@ class VoiceAssistantService {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('tmc.voice.mode', mode);
     }
-    if (this.enabled) {
+    if (this.enabled && this.sttEngine === 'native') {
       if (mode === 'continuous') {
         this.startListening();
       } else {
@@ -127,12 +147,54 @@ class VoiceAssistantService {
     }
   }
 
-  startListening(): void {
+  setSttEngine(engine: SttEngineKind): void {
+    this.sttEngine = engine;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('tmc.voice.stt_engine', engine);
+    }
+    if (engine === 'whisper') {
+      this.stopListening();
+      void this.preloadWhisperModel();
+    }
+  }
+
+  async preloadWhisperModel(): Promise<boolean> {
+    this.whisperStatus = 'loading';
+    const ok = await whisperEngine.loadModel((pct) => {
+      this.whisperProgress = pct;
+    });
+    this.whisperStatus = whisperEngine.status;
+    return ok;
+  }
+
+  async startListening(): Promise<void> {
     if (!this.enabled) return;
     this.error = null;
-    this.state = 'listening';
 
-    if (this.recognition) {
+    if (this.sttEngine === 'whisper') {
+      // Motor neuronal Whisper AI on-device
+      try {
+        if (!whisperEngine.isReady()) {
+          this.whisperStatus = 'loading';
+          const ready = await whisperEngine.loadModel((pct) => {
+            this.whisperProgress = pct;
+          });
+          this.whisperStatus = whisperEngine.status;
+          if (!ready) {
+            this.error = whisperEngine.error || 'error-loading-whisper';
+            return;
+          }
+        }
+
+        this.state = 'listening';
+        this.activeRecorder = await whisperEngine.startRecording();
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err);
+        this.state = 'inactive';
+      }
+    } else if (this.recognition) {
+      // Motor nativo del navegador como fallback
+      this.state = 'listening';
       try {
         const locale = getLocale();
         const langMap: Record<string, string> = {
@@ -150,17 +212,46 @@ class VoiceAssistantService {
     }
   }
 
-  stopListening(): void {
-    if (this.state === 'listening') {
-      this.state = 'inactive';
-    }
-    if (this.recognition) {
+  async stopListening(): Promise<void> {
+    if (this.sttEngine === 'whisper' && this.activeRecorder) {
+      const recorder = this.activeRecorder;
+      this.activeRecorder = null;
+      this.state = 'processing';
+
       try {
-        this.recognition.stop();
-      } catch {
-        // ignorar
+        const samples = await recorder.stop();
+        if (samples.length > 8000) { // Al menos 0.5s de audio grabado
+          const text = await whisperEngine.transcribe(samples, getLocale());
+          if (text && text.trim().length > 0) {
+            await this.sendQuery(text);
+            return;
+          }
+        }
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err);
+      }
+
+      this.state = 'inactive';
+    } else {
+      if (this.state === 'listening') {
+        this.state = 'inactive';
+      }
+      if (this.recognition) {
+        try {
+          this.recognition.stop();
+        } catch {
+          // ignorar
+        }
       }
     }
+  }
+
+  abortListening(): void {
+    if (this.activeRecorder) {
+      this.activeRecorder.abort();
+      this.activeRecorder = null;
+    }
+    this.stopListening();
   }
 
   async sendQuery(queryText: string, localeOverride?: string): Promise<VoiceCommandResponse | null> {
@@ -195,10 +286,9 @@ class VoiceAssistantService {
       this.lastResponse = data;
       this.state = 'speaking';
 
-      // Transición automática tras finalizar la locución del copiloto
       const durationMs = Math.max(2000, Math.min(8000, (data.spoken_text?.length ?? 10) * 60));
       this.resetTimer = setTimeout(() => {
-        if (this.enabled && this.mode === 'continuous') {
+        if (this.enabled && this.mode === 'continuous' && this.sttEngine === 'native') {
           this.state = 'listening';
         } else {
           this.state = 'inactive';
@@ -209,7 +299,7 @@ class VoiceAssistantService {
       return data;
     } catch (err) {
       this.error = err instanceof Error ? err.message : String(err);
-      this.state = this.enabled && this.mode === 'continuous' ? 'listening' : 'inactive';
+      this.state = this.enabled && this.mode === 'continuous' && this.sttEngine === 'native' ? 'listening' : 'inactive';
       return null;
     }
   }

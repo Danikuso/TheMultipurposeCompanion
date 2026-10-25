@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Profile xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Id>b4382594-5a21-4f17-8a4b-2d7c04192b01</Id>
+  <Name>TMC - The Multipurpose Companion</Name>
+  <Commands>
+    <Command>
+      <Id>b4382594-5a21-4f17-8a4b-2d7c04192b11</Id>
+      <CommandString>¿Estado de la nave?;Estado de la nave;Informe de nave;Ship status</CommandString>
+      <Description>Consulta el estado general del casco, escudos y depósitos</Description>
+      <Category>TMC Cabina</Category>
+      <ActionSequence>
+        <CommandAction>
+          <ActionType>Launch</ActionType>
+          <Path>powershell.exe</Path>
+          <Args>-WindowStyle Hidden -NoProfile -Command "Invoke-RestMethod -Uri 'http://127.0.0.1:47320/api/voice/intent' -Method Post -ContentType 'application/json' -Body '{\"query\":\"ShipStatus\"}'"</Args>
+          <Async>true</Async>
+        </CommandAction>
+      </ActionSequence>
+      <Async>true</Async>
+      <Enabled>true</Enabled>
+    </Command>
+    <Command>
+      <Id>b4382594-5a21-4f17-8a4b-2d7c04192b12</Id>
+      <CommandString>¿Cuál es el siguiente salto?;Siguiente salto;Próximo salto;Next jump</CommandString>
+      <Description>Informa del siguiente sistema estelar en la ruta de navegación</Description>
+      <Category>TMC Cabina</Category>
+      <ActionSequence>
+        <CommandAction>
+          <ActionType>Launch</ActionType>
+          <Path>powershell.exe</Path>
+          <Args>-WindowStyle Hidden -NoProfile -Command "Invoke-RestMethod -Uri 'http://127.0.0.1:47320/api/voice/intent' -Method Post -ContentType 'application/json' -Body '{\"query\":\"NextJump\"}'"</Args>
+          <Async>true</Async>
+        </CommandAction>
+      </ActionSequence>
+      <Async>true</Async>
+      <Enabled>true</Enabled>
+    </Command>
+    <Command>
+      <Id>b4382594-5a21-4f17-8a4b-2d7c04192b13</Id>
+      <CommandString>Copia el siguiente sistema;Copiar salto;Copiar siguiente salto;Copy next jump</CommandString>
+      <Description>Copia el siguiente salto estelar al portapapeles del piloto</Description>
+      <Category>TMC Cabina</Category>
+      <ActionSequence>
+        <CommandAction>
+          <ActionType>Launch</ActionType>
+          <Path>powershell.exe</Path>
+          <Args>-WindowStyle Hidden -NoProfile -Command "Invoke-RestMethod -Uri 'http://127.0.0.1:47320/api/voice/intent' -Method Post -ContentType 'application/json' -Body '{\"query\":\"CopyNextSystem\"}'"</Args>
+          <Async>true</Async>
+        </CommandAction>
+      </ActionSequence>
+      <Async>true</Async>
+      <Enabled>true</Enabled>
+    </Command>
+    <Command>
+      <Id>b4382594-5a21-4f17-8a4b-2d7c04192b14</Id>
+      <CommandString>¿Dónde está el factor interestelar más cercano?;Factor interestelar más cercano;Factor interestelar;Nearest interstellar factor</CommandString>
+      <Description>Localiza el factor interestelar más próximo y copia su sistema al portapapeles</Description>
+      <Category>TMC Cabina</Category>
+      <ActionSequence>
+        <CommandAction>
+          <ActionType>Launch</ActionType>
+          <Path>powershell.exe</Path>
+          <Args>-WindowStyle Hidden -NoProfile -Command "Invoke-RestMethod -Uri 'http://127.0.0.1:47320/api/voice/intent' -Method Post -ContentType 'application/json' -Body '{\"query\":\"NearestInterstellarFactor\"}'"</Args>
+          <Async>true</Async>
+        </CommandAction>
+      </ActionSequence>
+      <Async>true</Async>
+      <Enabled>true</Enabled>
+    </Command>
+    <Command>
+      <Id>b4382594-5a21-4f17-8a4b-2d7c04192b15</Id>
+      <CommandString>¿Dónde hay un mercado negro?;Mercado negro más cercano;Mercado negro;Nearest black market</CommandString>
+      <Description>Localiza el mercado negro más próximo y copia su sistema al portapapeles</Description>
+      <Category>TMC Cabina</Category>
+      <ActionSequence>
+        <CommandAction>
+          <ActionType>Launch</ActionType>
+          <Path>powershell.exe</Path>
+          <Args>-WindowStyle Hidden -NoProfile -Command "Invoke-RestMethod -Uri 'http://127.0.0.1:47320/api/voice/intent' -Method Post -ContentType 'application/json' -Body '{\"query\":\"NearestBlackMarket\"}'"</Args>
+          <Async>true</Async>
+        </CommandAction>
+      </ActionSequence>
+      <Async>true</Async>
+      <Enabled>true</Enabled>
+    </Command>
+    <Command>
+      <Id>b4382594-5a21-4f17-8a4b-2d7c04192b16</Id>
+      <CommandString>¿Tengo multas?;¿Cuál es mi notoriedad?;Estado legal;Multas y notoriedad;Crime status</CommandString>
+      <Description>Consulta el nivel de notoriedad, multas activas y recompensas</Description>
+      <Category>TMC Cabina</Category>
+      <ActionSequence>
+        <CommandAction>
+          <ActionType>Launch</ActionType>
+          <Path>powershell.exe</Path>
+          <Args>-WindowStyle Hidden -NoProfile -Command "Invoke-RestMethod -Uri 'http://127.0.0.1:47320/api/voice/intent' -Method Post -ContentType 'application/json' -Body '{\"query\":\"CrimeStatus\"}'"</Args>
+          <Async>true</Async>
+        </CommandAction>
+      </ActionSequence>
+      <Async>true</Async>
+      <Enabled>true</Enabled>
+    </Command>
+    <Command>
+      <Id>b4382594-5a21-4f17-8a4b-2d7c04192b17</Id>
+      <CommandString>¿Hay bio señales?;Señales biológicas;Bio señales;Bio signals</CommandString>
+      <Description>Informa sobre la presencia de bio-señales en cuerpos del sistema actual</Description>
+      <Category>TMC Cabina</Category>
+      <ActionSequence>
+        <CommandAction>
+          <ActionType>Launch</ActionType>
+          <Path>powershell.exe</Path>
+          <Args>-WindowStyle Hidden -NoProfile -Command "Invoke-RestMethod -Uri 'http://127.0.0.1:47320/api/voice/intent' -Method Post -ContentType 'application/json' -Body '{\"query\":\"BioSignals\"}'"</Args>
+          <Async>true</Async>
+        </CommandAction>
+      </ActionSequence>
+      <Async>true</Async>
+      <Enabled>true</Enabled>
+    </Command>
+    <Command>
+      <Id>b4382594-5a21-4f17-8a4b-2d7c04192b18</Id>
+      <CommandString>¿Qué materiales me faltan?;Resumen de materiales;Materiales fijados;Materials summary</CommandString>
+      <Description>Consulta los materiales pendientes para las recetas fijadas de ingeniería</Description>
+      <Category>TMC Cabina</Category>
+      <ActionSequence>
+        <CommandAction>
+          <ActionType>Launch</ActionType>
+          <Path>powershell.exe</Path>
+          <Args>-WindowStyle Hidden -NoProfile -Command "Invoke-RestMethod -Uri 'http://127.0.0.1:47320/api/voice/intent' -Method Post -ContentType 'application/json' -Body '{\"query\":\"MaterialsSummary\"}'"</Args>
+          <Async>true</Async>
+        </CommandAction>
+      </ActionSequence>
+      <Async>true</Async>
+      <Enabled>true</Enabled>
+    </Command>
+    <Command>
+      <Id>b4382594-5a21-4f17-8a4b-2d7c04192b19</Id>
+      <CommandString>¿Cuánto combustible me queda?;Nivel de combustible;Estado del combustible;Fuel status</CommandString>
+      <Description>Consulta el nivel porcentual y toneladas del tanque de combustible</Description>
+      <Category>TMC Cabina</Category>
+      <ActionSequence>
+        <CommandAction>
+          <ActionType>Launch</ActionType>
+          <Path>powershell.exe</Path>
+          <Args>-WindowStyle Hidden -NoProfile -Command "Invoke-RestMethod -Uri 'http://127.0.0.1:47320/api/voice/intent' -Method Post -ContentType 'application/json' -Body '{\"query\":\"FuelStatus\"}'"</Args>
+          <Async>true</Async>
+        </CommandAction>
+      </ActionSequence>
+      <Async>true</Async>
+      <Enabled>true</Enabled>
+    </Command>
+  </Commands>
+</Profile>

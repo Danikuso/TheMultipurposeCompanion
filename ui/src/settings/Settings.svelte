@@ -628,6 +628,58 @@
 
       {#if voiceAssistant.enabled}
         <div class="field-row">
+          <label for="voice-engine-select">
+            <span>{t('voice-assistant-engine')}</span>
+          </label>
+          <select
+            id="voice-engine-select"
+            data-testid="voice-engine-select"
+            value={voiceAssistant.sttEngine}
+            onchange={(e) => voiceAssistant.setSttEngine(e.currentTarget.value as 'whisper' | 'native')}
+          >
+            <option value="whisper">{t('voice-assistant-engine-whisper')}</option>
+            <option value="native">{t('voice-assistant-engine-native')}</option>
+          </select>
+        </div>
+
+        {#if voiceAssistant.sttEngine === 'whisper'}
+          <div class="whisper-status-card">
+            <div class="whisper-status-header">
+              <span class="whisper-title">🧠 Whisper AI Local</span>
+              <span
+                class="badge"
+                class:badge-success={voiceAssistant.whisperStatus === 'ready'}
+                class:badge-warning={voiceAssistant.whisperStatus === 'loading'}
+                class:badge-muted={voiceAssistant.whisperStatus === 'unloaded'}
+                data-testid="whisper-status-badge"
+              >
+                {#if voiceAssistant.whisperStatus === 'ready'}
+                  {t('voice-assistant-whisper-ready')}
+                {:else if voiceAssistant.whisperStatus === 'loading'}
+                  {t('voice-assistant-whisper-loading', { pct: voiceAssistant.whisperProgress })}
+                {:else}
+                  Offline (~39MB)
+                {/if}
+              </span>
+            </div>
+            <p class="whisper-desc">{t('voice-assistant-whisper-model-info')}</p>
+            {#if voiceAssistant.whisperStatus !== 'ready'}
+              <div class="whisper-actions">
+                <button
+                  type="button"
+                  class="btn-preload-whisper"
+                  data-testid="preload-whisper-btn"
+                  disabled={voiceAssistant.whisperStatus === 'loading'}
+                  onclick={() => void voiceAssistant.preloadWhisperModel()}
+                >
+                  ⚡ {t('voice-assistant-whisper-preload')}
+                </button>
+              </div>
+            {/if}
+          </div>
+        {/if}
+
+        <div class="field-row">
           <label for="voice-mode-select">
             <span>{t('voice-assistant-mode')}</span>
           </label>
@@ -802,6 +854,67 @@
 
   .voice-assistant-section legend {
     color: var(--hud-cyan, #00d4b2);
+  }
+
+  .whisper-status-card {
+    padding: 0.6rem 0.75rem;
+    background: rgba(0, 212, 178, 0.05);
+    border: 1px solid rgba(0, 212, 178, 0.2);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin: 0.25rem 0;
+  }
+
+  .whisper-status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .whisper-title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--hud-cyan, #00d4b2);
+  }
+
+  .whisper-desc {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--hud-muted);
+    line-height: 1.35;
+  }
+
+  .whisper-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.2rem;
+  }
+
+  .btn-preload-whisper {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(0, 212, 178, 0.15);
+    color: var(--hud-cyan, #00d4b2);
+    border: 1px solid rgba(0, 212, 178, 0.4);
+    padding: 0.3rem 0.65rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-preload-whisper:hover:not(:disabled) {
+    background: var(--hud-cyan, #00d4b2);
+    color: #000;
+  }
+
+  .btn-preload-whisper:disabled {
+    opacity: 0.6;
+    cursor: wait;
   }
 
   .voice-feedback-row {

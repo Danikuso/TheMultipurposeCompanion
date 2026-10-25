@@ -176,6 +176,10 @@ async fn start_inner(
     let store = open_or_rebuild_store(&db_dir)?;
     store.kv_set("locale", &config.language);
 
+    // Exportar automáticamente el perfil oficial TMC-Copiloto.vap en la carpeta de datos
+    let vap_content = crate::voiceattack::generate_vap_profile(config.server.port);
+    let _ = std::fs::write(db_dir.join("TMC-Copiloto.vap"), vap_content);
+
     let writer = EventWriter::spawn(&store);
     tmc_model::diagnostic!(
         tmc_model::diagnostics::DiagnosticContext::State,

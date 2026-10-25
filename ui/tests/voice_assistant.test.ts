@@ -26,6 +26,7 @@ beforeEach(() => {
   localStorage.clear();
   voiceAssistant.setEnabled(false);
   voiceAssistant.setMode('continuous');
+  voiceAssistant.setSttEngine('whisper');
   voiceAssistant.lastQuery = null;
   voiceAssistant.lastResponse = null;
   voiceAssistant.voiceAttackStatus = null;
@@ -184,4 +185,32 @@ test('Settings renders voice assistant section and voiceattack profile download'
   expect(downloadBtn).not.toBeNull();
   expect(downloadBtn.getAttribute('href')).toBe('/api/voice/voiceattack/profile');
   expect(downloadBtn.getAttribute('download')).toBe('TMC-Copiloto.vap');
+});
+
+test('voiceAssistant switches STT engine and persists selection', () => {
+  expect(voiceAssistant.sttEngine).toBe('whisper');
+
+  voiceAssistant.setSttEngine('native');
+  expect(voiceAssistant.sttEngine).toBe('native');
+  expect(localStorage.getItem('tmc.voice.stt_engine')).toBe('native');
+
+  voiceAssistant.setSttEngine('whisper');
+  expect(voiceAssistant.sttEngine).toBe('whisper');
+  expect(localStorage.getItem('tmc.voice.stt_engine')).toBe('whisper');
+});
+
+test('Settings renders STT engine selector and Whisper info when enabled', async () => {
+  voiceAssistant.setEnabled(true);
+  inst = mount(Settings, { target });
+  await settle();
+
+  const engineSelect = target.querySelector('[data-testid="voice-engine-select"]') as HTMLSelectElement;
+  expect(engineSelect).not.toBeNull();
+  expect(engineSelect.value).toBe('whisper');
+
+  const whisperBadge = target.querySelector('[data-testid="whisper-status-badge"]');
+  expect(whisperBadge).not.toBeNull();
+
+  const preloadBtn = target.querySelector('[data-testid="preload-whisper-btn"]') as HTMLButtonElement;
+  expect(preloadBtn).not.toBeNull();
 });
