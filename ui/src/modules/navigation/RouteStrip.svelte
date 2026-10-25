@@ -85,7 +85,7 @@
   .following {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.35rem;
   }
 
   @media (max-width: 1599px) {

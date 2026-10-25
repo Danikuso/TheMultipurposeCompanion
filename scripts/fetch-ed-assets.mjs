@@ -59,6 +59,17 @@ const ASSETS_TO_FETCH = [
   { category: 'galaxy-map/markers', file: 'bookmark.svg', target: 'navigation/bookmark.svg' },
   { category: 'galaxy-map/markers', file: 'ship.svg', target: 'navigation/ship.svg' },
   { category: 'galaxy-map/markers', file: 'communitygoal.svg', target: 'navigation/community-goal.svg' },
+  { category: 'galaxy-map/markers', file: 'friends.svg', target: 'navigation/accounts.svg' },
+
+  // Role & Module Icons (Official Elite Dangerous Assets)
+  { category: 'pilots-federation/explorer', file: 'rank-9.svg', target: 'navigation/exploration.svg' },
+  { category: 'pilots-federation/combat', file: 'rank-9-combat.svg', target: 'navigation/combat.svg' },
+  { category: 'pilots-federation/trading', file: 'rank-9-trading.svg', target: 'navigation/trade.svg' },
+  { category: 'missions', file: 'mining.svg', target: 'navigation/mining.svg' },
+  { category: 'missions', file: 'delivery.svg', target: 'navigation/missions.svg' },
+  { category: 'codex', file: 'organic-structure.svg', target: 'navigation/exobiology.svg' },
+  { category: 'missions', file: 'pirate.svg', target: 'navigation/crime.svg' },
+  { category: 'pilots-federation', file: 'rank-9.svg', target: 'navigation/dashboard.svg' },
 
   // Portraits
   { category: 'portraits', file: 'Aisling-Duval-portrait.jpg', target: 'portraits/aisling-duval.jpg', isBinary: true },
@@ -68,8 +79,16 @@ const ASSETS_TO_FETCH = [
 
 const targetDir = path.resolve(rootDir, 'ui', 'src', 'assets', 'icons');
 
-function normalizeSvg(content) {
+function normalizeSvg(content, target = '') {
   let svg = content;
+  // If target is ship.svg from galaxy map markers, extract ship silhouette and use viewBox="10 30 80 40"
+  if (target.endsWith('ship.svg') && svg.includes('M60.14,34.42')) {
+    const shipPathMatch = svg.match(/<path[^>]*d="(M60\.14,34\.42[^"]+)"/);
+    if (shipPathMatch) {
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="10 30 80 40"><path fill="currentColor" d="${shipPathMatch[1]}"/></svg>\n`;
+    }
+  }
+
   // Remove hardcoded black background styles so icon is transparent
   svg = svg.replace(/style="[^"]*background:\s*(black|#000|#000000)[^"]*"/gi, '');
   svg = svg.replace(/background:\s*(black|#000|#000000);?/gi, '');
@@ -99,7 +118,7 @@ async function downloadAsset(item) {
     fs.writeFileSync(destPath, buffer);
   } else {
     let text = await res.text();
-    const normalized = normalizeSvg(text);
+    const normalized = normalizeSvg(text, item.target);
     fs.writeFileSync(destPath, normalized, 'utf-8');
   }
 }

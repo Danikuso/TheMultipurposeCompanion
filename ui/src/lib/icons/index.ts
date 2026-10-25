@@ -48,6 +48,19 @@ import grade5Svg from '../../assets/icons/engineering/grade-5.svg?raw';
 import engineerSvg from '../../assets/icons/engineering/engineer.svg?raw';
 import materialSvg from '../../assets/icons/engineering/material.svg?raw';
 
+// Iconos oficiales de navegación y módulos (Elite Dangerous EDAssets)
+import explorationSvg from '../../assets/icons/navigation/exploration.svg?raw';
+import combatSvg from '../../assets/icons/navigation/combat.svg?raw';
+import miningSvg from '../../assets/icons/navigation/mining.svg?raw';
+import tradeSvg from '../../assets/icons/navigation/trade.svg?raw';
+import missionsSvg from '../../assets/icons/navigation/missions.svg?raw';
+import shipSvg from '../../assets/icons/navigation/ship.svg?raw';
+import dashboardSvg from '../../assets/icons/navigation/dashboard.svg?raw';
+import bookmarkSvg from '../../assets/icons/navigation/bookmark.svg?raw';
+import exobiologySvg from '../../assets/icons/navigation/exobiology.svg?raw';
+import crimeSvg from '../../assets/icons/navigation/crime.svg?raw';
+import accountsSvg from '../../assets/icons/navigation/accounts.svg?raw';
+
 export interface PowerMeta {
   name: string;
   key: string;
@@ -232,4 +245,27 @@ export function resolveStation(stationType?: string | null): { key: string; name
   if (s.includes('outpost')) return { key: 'outpost', ...STATIONS['outpost'] };
   if (s.includes('mega') || s.includes('fleetcarrier') || s.includes('carrier')) return { key: 'mega-ship', ...STATIONS['mega-ship'] };
   return { key: 'coriolis', ...STATIONS['coriolis'] };
+}
+
+export const NAV_ICONS: Record<string, string> = {
+  exploration: explorationSvg,
+  combat: combatSvg,
+  mining: miningSvg,
+  trade: tradeSvg,
+  missions: missionsSvg,
+  engineering: engineerSvg,
+  carrier: megaShipSvg,
+  colonisation: outpostSvg,
+  powerplay: aislingDuvalSvg,
+  ship: shipSvg,
+  dashboard: dashboardSvg,
+  navigation: bookmarkSvg,
+  exobiology: exobiologySvg,
+  bgs: federationSvg,
+  accounts: accountsSvg,
+  crime: crimeSvg,
+};
+
+export function resolveNavIcon(id: string): string | null {
+  return NAV_ICONS[id] ?? null;
 }

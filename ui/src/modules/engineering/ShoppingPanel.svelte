@@ -32,7 +32,7 @@
   }
 </script>
 
-<Panel titleKey="panel-engineering-shopping" span={2}>
+<Panel titleKey="panel-engineering-shopping" span={2} collapsible={true} defaultExpanded={false}>
   {#if error}<p role="alert" class="error-msg">{t('engineering-action-failed')}</p>{/if}
 
   {#if reader.ready}
@@ -134,30 +134,34 @@
         </article>
       {/each}
     </div>
-
-    <!-- Resumen acumulado (Needs / Missing / Surplus) en tarjetas -->
-    <div class="aggregates-grid">
-      {#each ['needs', 'missing', 'surplus'] as section}
-        <section data-section={section} class="aggregate-card aggregate-{section}">
-          <h3 class="aggregate-title">{t(`engineering-aggregate-${section}`)}</h3>
-          <ul class="aggregate-list">
-            {#each reader[section as 'needs' | 'missing' | 'surplus'].items as row (row.key)}
-              <li class="aggregate-item">
-                <span class="agg-name">{inventoryMaterial(row.key, inventory, row.name_en)}:</span>
-                <span class="agg-count font-mono">{integer(row.count)}</span>
-              </li>
-            {:else}
-              <li class="muted">{t('engineering-no-data')}</li>
-            {/each}
-          </ul>
-        </section>
-      {/each}
-    </div>
   {:else}
     <p role="status">
       {t(reader.state === 'failed' ? 'engineering-page-failed' : reader.state === 'stale' ? 'engineering-goals-stale' : reader.state === 'idle' ? 'engineering-no-data' : 'engineering-page-loading')}
     </p>
   {/if}
+
+  {#snippet details()}
+    {#if reader.ready}
+      <!-- Resumen acumulado (Needs / Missing / Surplus) en tarjetas -->
+      <div class="aggregates-grid">
+        {#each ['needs', 'missing', 'surplus'] as section}
+          <section data-section={section} class="aggregate-card aggregate-{section}">
+            <h3 class="aggregate-title">{t(`engineering-aggregate-${section}`)}</h3>
+            <ul class="aggregate-list">
+              {#each reader[section as 'needs' | 'missing' | 'surplus'].items as row (row.key)}
+                <li class="aggregate-item">
+                  <span class="agg-name">{inventoryMaterial(row.key, inventory, row.name_en)}:</span>
+                  <span class="agg-count font-mono">{integer(row.count)}</span>
+                </li>
+              {:else}
+                <li class="muted">{t('engineering-no-data')}</li>
+              {/each}
+            </ul>
+          </section>
+        {/each}
+      </div>
+    {/if}
+  {/snippet}
 </Panel>
 
 <style>

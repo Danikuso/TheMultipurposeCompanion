@@ -82,7 +82,7 @@
   });
 </script>
 
-<Panel titleKey="panel-engineering-materials" span={2}>
+<Panel titleKey="panel-engineering-materials" span={2} collapsible={true} defaultExpanded={false}>
   <div class="tabs-header">
     <div class="tabs" role="tablist" aria-label={t('panel-engineering-materials')}>
       {#each categories as category}
@@ -126,30 +126,6 @@
         </select>
       </label>
     </div>
-
-    {#if canRead && reader.key === currentKey && reader.state === 'ready'}
-      {#if reader.items.length === 0}
-        <p class="muted">{t('engineering-no-data')}</p>
-      {/if}
-      <ul class="material-list">
-        {#each reader.items as row (row.key)}
-          <li data-key={row.key} class="material-item">
-            <span class="material-name">{row.name_localised ?? row.key}</span>
-            <span class="mono count-badge">{integer(row.count)}</span>
-          </li>
-        {/each}
-      </ul>
-    {:else}
-      <p class="muted" role="status">
-        {t(reader.key === currentKey && reader.state === 'failed'
-          ? 'engineering-page-failed'
-          : reader.key === currentKey && reader.state === 'stale'
-            ? 'engineering-page-stale'
-            : canRead
-              ? 'engineering-page-loading'
-              : 'engineering-no-data')}
-      </p>
-    {/if}
   {:else}
     <!-- Search Bar -->
     <div class="search-bar">
@@ -160,61 +136,6 @@
         class="search-input"
       />
     </div>
-
-    {#if grades.length === 0}
-      <p class="muted">{t('engineering-no-data')}</p>
-    {/if}
-
-    {#each grades as [grade, rows] (grade)}
-      {@const isCollapsed = collapsedGrades[grade] ?? false}
-      <div class="grade-section">
-        <h3 class="grade-header">
-          <button
-            type="button"
-            class="grade-toggle-btn"
-            data-testid={`toggle-grade-${grade}`}
-            onclick={() => toggleGrade(grade)}
-            aria-expanded={!isCollapsed}
-          >
-            <span class="grade-pill grade-pill-{grade}">G{grade}</span>
-            <span>{Number(grade) > 0 ? t('engineering-grade', { grade: integer(Number(grade)) }) : t('engineering-no-data')}</span>
-            <span class="fold-arrow">{isCollapsed ? '▼' : '▲'}</span>
-          </button>
-        </h3>
-        <ul class="material-list" class:is-collapsed={isCollapsed}>
-          {#each rows as row (row.key)}
-            {@const maxCap = inventory?.caps[grade] ?? 0}
-            {@const isAtMax = inventory?.at_max.includes(row.key)}
-            {@const pct = maxCap > 0 ? Math.min(100, Math.round((row.count / maxCap) * 100)) : 0}
-            <li data-key={row.key} class="material-item" class:item-at-max={isAtMax}>
-              <div class="item-info">
-                <span class="material-name">
-                  {materialName(row)}
-                  {#if row.known === false || grade === '0'}
-                    <small class="muted">{t('engineering-no-data')}</small>
-                  {/if}
-                </span>
-                <div class="progress-wrap">
-                  <div class="progress-bar">
-                    <div class="progress-fill grade-{grade}" style="width: {pct}%"></div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="item-counts">
-                <span class="mono count-display">
-                  {inventory?.caps[grade] ? t('engineering-count-of-max', { have: integer(row.count), max: integer(inventory.caps[grade]) }) : integer(row.count)}
-                </span>
-                {#if isAtMax}
-                  <span class="badge-max">{t('engineering-at-max-badge')}</span>
-                  <strong class="warning">{t('engineering-at-max')}</strong>
-                {/if}
-              </div>
-            </li>
-          {/each}
-        </ul>
-      </div>
-    {/each}
   {/if}
 
   <div class="session-section">
@@ -238,6 +159,89 @@
       {/each}
     </ul>
   </div>
+
+  {#snippet details()}
+    {#if tab === 'locker'}
+      {#if canRead && reader.key === currentKey && reader.state === 'ready'}
+        {#if reader.items.length === 0}
+          <p class="muted">{t('engineering-no-data')}</p>
+        {/if}
+        <ul class="material-list">
+          {#each reader.items as row (row.key)}
+            <li data-key={row.key} class="material-item">
+              <span class="material-name">{row.name_localised ?? row.key}</span>
+              <span class="mono count-badge">{integer(row.count)}</span>
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <p class="muted" role="status">
+          {t(reader.key === currentKey && reader.state === 'failed'
+            ? 'engineering-page-failed'
+            : reader.key === currentKey && reader.state === 'stale'
+              ? 'engineering-page-stale'
+              : canRead
+                ? 'engineering-page-loading'
+                : 'engineering-no-data')}
+        </p>
+      {/if}
+    {:else}
+      {#if grades.length === 0}
+        <p class="muted">{t('engineering-no-data')}</p>
+      {/if}
+
+      {#each grades as [grade, rows] (grade)}
+        {@const isCollapsed = collapsedGrades[grade] ?? false}
+        <div class="grade-section">
+          <h3 class="grade-header">
+            <button
+              type="button"
+              class="grade-toggle-btn"
+              data-testid={`toggle-grade-${grade}`}
+              onclick={() => toggleGrade(grade)}
+              aria-expanded={!isCollapsed}
+            >
+              <span class="grade-pill grade-pill-{grade}">G{grade}</span>
+              <span>{Number(grade) > 0 ? t('engineering-grade', { grade: integer(Number(grade)) }) : t('engineering-no-data')}</span>
+              <span class="fold-arrow">{isCollapsed ? '▼' : '▲'}</span>
+            </button>
+          </h3>
+          <ul class="material-list" class:is-collapsed={isCollapsed}>
+            {#each rows as row (row.key)}
+              {@const maxCap = inventory?.caps[grade] ?? 0}
+              {@const isAtMax = inventory?.at_max.includes(row.key)}
+              {@const pct = maxCap > 0 ? Math.min(100, Math.round((row.count / maxCap) * 100)) : 0}
+              <li data-key={row.key} class="material-item" class:item-at-max={isAtMax}>
+                <div class="item-info">
+                  <span class="material-name">
+                    {materialName(row)}
+                    {#if row.known === false || grade === '0'}
+                      <small class="muted">{t('engineering-no-data')}</small>
+                    {/if}
+                  </span>
+                  <div class="progress-wrap">
+                    <div class="progress-bar">
+                      <div class="progress-fill grade-{grade}" style="width: {pct}%"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="item-counts">
+                  <span class="mono count-display">
+                    {inventory?.caps[grade] ? t('engineering-count-of-max', { have: integer(row.count), max: integer(inventory.caps[grade]) }) : integer(row.count)}
+                  </span>
+                  {#if isAtMax}
+                    <span class="badge-max">{t('engineering-at-max-badge')}</span>
+                    <strong class="warning">{t('engineering-at-max')}</strong>
+                  {/if}
+                </div>
+              </li>
+            {/each}
+          </ul>
+        </div>
+      {/each}
+    {/if}
+  {/snippet}
 </Panel>
 
 <style>

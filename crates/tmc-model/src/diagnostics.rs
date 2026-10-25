@@ -818,6 +818,7 @@ const UI_LAYOUTS: &[&str] = &[
     "missions",
     "none",
     "powerplay",
+    "ship",
     "trade",
 ];
 /// Ranuras de las disposiciones (`ui/src/shell/layouts.ts`).
@@ -842,6 +843,9 @@ const UI_SLOTS: &[&str] = &[
     "context-exobiology",
     "planner",
     "jump",
+    "ship-jump",
+    "ship-cargo",
+    "ship-detail",
     "target",
     "hunting",
     "ship",

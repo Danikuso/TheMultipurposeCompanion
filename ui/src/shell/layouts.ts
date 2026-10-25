@@ -21,6 +21,7 @@ import { CarrierOverviewPanel, CarrierJumpPanel, CarrierFinancesPanel } from '..
 import { ColonisationProgressPanel, ColonisationSupplyPanel } from '../modules/colonisation';
 import { PowerplayPanel } from '../modules/powerplay';
 import { BgsPanel } from '../modules/bgs';
+import { ShipPanel as DashboardShipPanel } from '../modules/dashboard';
 import { topic } from '../lib/ws.svelte';
 
 export interface LayoutCtx {
@@ -70,6 +71,7 @@ const czVisible = () => (topic<unknown>('combat.conflict_zone') ?? null) !== nul
 
 type AutoLayout =
   | 'exploration'
+  | 'ship'
   | 'combat'
   | 'mining'
   | 'engineering'
@@ -80,6 +82,7 @@ type AutoLayout =
   | 'powerplay';
 const MANUAL: string[] = [
   'exploration',
+  'ship',
   'combat',
   'mining',
   'engineering',
@@ -125,6 +128,15 @@ export const layouts: LayoutDef[] = [{
       when: (ctx) => contextPanel(ctx.modules, ctx.manual) === 'exobiology' },
     { id: 'planner', panel: PlannerPanel, span: 1 },
     { id: 'jump', panel: JumpPanel, span: 1 },
+  ],
+}, {
+  id: 'ship',
+  titleKey: 'layout-ship',
+  icon: 'ship',
+  slots: [
+    { id: 'ship-detail', panel: DashboardShipPanel, span: 2 },
+    { id: 'ship-jump', panel: JumpPanel, span: 1 },
+    { id: 'ship-cargo', panel: CargoPanel, span: 1 },
   ],
 }, {
   id: 'combat',

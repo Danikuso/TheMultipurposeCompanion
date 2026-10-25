@@ -117,7 +117,7 @@
   }
 </script>
 
-<Panel titleKey="panel-engineering-engineers" span={2}>
+<Panel titleKey="panel-engineering-engineers" span={1} collapsible={true} defaultExpanded={false}>
   {#if failed}
     <p class="error" role="alert">{t('engineering-select-engineer-failed')}</p>
   {/if}
@@ -136,7 +136,7 @@
     <p class="muted">{t('engineering-no-data')}</p>
   {/if}
 
-  <!-- Status Filter Tabs -->
+  <!-- Status Filter Tabs (basic top ~33%) -->
   <div class="filter-tabs">
     <button
       class="filter-tab"
@@ -161,163 +161,209 @@
     </button>
   </div>
 
-  <div class="engineers-container">
-    {#snippet engineerDetails(name: string, row: EngineerRow | undefined)}
-      <section class="details" data-testid="engineer-details">
-        <div class="details-header">
-          <h3 class="details-name">{name}</h3>
-          {#if row}
-            <span class="status-badge {statusClass(row.status)}">
-              {engineerStatusLabel(row.status)}
-            </span>
-          {/if}
-        </div>
+  {#if selectedName && selectedRow}
+    <div class="selected-summary-chip">
+      <div class="chip-header">
+        <strong class="selected-engineer-name">{selectedName}</strong>
+        <span class="status-badge {statusClass(selectedRow.status)}">
+          {engineerStatusLabel(selectedRow.status)}
+        </span>
+      </div>
+      <div class="chip-meta">
+        <span class="mono cyan">{distance(selectedRow)}</span>
+        {#if selectedRow.rank != null && selectedRow.rank > 0}
+          <span class="rank-stars">{rankStars(selectedRow.rank)}</span>
+        {/if}
+      </div>
+    </div>
+  {/if}
 
-        <div class="next-step-box">
-          <h4 class="next-step-title">{t('engineering-engineer-next-step')}</h4>
-          <p data-testid="engineer-next-step" class="next-step-desc">
-            {#if next === 'Done'}
-              <span class="done-mark">✔ {t('engineering-engineer-unlocked')}</span>
-            {:else if next && typeof next === 'object' && 'Requirement' in next}
-              {requirement(next.Requirement.key)}
-            {:else if next && typeof next === 'object' && 'Invite' in next}
-              {requirement(next.Invite.key)}
-            {:else if next && typeof next === 'object' && 'Contribute' in next}
-              {@const contribution = contributionItem(next.Contribute.item, next.Contribute.kind)}
-              <span class="contribution-item">{contribution.name}:</span>
-              <span class="contribution-progress">
-                {t('engineering-engineer-progress', {
-                  done: integer(next.Contribute.have), need: integer(next.Contribute.need),
-                })}
+  {#snippet details()}
+    <div class="engineers-container">
+      {#snippet engineerDetails(name: string, row: EngineerRow | undefined)}
+        <section class="details" data-testid="engineer-details">
+          <div class="details-header">
+            <h3 class="details-name">{name}</h3>
+            {#if row}
+              <span class="status-badge {statusClass(row.status)}">
+                {engineerStatusLabel(row.status)}
               </span>
-              {#if contribution.pending}
-                <small class="muted">{t('engineering-translation-pending')}</small>
-              {/if}
-            {:else}
-              {t('engineering-no-data')}
             {/if}
-          </p>
-        </div>
+          </div>
 
-        <h4 class="caps-title">{t('engineering-engineer-capabilities')}</h4>
-        {#if caps.ready}
-          <ul data-testid="engineer-blueprints" class="caps-grid">
-            {#each capabilities as entry (`${entry.module}/${entry.blueprint}`)}
-              {@const label = blueprintLabel(entry.blueprint)}
-              {@const module = engineeringDataLabel('modtype', entry.module)}
-              <li class="caps-card">
-                <div class="caps-text">
-                  {t('engineering-engineer-capability', {
-                    module: module.name, blueprint: label.name,
-                    grades: entry.grades.map((grade) => t('engineering-grade', { grade: integer(grade) })).join(', '),
+          <div class="next-step-box">
+            <h4 class="next-step-title">{t('engineering-engineer-next-step')}</h4>
+            <p data-testid="engineer-next-step" class="next-step-desc">
+              {#if next === 'Done'}
+                <span class="done-mark">✔ {t('engineering-engineer-unlocked')}</span>
+              {:else if next && typeof next === 'object' && 'Requirement' in next}
+                {requirement(next.Requirement.key)}
+              {:else if next && typeof next === 'object' && 'Invite' in next}
+                {requirement(next.Invite.key)}
+              {:else if next && typeof next === 'object' && 'Contribute' in next}
+                {@const contribution = contributionItem(next.Contribute.item, next.Contribute.kind)}
+                <span class="contribution-item">{contribution.name}:</span>
+                <span class="contribution-progress">
+                  {t('engineering-engineer-progress', {
+                    done: integer(next.Contribute.have), need: integer(next.Contribute.need),
                   })}
-                </div>
-                {#if label.pending || module.pending}
+                </span>
+                {#if contribution.pending}
                   <small class="muted">{t('engineering-translation-pending')}</small>
                 {/if}
-              </li>
-            {/each}
-          </ul>
-        {:else}
-          <p class="muted" role="status">
-            {t(caps.state === 'failed'
-              ? 'engineering-page-failed'
-              : caps.state === 'stale'
-                ? 'engineering-data-stale'
-                : 'engineering-page-loading')}
-          </p>
-        {/if}
-      </section>
-    {/snippet}
-    {#each [false, true] as onFoot}
-      {@const filtered = rows.filter((row) => row.on_foot === onFoot && matchesFilter(row))}
-      {@const isOpen = onFoot ? onFootOpen : shipOpen}
-      <section data-testid={onFoot ? 'engineers-on-foot' : 'engineers-ship'} class="engineers-section">
-        <button
-          type="button"
-          class="section-toggle"
-          onclick={() => { if (onFoot) onFootOpen = !onFootOpen; else shipOpen = !shipOpen; }}
-          aria-expanded={isOpen}
-        >
-          <h3 class="section-title">
-            {t(onFoot ? 'engineering-engineer-on-foot' : 'engineering-engineer-ship')}
-            <span class="section-count">({filtered.length})</span>
-          </h3>
-          <span class="chevron" aria-hidden="true">{isOpen ? '▲' : '▼'}</span>
-        </button>
+              {:else}
+                {t('engineering-no-data')}
+              {/if}
+            </p>
+          </div>
 
-        {#if isOpen}
-          <ul class="engineers">
-            {#each filtered as row (row.id)}
-              <li data-engineer-id={row.id} class="engineer-card" class:selected={selectedId === row.id}>
-                <div
-                  class="card-top"
-                  onclick={() => selectEngineer(row.id)}
-                  role="button"
-                  tabindex="0"
-                  onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectEngineer(row.id); } }}
-                >
-                  <button
-                    type="button"
-                    class="engineer-button"
-                    onclick={(e) => { e.stopPropagation(); selectEngineer(row.id); }}
-                    aria-pressed={selectedId === row.id}
-                    aria-expanded={selectedId === row.id}
+          <h4 class="caps-title">{t('engineering-engineer-capabilities')}</h4>
+          {#if caps.ready}
+            <ul data-testid="engineer-blueprints" class="caps-grid">
+              {#each capabilities as entry (`${entry.module}/${entry.blueprint}`)}
+                {@const label = blueprintLabel(entry.blueprint)}
+                {@const module = engineeringDataLabel('modtype', entry.module)}
+                <li class="caps-card">
+                  <div class="caps-text">
+                    {t('engineering-engineer-capability', {
+                      module: module.name, blueprint: label.name,
+                      grades: entry.grades.map((grade) => t('engineering-grade', { grade: integer(grade) })).join(', '),
+                    })}
+                  </div>
+                  {#if label.pending || module.pending}
+                    <small class="muted">{t('engineering-translation-pending')}</small>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+          {:else}
+            <p class="muted" role="status">
+              {t(caps.state === 'failed'
+                ? 'engineering-page-failed'
+                : caps.state === 'stale'
+                  ? 'engineering-data-stale'
+                  : 'engineering-page-loading')}
+            </p>
+          {/if}
+        </section>
+      {/snippet}
+      {#each [false, true] as onFoot}
+        {@const filtered = rows.filter((row) => row.on_foot === onFoot && matchesFilter(row))}
+        {@const isOpen = onFoot ? onFootOpen : shipOpen}
+        <section data-testid={onFoot ? 'engineers-on-foot' : 'engineers-ship'} class="engineers-section">
+          <button
+            type="button"
+            class="section-toggle"
+            onclick={() => { if (onFoot) onFootOpen = !onFootOpen; else shipOpen = !shipOpen; }}
+            aria-expanded={isOpen}
+          >
+            <h3 class="section-title">
+              {t(onFoot ? 'engineering-engineer-on-foot' : 'engineering-engineer-ship')}
+              <span class="section-count">({filtered.length})</span>
+            </h3>
+            <span class="chevron" aria-hidden="true">{isOpen ? '▲' : '▼'}</span>
+          </button>
+
+          {#if isOpen}
+            <ul class="engineers">
+              {#each filtered as row (row.id)}
+                <li data-engineer-id={row.id} class="engineer-card" class:selected={selectedId === row.id}>
+                  <div
+                    class="card-top"
+                    onclick={() => selectEngineer(row.id)}
+                    role="button"
+                    tabindex="0"
+                    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectEngineer(row.id); } }}
                   >
-                    <span class="engineer-name">{row.name}</span>
-                    <span class="chevron-sm" aria-hidden="true">{selectedId === row.id ? '▲' : '▼'}</span>
-                  </button>
-                  <span class="status-badge {statusClass(row.status)}">
-                    {engineerStatusLabel(row.status)}
-                  </span>
-                </div>
-
-                <div class="card-details">
-                  <div class="rank-info">
-                    {#if row.rank != null && row.rank > 0}
-                      <GradeBadge grade={row.rank} size={15} />
-                    {/if}
-                    <span class="rank-label">{t('engineering-col-rank')}: {row.rank == null ? t('engineering-no-data') : integer(row.rank)}</span>
-                    {#if row.rank != null && row.rank > 0}
-                      <span class="rank-stars" title={String(row.rank)}>{rankStars(row.rank)}</span>
-                    {/if}
-                    <span class="rank-progress">
-                      {t('engineering-engineer-rank-progress', {
-                        progress: row.rank_progress == null ? t('engineering-no-data') : `${integer(row.rank_progress)} %`,
-                      })}
+                    <button
+                      type="button"
+                      class="engineer-button"
+                      onclick={(e) => { e.stopPropagation(); selectEngineer(row.id); }}
+                      aria-pressed={selectedId === row.id}
+                      aria-expanded={selectedId === row.id}
+                    >
+                      <span class="engineer-name">{row.name}</span>
+                      <span class="chevron-sm" aria-hidden="true">{selectedId === row.id ? '▲' : '▼'}</span>
+                    </button>
+                    <span class="status-badge {statusClass(row.status)}">
+                      {engineerStatusLabel(row.status)}
                     </span>
                   </div>
 
-                  <div class="location-info">
-                    <span class="system-name">{row.system ?? t('engineering-no-data')}</span>
-                    <span class="mono distance-val">{distance(row)}</span>
+                  <div class="card-details">
+                    <div class="rank-info">
+                      {#if row.rank != null && row.rank > 0}
+                        <GradeBadge grade={row.rank} size={15} />
+                      {/if}
+                      <span class="rank-label">{t('engineering-col-rank')}: {row.rank == null ? t('engineering-no-data') : integer(row.rank)}</span>
+                      {#if row.rank != null && row.rank > 0}
+                        <span class="rank-stars" title={String(row.rank)}>{rankStars(row.rank)}</span>
+                      {/if}
+                      <span class="rank-progress">
+                        {t('engineering-engineer-rank-progress', {
+                          progress: row.rank_progress == null ? t('engineering-no-data') : `${integer(row.rank_progress)} %`,
+                        })}
+                      </span>
+                    </div>
+
+                    <div class="location-info">
+                      <span class="system-name">{row.system ?? t('engineering-no-data')}</span>
+                      <span class="mono distance-val">{distance(row)}</span>
+                    </div>
                   </div>
-                </div>
 
-                {#if !row.verified}
-                  <small class="muted unverified-tag">{t('engineering-unverified')}</small>
-                {/if}
+                  {#if !row.verified}
+                    <small class="muted unverified-tag">{t('engineering-unverified')}</small>
+                  {/if}
 
-                {#if selectedId === row.id && selectedName !== undefined}
-                  {@render engineerDetails(selectedName, selectedRow)}
-                {/if}
-              </li>
-            {/each}
-          </ul>
-        {/if}
-      </section>
-    {/each}
+                  {#if selectedId === row.id && selectedName !== undefined}
+                    {@render engineerDetails(selectedName, selectedRow)}
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </section>
+      {/each}
 
-    {#if selectedId !== null && selectedName !== undefined && !rows.some((r) => r.id === selectedId && matchesFilter(r))}
-      {@render engineerDetails(selectedName, selectedRow)}
-    {/if}
-  </div>
+      {#if selectedId !== null && selectedName !== undefined && !rows.some((r) => r.id === selectedId && matchesFilter(r))}
+        {@render engineerDetails(selectedName, selectedRow)}
+      {/if}
+    </div>
+  {/snippet}
 </Panel>
 
 <style>
   .filter-tabs { display: flex; gap: .4rem; margin-bottom: .8rem; }
   .filter-tab { color: var(--hud-text); background: var(--hud-bg); border: 1px solid var(--hud-muted); padding: .25rem .5rem; border-radius: 4px; font-size: .8rem; }
   .filter-tab.active { border-color: var(--hud-primary); color: var(--hud-primary); background: rgba(255, 113, 0, 0.12); font-weight: 600; }
+
+  .selected-summary-chip {
+    background: rgba(255, 113, 0, 0.08);
+    border: 1px solid rgba(255, 113, 0, 0.3);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .chip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .selected-engineer-name {
+    color: var(--hud-primary);
+    font-size: 0.95rem;
+  }
+  .chip-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+  }
+  .cyan { color: var(--hud-cyan, #00d9ff); }
 
   .engineers-container { display: flex; flex-direction: column; gap: 1rem; }
   .engineers-section { display: flex; flex-direction: column; gap: .4rem; }

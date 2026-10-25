@@ -324,10 +324,28 @@
     border-color: var(--hud-primary);
   }
 
-  .small {
+  .card.small {
+    padding: 0.35rem 0.55rem;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.15rem;
+    font-size: 0.74rem;
+    line-height: 1.25;
+  }
+
+  .card.small .name {
+    font-size: 0.85rem;
+    margin-bottom: 0.05rem;
+  }
+
+  .card.small .tag {
+    font-size: 0.65rem;
+    padding: 0.05rem 0.3rem;
+  }
+
+  .card.small .label,
+  .card.small .muted {
+    font-size: 0.72rem;
   }
 
   .name {

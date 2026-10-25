@@ -1,6 +1,7 @@
 app-name = TMC — The Multipurpose Companion
 settings-save-error = Die Einstellungen konnten nicht gespeichert werden. Die zuletzt gespeicherte Konfiguration wurde wiederhergestellt.
 layout-exploration = Erkundung
+layout-ship = Schiff
 nav-layouts = Ansichten
 nav-modules = Module
 layout-context = Kontextbereich

@@ -3,6 +3,7 @@
   import { topic } from '../lib/ws.svelte';
   import { modules } from '../modules/registry';
   import { layouts } from './layouts';
+  import { resolveNavIcon } from '../lib/icons';
 
   interface LiveModuleState {
     id: string;
@@ -33,6 +34,7 @@
 
   const LAYOUT_ICONS: Record<string, string> = {
     exploration: '🧭',
+    ship: '🚀',
     combat: '🎯',
     mining: '⛏️',
     trade: '⚖️',
@@ -70,7 +72,11 @@
       <button type="button" class="nav-btn" class:active={activeTab === `layout:${layout.id}`}
         title={t(layout.titleKey)} onclick={() => onSelect?.(`layout:${layout.id}`)}>
         <span class="nav-content">
-          <span class="nav-icon" aria-hidden="true">{LAYOUT_ICONS[layout.id] ?? '◈'}</span>
+          {#if resolveNavIcon(layout.id)}
+            <span class="nav-icon hud-svg-icon" aria-hidden="true">{@html resolveNavIcon(layout.id)}</span>
+          {:else}
+            <span class="nav-icon" aria-hidden="true">{LAYOUT_ICONS[layout.id] ?? '◈'}</span>
+          {/if}
           <span class="nav-label">{t(layout.titleKey)}</span>
         </span>
       </button>
@@ -86,7 +92,11 @@
           onclick={() => onSelect?.(mod.id)}
         >
           <span class="nav-content">
-            <span class="nav-icon" aria-hidden="true">{MOD_ICONS[mod.id] ?? '◈'}</span>
+            {#if resolveNavIcon(mod.id)}
+              <span class="nav-icon hud-svg-icon" aria-hidden="true">{@html resolveNavIcon(mod.id)}</span>
+            {:else}
+              <span class="nav-icon" aria-hidden="true">{MOD_ICONS[mod.id] ?? '◈'}</span>
+            {/if}
             <span class="nav-label">{t(mod.titleKey)}</span>
           </span>
           <span class="relevance-dot relevance-{mod.relevance}"></span>
@@ -210,6 +220,40 @@
     font-size: 0.95rem;
     line-height: 1;
     flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+  }
+
+  .hud-svg-icon {
+    color: var(--hud-primary, #ff7100);
+    transition: all 150ms ease;
+  }
+
+  .hud-svg-icon :global(svg) {
+    width: 100%;
+    height: 100%;
+    max-width: 18px;
+    max-height: 18px;
+    display: block;
+    object-fit: contain;
+  }
+
+  .nav-btn.active .hud-svg-icon {
+    color: var(--hud-primary, #ff7100);
+    filter: drop-shadow(0 0 5px rgba(255, 113, 0, 0.7));
+  }
+
+  .nav-btn:not(.active) .hud-svg-icon {
+    color: var(--hud-muted, #8a96a3);
+    opacity: 0.85;
+  }
+
+  .nav-btn:hover .hud-svg-icon {
+    color: var(--hud-text, #e2e8f0);
+    opacity: 1;
   }
 
   .nav-label {
