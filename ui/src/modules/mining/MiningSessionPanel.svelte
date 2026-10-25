@@ -68,7 +68,7 @@
   }
 </script>
 
-<Panel titleKey="panel-mining-session" span={1}>
+<Panel titleKey="panel-mining-session" span={1} collapsible={!!s} defaultExpanded={false}>
   {#if !s}
     <p class="muted" data-testid="session-empty">{t('mining-no-data')}</p>
   {:else}
@@ -87,30 +87,6 @@
         <div class="rate-sub muted" data-testid="credits-hour">· {creditsPerHour == null ? '—' : t('mining-credits-per-hour', { credits: credits(Math.round(creditsPerHour)) })}</div>
       </div>
     </div>
-
-    <table>
-      <thead><tr><th>{t('mining-refined')}</th><th>{t('mining-col-tons')}</th></tr></thead>
-      <tbody>
-        {#each refined as [key, tons] (key)}
-          <tr data-testid="refined-row"><td>{materialName(key, names)}</td><td class="mono">{tons}</td></tr>
-        {/each}
-      </tbody>
-    </table>
-
-    <div class="sub" data-testid="refinery">{t('mining-refinery-estimated')}</div>
-    <ul class="bins">
-      {#each s.refinery_bins as b (b.key)}
-        <li
-          class="bin"
-          data-testid="bin"
-          role="img"
-          aria-label={t('mining-bin-aria', { material: materialName(b.key, names), tons: b.tons })}
-        >
-          <i style:height={cssPct((b.tons / maxBin) * 100)}></i>
-          <span class="label">{materialName(b.key, names)}</span>
-        </li>
-      {/each}
-    </ul>
 
     <div class="sub">
       {t('mining-limpets')}
@@ -136,10 +112,38 @@
       aria-valuemax="100"
       aria-valuenow={Math.round(cargoPct)}
     ><i style:width={cssPct(cargoPct)}></i></div>
-
-    <button type="button" class="btn-reset" data-testid="reset-session" onclick={reset}>{t('mining-reset')}</button>
-    {#if failed}<p class="err" role="alert">{t('mining-reset-failed')}</p>{/if}
   {/if}
+
+  {#snippet details()}
+    {#if s}
+      <table>
+        <thead><tr><th>{t('mining-refined')}</th><th>{t('mining-col-tons')}</th></tr></thead>
+        <tbody>
+          {#each refined as [key, tons] (key)}
+            <tr data-testid="refined-row"><td>{materialName(key, names)}</td><td class="mono">{tons}</td></tr>
+          {/each}
+        </tbody>
+      </table>
+
+      <div class="sub" data-testid="refinery">{t('mining-refinery-estimated')}</div>
+      <ul class="bins">
+        {#each s.refinery_bins as b (b.key)}
+          <li
+            class="bin"
+            data-testid="bin"
+            role="img"
+            aria-label={t('mining-bin-aria', { material: materialName(b.key, names), tons: b.tons })}
+          >
+            <i style:height={cssPct((b.tons / maxBin) * 100)}></i>
+            <span class="label">{materialName(b.key, names)}</span>
+          </li>
+        {/each}
+      </ul>
+
+      <button type="button" class="btn-reset" data-testid="reset-session" onclick={reset}>{t('mining-reset')}</button>
+      {#if failed}<p class="err" role="alert">{t('mining-reset-failed')}</p>{/if}
+    {/if}
+  {/snippet}
 </Panel>
 
 <style>

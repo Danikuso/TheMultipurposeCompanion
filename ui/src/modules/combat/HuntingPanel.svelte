@@ -54,7 +54,7 @@
   }
 </script>
 
-<Panel titleKey="panel-combat-hunting" span={2}>
+<Panel titleKey="panel-combat-hunting" span={2} collapsible={!!s} defaultExpanded={false}>
   {#if !s}
     <p class="empty">{t('combat-no-data')}</p>
   {:else}
@@ -71,39 +71,46 @@
         <span data-testid="rank-progress">{t('combat-rank-progress', { rank: rankName, pct: pct(s.combat_progress == null ? null : s.combat_progress / 100) })}</span>
       </div>
     {/if}
-    <h3>{t('combat-vouchers-title')}</h3>
-    {#if s.vouchers.length === 0}
-      <p class="empty" data-testid="vouchers-none">{t('combat-bounties-none')}</p>
-    {:else}
-      <p class="mono" data-testid="vouchers-total">{t('combat-bounties-unclaimed', { count: s.vouchers.reduce((n, v) => n + v.count, 0), credits: credits(unredeemed) })}</p>
-      <ul class="vouchers">
-        {#each s.vouchers as v, i (i)}
-          <li data-testid="voucher-row" data-kind={v.kind ?? 'other'}>
-            <span class="kind">{v.kind === 'Bounty' ? t('combat-voucher-bounty') : v.kind === 'CombatBond' ? t('combat-voucher-bond') : t('combat-voucher-other', { count: v.count })}</span>
-            {#if !v.other}
-              <strong>{cleanFaction(v.faction) || t('combat-faction-unknown')}</strong>
-              {#if v.systems.length > 0}<span class="systems">{v.systems.join(', ')}</span>{/if}
-            {/if}
-            <span class="mono amount">{credits(v.amount)}</span>
-            {#if s.nearest_if}
-              <span class="mono fee" data-testid="voucher-fee">{t('combat-if-fee', { fee: fee(v.amount) })}</span>
-            {/if}
-          </li>
-        {/each}
-      </ul>
-    {/if}
-    <div class="if">
-      <span class="label">{t('combat-if-nearest')}</span>
-      {#if s.nearest_if}
-        <span data-testid="if-station">{t('combat-if-station', { station: s.nearest_if.station_name, system: s.nearest_if.system_name, distance: ly(s.nearest_if.distance_ly) })}</span>
-        <span class="muted" data-testid="if-age">{ifAge == null ? '—' : t('combat-if-age', { age: ifAge })}</span>
-      {:else}
-        <span class="muted" data-testid="if-none">{t('combat-no-data')}</span>
-      {/if}
+    <div class="actions-row">
+      <button type="button" data-testid="reset-session" onclick={reset}>{t('combat-reset-session')}</button>
+      {#if failed}<p class="err" role="alert">{t('combat-reset-failed')}</p>{/if}
     </div>
-    <button type="button" data-testid="reset-session" onclick={reset}>{t('combat-reset-session')}</button>
-    {#if failed}<p class="err" role="alert">{t('combat-reset-failed')}</p>{/if}
   {/if}
+
+  {#snippet details()}
+    {#if s}
+      <h3>{t('combat-vouchers-title')}</h3>
+      {#if s.vouchers.length === 0}
+        <p class="empty" data-testid="vouchers-none">{t('combat-bounties-none')}</p>
+      {:else}
+        <p class="mono" data-testid="vouchers-total">{t('combat-bounties-unclaimed', { count: s.vouchers.reduce((n, v) => n + v.count, 0), credits: credits(unredeemed) })}</p>
+        <ul class="vouchers">
+          {#each s.vouchers as v, i (i)}
+            <li data-testid="voucher-row" data-kind={v.kind ?? 'other'}>
+              <span class="kind">{v.kind === 'Bounty' ? t('combat-voucher-bounty') : v.kind === 'CombatBond' ? t('combat-voucher-bond') : t('combat-voucher-other', { count: v.count })}</span>
+              {#if !v.other}
+                <strong>{cleanFaction(v.faction) || t('combat-faction-unknown')}</strong>
+                {#if v.systems.length > 0}<span class="systems">{v.systems.join(', ')}</span>{/if}
+              {/if}
+              <span class="mono amount">{credits(v.amount)}</span>
+              {#if s.nearest_if}
+                <span class="mono fee" data-testid="voucher-fee">{t('combat-if-fee', { fee: fee(v.amount) })}</span>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      {/if}
+      <div class="if">
+        <span class="label">{t('combat-if-nearest')}</span>
+        {#if s.nearest_if}
+          <span data-testid="if-station">{t('combat-if-station', { station: s.nearest_if.station_name, system: s.nearest_if.system_name, distance: ly(s.nearest_if.distance_ly) })}</span>
+          <span class="muted" data-testid="if-age">{ifAge == null ? '—' : t('combat-if-age', { age: ifAge })}</span>
+        {:else}
+          <span class="muted" data-testid="if-none">{t('combat-no-data')}</span>
+        {/if}
+      </div>
+    {/if}
+  {/snippet}
 </Panel>
 
 <style>

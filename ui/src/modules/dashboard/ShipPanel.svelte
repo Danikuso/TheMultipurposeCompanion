@@ -136,7 +136,7 @@
   // Filtro de categoría de módulos ('all' | 'hardpoint' | 'core' | 'optional' | 'utility')
   let categoryFilter = $state<'all' | 'hardpoint' | 'core' | 'optional' | 'utility'>('all');
   let searchQuery = $state('');
-  let modulesCollapsed = $state(false);
+  let modulesCollapsed = $state(true);
   let expandedModuleSlot = $state<string | null>(null);
 
   function toggleModuleDetails(slot: string) {

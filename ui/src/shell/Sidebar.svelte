@@ -111,23 +111,57 @@
 
 <style>
   .hud-sidebar {
-    width: 190px;
+    width: 200px;
+    height: 100%;
+    max-height: 100%;
     background: var(--hud-surface);
     border-right: 1px solid var(--hud-border-subtle);
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    padding: 0.6rem;
+    padding: 0.6rem 0.4rem;
     gap: 0.5rem;
     flex-shrink: 0;
+    min-height: 0;
+    overflow: hidden;
     box-shadow: 2px 0 15px rgba(0, 0, 0, 0.3);
   }
 
-  .sidebar-top,
-  .sidebar-bottom {
+  .sidebar-top {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
+    padding-right: 0.25rem;
+  }
+
+  .sidebar-top::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .sidebar-top::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+  }
+
+  .sidebar-top::-webkit-scrollbar-thumb {
+    background: rgba(255, 113, 0, 0.25);
+    border-radius: 4px;
+  }
+
+  .sidebar-top::-webkit-scrollbar-thumb:hover {
+    background: var(--hud-primary, #ff7100);
+  }
+
+  .sidebar-bottom {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid var(--hud-border-subtle);
   }
 
   h2 {

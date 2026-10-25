@@ -20,7 +20,7 @@
   }
 </script>
 
-<Panel titleKey="panel-system-bodies" span="full" size="large">
+<Panel titleKey="panel-system-bodies" span="full" size="large" defaultExpanded={false}>
   {#if system}
     <div class="summary">
       <div class="system-header">
@@ -67,36 +67,41 @@
         <strong class="metric-val green">{credits(system.value_if_mapped)}</strong>
       </div>
     </div>
-    {#if (system.truncated ?? 0) > 0}
-      <p data-testid="exploration-truncated">{t('exploration-truncated', { count: system.truncated ?? 0 })}</p>
-    {/if}
-    <div class="table-scroll">
-      <div role="table" aria-label={t('panel-system-bodies')} aria-rowcount={system.rows.length + 1} class="body-table">
-        <div class="body-grid headings" role="row">
-          {#each columns as column}<span role="columnheader">{t(`exploration-col-${column}`)}</span>{/each}
-        </div>
-        <VirtualList items={system.rows} rowHeight={30} height={600} label={t('panel-system-bodies')}>
-          {#snippet row(body, index)}
-            <div role="row" aria-rowindex={index + 2} class="body-grid body-row" class:map-advice={body.advice?.includes('map')}
-              data-testid="body-row" data-body-id={body.body_id}>
-              <span role="cell" class="cell-body-name" title={body.short_name}>{body.short_name}</span>
-              <span role="cell" data-testid="body-kind" title={t(`exploration-kind-${body.kind_key}`)}>{t(`exploration-kind-${body.kind_key}`)}{body.star_class ? ` (${body.star_class})` : ''}</span>
-              <span role="cell" class="number">{num1(body.distance_ls)}</span>
-              <span role="cell" class="number font-mono">{credits(body.scanned_value)}</span>
-              <span role="cell" class="number font-mono" data-testid="mapped-value">{body.kind_key.startsWith('star-') ? '—' : credits(body.mapped_value)}</span>
-              <span role="cell">{t('exploration-signals-bio')} {body.bio ?? 0} · {t('exploration-signals-geo')} {body.geo ?? 0}</span>
-              <span role="cell" data-testid="body-marks" title={marks(body)}>{marks(body)}</span>
-              <span role="cell" class="advice-cell" title={advice(body) + (body.probes ? ' · ' + t(body.probes.estimated ? 'exploration-probes-estimated' : 'exploration-probes-exact', { count: body.probes.n }) : '')}>
-                {#if body.advice?.includes('map')}<span class="map-star">★ </span>{/if}{advice(body)}{#if body.probes} · {t(body.probes.estimated ? 'exploration-probes-estimated' : 'exploration-probes-exact', { count: body.probes.n })}{/if}
-              </span>
-            </div>
-          {/snippet}
-        </VirtualList>
-      </div>
-    </div>
   {:else}
     <p class="empty">{t('empty-no-data')}</p>
   {/if}
+
+  {#snippet details()}
+    {#if system}
+      {#if (system.truncated ?? 0) > 0}
+        <p data-testid="exploration-truncated">{t('exploration-truncated', { count: system.truncated ?? 0 })}</p>
+      {/if}
+      <div class="table-scroll">
+        <div role="table" aria-label={t('panel-system-bodies')} aria-rowcount={system.rows.length + 1} class="body-table">
+          <div class="body-grid headings" role="row">
+            {#each columns as column}<span role="columnheader">{t(`exploration-col-${column}`)}</span>{/each}
+          </div>
+          <VirtualList items={system.rows} rowHeight={30} height={600} label={t('panel-system-bodies')}>
+            {#snippet row(body, index)}
+              <div role="row" aria-rowindex={index + 2} class="body-grid body-row" class:map-advice={body.advice?.includes('map')}
+                data-testid="body-row" data-body-id={body.body_id}>
+                <span role="cell" class="cell-body-name" title={body.short_name}>{body.short_name}</span>
+                <span role="cell" data-testid="body-kind" title={t(`exploration-kind-${body.kind_key}`)}>{t(`exploration-kind-${body.kind_key}`)}{body.star_class ? ` (${body.star_class})` : ''}</span>
+                <span role="cell" class="number">{num1(body.distance_ls)}</span>
+                <span role="cell" class="number font-mono">{credits(body.scanned_value)}</span>
+                <span role="cell" class="number font-mono" data-testid="mapped-value">{body.kind_key.startsWith('star-') ? '—' : credits(body.mapped_value)}</span>
+                <span role="cell">{t('exploration-signals-bio')} {body.bio ?? 0} · {t('exploration-signals-geo')} {body.geo ?? 0}</span>
+                <span role="cell" data-testid="body-marks" title={marks(body)}>{marks(body)}</span>
+                <span role="cell" class="advice-cell" title={advice(body) + (body.probes ? ' · ' + t(body.probes.estimated ? 'exploration-probes-estimated' : 'exploration-probes-exact', { count: body.probes.n }) : '')}>
+                  {#if body.advice?.includes('map')}<span class="map-star">★ </span>{/if}{advice(body)}{#if body.probes} · {t(body.probes.estimated ? 'exploration-probes-estimated' : 'exploration-probes-exact', { count: body.probes.n })}{/if}
+                </span>
+              </div>
+            {/snippet}
+          </VirtualList>
+        </div>
+      </div>
+    {/if}
+  {/snippet}
   <footer data-testid="exploration-footer">
     {#if system}<span>{t('exploration-unidentified')}: {system.unidentified ?? '—'}</span>{/if}
     {#if unsold}

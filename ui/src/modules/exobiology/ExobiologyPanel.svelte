@@ -37,7 +37,7 @@
   const genera = $derived((body?.confirmed_genera ?? []).map(g => g.name ?? '—').join(', '));
 </script>
 
-<Panel titleKey="panel-exobiology" span="full" size="large">
+<Panel titleKey="panel-exobiology" span="full" size="large" collapsible={!!body} defaultExpanded={false}>
   {#if body}
     <div class="header" data-testid="body-header">
       <div>
@@ -51,7 +51,60 @@
         {/if}
       </div>
     </div>
-    <div class="columns">
+
+    <section class="box sampling" data-testid="sampling">
+      <h3>{t('exobiology-sampling')}</h3>
+      {#if sampling}
+        <div class="sampling-grid">
+          <div class="sampling-main">
+            <div class="species">{sampling.species_name ?? sampling.genus_name ?? '—'}</div>
+            <div class="dots" aria-hidden="true">
+              {#each [1, 2, 3] as n}<span class="dot" class:filled={n <= sampling.points}></span>{/each}
+            </div>
+            <div class="dim">{sampling.complete ? t('exobiology-sampling-complete') : t('exobiology-samples', { n: sampling.points })}</div>
+          </div>
+          {#if !sampling.complete}
+            <div class="sampling-distance">
+              <div>
+                {t('exobiology-distance')}:
+                {#if sampling.distance_m != null}
+                  <strong class={sampling.remaining_m === 0 ? 'ok number' : 'warn number'} data-testid="distance-value">{meters(sampling.distance_m)} / {meters(sampling.min_m)}</strong>
+                {:else}
+                  <strong class="dim">{t('exobiology-no-data')}</strong>
+                {/if}
+              </div>
+              <div class="bar" role="progressbar" aria-label={t('exobiology-distance-progress')} aria-valuemin="0" aria-valuemax={sampling.min_m} aria-valuenow={barNow}><i data-testid="distance-bar" style:width={barWidth}></i></div>
+              <div class="dim">
+                {#if sampling.remaining_m != null}{t('exobiology-remaining', { meters: meters(sampling.remaining_m) })}{/if}
+                {#if sampling.direction}
+                  <span data-testid="direction">{t('exobiology-direction', { dir: t(`dir-${sampling.direction.rel}`), compass: t(`compass-${sampling.direction.compass}`) })}</span>
+                {/if}
+              </div>
+            </div>
+          {/if}
+          {#if unsold}
+            <div class="unsold" data-testid="unsold">
+              <div class="dim">{t('exobiology-unsold')} · {t('exobiology-unsold-species', { count: unsold.species })}</div>
+              <strong class="amount number">{credits(unsold.total)}</strong>
+              {#if sampling && !sampling.complete}
+                <span class="dim">{t('exobiology-unsold-after', { after: credits(sampling.unsold_after), species: sampling.species_name ?? sampling.genus_name ?? '—' })}</span>
+              {/if}
+            </div>
+          {/if}
+        </div>
+        {#if sampling.discarded_name || sampling.discarded_species}
+          <div class="notice" data-testid="discarded">{sampling.discarded_name ? t('exobiology-discarded', { name: sampling.discarded_name }) : t('exobiology-discarded-unknown')}</div>
+        {/if}
+      {:else}
+        <p class="dim">{t('exobiology-waiting')}</p>
+      {/if}
+    </section>
+  {:else}
+    <p class="dim" data-testid="empty">{t('empty-no-data')}</p>
+  {/if}
+
+  {#snippet details()}
+    {#if body}
       <section class="box candidates">
         <h3>{t('exobiology-candidates')}</h3>
         {#if body.candidates.length > 0}
@@ -88,51 +141,8 @@
           · {t('exobiology-completed', { completed: body.completed, signals: body.bio_signals })}
         </p>
       </section>
-      <section class="box sampling" data-testid="sampling">
-        <h3>{t('exobiology-sampling')}</h3>
-        {#if sampling}
-          <div class="species">{sampling.species_name ?? sampling.genus_name ?? '—'}</div>
-          <div class="dots" aria-hidden="true">
-            {#each [1, 2, 3] as n}<span class="dot" class:filled={n <= sampling.points}></span>{/each}
-          </div>
-          <div class="dim">{sampling.complete ? t('exobiology-sampling-complete') : t('exobiology-samples', { n: sampling.points })}</div>
-          {#if !sampling.complete}
-            <div>
-              {t('exobiology-distance')}:
-              {#if sampling.distance_m != null}
-                <strong class={sampling.remaining_m === 0 ? 'ok number' : 'warn number'} data-testid="distance-value">{meters(sampling.distance_m)} / {meters(sampling.min_m)}</strong>
-              {:else}
-                <strong class="dim">{t('exobiology-no-data')}</strong>
-              {/if}
-            </div>
-            <div class="bar" role="progressbar" aria-label={t('exobiology-distance-progress')} aria-valuemin="0" aria-valuemax={sampling.min_m} aria-valuenow={barNow}><i data-testid="distance-bar" style:width={barWidth}></i></div>
-            <div class="dim">
-              {#if sampling.remaining_m != null}{t('exobiology-remaining', { meters: meters(sampling.remaining_m) })}{/if}
-              {#if sampling.direction}
-                <span data-testid="direction">{t('exobiology-direction', { dir: t(`dir-${sampling.direction.rel}`), compass: t(`compass-${sampling.direction.compass}`) })}</span>
-              {/if}
-            </div>
-          {/if}
-          {#if sampling.discarded_name || sampling.discarded_species}
-            <div class="notice" data-testid="discarded">{sampling.discarded_name ? t('exobiology-discarded', { name: sampling.discarded_name }) : t('exobiology-discarded-unknown')}</div>
-          {/if}
-        {:else}
-          <p class="dim">{t('exobiology-waiting')}</p>
-        {/if}
-        {#if unsold}
-          <div class="unsold" data-testid="unsold">
-            <div class="dim">{t('exobiology-unsold')} · {t('exobiology-unsold-species', { count: unsold.species })}</div>
-            <strong class="amount number">{credits(unsold.total)}</strong>
-            {#if sampling && !sampling.complete}
-              <span class="dim">{t('exobiology-unsold-after', { after: credits(sampling.unsold_after), species: sampling.species_name ?? sampling.genus_name ?? '—' })}</span>
-            {/if}
-          </div>
-        {/if}
-      </section>
-    </div>
-  {:else}
-    <p class="dim" data-testid="empty">{t('empty-no-data')}</p>
-  {/if}
+    {/if}
+  {/snippet}
 </Panel>
 
 <style>
@@ -143,8 +153,15 @@
   .badge.warn, .warn { color: var(--hud-warning); border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.12); }
   .columns { display: flex; flex-wrap: wrap; gap: 1rem; align-items: stretch; }
   .box { background: var(--hud-surface-card); border: 1px solid var(--hud-border-subtle); border-radius: 6px; padding: .8rem; min-width: 0; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25); }
-  .candidates { flex: 1.6 1 32rem; }
-  .sampling { flex: 1 1 18rem; border-top: 3px solid var(--hud-purple); }
+  .candidates { margin-top: 0.5rem; }
+  .sampling { border-top: 3px solid var(--hud-purple); }
+  .sampling-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; justify-content: space-between; }
+  .sampling-main { flex: 1 1 14rem; min-width: 0; }
+  .sampling-distance { flex: 1.2 1 16rem; min-width: 0; }
+  .sampling-grid .unsold { margin-top: 0; border-top: none; padding-top: 0; flex: 1 1 12rem; border-left: 1px solid var(--hud-border-subtle); padding-left: 1rem; }
+  @media (max-width: 768px) {
+    .sampling-grid .unsold { border-left: none; padding-left: 0; border-top: 1px solid var(--hud-border-subtle); padding-top: .6rem; }
+  }
   h3 { margin: 0 0 .6rem; font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--hud-primary); border-bottom: 1px solid var(--hud-border-subtle); padding-bottom: 0.35rem; }
   .sampling h3 { color: var(--hud-purple); }
   .scroll { overflow-x: auto; }

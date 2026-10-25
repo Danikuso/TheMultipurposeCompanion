@@ -168,12 +168,16 @@
   .app-shell {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
   }
 
   .app-body {
     display: flex;
     flex: 1;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .layout-slot { min-width: 0; grid-column: 1 / -1; }

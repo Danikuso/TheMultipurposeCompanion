@@ -16,6 +16,27 @@
     padding: 0.85rem;
     align-content: start;
     flex: 1;
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .hud-grid::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .hud-grid::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.15);
+  }
+
+  .hud-grid::-webkit-scrollbar-thumb {
+    background: rgba(255, 113, 0, 0.25);
+    border-radius: 4px;
+  }
+
+  .hud-grid::-webkit-scrollbar-thumb:hover {
+    background: var(--hud-primary, #ff7100);
   }
 
   @media (min-width: 900px) {

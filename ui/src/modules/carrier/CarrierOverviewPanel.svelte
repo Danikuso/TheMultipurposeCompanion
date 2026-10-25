@@ -15,7 +15,7 @@
   );
 </script>
 
-<Panel titleKey="panel-carrier-overview" span={2}>
+<Panel titleKey="panel-carrier-overview" span={2} collapsible={!!overview} defaultExpanded={false}>
   {#if !overview || (!overview.carrier_id && !overview.callsign)}
     <p class="muted" data-testid="carrier-no-data">{t('carrier-no-carrier')}</p>
   {:else}
@@ -54,43 +54,47 @@
         <span class="metric-val mono small" data-testid="carrier-access">{overview.docking_access ?? 'All'}</span>
       </div>
     </div>
-
-    <!-- Combustible Tritio -->
-    <div class="section-card">
-      <div class="section-head">
-        <span class="metric-label">{t('carrier-fuel')}</span>
-        <span class="mono cyan bold" data-testid="carrier-fuel-total">{integer(overview.fuel_total)} t</span>
-      </div>
-
-      <div class="meter-group">
-        <div class="meter-labels">
-          <span class="sub">{t('carrier-fuel-depot')}: <b>{integer(overview.fuel_depot)} / 1.000 t</b></span>
-          <span class="sub">{t('carrier-fuel-cargo')}: <b>{integer(overview.fuel_cargo)} t</b></span>
-        </div>
-        <div class="hud-meter-track" role="progressbar" aria-valuenow={overview.fuel_depot} aria-valuemin={0} aria-valuemax={1000}>
-          <div class="hud-meter-fill fill-cyan" style:width="{depotPct}%"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Capacidad de Almacenamiento -->
-    <div class="section-card">
-      <div class="section-head">
-        <span class="metric-label">{t('carrier-capacity')}</span>
-        <span class="mono bold" data-testid="carrier-cargo-total">{integer(overview.cargo_total)} t</span>
-      </div>
-
-      <div class="meter-group">
-        <div class="meter-labels">
-          <span class="sub">{t('carrier-used-space')}: <b>{integer(overview.cargo_used)} t</b></span>
-          <span class="sub">{t('carrier-free-space')}: <b>{integer(overview.cargo_free)} t</b></span>
-        </div>
-        <div class="hud-meter-track" role="progressbar" aria-valuenow={overview.cargo_used} aria-valuemin={0} aria-valuemax={overview.cargo_total}>
-          <div class="hud-meter-fill fill-orange" style:width="{cargoPct}%"></div>
-        </div>
-      </div>
-    </div>
   {/if}
+
+  {#snippet details()}
+    {#if overview}
+      <!-- Combustible Tritio -->
+      <div class="section-card">
+        <div class="section-head">
+          <span class="metric-label">{t('carrier-fuel')}</span>
+          <span class="mono cyan bold" data-testid="carrier-fuel-total">{integer(overview.fuel_total)} t</span>
+        </div>
+
+        <div class="meter-group">
+          <div class="meter-labels">
+            <span class="sub">{t('carrier-fuel-depot')}: <b>{integer(overview.fuel_depot)} / 1.000 t</b></span>
+            <span class="sub">{t('carrier-fuel-cargo')}: <b>{integer(overview.fuel_cargo)} t</b></span>
+          </div>
+          <div class="hud-meter-track" role="progressbar" aria-valuenow={overview.fuel_depot} aria-valuemin={0} aria-valuemax={1000}>
+            <div class="hud-meter-fill fill-cyan" style:width="{depotPct}%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Capacidad de Almacenamiento -->
+      <div class="section-card">
+        <div class="section-head">
+          <span class="metric-label">{t('carrier-capacity')}</span>
+          <span class="mono bold" data-testid="carrier-cargo-total">{integer(overview.cargo_total)} t</span>
+        </div>
+
+        <div class="meter-group">
+          <div class="meter-labels">
+            <span class="sub">{t('carrier-used-space')}: <b>{integer(overview.cargo_used)} t</b></span>
+            <span class="sub">{t('carrier-free-space')}: <b>{integer(overview.cargo_free)} t</b></span>
+          </div>
+          <div class="hud-meter-track" role="progressbar" aria-valuenow={overview.cargo_used} aria-valuemin={0} aria-valuemax={overview.cargo_total}>
+            <div class="hud-meter-fill fill-orange" style:width="{cargoPct}%"></div>
+          </div>
+        </div>
+      </div>
+    {/if}
+  {/snippet}
 </Panel>
 
 <style>
