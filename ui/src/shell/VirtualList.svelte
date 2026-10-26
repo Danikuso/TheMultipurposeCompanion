@@ -26,7 +26,7 @@
 <!-- Scroll regions need keyboard focus so arrow/Page keys can reach offscreen rows. -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div bind:this={viewport} data-testid="virtual-list" role="region" aria-label={label}
-  tabindex="0" style:height="{height}px" style:overflow-y="auto"
+  tabindex="0" style:height="{height}px" style:overflow-y="{items.length * rowHeight > height ? 'auto' : 'hidden'}"
   onscroll={() => scrollTop = viewport.scrollTop}>
   <div style:height="{items.length * rowHeight}px" style:position="relative">
     <div role="rowgroup" style:position="absolute" style:inset="0 0 auto"

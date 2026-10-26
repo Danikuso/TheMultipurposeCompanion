@@ -41,7 +41,14 @@ test('body_table_renders_only_visible_rows',()=>{
   render(Array.from({length:300},(_,i)=>body(i+1)));
   const rows=target.querySelectorAll('[data-testid="body-row"]');
   expect(rows.length).toBeGreaterThan(0);expect(rows.length).toBeLessThanOrEqual(30);
-  expect(target.querySelector('[data-testid="virtual-list"]')?.getAttribute('style')).toContain('600px');
+  expect(target.querySelector('[data-testid="virtual-list"]')?.getAttribute('style')).toContain('420px');
+});
+
+test('body table does not show vertical scroll for small number of bodies',()=>{
+  render([body(1), body(2)]);
+  const vl = target.querySelector('[data-testid="virtual-list"]');
+  expect(vl?.getAttribute('style')).toContain('60px');
+  expect(vl?.getAttribute('style')).toContain('overflow-y: hidden');
 });
 
 test('sticky horizontal scrollbar is present for wide table navigation',()=>{

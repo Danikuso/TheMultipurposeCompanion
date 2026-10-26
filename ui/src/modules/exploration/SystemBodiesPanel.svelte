@@ -23,7 +23,11 @@
   let stickyScrollEl = $state<HTMLDivElement>();
   let tableEl = $state<HTMLDivElement>();
   let tableScrollWidth = $state(1350);
+  let hasHorizontalOverflow = $state(true);
   let syncing = false;
+
+  const rowCount = $derived(system?.rows?.length ?? 0);
+  const listHeight = $derived(Math.max(30, Math.min(420, rowCount * 30)));
 
   function onTableScroll() {
     if (syncing || !tableScrollEl || !stickyScrollEl) return;
@@ -40,8 +44,9 @@
   }
 
   $effect(() => {
-    if (tableEl) {
+    if (tableEl && tableScrollEl) {
       tableScrollWidth = Math.max(1350, tableEl.scrollWidth);
+      hasHorizontalOverflow = tableScrollEl.clientWidth === 0 || tableEl.scrollWidth > tableScrollEl.clientWidth + 1;
     }
   });
 </script>
@@ -103,12 +108,12 @@
         <p data-testid="exploration-truncated">{t('exploration-truncated', { count: system.truncated ?? 0 })}</p>
       {/if}
       <div class="table-container">
-        <div class="table-scroll" bind:this={tableScrollEl} onscroll={onTableScroll}>
+        <div class="table-scroll" bind:this={tableScrollEl} onscroll={onTableScroll} class:no-overflow={!hasHorizontalOverflow}>
           <div role="table" aria-label={t('panel-system-bodies')} aria-rowcount={system.rows.length + 1} class="body-table" bind:this={tableEl}>
             <div class="body-grid headings" role="row">
               {#each columns as column}<span role="columnheader">{t(`exploration-col-${column}`)}</span>{/each}
             </div>
-            <VirtualList items={system.rows} rowHeight={30} height={600} label={t('panel-system-bodies')}>
+            <VirtualList items={system.rows} rowHeight={30} height={listHeight} label={t('panel-system-bodies')}>
               {#snippet row(body, index)}
                 <div role="row" aria-rowindex={index + 2} class="body-grid body-row" class:map-advice={body.advice?.includes('map')}
                   data-testid="body-row" data-body-id={body.body_id}>
@@ -127,9 +132,11 @@
             </VirtualList>
           </div>
         </div>
-        <div class="sticky-scrollbar" bind:this={stickyScrollEl} onscroll={onStickyScroll} aria-hidden="true" data-testid="sticky-horizontal-scrollbar">
-          <div class="sticky-scrollbar-track" style:width="{tableScrollWidth}px"></div>
-        </div>
+        {#if hasHorizontalOverflow && rowCount > 0}
+          <div class="sticky-scrollbar" bind:this={stickyScrollEl} onscroll={onStickyScroll} aria-hidden="true" data-testid="sticky-horizontal-scrollbar">
+            <div class="sticky-scrollbar-track" style:width="{tableScrollWidth}px"></div>
+          </div>
+        {/if}
       </div>
     {/if}
   {/snippet}
@@ -169,6 +176,7 @@
   .table-container { position: relative; display: flex; flex-direction: column; min-height: 0; }
   .table-scroll { overflow-x: auto; scrollbar-width: none; }
   .table-scroll::-webkit-scrollbar { display: none; }
+  .table-scroll.no-overflow { overflow-x: hidden; }
   .body-table { min-width: 1350px; }
   .body-grid { display: grid; grid-template-columns: minmax(75px,.6fr) minmax(150px,1.4fr) minmax(85px,.7fr) minmax(110px,.9fr) minmax(110px,.9fr) minmax(110px,1fr) minmax(180px,1.5fr) minmax(210px,1.8fr); align-items: center; gap: .6rem; padding: 0 .4rem; }
   .headings { min-height: 2.5rem; color: var(--hud-primary); border-bottom: 1px solid var(--hud-border); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; }
