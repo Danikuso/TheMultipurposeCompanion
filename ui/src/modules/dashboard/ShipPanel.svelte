@@ -660,6 +660,7 @@
     border: 1px solid var(--hud-border);
     border-radius: 6px;
     padding: 1rem;
+    flex-shrink: 0;
   }
 
   /* Cabecera y medidores */
@@ -868,6 +869,7 @@
     padding: 0.35rem 0.6rem;
     border-radius: 4px;
     font-size: 0.8rem;
+    flex-shrink: 0;
   }
 
   .feature-item.installed {
@@ -888,6 +890,7 @@
     background: rgba(0, 0, 0, 0.2);
     padding: 0.3rem 0.5rem;
     border-radius: 3px;
+    flex-shrink: 0;
   }
 
   .defenses-badges {
@@ -933,6 +936,7 @@
     background: rgba(0, 0, 0, 0.2);
     padding: 0.3rem 0.6rem;
     border-radius: 3px;
+    flex-shrink: 0;
   }
 
   /* Sección Módulo por Módulo */
@@ -1025,7 +1029,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.45rem;
-    max-height: 380px;
+    max-height: 520px;
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 0.35rem;
@@ -1056,6 +1060,8 @@
     border: 1px solid var(--hud-border);
     border-radius: 4px;
     overflow: hidden;
+    flex-shrink: 0;
+    min-height: 38px;
   }
 
   .module-card.damaged {
