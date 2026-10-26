@@ -44,6 +44,13 @@ test('body_table_renders_only_visible_rows',()=>{
   expect(target.querySelector('[data-testid="virtual-list"]')?.getAttribute('style')).toContain('600px');
 });
 
+test('sticky horizontal scrollbar is present for wide table navigation',()=>{
+  render([body(1)]);
+  const scrollbar=target.querySelector('[data-testid="sticky-horizontal-scrollbar"]');
+  expect(scrollbar).not.toBeNull();
+  expect(scrollbar?.classList.contains('sticky-scrollbar')).toBe(true);
+});
+
 test('map advice rows are highlighted and show probes',()=>{
   render([body(1,{advice:['map','land'],marks:3,bio:4,geo:3,probes:{n:6,estimated:true}})]);
   const row=target.querySelector('[data-testid="body-row"]')!;
