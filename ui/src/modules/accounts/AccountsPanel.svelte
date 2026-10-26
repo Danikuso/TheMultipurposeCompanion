@@ -453,7 +453,30 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
-    padding: 8px 0;
+    padding: 8px 4px 8px 0;
+    max-height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 212, 178, 0.45) rgba(0, 0, 0, 0.2);
+  }
+
+  .accounts-container::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .accounts-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+
+  .accounts-container::-webkit-scrollbar-thumb {
+    background: rgba(0, 212, 178, 0.45);
+    border-radius: 3px;
+  }
+
+  .accounts-container::-webkit-scrollbar-thumb:hover {
+    background: #00d4b2;
   }
 
   .glass-card {
@@ -500,7 +523,7 @@
   .card-head {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: 12px;
   }
 
@@ -508,6 +531,13 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .service-titles {
+    flex: 1;
+    min-width: 0;
   }
 
   .service-icon {
@@ -631,31 +661,41 @@
 
   /* Switches */
   .switch-btn {
-    width: 40px;
-    height: 22px;
+    width: 38px;
+    min-width: 38px;
+    max-width: 38px;
+    height: 20px;
     background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 11px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 10px;
     cursor: pointer;
     position: relative;
     padding: 0;
-    transition: background 0.2s;
+    flex-shrink: 0;
+    transition: all 150ms ease;
+    box-sizing: border-box;
+  }
+
+  .switch-btn:hover {
+    border-color: rgba(255, 255, 255, 0.45);
   }
 
   .switch-btn.active {
-    background: #00d4b2;
-    border-color: #00d4b2;
+    background: var(--hud-cyan, #00d4b2);
+    border-color: var(--hud-cyan, #00d4b2);
+    box-shadow: 0 0 8px rgba(0, 212, 178, 0.35);
   }
 
   .switch-knob {
-    width: 16px;
-    height: 16px;
-    background: #fff;
+    width: 14px;
+    height: 14px;
+    background: #ffffff;
     border-radius: 50%;
     position: absolute;
     top: 2px;
     left: 2px;
-    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    transition: transform 150ms ease;
   }
 
   .switch-btn.active .switch-knob {

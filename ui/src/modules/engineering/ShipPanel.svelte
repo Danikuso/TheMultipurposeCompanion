@@ -262,6 +262,26 @@
     list-style: none;
     padding: 0;
     margin: 0;
+    max-height: 280px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 0.35rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 229, 255, 0.45) rgba(0, 0, 0, 0.2);
+  }
+  .module-list::-webkit-scrollbar {
+    width: 6px;
+  }
+  .module-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+  .module-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 229, 255, 0.45);
+    border-radius: 3px;
+  }
+  .module-list::-webkit-scrollbar-thumb:hover {
+    background: var(--hud-primary, #00e5ff);
   }
   .module-list.is-collapsed {
     display: none;

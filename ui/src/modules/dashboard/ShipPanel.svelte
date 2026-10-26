@@ -900,6 +900,30 @@
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 0.35rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 113, 0, 0.45) rgba(0, 0, 0, 0.2);
+  }
+
+  .cargo-items-list::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .cargo-items-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+
+  .cargo-items-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 113, 0, 0.45);
+    border-radius: 3px;
+  }
+
+  .cargo-items-list::-webkit-scrollbar-thumb:hover {
+    background: var(--hud-primary, #ff7100);
   }
 
   .cargo-item-row {
@@ -1001,6 +1025,30 @@
     display: flex;
     flex-direction: column;
     gap: 0.45rem;
+    max-height: 380px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 0.35rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 113, 0, 0.45) rgba(0, 0, 0, 0.2);
+  }
+
+  .modules-grid::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .modules-grid::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+
+  .modules-grid::-webkit-scrollbar-thumb {
+    background: rgba(255, 113, 0, 0.45);
+    border-radius: 3px;
+  }
+
+  .modules-grid::-webkit-scrollbar-thumb:hover {
+    background: var(--hud-primary, #ff7100);
   }
 
   .module-card {

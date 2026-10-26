@@ -145,6 +145,8 @@
     flex-direction: column;
     gap: 0.35rem;
     padding-right: 0.25rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 113, 0, 0.45) rgba(0, 0, 0, 0.2);
   }
 
   .sidebar-top::-webkit-scrollbar {
@@ -157,7 +159,7 @@
   }
 
   .sidebar-top::-webkit-scrollbar-thumb {
-    background: rgba(255, 113, 0, 0.25);
+    background: rgba(255, 113, 0, 0.45);
     border-radius: 4px;
   }
 

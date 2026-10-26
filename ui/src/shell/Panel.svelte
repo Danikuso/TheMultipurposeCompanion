@@ -149,6 +149,29 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 113, 0, 0.45) rgba(0, 0, 0, 0.15);
+  }
+
+  .hud-panel-body::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .hud-panel-body::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+  }
+
+  .hud-panel-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 113, 0, 0.45);
+    border-radius: 3px;
+  }
+
+  .hud-panel-body::-webkit-scrollbar-thumb:hover {
+    background: var(--hud-primary, #ff7100);
   }
 
   .hud-panel-basic {
@@ -192,9 +215,37 @@
     display: flex;
     flex-direction: column;
     flex: 1;
+    min-height: 0;
   }
 
   .hud-panel-details.collapsed .details-content {
     display: none;
+  }
+
+  .details-content {
+    max-height: 480px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 0.35rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 113, 0, 0.45) rgba(0, 0, 0, 0.15);
+  }
+
+  .details-content::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .details-content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+  }
+
+  .details-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 113, 0, 0.45);
+    border-radius: 3px;
+  }
+
+  .details-content::-webkit-scrollbar-thumb:hover {
+    background: var(--hud-primary, #ff7100);
   }
 </style>
