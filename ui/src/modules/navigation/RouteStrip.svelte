@@ -36,6 +36,14 @@
       // El fallo lo comunica el servidor mediante alertas.
     }
   }
+
+  async function clearPlan() {
+    try {
+      await action('navigation.clear-plan', {});
+    } catch {
+      // El fallo lo comunica el servidor.
+    }
+  }
 </script>
 
 <Panel titleKey="panel-route-strip" span="full" size="large">
@@ -45,9 +53,16 @@
     {#if route.off_route}
       <div class="off-route" data-testid="off-route">
         <span>{t('strip-off-route')}</span>
-        <button type="button" data-testid="recalculate" onclick={recalculate}>
-          {t('strip-recalculate')}
-        </button>
+        <div class="off-route-actions">
+          <button type="button" data-testid="recalculate" onclick={recalculate}>
+            {t('strip-recalculate')}
+          </button>
+          {#if route.source === 'plan'}
+            <button type="button" class="btn-clear-plan" data-testid="strip-clear-plan" onclick={clearPlan}>
+              {t('nav-plan-clear')}
+            </button>
+          {/if}
+        </div>
       </div>
     {/if}
     {#if !route.next}
@@ -121,5 +136,28 @@
     border-radius: 4px;
     color: var(--hud-warning);
     font-weight: 700;
+  }
+
+  .off-route-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-clear-plan {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: var(--hud-danger, #ef4444);
+    padding: 0.3rem 0.65rem;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+
+  .btn-clear-plan:hover {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: #ef4444;
   }
 </style>
