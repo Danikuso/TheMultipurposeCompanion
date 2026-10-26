@@ -1626,6 +1626,181 @@ h1, h2, h3, h4, .hud-title {
 }
 
 /* ===================================================================
+   COMPONENTES ORIENTADOS AL JUGADOR / PILOTO (BENEFICIOS REALES)
+   =================================================================== */
+
+.pain-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.75rem;
+  margin-top: 2.5rem;
+}
+
+.pain-card {
+  background: var(--hud-surface);
+  border: 1px solid var(--hud-border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  transition: var(--transition-normal);
+}
+
+.pain-card:hover {
+  border-color: var(--hud-border);
+  box-shadow: var(--shadow-hud);
+}
+
+.pain-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: #fff;
+}
+
+.pain-box {
+  background: rgba(239, 68, 68, 0.08);
+  border-left: 3px solid var(--hud-danger);
+  padding: 0.85rem 1rem;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.9rem;
+  color: #fca5a5;
+  line-height: 1.5;
+}
+
+.solution-box {
+  background: rgba(34, 197, 94, 0.08);
+  border-left: 3px solid var(--hud-success);
+  padding: 0.85rem 1rem;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.9rem;
+  color: #86efac;
+  line-height: 1.5;
+}
+
+.module-player-benefit {
+  background: rgba(255, 113, 0, 0.08);
+  border: 1px solid rgba(255, 113, 0, 0.25);
+  border-left: 3px solid var(--hud-primary);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 0.95rem;
+  font-size: 0.88rem;
+  color: #fed7aa;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.benefit-title {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--hud-primary);
+  letter-spacing: 0.06em;
+}
+
+.pilot-quote-card {
+  background: linear-gradient(135deg, rgba(22, 28, 45, 0.8), rgba(15, 18, 29, 0.9));
+  border: 1px solid var(--hud-border-cyan);
+  border-radius: var(--radius-lg);
+  padding: 2.25rem;
+  margin: 3.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  box-shadow: var(--shadow-cyan);
+}
+
+.pilot-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid var(--hud-cyan);
+  background: rgba(6, 182, 212, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  flex-shrink: 0;
+}
+
+.pilot-quote-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pilot-quote-text {
+  font-size: 1.15rem;
+  font-style: italic;
+  color: #fff;
+  line-height: 1.6;
+}
+
+.pilot-quote-author {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--hud-cyan);
+  text-transform: uppercase;
+}
+
+.gameplay-pill-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+
+.gameplay-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--hud-muted);
+}
+
+.gameplay-pill.active {
+  background: rgba(6, 182, 212, 0.12);
+  border-color: var(--hud-cyan);
+  color: var(--hud-cyan);
+}
+
+.cta-banner {
+  background: radial-gradient(circle at 50% 50%, rgba(255, 113, 0, 0.15) 0%, rgba(15, 18, 29, 0.95) 70%);
+  border: 1px solid var(--hud-border);
+  border-radius: var(--radius-lg);
+  padding: 3.5rem 2rem;
+  text-align: center;
+  margin: 4rem 0 2rem 0;
+  box-shadow: var(--shadow-hud);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.cta-banner-title {
+  font-size: 2.4rem;
+  line-height: 1.2;
+}
+
+.cta-banner-desc {
+  max-width: 680px;
+  font-size: 1.05rem;
+  color: var(--hud-muted);
+  line-height: 1.6;
+}
+
+/* ===================================================================
    RESPONSIVE DESIGN (MEDIA QUERIES)
    =================================================================== */
 
@@ -1636,6 +1811,13 @@ h1, h2, h3, h4, .hud-title {
   }
   .features-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .pain-grid {
+    grid-template-columns: 1fr;
+  }
+  .pilot-quote-card {
+    flex-direction: column;
+    text-align: center;
   }
   .modules-grid {
     grid-template-columns: 1fr;

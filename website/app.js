@@ -232,12 +232,12 @@ const SEARCH_DATABASE = [
   { title: 'Crimen, Notoriedad & Piratería', category: 'Módulo de Seguridad', url: '#mod-crime', snippet: 'Temporizador de notoriedad en tiempo real, Interstellar Factors, contrabando y mercados negros.' },
   { title: 'Cuentas & Sincronización', category: 'Módulo de Conectividad', url: '#mod-accounts', snippet: 'Sincronización con EDDN, EDSM e Inara respetando la privacidad y galaxia Legacy.' },
 
-  // Manual
-  { title: 'Instalación y Requisitos', category: 'Manual de Usuario', url: '#manual-install', snippet: 'Binario único ultraligero para Windows 10/11 sin dependencias pesadas ni instaladores invasivos.' },
-  { title: 'Detección Automática de Diarios', category: 'Manual de Usuario', url: '#manual-journal', snippet: 'Lectura no invasiva por offset de bytes de Saved Games sin ralentizar el disco ni el juego.' },
-  { title: 'Ergonomía «TMC Glass HUD»', category: 'Manual de Usuario', url: '#manual-hud', snippet: 'Normativa §11: 33% de información fija superior, detalles colapsables y scroll horizontal pegajoso.' },
-  { title: 'Copiloto de Voz & VoiceAttack', category: 'Manual de Usuario', url: '#manual-voice', snippet: 'Síntesis OneCore/KokoroTTS, reconocimiento de órdenes vocales y descarga de perfil .vap.' },
-  { title: 'Pantalla Remota LAN con Tablet', category: 'Manual de Usuario', url: '#manual-lan', snippet: 'Emparejamiento inmediato con código QR y visualización táctil en cualquier dispositivo de tu red.' },
+  // Manual de Vuelo
+  { title: 'Cómo Empezar a Volar en 10 Segundos', category: 'Guía de Inicio', url: '#manual-install', snippet: 'Abre TMC.exe y detecta tu nave, comandante y sistema al instante sin configuraciones complejas.' },
+  { title: 'Pantalla Táctil para Tablet o Móvil (QR)', category: 'Guía de Cabina', url: '#manual-lan', snippet: 'Usa tu tablet o smartphone como monitor auxiliar MFD de cabina escaneando un simple código QR.' },
+  { title: 'Modo Auto-Companion: TMC Piensa por Ti', category: 'Guía de Cabina', url: '#manual-hud', snippet: 'Cambio de pantalla automático según lo que estés haciendo: saltar, minar, combatir o recolectar plantas.' },
+  { title: 'Copiloto de Voz Hablada & VoiceAttack', category: 'Guía de Audio', url: '#manual-voice', snippet: 'Tu nave te avisa con voz en español de estrellas para repostar, bioseñales y daños críticos.' },
+  { title: 'Conexión con Inara, EDSM y EDDN', category: 'Guía de Comunidad', url: '#manual-accounts', snippet: 'Mantén tu flota, créditos y perfil actualizados en la comunidad de Elite Dangerous en tiempo real.' },
 
   // Tutoriales
   { title: 'Tutorial: Ruta de Exobiología Multimillonaria', category: 'Tutorial Práctico', url: '#tut-exobiology', snippet: 'Cómo ganar más de 100M Cr por sistema aprovechando el semáforo de distancias y el bono de primer descubrimiento.' },
