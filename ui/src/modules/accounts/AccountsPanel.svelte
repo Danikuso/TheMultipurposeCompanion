@@ -261,7 +261,9 @@
               <button class="icon-toggle-btn" onclick={() => (showEdsmKey = !showEdsmKey)} type="button">
                 {showEdsmKey ? '🙈' : '👁️'}
               </button>
-              <button class="action-btn" onclick={saveEdsmKey} data-testid="edsm-save-btn">
+            </div>
+            <div class="btn-group-row">
+              <button class="action-btn flex-1" onclick={saveEdsmKey} data-testid="edsm-save-btn">
                 {t('accounts-edsm-btn-save')}
               </button>
             </div>
@@ -299,26 +301,30 @@
 
         <div class="card-body">
           <div class="status-row">
-            <span class="badge" class:badge-green={status?.inara?.has_key} class:badge-amber={!status?.inara?.has_key}>
-              {status?.inara?.has_key ? t('accounts-edsm-status-configured') : t('accounts-edsm-status-pending')}
-            </span>
-            <span class="badge badge-green" data-testid="inara-whitelist-badge">
-              🛡️ {t('accounts-inara-whitelist-badge')}
-            </span>
-            {#if status?.inara?.commander_name}
-              <span class="cmdr-pill mono">CMDR {status.inara.commander_name}</span>
-            {/if}
-            {#if status?.inara?.inara_url}
-              <a
-                href={status.inara.inara_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inara-link mono"
-                data-testid="inara-profile-link"
-              >
-                🌐 {t('accounts-inara-profile-link')}
-              </a>
-            {/if}
+            <div class="badges-wrap">
+              <span class="badge" class:badge-green={status?.inara?.has_key} class:badge-amber={!status?.inara?.has_key}>
+                {status?.inara?.has_key ? t('accounts-edsm-status-configured') : t('accounts-edsm-status-pending')}
+              </span>
+              <span class="badge badge-green" data-testid="inara-whitelist-badge" title={t('accounts-inara-whitelist-tooltip')}>
+                🛡️ {t('accounts-inara-whitelist-badge')}
+              </span>
+            </div>
+            <div class="badges-wrap">
+              {#if status?.inara?.commander_name}
+                <span class="cmdr-pill mono">CMDR {status.inara.commander_name}</span>
+              {/if}
+              {#if status?.inara?.inara_url}
+                <a
+                  href={status.inara.inara_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inara-link mono"
+                  data-testid="inara-profile-link"
+                >
+                  🌐 {t('accounts-inara-profile-link')}
+                </a>
+              {/if}
+            </div>
           </div>
 
           <div class="input-form">
@@ -335,11 +341,13 @@
               <button class="icon-toggle-btn" onclick={() => (showInaraKey = !showInaraKey)} type="button">
                 {showInaraKey ? '🙈' : '👁️'}
               </button>
-              <button class="action-btn" onclick={saveInaraKey} data-testid="inara-save-btn">
+            </div>
+            <div class="btn-group-row">
+              <button class="action-btn flex-1" onclick={saveInaraKey} data-testid="inara-save-btn">
                 {t('accounts-inara-btn-save')}
               </button>
               <button
-                class="action-btn btn-secondary"
+                class="action-btn btn-secondary flex-1"
                 onclick={testInaraConnection}
                 disabled={testingInara}
                 data-testid="inara-test-btn"
@@ -660,7 +668,15 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+    flex-wrap: wrap;
     margin-bottom: 12px;
+  }
+
+  .badges-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
   }
 
   .metric-block {
@@ -769,6 +785,19 @@
     gap: 6px;
   }
 
+  .btn-group-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+    margin-top: 2px;
+  }
+
+  .flex-1 {
+    flex: 1;
+    text-align: center;
+  }
+
   .glass-input {
     flex: 1;
     background: rgba(0, 0, 0, 0.35);
@@ -802,6 +831,7 @@
     border-radius: 4px;
     cursor: pointer;
     font-weight: 600;
+    white-space: nowrap;
   }
 
   .action-btn,

@@ -93,7 +93,8 @@ test('AccountsPanel renders privacy notice banner and 4 glass cards', () => {
   // 4. Tarjeta Inara
   expect(q('accounts-inara-card')).toBeTruthy();
   expect(q('inara-whitelist-badge')).toBeTruthy();
-  expect(q('inara-whitelist-badge')?.textContent).toContain('The Multipurpose Companion (TMC)');
+  expect(q('inara-whitelist-badge')?.textContent).toContain('Whitelist oficial');
+  expect(q('inara-whitelist-badge')?.getAttribute('title')).toContain('The Multipurpose Companion (TMC)');
   expect(q('inara-rate-meter')).toBeTruthy();
   expect(q('inara-rate-meter')?.textContent).toContain('2 req / 60s');
   expect(q('inara-test-btn')).toBeTruthy();

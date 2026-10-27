@@ -39,7 +39,8 @@ accounts-inara-test-testing = Wird getestet...
 accounts-inara-test-success = Verbindung zu Inara erfolgreich
 accounts-inara-test-failed = Verbindung zu Inara fehlgeschlagen
 accounts-inara-profile-link = Inara-Profil ansehen
-accounts-inara-whitelist-badge = Offizielle Whitelist genehmigt: The Multipurpose Companion (TMC)
+accounts-inara-whitelist-badge = Offizielle Whitelist
+accounts-inara-whitelist-tooltip = The Multipurpose Companion (TMC) offiziell auf Inara InAPI v1 zugelassen
 accounts-inara-btn-send = Stapel jetzt senden
 
 accounts-capi-title = Frontier Companion API (CAPI)
