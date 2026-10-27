@@ -360,7 +360,7 @@ impl ActionHost for AppActions {
                 let redirect_uri = args
                     .get("redirect_uri")
                     .and_then(|u| u.as_str())
-                    .unwrap_or("http://localhost:47320/api/auth/frontier/callback");
+                    .unwrap_or("https://localhost:47320/api/auth/frontier/callback");
                 let capi = self.capi_service.as_ref().ok_or(ActionError::NotFound)?;
                 let (url, state) = capi.start_login(redirect_uri);
                 return Ok(json!({ "url": url, "state": state }));
@@ -370,6 +370,102 @@ impl ActionHost for AppActions {
                 capi.clear_session()
                     .map_err(|e| ActionError::Failed(e.to_string()))?;
                 return Ok(json!({ "ok": true }));
+            }
+            "frontier.submit_callback" => {
+                let capi = self.capi_service.as_ref().ok_or(ActionError::NotFound)?;
+                let raw_input = args
+                    .get("url")
+                    .or_else(|| args.get("code"))
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| ActionError::Failed("missing-url-or-code".into()))?;
+
+                let (code, state) = if raw_input.contains("code=") {
+                    let parsed_code = raw_input
+                        .split("code=")
+                        .nth(1)
+                        .and_then(|s| s.split('&').next())
+                        .unwrap_or("");
+                    let parsed_state = raw_input
+                        .split("state=")
+                        .nth(1)
+                        .and_then(|s| s.split('&').next())
+                        .unwrap_or("");
+                    (parsed_code.to_string(), parsed_state.to_string())
+                } else {
+                    let code = raw_input.trim().to_string();
+                    let state = args
+                        .get("state")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    (code, state)
+                };
+
+                if code.is_empty() {
+                    return Err(ActionError::Failed("missing-authorization-code".into()));
+                }
+
+                let redirect_uri = args
+                    .get("redirect_uri")
+                    .and_then(|u| u.as_str())
+                    .unwrap_or("https://localhost:47320/api/auth/frontier/callback")
+                    .to_string();
+
+                let capi_cloned = capi.clone();
+                let events = self.runtime.as_ref().map(|r| r.events.clone());
+
+                let result = {
+                    let handle = tokio::runtime::Handle::try_current();
+                    match handle {
+                        Ok(h)
+                            if h.runtime_flavor() == tokio::runtime::RuntimeFlavor::MultiThread =>
+                        {
+                            tokio::task::block_in_place(|| {
+                                h.block_on(async {
+                                    capi_cloned
+                                        .handle_callback(&code, &state, &redirect_uri)
+                                        .await
+                                })
+                            })
+                        }
+                        _ => std::thread::spawn(move || {
+                            let rt = tokio::runtime::Builder::new_current_thread()
+                                .enable_all()
+                                .build()
+                                .unwrap();
+                            rt.block_on(async {
+                                capi_cloned
+                                    .handle_callback(&code, &state, &redirect_uri)
+                                    .await
+                            })
+                        })
+                        .join()
+                        .unwrap_or_else(|_| {
+                            Err(crate::capi_service::CapiError::Malformed(
+                                "thread-panicked".into(),
+                            ))
+                        }),
+                    }
+                };
+
+                match result {
+                    Ok(token) => {
+                        if let Some(events) = events {
+                            let _ = events.try_send(SourceEvent::Action {
+                                name: "accounts.set_settings".to_string(),
+                                args: serde_json::json!({
+                                    "capi_connected": true,
+                                }),
+                            });
+                        }
+                        return Ok(json!({
+                            "ok": true,
+                            "token_type": token.token_type,
+                            "expires_in": token.expires_in,
+                        }));
+                    }
+                    Err(e) => return Err(ActionError::Failed(e.to_string())),
+                }
             }
             "inara.test_connection" => {
                 let inara = self.inara_service.as_ref().ok_or(ActionError::NotFound)?;

@@ -10,7 +10,7 @@ use tmc_model::accounts::RemoteShip;
 pub const FRONTIER_AUTH_URL: &str = "https://auth.frontierstore.net/auth";
 pub const FRONTIER_TOKEN_URL: &str = "https://auth.frontierstore.net/token";
 pub const FRONTIER_CAPI_BASE: &str = "https://companion.orerve.net";
-pub const DEFAULT_REDIRECT_URI: &str = "http://localhost:47320/api/auth/frontier/callback";
+pub const DEFAULT_REDIRECT_URI: &str = "https://localhost:47320/api/auth/frontier/callback";
 pub const DEFAULT_SCOPE: &str = "auth capi";
 
 const BASE64URL_CHARS: &[u8; 64] =

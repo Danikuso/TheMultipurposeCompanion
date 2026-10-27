@@ -18,6 +18,10 @@
   let syncingInara = $state(false);
   let loadingFleet = $state(false);
   let loginOpening = $state(false);
+  let showManualCapi = $state(false);
+  let manualCapiInput = $state('');
+  let submittingManualCapi = $state(false);
+  let manualCapiFeedback = $state<string | null>(null);
   let remoteShips = $state<RemoteShip[]>([]);
   let selectedShipId = $state<number | null>(null);
   let showFleetGrid = $state(false);
@@ -137,6 +141,31 @@
   async function unlinkFrontier() {
     await action('frontier.logout');
     remoteShips = [];
+  }
+
+  async function submitManualCapi() {
+    if (!manualCapiInput.trim()) return;
+    submittingManualCapi = true;
+    manualCapiFeedback = null;
+    try {
+      const res = (await action('frontier.submit_callback', {
+        url: manualCapiInput.trim(),
+      })) as { ok?: boolean };
+      if (res?.ok) {
+        manualCapiFeedback = t('accounts-capi-manual-success');
+        manualCapiInput = '';
+        setTimeout(() => {
+          showManualCapi = false;
+          manualCapiFeedback = null;
+        }, 2000);
+      } else {
+        manualCapiFeedback = t('accounts-capi-manual-failed');
+      }
+    } catch (e: any) {
+      manualCapiFeedback = `${t('accounts-capi-manual-failed')} (${e?.message ?? 'error'})`;
+    } finally {
+      submittingManualCapi = false;
+    }
   }
 
   async function fetchFleet() {
@@ -401,6 +430,42 @@
               <button class="btn-primary" onclick={startFrontierLogin} disabled={loginOpening} data-testid="capi-link-btn">
                 {loginOpening ? t('accounts-capi-btn-opening') : t('accounts-capi-btn-link')}
               </button>
+
+              <div class="capi-manual-row">
+                <button
+                  type="button"
+                  class="manual-toggle-btn sub mono"
+                  onclick={() => (showManualCapi = !showManualCapi)}
+                  data-testid="capi-manual-toggle"
+                >
+                  {showManualCapi ? `▲ ${t('accounts-capi-manual-toggle-hide')}` : `▼ ${t('accounts-capi-manual-toggle')}`}
+                </button>
+                {#if showManualCapi}
+                  <div class="manual-input-box">
+                    <p class="manual-help sub">{t('accounts-capi-manual-help')}</p>
+                    <div class="input-row">
+                      <input
+                        class="glass-input mono"
+                        type="text"
+                        placeholder="https://localhost:47320/api/auth/frontier/callback?code=..."
+                        bind:value={manualCapiInput}
+                        data-testid="capi-manual-input"
+                      />
+                      <button
+                        class="action-btn"
+                        onclick={submitManualCapi}
+                        disabled={submittingManualCapi || !manualCapiInput.trim()}
+                        data-testid="capi-manual-submit"
+                      >
+                        {submittingManualCapi ? '...' : t('accounts-capi-btn-complete')}
+                      </button>
+                    </div>
+                    {#if manualCapiFeedback}
+                      <p class="test-feedback mono" data-testid="capi-manual-feedback">{manualCapiFeedback}</p>
+                    {/if}
+                  </div>
+                {/if}
+              </div>
             </div>
           {:else}
             <div class="connected-row">
@@ -887,6 +952,52 @@
     font-size: 11px;
     color: #00e5ff;
     margin: 4px 0 0 0;
+  }
+
+  .link-prompt {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .capi-manual-row {
+    margin-top: 6px;
+    width: 100%;
+    text-align: left;
+  }
+
+  .manual-toggle-btn {
+    background: transparent;
+    border: none;
+    color: var(--hud-cyan, #00d4b2);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    opacity: 0.85;
+    transition: opacity 150ms ease;
+  }
+
+  .manual-toggle-btn:hover {
+    opacity: 1;
+  }
+
+  .manual-input-box {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 8px 10px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .manual-help {
+    font-size: 11px;
+    color: var(--text-dim, #7e9bb5);
+    line-height: 1.3;
+    margin: 0;
   }
 
   .btn-danger {

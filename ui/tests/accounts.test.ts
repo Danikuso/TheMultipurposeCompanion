@@ -106,6 +106,11 @@ test('AccountsPanel renders privacy notice banner and 4 glass cards', () => {
   expect(q('accounts-capi-card')).toBeTruthy();
   expect(q('capi-link-btn')).toBeTruthy();
   expect(q('capi-link-btn')?.textContent).toContain('Vincular con Frontier Store');
+  expect(q('capi-manual-toggle')).toBeTruthy();
+  (q('capi-manual-toggle') as HTMLButtonElement)?.click();
+  flushSync();
+  expect(q('capi-manual-input')).toBeTruthy();
+  expect(q('capi-manual-submit')).toBeTruthy();
 });
 
 test('AccountsPanel renders connected CAPI status with remote fleet list', () => {

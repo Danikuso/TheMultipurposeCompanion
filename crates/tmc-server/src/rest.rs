@@ -311,7 +311,7 @@ pub async fn get_frontier_login(
     headers: axum::http::HeaderMap,
 ) -> Response {
     let port = state.port;
-    let redirect_uri = format!("http://localhost:{port}/api/auth/frontier/callback");
+    let redirect_uri = format!("https://localhost:{port}/api/auth/frontier/callback");
     match state.host.frontier_login_url(&redirect_uri).await {
         Ok(v) => {
             let auth_url = v
@@ -390,7 +390,10 @@ pub async fn get_frontier_callback(
         );
     };
 
-    let redirect_uri = format!("http://localhost:{}/api/auth/frontier/callback", state.port);
+    let redirect_uri = format!(
+        "https://localhost:{}/api/auth/frontier/callback",
+        state.port
+    );
     match state
         .host
         .frontier_exchange_code(&code, &auth_state, &redirect_uri)

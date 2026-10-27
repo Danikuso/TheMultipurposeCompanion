@@ -5,11 +5,11 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tmc_model::accounts::RemoteShip;
 use tmc_net::Transport;
-use tmc_net::capi::{CapiClient, CapiError, CapiToken, build_auth_url, generate_pkce_pair};
+pub use tmc_net::capi::{CapiClient, CapiError, CapiToken, build_auth_url, generate_pkce_pair};
 use tmc_store::{AccountCredentialRecord, Store, StoreError};
 
 const PENDING_STATE_TTL: Duration = Duration::from_secs(600);
-const DEFAULT_CLIENT_ID: &str = "tmc_desktop_companion";
+const DEFAULT_CLIENT_ID: &str = "12fbec0d-b5c9-4911-af18-0e7a4ede266e";
 const CAPI_SERVICE_KEY: &str = "frontier_capi";
 
 /// Servicio de integración Frontier CAPI con gestión de ciclo de vida OAuth2 PKCE y flota remota.
@@ -230,7 +230,7 @@ mod tests {
 
         let service = CapiService::new(store.clone(), transport, Some("test_client".to_string()));
 
-        let redirect_uri = "http://localhost:47320/api/auth/frontier/callback";
+        let redirect_uri = "https://localhost:47320/api/auth/frontier/callback";
         let (auth_url, state) = service.start_login(redirect_uri);
 
         assert!(auth_url.contains("https://auth.frontierstore.net/auth"));
