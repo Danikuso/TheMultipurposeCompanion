@@ -161,6 +161,11 @@ impl Module for AccountsModule {
                     if let Some(edsm_key) = args.get("edsm_has_key").and_then(|v| v.as_bool()) {
                         self.status.edsm.has_key = edsm_key;
                     }
+                    if let Some(edsm_cmdr) =
+                        args.get("edsm_commander_name").and_then(|v| v.as_str())
+                    {
+                        self.status.edsm.commander_name = Some(edsm_cmdr.to_string());
+                    }
                     if let Some(inara_en) = args.get("inara_enabled").and_then(|v| v.as_bool()) {
                         self.status.inara.enabled = inara_en;
                     }
@@ -187,8 +192,17 @@ impl Module for AccountsModule {
                     if let Some(capi_conn) = args.get("capi_connected").and_then(|v| v.as_bool()) {
                         self.status.capi.connected = capi_conn;
                     }
-                    if let Some(ships) = args.get("remote_ships_count").and_then(|v| v.as_u64()) {
+                    if let Some(ships) = args
+                        .get("capi_remote_ships_count")
+                        .or_else(|| args.get("remote_ships_count"))
+                        .and_then(|v| v.as_u64())
+                    {
                         self.status.capi.remote_ships_count = ships as u32;
+                    }
+                    if let Some(capi_cmdr) =
+                        args.get("capi_commander_name").and_then(|v| v.as_str())
+                    {
+                        self.status.capi.commander_name = Some(capi_cmdr.to_string());
                     }
                     changed.insert(TOPIC_STATUS.to_string());
                 }

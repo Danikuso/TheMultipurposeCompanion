@@ -121,6 +121,7 @@ pub struct AppActions {
     save_path: Option<PathBuf>,
     settings_watch: Option<tokio::sync::watch::Sender<tmc_model::settings::ModuleSettings>>,
     capi_service: Option<Arc<crate::capi_service::CapiService>>,
+    edsm_service: Option<Arc<crate::edsm_service::EdsmService>>,
     inara_service: Option<Arc<crate::inara_service::InaraService>>,
     kokoro_engine: Mutex<Option<tmc_tts::KokoroEngine>>,
 }
@@ -143,6 +144,7 @@ impl AppActions {
             save_path: None,
             settings_watch: None,
             capi_service: None,
+            edsm_service: None,
             inara_service: None,
             kokoro_engine: Mutex::new(None),
         }
@@ -156,6 +158,7 @@ impl AppActions {
             save_path: None,
             settings_watch: None,
             capi_service: None,
+            edsm_service: None,
             inara_service: None,
             kokoro_engine: Mutex::new(None),
         }
@@ -197,6 +200,15 @@ impl AppActions {
         capi_service: Arc<crate::capi_service::CapiService>,
     ) -> Self {
         self.capi_service = Some(capi_service);
+        self
+    }
+
+    /// Conecta el servicio de persistencia y sincronización de EDSM.
+    pub fn with_edsm_service(
+        mut self,
+        edsm_service: Arc<crate::edsm_service::EdsmService>,
+    ) -> Self {
+        self.edsm_service = Some(edsm_service);
         self
     }
 
@@ -369,6 +381,16 @@ impl ActionHost for AppActions {
                 let capi = self.capi_service.as_ref().ok_or(ActionError::NotFound)?;
                 capi.clear_session()
                     .map_err(|e| ActionError::Failed(e.to_string()))?;
+                if let Some(runtime) = &self.runtime {
+                    let _ = runtime.events.try_send(SourceEvent::Action {
+                        name: "accounts.set_settings".to_string(),
+                        args: json!({
+                            "capi_connected": false,
+                            "capi_enabled": false,
+                            "capi_remote_ships_count": 0,
+                        }),
+                    });
+                }
                 return Ok(json!({ "ok": true }));
             }
             "frontier.submit_callback" => {
@@ -658,6 +680,48 @@ impl ActionHost for AppActions {
                 }
                 return Ok(json!({ "ok": true }));
             }
+            "edsm.save_key" => {
+                let edsm = self.edsm_service.as_ref().ok_or(ActionError::NotFound)?;
+                let api_key = args
+                    .get("api_key")
+                    .and_then(|k| k.as_str())
+                    .ok_or_else(|| ActionError::Failed("missing-api-key".into()))?;
+                let cmdr = args
+                    .get("commander_name")
+                    .and_then(|c| c.as_str())
+                    .or_else(|| {
+                        snapshot
+                            .get("core.cmdr")
+                            .and_then(|c| c.get("name"))
+                            .and_then(|n| n.as_str())
+                    });
+                edsm.save_key(api_key, cmdr).map_err(ActionError::Failed)?;
+
+                if let Some(runtime) = &self.runtime {
+                    let _ = runtime.events.try_send(SourceEvent::Action {
+                        name: "accounts.set_settings".to_string(),
+                        args: json!({
+                            "edsm_has_key": true,
+                            "edsm_enabled": true,
+                        }),
+                    });
+                }
+                return Ok(json!({ "ok": true }));
+            }
+            "edsm.clear_key" => {
+                let edsm = self.edsm_service.as_ref().ok_or(ActionError::NotFound)?;
+                edsm.clear_key().map_err(ActionError::Failed)?;
+                if let Some(runtime) = &self.runtime {
+                    let _ = runtime.events.try_send(SourceEvent::Action {
+                        name: "accounts.set_settings".to_string(),
+                        args: json!({
+                            "edsm_has_key": false,
+                            "edsm_enabled": false,
+                        }),
+                    });
+                }
+                return Ok(json!({ "ok": true }));
+            }
             "tts.voices" => {
                 let engine_kind = args
                     .get("engine")
@@ -906,7 +970,7 @@ impl ActionHost for AppActions {
     }
 }
 
-const MODULE_PREFIXES: [&str; 14] = [
+const MODULE_PREFIXES: [&str; 15] = [
     "navigation.",
     "exploration.",
     "exobiology.",
@@ -921,6 +985,7 @@ const MODULE_PREFIXES: [&str; 14] = [
     "bgs.",
     "accounts.",
     "inara.",
+    "edsm.",
 ];
 
 #[cfg(test)]

@@ -161,3 +161,36 @@ test('AccountsPanel remote fleet dropdown selector and accordion work compactly 
   // When remote ships empty, no selector
   expect(q('remote-fleet-select')).toBeNull();
 });
+
+test('AccountsPanel saveEdsmKey dispatches edsm.save_key and clears input', async () => {
+  let actionCalled = false;
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (typeof url === 'string' && url.includes('edsm.save_key')) {
+      actionCalled = true;
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }
+    return new Response(JSON.stringify({}), { status: 200 });
+  }));
+
+  mountWith(AccountsPanel, {
+    'accounts.status': {
+      eddn: { enabled: true, connected: true, uploader_id: 'TMC-Anon', messages_sent_session: 0, last_upload_time: null, last_error: null },
+      edsm: { enabled: false, has_key: false, commander_name: null, last_sync_time: null, last_error: null, syncing: false },
+      inara: { enabled: false, has_key: false, commander_name: null, last_sync_time: null, last_error: null, pending_events: 0, next_slot_secs: 0, syncing: false },
+      capi: { configured: false, connected: false, commander_name: null, token_expires_at: null, remote_ships_count: 0, last_sync_time: null, last_error: null },
+    },
+  });
+
+  const input = q('edsm-key-input') as HTMLInputElement;
+  const saveBtn = q('edsm-save-btn') as HTMLButtonElement;
+  input.value = 'secret-edsm-key';
+  input.dispatchEvent(new Event('input'));
+  flushSync();
+
+  saveBtn.click();
+  await new Promise((r) => setTimeout(r, 10));
+  flushSync();
+
+  expect(actionCalled).toBe(true);
+  expect(input.value).toBe('');
+});

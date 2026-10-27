@@ -928,6 +928,14 @@ impl NetClient {
                     Err(Miss::Fail(NetFailure::RateLimited))
                 }
                 500..=599 => {
+                    // Si Spansh devuelve 500 en results con un JSON de error de ruta ("status":"failed"),
+                    // no es una caída de infraestructura, sino el resultado del cálculo que se parsea en parse_route_result.
+                    if service == Service::Spansh
+                        && body.contains("\"status\"")
+                        && (body.contains("\"failed\"") || body.contains("\"error\""))
+                    {
+                        return Ok(body);
+                    }
                     self.fail(service);
                     Err(Miss::Fail(NetFailure::Http(status)))
                 }
@@ -935,7 +943,7 @@ impl NetClient {
                 _ => {
                     tracing::warn!(status, ?service, "petición rechazada por el servicio");
                     if service == Service::Spansh
-                        && status == 400
+                        && (status == 400 || status == 500)
                         && let Some(err) = spansh::parse_submit_error(&body)
                     {
                         return Err(Miss::Fail(err));

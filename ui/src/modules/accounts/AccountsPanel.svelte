@@ -79,11 +79,14 @@
 
   async function saveEdsmKey() {
     if (!edsmKey.trim()) return;
-    await action('accounts.set_settings', {
-      edsm_has_key: true,
-      edsm_enabled: true,
+    await action('edsm.save_key', {
+      api_key: edsmKey.trim(),
     });
     edsmKey = '';
+  }
+
+  async function clearEdsmKey() {
+    await action('edsm.clear_key', {});
   }
 
   async function toggleInara() {
@@ -325,6 +328,11 @@
               <button class="action-btn flex-1" onclick={saveEdsmKey} data-testid="edsm-save-btn">
                 {t('accounts-edsm-btn-save')}
               </button>
+              {#if status?.edsm?.has_key}
+                <button class="action-btn btn-secondary flex-1" onclick={clearEdsmKey} data-testid="edsm-clear-btn">
+                  {t('accounts-capi-btn-unlink')}
+                </button>
+              {/if}
             </div>
           </div>
 

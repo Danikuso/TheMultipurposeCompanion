@@ -405,10 +405,43 @@ async fn start_inner(
         transport.clone(),
         None,
     ));
+    let edsm_service = Arc::new(crate::edsm_service::EdsmService::new(store.clone()));
     let inara_service = Arc::new(crate::inara_service::InaraService::new(
         store.clone(),
         transport.clone(),
     ));
+
+    // Si hay una sesión de Frontier CAPI guardada en SQLite, restaurar estado en accounts
+    if let Ok(Some(_token)) = capi_service.get_token() {
+        let _ = core
+            .events
+            .send(SourceEvent::Action {
+                name: "accounts.set_settings".to_string(),
+                args: serde_json::json!({
+                    "capi_connected": true,
+                    "capi_enabled": true,
+                }),
+            })
+            .await;
+    }
+
+    // Si hay una clave API de EDSM guardada en SQLite, restaurar estado en accounts
+    if let Some(_key) = edsm_service.get_saved_key() {
+        let mut edsm_args = serde_json::json!({
+            "edsm_has_key": true,
+            "edsm_enabled": true,
+        });
+        if let Some(cmdr) = edsm_service.get_saved_cmdr() {
+            edsm_args["edsm_commander_name"] = serde_json::json!(cmdr);
+        }
+        let _ = core
+            .events
+            .send(SourceEvent::Action {
+                name: "accounts.set_settings".to_string(),
+                args: edsm_args,
+            })
+            .await;
+    }
 
     // Si hay una clave API de Inara guardada en SQLite, activar el estado en el módulo accounts
     if let Some(_key) = inara_service.get_saved_key() {
@@ -433,6 +466,7 @@ async fn start_inner(
                 .with_clipboard(clipboard.clone())
                 .with_settings_watch(settings_tx)
                 .with_capi_service(capi_service)
+                .with_edsm_service(edsm_service)
                 .with_inara_service(inara_service),
         ),
     )
