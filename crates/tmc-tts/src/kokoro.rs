@@ -94,22 +94,29 @@ impl KokoroProcess {
         if let Some(ref local) = std::env::var("LOCALAPPDATA").ok().map(PathBuf::from) {
             python_execs.push(
                 local
-                    .join("Microsoft")
-                    .join("WindowsApps")
-                    .join("python.exe"),
-            );
-            python_execs.push(
-                local
                     .join("Programs")
                     .join("Python")
                     .join("Launcher")
                     .join("py.exe"),
             );
+            python_execs.push(
+                local
+                    .join("Programs")
+                    .join("Python")
+                    .join("Python313")
+                    .join("python.exe"),
+            );
+            python_execs.push(
+                local
+                    .join("Microsoft")
+                    .join("WindowsApps")
+                    .join("python.exe"),
+            );
         }
-        python_execs.push(PathBuf::from("python.exe"));
         python_execs.push(PathBuf::from("py.exe"));
-        python_execs.push(PathBuf::from("python"));
+        python_execs.push(PathBuf::from("python.exe"));
         python_execs.push(PathBuf::from("py"));
+        python_execs.push(PathBuf::from("python"));
 
         for script in candidate_scripts {
             if script.exists() {
@@ -132,6 +139,12 @@ impl KokoroProcess {
     }
 
     fn try_spawn(mut cmd: Command) -> Option<Self> {
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000);
+        }
+
         let mut child = match cmd
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
