@@ -6,10 +6,12 @@
 
 use crate::native::NativeEngine;
 use crate::{TtsEngine, TtsError};
-use std::process::{Child, Command, Stdio};
+use std::io::{BufRead, BufReader, Write};
+use std::path::PathBuf;
+use std::process::{Child, ChildStdin, Command, Stdio};
 use std::time::{Duration, Instant};
 use tmc_model::tts::VoiceInfo;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 /// Catálogo de voces neuronales predeterminadas de Kokoro.
 pub const KOKORO_VOICES: &[(&str, &str, &str, &str)] = &[
@@ -29,34 +31,199 @@ pub const KOKORO_VOICES: &[(&str, &str, &str, &str)] = &[
 #[derive(Debug)]
 pub struct KokoroProcess {
     child: Child,
+    stdin: ChildStdin,
+    reader: BufReader<std::process::ChildStdout>,
 }
 
 impl KokoroProcess {
     pub fn spawn_if_available() -> Option<Self> {
-        // Busca binario dedicado o script empaquetado en el entorno
-        let possible_bins = ["tmc-kokoro-worker.exe", "kokoro-worker.exe", "kokoro-tts"];
-        for bin in &possible_bins {
-            if let Ok(child) = Command::new(bin)
-                .stdin(Stdio::piped())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn()
-            {
-                info!("Subproceso KokoroTTS iniciado exitosamente: {bin}");
-                return Some(Self { child });
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.to_path_buf()));
+        let appdata_dir = std::env::var("LOCALAPPDATA")
+            .ok()
+            .map(|l| PathBuf::from(l).join("TMC"));
+
+        // 1. Buscar binario dedicado empaquetado o instalado
+        let mut candidate_bins: Vec<PathBuf> = Vec::new();
+        if let Some(ref dir) = exe_dir {
+            candidate_bins.push(dir.join("tmc-kokoro-worker.exe"));
+        }
+        if let Some(ref dir) = appdata_dir {
+            candidate_bins.push(dir.join("bin").join("tmc-kokoro-worker.exe"));
+        }
+        candidate_bins.push(PathBuf::from("tmc-kokoro-worker.exe"));
+        candidate_bins.push(PathBuf::from("kokoro-worker.exe"));
+        candidate_bins.push(PathBuf::from("kokoro-tts"));
+
+        for bin in candidate_bins {
+            if let Some(proc) = Self::try_spawn(Command::new(&bin)) {
+                info!(
+                    "Subproceso KokoroTTS iniciado exitosamente desde binario: {}",
+                    bin.display()
+                );
+                return Some(proc);
             }
         }
+
+        // 2. Buscar script Python del worker
+        let mut candidate_scripts: Vec<PathBuf> = Vec::new();
+        if let Some(ref dir) = appdata_dir {
+            candidate_scripts.push(dir.join("scripts").join("tmc-kokoro-worker.py"));
+        }
+        candidate_scripts.push(PathBuf::from("scripts").join("tmc-kokoro-worker.py"));
+        if let Some(ref dir) = exe_dir {
+            candidate_scripts.push(dir.join("scripts").join("tmc-kokoro-worker.py"));
+            candidate_scripts.push(dir.join("..").join("scripts").join("tmc-kokoro-worker.py"));
+            candidate_scripts.push(
+                dir.join("..")
+                    .join("..")
+                    .join("scripts")
+                    .join("tmc-kokoro-worker.py"),
+            );
+            candidate_scripts.push(
+                dir.join("..")
+                    .join("..")
+                    .join("..")
+                    .join("scripts")
+                    .join("tmc-kokoro-worker.py"),
+            );
+        }
+
+        let mut python_execs: Vec<PathBuf> = Vec::new();
+        if let Some(ref local) = std::env::var("LOCALAPPDATA").ok().map(PathBuf::from) {
+            python_execs.push(
+                local
+                    .join("Microsoft")
+                    .join("WindowsApps")
+                    .join("python.exe"),
+            );
+            python_execs.push(
+                local
+                    .join("Programs")
+                    .join("Python")
+                    .join("Launcher")
+                    .join("py.exe"),
+            );
+        }
+        python_execs.push(PathBuf::from("python.exe"));
+        python_execs.push(PathBuf::from("py.exe"));
+        python_execs.push(PathBuf::from("python"));
+        python_execs.push(PathBuf::from("py"));
+
+        for script in candidate_scripts {
+            if script.exists() {
+                for py in &python_execs {
+                    let mut cmd = Command::new(py);
+                    cmd.arg(&script);
+                    if let Some(proc) = Self::try_spawn(cmd) {
+                        info!(
+                            "Subproceso KokoroTTS iniciado exitosamente vía {} con {}",
+                            py.display(),
+                            script.display()
+                        );
+                        return Some(proc);
+                    }
+                }
+            }
+        }
+
         None
     }
 
+    fn try_spawn(mut cmd: Command) -> Option<Self> {
+        let mut child = match cmd
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+        {
+            Ok(c) => c,
+            Err(e) => {
+                debug!("No se pudo invocar comando {:?}: {e}", cmd);
+                return None;
+            }
+        };
+
+        let stdin = child.stdin.take()?;
+        let stdout = child.stdout.take()?;
+        let mut reader = BufReader::new(stdout);
+
+        let mut ready_line = String::new();
+        match reader.read_line(&mut ready_line) {
+            Ok(_) if ready_line.contains("\"ready\": true") => Some(Self {
+                child,
+                stdin,
+                reader,
+            }),
+            Ok(_) => {
+                debug!("Worker no retornó handshake de preparación: '{ready_line}'");
+                let _ = child.kill();
+                None
+            }
+            Err(e) => {
+                debug!("Fallo al leer handshake del worker: {e}");
+                let _ = child.kill();
+                None
+            }
+        }
+    }
+
+    pub fn speak(
+        &mut self,
+        text: &str,
+        voice: &str,
+        volume: u8,
+        rate: f32,
+    ) -> Result<(), TtsError> {
+        let req = serde_json::json!({
+            "action": "speak",
+            "text": text,
+            "voice": voice,
+            "volume": volume,
+            "rate": rate,
+        });
+        let mut payload = serde_json::to_vec(&req).map_err(|e| TtsError::Engine(e.to_string()))?;
+        payload.push(b'\n');
+        self.stdin
+            .write_all(&payload)
+            .map_err(|e| TtsError::Engine(format!("Error enviando audio al worker: {e}")))?;
+        self.stdin
+            .flush()
+            .map_err(|e| TtsError::Engine(format!("Error vaciando stream al worker: {e}")))?;
+
+        let mut line = String::new();
+        if self.reader.read_line(&mut line).is_ok() {
+            if line.contains("\"status\": \"error\"") {
+                return Err(TtsError::Engine(format!("Kokoro worker error: {line}")));
+            }
+            Ok(())
+        } else {
+            Err(TtsError::Engine(
+                "Error de lectura desde Kokoro worker".into(),
+            ))
+        }
+    }
+
     pub fn stop(&mut self) {
-        // Envía señal de parada o mata el subproceso
+        let req = serde_json::json!({ "action": "stop" });
+        if let Ok(mut payload) = serde_json::to_vec(&req) {
+            payload.push(b'\n');
+            let _ = self.stdin.write_all(&payload);
+            let _ = self.stdin.flush();
+        }
         let _ = self.child.kill();
     }
 }
 
 impl Drop for KokoroProcess {
     fn drop(&mut self) {
+        let req = serde_json::json!({ "action": "quit" });
+        if let Ok(mut payload) = serde_json::to_vec(&req) {
+            payload.push(b'\n');
+            let _ = self.stdin.write_all(&payload);
+            let _ = self.stdin.flush();
+        }
         let _ = self.child.kill();
     }
 }
@@ -179,9 +346,14 @@ impl TtsEngine for KokoroEngine {
 
         self.last_used = Some(Instant::now());
 
-        if let Some(ref mut _proc) = self.worker {
+        if let Some(ref mut proc) = self.worker {
             // El subproceso neuronal está presente y gestiona la síntesis
             debug!("Sintetizando con KokoroTTS: '{text}' con voz '{requested}'");
+            if let Err(err) = proc.speak(text, requested, volume, rate) {
+                warn!("Fallo en subproceso KokoroTTS: {err}; recurriendo a motor nativo");
+                self.worker = None;
+                return self.native_fallback.speak(text, None, volume, rate);
+            }
             Ok(())
         } else {
             // Subproceso no disponible en el sistema -> degradación limpia y transparente a motor nativo
@@ -257,5 +429,20 @@ mod tests {
         // Sin worker real, check_idle_timeout no descarga nada falso
         assert!(!engine.check_idle_timeout());
         assert!(!engine.is_worker_active());
+    }
+
+    #[test]
+    fn kokoro_spawns_worker_and_speaks() {
+        let mut engine = KokoroEngine::new().expect("KokoroEngine debe inicializarse");
+        let res = engine.speak(
+            "Copiloto de TMC activo y listo para la navegación.",
+            Some("ef_dora"),
+            80,
+            1.0,
+        );
+        assert!(res.is_ok());
+        assert!(engine.is_worker_active());
+        let stop_res = engine.stop();
+        assert!(stop_res.is_ok());
     }
 }
