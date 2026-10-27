@@ -139,6 +139,10 @@ pub struct GalaxyRouteParams {
     pub ship: ShipParams,
     pub refuel_scoopable: bool,
     pub use_injections: bool,
+    #[serde(default)]
+    pub algorithm: Option<String>,
+    #[serde(default)]
+    pub from_coords: Option<[f64; 3]>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -22,9 +22,7 @@ const ERR_TOO_LONG: &str = "nav-plan-error-route-too-long";
 const MAX_HOPS: usize = 2000;
 const TOPIC_HOPS: usize = 50;
 const MAX_NAME_CHARS: usize = 128;
-const ERR_NO_DESTINATION_ID: &str = "nav-plan-error-no-destination-id";
 const ERR_NO_ORIGIN: &str = "nav-plan-error-no-origin";
-const ERR_NO_ORIGIN_ID: &str = "nav-plan-error-no-origin-id";
 const ERR_BAD_REQUEST: &str = "nav-plan-error-bad-request";
 const ERR_NO_RANGE: &str = "nav-plan-error-no-range";
 const ERR_NO_FSD: &str = "nav-plan-error-no-fsd";
@@ -222,17 +220,29 @@ impl Navigation {
             }
             PlanMode::Galaxy => {
                 let fsd = fsd.ok_or(ERR_NO_FSD)?;
-                let to = req.to_id64.ok_or(ERR_NO_DESTINATION_ID)?;
-                let from = req.from_id64.ok_or(ERR_NO_ORIGIN_ID)?;
+                let to = req
+                    .to_id64
+                    .map(|id| id.to_string())
+                    .unwrap_or_else(|| req.to.clone());
+                let from = req
+                    .from_id64
+                    .map(|id| id.to_string())
+                    .unwrap_or_else(|| req.from.clone());
                 let ship = state.ship.as_ref().ok_or(ERR_NO_RANGE)?;
                 let (Some(unladen_mass), Some(fuel_main_capacity)) =
                     (self.unladen_mass, ship.fuel_capacity_main)
                 else {
                     return Err(ERR_NO_RANGE);
                 };
+                let from_coords = if state.location.system.eq_ignore_ascii_case(&req.from) {
+                    let p = state.location.star_pos;
+                    (p[0] != 0.0 || p[1] != 0.0 || p[2] != 0.0).then_some(p)
+                } else {
+                    None
+                };
                 Ok(NetQuery::GalaxyRoute(GalaxyRouteParams {
-                    from: from.to_string(),
-                    to: to.to_string(),
+                    from,
+                    to,
                     ship: ShipParams {
                         unladen_mass,
                         fuel_main_capacity,
@@ -250,6 +260,8 @@ impl Navigation {
                     },
                     refuel_scoopable: req.refuel_scoopable,
                     use_injections: req.use_injections,
+                    algorithm: Some("optimistic".into()),
+                    from_coords,
                 }))
             }
         }

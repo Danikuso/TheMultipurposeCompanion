@@ -370,7 +370,19 @@ impl NetClient {
             }
             NetQuery::GalaxyRoute(p) => {
                 let req = Req::Post(spansh::galaxy_url(), spansh::galaxy_form(p));
-                (NetSource::Spansh, self.route(req, online).await)
+                let mut out = self.route(req, online).await;
+                if matches!(out, NetOutcome::Failed(NetFailure::UnknownOrigin))
+                    && let Some(coords) = p.from_coords
+                    && let Ok(nearest) = self.fetch_nearest_system(coords, online).await
+                {
+                    tracing::info!(from = %p.from, %nearest, "Origen no indexado en Spansh; recalculando ruta exacta desde el sistema conocido más cercano");
+                    let mut fallback_p = p.clone();
+                    fallback_p.from = nearest;
+                    fallback_p.from_coords = None;
+                    let req = Req::Post(spansh::galaxy_url(), spansh::galaxy_form(&fallback_p));
+                    out = self.route(req, online).await;
+                }
+                (NetSource::Spansh, out)
             }
             NetQuery::Autocomplete { prefix } => {
                 let req = Req::Get(spansh::autocomplete_url(prefix));
@@ -1487,6 +1499,8 @@ mod tests {
             },
             refuel_scoopable: true,
             use_injections: false,
+            algorithm: None,
+            from_coords: None,
         });
         let (src, out) = client(&t).execute(&q).await;
         assert_eq!(src, NetSource::Spansh);
@@ -1495,6 +1509,53 @@ mod tests {
         };
         assert_eq!(r.hops.len(), 3);
         assert_eq!(t.count("POST https://spansh.co.uk/api/generic/route"), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn galaxy_route_unknown_origin_falls_back_to_nearest_system() {
+        let t = FakeTransport::new();
+        t.script(
+            "spansh.co.uk/api/generic/route",
+            vec![
+                ok(400, r#"{"error":"Could not find starting system"}"#),
+                ok(202, JOB),
+            ],
+        );
+        t.script(
+            "spansh.co.uk/api/nearest",
+            vec![ok(
+                200,
+                r#"{"system":{"distance":10.36,"id64":22648839483193,"name":"Byua Euq FU-K b36-10","x":-916.6,"y":146.2,"z":6116.8}}"#,
+            )],
+        );
+        t.script("/api/results/", vec![ok(200, GALAXY)]);
+
+        let q = NetQuery::GalaxyRoute(GalaxyRouteParams {
+            from: "Byua Euq EU-K b36-0".into(),
+            to: "Colonia".into(),
+            ship: ShipParams {
+                unladen_mass: 300.0,
+                fuel_main_capacity: 32.0,
+                fuel_reserve: 2.0,
+                cargo: 0.0,
+                optimal_mass: 1052.0,
+                max_fuel_per_jump: 5.2,
+                fuel_mul: 0.012,
+                fuel_power: 2.45,
+                guardian_bonus_ly: 0.0,
+                supercharge_multiplier: 4.0,
+            },
+            refuel_scoopable: true,
+            use_injections: false,
+            algorithm: Some("optimistic".into()),
+            from_coords: Some([-926.96875, 145.71875, 6116.375]),
+        });
+
+        let (src, out) = client(&t).execute(&q).await;
+        assert_eq!(src, NetSource::Spansh);
+        assert!(matches!(out, NetOutcome::Route(_)));
+        assert_eq!(t.count("/api/nearest"), 1);
+        assert_eq!(t.count("POST https://spansh.co.uk/api/generic/route"), 2);
     }
 
     #[tokio::test(start_paused = true)]

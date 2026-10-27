@@ -65,9 +65,7 @@
   });
   const efficiencyInvalid = $derived(Number.isNaN(efficiencyValue));
   const hasDestination = $derived(to.text.trim() !== '' || Boolean(plan?.active?.destination));
-  const toNeedsPick = $derived(mode === 'galaxy' && to.text.trim() !== '' && to.id64 == null);
-  const fromNeedsPick = $derived(mode === 'galaxy' && from.text.trim() !== '' && from.id64 == null);
-  const blocked = $derived(disabled || computing || efficiencyInvalid || !hasDestination || toNeedsPick || fromNeedsPick);
+  const blocked = $derived(disabled || computing || efficiencyInvalid || !hasDestination);
 
   async function fetchSuggestions(f: Field, seq: number) {
     f.ctrl?.abort();
@@ -229,15 +227,20 @@
       {/if}
     </div>
 
-    <div class="options">
-      <label class="check">
+    <div class="mode-selector">
+      <label class="mode-btn" class:active={mode === 'neutron'}>
         <input type="radio" name="plan-mode" value="neutron" data-testid="mode-neutron" {disabled} bind:group={mode} />
-        {t('nav-plan-mode-neutron')}
+        <span class="mode-icon">⚡</span>
+        <span>{t('nav-plan-mode-neutron')}</span>
       </label>
-      <label class="check">
+      <label class="mode-btn" class:active={mode === 'galaxy'}>
         <input type="radio" name="plan-mode" value="galaxy" data-testid="mode-galaxy" {disabled} bind:group={mode} />
-        {t('nav-plan-mode-galaxy')}
+        <span class="mode-icon">🗺️</span>
+        <span>{t('nav-plan-mode-galaxy')}</span>
       </label>
+    </div>
+
+    <div class="options">
       <label class="check">
         {t('nav-plan-efficiency')}
         <input
@@ -279,9 +282,6 @@
 
   {#if efficiencyInvalid}
     <p class="error" data-testid="plan-efficiency-error">{t('nav-plan-efficiency-invalid')}</p>
-  {/if}
-  {#if toNeedsPick || fromNeedsPick}
-    <p class="note" data-testid="plan-pick-hint">{t('nav-plan-pick-destination')}</p>
   {/if}
   {#if computing}
     <p class="note" data-testid="plan-computing">{t('nav-plan-computing')}</p>
@@ -332,7 +332,13 @@
               </td>
               <td class="r mono">{ly(hop.distance_ly)}</td>
               <td>{hop.star_class ?? '—'}</td>
-              <td>{refuelLabel(hop.refuel)}</td>
+              <td>
+                {#if hop.refuel}
+                  <span class="badge refuel-badge">⛽ {t('nav-plan-refuel-yes')}</span>
+                {:else}
+                  {refuelLabel(hop.refuel)}
+                {/if}
+              </td>
             </tr>
           {/each}
         </tbody>
@@ -511,5 +517,65 @@
     padding: 0 0.3rem;
     margin-left: 0.3rem;
     font-size: 0.85em;
+  }
+
+  .mode-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .mode-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--hud-border, rgba(255, 113, 0, 0.25));
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--hud-muted, #999);
+    transition: all 0.15s ease;
+  }
+
+  .mode-btn:hover {
+    border-color: var(--hud-primary, #ff7100);
+    color: var(--hud-text, #fff);
+  }
+
+  .mode-btn.active {
+    border-color: var(--hud-primary, #ff7100);
+    background: rgba(255, 113, 0, 0.15);
+    color: var(--hud-primary, #ff7100);
+    font-weight: 600;
+  }
+
+  .mode-btn input[type='radio'] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+
+  .mode-icon {
+    font-size: 1rem;
+  }
+
+  .refuel-badge {
+    color: #ff9900;
+    border-color: rgba(255, 153, 0, 0.6);
+    background: rgba(255, 153, 0, 0.12);
+    font-weight: 600;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
   }
 </style>

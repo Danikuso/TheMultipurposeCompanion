@@ -444,31 +444,30 @@ describe('navigation panels', () => {
       expect(target.querySelector('[data-testid="plan-efficiency-error"]')).toBeNull();
     });
 
-    test('galaxy mode without picked destination blocks submit with hint', async () => {
-      const body = await (async () => {
-        vi.useFakeTimers();
-        const calls: string[] = [];
-        vi.stubGlobal('fetch', fetchRouter(calls));
-        live.topics['navigation.plan'] = planTopic();
-        render(PlannerPanel);
-        (target.querySelector('[data-testid="mode-galaxy"]') as HTMLInputElement).click();
-        typeIn(target.querySelector('[data-testid="plan-to"]') as HTMLInputElement, 'Colonia');
-        flushSync();
-        return calls;
-      })();
-      expect((target.querySelector('[data-testid="plan-submit"]') as HTMLButtonElement).disabled).toBe(true);
-      expect(target.querySelector('[data-testid="plan-pick-hint"]')?.textContent).toContain(
-        t('nav-plan-pick-destination'),
-      );
-      expect(body.filter((c) => c.startsWith('/api/actions')).length).toBe(0);
+    test('galaxy mode with typed destination allows submit without id64', async () => {
+      const calls: string[] = [];
+      vi.stubGlobal('fetch', fetchRouter(calls));
+      live.topics['navigation.plan'] = planTopic();
+      render(PlannerPanel);
+      (target.querySelector('[data-testid="mode-galaxy"]') as HTMLInputElement).click();
+      typeIn(target.querySelector('[data-testid="plan-to"]') as HTMLInputElement, 'Colonia');
+      flushSync();
+      expect((target.querySelector('[data-testid="plan-submit"]') as HTMLButtonElement).disabled).toBe(false);
+      (target.querySelector('[data-testid="plan-submit"]') as HTMLButtonElement).click();
+      flushSync();
+      const planCall = calls.find((c) => c.startsWith('/api/actions/navigation.plan'));
+      expect(planCall).toBeDefined();
+      const body = JSON.parse(planCall!.split('|')[1]);
+      expect(body.to).toBe('Colonia');
+      expect(body.mode).toBe('galaxy');
+      expect(body.to_id64).toBeUndefined();
     });
 
-    test('galaxy mode with typed origin but no id64 blocks submit', async () => {
+    test('galaxy mode with empty destination blocks submit', async () => {
       vi.stubGlobal('fetch', fetchRouter([]));
       live.topics['navigation.plan'] = planTopic();
       render(PlannerPanel);
       (target.querySelector('[data-testid="mode-galaxy"]') as HTMLInputElement).click();
-      typeIn(target.querySelector('[data-testid="plan-from"]') as HTMLInputElement, 'Sol');
       expect((target.querySelector('[data-testid="plan-submit"]') as HTMLButtonElement).disabled).toBe(true);
     });
 

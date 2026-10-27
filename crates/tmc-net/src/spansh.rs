@@ -177,11 +177,8 @@ pub fn neutron_form(p: &NeutronRouteParams) -> Vec<(String, String)> {
     ]
 }
 
-/// `from`/`to` deben ser id64 en decimal (Spansh pide `source`/`destination` por id64).
-///
-/// Suposición NO verificada (spike §4): `internal_tank_size` se rellena con
-/// `ShipParams::fuel_reserve`. Spansh ignora `reserve_size` y la semántica de
-/// `internal_tank_size` está sin confirmar con una ruta real; no se inventan valores.
+/// `from`/`to` pueden ser id64 en decimal o nombres directos de sistemas estelares
+/// (Spansh `generic/route` / Exact Plotter admite ambos).
 pub fn galaxy_form(p: &GalaxyRouteParams) -> Vec<(String, String)> {
     let s = &p.ship;
     vec![
@@ -199,6 +196,10 @@ pub fn galaxy_form(p: &GalaxyRouteParams) -> Vec<(String, String)> {
         pair("supercharge_multiplier", num(s.supercharge_multiplier)),
         pair("use_injections", flag(p.use_injections)),
         pair("refuel_every_scoopable", flag(p.refuel_scoopable)),
+        pair(
+            "algorithm",
+            p.algorithm.as_deref().unwrap_or("optimistic").to_string(),
+        ),
     ]
 }
 
@@ -417,7 +418,7 @@ fn parse_galaxy(result: &jsonx::Obj) -> Result<PlannedRoute, NetFailure> {
         let e = jsonx::as_obj(e)?;
         hops.push(PlannedHop {
             name: jsonx::req_str(e, "name")?,
-            id64: Some(jsonx::req_u64(e, "id64")?),
+            id64: jsonx::opt_u64(e, "id64")?,
             star_pos: position(e)?,
             distance_ly: jsonx::req_f64(e, "distance")?,
             jumps: 1,
@@ -833,6 +834,8 @@ mod tests {
             },
             refuel_scoopable: true,
             use_injections: false,
+            algorithm: None,
+            from_coords: None,
         });
         assert_eq!(form_get(&f, "source"), Some("10477373803"));
         assert_eq!(form_get(&f, "destination"), Some("3238296097059"));
@@ -848,6 +851,36 @@ mod tests {
         assert_eq!(form_get(&f, "use_injections"), Some("0"));
         assert_eq!(form_get(&f, "refuel_every_scoopable"), Some("1"));
         assert_eq!(form_get(&f, "supercharge_multiplier"), Some("4"));
+        assert_eq!(form_get(&f, "algorithm"), Some("optimistic"));
+    }
+
+    #[test]
+    fn galaxy_form_sends_system_names_and_optimistic_algorithm() {
+        let f = galaxy_form(&GalaxyRouteParams {
+            from: "Sol".into(),
+            to: "Colonia".into(),
+            ship: ShipParams {
+                unladen_mass: 250.0,
+                fuel_main_capacity: 32.0,
+                fuel_reserve: 0.63,
+                cargo: 0.0,
+                optimal_mass: 1400.0,
+                max_fuel_per_jump: 5.5,
+                fuel_mul: 0.012,
+                fuel_power: 2.75,
+                guardian_bonus_ly: 10.5,
+                supercharge_multiplier: 4.0,
+            },
+            refuel_scoopable: true,
+            use_injections: true,
+            algorithm: Some("fuel".into()),
+            from_coords: Some([-926.0, 145.0, 6116.0]),
+        });
+        assert_eq!(form_get(&f, "source"), Some("Sol"));
+        assert_eq!(form_get(&f, "destination"), Some("Colonia"));
+        assert_eq!(form_get(&f, "algorithm"), Some("fuel"));
+        assert_eq!(form_get(&f, "use_injections"), Some("1"));
+        assert_eq!(form_get(&f, "refuel_every_scoopable"), Some("1"));
     }
 
     const TRADE: &str = include_str!("../../../tests/fixtures/net/spansh_trade_result.json");

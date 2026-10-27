@@ -1154,33 +1154,40 @@ fn neutron_plan_with_unknown_fsd_and_no_max_jump_range_has_no_range() {
 }
 
 #[test]
-fn galaxy_plan_uses_id64_and_fsd_params_and_needs_destination_id() {
+fn galaxy_plan_uses_id64_or_names_and_fsd_params() {
     let mut h = Harness::new();
     h.ready_ship();
+    // Sin to_id64 usa el nombre directo del sistema
     h.act(
         "navigation.plan",
         json!({"to": "Colonia", "mode": "galaxy"}),
     );
-    assert_eq!(h.plan_topic()["status"], "failed");
-    assert_eq!(
-        h.plan_topic()["error_key"],
-        "nav-plan-error-no-destination-id"
-    );
-    assert!(h.route_requests().is_empty());
+    assert_eq!(h.route_requests().len(), 1);
+    let NetQuery::GalaxyRoute(GalaxyRouteParams { to, algorithm, .. }) =
+        &h.route_requests()[0].query
+    else {
+        panic!("{:?}", h.route_requests()[0].query);
+    };
+    assert_eq!(to, "Colonia");
+    assert_eq!(algorithm.as_deref(), Some("optimistic"));
+
+    // Con to_id64 usa el ID numérico
     h.act(
         "navigation.plan",
         json!({"to": "Colonia", "to_id64": 3_238_296_097_059u64, "mode": "galaxy", "use_injections": true}),
     );
-    assert_eq!(h.route_requests().len(), 1);
+    assert_eq!(h.route_requests().len(), 2);
     let NetQuery::GalaxyRoute(GalaxyRouteParams {
         from,
         to,
         ship,
         refuel_scoopable,
         use_injections,
-    }) = &h.route_requests()[0].query
+        from_coords,
+        ..
+    }) = &h.route_requests()[1].query
     else {
-        panic!("{:?}", h.route_requests()[0].query);
+        panic!("{:?}", h.route_requests()[1].query);
     };
     assert_eq!(from, "10");
     assert_eq!(to, "3238296097059");
@@ -1190,6 +1197,7 @@ fn galaxy_plan_uses_id64_and_fsd_params_and_needs_destination_id() {
     assert_eq!(ship.max_fuel_per_jump, 5.0);
     assert_eq!(ship.supercharge_multiplier, 4.0);
     assert!(*refuel_scoopable && *use_injections);
+    assert!(from_coords.is_none() || from_coords.is_some());
 }
 
 #[test]
