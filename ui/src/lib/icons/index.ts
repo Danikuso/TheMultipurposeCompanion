@@ -203,12 +203,12 @@ export function resolveManufacturer(shipType?: string | null): { key: string; na
   const s = shipType.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   // Gutamaya
-  if (s.includes('cutter') || s.includes('clipper') || s.includes('courier') || s.includes('imperial') || s.includes('empiretrader')) {
+  if (s.includes('cutter') || s.includes('clipper') || s.includes('courier') || s.includes('imperial') || s.includes('empiretrader') || s.includes('corsair')) {
     return { key: 'gutamaya', ...MANUFACTURERS['gutamaya'] };
   }
 
   // Core Dynamics
-  if (s.includes('corvette') || s.includes('gunship') || s.includes('dropship') || s.includes('assaultship') || s.includes('vulture') || s.includes('eagle')) {
+  if (s.includes('corvette') || s.includes('gunship') || s.includes('dropship') || s.includes('assaultship') || s.includes('vulture') || s.includes('eagle') || s.includes('kestrel')) {
     return { key: 'core-dynamics', ...MANUFACTURERS['core-dynamics'] };
   }
 
@@ -218,14 +218,14 @@ export function resolveManufacturer(shipType?: string | null): { key: string; na
   }
 
   // Zorgon Peterson
-  if (s.includes('ferdelance') || s.includes('fdl') || s.includes('mamba') || s.includes('hauler') || s.includes('adder')) {
+  if (s.includes('ferdelance') || s.includes('fdl') || s.includes('mamba') || s.includes('hauler') || s.includes('adder') || s.includes('mandalay') || s.includes('panther')) {
     return { key: 'zorgon-peterson', ...MANUFACTURERS['zorgon-peterson'] };
   }
 
   // Lakon
-  if (s.includes('type6') || s.includes('type7') || s.includes('type8') || s.includes('type9') || s.includes('type10') ||
-      s.includes('asp') || s.includes('diamondback') || s.includes('keelback') ||
-      s.includes('chieftain') || s.includes('crusader') || s.includes('challenger')) {
+  if (s.includes('type6') || s.includes('type7') || s.includes('type8') || s.includes('type9') || s.includes('type10') || s.includes('type11') ||
+      s.includes('asp') || s.includes('diamondback') || s.includes('keelback') || s.includes('independanttrader') || s.includes('independenttrader') ||
+      s.includes('chieftain') || s.includes('crusader') || s.includes('challenger') || s.includes('typex')) {
     return { key: 'lakon', ...MANUFACTURERS['lakon'] };
   }
 

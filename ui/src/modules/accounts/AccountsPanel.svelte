@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
-  import { credits, integer, ly } from '../../lib/format';
+  import { credits, formatShipName, integer, ly } from '../../lib/format';
   import { action, topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
   import ManufacturerIcon from '../../lib/icons/ManufacturerIcon.svelte';
@@ -370,7 +370,7 @@
                     >
                       {#each remoteShips as ship (ship.id)}
                         <option value={ship.id}>
-                          {ship.ship_type} {ship.name ? `«${ship.name}»` : ''} - {ship.system}
+                          {formatShipName(ship.ship_type)} {ship.name ? `«${ship.name}»` : ''} - {ship.system}
                         </option>
                       {/each}
                     </select>
@@ -390,12 +390,12 @@
                   <div class="active-ship-card">
                     <div class="ship-card-head">
                       <div class="ship-top">
-                        <span class="ship-type mono bold">{activeShip.ship_type}</span>
+                        <span class="ship-type mono bold">{formatShipName(activeShip.ship_type)}</span>
                         {#if activeShip.name}
                           <span class="ship-custom-name">«{activeShip.name}»</span>
                         {/if}
                       </div>
-                      <div class="ship-mfr" title={activeShip.ship_type}>
+                      <div class="ship-mfr" title={formatShipName(activeShip.ship_type)}>
                         <ManufacturerIcon shipType={activeShip.ship_type} size={20} />
                       </div>
                     </div>
@@ -417,12 +417,12 @@
                     <div class="ship-card" class:is-selected={ship.id === activeShip?.id}>
                       <div class="ship-card-head">
                         <div class="ship-top">
-                          <span class="ship-type mono bold">{ship.ship_type}</span>
+                          <span class="ship-type mono bold">{formatShipName(ship.ship_type)}</span>
                           {#if ship.name}
                             <span class="ship-custom-name">«{ship.name}»</span>
                           {/if}
                         </div>
-                        <div class="ship-mfr" title={ship.ship_type}>
+                        <div class="ship-mfr" title={formatShipName(ship.ship_type)}>
                           <ManufacturerIcon shipType={ship.ship_type} size={18} />
                         </div>
                       </div>

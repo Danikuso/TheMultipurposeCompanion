@@ -71,7 +71,10 @@
    "name": "Diamondback Explorer",
    "pad": "S",
    "source": "hecho del juego (pantalla de astillero), transcrito por TMC 2026-10-18 Sin verificar: se contrastara con los Loadouts del propietario mediante eval (Task 27).",
-   "verified": false
+   "verified": false,
+   "aliases": [
+    "diamondback_explorer"
+   ]
   },
   {
    "ship": "empire_eagle",
@@ -99,7 +102,11 @@
    "name": "Keelback",
    "pad": "M",
    "source": "hecho del juego (pantalla de astillero), transcrito por TMC 2026-10-18 Sin verificar: se contrastara con los Loadouts del propietario mediante eval (Task 27).",
-   "verified": false
+   "verified": false,
+   "aliases": [
+    "independent_trader",
+    "keelback"
+   ]
   },
   {
    "ship": "asp_scout",
@@ -183,7 +190,11 @@
    "name": "Python Mk II",
    "pad": "M",
    "source": "hecho del juego (pantalla de astillero), transcrito por TMC 2026-10-18 Sin verificar: se contrastara con los Loadouts del propietario mediante eval (Task 27).",
-   "verified": false
+   "verified": false,
+   "aliases": [
+    "python_mkii",
+    "pythonmkii"
+   ]
   },
   {
    "ship": "type9",
@@ -197,7 +208,12 @@
    "name": "Type-10 Defender",
    "pad": "L",
    "source": "hecho del juego (pantalla de astillero), transcrito por TMC 2026-10-18 Sin verificar: se contrastara con los Loadouts del propietario mediante eval (Task 27).",
-   "verified": false
+   "verified": false,
+   "aliases": [
+    "type10",
+    "type_10",
+    "type10_defender"
+   ]
   },
   {
    "ship": "anaconda",
@@ -246,7 +262,11 @@
    "name": "Krait Phantom",
    "pad": "M",
    "source": "hecho del juego (pantalla de astillero), transcrito por TMC 2026-10-18 Sin verificar: se contrastara con los Loadouts del propietario mediante eval (Task 27).",
-   "verified": false
+   "verified": false,
+   "aliases": [
+    "krait_phantom",
+    "kraitphantom"
+   ]
   },
   {
    "ship": "mandalay",

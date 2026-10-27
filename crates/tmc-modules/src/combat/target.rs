@@ -121,6 +121,7 @@ impl TargetTracker {
         let ship_name = ev
             .ship_localised
             .clone()
+            .filter(|s| !s.starts_with('$') && !s.ends_with(';'))
             .or_else(|| ship_pads().display_name(&key).map(str::to_owned));
         let subsystem = ev.subsystem.as_deref().map(|s| SubsystemView {
             kind: SubsystemKind::from_journal(s),

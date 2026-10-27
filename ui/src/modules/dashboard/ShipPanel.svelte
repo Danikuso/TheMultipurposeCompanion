@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { credits, ly, pct, integer } from '../../lib/format';
+  import { credits, ly, pct, integer, formatShipName } from '../../lib/format';
   import { t } from '../../lib/i18n';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
@@ -190,7 +190,7 @@
       <div class="hud-card cockpit-header">
         <div class="identity-col">
           <div class="ship-titles">
-            <h2 class="ship-type">{ship.ship_type_localised || ship.ship_type || '—'}</h2>
+            <h2 class="ship-type">{formatShipName(ship.ship_type, ship.ship_type_localised)}</h2>
             {#if ship.name || ship.ident}
               <span class="ship-name">
                 {ship.name ?? ''}

@@ -124,3 +124,6 @@ export function relativeAge(iso: string | null | undefined, nowMs: number | null
   if (secs < 86400) return rtf.format(-Math.floor(secs / 3600), 'hour');
   return rtf.format(-Math.floor(secs / 86400), 'day');
 }
+
+export { formatShipName } from './ships';
+

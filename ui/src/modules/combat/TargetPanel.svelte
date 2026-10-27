@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
-  import { credits, pct } from '../../lib/format';
+  import { credits, formatShipName, pct } from '../../lib/format';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
   import ManufacturerIcon from '../../lib/icons/ManufacturerIcon.svelte';
@@ -50,7 +50,7 @@
     <div class="head">
       <div>
         <div class="target-title-row">
-          <strong class="ship">{tgt.ship_name ?? '—'}</strong>
+          <strong class="ship">{formatShipName(tgt.ship_key, tgt.ship_name)}</strong>
           <ManufacturerIcon shipType={tgt.ship_name ?? tgt.ship_key} size={16} />
         </div>
         {#if tgt.pilot}<div class="dim">{tgt.pilot}{tgt.rank ? ` · ${tgt.rank}` : ''}</div>{/if}
