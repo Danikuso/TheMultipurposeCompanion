@@ -50,6 +50,7 @@ accounts-capi-status-linked = Offiziell verknüpftes Konto
 accounts-capi-status-unlinked = Nicht verknüpft
 accounts-capi-remote-fleet-title = Gespeicherte Remote-Flotte
 accounts-capi-remote-fleet-empty = Keine gespeicherten Schiffe in entfernten Werften gefunden.
+accounts-capi-empty-hint = Frontier aktualisiert den Schiffs-Snapshot, wenn Sie im Spiel andocken oder die Werft öffnen (Live 4.0/Odyssey). Wenn Sie Schiffe in anderen Systemen haben, starten Sie Elite Dangerous, docken Sie an einer Station an und klicken Sie auf „Flotte aktualisieren“.
 accounts-capi-remote-fleet-count = Schiffe in Werften:
 accounts-capi-btn-link = Mit Frontier Store verknüpfen
 accounts-capi-btn-opening = Browser wird geöffnet...

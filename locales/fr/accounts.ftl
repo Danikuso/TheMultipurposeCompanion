@@ -50,6 +50,7 @@ accounts-capi-status-linked = Compte officiellement lié
 accounts-capi-status-unlinked = Non lié
 accounts-capi-remote-fleet-title = Flotte distante stockée
 accounts-capi-remote-fleet-empty = Aucun vaisseau stocké dans les chantiers distants.
+accounts-capi-empty-hint = Frontier met à jour la capture des vaisseaux lorsque vous vous amarrez ou ouvrez le chantier naval en jeu (Live 4.0/Odyssey). Si vous avez des vaisseaux dans d'autres systèmes, lancez Elite Dangerous, amarrez-vous et cliquez sur « Actualiser la flotte ».
 accounts-capi-remote-fleet-count = Vaisseaux dans les chantiers :
 accounts-capi-btn-link = Lier avec Frontier Store
 accounts-capi-btn-opening = Ouverture du navigateur...

@@ -467,6 +467,60 @@ impl ActionHost for AppActions {
                     Err(e) => return Err(ActionError::Failed(e.to_string())),
                 }
             }
+            "frontier.fleet" => {
+                let capi = self.capi_service.as_ref().ok_or(ActionError::NotFound)?;
+                let capi_cloned = capi.clone();
+                let events = self.runtime.as_ref().map(|r| r.events.clone());
+
+                let result = {
+                    let handle = tokio::runtime::Handle::try_current();
+                    match handle {
+                        Ok(h)
+                            if h.runtime_flavor() == tokio::runtime::RuntimeFlavor::MultiThread =>
+                        {
+                            tokio::task::block_in_place(|| {
+                                h.block_on(async { capi_cloned.fetch_profile().await })
+                            })
+                        }
+                        _ => std::thread::spawn(move || {
+                            let rt = tokio::runtime::Builder::new_current_thread()
+                                .enable_all()
+                                .build()
+                                .unwrap();
+                            rt.block_on(async { capi_cloned.fetch_profile().await })
+                        })
+                        .join()
+                        .unwrap_or_else(|_| {
+                            Err(crate::capi_service::CapiError::Malformed(
+                                "thread-panicked".into(),
+                            ))
+                        }),
+                    }
+                };
+
+                match result {
+                    Ok(profile) => {
+                        let count = profile.remote_ships.len();
+                        if let Some(events) = events {
+                            let _ = events.try_send(SourceEvent::Action {
+                                name: "accounts.set_settings".to_string(),
+                                args: serde_json::json!({
+                                    "capi_remote_ships_count": count,
+                                    "capi_commander_name": profile.commander_name,
+                                }),
+                            });
+                        }
+                        return Ok(json!({
+                            "ok": true,
+                            "ships": profile.remote_ships,
+                            "count": count,
+                            "commander_name": profile.commander_name,
+                            "credits": profile.credits,
+                        }));
+                    }
+                    Err(e) => return Err(ActionError::Failed(e.to_string())),
+                }
+            }
             "inara.test_connection" => {
                 let inara = self.inara_service.as_ref().ok_or(ActionError::NotFound)?;
                 let api_key = args.get("api_key").and_then(|k| k.as_str());

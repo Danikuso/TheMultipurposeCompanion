@@ -5,7 +5,9 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tmc_model::accounts::RemoteShip;
 use tmc_net::Transport;
-pub use tmc_net::capi::{CapiClient, CapiError, CapiToken, build_auth_url, generate_pkce_pair};
+pub use tmc_net::capi::{
+    CapiClient, CapiError, CapiProfile, CapiToken, build_auth_url, generate_pkce_pair,
+};
 use tmc_store::{AccountCredentialRecord, Store, StoreError};
 
 const PENDING_STATE_TTL: Duration = Duration::from_secs(600);
@@ -128,21 +130,26 @@ impl CapiService {
         Ok(refreshed)
     }
 
-    /// Consulta la flota remota de naves del comandante vía `/profile`. Refresca automáticamente si el token caducó.
-    pub async fn fetch_fleet(&self) -> Result<Vec<RemoteShip>, CapiError> {
+    /// Consulta el perfil completo del comandante vía `/profile`. Refresca automáticamente si el token caducó.
+    pub async fn fetch_profile(&self) -> Result<CapiProfile, CapiError> {
         let token = self
             .get_token()?
             .ok_or_else(|| CapiError::Unauthorized(401, "no-session".into()))?;
 
         match self.client.fetch_profile(&token.access_token).await {
-            Ok(profile) => Ok(profile.remote_ships),
+            Ok(profile) => Ok(profile),
             Err(CapiError::Unauthorized(_, _)) => {
                 let refreshed = self.refresh_session().await?;
                 let profile = self.client.fetch_profile(&refreshed.access_token).await?;
-                Ok(profile.remote_ships)
+                Ok(profile)
             }
             Err(e) => Err(e),
         }
+    }
+
+    /// Consulta la flota remota de naves del comandante vía `/profile`. Refresca automáticamente si el token caducó.
+    pub async fn fetch_fleet(&self) -> Result<Vec<RemoteShip>, CapiError> {
+        self.fetch_profile().await.map(|p| p.remote_ships)
     }
 
     /// Elimina la sesión de Frontier de la base de datos (desvincular cuenta).

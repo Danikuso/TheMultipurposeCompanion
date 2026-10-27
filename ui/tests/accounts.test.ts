@@ -132,9 +132,12 @@ test('AccountsPanel renders connected CAPI status with remote fleet list', () =>
   });
 
   expect(q('accounts-capi-card')).toBeTruthy();
+  expect(q('accounts-capi-card')?.classList.contains('capi-card')).toBe(true);
   expect(q('capi-unlink-btn')).toBeTruthy();
   expect(q('capi-refresh-fleet-btn')).toBeTruthy();
   expect(q('capi-remote-fleet-list')).toBeTruthy();
+  expect(q('accounts-capi-card')?.textContent).toContain('CMDR Danikuso');
+  expect(q('accounts-capi-card')?.textContent).toContain('No hay naves almacenadas en astilleros remotos');
 });
 
 test('AccountsPanel remote fleet dropdown selector and accordion work compactly by default', () => {

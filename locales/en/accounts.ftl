@@ -50,6 +50,7 @@ accounts-capi-status-linked = Officially linked account
 accounts-capi-status-unlinked = Not linked
 accounts-capi-remote-fleet-title = Remote Stored Fleet
 accounts-capi-remote-fleet-empty = No stored ships found in remote shipyards.
+accounts-capi-empty-hint = Frontier updates its ship snapshot when you dock or open the Shipyard in-game (Live 4.0/Odyssey). If you have ships in other systems, enter Elite Dangerous, dock at any station, and click 'Refresh fleet'.
 accounts-capi-remote-fleet-count = Ships in shipyards:
 accounts-capi-btn-link = Link with Frontier Store
 accounts-capi-btn-opening = Opening browser...

@@ -50,6 +50,7 @@ accounts-capi-status-linked = Conta oficialmente vinculada
 accounts-capi-status-unlinked = Não vinculada
 accounts-capi-remote-fleet-title = Frota Remota Armazenada
 accounts-capi-remote-fleet-empty = Nenhuma nave armazenada em estaleiros remotos encontrada.
+accounts-capi-empty-hint = A Frontier atualiza o snapshot das naves quando você atraca ou abre o Estaleiro no jogo (Live 4.0/Odyssey). Se tiver naves em outros sistemas, entre no Elite Dangerous, atraque em qualquer estação e clique em «Atualizar frota».
 accounts-capi-remote-fleet-count = Naves em estaleiros:
 accounts-capi-btn-link = Vincular com Frontier Store
 accounts-capi-btn-opening = Abrindo navegador...

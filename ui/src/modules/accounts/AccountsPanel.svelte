@@ -17,6 +17,7 @@
   let syncingEdsm = $state(false);
   let syncingInara = $state(false);
   let loadingFleet = $state(false);
+  let fleetFetched = $state(false);
   let loginOpening = $state(false);
   let showManualCapi = $state(false);
   let manualCapiInput = $state('');
@@ -24,8 +25,14 @@
   let manualCapiFeedback = $state<string | null>(null);
   let remoteShips = $state<RemoteShip[]>([]);
   let selectedShipId = $state<number | null>(null);
-  let showFleetGrid = $state(false);
   const activeShip = $derived(remoteShips.find((s) => s.id === selectedShipId) ?? remoteShips[0]);
+
+  $effect(() => {
+    if (status?.capi?.connected && !fleetFetched && !loadingFleet) {
+      fleetFetched = true;
+      fetchFleet();
+    }
+  });
 
   async function copyUploaderId() {
     const id = status?.eddn?.uploader_id;
@@ -141,6 +148,7 @@
   async function unlinkFrontier() {
     await action('frontier.logout');
     remoteShips = [];
+    fleetFetched = false;
   }
 
   async function submitManualCapi() {
@@ -154,6 +162,7 @@
       if (res?.ok) {
         manualCapiFeedback = t('accounts-capi-manual-success');
         manualCapiInput = '';
+        fetchFleet();
         setTimeout(() => {
           showManualCapi = false;
           manualCapiFeedback = null;
@@ -408,28 +417,45 @@
         </div>
       </div>
 
-      <!-- 4. TARJETA FRONTIER CAPI -->
-      <div class="hud-card glass-card" data-testid="accounts-capi-card">
-        <div class="card-head">
+      <!-- 4. TARJETA FRONTIER CAPI (EXPANDIDA A TODA LA FILA) -->
+      <div class="hud-card glass-card capi-card" data-testid="accounts-capi-card">
+        <div class="card-head capi-card-head">
           <div class="service-identity">
             <span class="service-icon">🚀</span>
             <div class="service-titles">
-              <h4 class="service-name">{t('accounts-capi-title')}</h4>
+              <div class="capi-title-row">
+                <h4 class="service-name">{t('accounts-capi-title')}</h4>
+                <span class="badge" class:badge-green={status?.capi?.connected} class:badge-amber={!status?.capi?.connected}>
+                  {status?.capi?.connected ? t('accounts-capi-status-linked') : t('accounts-capi-status-unlinked')}
+                </span>
+                {#if status?.capi?.connected && status?.capi?.commander_name}
+                  <span class="cmdr-pill mono">CMDR {status.capi.commander_name}</span>
+                {/if}
+              </div>
               <p class="sub">{t('accounts-capi-desc')}</p>
             </div>
           </div>
-          <span class="badge" class:badge-green={status?.capi?.connected} class:badge-amber={!status?.capi?.connected}>
-            {status?.capi?.connected ? t('accounts-capi-status-linked') : t('accounts-capi-status-unlinked')}
-          </span>
+          {#if status?.capi?.connected}
+            <div class="btn-group capi-actions">
+              <button class="btn-outline" onclick={fetchFleet} disabled={loadingFleet} data-testid="capi-refresh-fleet-btn">
+                {loadingFleet ? '...' : t('accounts-capi-btn-refresh-fleet')}
+              </button>
+              <button class="btn-danger" onclick={unlinkFrontier} data-testid="capi-unlink-btn">
+                {t('accounts-capi-btn-unlink')}
+              </button>
+            </div>
+          {/if}
         </div>
 
         <div class="card-body">
           {#if !status?.capi?.connected}
             <div class="link-prompt">
               <p class="sub">{t('accounts-capi-auth-notice')}</p>
-              <button class="btn-primary" onclick={startFrontierLogin} disabled={loginOpening} data-testid="capi-link-btn">
-                {loginOpening ? t('accounts-capi-btn-opening') : t('accounts-capi-btn-link')}
-              </button>
+              <div class="btn-group-row">
+                <button class="btn-primary" onclick={startFrontierLogin} disabled={loginOpening} data-testid="capi-link-btn">
+                  {loginOpening ? t('accounts-capi-btn-opening') : t('accounts-capi-btn-link')}
+                </button>
+              </div>
 
               <div class="capi-manual-row">
                 <button
@@ -468,103 +494,115 @@
               </div>
             </div>
           {:else}
-            <div class="connected-row">
-              <span class="sub">{t('accounts-capi-remote-fleet-count')} <b class="mono cyan">{status?.capi?.remote_ships_count ?? remoteShips.length}</b></span>
-              <div class="btn-group">
-                <button class="btn-outline" onclick={fetchFleet} disabled={loadingFleet} data-testid="capi-refresh-fleet-btn">
-                  {loadingFleet ? '...' : t('accounts-capi-btn-refresh-fleet')}
-                </button>
-                <button class="btn-danger" onclick={unlinkFrontier} data-testid="capi-unlink-btn">
-                  {t('accounts-capi-btn-unlink')}
-                </button>
-              </div>
-            </div>
-
             <!-- Flota remota -->
-            <div class="fleet-list" data-testid="capi-remote-fleet-list">
+            <div class="fleet-container" data-testid="capi-remote-fleet-list">
               {#if remoteShips.length === 0}
-                <p class="muted sub">{t('accounts-capi-remote-fleet-empty')}</p>
-              {:else}
-                <div class="fleet-controls">
-                  <label class="compact-selector-label" for="remote-fleet-select">
-                    <span class="label-text">Nave ({remoteShips.length}):</span>
-                    <select
-                      id="remote-fleet-select"
-                      class="glass-select"
-                      data-testid="remote-fleet-select"
-                      value={selectedShipId ?? activeShip?.id ?? ''}
-                      onchange={(e) => (selectedShipId = Number(e.currentTarget.value))}
-                    >
-                      {#each remoteShips as ship (ship.id)}
-                        <option value={ship.id}>
-                          {formatShipName(ship.ship_type)} {ship.name ? `«${ship.name}»` : ''} - {ship.system}
-                        </option>
-                      {/each}
-                    </select>
-                  </label>
-
-                  <button
-                    type="button"
-                    class="glass-btn-secondary list-toggle-btn"
-                    data-testid="toggle-fleet-list"
-                    onclick={() => (showFleetGrid = !showFleetGrid)}
-                  >
-                    {showFleetGrid ? '▲ Ocultar lista' : `▼ Ver flota (${remoteShips.length})`}
-                  </button>
-                </div>
-
-                {#if activeShip}
-                  <div class="active-ship-card">
-                    <div class="ship-card-head">
-                      <div class="ship-top">
-                        <span class="ship-type mono bold">{formatShipName(activeShip.ship_type)}</span>
-                        {#if activeShip.name}
-                          <span class="ship-custom-name">«{activeShip.name}»</span>
-                        {/if}
-                      </div>
-                      <div class="ship-mfr" title={formatShipName(activeShip.ship_type)}>
-                        <ManufacturerIcon shipType={activeShip.ship_type} size={20} />
-                      </div>
+                <div class="capi-empty-state">
+                  <div class="capi-stats-bar">
+                    <div class="stat-item">
+                      <span class="sub">{t('accounts-capi-remote-fleet-count')}</span>
+                      <span class="mono cyan bold stat-val">{status?.capi?.remote_ships_count ?? 0}</span>
                     </div>
-                    <div class="ship-loc sub">
-                      <StationIcon size={14} />
-                      <span>{activeShip.station} ({activeShip.system})</span>
-                    </div>
-                    <div class="ship-meta sub mono">
-                      <span class="gold">{credits(activeShip.value)}</span>
-                      {#if activeShip.distance_ly != null}
-                        <span>{ly(activeShip.distance_ly)}</span>
-                      {/if}
+                    {#if status?.capi?.last_sync_time}
+                      <div class="stat-item">
+                        <span class="sub">{t('accounts-edsm-last-sync')}</span>
+                        <span class="mono stat-val">{status.capi.last_sync_time}</span>
+                      </div>
+                    {/if}
+                  </div>
+                  <div class="capi-info-box">
+                    <span class="info-icon">ℹ️</span>
+                    <div class="info-text">
+                      <p class="info-empty-title">{t('accounts-capi-remote-fleet-empty')}</p>
+                      <p class="info-empty-desc">{t('accounts-capi-empty-hint')}</p>
                     </div>
                   </div>
-                {/if}
+                </div>
+              {:else}
+                <div class="fleet-cockpit-layout">
+                  <!-- Columna izquierda: Nave seleccionada -->
+                  <div class="fleet-detail-col">
+                    <label class="compact-selector-label" for="remote-fleet-select">
+                      <span class="label-text">Nave ({remoteShips.length}):</span>
+                      <select
+                        id="remote-fleet-select"
+                        class="glass-select"
+                        data-testid="remote-fleet-select"
+                        value={selectedShipId ?? activeShip?.id ?? ''}
+                        onchange={(e) => (selectedShipId = Number(e.currentTarget.value))}
+                      >
+                        {#each remoteShips as ship (ship.id)}
+                          <option value={ship.id}>
+                            {formatShipName(ship.ship_type)} {ship.name ? `«${ship.name}»` : ''} - {ship.system}
+                          </option>
+                        {/each}
+                      </select>
+                    </label>
 
-                <div class="fleet-grid" class:is-collapsed={!showFleetGrid}>
-                  {#each remoteShips as ship (ship.id)}
-                    <div class="ship-card" class:is-selected={ship.id === activeShip?.id}>
-                      <div class="ship-card-head">
-                        <div class="ship-top">
-                          <span class="ship-type mono bold">{formatShipName(ship.ship_type)}</span>
-                          {#if ship.name}
-                            <span class="ship-custom-name">«{ship.name}»</span>
+                    {#if activeShip}
+                      <div class="active-ship-card">
+                        <div class="ship-card-head">
+                          <div class="ship-top">
+                            <span class="ship-type mono bold">{formatShipName(activeShip.ship_type)}</span>
+                            {#if activeShip.name}
+                              <span class="ship-custom-name">«{activeShip.name}»</span>
+                            {/if}
+                          </div>
+                          <div class="ship-mfr" title={formatShipName(activeShip.ship_type)}>
+                            <ManufacturerIcon shipType={activeShip.ship_type} size={24} />
+                          </div>
+                        </div>
+                        <div class="ship-loc sub">
+                          <StationIcon size={14} />
+                          <span>{activeShip.station} ({activeShip.system})</span>
+                        </div>
+                        <div class="ship-meta sub mono">
+                          <span class="gold">{credits(activeShip.value)}</span>
+                          {#if activeShip.distance_ly != null}
+                            <span>{ly(activeShip.distance_ly)}</span>
                           {/if}
                         </div>
-                        <div class="ship-mfr" title={formatShipName(ship.ship_type)}>
-                          <ManufacturerIcon shipType={ship.ship_type} size={18} />
-                        </div>
                       </div>
-                      <div class="ship-loc sub">
-                        <StationIcon size={13} />
-                        <span>{ship.station} ({ship.system})</span>
-                      </div>
-                      <div class="ship-meta sub mono">
-                        <span class="gold">{credits(ship.value)}</span>
-                        {#if ship.distance_ly != null}
-                          <span>{ly(ship.distance_ly)}</span>
-                        {/if}
-                      </div>
+                    {/if}
+                  </div>
+
+                  <!-- Columna derecha: Grid de naves almacenadas -->
+                  <div class="fleet-grid-col">
+                    <div class="fleet-grid-head">
+                      <span class="sub bold">{t('accounts-capi-remote-fleet-title')} ({remoteShips.length})</span>
+                      <span class="sub mono cyan">Haz clic para seleccionar</span>
                     </div>
-                  {/each}
+                    <div class="fleet-cards-grid">
+                      {#each remoteShips as ship (ship.id)}
+                        <button
+                          type="button"
+                          class="ship-card interactive-ship-card"
+                          class:is-selected={ship.id === activeShip?.id}
+                          onclick={() => (selectedShipId = ship.id)}
+                        >
+                          <div class="ship-card-head">
+                            <div class="ship-top">
+                              <span class="ship-type mono bold">{formatShipName(ship.ship_type)}</span>
+                              {#if ship.name}
+                                <span class="ship-custom-name">«{ship.name}»</span>
+                              {/if}
+                            </div>
+                            <div class="ship-mfr" title={formatShipName(ship.ship_type)}>
+                              <ManufacturerIcon shipType={ship.ship_type} size={18} />
+                            </div>
+                          </div>
+                          <div class="ship-loc sub">
+                            <StationIcon size={13} />
+                            <span>{ship.station}</span>
+                          </div>
+                          <div class="ship-meta sub mono">
+                            <span class="gold">{credits(ship.value)}</span>
+                            <span>{ship.system}</span>
+                          </div>
+                        </button>
+                      {/each}
+                    </div>
+                  </div>
                 </div>
               {/if}
             </div>
@@ -1045,26 +1083,137 @@
     transition: width 0.3s;
   }
 
-  /* Fleet list */
-  .connected-row {
+  /* CAPI Card & Full-Width layout */
+  .capi-card {
+    grid-column: 1 / -1;
+  }
+
+  .capi-card-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    gap: 16px;
+    flex-wrap: wrap;
   }
 
-  .btn-group {
+  .capi-title-row {
     display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 2px;
+  }
+
+  .capi-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .capi-empty-state {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 6px 0;
+  }
+
+  .capi-stats-bar {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .stat-item {
+    display: flex;
+    align-items: baseline;
     gap: 6px;
   }
 
-  .fleet-controls {
+  .stat-val {
+    font-size: 15px;
+  }
+
+  .capi-info-box {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 12px 16px;
+    background: rgba(0, 212, 178, 0.05);
+    border: 1px solid rgba(0, 212, 178, 0.2);
+    border-radius: 6px;
+  }
+
+  .info-icon {
+    font-size: 20px;
+    line-height: 1.2;
+    flex-shrink: 0;
+  }
+
+  .info-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .info-empty-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main, #e6f1ff);
+    margin: 0;
+  }
+
+  .info-empty-desc {
+    font-size: 12px;
+    color: var(--text-dim, #8fa3b8);
+    line-height: 1.45;
+    margin: 0;
+  }
+
+  /* Cockpit Fleet Layout (2 columns) */
+  .fleet-cockpit-layout {
+    display: grid;
+    grid-template-columns: minmax(320px, 360px) 1fr;
+    gap: 18px;
+    align-items: start;
+  }
+
+  @media (max-width: 860px) {
+    .fleet-cockpit-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .fleet-detail-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .fleet-grid-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .fleet-grid-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 8px;
-    margin-bottom: 8px;
-    flex-wrap: wrap;
+  }
+
+  .fleet-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 10px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 212, 178, 0.45) rgba(0, 0, 0, 0.2);
   }
 
   .compact-selector-label {
@@ -1073,8 +1222,7 @@
     gap: 6px;
     font-size: 12px;
     color: var(--hud-muted, #7ea0b8);
-    flex: 1;
-    min-width: 200px;
+    width: 100%;
   }
 
   .compact-selector-label .label-text {
@@ -1089,7 +1237,7 @@
     background: rgba(10, 16, 26, 0.9);
     border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.3));
     color: var(--hud-primary, #00e5ff);
-    padding: 4px 8px;
+    padding: 6px 10px;
     border-radius: 4px;
     font-size: 12px;
     outline: none;
@@ -1101,40 +1249,10 @@
     border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.3));
     border-left: 3px solid var(--hud-primary, #00e5ff);
     border-radius: 6px;
-    padding: 8px 12px;
+    padding: 10px 14px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    margin-bottom: 8px;
-  }
-
-  .list-toggle-btn {
-    background: rgba(15, 23, 42, 0.6);
-    border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.25));
-    color: var(--hud-text, #c9d7e5);
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .list-toggle-btn:hover {
-    background: rgba(0, 229, 255, 0.12);
-    border-color: var(--hud-primary, #00e5ff);
-    color: var(--hud-primary, #00e5ff);
-  }
-
-  .fleet-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-    max-height: 220px;
-    overflow-y: auto;
-  }
-
-  .fleet-grid.is-collapsed {
-    display: none;
+    gap: 6px;
   }
 
   .ship-card {
@@ -1145,6 +1263,27 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    color: inherit;
+  }
+
+  .interactive-ship-card {
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .interactive-ship-card:hover {
+    background: rgba(0, 212, 178, 0.08);
+    border-color: rgba(0, 212, 178, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .interactive-ship-card.is-selected {
+    background: rgba(0, 212, 178, 0.12);
+    border-color: #00d4b2;
+    box-shadow: 0 0 8px rgba(0, 212, 178, 0.25);
   }
 
   .ship-card-head {
@@ -1159,10 +1298,13 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 6px;
   }
 
   .ship-mfr {
-    opacity: 0.8;
+    opacity: 0.85;
+    display: flex;
+    align-items: center;
   }
 
   .ship-loc {
