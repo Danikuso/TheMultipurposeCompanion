@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Worker subproceso de sintesis neuronal KokoroTTS para TMC.
-Lee comandos JSON línea a línea por stdin y sintetiza audio usando kokoro-onnx y sounddevice.
+Worker subproceso de síntesis neuronal KokoroTTS para TMC.
+Optimizado para baja latencia con ONNX Runtime multinúcleo y reproducción fluida en sounddevice.
 """
 
 import sys
@@ -10,7 +10,6 @@ import json
 import traceback
 
 def get_model_paths():
-    # 1. Rutas estándar en AppData
     appdata_local = os.environ.get('LOCALAPPDATA', '')
     candidates = [
         os.path.join(appdata_local, 'TMC', 'models', 'kokoro'),
@@ -19,14 +18,16 @@ def get_model_paths():
         os.path.join(os.getcwd(), 'models', 'kokoro'),
     ]
     for c in candidates:
-        model = os.path.join(c, 'kokoro-v1.0.int8.onnx')
         voices = os.path.join(c, 'voices-v1.0.bin')
-        if os.path.exists(model) and os.path.exists(voices):
-            return model, voices
-        # Fallback para nombre sin int8 si existe
+        if not os.path.exists(voices):
+            continue
+        # Priorizar FP32 si existe (en x86-64 Zen 3 / Intel moderno ejecuta AVX2 FMA directo, 8x más rápido que int8)
         model_fp = os.path.join(c, 'kokoro-v1.0.onnx')
-        if os.path.exists(model_fp) and os.path.exists(voices):
+        if os.path.exists(model_fp):
             return model_fp, voices
+        model_int8 = os.path.join(c, 'kokoro-v1.0.int8.onnx')
+        if os.path.exists(model_int8):
+            return model_int8, voices
     return None, None
 
 def determine_lang(voice_name):
@@ -47,6 +48,7 @@ def determine_lang(voice_name):
 
 def main():
     try:
+        import onnxruntime as rt
         import kokoro_onnx
         import sounddevice as sd
     except ImportError as e:
@@ -61,7 +63,16 @@ def main():
         sys.exit(2)
 
     try:
-        kokoro = kokoro_onnx.Kokoro(model_path, voices_path)
+        # Configurar hilos e instrucciones aceleradas de CPU en ONNX Runtime
+        opts = rt.SessionOptions()
+        cpu_count = os.cpu_count() or 4
+        opts.intra_op_num_threads = min(8, max(2, cpu_count))
+        opts.inter_op_num_threads = 2
+        opts.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
+        opts.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL
+
+        sess = rt.InferenceSession(model_path, sess_options=opts, providers=['CPUExecutionProvider'])
+        kokoro = kokoro_onnx.Kokoro.from_session(sess, voices_path)
     except Exception as e:
         sys.stdout.write(json.dumps({"error": f"Failed to initialize Kokoro: {e}"}) + "\n")
         sys.stdout.flush()
@@ -96,6 +107,10 @@ def main():
             sys.stdout.flush()
 
         elif action == "quit":
+            try:
+                sd.stop()
+            except Exception:
+                pass
             break
 
         elif action == "speak":
@@ -112,12 +127,11 @@ def main():
             lang = determine_lang(voice)
             try:
                 samples, sample_rate = kokoro.create(text, voice=voice, speed=speed, lang=lang)
-                # Aplicar volumen (0..100 -> factor de ganancia 0.0 .. 1.0)
                 vol_factor = max(0.0, min(1.0, volume / 100.0))
                 audio = samples * vol_factor
+                # Detener audio previo y reproducir
+                sd.stop()
                 sd.play(audio, sample_rate)
-                # Esperar a que termine la reproducción para sincronización limpia
-                sd.wait()
                 sys.stdout.write(json.dumps({"status": "ok"}) + "\n")
                 sys.stdout.flush()
             except Exception as e:

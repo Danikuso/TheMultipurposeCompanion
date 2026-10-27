@@ -121,6 +121,7 @@ pub struct AppActions {
     save_path: Option<PathBuf>,
     settings_watch: Option<tokio::sync::watch::Sender<tmc_model::settings::ModuleSettings>>,
     capi_service: Option<Arc<crate::capi_service::CapiService>>,
+    kokoro_engine: Mutex<Option<tmc_tts::KokoroEngine>>,
 }
 
 impl AppActions {
@@ -141,6 +142,7 @@ impl AppActions {
             save_path: None,
             settings_watch: None,
             capi_service: None,
+            kokoro_engine: Mutex::new(None),
         }
     }
 
@@ -152,6 +154,7 @@ impl AppActions {
             save_path: None,
             settings_watch: None,
             capi_service: None,
+            kokoro_engine: Mutex::new(None),
         }
     }
 
@@ -370,9 +373,16 @@ impl ActionHost for AppActions {
                     });
 
                 let voices = match engine_kind {
-                    tmc_model::tts::TtsEngineKind::Kokoro => tmc_tts::KokoroEngine::new()
-                        .map(|e| e.available_voices())
-                        .unwrap_or_default(),
+                    tmc_model::tts::TtsEngineKind::Kokoro => {
+                        let mut guard = self.kokoro_engine.lock().unwrap();
+                        if guard.is_none() {
+                            *guard = tmc_tts::KokoroEngine::new().ok();
+                        }
+                        guard
+                            .as_ref()
+                            .map(|e| e.available_voices())
+                            .unwrap_or_default()
+                    }
                     tmc_model::tts::TtsEngineKind::Native => tmc_tts::NativeEngine::new()
                         .map(|e| e.available_voices())
                         .unwrap_or_default(),
@@ -427,11 +437,17 @@ impl ActionHost for AppActions {
 
                 match chosen_engine {
                     tmc_model::tts::TtsEngineKind::Kokoro => {
-                        let mut engine = tmc_tts::KokoroEngine::new()
-                            .map_err(|e| ActionError::Failed(e.to_string()))?;
-                        engine
-                            .speak(text, voice.as_deref(), volume, rate_f32)
-                            .map_err(|e| ActionError::Failed(e.to_string()))?;
+                        let mut guard = self.kokoro_engine.lock().unwrap();
+                        if guard.is_none() {
+                            *guard = tmc_tts::KokoroEngine::new().ok();
+                        }
+                        if let Some(ref mut engine) = *guard {
+                            engine
+                                .speak(text, voice.as_deref(), volume, rate_f32)
+                                .map_err(|e| ActionError::Failed(e.to_string()))?;
+                        } else {
+                            return Err(ActionError::Failed("KokoroEngine unavailable".into()));
+                        }
                     }
                     tmc_model::tts::TtsEngineKind::Native => {
                         let mut engine = tmc_tts::NativeEngine::new()
