@@ -34,6 +34,12 @@ accounts-inara-rate-limit-desc = Maximum 2 requests per 60 seconds (official quo
 accounts-inara-pending-batch = Queued batch events:
 accounts-inara-next-slot = Next slot available in:
 accounts-inara-btn-save = Save credentials
+accounts-inara-btn-test = Test connection
+accounts-inara-test-testing = Testing...
+accounts-inara-test-success = Successful connection with Inara
+accounts-inara-test-failed = Failed to connect to Inara
+accounts-inara-profile-link = View Inara profile
+accounts-inara-whitelist-badge = Official whitelist approved: The Multipurpose Companion (TMC)
 accounts-inara-btn-send = Send batch now
 
 accounts-capi-title = Frontier Companion API (CAPI)

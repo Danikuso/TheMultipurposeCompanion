@@ -7,7 +7,27 @@ use tmc_model::accounts::{InaraBatchEnvelope, InaraEvent, InaraHeader};
 use tmc_model::state::Galaxy;
 
 pub const INARA_API_URL: &str = "https://inara.cz/inapi/v1/";
+pub const INARA_APP_NAME: &str = "The Multipurpose Companion (TMC)";
 pub const MAX_EVENTS_PER_BATCH: usize = 50;
+
+/// Resultado de un evento individual retornado por InAPI v1.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct InaraEventResult {
+    #[serde(rename = "eventStatus")]
+    pub event_status: u16,
+    #[serde(rename = "eventStatusText", skip_serializing_if = "Option::is_none")]
+    pub event_status_text: Option<String>,
+    #[serde(rename = "eventData", skip_serializing_if = "Option::is_none")]
+    pub event_data: Option<Value>,
+}
+
+/// Respuesta completa analizada de InAPI v1.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct InaraResponse {
+    pub status: u16,
+    pub status_text: String,
+    pub events: Vec<InaraEventResult>,
+}
 
 /// Error de sincronización con Inara InAPI v1.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -35,6 +55,7 @@ pub enum InaraError {
 /// Cliente para la API de Inara.
 pub struct InaraClient {
     transport: Arc<dyn Transport>,
+    app_name: String,
     app_version: String,
 }
 
@@ -42,12 +63,18 @@ impl InaraClient {
     pub fn new(transport: Arc<dyn Transport>) -> Self {
         Self {
             transport,
+            app_name: INARA_APP_NAME.to_string(),
             app_version: env!("CARGO_PKG_VERSION").to_string(),
         }
     }
 
-    /// Construye y envía un lote de eventos a Inara InAPI v1.
-    pub async fn send_batch(
+    pub fn with_app_name(mut self, app_name: impl Into<String>) -> Self {
+        self.app_name = app_name.into();
+        self
+    }
+
+    /// Construye y envía eventos a Inara InAPI v1 devolviendo la respuesta estructurada.
+    pub async fn send_events(
         &self,
         api_key: &str,
         commander_name: Option<&str>,
@@ -55,7 +82,7 @@ impl InaraClient {
         galaxy: Galaxy,
         online: bool,
         enabled: bool,
-    ) -> Result<usize, InaraError> {
+    ) -> Result<InaraResponse, InaraError> {
         if galaxy != Galaxy::Live {
             return Err(InaraError::LegacyBlocked);
         }
@@ -73,11 +100,10 @@ impl InaraClient {
         }
 
         let chunk: Vec<InaraEvent<Value>> = events.into_iter().take(MAX_EVENTS_PER_BATCH).collect();
-        let events_count = chunk.len();
 
         let batch = InaraBatchEnvelope {
             header: InaraHeader {
-                app_name: "TMC".to_string(),
+                app_name: self.app_name.clone(),
                 app_version: self.app_version.clone(),
                 is_developed: false,
                 api_key: api_key.trim().to_string(),
@@ -95,14 +121,76 @@ impl InaraClient {
             .await
             .map_err(|e| InaraError::Transport(format!("{e:?}")))?;
 
-        parse_inara_response(&reply)?;
+        parse_inara_response(&reply)
+    }
 
-        Ok(events_count)
+    /// Construye y envía un lote de eventos a Inara InAPI v1.
+    pub async fn send_batch(
+        &self,
+        api_key: &str,
+        commander_name: Option<&str>,
+        events: Vec<InaraEvent<Value>>,
+        galaxy: Galaxy,
+        online: bool,
+        enabled: bool,
+    ) -> Result<usize, InaraError> {
+        let count = events.len().min(MAX_EVENTS_PER_BATCH);
+        self.send_events(api_key, commander_name, events, galaxy, online, enabled)
+            .await?;
+        Ok(count)
+    }
+
+    /// Consulta el perfil del comandante en Inara mediante `getCommanderProfile`.
+    pub async fn get_commander_profile(
+        &self,
+        api_key: &str,
+        commander_name: &str,
+        galaxy: Galaxy,
+        online: bool,
+        enabled: bool,
+    ) -> Result<Option<Value>, InaraError> {
+        let event = InaraEvent {
+            event_name: "getCommanderProfile".to_string(),
+            event_timestamp: chrono::Utc::now().to_rfc3339(),
+            event_data: serde_json::json!({
+                "searchName": commander_name
+            }),
+        };
+        let resp = self
+            .send_events(
+                api_key,
+                Some(commander_name),
+                vec![event],
+                galaxy,
+                online,
+                enabled,
+            )
+            .await?;
+        Ok(resp.events.into_iter().next().and_then(|e| e.event_data))
+    }
+
+    /// Consulta los Community Goals recientes en Inara mediante `getCommunityGoalsRecent`.
+    pub async fn get_community_goals(
+        &self,
+        api_key: &str,
+        galaxy: Galaxy,
+        online: bool,
+        enabled: bool,
+    ) -> Result<Option<Value>, InaraError> {
+        let event = InaraEvent {
+            event_name: "getCommunityGoalsRecent".to_string(),
+            event_timestamp: chrono::Utc::now().to_rfc3339(),
+            event_data: serde_json::json!([]),
+        };
+        let resp = self
+            .send_events(api_key, None, vec![event], galaxy, online, enabled)
+            .await?;
+        Ok(resp.events.into_iter().next().and_then(|e| e.event_data))
     }
 }
 
 /// Analiza la respuesta de Inara InAPI v1.
-fn parse_inara_response(reply: &HttpReply) -> Result<(), InaraError> {
+fn parse_inara_response(reply: &HttpReply) -> Result<InaraResponse, InaraError> {
     if reply.status == 429 {
         return Err(InaraError::RateLimited(
             "Límite de 2 req/min superado".into(),
@@ -132,7 +220,32 @@ fn parse_inara_response(reply: &HttpReply) -> Result<(), InaraError> {
         .to_string();
 
     match status {
-        200 | 202 => Ok(()),
+        200 | 202 => {
+            let events_vec = val
+                .get("events")
+                .and_then(|e| e.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .map(|ev| InaraEventResult {
+                            event_status: ev
+                                .get("eventStatus")
+                                .and_then(|s| s.as_u64())
+                                .unwrap_or(200) as u16,
+                            event_status_text: ev
+                                .get("eventStatusText")
+                                .and_then(|t| t.as_str())
+                                .map(ToString::to_string),
+                            event_data: ev.get("eventData").cloned(),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+            Ok(InaraResponse {
+                status,
+                status_text,
+                events: events_vec,
+            })
+        }
         400 => Err(InaraError::ApiError(status, status_text)),
         403 => Err(InaraError::Unauthorized(status, status_text)),
         429 => Err(InaraError::RateLimited(status_text)),
@@ -287,9 +400,98 @@ mod tests {
         let posted = transport.posted_json.lock().unwrap();
         assert_eq!(posted.len(), 1);
         assert_eq!(posted[0].0, INARA_API_URL);
-        assert!(posted[0].1.contains("\"appName\":\"TMC\""));
+        assert!(
+            posted[0]
+                .1
+                .contains("\"appName\":\"The Multipurpose Companion (TMC)\"")
+        );
         assert!(posted[0].1.contains("\"APIkey\":\"inara_key_xyz\""));
         assert!(posted[0].1.contains("\"commanderName\":\"Danikuso\""));
+    }
+
+    #[tokio::test]
+    async fn get_commander_profile_parses_response() {
+        let reply_json = serde_json::json!({
+            "header": {
+                "eventStatus": 200,
+                "eventStatusText": "OK"
+            },
+            "events": [
+                {
+                    "eventStatus": 200,
+                    "eventData": {
+                        "userID": 12345,
+                        "userName": "Danikuso",
+                        "commanderName": "Danikuso",
+                        "inaraURL": "https://inara.cz/elite/cmdr/12345/"
+                    }
+                }
+            ]
+        });
+
+        let transport = Arc::new(MockTransport::new(vec![Ok(HttpReply {
+            status: 200,
+            body: reply_json.to_string(),
+        })]));
+        let client = InaraClient::new(transport.clone());
+
+        let profile = client
+            .get_commander_profile("key_123", "Danikuso", Galaxy::Live, true, true)
+            .await
+            .unwrap()
+            .expect("profile data");
+
+        assert_eq!(profile["userName"], "Danikuso");
+        assert_eq!(profile["inaraURL"], "https://inara.cz/elite/cmdr/12345/");
+
+        let posted = transport.posted_json.lock().unwrap();
+        assert!(
+            posted[0]
+                .1
+                .contains("\"eventName\":\"getCommanderProfile\"")
+        );
+        assert!(posted[0].1.contains("\"searchName\":\"Danikuso\""));
+    }
+
+    #[tokio::test]
+    async fn get_community_goals_parses_response() {
+        let reply_json = serde_json::json!({
+            "header": {
+                "eventStatus": 200,
+                "eventStatusText": "OK"
+            },
+            "events": [
+                {
+                    "eventStatus": 200,
+                    "eventData": [
+                        {
+                            "communityGoalName": "Protect Traders in Lave",
+                            "starsystemName": "Lave"
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let transport = Arc::new(MockTransport::new(vec![Ok(HttpReply {
+            status: 200,
+            body: reply_json.to_string(),
+        })]));
+        let client = InaraClient::new(transport.clone());
+
+        let cgs = client
+            .get_community_goals("key_123", Galaxy::Live, true, true)
+            .await
+            .unwrap()
+            .expect("cgs data");
+
+        assert_eq!(cgs[0]["communityGoalName"], "Protect Traders in Lave");
+        let posted = transport.posted_json.lock().unwrap();
+        assert!(
+            posted[0]
+                .1
+                .contains("\"eventName\":\"getCommunityGoalsRecent\"")
+        );
     }
 
     #[tokio::test]

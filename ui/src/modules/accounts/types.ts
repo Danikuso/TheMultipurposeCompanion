@@ -20,6 +20,8 @@ export interface InaraStatus {
   enabled: boolean;
   has_key: boolean;
   commander_name: string | null;
+  inara_url?: string | null;
+  verified?: boolean;
   last_sync_time: string | null;
   last_error: string | null;
   pending_events: number;

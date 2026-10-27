@@ -167,6 +167,20 @@ impl Module for AccountsModule {
                     if let Some(inara_key) = args.get("inara_has_key").and_then(|v| v.as_bool()) {
                         self.status.inara.has_key = inara_key;
                     }
+                    if let Some(inara_url) = args.get("inara_url").and_then(|v| v.as_str()) {
+                        self.status.inara.inara_url = Some(inara_url.to_string());
+                    }
+                    if let Some(inara_ver) = args.get("inara_verified").and_then(|v| v.as_bool()) {
+                        self.status.inara.verified = inara_ver;
+                    }
+                    if let Some(inara_cmdr) =
+                        args.get("inara_commander_name").and_then(|v| v.as_str())
+                    {
+                        self.status.inara.commander_name = Some(inara_cmdr.to_string());
+                    }
+                    if let Some(inara_err) = args.get("inara_last_error").and_then(|v| v.as_str()) {
+                        self.status.inara.last_error = Some(inara_err.to_string());
+                    }
                     if let Some(capi_en) = args.get("capi_enabled").and_then(|v| v.as_bool()) {
                         self.status.capi.configured = capi_en;
                     }

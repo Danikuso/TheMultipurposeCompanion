@@ -58,11 +58,40 @@
     await action('accounts.set_settings', { inara_enabled: !status?.inara?.enabled });
   }
 
+  let testingInara = $state(false);
+  let inaraTestFeedback = $state<string | null>(null);
+
+  async function testInaraConnection() {
+    testingInara = true;
+    inaraTestFeedback = null;
+    try {
+      const payload: Record<string, string> = {};
+      if (inaraKey.trim()) {
+        payload.api_key = inaraKey.trim();
+      }
+      const res = (await action('inara.test_connection', payload)) as { ok?: boolean } | undefined;
+      if (res && res.ok) {
+        inaraTestFeedback = t('accounts-inara-test-success');
+        if (inaraKey.trim()) {
+          inaraKey = '';
+        }
+      } else {
+        inaraTestFeedback = t('accounts-inara-test-failed');
+      }
+    } catch {
+      inaraTestFeedback = t('accounts-inara-test-failed');
+    } finally {
+      testingInara = false;
+      setTimeout(() => {
+        inaraTestFeedback = null;
+      }, 5000);
+    }
+  }
+
   async function saveInaraKey() {
     if (!inaraKey.trim()) return;
-    await action('accounts.set_settings', {
-      inara_has_key: true,
-      inara_enabled: true,
+    await action('inara.save_key', {
+      api_key: inaraKey.trim(),
     });
     inaraKey = '';
   }
@@ -273,8 +302,22 @@
             <span class="badge" class:badge-green={status?.inara?.has_key} class:badge-amber={!status?.inara?.has_key}>
               {status?.inara?.has_key ? t('accounts-edsm-status-configured') : t('accounts-edsm-status-pending')}
             </span>
+            <span class="badge badge-green" data-testid="inara-whitelist-badge">
+              🛡️ {t('accounts-inara-whitelist-badge')}
+            </span>
             {#if status?.inara?.commander_name}
               <span class="cmdr-pill mono">CMDR {status.inara.commander_name}</span>
+            {/if}
+            {#if status?.inara?.inara_url}
+              <a
+                href={status.inara.inara_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inara-link mono"
+                data-testid="inara-profile-link"
+              >
+                🌐 {t('accounts-inara-profile-link')}
+              </a>
             {/if}
           </div>
 
@@ -295,7 +338,18 @@
               <button class="action-btn" onclick={saveInaraKey} data-testid="inara-save-btn">
                 {t('accounts-inara-btn-save')}
               </button>
+              <button
+                class="action-btn btn-secondary"
+                onclick={testInaraConnection}
+                disabled={testingInara}
+                data-testid="inara-test-btn"
+              >
+                {testingInara ? t('accounts-inara-test-testing') : t('accounts-inara-btn-test')}
+              </button>
             </div>
+            {#if inaraTestFeedback}
+              <p class="test-feedback mono" data-testid="inara-test-feedback">{inaraTestFeedback}</p>
+            {/if}
           </div>
 
           <!-- Medidor de 2 peticiones/minuto -->
@@ -767,6 +821,42 @@
     background: transparent;
     color: #cbd5e1;
     border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+
+  .inara-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    background: rgba(0, 229, 255, 0.12);
+    border: 1px solid rgba(0, 229, 255, 0.35);
+    color: #00e5ff;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .inara-link:hover {
+    background: rgba(0, 229, 255, 0.25);
+    border-color: #00e5ff;
+  }
+
+  .test-feedback {
+    font-size: 11px;
+    color: #00e5ff;
+    margin: 4px 0 0 0;
   }
 
   .btn-danger {

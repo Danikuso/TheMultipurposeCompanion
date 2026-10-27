@@ -54,6 +54,8 @@ test('AccountsPanel renders privacy notice banner and 4 glass cards', () => {
         enabled: true,
         has_key: true,
         commander_name: 'Danikuso',
+        inara_url: 'https://inara.cz/elite/cmdr/12345/',
+        verified: true,
         last_sync_time: '2026-10-23T20:10:00Z',
         last_error: null,
         pending_events: 5,
@@ -90,9 +92,14 @@ test('AccountsPanel renders privacy notice banner and 4 glass cards', () => {
 
   // 4. Tarjeta Inara
   expect(q('accounts-inara-card')).toBeTruthy();
+  expect(q('inara-whitelist-badge')).toBeTruthy();
+  expect(q('inara-whitelist-badge')?.textContent).toContain('The Multipurpose Companion (TMC)');
   expect(q('inara-rate-meter')).toBeTruthy();
   expect(q('inara-rate-meter')?.textContent).toContain('2 req / 60s');
+  expect(q('inara-test-btn')).toBeTruthy();
   expect(q('inara-send-btn')).toBeTruthy();
+  expect(q('inara-profile-link')).toBeTruthy();
+  expect((q('inara-profile-link') as HTMLAnchorElement)?.href).toContain('inara.cz/elite/cmdr/12345/');
 
   // 5. Tarjeta Frontier CAPI (sin vincular)
   expect(q('accounts-capi-card')).toBeTruthy();

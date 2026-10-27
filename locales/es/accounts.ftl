@@ -34,6 +34,12 @@ accounts-inara-rate-limit-desc = Máximo 2 peticiones cada 60 segundos (cuota of
 accounts-inara-pending-batch = Eventos pendientes en lote:
 accounts-inara-next-slot = Próximo envío disponible en:
 accounts-inara-btn-save = Guardar credenciales
+accounts-inara-btn-test = Probar conexión
+accounts-inara-test-testing = Probando...
+accounts-inara-test-success = Conexión exitosa con Inara
+accounts-inara-test-failed = Error al conectar con Inara
+accounts-inara-profile-link = Ver perfil en Inara
+accounts-inara-whitelist-badge = Whitelist oficial aprobada: The Multipurpose Companion (TMC)
 accounts-inara-btn-send = Transmitir lote ahora
 
 accounts-capi-title = Frontier Companion API (CAPI)

@@ -80,6 +80,10 @@ pub struct InaraStatus {
     pub enabled: bool,
     pub has_key: bool,
     pub commander_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inara_url: Option<String>,
+    #[serde(default)]
+    pub verified: bool,
     pub last_sync_time: Option<String>,
     pub last_error: Option<String>,
     pub pending_events: u32,

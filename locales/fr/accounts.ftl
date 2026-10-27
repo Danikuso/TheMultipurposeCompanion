@@ -34,6 +34,12 @@ accounts-inara-rate-limit-desc = Maximum 2 requêtes toutes les 60 secondes (quo
 accounts-inara-pending-batch = Événements en attente dans le lot :
 accounts-inara-next-slot = Prochain créneau disponible dans :
 accounts-inara-btn-save = Enregistrer les identifiants
+accounts-inara-btn-test = Tester la connexion
+accounts-inara-test-testing = Test en cours...
+accounts-inara-test-success = Connexion réussie avec Inara
+accounts-inara-test-failed = Échec de la connexion à Inara
+accounts-inara-profile-link = Voir le profil Inara
+accounts-inara-whitelist-badge = Liste blanche officielle approuvée: The Multipurpose Companion (TMC)
 accounts-inara-btn-send = Transmettre le lot maintenant
 
 accounts-capi-title = Frontier Companion API (CAPI)

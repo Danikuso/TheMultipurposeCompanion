@@ -405,6 +405,25 @@ async fn start_inner(
         transport.clone(),
         None,
     ));
+    let inara_service = Arc::new(crate::inara_service::InaraService::new(
+        store.clone(),
+        transport.clone(),
+    ));
+
+    // Si hay una clave API de Inara guardada en SQLite, activar el estado en el módulo accounts
+    if let Some(_key) = inara_service.get_saved_key() {
+        let _ = core
+            .events
+            .send(SourceEvent::Action {
+                name: "accounts.set_settings".to_string(),
+                args: serde_json::json!({
+                    "inara_has_key": true,
+                    "inara_enabled": true,
+                }),
+            })
+            .await;
+    }
+
     let server = serve(
         server_cfg,
         core.clone(),
@@ -413,7 +432,8 @@ async fn start_inner(
             AppActions::with_runtime(config, core.events.clone(), online, net)
                 .with_clipboard(clipboard.clone())
                 .with_settings_watch(settings_tx)
-                .with_capi_service(capi_service),
+                .with_capi_service(capi_service)
+                .with_inara_service(inara_service),
         ),
     )
     .await?;

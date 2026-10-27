@@ -34,6 +34,12 @@ accounts-inara-rate-limit-desc = Maximal 2 Anfragen alle 60 Sekunden (offizielle
 accounts-inara-pending-batch = Ausstehende Stapelereignisse:
 accounts-inara-next-slot = Nächster Slot verfügbar in:
 accounts-inara-btn-save = Anmeldedaten speichern
+accounts-inara-btn-test = Verbindung testen
+accounts-inara-test-testing = Wird getestet...
+accounts-inara-test-success = Verbindung zu Inara erfolgreich
+accounts-inara-test-failed = Verbindung zu Inara fehlgeschlagen
+accounts-inara-profile-link = Inara-Profil ansehen
+accounts-inara-whitelist-badge = Offizielle Whitelist genehmigt: The Multipurpose Companion (TMC)
 accounts-inara-btn-send = Stapel jetzt senden
 
 accounts-capi-title = Frontier Companion API (CAPI)

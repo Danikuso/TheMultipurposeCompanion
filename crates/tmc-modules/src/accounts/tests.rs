@@ -164,4 +164,25 @@ fn live_events_update_counters_and_timestamps() {
     let changed_sync = module.on_event(&sync_now, &state, &mut ctx);
     assert!(changed_sync.contains(TOPIC_STATUS));
     assert_eq!(module.status().inara.pending_events, 0);
+
+    // 6. Configurar inara_url y verificación
+    let set_inara_meta = SourceEvent::Action {
+        name: "accounts.set_settings".to_string(),
+        args: json!({
+            "inara_url": "https://inara.cz/elite/cmdr/12345/",
+            "inara_verified": true,
+            "inara_commander_name": "CMDR Artie",
+        }),
+    };
+    let changed_meta = module.on_event(&set_inara_meta, &state, &mut ctx);
+    assert!(changed_meta.contains(TOPIC_STATUS));
+    assert_eq!(
+        module.status().inara.inara_url.as_deref(),
+        Some("https://inara.cz/elite/cmdr/12345/")
+    );
+    assert!(module.status().inara.verified);
+    assert_eq!(
+        module.status().inara.commander_name.as_deref(),
+        Some("CMDR Artie")
+    );
 }
