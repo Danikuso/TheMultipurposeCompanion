@@ -31,6 +31,8 @@ const ERR_NO_FSD: &str = "nav-plan-error-no-fsd";
 const ERR_NO_PLAN: &str = "nav-plan-error-no-plan";
 const ERR_NO_ROUTE: &str = "nav-plan-error-no-route";
 const ERR_SERVICE: &str = "nav-plan-error-service";
+const ERR_UNKNOWN_ORIGIN: &str = "nav-plan-error-unknown-origin";
+const ERR_UNKNOWN_DESTINATION: &str = "nav-plan-error-unknown-destination";
 const DISABLED_LEGACY: &str = "nav-plan-disabled-legacy";
 const DISABLED_OFFLINE: &str = "nav-plan-disabled-offline";
 
@@ -203,12 +205,19 @@ impl Navigation {
                 let supercharge_multiplier = fsd.map_or(4.0, |f| {
                     supercharge_multiplier(f.kind, StarSpecial::Neutron)
                 });
+                let from_coords = if state.location.system.eq_ignore_ascii_case(&req.from) {
+                    let p = state.location.star_pos;
+                    (p[0] != 0.0 || p[1] != 0.0 || p[2] != 0.0).then_some(p)
+                } else {
+                    None
+                };
                 Ok(NetQuery::NeutronRoute(NeutronRouteParams {
                     from: req.from.clone(),
                     to: req.to.clone(),
                     range_ly,
                     efficiency: req.efficiency,
                     supercharge_multiplier,
+                    from_coords,
                 }))
             }
             PlanMode::Galaxy => {
@@ -425,6 +434,15 @@ impl Navigation {
             NetOutcome::Disabled => {
                 self.planner.status = PlanStatus::Disabled;
                 self.planner.error_key = Some(DISABLED_OFFLINE);
+            }
+            NetOutcome::Failed(tmc_model::net::NetFailure::UnknownOrigin) => {
+                self.plan_fail(ERR_UNKNOWN_ORIGIN)
+            }
+            NetOutcome::Failed(tmc_model::net::NetFailure::UnknownDestination) => {
+                self.plan_fail(ERR_UNKNOWN_DESTINATION)
+            }
+            NetOutcome::Failed(tmc_model::net::NetFailure::Http(400)) => {
+                self.plan_fail(ERR_BAD_REQUEST)
             }
             NetOutcome::Failed(_) => self.plan_fail(ERR_SERVICE),
             _ => return,

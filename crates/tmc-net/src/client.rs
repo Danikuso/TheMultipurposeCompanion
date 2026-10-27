@@ -354,7 +354,19 @@ impl NetClient {
             NetQuery::System { id64, name } => self.system(*id64, name, online).await,
             NetQuery::NeutronRoute(p) => {
                 let req = Req::Post(spansh::neutron_url(), spansh::neutron_form(p));
-                (NetSource::Spansh, self.route(req, online).await)
+                let mut out = self.route(req, online).await;
+                if matches!(out, NetOutcome::Failed(NetFailure::UnknownOrigin))
+                    && let Some(coords) = p.from_coords
+                    && let Ok(nearest) = self.fetch_nearest_system(coords, online).await
+                {
+                    tracing::info!(from = %p.from, %nearest, "Origen no indexado en Spansh; recalculando desde el sistema conocido más cercano");
+                    let mut fallback_p = p.clone();
+                    fallback_p.from = nearest;
+                    fallback_p.from_coords = None;
+                    let req = Req::Post(spansh::neutron_url(), spansh::neutron_form(&fallback_p));
+                    out = self.route(req, online).await;
+                }
+                (NetSource::Spansh, out)
             }
             NetQuery::GalaxyRoute(p) => {
                 let req = Req::Post(spansh::galaxy_url(), spansh::galaxy_form(p));
@@ -727,6 +739,22 @@ impl NetClient {
     /// Alta de un trabajo de ruta en Spansh y sondeo hasta terminar (o 120 s).
     ///
     /// Los 120 s se miden desde que se obtiene el cerrojo de rutas y tras el
+    async fn fetch_nearest_system(
+        &self,
+        coords: [f64; 3],
+        online: Option<&AtomicBool>,
+    ) -> Result<String, NetFailure> {
+        let url = spansh::nearest_url(coords[0], coords[1], coords[2]);
+        let body = self
+            .call(Service::Spansh, Req::Get(url), online)
+            .await
+            .map_err(|m| match m {
+                Miss::Fail(f) => f,
+                _ => NetFailure::Malformed,
+            })?;
+        spansh::parse_nearest(&body)
+    }
+
     /// alta: no son un tope absoluto de reloj (peor caso aproximado: 120 s +
     /// intervalo de sondeo + tiempo máximo de una petición, sin contar la espera
     /// del cerrojo). Se toleran hasta 2 fallos transitorios consecutivos de
@@ -890,6 +918,12 @@ impl NetClient {
                 // Otros 4xx: petición rechazada, no es un fallo del servicio.
                 _ => {
                     tracing::warn!(status, ?service, "petición rechazada por el servicio");
+                    if service == Service::Spansh
+                        && status == 400
+                        && let Some(err) = spansh::parse_submit_error(&body)
+                    {
+                        return Err(Miss::Fail(err));
+                    }
                     Err(Miss::Fail(NetFailure::Http(status)))
                 }
             },
@@ -1123,6 +1157,7 @@ mod tests {
             range_ly: 50.0,
             efficiency: 60,
             supercharge_multiplier: 4.0,
+            from_coords: None,
         })
     }
 
@@ -1501,9 +1536,57 @@ mod tests {
         );
         assert_eq!(
             client(&t).execute(&neutron_query()).await,
-            (NetSource::Spansh, NetOutcome::Failed(NetFailure::Http(400)))
+            (
+                NetSource::Spansh,
+                NetOutcome::Failed(NetFailure::UnknownDestination)
+            )
         );
         assert_eq!(t.count("/api/results/"), 0);
+
+        let t = FakeTransport::new();
+        t.script(
+            "spansh.co.uk/api/route",
+            vec![ok(400, r#"{"error":"ship details are invalid"}"#)],
+        );
+        assert_eq!(
+            client(&t).execute(&neutron_query()).await,
+            (NetSource::Spansh, NetOutcome::Failed(NetFailure::Http(400)))
+        );
+    }
+
+    #[tokio::test]
+    async fn route_unknown_origin_falls_back_to_nearest_system() {
+        let t = FakeTransport::new();
+        t.script(
+            "spansh.co.uk/api/route",
+            vec![
+                ok(400, r#"{"error":"Could not find starting system"}"#),
+                ok(202, JOB),
+            ],
+        );
+        t.script(
+            "spansh.co.uk/api/nearest",
+            vec![ok(
+                200,
+                r#"{"system":{"distance":10.36,"id64":22648839483193,"name":"Byua Euq FU-K b36-10","x":-916.6,"y":146.2,"z":6116.8}}"#,
+            )],
+        );
+        t.script("/api/results/", vec![ok(200, NEUTRON)]);
+
+        let q = NetQuery::NeutronRoute(NeutronRouteParams {
+            from: "Byua Euq EU-K b36-0".into(),
+            to: "Colonia".into(),
+            range_ly: 50.0,
+            efficiency: 60,
+            supercharge_multiplier: 4.0,
+            from_coords: Some([-926.96875, 145.71875, 6116.375]),
+        });
+
+        let (src, out) = client(&t).execute(&q).await;
+        assert_eq!(src, NetSource::Spansh);
+        assert!(matches!(out, NetOutcome::Route(_)));
+        assert_eq!(t.count("/api/nearest"), 1);
+        assert_eq!(t.count("POST https://spansh.co.uk/api/route"), 2);
     }
 
     #[tokio::test(start_paused = true)]

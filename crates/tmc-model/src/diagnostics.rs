@@ -649,7 +649,15 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
     if matches!(context, DiagnosticContext::NetOutcome)
         && ((matches!(path, "" | "outcome") && matches!(text, "NoData" | "Disabled"))
             || (matches!(path, "failed" | "outcome.failed")
-                && matches!(text, "Timeout" | "Malformed" | "Down" | "RateLimited")))
+                && matches!(
+                    text,
+                    "Timeout"
+                        | "Malformed"
+                        | "Down"
+                        | "RateLimited"
+                        | "UnknownOrigin"
+                        | "UnknownDestination"
+                )))
     {
         return true;
     }
@@ -1680,6 +1688,8 @@ mod tests {
             NetFailure::Malformed,
             NetFailure::Down,
             NetFailure::RateLimited,
+            NetFailure::UnknownOrigin,
+            NetFailure::UnknownDestination,
         ] {
             let raw = serde_json::to_value(NetOutcome::Failed(failure)).unwrap();
             assert_eq!(redact_diagnostic(&raw, DiagnosticContext::NetOutcome), raw);

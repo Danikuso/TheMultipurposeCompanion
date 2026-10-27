@@ -331,6 +331,7 @@ mod tests {
             range_ly: 50.0,
             efficiency: 60,
             supercharge_multiplier: 4.0,
+            from_coords: None,
         });
         assert!(cache_keys(&route).is_empty());
         assert!(

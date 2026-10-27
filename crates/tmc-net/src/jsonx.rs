@@ -68,3 +68,10 @@ pub(crate) fn req_array<'a>(o: &'a Obj, k: &str) -> Result<&'a Vec<Value>, NetFa
         _ => Err(NetFailure::Malformed),
     }
 }
+
+pub(crate) fn req_obj<'a>(o: &'a Obj, k: &str) -> Result<&'a Obj, NetFailure> {
+    match o.get(k) {
+        Some(Value::Object(m)) => Ok(m),
+        _ => Err(NetFailure::Malformed),
+    }
+}

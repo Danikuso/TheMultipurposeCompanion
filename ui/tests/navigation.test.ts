@@ -585,6 +585,23 @@ describe('navigation panels', () => {
       );
     });
 
+    test('recalculate plan button calls navigation.recalculate when active', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+      vi.stubGlobal('fetch', fetchMock);
+      live.topics['navigation.plan'] = planTopic({
+        status: 'active',
+        active: { destination: 'Colonia', current_index: 3, total: 10, off_route: false },
+      });
+      render(PlannerPanel);
+      expect(target.querySelector('[data-testid="plan-recalc"]')).toBeTruthy();
+      (target.querySelector('[data-testid="plan-recalc"]') as HTMLButtonElement).click();
+      await Promise.resolve();
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/actions/navigation.recalculate',
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
     test('failed plan shows translated error', () => {
       live.topics['navigation.plan'] = planTopic({ status: 'failed', error_key: 'nav-plan-error-no-route' });
       render(PlannerPanel);

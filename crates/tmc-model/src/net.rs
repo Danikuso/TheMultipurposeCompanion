@@ -128,6 +128,8 @@ pub struct NeutronRouteParams {
     pub range_ly: f64,
     pub efficiency: u8,
     pub supercharge_multiplier: f64,
+    #[serde(default)]
+    pub from_coords: Option<[f64; 3]>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -231,6 +233,8 @@ pub enum NetFailure {
     Malformed,
     Down,
     RateLimited,
+    UnknownOrigin,
+    UnknownDestination,
 }
 
 /// Sugerencia de autocompletado; `id64` lo necesita el planificador de galaxia.

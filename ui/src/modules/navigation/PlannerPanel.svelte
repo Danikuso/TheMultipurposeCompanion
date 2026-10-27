@@ -64,9 +64,10 @@
     return Number.isInteger(n) && n >= 0 && n <= 100 ? n : NaN;
   });
   const efficiencyInvalid = $derived(Number.isNaN(efficiencyValue));
+  const hasDestination = $derived(to.text.trim() !== '' || Boolean(plan?.active?.destination));
   const toNeedsPick = $derived(mode === 'galaxy' && to.text.trim() !== '' && to.id64 == null);
   const fromNeedsPick = $derived(mode === 'galaxy' && from.text.trim() !== '' && from.id64 == null);
-  const blocked = $derived(disabled || computing || efficiencyInvalid || toNeedsPick || fromNeedsPick);
+  const blocked = $derived(disabled || computing || efficiencyInvalid || !hasDestination || toNeedsPick || fromNeedsPick);
 
   async function fetchSuggestions(f: Field, seq: number) {
     f.ctrl?.abort();
@@ -133,8 +134,10 @@
   function submit(ev: Event) {
     ev.preventDefault();
     if (blocked) return;
+    const targetDest = to.text.trim() || plan?.active?.destination || '';
+    if (!targetDest) return;
     const args: Record<string, unknown> = {
-      to: to.text.trim(),
+      to: targetDest,
       mode,
       use_ship: useShip,
     };
@@ -149,6 +152,10 @@
       args.use_injections = useInjections;
     }
     void action('navigation.plan', args).catch(() => {});
+  }
+
+  function recalculate() {
+    void action('navigation.recalculate', {}).catch(() => {});
   }
 
   function accept() {
@@ -202,6 +209,7 @@
         data-testid="plan-to"
         type="text"
         autocomplete="off"
+        placeholder={plan?.active?.destination ? `Destino (o ruta activa: ${plan.active.destination})` : ''}
         {disabled}
         bind:value={to.text}
         role="combobox"
@@ -291,7 +299,12 @@
           total: plan.active.total,
         })}
       </span>
-      <button type="button" data-testid="plan-clear" onclick={clear}>{t('nav-plan-clear')}</button>
+      <div class="active-actions">
+        <button type="button" class="btn-recalc" data-testid="plan-recalc" onclick={recalculate}>
+          {t('strip-recalculate')}
+        </button>
+        <button type="button" data-testid="plan-clear" onclick={clear}>{t('nav-plan-clear')}</button>
+      </div>
     </div>
   {/if}
 
@@ -443,9 +456,31 @@
   .summary {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
     gap: 0.75rem;
     margin-top: 0.6rem;
+  }
+
+  .active-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .btn-recalc {
+    background: rgba(0, 212, 178, 0.15);
+    border: 1px solid rgba(0, 212, 178, 0.4);
+    color: #00d4b2;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .btn-recalc:hover {
+    background: rgba(0, 212, 178, 0.25);
   }
 
   table {

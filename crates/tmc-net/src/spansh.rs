@@ -54,6 +54,34 @@ pub fn results_url(job: &str) -> String {
     format!("{BASE}/results/{}", url_encode(job))
 }
 
+/// Consulta del sistema estelar conocido más cercano a las coordenadas galácticas (en AL).
+pub fn nearest_url(x: f64, y: f64, z: f64) -> String {
+    format!("{BASE}/nearest?x={x}&y={y}&z={z}")
+}
+
+/// Extrae el nombre del sistema más cercano desde la respuesta de `/api/nearest`.
+pub fn parse_nearest(body: &str) -> Result<String, NetFailure> {
+    let v = jsonx::parse(body)?;
+    let root = jsonx::as_obj(&v)?;
+    let system = jsonx::req_obj(root, "system")?;
+    jsonx::req_str(system, "name")
+}
+
+/// Clasifica el mensaje de error al enviar una petición de ruta a Spansh (HTTP 400).
+pub fn parse_submit_error(body: &str) -> Option<NetFailure> {
+    let v = jsonx::parse(body).ok()?;
+    let root = jsonx::as_obj(&v).ok()?;
+    let err = jsonx::opt_str(root, "error").ok()??;
+    let err_lower = err.to_ascii_lowercase();
+    if err_lower.contains("starting system") || err_lower.contains("source system") {
+        Some(NetFailure::UnknownOrigin)
+    } else if err_lower.contains("finishing system") || err_lower.contains("destination system") {
+        Some(NetFailure::UnknownDestination)
+    } else {
+        None
+    }
+}
+
 pub fn autocomplete_url(prefix: &str) -> String {
     format!(
         "{BASE}/systems/field_values/system_names?q={}",
@@ -568,6 +596,29 @@ mod tests {
             autocomplete_url("Col 359"),
             "https://spansh.co.uk/api/systems/field_values/system_names?q=Col%20359"
         );
+        assert_eq!(
+            nearest_url(-926.96875, 145.71875, 6116.375),
+            "https://spansh.co.uk/api/nearest?x=-926.96875&y=145.71875&z=6116.375"
+        );
+    }
+
+    #[test]
+    fn parses_nearest_system_and_errors() {
+        let json = r#"{"system":{"distance":10.36,"id64":22648839483193,"name":"Byua Euq FU-K b36-10","x":-916.6,"y":146.2,"z":6116.8}}"#;
+        assert_eq!(parse_nearest(json).unwrap(), "Byua Euq FU-K b36-10");
+
+        assert_eq!(
+            parse_submit_error(r#"{"error":"Could not find starting system"}"#),
+            Some(NetFailure::UnknownOrigin)
+        );
+        assert_eq!(
+            parse_submit_error(r#"{"error":"Could not find destination system"}"#),
+            Some(NetFailure::UnknownDestination)
+        );
+        assert_eq!(
+            parse_submit_error(r#"{"error":"ship details are invalid"}"#),
+            None
+        );
     }
 
     #[test]
@@ -753,6 +804,7 @@ mod tests {
             range_ly: 50.0,
             efficiency: 60,
             supercharge_multiplier: 4.0,
+            from_coords: None,
         });
         assert_eq!(form_get(&f, "from"), Some("Sol"));
         assert_eq!(form_get(&f, "to"), Some("Colonia"));
