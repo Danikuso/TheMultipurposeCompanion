@@ -1273,6 +1273,22 @@ tourism_reference_cr_ly = 200000
         let resp_test = router.clone().oneshot(req_test).await.unwrap();
         assert_eq!(resp_test.status(), StatusCode::OK);
 
+        // 2b. Probar POST /api/tts/test con motor neuronal Kokoro
+        let mut req_test_kokoro = Request::builder()
+            .method("POST")
+            .uri("/api/tts/test")
+            .header(header::HOST, "127.0.0.1:47320")
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(
+                r#"{"engine":"kokoro","voice":"ef_dora","text":"Prueba de voz Kokoro","volume":80,"rate":100}"#,
+            ))
+            .unwrap();
+        req_test_kokoro.extensions_mut().insert(ConnectInfo(
+            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
+        ));
+        let resp_test_kokoro = router.clone().oneshot(req_test_kokoro).await.unwrap();
+        assert_eq!(resp_test_kokoro.status(), StatusCode::OK);
+
         // 3. Probar PUT /api/config modificando tts
         let mut req_cfg = Request::builder()
             .method("PUT")
