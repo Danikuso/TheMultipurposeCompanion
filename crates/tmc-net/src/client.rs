@@ -355,8 +355,10 @@ impl NetClient {
             NetQuery::NeutronRoute(p) => {
                 let req = Req::Post(spansh::neutron_url(), spansh::neutron_form(p));
                 let mut out = self.route(req, online).await;
-                if matches!(out, NetOutcome::Failed(NetFailure::UnknownOrigin))
-                    && let Some(coords) = p.from_coords
+                if matches!(
+                    out,
+                    NetOutcome::NoData | NetOutcome::Failed(NetFailure::UnknownOrigin)
+                ) && let Some(coords) = p.from_coords
                     && let Ok(nearest) = self.fetch_nearest_system(coords, online).await
                 {
                     tracing::info!(from = %p.from, %nearest, "Origen no indexado en Spansh; recalculando desde el sistema conocido más cercano");
@@ -371,8 +373,10 @@ impl NetClient {
             NetQuery::GalaxyRoute(p) => {
                 let req = Req::Post(spansh::galaxy_url(), spansh::galaxy_form(p));
                 let mut out = self.route(req, online).await;
-                if matches!(out, NetOutcome::Failed(NetFailure::UnknownOrigin))
-                    && let Some(coords) = p.from_coords
+                if matches!(
+                    out,
+                    NetOutcome::NoData | NetOutcome::Failed(NetFailure::UnknownOrigin)
+                ) && let Some(coords) = p.from_coords
                     && let Ok(nearest) = self.fetch_nearest_system(coords, online).await
                 {
                     tracing::info!(from = %p.from, %nearest, "Origen no indexado en Spansh; recalculando ruta exacta desde el sistema conocido más cercano");

@@ -382,8 +382,6 @@ describe('navigation panels', () => {
       flushSync();
       (target.querySelector('[data-testid="suggestion"]') as HTMLElement).click();
       flushSync();
-      (target.querySelector('[data-testid="mode-galaxy"]') as HTMLInputElement).click();
-      flushSync();
       typeIn(target.querySelector('[data-testid="plan-efficiency"]') as HTMLInputElement, '80');
       (target.querySelector('[data-testid="plan-submit"]') as HTMLButtonElement).click();
       await vi.advanceTimersByTimeAsync(0);
@@ -391,7 +389,7 @@ describe('navigation panels', () => {
       const body = JSON.parse(planCall.split('|')[1]);
       expect(body.to).toBe('Colonia');
       expect(body.to_id64).toBe(3238296097059);
-      expect(body.mode).toBe('galaxy');
+      expect(body.mode).toBe('neutron');
       expect(body.efficiency).toBe(80);
       expect(body.use_ship).toBe(true);
       expect(body.from).toBeUndefined();

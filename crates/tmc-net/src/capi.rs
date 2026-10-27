@@ -267,15 +267,36 @@ pub fn parse_profile(body: &str) -> Result<CapiProfile, CapiError> {
                 .parse::<u64>()
                 .unwrap_or_else(|_| ship_val.get("id").and_then(|v| v.as_u64()).unwrap_or(0));
 
-            let name = ship_val
-                .get("name")
+            // En Frontier CAPI:
+            // - "name" suele ser el identificador o modelo de la nave (ej: "Mandalay", "Python_NX", "MediumTransport01", "Viper").
+            // - "shipName" es el nombre personalizado asignado por el comandante.
+            // - Si "type" está presente (en mocks o endpoints secundarios), se toma como modelo y "name" como nombre propio.
+            let (ship_type, name) = if let Some(custom) = ship_val
+                .get("shipName")
+                .or_else(|| ship_val.get("ship_name"))
                 .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
-            let ship_type = ship_val
-                .get("type")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Unknown")
-                .to_string();
+                .filter(|s| !s.trim().is_empty())
+            {
+                let model = ship_val
+                    .get("name")
+                    .or_else(|| ship_val.get("type"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Unknown");
+                (model.to_string(), Some(custom.to_string()))
+            } else if let Some(model) = ship_val.get("type").and_then(|v| v.as_str()) {
+                let custom = ship_val
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .filter(|s| !s.trim().is_empty())
+                    .map(|s| s.to_string());
+                (model.to_string(), custom)
+            } else {
+                let model = ship_val
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Unknown");
+                (model.to_string(), None)
+            };
 
             let station = ship_val
                 .get("station")
@@ -458,5 +479,25 @@ mod tests {
         assert_eq!(cutter.station, "Dawes Hub");
         assert_eq!(cutter.system, "Achenar");
         assert_eq!(cutter.value, 1_200_000_000);
+    }
+
+    #[test]
+    fn parses_real_capi_ships_without_type_field() {
+        let json = r#"{
+            "commander": { "name": "Danikuso", "credits": 500000000, "debt": 0 },
+            "ships": {
+                "10": { "name": "Mandalay", "starsystem": { "name": "PSR J1752-2806" }, "station": { "name": "The Plaza" }, "value": { "total": 29131160 } },
+                "11": { "name": "Python_NX", "shipName": "Vortex", "starsystem": { "name": "Sol" }, "station": { "name": "Li Qing Jao" }, "value": { "total": 117248604 } }
+            }
+        }"#;
+        let profile = parse_profile(json).unwrap();
+        assert_eq!(profile.remote_ships.len(), 2);
+        let m = profile.remote_ships.iter().find(|s| s.id == 10).unwrap();
+        assert_eq!(m.ship_type, "Mandalay");
+        assert_eq!(m.name, None);
+
+        let p = profile.remote_ships.iter().find(|s| s.id == 11).unwrap();
+        assert_eq!(p.ship_type, "Python_NX");
+        assert_eq!(p.name.as_deref(), Some("Vortex"));
     }
 }

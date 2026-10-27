@@ -225,7 +225,7 @@ export function resolveManufacturer(shipType?: string | null): { key: string; na
   // Lakon
   if (s.includes('type6') || s.includes('type7') || s.includes('type8') || s.includes('type9') || s.includes('type10') || s.includes('type11') ||
       s.includes('asp') || s.includes('diamondback') || s.includes('keelback') || s.includes('independanttrader') || s.includes('independenttrader') ||
-      s.includes('chieftain') || s.includes('crusader') || s.includes('challenger') || s.includes('typex')) {
+      s.includes('chieftain') || s.includes('crusader') || s.includes('challenger') || s.includes('typex') || s.includes('mediumtransport')) {
     return { key: 'lakon', ...MANUFACTURERS['lakon'] };
   }
 

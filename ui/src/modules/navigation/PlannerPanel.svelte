@@ -58,12 +58,13 @@
   });
 
   const efficiencyValue = $derived.by(() => {
+    if (mode === 'galaxy') return null;
     const raw: unknown = efficiency;
     if (raw === null || raw === undefined || raw === '') return null;
     const n = Number(raw);
     return Number.isInteger(n) && n >= 0 && n <= 100 ? n : NaN;
   });
-  const efficiencyInvalid = $derived(Number.isNaN(efficiencyValue));
+  const efficiencyInvalid = $derived(mode === 'neutron' && Number.isNaN(efficiencyValue));
   const hasDestination = $derived(to.text.trim() !== '' || Boolean(plan?.active?.destination));
   const blocked = $derived(disabled || computing || efficiencyInvalid || !hasDestination);
 
@@ -241,27 +242,32 @@
     </div>
 
     <div class="options">
-      <label class="check">
-        {t('nav-plan-efficiency')}
-        <input
-          class="num"
-          type="number"
-          min="0"
-          max="100"
-          data-testid="plan-efficiency"
-          placeholder={defaultEfficiency != null
-            ? t('nav-plan-efficiency-default', { value: defaultEfficiency })
-            : t('nav-plan-efficiency-hint')}
-          aria-invalid={efficiencyInvalid}
-          {disabled}
-          bind:value={efficiency}
-        />
-      </label>
-      <label class="check">
-        <input type="checkbox" data-testid="plan-use-ship" {disabled} bind:checked={useShip} />
-        {t('nav-plan-use-ship')}
-      </label>
-      {#if mode === 'galaxy'}
+      {#if mode === 'neutron'}
+        <label class="check">
+          {t('nav-plan-efficiency')}
+          <input
+            class="num"
+            type="number"
+            min="0"
+            max="100"
+            data-testid="plan-efficiency"
+            placeholder={defaultEfficiency != null
+              ? t('nav-plan-efficiency-default', { value: defaultEfficiency })
+              : t('nav-plan-efficiency-hint')}
+            aria-invalid={efficiencyInvalid}
+            {disabled}
+            bind:value={efficiency}
+          />
+        </label>
+        <label class="check">
+          <input type="checkbox" data-testid="plan-use-ship" {disabled} bind:checked={useShip} />
+          {t('nav-plan-use-ship')}
+        </label>
+      {:else}
+        <label class="check">
+          <input type="checkbox" data-testid="plan-use-ship" {disabled} bind:checked={useShip} />
+          {t('nav-plan-use-ship')}
+        </label>
         <label class="check">
           <input type="checkbox" data-testid="plan-refuel" {disabled} bind:checked={refuelScoopable} />
           {t('nav-plan-refuel-scoopable')}

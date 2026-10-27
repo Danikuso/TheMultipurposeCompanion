@@ -27,6 +27,27 @@
   let selectedShipId = $state<number | null>(null);
   const activeShip = $derived(remoteShips.find((s) => s.id === selectedShipId) ?? remoteShips[0]);
 
+  function getShipLabels(ship: RemoteShip): { type: string; customName: string | null } {
+    const hasValidType = ship.ship_type && ship.ship_type.toLowerCase() !== 'unknown';
+    if (hasValidType) {
+      return {
+        type: formatShipName(ship.ship_type),
+        customName: ship.name && ship.name !== ship.ship_type ? ship.name : null,
+      };
+    }
+    // Fallback de contingencia: si ship_type era "Unknown", ship.name contiene el modelo reportado por CAPI
+    if (ship.name) {
+      return {
+        type: formatShipName(ship.name),
+        customName: null,
+      };
+    }
+    return {
+      type: 'Nave desconocida',
+      customName: null,
+    };
+  }
+
   $effect(() => {
     if (status?.capi?.connected && !fleetFetched && !loadingFleet) {
       fleetFetched = true;
@@ -532,24 +553,26 @@
                         onchange={(e) => (selectedShipId = Number(e.currentTarget.value))}
                       >
                         {#each remoteShips as ship (ship.id)}
+                          {@const labels = getShipLabels(ship)}
                           <option value={ship.id}>
-                            {formatShipName(ship.ship_type)} {ship.name ? `«${ship.name}»` : ''} - {ship.system}
+                            {labels.type}{labels.customName ? ` «${labels.customName}»` : ''} - {ship.system}
                           </option>
                         {/each}
                       </select>
                     </label>
 
                     {#if activeShip}
+                      {@const activeLabels = getShipLabels(activeShip)}
                       <div class="active-ship-card">
                         <div class="ship-card-head">
                           <div class="ship-top">
-                            <span class="ship-type mono bold">{formatShipName(activeShip.ship_type)}</span>
-                            {#if activeShip.name}
-                              <span class="ship-custom-name">«{activeShip.name}»</span>
+                            <span class="ship-type mono bold">{activeLabels.type}</span>
+                            {#if activeLabels.customName}
+                              <span class="ship-custom-name">«{activeLabels.customName}»</span>
                             {/if}
                           </div>
-                          <div class="ship-mfr" title={formatShipName(activeShip.ship_type)}>
-                            <ManufacturerIcon shipType={activeShip.ship_type} size={24} />
+                          <div class="ship-mfr" title={activeLabels.type}>
+                            <ManufacturerIcon shipType={activeLabels.type} size={24} />
                           </div>
                         </div>
                         <div class="ship-loc sub">
@@ -574,6 +597,7 @@
                     </div>
                     <div class="fleet-cards-grid">
                       {#each remoteShips as ship (ship.id)}
+                        {@const labels = getShipLabels(ship)}
                         <button
                           type="button"
                           class="ship-card interactive-ship-card"
@@ -582,13 +606,13 @@
                         >
                           <div class="ship-card-head">
                             <div class="ship-top">
-                              <span class="ship-type mono bold">{formatShipName(ship.ship_type)}</span>
-                              {#if ship.name}
-                                <span class="ship-custom-name">«{ship.name}»</span>
+                              <span class="ship-type mono bold">{labels.type}</span>
+                              {#if labels.customName}
+                                <span class="ship-custom-name">«{labels.customName}»</span>
                               {/if}
                             </div>
-                            <div class="ship-mfr" title={formatShipName(ship.ship_type)}>
-                              <ManufacturerIcon shipType={ship.ship_type} size={18} />
+                            <div class="ship-mfr" title={labels.type}>
+                              <ManufacturerIcon shipType={labels.type} size={18} />
                             </div>
                           </div>
                           <div class="ship-loc sub">

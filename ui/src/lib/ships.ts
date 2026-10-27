@@ -28,6 +28,9 @@ export const CANONICAL_SHIPS: Record<string, string> = {
   asp_scout: 'Asp Scout',
   independant_trader: 'Keelback',
   type6: 'Type-6 Transporter',
+  mediumtransport01: 'Type-6 Transporter',
+  mediumtransport02: 'Keelback',
+  mediumtransport: 'Type-6 Transporter',
   typex: 'Alliance Chieftain',
   typex_2: 'Alliance Crusader',
   typex_3: 'Alliance Challenger',
@@ -99,8 +102,16 @@ const ALIASES: Record<string, string> = {
   keelback: 'Keelback',
 
   // Python Mk II
+  pythonnx: 'Python Mk II',
+  python_nx: 'Python Mk II',
   pythonmkii: 'Python Mk II',
   pythonmk2: 'Python Mk II',
+
+  // Type-6 & Keelback
+  mediumtransport01: 'Type-6 Transporter',
+  mediumtransport02: 'Keelback',
+  mediumtransport: 'Type-6 Transporter',
+  type6transporter: 'Type-6 Transporter',
 
   // Krait Phantom
   kraitphantom: 'Krait Phantom',

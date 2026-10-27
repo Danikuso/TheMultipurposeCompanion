@@ -50,9 +50,9 @@ pub trait Transport: Send + Sync {
     }
 }
 
-const TIMEOUT: Duration = Duration::from_secs(5);
+const TIMEOUT: Duration = Duration::from_secs(15);
 
-/// Transporte real: tiempo máximo de 5 s y `User-Agent: TMC/<versión>`.
+/// Transporte real: tiempo máximo de 15 s y `User-Agent: TMC/<versión>`.
 pub struct ReqwestTransport {
     client: reqwest::Client,
 }

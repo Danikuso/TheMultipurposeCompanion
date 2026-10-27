@@ -26,6 +26,12 @@ describe('ships', () => {
     expect(formatShipName('typex_2')).toBe('Alliance Crusader');
     expect(formatShipName('typex_3')).toBe('Alliance Challenger');
     expect(formatShipName('type6')).toBe('Type-6 Transporter');
+    expect(formatShipName('MediumTransport01')).toBe('Type-6 Transporter');
+    expect(formatShipName('mediumtransport01')).toBe('Type-6 Transporter');
+    expect(formatShipName('MediumTransport02')).toBe('Keelback');
+    expect(formatShipName('viper')).toBe('Viper Mk III');
+    expect(formatShipName('Viper')).toBe('Viper Mk III');
+    expect(formatShipName('Python_NX')).toBe('Python Mk II');
     expect(formatShipName('type7')).toBe('Type-7 Transporter');
     expect(formatShipName('type8')).toBe('Type-8 Transporter');
     expect(formatShipName('type9')).toBe('Type-9 Heavy');
