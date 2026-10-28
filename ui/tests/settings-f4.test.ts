@@ -1,4 +1,4 @@
-﻿import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import Settings from '../src/settings/Settings.svelte';
 import { getLocale, setLocale } from '../src/lib/i18n';
@@ -171,4 +171,24 @@ test('queued edits keep roll snapshots separate and rollback to preceding succes
   expect(put).toHaveBeenCalledTimes(1); pending.resolve(response({ ...cfg, engineering_rolls: [7,3,4,5,6] })); await settle();
   expect(put).toHaveBeenCalledTimes(2); expect(JSON.parse(put.mock.calls[1][1].body as string).engineering_rolls).toEqual([7,8,4,5,6]);
   expect([1,2].map(g => input(g).value)).toEqual(['7','3']);
+});
+
+test('renders feedback and github issues card with link and button', async () => {
+  await render();
+  const feedbackCard = target.querySelector('[data-testid="settings-feedback-card"]');
+  expect(feedbackCard).not.toBeNull();
+  expect(feedbackCard?.textContent).toContain('GitHub');
+
+  const btn = target.querySelector('[data-testid="github-feedback-btn"]') as HTMLButtonElement;
+  expect(btn).not.toBeNull();
+
+  const repoLink = target.querySelector('[data-testid="github-repo-link"]') as HTMLAnchorElement;
+  expect(repoLink).not.toBeNull();
+  expect(repoLink.href).toContain('github.com/Danikuso/TheMultipurposeCompanion');
+
+  const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+  btn.click();
+  expect(openSpy).toHaveBeenCalledTimes(1);
+  expect(openSpy.mock.calls[0][0]).toContain('github.com/Danikuso/TheMultipurposeCompanion/issues/new');
+  openSpy.mockRestore();
 });

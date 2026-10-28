@@ -371,6 +371,34 @@
       }
     });
   }
+
+  function openGitHubFeedback() {
+    const tmcVersion = '0.1.0';
+    const osInfo = typeof navigator !== 'undefined' ? navigator.userAgent : 'Windows';
+    const lang = fullConfig.language || 'es';
+    const issueTitle = encodeURIComponent('[Feedback / Reporte] ');
+    const issueBody = encodeURIComponent(
+`### Descripción de la incidencia o propuesta:
+<!-- Escribe aquí detalladamente lo que has observado o tu sugerencia -->
+
+---
+### Pasos para reproducir (si aplica):
+1. 
+2. 
+3. 
+
+---
+### Diagnóstico de entorno:
+- **Versión de TMC:** ${tmcVersion}
+- **Idioma activo:** ${lang}
+- **Plataforma / Agente:** ${osInfo}
+`
+    );
+    const url = `https://github.com/Danikuso/TheMultipurposeCompanion/issues/new?title=${issueTitle}&body=${issueBody}`;
+    if (typeof window !== 'undefined') {
+      window.open(url, '_blank');
+    }
+  }
 </script>
 
 <Panel titleKey="nav-settings">
@@ -758,6 +786,31 @@
         </fieldset>
 
         <Pairing />
+
+        <!-- Soporte, Feedback y Comunidad -->
+        <fieldset class="settings-card feedback-card" data-testid="settings-feedback-card">
+          <legend>💬 {t('settings-feedback-title')}</legend>
+          <p class="feedback-desc">{t('settings-feedback-desc')}</p>
+          <div class="feedback-actions">
+            <button
+              type="button"
+              class="feedback-btn-primary"
+              data-testid="github-feedback-btn"
+              onclick={openGitHubFeedback}
+            >
+              🚀 {t('settings-feedback-btn')}
+            </button>
+            <a
+              href="https://github.com/Danikuso/TheMultipurposeCompanion"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="feedback-btn-secondary"
+              data-testid="github-repo-link"
+            >
+              ⭐ {t('settings-feedback-repo-btn')}
+            </a>
+          </div>
+        </fieldset>
       </div>
     </div>
   </div>
@@ -1216,5 +1269,67 @@
   .btn-download-vap:hover {
     background: var(--hud-cyan, #00d4b2);
     color: #000;
+  }
+
+  .feedback-card {
+    border-color: rgba(255, 113, 0, 0.25);
+    background: linear-gradient(180deg, rgba(20, 25, 35, 0.6) 0%, rgba(255, 113, 0, 0.04) 100%);
+  }
+
+  .feedback-desc {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--hud-muted, #8ea1b4);
+    line-height: 1.45;
+  }
+
+  .feedback-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 0.35rem;
+  }
+
+  .feedback-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: var(--hud-primary, #ff7100);
+    color: #000;
+    font-weight: 700;
+    font-size: 0.82rem;
+    padding: 0.5rem 0.95rem;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: filter 0.15s ease, transform 0.1s ease;
+    box-shadow: 0 0 10px rgba(255, 113, 0, 0.3);
+  }
+
+  .feedback-btn-primary:hover {
+    filter: brightness(1.15);
+    transform: translateY(-1px);
+  }
+
+  .feedback-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--hud-text, #e2e8f0);
+    font-weight: 600;
+    font-size: 0.82rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: 4px;
+    border: 1px solid var(--hud-border-subtle, rgba(255, 255, 255, 0.15));
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .feedback-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--hud-primary, #ff7100);
   }
 </style>

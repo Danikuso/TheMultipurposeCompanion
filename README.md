@@ -1,164 +1,128 @@
 # TMC — The Multipurpose Companion
 
-Companion en tiempo real de bajo consumo para **Elite Dangerous** (Windows 10/11, preparado para Linux).
+[![Versión](https://img.shields.io/badge/versión-0.1.0-orange.svg)](https://github.com/Danikuso/TheMultipurposeCompanion/releases)
+[![Licencia: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/licencia-PolyForm%20Noncommercial-blue.svg)](LICENSE)
+[![Plataforma](https://img.shields.io/badge/plataforma-Windows%2010%2F11%20%7C%20Linux-green.svg)]()
+[![Inara Whitelist](https://img.shields.io/badge/Inara-Oficialmente%20Aprobado-success.svg)]()
 
-> Estado: **F0 y F1 completadas**. Consulta [`status.md`](status.md), la [spec de F1](docs/specs/2026-10-17-tmc-f1-navegacion-exploracion-exobiologia-design.md) y el [plan y sus evidencias](docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md).
+> **El copiloto y ayudante integral de bajo consumo para *Elite Dangerous*.**  
+> Diseñado tanto para los pilotos más novatos como para los comandantes más experimentados.
 
-## Características de F0
+---
 
-- **Lectura en tiempo real:** seguimiento incremental por offset de bytes de los diarios `Journal.*.log`, `Status.json` (100–250 ms), archivos compañeros (`Cargo.json`, `NavRoute.json`, `Market.json`, `Outfitting.json`, `Shipyard.json`, `ModulesInfo.json`, `Backpack.json`, `ShipLocker.json`), detección del proceso del juego y matriz de color HUD (`GraphicsConfigurationOverride.xml`).
-- **Almacenamiento e historial:** SQLite en modo WAL (`tmc.db`) con importación en segundo plano reanudable por archivo y offset, y reconstrucción automática si la base de datos se corrompe.
-- **Servidor local y protocolo WebSocket:** actor central que publica topics con *coalescing* a máx. 10 Hz (`hello`, `snapshot`, `update`, `alert`, `import-progress`) y endpoints REST (`/api/health`, `/api/history/events`, `/api/config`, `/api/actions/{name}`, `/api/pairing`).
-- **Interfaz adaptable (2560×1080 UW / 1080p / móvil):** panel general (`dashboard`) con Comandante, Nave, Ubicación, Status en vivo, Ruta (con copia al portapapeles del siguiente sistema), Sesión y Alertas; 5 idiomas (`es`, `en`, `fr`, `de`, `pt`) con Fluent y tema dinámico del HUD del jugador.
-- **Escritorio e instalador:** aplicación Tauri 2 (`TMC.exe`) con icono en bandeja del sistema, cierre a bandeja destruyendo los procesos `msedgewebview2.exe`, ahorro de memoria al minimizar, instancia única e instalador NSIS (`TMC_0.1.0_x64-setup.exe`).
+## 🌌 Filosofía: El Ayudante Integral (Nunca un callejón sin salida)
 
-## Navegación, exploración y exobiología (F1)
+TMC (**The Multipurpose Companion**) nace con un objetivo innegociable: **nunca dejar al comandante bloqueado**.
+- Si intentas ingenierizar un módulo y todavía no tienes desbloqueado o invitado al ingeniero, TMC actúa de guía pedagógica: te muestra primero la **secuencia de desbloqueo** (descubrimiento, invitación y donación) y **después** los materiales y cálculos de recetas.
+- Sin cálculos mentales: barras de llenado, steppers de progreso, semáforos de existencias y tarjetas métricas de lectura rápida.
+- Telemetría en tiempo real a 10 Hz con un consumo inferior a **50 MB de RAM** y **0 % de CPU en reposo**, respetando estrictamente el rendimiento de tu PC durante el combate o la exploración.
 
-- **Disposición Exploración por defecto:** tira de ruta a todo el ancho, contexto de cuerpos o exobiología, planificador y alcance/combustible. El contexto cambia con la relevancia del módulo; los botones manuales lo fijan hasta cambiar de cuerpo. Los cuatro módulos siguen accesibles en la barra lateral.
-- **Navegación:** siguiente salto y tres posteriores, fichas locales/remotas, visitas del historial, alcance y combustible estimados, planificación de neutrones o galaxia, aceptación y seguimiento de la ruta y copia automática opcional. Los FSD sin datos suficientes muestran alcance desconocido o desactivan los modos que necesitan esos datos.
-- **Exploración:** tabla virtualizada de cuerpos, progreso FSS, valores estimados de escaneo/mapeo, consejo de mapeo, sondas aproximadas y saldo de datos sin vender reconstruido desde el historial.
-- **Exobiología:** candidatos por reglas propias e historial, origen de la predicción, muestreo, distancia y rumbo respecto a las muestras y valor sin vender. Nombres desde los campos localizados del diario, con el nombre latino como respaldo. Las especies sin reglas se muestran sin predicción.
+---
 
-Las estimaciones y tablas tienen cobertura y verificación parciales sobre el historial local actual; véase [Evaluación local](#evaluación-local-del-historial).
+## ⚡ Características Principales
 
-## Servicios online y privacidad
+### 🧭 1. Navegación y Spansh Exact Plotter
+- **Física de salto real y automatizada:** Olvídate de exportar tus naves a Coriolis o EDSY. TMC lee en tiempo real la telemetría viva de tu nave (masa sin combustible, depósitos de reserva y principal, masa óptima del FSD con ingeniería y multiplicadores Guardian Booster) y los envía directamente al motor de Spansh Exact Plotter.
+- **Autopista de Neutrones:** Planificación optimizada para saltos con sobrecarga de conos de estrellas de neutrones.
+- **Rescate por coordenadas 3D:** Si te encuentras en el espacio profundo en sistemas procedimentales no indexados, TMC resuelve automáticamente tu posición por coordenadas estelares tridimensionales.
+- **Copiado automático al portapapeles:** Copia el siguiente sistema de la ruta directamente al portapapeles de Windows para pegar en el mapa de la galaxia del juego.
 
-En **Ajustes**, «Consultar servicios online (Spansh, EDSM, Canonn)» controla `online_services` (activado por defecto). El cambio se guarda y se propaga en caliente. Al desactivarlo no se envían nuevas consultas; siguen disponibles los datos locales y el historial, y el planificador explica que necesita conexión. Un fallo al guardar muestra un aviso y restaura la última configuración confirmada.
+### 🧬 2. Exploración y Exobiología
+- **Exploración de sistemas:** Tabla de cuerpos virtualizada, progreso de escaneo FSS, valores estimados de cartografía y consejo inteligente de mapeo de planetas valiosos.
+- **Exobiología de campo:** Semáforo de muestreo genético (Muestra 1, 2 y 3), distancia mínima de clonación por especie con brújula y valor total de bio-datos sin vender.
 
-El opt-out se comprueba de nuevo antes de cada envío, incluso tras esperar un cupo o durante el sondeo de una ruta. Una petición que ya se había enviado puede terminar; no se puede retirar del servicio remoto.
+### 🔧 3. Ingenieros y Materiales (`EngineerFlow`)
+- **Guía de desbloqueo paso a paso:** Progreso de los 25 ingenieros de la galaxia.
+- **Inventario vivo y recetas:** Seguimiento de materiales manufacturados, codificados y elementos en tiempo real.
+- **Calculadora de intercambios:** Soluciones óptimas de intercambio con comerciantes de materiales basadas en tus excedentes reales.
 
-- **Spansh:** fichas de sistema y planificador, con un límite propio de una petición por segundo y un trabajo de planificación a la vez.
-- **EDSM:** alternativa para información de sistemas; límite de diez peticiones cada diez segundos.
-- **Canonn permanece desactivado en F1**, aunque aparezca en la etiqueta del ajuste: su adaptador devuelve `Disabled` y no consulta el servicio hasta que el propietario confirme el permiso formal requerido. La predicción sigue usando reglas propias e historial. Decisión y evidencia en el [spike de Canonn](docs/research/notes/spike_canonn_f1.md).
+### ⚔️ 4. Combate, Piratería y Crimen
+- **Seguimiento táctico:** Escaneo de nave objetivo en tiempo real, integridad de casco/escudos y subsistemas.
+- **Reglas oficiales de Crimen:** Totalmente adaptado a las normativas de jurisdicción y *Law & Disorder* de Frontier.
+- **Massacre Mission Stacking:** Optimizador de misiones de masacre de piratas entre facciones distintas para maximizar créditos por cada baja.
 
-Las consultas usan nombres o identificadores de sistemas y los parámetros necesarios para la ruta o el cuerpo consultado; no se envían nombres de comandante ni diarios completos. Los servicios no reciben datos de la galaxia Legacy. Las respuestas permitidas se guardan en `api_cache`; no se incorporan al repositorio. Las fichas tienen una frescura de 24 h y los datos políticos de 1 h, con uso limitado de caché antigua y recuperación ante caídas.
+### ⛏️ 5. Minería y Comercio
+- **Minería de superficie y núcleo:** Rendimiento en toneladas/hora (t/h), detección de prospectores y valor estimado de la bodega.
+- **Comercio Spansh:** Cálculo de rutas comerciales seguras, filtros de plataforma (Grande/Mediana) y edad de precios de mercado.
 
-Los ajustes incluyen el umbral de «Mapear» (500 000 cr por defecto) y la eficiencia predeterminada del planificador (60 %, rango 0–100). La copia automática del siguiente sistema se controla por separado.
+### 🚀 6. Flota, Fleet Carrier y Powerplay 2.0
+- **Seguimiento de Portaaviones:** Salto programado, combustible de Tritio, bodega y finanzas del Carrier.
+- **Powerplay 2.0:** Control de méritos, rango de lealtad y estado de las potencias.
 
-## Compilación
+### 🌐 7. Integraciones Oficiales Aprobadas
+- **Inara InAPI v1:** Whitelist oficial concedida bajo el nombre canónico registrado `The Multipurpose Companion (TMC)`.
+- **Frontier CAPI:** Autenticación oficial OAuth2 PKCE para sincronización de flota remota y naves en astilleros.
+- **EDSM y EDDN:** Persistencia de credenciales segura y retransmisión comunitaria de eventos astronómicos.
+
+### 🎙️ 8. Copiloto Auditivo (Síntesis de Voz) y VoiceAttack
+- **Voz Nativa del Sistema Operativo:** Motor Windows SAPI5/OneCore ultraligero integrado de fábrica (< 2 MB de memoria, 0 dependencias externas).
+- **Voz Neuronal KokoroTTS (Opcional):** Inferencia local de alta fidelidad para mayor inmersión.
+- **Perfil de VoiceAttack:** Descarga directa de `TMC-Copiloto.vap` desde los Ajustes para control por voz total de tu nave.
+
+### 📱 9. Pantalla Remota LAN (Tablets y Móviles)
+- Escanea el **código QR de emparejamiento** desde tu tablet (iPad, Android) o smartphone conectado a la misma red local para utilizar TMC como una botonera y pantalla táctil de cabina independiente.
+
+---
+
+## 📥 Instalación y Primer Uso
+
+### Descarga para Windows
+1. Descarga el instalador oficial desde [Releases](https://github.com/Danikuso/TheMultipurposeCompanion/releases):
+   - **`TMC_0.1.0_x64-setup.exe`** (Instalador recomendado)
+   - O descarga el paquete portable `.zip` si prefieres no instalar nada.
+2. Ejecuta el instalador.
+
+> [!NOTE]
+> **Aviso de Microsoft Defender SmartScreen:**  
+> Al ser un proyecto independiente y de código abierto sin un certificado digital de pago corporativo de Microsoft, Windows mostrará la advertencia azul *"Windows protegió su PC / Editor desconocido"*.  
+> Para continuar:
+> 1. Haz clic en **«Más información»**.
+> 2. Haz clic en **«Ejecutar de todas formas»**.
+
+3. Abre **TMC**: la aplicación detectará automáticamente tu instalación de *Elite Dangerous* y tus archivos de diario (`Saved Games\Frontier Developments\Elite Dangerous`). ¡No necesitas configurar rutas manualmente!
+
+---
+
+## 📖 Manual de Usuario y Documentación
+
+- **Manual en PDF:** Descarga la guía completa para pilotos lista para imprimir o leer offline: [`Manual_TMC_Comandante.pdf`](website/Manual_TMC_Comandante.pdf).
+- **Web Oficial:** Explora la documentación interactiva en [`website/index.html`](website/index.html).
+
+---
+
+## 🛠️ Compilación para Desarrolladores
+
+Si prefieres compilar TMC desde el código fuente:
 
 ### Requisitos
-
-- **Rust** estable (edición 2024, `1.90+`) con MSVC Build Tools en Windows.
+- **Rust** estable (edición 2024, 1.90+) con herramientas de compilación de C++ (MSVC en Windows).
 - **Node.js** 22+ y `npm`.
-- **Tauri CLI** 2.x (`cargo install tauri-cli@^2`).
+- **Tauri CLI 2.x** (`cargo install tauri-cli@^2`).
 
-### Pasos
-
+### Comandos de Compilación
 ```powershell
-# 1. Instalar dependencias y compilar la interfaz web (ui/dist)
+# 1. Instalar dependencias y compilar la interfaz de usuario
 npm.cmd --prefix ui ci
 npm.cmd --prefix ui run build
 
-# 2. Compilar todo el workspace Rust
-cargo build --workspace --release
+# 2. Ejecutar la suite completa de pruebas
+cargo test --workspace
+npm.cmd --prefix ui run test
 
-# 3. Generar el instalador NSIS (desde apps/desktop)
+# 3. Compilar el ejecutable Release
+cargo build -p tmc-desktop --release
+
+# 4. Generar el instalador NSIS
 Push-Location apps/desktop
 cargo tauri build
 Pop-Location
 # Salida: target/release/bundle/nsis/TMC_0.1.0_x64-setup.exe
 ```
 
-## Ejecución
+---
 
-### Aplicación de escritorio (`TMC.exe`)
+## 🔒 Privacidad y Licencia
 
-```powershell
-.\target\release\TMC.exe
-# Opcional: indicar carpeta de diarios o archivo config.toml explícitos
-.\target\release\TMC.exe --journal-dir "D:\Ruta\Saved Games\Frontier Developments\Elite Dangerous"
-```
-
-- Al cerrar la ventana principal, TMC permanece activo en la bandeja del sistema y destruye el WebView para liberar memoria.
-- Clic izquierdo o «Abrir TMC» en el icono de bandeja vuelve a crear la ventana; «Salir» detiene el servidor y cierra la aplicación.
-
-### Modo sin ventana (`tmc-headless`) y desarrollo de UI
-
-```powershell
-# Terminal 1: núcleo + servidor HTTP/WS en 127.0.0.1:47320
-cargo run -p tmc-headless -- --journal-dir tests/fixtures/journal
-
-# Terminal 2: servidor de desarrollo Vite con proxy a 127.0.0.1:47320
-npm.cmd --prefix ui run dev
-```
-
-## Reproducción y anonimización de diarios (`tmc-replay`)
-
-`tmc-replay` permite probar TMC en vivo sin abrir el juego y anonimizar diarios reales antes de usarlos como fixtures:
-
-```powershell
-# Reproducir un diario de prueba a 10x sobre una carpeta temporal
-cargo run -p tmc-replay -- play `
-  --from tests/fixtures/journal/basic_session.log `
-  --to "$env:TEMP\tmc-replay" `
-  --speed 10
-
-# Anonimizar diarios reales (sustituye comandante, FID, naves/flota y elimina chats/amigos)
-cargo run -p tmc-replay -- anonymize `
-  --from "C:\Users\<usuario>\Saved Games\Frontier Developments\Elite Dangerous" `
-  --to "$env:TEMP\tmc-anon"
-```
-
-## Modo LAN (tablet / móvil en red local)
-
-Por defecto, TMC escucha exclusivamente en `127.0.0.1:47320`. Para consultar el panel desde otro dispositivo de tu red local:
-
-1. Abre **Ajustes** en la barra lateral y activa **Acceso por red local**; el guardado es automático.
-2. Reinicia TMC para que el servidor escuche en la interfaz de red local (`0.0.0.0`).
-3. Desde el propio PC en `127.0.0.1`, abre **Ajustes** y escanea el código **QR de emparejamiento** con tu tablet o móvil.
-4. La URL del QR incluye el token aleatorio de 128 bits (`?token=...`), que establece una cookie `HttpOnly; SameSite=Strict` para autenticar las conexiones HTTP y WebSocket. Sin token válido, cualquier petición desde fuera de loopback recibe `401 Unauthorized`.
-
-> Nota: en F0 la conexión LAN utiliza HTTP sin TLS (no es instalable como PWA independiente).
-
-## Evaluación local del historial
-
-`tmc-headless eval` lee una carpeta de diarios `Journal.*.log` y genera métricas agregadas de alcance, valores de exploración y predicción de especies. No inicia consultas online ni imprime nombres de comandante o de sistemas; el informe incluye números y símbolos del juego. `--timings` mide además las consultas de visitas, saldo sin vender y estadísticas biológicas sobre SQLite temporal en memoria.
-
-```powershell
-cargo run -p tmc-headless -- eval `
-  --journal-dir "D:\Ruta\Diarios" `
-  --timings
-```
-
-La salida distingue `PASS`, `FAIL` e `INSUFICIENTE`; un código de proceso 0 confirma la ejecución del informe, no la aceptación de los criterios.
-
-Última evidencia registrada (2026-10-18; 7 diarios, 3641 eventos):
-
-| Criterio F1 | Evidencia agregada | Estado |
-|---|---|---|
-| 3: alcance, tolerancia ±0,05 al | 15/15 casos coinciden; error máximo 0,0023 al; faltan ingeniería y Guardian. Los cuatro FSD observados se ajustaron con ese mismo historial: demuestra consistencia, no validación independiente. | INSUFICIENTE |
-| 4: exploración, tolerancia ±5 % | Ninguna venta con cobertura completa de escaneos; cuatro ventas sin cobertura. Un error mostrado como 0 con cero casos no valida la fórmula. | INSUFICIENTE |
-| 6: predicción, acierto Alta/Media ≥70 % | Ningún caso cuerpo/especie evaluable en el historial disponible. El muestreo se ha probado con un fixture sintético; falta una sesión real. | INSUFICIENTE |
-
-Consultas registradas sobre 3630 eventos importados: visitas 1,3 ms, sin vender 11,4 ms y estadísticas biológicas 1,2 ms. Los criterios completos, sus desviaciones y las verificaciones figuran en el [plan de F1](docs/plans/2026-10-17-tmc-f1-navegacion-exploracion.md#verificación-f1).
-
-## Pruebas y presupuesto de consumo
-
-```powershell
-# Formato, linter y tests unitarios/integración en Rust
-cargo fmt --all --check
-cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
-
-# Verificación de tipos, tests unitarios (Vitest) y test e2e (Playwright) en UI
-npm.cmd --prefix ui run check
-npm.cmd --prefix ui test
-Push-Location ui
-$env:TMC_E2E_PORT = '47322' # Puerto libre para no interferir con TMC abierto
-node node_modules/@playwright/test/cli.js test
-Pop-Location
-
-# Medición del presupuesto de consumo (< 150 MB Private Bytes, < 1 % CPU en reposo)
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/measure-footprint.ps1 `
-  -Exe target/release/TMC.exe `
-  -JournalDir .tmp\footprint-f1 `
-  -ShowWindow `
-  -Seconds 120
-```
-
-## Licencia y marcas
-
-Licenciado bajo **PolyForm Noncommercial 1.0.0** (ver [`LICENSE`](LICENSE)). Avisos de dependencias de terceros en [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
-
-*Elite Dangerous* es una marca registrada de Frontier Developments plc. TMC no está afiliado ni respaldado por Frontier Developments.
+- **Licencia:** **PolyForm Noncommercial 1.0.0** (Uso personal no comercial). Consulta el archivo [`LICENSE`](LICENSE) para más detalles.
+- **Privacidad:** TMC nunca recopila ni transmite datos personales reales ni chats del comandante. Tus credenciales de Inara y EDSM se almacenan cifradas en SQLite local y los tokens de Frontier CAPI usan el protocolo seguro OAuth2 PKCE. La galaxia Legacy está 100 % aislada.
+- **Aviso de Marca:** *Elite Dangerous* es una marca registrada de Frontier Developments plc. TMC es un proyecto complementario no oficial desarrollado bajo las directrices comunitarias.

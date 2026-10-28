@@ -156,3 +156,7 @@ ship-filter-optional = Internes optionnels
 ship-filter-utility = Points d'utilité
 ship-search-modules-placeholder = Rechercher par nom ou emplacement...
 ship-no-modules-match = Aucun module ne correspond au filtre actuel.
+settings-feedback-title = Support, Retours et Communauté
+settings-feedback-desc = Vous avez trouvé un bogue ou avez une idée pour améliorer TMC ? Ouvrez un ticket ou partagez vos retours sur notre dépôt GitHub officiel.
+settings-feedback-btn = Signaler un problème ou une suggestion sur GitHub
+settings-feedback-repo-btn = Voir le dépôt sur GitHub

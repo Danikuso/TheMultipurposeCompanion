@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const mockupPath = 'C:/Users/danik/.gemini/antigravity/brain/d535e4e5-ea82-44a5-82ea-da3439e3b468/f5_carrier_colonisation_powerplay_mockups.html';
+const mockupPath = process.env.MOCKUP_PATH || process.argv[2] || path.join(process.cwd(), 'docs/mockups/f5_carrier_colonisation_powerplay_mockups.html');
 const iconsBase = 'ui/src/assets/icons';
 
 function readSvg(relPath) {

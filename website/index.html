@@ -76,9 +76,9 @@
           </p>
 
           <div class="hero-cta">
-            <a href="#modulos" class="btn-hud btn-hud-primary">Descubrir los 16 Módulos</a>
-            <a href="#tutoriales" class="btn-hud btn-hud-secondary">Ver Guías para Ganar Créditos</a>
-            <a href="#manual-lan" class="btn-hud btn-hud-cyan">Ponerlo en mi Tablet</a>
+            <a href="https://github.com/Danikuso/TheMultipurposeCompanion/releases/latest" class="btn-hud btn-hud-primary" target="_blank" rel="noopener">📥 Descargar TMC v0.1.0</a>
+            <a href="Manual_TMC_Comandante.pdf" class="btn-hud btn-hud-secondary" download>📄 Manual de Usuario (PDF)</a>
+            <a href="#manual-install" class="btn-hud btn-hud-cyan">Guía de Inicio Rápido</a>
           </div>
 
           <div class="gameplay-pill-bar">
@@ -760,11 +760,14 @@
           <!-- Menú lateral del manual -->
           <aside class="manual-sidebar">
             <span class="manual-sidebar-title">Guía de Cabina</span>
-            <a href="#manual-install" class="manual-nav-item active">1. Arrancar en 10 Segundos</a>
+            <a href="#manual-install" class="manual-nav-item active">1. Instalación y Arranque</a>
             <a href="#manual-lan" class="manual-nav-item">2. Ponerlo en tu Tablet/Móvil</a>
             <a href="#manual-hud" class="manual-nav-item">3. Cómo Funciona en Partida</a>
             <a href="#manual-voice" class="manual-nav-item">4. Copiloto de Voz & VoiceAttack</a>
-            <a href="#manual-accounts" class="manual-nav-item">5. Vincular Inara y EDSM</a>
+            <a href="#manual-accounts" class="manual-nav-item">5. Vincular Inara, EDSM y CAPI</a>
+            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--hud-border-subtle, rgba(255,255,255,0.1));">
+              <a href="Manual_TMC_Comandante.pdf" class="btn-hud btn-hud-primary" style="width: 100%; text-align: center; font-size: 0.78rem; padding: 0.5rem; display: block;" download>📄 Descargar Manual (PDF)</a>
+            </div>
           </aside>
 
           <!-- Contenido de los capítulos -->
@@ -772,16 +775,16 @@
             <!-- Capítulo 1 -->
             <article class="manual-chapter" id="manual-install">
               <h3 class="manual-chapter-title">
-                <span class="num">01.</span> Cómo Empezar a Volar en 10 Segundos
+                <span class="num">01.</span> Instalación Oficial y Arranque Rápido
               </h3>
               <div class="manual-body">
                 <p>
-                  Olvídate de instaladores que te llenan el ordenador de basura o que te obligan a buscar dónde tienes instalado Elite Dangerous. TMC es un ejecutable único:
+                  TMC se distribuye tanto con instalador guiado para Windows como en versión portable de un solo archivo:
                 </p>
                 <ol>
-                  <li>Abre Elite Dangerous (en Steam, Epic Games o launcher de Frontier).</li>
-                  <li>Ejecuta el archivo <code>TMC.exe</code>.</li>
-                  <li><strong>¡Listo!</strong> TMC detectará en menos de 1 segundo tu nombre de comandante, qué nave estás pilotando, en qué sistema te encuentras y cuántos créditos tienes en el banco.</li>
+                  <li>Descarga <strong><code>TMC_0.1.0_x64-setup.exe</code></strong> desde <a href="https://github.com/Danikuso/TheMultipurposeCompanion/releases" target="_blank" rel="noopener" style="color: var(--hud-cyan); font-weight: 600;">GitHub Releases</a>.</li>
+                  <li>Ejecuta el instalador. Si Windows muestra la advertencia azul de <em>Microsoft Defender SmartScreen</em> por ser una aplicación comunitaria sin certificado de pago, haz clic en <strong>«Más información» → «Ejecutar de todas formas»</strong>.</li>
+                  <li>Abre Elite Dangerous y lanza <strong>TMC</strong>: detectará automáticamente tu comandante, nave equipada, sistema y créditos en menos de 1 segundo leyendo tu carpeta de <code>Saved Games\Frontier Developments\Elite Dangerous</code>.</li>
                 </ol>
                 <div class="manual-callout">
                   <span class="manual-callout-title">💡 ¿Dónde lee TMC mis datos?</span>
