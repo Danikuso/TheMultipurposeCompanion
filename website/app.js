@@ -1,6 +1,6 @@
 /**
  * TMC — The Multipurpose Companion
- * Motor Interactivo de la Web Oficial
+ * Scripts interactivos del portal de documentación y vista previa Glass HUD
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ===================================================================
-// 1. SIMULADOR INTERACTIVO DE CABINA («LIVE COCKPIT HUD»)
+// 1. VISTA PREVIA INTERACTIVA DE INTERFAZ («GLASS HUD»)
 // ===================================================================
 
 const SIM_DATA = {
@@ -28,17 +28,17 @@ const SIM_DATA = {
     shield: '100 %',
     shieldFill: '100%',
     credits: '14.280.000 Cr',
-    routeTitle: 'Siguiente Salto (Neutrones Spansh)',
+    routeTitle: 'Siguiente Salto (Spansh Exact Plotter)',
     routeTarget: 'Eol Prou SS-T d3-128',
     routeAction: 'Copiar',
     systemName: 'Synuefe GT-H b43-1',
     cardTitle: '🔭 Cuerpos Celestes & Cartografía FSS',
     rows: [
-      { name: 'Synuefe GT-H b43-1 3 (Mundo Acuático)', badge: '🌊 TERRAFORMABLE', badgeClass: 'badge-cyan', val: '3.250.000 Cr' },
-      { name: 'Synuefe GT-H b43-1 4 a (Biológico 4)', badge: '🌿 EXOBIOLOGÍA', badgeClass: 'badge-purple', val: '19.500.000 Cr' },
-      { name: 'Synuefe GT-H b43-1 5 (Tierra ELW)', badge: '🌍 HABITABLE', badgeClass: 'badge-green', val: '4.800.000 Cr' }
+      { name: 'Synuefe GT-H b43-1 3 (Mundo Acuático)', badge: 'TERRAFORMABLE', badgeClass: 'badge-cyan', val: '3.250.000 Cr' },
+      { name: 'Synuefe GT-H b43-1 4 a (Superficie)', badge: '4 BIOSEÑALES', badgeClass: 'badge-purple', val: '19.000.000 Cr' },
+      { name: 'Synuefe GT-H b43-1 5 (Tipo Tierra)', badge: 'ELW · MAPEAR', badgeClass: 'badge-green', val: '4.800.000 Cr' }
     ],
-    ttsAudio: 'Comandante, entrada en sistema Synuefe. Tres cuerpos de alto valor detectados. Siguiente salto alineado a Eol Prou.'
+    ttsAudio: 'Salto completado a Synuefe. Estrella repostable. Detectadas señales biológicas en un cuerpo.'
   },
   combat: {
     badgeMode: 'ZONA DE CONFLICTO AX',
@@ -50,17 +50,17 @@ const SIM_DATA = {
     shield: '64 %',
     shieldFill: '64%',
     credits: '48.000.000 Cr',
-    routeTitle: 'Alerta Táctica Thargoide',
-    routeTarget: 'Medusa Clase Interceptor',
-    routeAction: 'Fijar Objetivo',
-    systemName: 'HIP 23716 (Ataque Activo)',
-    cardTitle: '⚔️ Monitor de Interceptores & Corazones',
+    routeTitle: 'Objetivo Fijado (ShipTargeted)',
+    routeTarget: 'Interceptor Clase Medusa',
+    routeAction: 'Copiar Sistema',
+    systemName: 'HIP 23716',
+    cardTitle: '⚔️ Telemetría de Objetivo & Estado AX',
     rows: [
-      { name: 'Corazón Cáustico 1/4', badge: 'DESTRUIDO', badgeClass: 'badge-green', val: '0 %' },
-      { name: 'Corazón Cáustico 2/4', badge: 'EXPUESTO', badgeClass: 'badge-danger', val: '38 %' },
-      { name: 'Enjambre Thargoide (32)', badge: 'AMENAZA ALTA', badgeClass: 'badge-orange', val: 'Flak Req.' }
+      { name: 'Corazón Thargoide 1 / 4', badge: 'DESTRUIDO', badgeClass: 'badge-green', val: '0 %' },
+      { name: 'Corazón Thargoide 2 / 4', badge: 'EXPUESTO', badgeClass: 'badge-danger', val: '38 %' },
+      { name: 'Enjambre Thargoide (32 unidades)', badge: 'ACTIVO', badgeClass: 'badge-orange', val: 'Flak' }
     ],
-    ttsAudio: '¡Atención comandante! Corazón cáustico número dos expuesto. Escudos del interceptor al cuarenta por ciento.'
+    ttsAudio: 'Advertencia de combate: escudos al sesenta y cuatro por ciento. Corazón número dos expuesto.'
   },
   mining: {
     badgeMode: 'ANILLO PLANETARIO',
@@ -71,21 +71,21 @@ const SIM_DATA = {
     fuelFill: '65%',
     shield: '100 %',
     shieldFill: '100%',
-    credits: '28.400.000 Cr/h',
-    routeTitle: 'Mejor Mercado de Venta Cercano',
-    routeTarget: 'Jameson Memorial (18 AL)',
-    routeAction: 'Trazar Ruta',
+    credits: '96,4 t/h',
+    routeTitle: 'Estación de Venta en Radio (18 AL)',
+    routeTarget: 'Jameson Memorial (Shinrarta Dezhra)',
+    routeAction: 'Copiar Sistema',
     systemName: 'Delkar 7 (Anillo Metálico A)',
-    cardTitle: '⛏️ Prospección de Asteroides & Bodega',
+    cardTitle: '⛏️ Último Dron Prospector & Bodega',
     rows: [
-      { name: 'Platino Puro', badge: '💎 58.4 % NÚCLEO', badgeClass: 'badge-cyan', val: '282.000 Cr/t' },
-      { name: 'Painita de Alta Pureza', badge: '💎 34.2 %', badgeClass: 'badge-green', val: '240.000 Cr/t' },
-      { name: 'Bodega de Carga (Krait Mk II)', badge: '112/128 TONELADAS', badgeClass: 'badge-orange', val: '87.5 % Lleno' }
+      { name: 'Platino (Mineral de interés)', badge: '58,4 % · ALTO', badgeClass: 'badge-cyan', val: '282.000 Cr/t' },
+      { name: 'Painita', badge: '34,2 % · MEDIO', badgeClass: 'badge-green', val: '240.000 Cr/t' },
+      { name: 'Ocupación de Bodega', badge: '112 / 128 t', badgeClass: 'badge-orange', val: '87,5 %' }
     ],
-    ttsAudio: 'Prospección completada: asteroide de Platino con cincuenta y ocho por ciento de pureza. Rendimiento óptimo.'
+    ttsAudio: 'Asteroide prospectado con cincuenta y ocho por ciento de Platino.'
   },
   trade: {
-    badgeMode: 'ATRACADO EN ESTACIÓN',
+    badgeMode: 'ATRACADO',
     badgeClass: 'badge-green',
     hull: '100 %',
     hullFill: '100%',
@@ -94,17 +94,17 @@ const SIM_DATA = {
     shield: '100 %',
     shieldFill: '100%',
     credits: '86.200.000 Cr',
-    routeTitle: 'Ruta Comercial de Alto Margen',
-    routeTarget: 'Wally Sei (Isótopos H3)',
-    routeAction: 'Copiar Destino',
-    systemName: 'Sol (Estación Gorbachov)',
-    cardTitle: '💰 Mercado Galáctico & Bodega Cutter',
+    routeTitle: 'Destino Comercial Seleccionado',
+    routeTarget: 'Wally Bei (Malerba Orbital)',
+    routeAction: 'Copiar Sistema',
+    systemName: 'Sol (Abraham Lincoln)',
+    cardTitle: '📦 Comparativa Market.json & Carga',
     rows: [
-      { name: 'Compra: Isótopos H3 (720 t)', badge: 'PRECIO: 4.800 Cr', badgeClass: 'badge-cyan', val: 'Inversión 3.4M' },
-      { name: 'Venta esperada en Wally Sei', badge: 'MARGEN +122.000 Cr/t', badgeClass: 'badge-green', val: '+87.840.000 Cr' },
-      { name: 'Demanda de la Estación Destino', badge: 'ALTA (18.500 t)', badgeClass: 'badge-orange', val: 'Seguro 1 Salto' }
+      { name: 'Carga en bodega: Plata (720 t)', badge: 'COMPRA: 34.800 Cr/t', badgeClass: 'badge-cyan', val: '720 / 720 t' },
+      { name: 'Precio receptor (datos EDDN < 2 h)', badge: 'VENTA: 48.950 Cr/t', badgeClass: 'badge-green', val: '+14.150 Cr/t' },
+      { name: 'Plataforma y Demanda en Destino', badge: 'GRANDE · 18.500 t', badgeClass: 'badge-orange', val: '14,2 AL' }
     ],
-    ttsAudio: 'Margen comercial confirmado: beneficio estimado de ochenta y siete millones en el siguiente salto.'
+    ttsAudio: 'Datos de mercado local actualizados. Ruta comercial de un salto verificada para plataforma grande.'
   }
 };
 
@@ -130,7 +130,7 @@ function initCockpitSimulator() {
   if (copyBtn) {
     copyBtn.addEventListener('click', () => {
       const targetSystem = document.getElementById('simRouteTarget').textContent.trim();
-      copyToClipboard(targetSystem, `Sistema «${targetSystem}» copiado al portapapeles.`);
+      copyToClipboard(targetSystem, `Elemento «${targetSystem}» copiado al portapapeles.`);
     });
   }
 
@@ -140,7 +140,6 @@ function initCockpitSimulator() {
     });
   }
 
-  // Inicializar vista
   renderSimMode('exploration');
 }
 
@@ -194,56 +193,59 @@ function playCockpitVoice(text) {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'es-ES';
-    utterance.rate = 1.05;
-    utterance.pitch = 0.95;
-    
-    // Intenta usar una voz natural si está disponible
+    utterance.rate = 1.03;
+    utterance.pitch = 0.98;
+
     const voices = window.speechSynthesis.getVoices();
     const esVoice = voices.find((v) => v.lang.startsWith('es'));
     if (esVoice) utterance.voice = esVoice;
 
     window.speechSynthesis.speak(utterance);
-    showToast(`🎙️ Copiloto de Cabina: «${text}»`);
+    showToast(`🔊 Locución TTS: «${text}»`);
   } else {
-    showToast(`🎙️ Simulación de Voz: ${text}`);
+    showToast(`🔊 Locución TTS: ${text}`);
   }
 }
 
 // ===================================================================
-// 2. BUSCADOR INSTANTÁNEO GLOBAL (CTRL + K O ATRIBUTO SEARCH)
+// 2. BUSCADOR INSTANTÁNEO GLOBAL (CTRL + K)
 // ===================================================================
 
 const SEARCH_DATABASE = [
-  // Módulos
-  { title: 'Dashboard & Telemetría', category: 'Módulo de Cabina', url: '#mod-dashboard', snippet: 'Estado del comandante, créditos, rango, alertas de sobrecalentamiento, SCO y salud de casco.' },
-  { title: 'Nave & Módulos (Ship Outfitting)', category: 'Módulo de Nave', url: '#mod-ship', snippet: 'Inspección de equipamiento, integridad de módulos, badges de ingeniería aplicados y balance de energía.' },
-  { title: 'Navegación & Route Strip', category: 'Módulo de Viaje', url: '#mod-navigation', snippet: 'Planificador Spansh de galaxia y neutrones, banner pegajoso de ruta y autocopiado de saltos.' },
-  { title: 'Exploración Cartográfica', category: 'Módulo Científico', url: '#mod-exploration', snippet: 'Cuerpos celestes FSS/DSS, detección de mundos acuáticos, terraformables, ELW y scroll pegajoso.' },
-  { title: 'Exobiología (Odyssey)', category: 'Módulo Científico', url: '#mod-exobiology', snippet: 'Semáforo de distancias mínimas entre muestras biológicas, catálogo por planeta y bono x5.' },
-  { title: 'Combate & Guerra Thargoide (AX)', category: 'Módulo Táctico', url: '#mod-combat', snippet: 'Caza de recompensas, Zonas de Conflicto (CZ) y monitor de interceptores AX con corazones.' },
-  { title: 'Minería de Alto Rendimiento', category: 'Módulo de Economía', url: '#mod-mining', snippet: 'Rendimiento en t/h, lectura en tiempo real de prospectores y recomendador de mercados de venta.' },
-  { title: 'Comercio & Mercados', category: 'Módulo de Economía', url: '#mod-trade', snippet: 'Inventario de bodega de carga, visor de mercado local vs media galáctica y rutas multi-hop.' },
-  { title: 'Misiones & Massacre Stacking', category: 'Módulo de Misiones', url: '#mod-missions', snippet: 'Apilamiento inteligente de misiones de masacre por facción, pasajeros VIP y Objetivos Comunitarios.' },
-  { title: 'Ingeniería & Asistente Proactivo', category: 'Módulo de Artesanía', url: '#mod-engineering', snippet: 'Flujo guiado de desbloqueo (EngineerFlow), inventario de materiales G1-G5 y Material Traders.' },
-  { title: 'Fleet Carrier (Mega-naves)', category: 'Módulo de Flota', url: '#mod-carrier', snippet: 'Gestión de carrier, consumo y stock de Tritio, cuenta atrás de saltos y finanzas de mantenimiento.' },
-  { title: 'Colonización de Sistemas', category: 'Módulo de Expansión', url: '#mod-colonisation', snippet: 'Seguimiento de proyectos de colonización, suministro de materias primas y puertos espaciales.' },
-  { title: 'Powerplay 2.0', category: 'Módulo Galáctico', url: '#mod-powerplay', snippet: 'Lealtad a líderes galácticos, méritos semanales, fortificación de sistemas y módulos exclusivos.' },
-  { title: 'Simulación de Fondo (BGS)', category: 'Módulo Galáctico', url: '#mod-bgs', snippet: 'Monitor de influencia de facciones menores, estados de guerra, elecciones y registro de impacto.' },
-  { title: 'Crimen, Notoriedad & Piratería', category: 'Módulo de Seguridad', url: '#mod-crime', snippet: 'Temporizador de notoriedad en tiempo real, Interstellar Factors, contrabando y mercados negros.' },
-  { title: 'Cuentas & Sincronización', category: 'Módulo de Conectividad', url: '#mod-accounts', snippet: 'Sincronización con EDDN, EDSM e Inara respetando la privacidad y galaxia Legacy.' },
+  // Arquitectura y código abierto
+  { title: 'Arquitectura y Principios de Diseño', category: 'Ingeniería', url: '#arquitectura', snippet: 'Motor en Rust, ergonomía Glass HUD (regla del 33 %), SQLite WAL local, aislamiento Legacy y código abierto.' },
 
-  // Manual de Vuelo
-  { title: 'Cómo Empezar a Volar en 10 Segundos', category: 'Guía de Inicio', url: '#manual-install', snippet: 'Abre TMC.exe y detecta tu nave, comandante y sistema al instante sin configuraciones complejas.' },
-  { title: 'Pantalla Táctil para Tablet o Móvil (QR)', category: 'Guía de Cabina', url: '#manual-lan', snippet: 'Usa tu tablet o smartphone como monitor auxiliar MFD de cabina escaneando un simple código QR.' },
-  { title: 'Modo Auto-Companion: TMC Piensa por Ti', category: 'Guía de Cabina', url: '#manual-hud', snippet: 'Cambio de pantalla automático según lo que estés haciendo: saltar, minar, combatir o recolectar plantas.' },
-  { title: 'Copiloto de Voz Hablada & VoiceAttack', category: 'Guía de Audio', url: '#manual-voice', snippet: 'Tu nave te avisa con voz en español de estrellas para repostar, bioseñales y daños críticos.' },
-  { title: 'Conexión con Inara, EDSM y EDDN', category: 'Guía de Comunidad', url: '#manual-accounts', snippet: 'Mantén tu flota, créditos y perfil actualizados en la comunidad de Elite Dangerous en tiempo real.' },
+  // Módulos (16)
+  { title: 'Panel General (Dashboard)', category: 'Módulo', url: '#mod-dashboard', snippet: 'Estado del comandante, créditos, rangos, banderas en vivo de Status.json, métricas de sesión y alertas.' },
+  { title: 'Nave & Equipamiento (Loadout)', category: 'Módulo', url: '#mod-ship', snippet: 'Auditoría por rol (Exploración, Combate, Carga) y desglose de ranuras con integridad e ingeniería aplicada.' },
+  { title: 'Navegación & Planificador Spansh', category: 'Módulo', url: '#mod-navigation', snippet: 'Ruta exacta (Exact Plotter con física leída del diario), Autopista de neutrones, coordenadas 3D y RouteStrip.' },
+  { title: 'Exploración Cartográfica', category: 'Módulo', url: '#mod-exploration', snippet: 'Progreso FSS, tabla adaptativa de cuerpos celestes y umbral configurable de mapeo DSS.' },
+  { title: 'Exobiología de Superficie', category: 'Módulo', url: '#mod-exobiology', snippet: 'Predicción de especies candidatas en Odyssey y cálculo GPS en tiempo real de distancias mínimas clonales (3 muestras).' },
+  { title: 'Combate & Actividad Anti-Xeno', category: 'Módulo', url: '#mod-combat', snippet: 'Lectura de objetivo fijado (ShipTargeted), subsistemas, Zonas de Conflicto, bonos y seguimiento AX.' },
+  { title: 'Minería & Prospección', category: 'Módulo', url: '#mod-mining', snippet: 'Análisis de drones prospectores, cadencia en toneladas/hora, minerales de interés y radio de venta.' },
+  { title: 'Comercio & Mercados', category: 'Módulo', url: '#mod-trade', snippet: 'Inventario de carga, comparativa de Market.json frente a datos EDDN y filtros por plataforma.' },
+  { title: 'Misiones & Contratos', category: 'Módulo', url: '#mod-missions', snippet: 'Seguimiento de expiración, referencia de turismo y agrupación de misiones de masacre por facción emisora.' },
+  { title: 'Ingeniería & Materiales (EngineerFlow)', category: 'Módulo', url: '#mod-engineering', snippet: 'Guía secuencial de desbloqueo de ingenieros, almacén, taquilla Odyssey, lista de la compra y Material Traders.' },
+  { title: 'Fleet Carrier', category: 'Módulo', url: '#mod-carrier', snippet: 'Reserva y consumo de Tritio, cuenta atrás de saltos programados, ocupación y presupuesto semanal.' },
+  { title: 'Colonización de Sistemas', category: 'Módulo', url: '#mod-colonisation', snippet: 'Control de entregas de materias primas de construcción y localización de oferta en mercados cercanos.' },
+  { title: 'Powerplay 2.0', category: 'Módulo', url: '#mod-powerplay', snippet: 'Potencia vinculada, rango actual, méritos acumulados en el ciclo semanal y estado estratégico del sistema.' },
+  { title: 'Simulación de Fondo (BGS)', category: 'Módulo', url: '#mod-bgs', snippet: 'Tabla de facciones menores, porcentajes de influencia, estados activos/pendientes y acciones de sesión.' },
+  { title: 'Crimen & Jurisdicción', category: 'Módulo', url: '#mod-crime', snippet: 'Multas, recompensas, decaimiento de notoriedad (2 h/punto), carga ilegal e Interstellar Factors cercanos.' },
+  { title: 'Cuentas & Sincronización', category: 'Módulo', url: '#mod-accounts', snippet: 'Frontier CAPI (OAuth2 PKCE y flota remota), Inara InAPI v1 (whitelist oficial), EDSM y EDDN.' },
 
-  // Tutoriales
-  { title: 'Tutorial: Ruta de Exobiología Multimillonaria', category: 'Tutorial Práctico', url: '#tut-exobiology', snippet: 'Cómo ganar más de 100M Cr por sistema aprovechando el semáforo de distancias y el bono de primer descubrimiento.' },
-  { title: 'Tutorial: Desbloqueo de Ingenieros desde Cero', category: 'Tutorial Práctico', url: '#tut-engineering', snippet: 'Uso de EngineerFlow para completar los pasos de conocimiento, invitación y donación sin bloqueos.' },
-  { title: 'Tutorial: Caza de Piratas con Massacre Stacking', category: 'Tutorial Práctico', url: '#tut-massacre', snippet: 'Cómo cobrar múltiples recompensas por una sola baja apilando misiones de distintas facciones.' },
-  { title: 'Tutorial: Limpiar Notoriedad y Vender Contrabando', category: 'Tutorial Práctico', url: '#tut-crime', snippet: 'Gestión del decaimiento en vuelo, localización de Interstellar Factors y evasión policial.' }
+  // Guía de instrucciones
+  { title: 'Instalación, SmartScreen y Archivos Locales', category: 'Instrucciones', url: '#manual-install', snippet: 'Instalador NSIS, nota sobre Windows SmartScreen, config.toml, tmc.db, bandeja del sistema y flag --journal-dir.' },
+  { title: 'Anatomía de Interfaz, Disposiciones y Auto-companion', category: 'Instrucciones', url: '#manual-hud', snippet: 'TopBar, diferencia entre Disposiciones combinadas y Módulos individuales, y paneles desplegables.' },
+  { title: 'Pantalla Auxiliar en Red Local (Código QR)', category: 'Instrucciones', url: '#manual-lan', snippet: 'Cómo abrir la interfaz en una tablet o teléfono en la misma red Wi-Fi escaneando el código QR.' },
+  { title: 'Síntesis de Voz (TTS), Reconocimiento y VoiceAttack', category: 'Instrucciones', url: '#manual-voice', snippet: 'Voces SAPI5/OneCore y KokoroTTS, reconocimiento Whisper AI Local y exportación del perfil TMC-Copiloto.vap.' },
+  { title: 'Vinculación Opcional: CAPI, Inara, EDSM y EDDN', category: 'Instrucciones', url: '#manual-accounts', snippet: 'Configuración paso a paso de servicios externos y modo de funcionamiento 100 % local.' },
+  { title: 'Compilación desde el Código Fuente', category: 'Código Abierto', url: '#manual-build', snippet: 'Comandos git clone, npm build, cargo test y cargo build --release para compilar TMC localmente.' },
+
+  // Flujos de trabajo
+  { title: 'Flujo: Muestreo Genético en Exobiología', category: 'Procedimiento', url: '#tut-exobiology', snippet: 'Secuencia de escaneo FSS/DSS y toma de las 3 muestras respetando el radio mínimo clonal.' },
+  { title: 'Flujo: Desbloqueo de Ingenieros e Intercambio', category: 'Procedimiento', url: '#tut-engineering', snippet: 'Cálculo de blueprint, verificación de pasos de desbloqueo, lista de la compra y trueque de excedentes.' },
+  { title: 'Flujo: Seguimiento de Misiones por Facción', category: 'Procedimiento', url: '#tut-massacre', snippet: 'Control de columnas por facción emisora para computar bajas en paralelo y plazos de entrega.' },
+  { title: 'Flujo: Gestión de Notoriedad e Interstellar Factors', category: 'Procedimiento', url: '#tut-crime', snippet: 'Comprobación de notoriedad 0 y localización de contactos neutrales para liquidar sanciones.' }
 ];
 
 function initSearchModal() {
@@ -289,10 +291,10 @@ function initSearchModal() {
   function renderSearchResults(query) {
     if (!resultsContainer) return;
 
-    const filtered = query === '' 
-      ? SEARCH_DATABASE.slice(0, 7)
-      : SEARCH_DATABASE.filter(item => 
-          item.title.toLowerCase().includes(query) || 
+    const filtered = query === ''
+      ? SEARCH_DATABASE.slice(0, 8)
+      : SEARCH_DATABASE.filter(item =>
+          item.title.toLowerCase().includes(query) ||
           item.category.toLowerCase().includes(query) ||
           item.snippet.toLowerCase().includes(query)
         );
@@ -396,11 +398,11 @@ function initCodeCopyButtons() {
       const snippet = btn.closest('.code-snippet');
       if (!snippet) return;
 
-      const codeText = snippet.textContent.replace(btn.textContent, '').trim();
-      copyToClipboard(codeText, 'Comando copiado al portapapeles');
-      
+      const codeText = snippet.innerText.replace(btn.innerText, '').trim();
+      copyToClipboard(codeText, 'Comandos copiados al portapapeles');
+
       const originalText = btn.textContent;
-      btn.textContent = '¡Copiado!';
+      btn.textContent = 'Copiado';
       btn.style.background = 'var(--hud-success)';
       btn.style.color = '#000';
 
@@ -436,7 +438,7 @@ function fallbackCopy(text, message) {
     document.execCommand('copy');
     showToast(message);
   } catch (e) {
-    showToast('Error al copiar automáticamente');
+    showToast('No se pudo copiar automáticamente');
   }
   document.body.removeChild(textarea);
 }
@@ -452,7 +454,7 @@ function showToast(message) {
   const toast = document.createElement('div');
   toast.className = 'toast';
   toast.innerHTML = `
-    <span style="color: var(--hud-primary);">⚡</span>
+    <span style="color: var(--hud-primary);">●</span>
     <span>${message}</span>
   `;
 
@@ -472,11 +474,12 @@ function showToast(message) {
 
 function initScrollSpy() {
   const sections = document.querySelectorAll('section[id]');
+  const chapters = document.querySelectorAll('.manual-chapter[id]');
   const navLinks = document.querySelectorAll('.nav-link');
   const manualNavItems = document.querySelectorAll('.manual-nav-item');
 
   window.addEventListener('scroll', () => {
-    const scrollPos = window.scrollY + 120;
+    const scrollPos = window.scrollY + 140;
 
     sections.forEach((section) => {
       const top = section.offsetTop;
@@ -490,7 +493,15 @@ function initScrollSpy() {
             link.classList.add('active');
           }
         });
+      }
+    });
 
+    chapters.forEach((chapter) => {
+      const top = chapter.offsetTop;
+      const height = chapter.offsetHeight;
+      const id = chapter.getAttribute('id');
+
+      if (scrollPos >= top && scrollPos < top + height) {
         manualNavItems.forEach((link) => {
           link.classList.remove('active');
           if (link.getAttribute('href') === `#${id}`) {

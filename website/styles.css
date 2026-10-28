@@ -240,6 +240,7 @@ h1, h2, h3, h4, .hud-title {
   align-items: center;
   gap: 0.85rem;
   text-decoration: none;
+  flex-shrink: 0;
 }
 
 .brand-icon {
@@ -291,13 +292,14 @@ h1, h2, h3, h4, .hud-title {
 
 .nav-link {
   font-family: var(--font-mono);
-  font-size: 0.82rem;
-  padding: 0.45rem 0.85rem;
+  font-size: 0.78rem;
+  padding: 0.45rem 0.7rem;
   border-radius: var(--radius-sm);
   color: var(--hud-muted);
   transition: var(--transition-fast);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .nav-link:hover, .nav-link.active {
@@ -309,6 +311,7 @@ h1, h2, h3, h4, .hud-title {
   display: flex;
   align-items: center;
   gap: 0.85rem;
+  flex-shrink: 0;
 }
 
 .search-trigger-btn {
@@ -323,6 +326,8 @@ h1, h2, h3, h4, .hud-title {
   font-family: var(--font-mono);
   font-size: 0.8rem;
   transition: var(--transition-fast);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .search-trigger-btn:hover {
@@ -337,6 +342,7 @@ h1, h2, h3, h4, .hud-title {
   border-radius: 3px;
   font-size: 0.7rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
 }
 
 .btn-hud {
@@ -353,6 +359,7 @@ h1, h2, h3, h4, .hud-title {
   text-transform: uppercase;
   transition: var(--transition-fast);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .btn-hud-primary {
@@ -540,11 +547,13 @@ h1, h2, h3, h4, .hud-title {
   font-size: 0.75rem;
   color: var(--hud-muted);
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .cockpit-modes {
   display: flex;
   gap: 0.35rem;
+  flex-wrap: wrap;
 }
 
 .cockpit-mode-btn {
@@ -556,6 +565,7 @@ h1, h2, h3, h4, .hud-title {
   color: var(--hud-muted);
   border: 1px solid transparent;
   transition: var(--transition-fast);
+  white-space: nowrap;
 }
 
 .cockpit-mode-btn:hover {
@@ -655,6 +665,8 @@ h1, h2, h3, h4, .hud-title {
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Panel de contenido dinámico del simulador */
@@ -688,6 +700,7 @@ h1, h2, h3, h4, .hud-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
   padding: 0.45rem 0.65rem;
   background: rgba(0, 0, 0, 0.25);
   border-radius: var(--radius-sm);
@@ -706,6 +719,8 @@ h1, h2, h3, h4, .hud-title {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .badge-green { background: var(--hud-success-dim); color: var(--hud-success); border: 1px solid rgba(34, 197, 94, 0.3); }
@@ -758,6 +773,8 @@ h1, h2, h3, h4, .hud-title {
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: var(--transition-fast);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .audio-test-btn:hover {
@@ -958,7 +975,9 @@ h1, h2, h3, h4, .hud-title {
 
 .module-search-box {
   position: relative;
-  min-width: 260px;
+  min-width: 310px;
+  flex: 1;
+  max-width: 410px;
 }
 
 .module-search-input {
@@ -1066,11 +1085,10 @@ h1, h2, h3, h4, .hud-title {
 }
 
 .module-panel-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
+  display: block;
   font-size: 0.85rem;
   color: #e5e7eb;
+  line-height: 1.55;
 }
 
 .module-panel-item svg {
@@ -1083,9 +1101,10 @@ h1, h2, h3, h4, .hud-title {
 
 .module-panel-tag {
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 700;
   color: var(--hud-cyan);
+  margin-right: 0.3rem;
 }
 
 /* ===================================================================
@@ -1195,9 +1214,8 @@ h1, h2, h3, h4, .hud-title {
   background: rgba(22, 28, 45, 0.7);
   border-left: 4px solid var(--hud-primary);
   margin: 1.5rem 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+  display: block;
+  line-height: 1.65;
 }
 
 .manual-callout.cyan {
@@ -1211,6 +1229,8 @@ h1, h2, h3, h4, .hud-title {
 }
 
 .manual-callout-title {
+  display: block;
+  margin-bottom: 0.35rem;
   font-family: var(--font-mono);
   font-size: 0.85rem;
   font-weight: 700;
@@ -1689,12 +1709,13 @@ h1, h2, h3, h4, .hud-title {
   padding: 0.75rem 0.95rem;
   font-size: 0.88rem;
   color: #fed7aa;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  display: block;
+  line-height: 1.55;
 }
 
 .benefit-title {
+  display: block;
+  margin-bottom: 0.25rem;
   font-family: var(--font-mono);
   font-size: 0.72rem;
   font-weight: 700;

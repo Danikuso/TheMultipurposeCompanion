@@ -2,129 +2,184 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Manual del Comandante — TMC: The Multipurpose Companion</title>
+  <title>Manual de Instrucciones y Operación — TMC (The Multipurpose Companion) v0.1.0</title>
   <style>
     @page {
       size: A4;
-      margin: 18mm 16mm 20mm 16mm;
+      margin: 16mm 15mm 18mm 15mm;
       @bottom-right {
-        content: counter(page);
+        content: "Página " counter(page);
         font-family: 'Segoe UI', Tahoma, sans-serif;
         font-size: 8pt;
-        color: #888;
+        color: #64748b;
       }
+      @bottom-left {
+        content: "TMC v0.1.0 — Manual de Instrucciones y Operación";
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+        font-size: 8pt;
+        color: #64748b;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
     }
 
     body {
       font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
       color: #1e293b;
-      line-height: 1.55;
-      font-size: 10pt;
+      line-height: 1.5;
+      font-size: 9.5pt;
       margin: 0;
       padding: 0;
       background: #ffffff;
     }
 
+    /* Portada técnica */
     .cover-page {
       page-break-after: always;
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      min-height: 88vh;
-      text-align: center;
-      border: 2px solid #ff7100;
-      border-radius: 8px;
-      padding: 40px;
-      background: linear-gradient(180deg, #fafafa 0%, #fff7ed 100%);
+      justify-content: space-between;
+      min-height: 90vh;
+      border: 1.5px solid #cbd5e1;
+      border-top: 6px solid #ea580c;
+      border-radius: 6px;
+      padding: 38px 42px;
+      background: #ffffff;
     }
 
-    .cover-badge {
-      display: inline-block;
-      background: #ff7100;
-      color: #ffffff;
-      font-weight: 700;
-      font-size: 10pt;
-      padding: 4px 14px;
-      border-radius: 20px;
-      letter-spacing: 0.1em;
+    .cover-header {
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 8.5pt;
+      color: #475569;
       text-transform: uppercase;
-      margin-bottom: 24px;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+    }
+
+    .cover-tag {
+      display: inline-block;
+      background: #f1f5f9;
+      color: #0f172a;
+      border: 1px solid #cbd5e1;
+      font-weight: 700;
+      font-size: 8.5pt;
+      padding: 4px 10px;
+      border-radius: 4px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .cover-main {
+      margin: 40px 0;
     }
 
     .cover-title {
-      font-size: 32pt;
-      font-weight: 900;
+      font-size: 26pt;
+      font-weight: 800;
       color: #0f172a;
-      margin: 0 0 10px 0;
-      line-height: 1.15;
-      letter-spacing: -0.02em;
+      margin: 0 0 12px 0;
+      line-height: 1.18;
+      letter-spacing: -0.01em;
     }
 
     .cover-title span {
-      color: #ff7100;
+      color: #ea580c;
     }
 
     .cover-subtitle {
-      font-size: 14pt;
-      color: #475569;
-      max-width: 600px;
-      margin: 0 0 35px 0;
+      font-size: 12.5pt;
+      color: #334155;
+      max-width: 620px;
+      margin: 0 0 24px 0;
       font-weight: 400;
+      line-height: 1.45;
     }
 
-    .cover-meta {
-      margin-top: 50px;
-      font-size: 9pt;
+    .cover-specs-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 8.8pt;
+    }
+
+    .cover-specs-table th {
+      width: 30%;
+      background: #f8fafc;
+      color: #334155;
+      font-weight: 700;
+      padding: 7px 10px;
+      border: 1px solid #cbd5e1;
+      text-align: left;
+    }
+
+    .cover-specs-table td {
+      padding: 7px 10px;
+      border: 1px solid #cbd5e1;
+      color: #0f172a;
+    }
+
+    .cover-footer {
+      font-size: 8.3pt;
       color: #64748b;
-      line-height: 1.8;
+      line-height: 1.6;
       border-top: 1px solid #e2e8f0;
-      padding-top: 20px;
-      width: 80%;
+      padding-top: 14px;
     }
 
     .page-break {
       page-break-after: always;
     }
 
+    .page-break-before {
+      page-break-before: always;
+    }
+
     h1 {
-      font-size: 18pt;
+      font-size: 15.5pt;
       font-weight: 800;
       color: #0f172a;
-      border-bottom: 2px solid #ff7100;
-      padding-bottom: 6px;
+      border-bottom: 2px solid #ea580c;
+      padding-bottom: 5px;
       margin-top: 24px;
-      margin-bottom: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      margin-bottom: 12px;
+      page-break-after: avoid;
+      break-after: avoid;
     }
 
     h2 {
-      font-size: 13pt;
+      font-size: 11.5pt;
       font-weight: 700;
-      color: #1e293b;
-      margin-top: 18px;
-      margin-bottom: 8px;
-      border-left: 3px solid #00d4b2;
+      color: #0f172a;
+      margin-top: 15px;
+      margin-bottom: 7px;
+      border-left: 3px solid #0d9488;
       padding-left: 8px;
+      page-break-after: avoid;
     }
 
     h3 {
-      font-size: 11pt;
-      font-weight: 600;
+      font-size: 10pt;
+      font-weight: 700;
       color: #334155;
-      margin-top: 12px;
-      margin-bottom: 6px;
+      margin-top: 11px;
+      margin-bottom: 5px;
+      page-break-after: avoid;
     }
 
     p {
-      margin: 0 0 10px 0;
+      margin: 0 0 8px 0;
     }
 
     ul, ol {
-      margin: 0 0 12px 0;
-      padding-left: 22px;
+      margin: 0 0 10px 0;
+      padding-left: 20px;
     }
 
     li {
@@ -133,59 +188,74 @@
 
     code {
       font-family: 'Consolas', 'Courier New', monospace;
-      font-size: 9pt;
+      font-size: 8.5pt;
       background: #f1f5f9;
       color: #0f172a;
-      padding: 1px 5px;
-      border-radius: 4px;
-      border: 1px solid #e2e8f0;
+      padding: 1px 4px;
+      border-radius: 3px;
+      border: 1px solid #cbd5e1;
+    }
+
+    kbd {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 8.3pt;
+      font-weight: 600;
+      background: #fff7ed;
+      color: #9a3412;
+      padding: 1px 6px;
+      border-radius: 3px;
+      border: 1px solid #fdba74;
     }
 
     pre {
       font-family: 'Consolas', monospace;
       background: #0f172a;
-      color: #e2e8f0;
-      padding: 12px;
-      border-radius: 6px;
-      font-size: 8.5pt;
+      color: #f8fafc;
+      padding: 10px 12px;
+      border-radius: 5px;
+      font-size: 8.3pt;
       overflow-x: auto;
-      margin: 0 0 12px 0;
+      margin: 6px 0 10px 0;
       line-height: 1.4;
+      break-inside: avoid;
     }
 
     .callout {
       background: #f8fafc;
       border: 1px solid #cbd5e1;
-      border-left: 4px solid #ff7100;
-      border-radius: 6px;
-      padding: 10px 14px;
-      margin: 12px 0;
-      font-size: 9pt;
+      border-left: 4px solid #ea580c;
+      border-radius: 4px;
+      padding: 9px 12px;
+      margin: 10px 0;
+      font-size: 8.8pt;
+      break-inside: avoid;
     }
 
-    .callout.cyan {
-      border-left-color: #00d4b2;
+    .callout.info {
+      border-left-color: #0d9488;
       background: #f0fdfa;
     }
 
     .callout-title {
       font-weight: 700;
       color: #0f172a;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
       display: block;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      margin: 12px 0;
-      font-size: 8.5pt;
+      margin: 8px 0 12px 0;
+      font-size: 8.4pt;
+      break-inside: avoid;
     }
 
     th, td {
       border: 1px solid #cbd5e1;
-      padding: 6px 10px;
+      padding: 5px 8px;
       text-align: left;
+      vertical-align: top;
     }
 
     th {
@@ -200,10 +270,10 @@
 
     .toc {
       background: #f8fafc;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #cbd5e1;
       border-radius: 6px;
-      padding: 18px 24px;
-      margin: 20px 0 30px 0;
+      padding: 18px 22px;
+      margin: 10px 0 20px 0;
     }
 
     .toc-title {
@@ -222,20 +292,29 @@
     }
 
     .toc-list li {
-      margin-bottom: 6px;
+      margin-bottom: 7px;
+      line-height: 1.4;
     }
 
     .toc-list a {
-      color: #ff7100;
+      color: #0f172a;
       text-decoration: none;
-      font-weight: 600;
+      font-weight: 700;
+    }
+
+    .toc-num {
+      display: inline-block;
+      width: 26px;
+      color: #ea580c;
+      font-weight: 800;
+      font-family: 'Consolas', monospace;
     }
 
     .toc-desc {
-      color: #64748b;
+      color: #475569;
       font-size: 8.5pt;
-      display: inline-block;
-      margin-left: 8px;
+      display: block;
+      margin-left: 26px;
     }
   </style>
 </head>
@@ -243,21 +322,50 @@
 
   <!-- PORTADA -->
   <div class="cover-page">
-    <div class="cover-badge">MANUAL OFICIAL DEL PILOTO · VERSIÓN 0.1.0</div>
-    <div class="cover-title">TMC <span>The Multipurpose Companion</span></div>
-    <div class="cover-subtitle">
-      Guía de vuelo, telemetría y cabina para comandantes de Elite Dangerous (Odyssey y Horizons 4.0).
+    <div class="cover-header">
+      <span>Documentación Técnica y de Usuario</span>
+      <span>Versión 0.1.0</span>
     </div>
 
-    <div style="font-size: 11pt; color: #00d4b2; font-weight: 700; margin: 15px 0;">
-      ⚡ Filosofía del Ayudante Integral: Nunca un callejón sin salida.
+    <div class="cover-main">
+      <div class="cover-tag">Manual de Instrucciones y Operación</div>
+      <div class="cover-title">TMC — <span>The Multipurpose Companion</span></div>
+      <div class="cover-subtitle">
+        Guía de instalación, configuración, anatomía de interfaz y procedimientos operativos paso a paso para <em>Elite Dangerous</em> (Live 4.0 / Odyssey y Legacy 3.8).
+      </div>
+
+      <table class="cover-specs-table">
+        <tbody>
+          <tr>
+            <th>Repositorio de código abierto</th>
+            <td><code>https://github.com/Danikuso/TheMultipurposeCompanion</code></td>
+          </tr>
+          <tr>
+            <th>Licencia</th>
+            <td>PolyForm Noncommercial 1.0.0 (Código abierto para uso personal y comunitario sin ánimo de lucro)</td>
+          </tr>
+          <tr>
+            <th>Plataformas soportadas</th>
+            <td>Windows 10 / 11 (x64, WebView2) y Linux (x64, WebKitGTK / modo headless)</td>
+          </tr>
+          <tr>
+            <th>Arquitectura técnica</th>
+            <td>Rust (edición 2024) · Tauri 2 · Svelte 5 · SQLite local (modo WAL) · Servidor HTTP/SSE local</td>
+          </tr>
+          <tr>
+            <th>Idiomas de la interfaz</th>
+            <td>Español (<code>es</code>), Inglés (<code>en</code>), Francés (<code>fr</code>), Alemán (<code>de</code>) y Portugués (<code>pt</code>)</td>
+          </tr>
+          <tr>
+            <th>Integraciones externas opcionales</th>
+            <td>Spansh API, Frontier CAPI (OAuth2 PKCE), Inara InAPI v1 (whitelist registrada), EDSM y EDDN</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
-    <div class="cover-meta">
-      <strong>Desarrollado para la comunidad de Elite Dangerous</strong><br>
-      Integraciones oficiales aprobadas con Inara InAPI v1 y Frontier CAPI (OAuth2 PKCE)<br>
-      Bajo consumo garantizado (&lt; 50 MB RAM, &lt; 1% CPU) · Pantalla Táctil LAN para Tablets y Móviles<br>
-      Licencia PolyForm Noncommercial 1.0.0 · Octubre 2026
+    <div class="cover-footer">
+      <strong>Aviso legal:</strong> <em>Elite Dangerous</em>, <em>Horizons</em> y <em>Odyssey</em> son marcas registradas de Frontier Developments plc. TMC es un proyecto independiente de código abierto que opera leyendo de forma pasiva los archivos de registro locales documentados por Frontier para herramientas de terceros.
     </div>
   </div>
 
@@ -265,277 +373,547 @@
   <div class="toc page-break">
     <div class="toc-title">Índice de Contenidos</div>
     <ul class="toc-list">
-      <li><strong>01.</strong> <a href="#cap1">¿Qué es TMC y cómo funciona?</a> <span class="toc-desc">— Filosofía del ayudante, rendimiento y seguridad.</span></li>
-      <li><strong>02.</strong> <a href="#cap2">Instalación y Puesta en Marcha</a> <span class="toc-desc">— Instalador de Windows, aviso SmartScreen y detección de diarios.</span></li>
-      <li><strong>03.</strong> <a href="#cap3">Navegación y Spansh Exact Plotter</a> <span class="toc-desc">— Física real de nave sin Coriolis/EDSY, neutrones y copia de saltos.</span></li>
-      <li><strong>04.</strong> <a href="#cap4">Exploración y Exobiología</a> <span class="toc-desc">— FSS, valores de cartografía y semáforo de muestras genéticas.</span></li>
-      <li><strong>05.</strong> <a href="#cap5">Ingenieros y Materiales (EngineerFlow)</a> <span class="toc-desc">— Pasos secuenciales de desbloqueo, recetas e intercambio.</span></li>
-      <li><strong>06.</strong> <a href="#cap6">Combate, Crimen y Misiones</a> <span class="toc-desc">— Radar táctico, Massacre Stacking y reglas de Law & Disorder.</span></li>
-      <li><strong>07.</strong> <a href="#cap7">Minería, Comercio y Mercados</a> <span class="toc-desc">— Detección de prospectores, toneladas/hora y rutas comerciales Spansh.</span></li>
-      <li><strong>08.</strong> <a href="#cap8">Fleet Carrier y Powerplay 2.0</a> <span class="toc-desc">— Gestión remota de portaaviones, tritio y lealtad a potencias.</span></li>
-      <li><strong>09.</strong> <a href="#cap9">Integraciones Oficiales (Inara, CAPI, EDSM)</a> <span class="toc-desc">— Vinculación con un solo clic y sincronización de flota.</span></li>
-      <li><strong>10.</strong> <a href="#cap10">Copiloto de Voz y Pantalla Táctil LAN</a> <span class="toc-desc">— Síntesis de voz OneCore/Kokoro, VoiceAttack y código QR.</span></li>
-      <li><strong>11.</strong> <a href="#cap11">Preguntas Frecuentes y Atajos</a> <span class="toc-desc">— Resolución de dudas comunes y teclas de cabina.</span></li>
+      <li>
+        <span class="toc-num">01.</span><a href="#cap1">Descripción Técnica y Funcionamiento Interno</a>
+        <span class="toc-desc">Lectura de archivos de diario, almacenamiento local SQLite, privacidad y aislamiento de la galaxia Legacy.</span>
+      </li>
+      <li>
+        <span class="toc-num">02.</span><a href="#cap2">Instalación, Archivos de Configuración y Arranque</a>
+        <span class="toc-desc">Requisitos, instalación en Windows, nota sobre SmartScreen, bandeja del sistema y parámetros CLI.</span>
+      </li>
+      <li>
+        <span class="toc-num">03.</span><a href="#cap3">Anatomía de la Interfaz y Controles Globales</a>
+        <span class="toc-desc">Barra superior (TopBar), modo Auto-companion, diferencia entre Disposiciones y Módulos, y paneles desplegables.</span>
+      </li>
+      <li>
+        <span class="toc-num">04.</span><a href="#cap4">Panel General (Dashboard) y Módulo de Nave</a>
+        <span class="toc-desc">Telemetría del comandante, banderas de estado en vivo, alertas operativas e inspección de módulos instalados.</span>
+      </li>
+      <li>
+        <span class="toc-num">05.</span><a href="#cap5">Navegación y Planificador de Rutas (Spansh)</a>
+        <span class="toc-desc">Uso de la tira de ruta, Ruta exacta (Exact Plotter), Autopista de neutrones, desvío y coordenadas 3D.</span>
+      </li>
+      <li>
+        <span class="toc-num">06.</span><a href="#cap6">Exploración Cartográfica y Exobiología</a>
+        <span class="toc-desc">Tabla de cuerpos FSS/DSS, umbral de mapeo, selector de contexto y medición de distancias de muestreo biológico.</span>
+      </li>
+      <li>
+        <span class="toc-num">07.</span><a href="#cap7">Ingeniería y Gestión de Materiales</a>
+        <span class="toc-desc">Inventario y taquilla, guía secuencial de desbloqueo de ingenieros, lista de la compra e intercambios.</span>
+      </li>
+      <li>
+        <span class="toc-num">08.</span><a href="#cap8">Combate, Misiones y Jurisdicción (Crimen)</a>
+        <span class="toc-desc">Objetivo fijado, seguimiento AX, agrupación de misiones de masacre, notoriedad e Interstellar Factors.</span>
+      </li>
+      <li>
+        <span class="toc-num">09.</span><a href="#cap9">Minería, Comercio, Fleet Carrier, Colonización, Powerplay 2.0 y BGS</a>
+        <span class="toc-desc">Prospección y radios de venta, mercados, control de Tritio del Carrier, obras de colonización y facciones.</span>
+      </li>
+      <li>
+        <span class="toc-num">10.</span><a href="#cap10">Cuentas y Sincronización con Servicios Externos</a>
+        <span class="toc-desc">Procedimiento de configuración para EDDN, EDSM, Inara InAPI v1 y Frontier CAPI (OAuth2 PKCE y modo manual).</span>
+      </li>
+      <li>
+        <span class="toc-num">11.</span><a href="#cap11">Síntesis de Voz (TTS), Asistente Vocal, VoiceAttack y Red Local (LAN)</a>
+        <span class="toc-desc">Motores SAPI5/OneCore y KokoroTTS, reconocimiento Whisper/STT, perfil .vap y emparejamiento por código QR.</span>
+      </li>
+      <li>
+        <span class="toc-num">12.</span><a href="#cap12">Resolución de Problemas, Código Fuente y Soporte</a>
+        <span class="toc-desc">Diagnóstico de incidencias frecuentes, envío de reportes a GitHub Issues y compilación desde código fuente.</span>
+      </li>
     </ul>
   </div>
 
-  <!-- CAPÍTULO 1 -->
-  <h1 id="cap1">01. ¿Qué es TMC y cómo funciona?</h1>
+  <!-- SECCIÓN 01 -->
+  <h1 id="cap1">01. Descripción Técnica y Funcionamiento Interno</h1>
   <p>
-    <strong>TMC (The Multipurpose Companion)</strong> es una aplicación de escritorio diseñada para acompañar al comandante en todas las actividades de <em>Elite Dangerous</em> (navegación, combate, comercio, minería, exobiología e ingeniería) sin necesidad de recurrir a navegadores web externos ni minimizar el juego con <code>Alt + Tab</code>.
+    <strong>TMC (The Multipurpose Companion)</strong> es una herramienta auxiliar de código abierto para <em>Elite Dangerous</em>. Su función es procesar en tiempo real los eventos que el juego escribe en disco y presentarlos en paneles estructurados por actividad (navegación, exploración, exobiología, ingeniería, combate, minería, comercio y gestión de flota).
   </p>
-  
-  <h2>La regla de oro: El Ayudante (Companion) integral</h2>
+
+  <h2>1.1 Lectura pasiva de archivos del juego</h2>
   <p>
-    A diferencia de otras herramientas que muestran volcados crudos de datos o tablas vacías, TMC actúa de forma <strong>proactiva</strong>:
+    TMC no modifica archivos ejecutables del juego, no lee ni escribe en la memoria del proceso <code>EliteDangerous64.exe</code> y no intercepta tráfico de red del cliente. Toda la telemetría proviene exclusivamente de los archivos estándar generados por Frontier Developments en la carpeta de partidas guardadas:
   </p>
   <ul>
-    <li><strong>Nunca te deja en un callejón sin salida:</strong> Si intentas ingenierizar un módulo de tu nave y todavía no conoces al ingeniero o no tienes su invitación, TMC te muestra primero la guía secuencial para desbloquearlo (requisitos de descubrimiento, invitación y donación) y solo después los cálculos de materiales y comerciantes.</li>
-    <li><strong>Cero cálculos mentales:</strong> Steppers de progreso, semáforos de existencias, barras de llenado y avisos de repostaje claros de un vistazo.</li>
-    <li><strong>Acción con un solo clic:</strong> Copiar el siguiente sistema de salto al portapapeles de Windows, calcular la ruta más cercana al comerciante de materiales o probar voces del copiloto.</li>
+    <li><strong>Archivos de diario (<code>Journal.*.log</code>):</strong> leídos mediante sondeo incremental por desplazamiento de bytes (<em>byte offset</em>), procesando únicamente las líneas nuevas escritas desde la última lectura sin bloquear el archivo.</li>
+    <li><strong>Archivos volátiles de estado (<code>.json</code>):</strong> <code>Status.json</code> (banderas de cabina, combustible, pips, coordenadas planetarias), <code>NavRoute.json</code> (ruta trazada en el mapa galáctico del juego), <code>Cargo.json</code>, <code>Market.json</code>, <code>Outfitting.json</code>, <code>Shipyard.json</code>, <code>ModulesInfo.json</code>, <code>Backpack.json</code>, <code>ShipLocker.json</code> y <code>FCMaterials.json</code>.</li>
   </ul>
 
-  <h2>Rendimiento estricto (0% Lag / 0 FPS de impacto)</h2>
+  <h2>1.2 Almacenamiento local y arquitectura</h2>
   <p>
-    TMC está programado en <strong>Rust</strong> nativo y su interfaz gráfica utiliza tecnologías web modernas y ultraligeras empaquetadas con <strong>Tauri 2</strong>:
+    El núcleo en Rust levanta un servidor HTTP y de eventos SSE local (por defecto en <code>127.0.0.1:47320</code>) consumido por la interfaz gráfica en Tauri 2 (o por un navegador en la red local si el usuario lo habilita expresamente). Los datos históricos, planes de ruta, listas de materiales y credenciales locales se guardan en una base de datos SQLite en modo WAL (<code>tmc.db</code>), evitando pérdidas de estado al cerrar la aplicación.
+  </p>
+
+  <h2>1.3 Aislamiento automático de la galaxia Legacy</h2>
+  <p>
+    Al abrir cada sesión de diario, TMC inspecciona la versión del cliente registrada en la cabecera <code>Fileheader</code>:
   </p>
   <ul>
-    <li>Consume menos de <strong>50 MB de memoria RAM</strong> en ejecución.</li>
-    <li>Menos del <strong>1% de CPU en reposo</strong>.</li>
-    <li>Sondea los diarios del juego de forma incremental por offset de bytes, sin lecturas de disco pesadas.</li>
-    <li><strong>100% Legal y Seguro:</strong> TMC no modifica la memoria de Elite Dangerous ni inyecta DLLs. Lee exclusivamente los archivos de registro oficiales que Frontier Developments genera para aplicaciones comunitarias.</li>
+    <li><strong>Galaxia Live (4.0 / Odyssey / Horizons 4.0):</strong> muestra la insignia <code>LIVE 4.0</code> en la barra superior y habilita las consultas y sincronizaciones en línea configuradas por el usuario.</li>
+    <li><strong>Galaxia Legacy (3.8):</strong> muestra el aviso <kbd>Galaxia Legacy: los datos permanecen locales</kbd>. En este modo, TMC bloquea automáticamente cualquier transmisión a EDDN, EDSM e Inara, así como el planificador en línea, para no mezclar datos entre ambas galaxias.</li>
   </ul>
 
-  <div class="callout page-break">
-    <span class="callout-title">🔒 Aislamiento de la Galaxia Legacy</span>
-    TMC distingue automáticamente si juegas en la versión en vivo (Live 4.0 / Odyssey) o en la galaxia Legacy. Los datos de la galaxia Legacy jamás se envían a servicios comunitarios externos (Inara, EDSM, EDDN), protegiendo la integridad de la base de datos galáctica.
-  </div>
+  <!-- SECCIÓN 02 -->
+  <h1 id="cap2">02. Instalación, Archivos de Configuración y Arranque</h1>
 
-  <!-- CAPÍTULO 2 -->
-  <h1 id="cap2">02. Instalación y Puesta en Marcha</h1>
-  <p>
-    Instalar y arrancar TMC no requiere más de 10 segundos:
-  </p>
+  <h2>2.1 Requisitos del sistema</h2>
+  <ul>
+    <li><strong>Windows:</strong> Windows 10 o Windows 11 (64 bits) con <em>Microsoft Edge WebView2 Runtime</em> (incluido de serie en sistemas actualizados).</li>
+    <li><strong>Linux:</strong> Distribución x64 con <code>webkit2gtk-4.1</code> para la ventana de escritorio, o cualquier entorno Linux para ejecutar el servidor sin ventana (<code>tmc-headless</code>).</li>
+    <li><strong>Consumo habitual de recursos:</strong> ~35–60 MB de RAM para el motor principal (objetivo máximo de diseño &lt; 150 MB con interfaz abierta) y &lt; 1 % de uso de CPU en reposo.</li>
+  </ul>
+
+  <h2>2.2 Procedimiento de instalación en Windows</h2>
   <ol>
-    <li>Descarga el instalador oficial <code>TMC_0.1.0_x64-setup.exe</code> desde la página de Releases oficial en GitHub.</li>
-    <li>Ejecuta el archivo descargado. Se instalará limpiamente en tu equipo y creará un acceso directo en tu Menú Inicio y Escritorio.</li>
-    <li>Abre <em>Elite Dangerous</em> (desde Steam, Epic Games o el launcher oficial de Frontier).</li>
-    <li>Abre <strong>TMC</strong>.</li>
+    <li>Descargue el instalador <code>TMC_0.1.0_x64-setup.exe</code> desde la sección <em>Releases</em> del repositorio oficial en GitHub (<code>https://github.com/Danikuso/TheMultipurposeCompanion/releases</code>).</li>
+    <li>Ejecute <code>TMC_0.1.0_x64-setup.exe</code> y siga los pasos del asistente NSIS para completar la instalación.</li>
+    <li>Inicie TMC desde el acceso directo del Menú Inicio o Escritorio. Puede abrir TMC antes o después de iniciar <em>Elite Dangerous</em>.</li>
   </ol>
 
   <div class="callout">
-    <span class="callout-title">⚠️ Aviso de Microsoft Defender SmartScreen</span>
-    Al tratarse de una aplicación de código abierto comunitaria y no disponer de un certificado de firma digital corporativo de pago de Microsoft (que cuesta cientos de euros al año), Windows mostrará una pantalla azul preventiva: <em>«Windows protegió su PC / Editor desconocido»</em>.<br><br>
-    <strong>Pasos para continuar:</strong>
-    <ol style="margin-bottom: 0;">
-      <li>Haz clic en el enlace <strong>«Más información»</strong>.</li>
-      <li>Haz clic en el botón <strong>«Ejecutar de todas formas»</strong>.</li>
-    </ol>
+    <span class="callout-title">Nota técnica sobre el aviso de Windows Defender SmartScreen</span>
+    Dado que TMC es un proyecto independiente de código abierto y sus binarios no están firmados con un certificado comercial EV de pago, la primera ejecución del instalador en Windows puede mostrar la ventana preventiva <em>«Windows protegió su PC»</em>.<br>
+    Para ejecutar el instalador: pulse en <strong>«Más información»</strong> y, a continuación, en el botón <strong>«Ejecutar de todas formas»</strong>. También puede verificar o compilar el ejecutable directamente desde el código fuente siguiendo la Sección 12.3.
   </div>
 
-  <h2>Detección automática de diarios</h2>
-  <p>
-    TMC localiza por sí solo la carpeta estándar de registros del juego:
-    <code>%USERPROFILE%\Saved Games\Frontier Developments\Elite Dangerous\</code>.
-    Al iniciarse, leerá inmediatamente tu nombre de comandante, tu nave actual, el sistema en el que estás y tu saldo de créditos sin que tengas que buscar ni configurar carpetas a mano.
-  </p>
-
-  <!-- CAPÍTULO 3 -->
-  <h1 id="cap3 page-break">03. Navegación y Spansh Exact Plotter</h1>
-  <p>
-    El módulo de navegación de TMC revoluciona la forma en que los comandantes planifican sus viajes a través de la galaxia.
-  </p>
-
-  <h2>Física de salto real sin Coriolis ni EDSY</h2>
-  <p>
-    Cuando utilizas la web de Spansh Exact Plotter, te ves obligado a exportar tu nave en JSON desde Coriolis o EDSY. <strong>En TMC este paso se elimina:</strong>
-  </p>
-  <ul>
-    <li>TMC extrae directamente de la telemetría viva de tu nave la masa vacía (<code>unladen_mass</code>), el tamaño exacto del depósito principal y de reserva, y la masa óptima del FSD con todas sus mejoras de ingeniería aplicadas.</li>
-    <li>Detecta automáticamente el bono plano de +10.50 AL del <strong>Módulo de Aumento de FSD de los Guardianes</strong>.</li>
-    <li>Envía estos parámetros físicos exactos al endpoint oficial de Spansh (<code>/api/generic/route</code>).</li>
-  </ul>
-
-  <h2>Selector de Modo: Autopista de Neutrones vs. Ruta Exacta</h2>
+  <h2>2.3 Ubicación de archivos de datos y configuración</h2>
   <table>
     <thead>
       <tr>
-        <th>Modo de Ruta</th>
-        <th>Para qué sirve</th>
-        <th>Comportamiento</th>
+        <th>Elemento</th>
+        <th>Ruta predeterminada en Windows</th>
+        <th>Ruta predeterminada en Linux</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td><strong>Ruta Exacta (Exact Plotter)</strong></td>
-        <td>Viajes de exploración y navegación general.</td>
-        <td>Calcula el consumo de combustible exacto en cada salto, marca las estrellas repostables obligatorias (⛽) y gestiona la carga de la bodega en tiempo real.</td>
+        <td>Diarios del juego leídos</td>
+        <td><code>%USERPROFILE%\Saved Games\Frontier Developments\Elite Dangerous\</code></td>
+        <td>Prefijo Proton/Wine de Steam detectado o ruta indicada manualmente</td>
       </tr>
       <tr>
-        <td><strong>Autopista de Neutrones</strong></td>
-        <td>Viajes de larga distancia a Colonia o Sagittario A*.</td>
-        <td>Optimiza la trayectoria aprovechando al máximo la sobrecarga de conos de estrellas de neutrones (4.0x de alcance) con un porcentaje de eficiencia configurable.</td>
+        <td>Archivo de configuración</td>
+        <td><code>%APPDATA%\TMC\config.toml</code></td>
+        <td><code>~/.config/tmc/config.toml</code></td>
+      </tr>
+      <tr>
+        <td>Base de datos local SQLite</td>
+        <td><code>%APPDATA%\TMC\tmc.db</code> (o ruta definida en <code>config.toml</code>)</td>
+        <td><code>~/.local/share/tmc/tmc.db</code></td>
       </tr>
     </tbody>
   </table>
 
-  <h2>Rescate por coordenadas 3D en espacio profundo</h2>
+  <h2>2.4 Bandeja del sistema (System Tray) y cierre de la aplicación</h2>
   <p>
-    Si te encuentras en un sistema procedimental desconocido que Spansh todavía no tiene indexado en su base de datos, TMC <strong>no fallará</strong>: utiliza las coordenadas tridimensionales de tu nave (<code>StarPos</code>) para encontrar el sistema conocido más cercano mediante el endpoint <code>/api/nearest</code> y calcular la ruta desde allí de forma transparente.
-  </p>
-
-  <h2>Copiado automático al portapapeles</h2>
-  <p>
-    Cada vez que ejecutas un salto o entras al hiperespacio, TMC copia automáticamente el nombre del siguiente sistema a tu portapapeles. Solo tienes que pulsar <code>Ctrl + V</code> en el mapa de galaxia del juego.
-  </p>
-
-  <!-- CAPÍTULO 4 -->
-  <h1 id="cap4 page-break">04. Exploración y Exobiología</h1>
-  <p>
-    Convierte tus expediciones en el sector negro en una fuente inagotable de descubrimientos y créditos.
-  </p>
-
-  <h2>Exploración de Sistemas y Cuerpos</h2>
-  <ul>
-    <li><strong>Progreso FSS en tiempo real:</strong> Muestra el porcentaje de cuerpos escaneados en el sistema actual.</li>
-    <li><strong>Estimación de Cartografía:</strong> Calcula el valor de los datos estelares antes de venderlos en Universal Cartographics.</li>
-    <li><strong>Recomendación inteligente de mapeo:</strong> Destaca con insignias visuales los mundos acuáticos, mundos con vida basada en amoníaco y planetas terrestres candidatos a terraformación (valores superiores a 500.000 Cr).</li>
-  </ul>
-
-  <h2>Exobiología de Campo (Odyssey)</h2>
-  <p>
-    TMC integra un asistente visual para la recolección biológica:
+    Al pulsar el botón cerrar (<code>✕</code>) de la ventana principal en escritorio:
   </p>
   <ul>
-    <li><strong>Semáforo de muestreo genético:</strong> Indica con tres indicadores visuales el estado de tus muestras (Muestra 1, 2 y 3).</li>
-    <li><strong>Distancia mínima de clonación:</strong> Te indica cuántos metros debes alejarte de la muestra anterior según la especie (ej. 100 m para bacterias, 500 m para aleoidas).</li>
-    <li><strong>Brújula de rumbo:</strong> Te guía hacia atrás en caso de que te desorientes en la superficie del planeta.</li>
-    <li><strong>Bonus de Primer Descubrimiento:</strong> Multiplica x5 el valor de venta estimado cuando el planeta nunca ha sido muestreado por otro piloto humano.</li>
+    <li>La aplicación <strong>no se detiene</strong>: permanece en ejecución en la bandeja del sistema (junto al reloj del sistema operativo) para seguir registrando eventos del diario, copiando saltos de ruta y emitiendo avisos de voz si están activos.</li>
+    <li>Al ocultarse en la bandeja, TMC destruye temporalmente la ventana WebView para liberar la memoria gráfica mientras usted juega.</li>
+    <li>Para reabrir la ventana o cerrar completamente el programa, haga clic derecho sobre el icono de TMC en la bandeja del sistema y elija <kbd>Abrir TMC</kbd> o <kbd>Salir de TMC</kbd>.</li>
   </ul>
 
-  <!-- CAPÍTULO 5 -->
-  <h1 id="cap5 page-break">05. Ingenieros y Materiales (EngineerFlow)</h1>
+  <h2>2.5 Parámetros de línea de comandos (CLI)</h2>
   <p>
-    Ingenierizar tus naves en Elite Dangerous solía ser frustrante por la falta de información dentro del juego. El módulo <strong>EngineerFlow</strong> de TMC soluciona esto por completo.
+    Si sus archivos de diario de <em>Elite Dangerous</em> se encuentran en una unidad o carpeta no estándar, puede pasar argumentos al ejecutable <code>TMC.exe</code> (o en las propiedades del acceso directo):
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>Argumento</th>
+        <th>Descripción</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>--journal-dir &lt;carpeta&gt;</code></td>
+        <td>Fuerza la lectura de diarios y archivos JSON desde la carpeta especificada en lugar de la ruta automática.</td>
+      </tr>
+      <tr>
+        <td><code>--config &lt;archivo&gt;</code></td>
+        <td>Indica una ruta alternativa para el archivo <code>config.toml</code>.</td>
+      </tr>
+      <tr>
+        <td><code>--ui-dir &lt;carpeta&gt;</code></td>
+        <td>Sirve los archivos estáticos de la interfaz web desde un directorio personalizado (uso avanzado / desarrollo).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECCIÓN 03 -->
+  <h1 id="cap3">03. Anatomía de la Interfaz y Controles Globales</h1>
+  <p>
+    La interfaz gráfica se divide en tres zonas permanentes: la barra de estado superior (<em>TopBar</em>), el menú de navegación lateral izquierdo (<em>Sidebar</em>) y el área central de paneles.
   </p>
 
-  <h2>Secuencia guiada de desbloqueo</h2>
-  <p>
-    Para cada uno de los 25 ingenieros de la burbuja y de Colonia, TMC desglosa los tres pasos ineludibles:
-  </p>
+  <h2>3.1 Barra Superior (TopBar)</h2>
+  <p>De izquierda a derecha, la barra superior presenta los siguientes indicadores y controles:</p>
   <ol>
-    <li><strong>Descubrimiento (Conocimiento):</strong> Requisito para enterarte de su existencia (ej. alcanzar rango de Exploración o comerciar en 50 mercados).</li>
-    <li><strong>Invitación:</strong> Requisito para que te permita viajar a su base (ej. viajar a 300 AL o entregar datos de combate).</li>
-    <li><strong>Desbloqueo / Donación:</strong> Lo que debes entregarle en persona para que empiece a trabajar (ej. 1 meta-aleación a Felicity Farseer o 25 unidades de puros kamitra a Hera Tani).</li>
+    <li><strong>Indicador de estado y galaxia:</strong> punto luminoso de conexión con el motor local, aviso si <kbd>El juego no está en ejecución</kbd>, progreso cuando se están importando diarios históricos (<kbd>Importando historial: X de Y</kbd>) e insignia de galaxia (<code>LIVE 4.0</code> o aviso de <code>LEGACY</code>).</li>
+    <li><strong>Sistema y modo de vuelo actual:</strong> nombre del sistema estelar actual y estado operativo detectado (<code>Atracado</code>, <code>Aterrizado</code>, <code>Espacio normal</code>, <code>Supercrucero</code>, <code>Hiperespacio</code>, <code>A pie</code>, <code>En vehículo de superficie</code>, <code>En caza</code>, <code>En taxi</code> o <code>Multitripulación</code>).</li>
+    <li><strong>Medidores rápidos de nave:</strong> barras de nivel de <code>Combustible</code>, integridad de <code>Casco</code> (%), ocupación de <code>Carga</code> (toneladas actuales / capacidad máxima) y saldo de <code>Créditos</code>.</li>
+    <li><strong>Control de micrófono (si la asistencia por voz está habilitada):</strong> permite activar o silenciar la escucha de consultas por voz.</li>
+    <li><strong>Interruptor <kbd>Auto-companion</kbd>:</strong> activa o desactiva el cambio automático de pantalla según contexto.</li>
   </ol>
 
-  <h2>Calculadora de Recetas y Materiales</h2>
-  <p>
-    Selecciona cualquier módulo (motor de distorsión, propulsores, escudos, cañones de fragmentación) y elige la modificación deseada y el efecto experimental. TMC calculará la cantidad de materiales necesarios (Grado 1 al Grado 5) según las tiradas estimadas.
-  </p>
-
-  <h2>Intercambio con Comerciantes de Materiales (Material Traders)</h2>
-  <p>
-    Si te faltan materiales de una categoría (manufacturados, codificados o elementos químicos), TMC consulta tus existencias reales en la bodega de datos y calcula <strong>qué materiales te sobran</strong> para intercambiarlos al mejor ratio en el comerciante más cercano.
-  </p>
-
-  <!-- CAPÍTULO 6 -->
-  <h1 id="cap6 page-break">06. Combate, Crimen y Misiones</h1>
-
-  <h2>Radar Táctico de Combate</h2>
+  <h2>3.2 Funcionamiento del interruptor «Auto-companion»</h2>
   <ul>
-    <li><strong>Identificación instantánea de objetivos:</strong> Nombre del piloto, facción, rango de combate y nave enemiga.</li>
-    <li><strong>Integridad de subsistemas:</strong> Salud del generador de escudos y de la planta de energía del enemigo para concentrar fuego crítico.</li>
+    <li><strong>Activado:</strong> TMC selecciona automáticamente la disposición y el panel contextual más pertinente cuando ocurre un evento significativo en el juego (por ejemplo, pasa a <em>Exploración</em> al saltar a un sistema nuevo, conmuta a <em>Exobiología</em> al bajar a pie sobre un cuerpo con señales biológicas, abre <em>Minería</em> al lanzar un dron prospector o pasa a <em>Combate</em> al desplegar armas frente a un objetivo hostil).</li>
+    <li><strong>Desactivado:</strong> la aplicación permanece fija en la disposición o módulo que usted haya seleccionado manualmente en la barra lateral, sin realizar cambios automáticos de vista.</li>
   </ul>
 
-  <h2>Massacre Mission Stacking</h2>
-  <p>
-    Maximiza tus créditos en combate: TMC analiza tus misiones activas de masacre de piratas. Si varias facciones distintas te han encargado eliminar piratas de la misma banda en el mismo sistema, cada enemigo abatido contará para todas las misiones simultáneamente.
-  </p>
-
-  <h2>Reglas Oficiales de Crimen (Law & Disorder)</h2>
-  <p>
-    TMC sigue estrictamente las normativas de jurisdicción: te avisa si tienes multas pendientes, recompensas sobre tu cabeza o notoriedad acumulada, indicándote la distancia a la estación con <strong>Interstellar Factors</strong> más cercana para limpiar tu historial legal.
-  </p>
-
-  <!-- CAPÍTULO 7 -->
-  <h1 id="cap7 page-break">07. Minería, Comercio y Mercados</h1>
-
-  <h2>Asistente de Minería de Asteroides</h2>
+  <h2>3.3 Barra Lateral: diferencia entre «Disposiciones» y «Módulos»</h2>
+  <p>El menú lateral izquierdo cuenta con desplazamiento vertical propio y contiene dos bloques diferenciados, además del botón <kbd>Ajustes</kbd> anclado en la parte inferior:</p>
   <ul>
-    <li><strong>Detección de drones prospectores:</strong> Al impactar un prospector en un asteroide, TMC muestra instantáneamente el porcentaje de minerales valiosos (Platino, Painita, Rodplumseíta, Diamantes de Baja Temperatura).</li>
-    <li><strong>Rendimiento en Toneladas / Hora:</strong> Cronómetro y métrica de velocidad de extracción para evaluar la rentabilidad del anillo.</li>
+    <li><strong><kbd>Disposiciones</kbd> (11 vistas combinadas):</strong> muestran varios paneles relacionados simultáneamente en una rejilla adaptada a una tarea concreta (por ejemplo, la disposición <em>Exploración</em> combina en una misma pantalla la tira de ruta, el resumen del sistema, el selector de contexto Cuerpos/Exobiología y el planificador). Disposiciones incluidas: <code>Exploración</code>, <code>Nave</code>, <code>Combate</code>, <code>Minería</code>, <code>Comercio</code>, <code>Misiones</code>, <code>Ingeniería</code>, <code>Fleet Carrier</code>, <code>Colonización</code>, <code>Powerplay 2.0</code> y <code>BGS</code>.</li>
+    <li><strong><kbd>Módulos</kbd> (16 vistas individuales):</strong> abren de forma dedicada y a ancho completo todas las herramientas de un único módulo específico: <code>Ingeniería</code>, <code>Panel general</code>, <code>Nave</code>, <code>Navegación</code>, <code>Exploración</code>, <code>Exobiología</code>, <code>Combate</code>, <code>Minería</code>, <code>Comercio</code>, <code>Misiones</code>, <code>Fleet Carrier</code>, <code>Colonización</code>, <code>Powerplay 2.0</code>, <code>BGS</code>, <code>Cuentas</code> y <code>Crimen</code>.</li>
   </ul>
 
-  <h2>Comercio y Rutas Comerciales Spansh</h2>
-  <p>
-    Planifica rutas comerciales seguras filtrando por el tamaño de plataforma de tu nave (plataformas Grandes para Type-9 o Anaconda; plataformas Medianas para Python o Krait Mk II) y excluyendo portaaviones privados con precios desfasados.
-  </p>
-
-  <!-- CAPÍTULO 8 -->
-  <h1 id="cap8">08. Fleet Carrier y Powerplay 2.0</h1>
+  <h2>3.4 Paneles desplegables y tablas anchas</h2>
   <ul>
-    <li><strong>Fleet Carrier:</strong> Sigue la cuenta atrás de salto de tu portaaviones, existencias de Tritio en el depósito, capacidad de bodega disponible y balance de créditos para el mantenimiento semanal.</li>
-    <li><strong>Powerplay 2.0:</strong> Controla tu lealtad a las potencias galácticas (Aisling Duval, Felicia Winters, Zachary Hudson, Yuri Grom), méritos acumulados durante el ciclo y estado de fortificación de los sistemas.</li>
+    <li><strong>Resumen y detalle:</strong> cada panel muestra en su tercio superior las métricas esenciales y acciones directas. Los listados extensos o desgloses secundarios se abren pulsando el botón <kbd>Ver información adicional</kbd> y se pliegan con <kbd>Ocultar información adicional</kbd>.</li>
+    <li><strong>Desplazamiento horizontal fijo:</strong> en tablas con numerosas columnas (como la tabla detallada de cuerpos celestes o comparativas de mercado), cuando el contenido supera el ancho del panel aparece una barra de desplazamiento horizontal fija en la parte inferior visible del panel, permitiendo desplazarse lateralmente sin necesidad de bajar primero hasta el final de la tabla.</li>
   </ul>
 
-  <!-- CAPÍTULO 9 -->
-  <h1 id="cap9 page-break">09. Integraciones Oficiales Comunitarias</h1>
+  <!-- SECCIÓN 04 -->
+  <h1 id="cap4">04. Panel General (Dashboard) y Módulo de Nave</h1>
 
-  <h2>Inara InAPI v1 (Oficialmente Aprobado)</h2>
-  <p>
-    TMC cuenta con la inclusión oficial en la whitelist de Inara con el nombre canónico registrado <code>The Multipurpose Companion (TMC)</code>. Solo tienes que introducir tu clave de API personal en el panel de Cuentas: TMC sincronizará tus eventos respetando los límites de frecuencia de Frontier e Inara.
-  </p>
-
-  <h2>Frontier CAPI (OAuth2 PKCE)</h2>
-  <p>
-    Conecta tu cuenta de Frontier mediante el protocolo de inicio de sesión seguro oficial. TMC podrá consultar la ubicación de tus naves almacenadas en astilleros remotos de la galaxia y transferir telemetría de forma persistente.
-  </p>
-
-  <h2>EDSM y EDDN</h2>
-  <p>
-    Envío voluntario de datos a la red de datos de la comunidad (Elite Dangerous Data Network) y sincronización con tu perfil de EDSM para registrar tus descubrimientos y viajes en el mapa galáctico.
-  </p>
-
-  <!-- CAPÍTULO 10 -->
-  <h1 id="cap10">10. Copiloto de Voz y Pantalla Táctil LAN</h1>
-
-  <h2>Síntesis de Voz Nativa y Neuronal</h2>
-  <p>
-    TMC habla contigo en español: te avisa cuando el combustible está bajo, cuando detecta un planeta valioso para cartografiar o cuando la nave sufre sobrecalentamiento.
-  </p>
+  <h2>4.1 Operación del «Panel general»</h2>
+  <p>El módulo <kbd>Panel general</kbd> reúne el estado operativo básico de la sesión en siete tarjetas:</p>
   <ul>
-    <li><strong>Motor Nativo de Windows (OneCore/SAPI5):</strong> Integrado de serie. Huella &lt; 2 MB y cero descargas adicionales.</li>
-    <li><strong>Motor Neuronal KokoroTTS (Opcional):</strong> Voces sintetizadas por inteligencia artificial de alta definición.</li>
+    <li><strong>Comandante:</strong> nombre, saldo de créditos y barras de progreso en rangos de la <em>Federación de Pilotos</em> (<code>Combate</code>, <code>Comercio</code>, <code>Exploración</code>, <code>Soldado</code>, <code>Exobiólogo</code>, <code>CQC</code>) y <em>Superpotencias</em> (<code>Federación</code>, <code>Imperio</code>).</li>
+    <li><strong>Nave y Ubicación:</strong> modelo canónico de la nave activa, nombre e identificador de matrícula, alcance de salto actual, coste de recompra (<em>rebuy</em>), sistema estelar, cuerpo celeste más cercano y estación si se está atracado.</li>
+    <li><strong>Estado en vivo:</strong> indicadores de telemetría inmediata leídos de <code>Status.json</code>: <code>Escudos</code>, <code>Anclajes de armas</code>, <code>Tren de aterrizaje</code>, <code>Bloqueo de masa</code>, <code>Navegación silenciosa</code>, <code>Recolector de carga</code> y <code>Sobrecarga de supercrucero (SCO)</code>.</li>
+    <li><strong>Ruta y Sesión:</strong> siguiente sistema en cola con botón <kbd>Copiar siguiente sistema</kbd>, saltos restantes, duración de la sesión actual, número de saltos realizados, distancia recorrida en años luz y balance neto de créditos ganados.</li>
+    <li><strong>Alertas:</strong> bandeja de avisos activos cuando se detectan condiciones críticas (<code>Combustible bajo</code>, <code>Sobrecalentamiento</code>, <code>Interdicción en curso</code>, <code>Bajo ataque</code>, <code>Daño en el casco</code>, <code>Oxígeno bajo</code>, <code>Salud baja</code> o fallo de módulo).</li>
   </ul>
 
-  <h2>Integración con VoiceAttack</h2>
+  <h2>4.2 Inspección de equipamiento en el módulo «Nave»</h2>
+  <ol>
+    <li>Seleccione <kbd>Nave</kbd> en la barra lateral. En la cabecera verá la masa en vacío, capacidad de combustible, carga, alcance de salto y coste de recompra.</li>
+    <li>Utilice las tres pestañas superiores de auditoría rápida según la función que quiera comprobar:
+      <ul>
+        <li><kbd>Exploración</kbd>: verifica si la nave lleva instalados recolector de combustible, potenciador FSD Guardian, escáner de superficie detallada (DSS), hangar de vehículos planetarios (SRV) y unidad de mantenimiento automático (AFMU), avisando explícitamente si falta alguno.</li>
+        <li><kbd>Combate</kbd>: resume las armas montadas en puntos de anclaje y contabiliza potenciadores de escudos, lanzadores de señuelos, defensas de punto y disipadores térmicos.</li>
+        <li><kbd>Carga y Minería</kbd>: indica el número de bodegas instaladas, refinería, controladores de drones e inventario de mercancías en bodega.</li>
+      </ul>
+    </li>
+    <li>Despliegue <kbd>Desglose módulo por módulo</kbd> para consultar todas las ranuras de la nave. Puede filtrar por <kbd>Todos</kbd>, <kbd>Anclajes</kbd>, <kbd>Módulos primarios</kbd>, <kbd>Módulos opcionales</kbd> o <kbd>Utilidades</kbd>, o escribir en el cuadro <kbd>Buscar por nombre o anclaje...</kbd>. Cada tarjeta muestra clase/calificación, integridad porcentual, estado de encendido, prioridad energética y modificaciones de ingeniería aplicadas (grado y efecto experimental).</li>
+  </ol>
+
+  <!-- SECCIÓN 05 -->
+  <h1 id="cap5">05. Navegación y Planificador de Rutas (Spansh)</h1>
   <p>
-    En la pestaña de Ajustes puedes descargar directamente el archivo de perfil <code>TMC-Copiloto.vap</code>. Impórtalo en VoiceAttack para controlar TMC y recibir respuestas audibles mediante comandos de voz mientras pilotas tu nave con tus mandos HOTAS.
+    El módulo <kbd>Navegación</kbd> requiere tener activada la opción <kbd>Consultar servicios online (Spansh, EDSM, Canonn)</kbd> en <kbd>Ajustes</kbd> y encontrarse en una sesión de la galaxia Live 4.0.
   </p>
 
-  <h2>Pantalla Táctil en Tablet o Móvil (LAN QR)</h2>
+  <h2>5.1 Lectura de la tira superior «Ruta» (RouteStrip)</h2>
   <p>
-    Activa la opción <strong>«Acceso por red local»</strong> en Ajustes y escanea el código QR desde cualquier dispositivo conectado a tu red Wi-Fi: tendrás todo el cuadro de mandos de TMC en la palma de tu mano sin perder un solo milímetro de pantalla en tu monitor principal.
+    Presente tanto en el módulo <em>Navegación</em> como en la disposición <em>Exploración</em>, muestra:
   </p>
+  <ul>
+    <li><strong>Tramos inmediatos:</strong> <code>Sistema actual</code>, <code>Siguiente</code> salto y sistema <code>A continuación</code>, junto con <code>Saltos restantes</code> y <code>Distancia total</code>.</li>
+    <li><strong>Información estelar del siguiente salto:</strong> clase espectral de la estrella, indicador <kbd>Se puede repostar</kbd> (clases O, B, A, F, G, K, M) o <kbd>No se puede repostar</kbd>, avisos de <kbd>Estrella de neutrones</kbd> / <kbd>Enana blanca</kbd>, si el sistema consta como descubierto o no en datos públicos y su estado político/seguridad.</li>
+    <li><strong>Copia al portapapeles:</strong> pulse el botón de copia junto al nombre del siguiente sistema para copiarlo al portapapeles del sistema operativo y pegarlo con <code>Ctrl + V</code> en el buscador del mapa galáctico del juego. Si activa en <kbd>Ajustes</kbd> la casilla <kbd>Copiar automáticamente el siguiente sistema</kbd>, TMC copiará el próximo tramo de forma automática cada vez que complete un salto.</li>
+  </ul>
 
-  <!-- CAPÍTULO 11 -->
-  <h1 id="cap11 page-break">11. Preguntas Frecuentes y Atajos</h1>
-
-  <h2>¿Afecta TMC a los fotogramas por segundo (FPS) de Elite Dangerous?</h2>
-  <p>
-    No. El motor de TMC está escrito en Rust y su consumo es inferior a 50 MB de RAM. El WebView solo se activa si la ventana está visible; al minimizar la aplicación a la bandeja del sistema, el consumo cae a 0% de CPU.
-  </p>
-
-  <h2>¿Qué hago si encuentro un error o tengo una sugerencia?</h2>
-  <p>
-    En el panel de <strong>Ajustes</strong> de TMC, haz clic en el botón <strong>«💬 Reportar problema o sugerencia en GitHub»</strong>. Se abrirá una incidencia en el repositorio oficial de GitHub con los datos de diagnóstico técnicos preparados para que podamos ayudarte de inmediato.
-  </p>
-
-  <div class="callout cyan" style="margin-top: 30px; text-align: center;">
-    <strong>¡Buena caza y vuela seguro, Comandante!</strong><br>
-    <em>o7 — El Equipo de Desarrollo de TMC</em>
+  <div class="callout info">
+    <span class="callout-title">Precedencia entre planes de TMC y NavRoute.json del juego</span>
+    Si no hay ningún plan de Spansh activo en TMC, la tira <em>Ruta</em> muestra automáticamente la ruta que usted haya trazado dentro del mapa de galaxia de <em>Elite Dangerous</em> (<code>NavRoute.json</code>). Cuando usted calcula y acepta un plan en TMC, dicho plan pasa a tener prioridad. Si durante el viaje salta a un sistema fuera del trazado, aparecerá la etiqueta <kbd>Fuera de ruta</kbd> con dos opciones directas: <kbd>Recalcular</kbd> (traza de nuevo hacia el mismo destino desde su posición actual) o <kbd>Borrar plan</kbd> (descarta el plan de TMC y vuelve a mostrar la ruta interna del juego).
   </div>
+
+  <h2>5.2 Cómo trazar una ruta paso a paso</h2>
+  <ol>
+    <li>Abra el panel <kbd>Planificador de rutas</kbd> dentro de <kbd>Navegación</kbd> o <kbd>Exploración</kbd>.</li>
+    <li>Seleccione el modo de cálculo según el tipo de viaje:
+      <table>
+        <thead>
+          <tr>
+            <th>Modo</th>
+            <th>Parámetros enviados y funcionamiento</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><kbd>Ruta exacta (Exact Plotter)</kbd></td>
+            <td>
+              Utiliza el servicio <em>Exact Plotter</em> de Spansh (<code>/api/generic/route</code>). TMC extrae directamente del último evento <code>Loadout</code> de su nave la masa en vacío, capacidad de los depósitos principal y de reserva, carga actual, parámetros óptimos del motor FSD (incluyendo ingeniería) y el aumento plano del potenciador Guardian FSD, sin necesidad de exportar perfiles desde Coriolis o EDSY.<br>
+              Opciones disponibles: <kbd>Repostar en estrellas escoop</kbd> (marca con la etiqueta <kbd>Repostar</kbd> las paradas de combustible recomendadas) y <kbd>Usar inyecciones FSD</kbd>.
+            </td>
+          </tr>
+          <tr>
+            <td><kbd>Autopista de neutrones</kbd></td>
+            <td>
+              Utiliza el planificador de sobrecarga de conos de estrellas de neutrones de Spansh. Toma el alcance de salto actual de la nave y aplica el valor de <kbd>Eficiencia (%)</kbd> (entero entre 0 y 100; un valor menor prioriza menos desvíos laterales, un valor mayor busca más estrellas de neutrones). El valor inicial se configura en <kbd>Ajustes</kbd> → <kbd>Eficiencia predeterminada del planificador (%)</kbd>.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </li>
+    <li>Verifique el campo <kbd>Origen</kbd> (por defecto se rellena con su sistema actual) e introduzca el sistema de <kbd>Destino</kbd> seleccionándolo en la lista de sugerencias si aparece disponible.</li>
+    <li>Pulse <kbd>Calcular ruta</kbd>. El estado cambiará a <em>«Calculando la ruta…»</em> mientras Spansh procesa el trabajo.</li>
+    <li>Revise el resumen generado (<code>Distancia total</code>, número de <code>Tramos</code> y tabla de sistemas con distancia por salto e indicación de repostaje) y pulse <kbd>Aceptar</kbd> para activar la ruta en cabina.</li>
+  </ol>
+
+  <h3>Comportamiento en sistemas procedimentales no registrados</h3>
+  <p>
+    Si inicia el cálculo desde un sistema del espacio profundo que todavía no existe en la base de datos de Spansh, TMC lee las coordenadas tridimensionales <code>StarPos</code> (X, Y, Z) de su diario local, consulta automáticamente el sistema indexado más cercano mediante <code>/api/nearest</code> y calcula la ruta desde ese punto de referencia sin requerir intervención manual.
+  </p>
+
+  <!-- SECCIÓN 06 -->
+  <h1 id="cap6">06. Exploración Cartográfica y Exobiología</h1>
+
+  <h2>6.1 Selector de contexto en la disposición de Exploración</h2>
+  <p>
+    En la disposición <kbd>Exploración</kbd>, el panel principal dispone de un conmutador superior (<kbd>Panel de contexto</kbd>) con dos pestañas: <kbd>Cuerpos</kbd> y <kbd>Exobiología</kbd>. Puede alternar entre ambas en cualquier momento (o dejar que <kbd>Auto-companion</kbd> seleccione <em>Exobiología</em> al aterrizar en un cuerpo con señales biológicas).
+  </p>
+
+  <h2>6.2 Uso del módulo «Exploración»</h2>
+  <ul>
+    <li><strong>Progreso de escaneo FSS:</strong> muestra cuántos cuerpos del sistema han sido descubiertos respecto al total anunciado por el pulso de descubrimiento (<em>honk</em>) y el valor cartográfico estimado acumulado en el sistema.</li>
+    <li><strong>Recomendación de sondeo DSS («Mapear»):</strong> TMC compara el valor estimado de mapeo con sondas DSS de cada planeta frente al ajuste <kbd>Umbral de «Mapear» (cr)</kbd> definido en <kbd>Ajustes</kbd>. Todo planeta que supere dicho umbral (como mundos tipo Tierra, acuáticos, de amoníaco o candidatos a terraformación) recibe un indicador visual de recomendación de mapeo.</li>
+    <li><strong>Tabla de cuerpos del sistema:</strong> detalla nombre del cuerpo, tipo, distancia desde la estrella principal (en segundos luz), gravedad superficial, atmósfera, vulcanismo, señales biológicas/geológicas, si es aterrizable y su valor estimado. La altura de la tabla se adapta dinámicamente al número real de cuerpos detectados.</li>
+  </ul>
+
+  <h2>6.3 Uso del módulo «Exobiología» (Odyssey)</h2>
+  <p>
+    Diseñado para el muestreo genético en superficie mediante el escáner del traje <em>Artemis</em>:
+  </p>
+  <ol>
+    <li><strong>Predicción y catálogo por cuerpo:</strong> tras escanear un planeta con el FSS o lanzar sondas DSS, el panel lista el número de señales biológicas detectadas y, según las condiciones físicas del planeta (temperatura, gravedad, tipo de atmósfera y estrella), muestra los géneros/especies candidatos junto a su pago base en <em>Vista Genomics</em> (aplicando el multiplicador ×5 cuando el cuerpo no registra pisada previa).</li>
+    <li><strong>Seguimiento de las 3 muestras y distancia mínima clonal:</strong>
+      <ul>
+        <li>Al tomar la primera muestra genética (<code>1 / 3</code>) con el traje Artemis, TMC guarda las coordenadas planetarias exactas (latitud y longitud) de ese punto de muestreo.</li>
+        <li>A medida que usted se desplaza a pie, en SRV o en vuelo rasante, TMC calcula en tiempo real mediante trigonometría esférica (usando el radio del planeta y la posición viva de <code>Status.json</code>) la distancia en metros respecto a las muestras ya tomadas de esa especie.</li>
+        <li>Cada género biológico exige una distancia mínima distinta (por ejemplo, 100 m, 150 m, 300 m, 500 m u 800 m). Mientras esté dentro del radio de exclusión, el indicador permanece bloqueado mostrando los metros restantes; al superar la distancia mínima requerida respecto a todas las muestras previas, el indicador cambia a estado listo (verde) para recoger la muestra <code>2 / 3</code> o <code>3 / 3</code>.</li>
+      </ul>
+    </li>
+    <li><strong>Rumbo y valor sin vender:</strong> muestra el rumbo en grados para orientarse sobre la superficie y mantiene el sumatorio de datos biológicos pendientes de entrega en cabina.</li>
+  </ol>
+
+  <!-- SECCIÓN 07 -->
+  <h1 id="cap7">07. Ingeniería y Gestión de Materiales</h1>
+  <p>
+    El módulo <kbd>Ingeniería</kbd> centraliza el inventario de materiales de nave, la taquilla de Odyssey, el estado de los ingenieros, el cálculo de recetas y las propuestas de intercambio.
+  </p>
+
+  <h2>7.1 Consulta de inventarios y taquilla</h2>
+  <ul>
+    <li>En el panel <kbd>Materiales</kbd>, alterne entre las pestañas <kbd>Materias primas</kbd>, <kbd>Fabricados</kbd>, <kbd>Codificados</kbd> y <kbd>Taquilla</kbd> (subdividida en <code>Artículos</code>, <code>Componentes</code>, <code>Consumibles</code> y <code>Datos</code> de Odyssey).</li>
+    <li>Use el campo <kbd>Buscar material por nombre...</kbd> para localizar cualquier elemento. Cada fila muestra su grado (<code>G1</code>–<code>G5</code>), existencias frente a capacidad máxima (<code>Tienes / Máx</code>), unidades reservadas por su lista de la compra y una etiqueta <kbd>MÁXIMO</kbd> cuando el almacén de ese material está lleno.</li>
+  </ul>
+
+  <h2>7.2 Planificación de mejoras («Ingenierizar un módulo») y desbloqueo guiado</h2>
+  <p>Para calcular qué necesita para modificar cualquier módulo de su nave (esté de serie o ya parcialmente modificado):</p>
+  <ol>
+    <li>En el panel <kbd>Mi nave modificada</kbd>, haga clic sobre el módulo que desea mejorar (o abra directamente el panel <kbd>Ingenierizar un módulo</kbd>).</li>
+    <li>Seleccione el <kbd>Blueprint</kbd> deseado, el <kbd>Grado objetivo</kbd> (<code>G1</code> a <code>G5</code>) y, si procede, el efecto <kbd>Experimental</kbd>.</li>
+    <li>Ajuste si lo desea las <kbd>Tiradas por grado</kbd> (los valores predeterminados para G1–G5 se configuran en <kbd>Ajustes</kbd> → <kbd>Tiradas de ingeniería por grado (G1–G5, 1–10)</kbd>) y pulse <kbd>Calcular materiales</kbd>.</li>
+    <li><strong>Verificación automática de acceso al ingeniero:</strong>
+      <ul>
+        <li>Si usted ya tiene desbloqueado a un ingeniero capaz de aplicar ese grado, TMC indica <kbd>Ingeniero recomendado</kbd>, su taller, la distancia en años luz y el porcentaje de materiales listos.</li>
+        <li><strong>Si todavía no tiene desbloqueado al ingeniero requerido:</strong> TMC no oculta la receta ni muestra un bloqueo vacío; despliega primero el bloque <kbd>GUÍA DE AYUDANTE — DESBLOQUEO DEL INGENIERO</kbd> con tres pasos secuenciales (<kbd>1. Descubrimiento</kbd>, <kbd>2. Invitación</kbd> y <kbd>3. Tarea de Desbloqueo</kbd>), indicando el progreso registrado en su diario y un botón <kbd>Copiar sistema</kbd> para viajar al taller, y justo debajo presenta el bloque <kbd>MATERIALES REQUERIDOS TRAS EL DESBLOQUEO</kbd>.</li>
+      </ul>
+    </li>
+    <li>Pulse <kbd>Añadir a la lista de la compra</kbd> para guardar ese objetivo en el panel <kbd>Lista de la compra</kbd>. Puede añadir varios módulos, reordenar su prioridad (<kbd>Subir</kbd> / <kbd>Bajar</kbd>) o eliminarlos (<kbd>Quitar</kbd>).</li>
+  </ol>
+
+  <h2>7.3 Soluciones de intercambio (Material Traders) y fuentes</h2>
+  <ul>
+    <li><strong>Panel <kbd>Intercambios</kbd>:</strong> cuando le faltan unidades de algún material para su lista de la compra, TMC analiza sus <em>excedentes sin reservar</em> de la misma categoría y genera instrucciones directas de canje (<kbd>Da X de [Material A] y recibe Y de [Material B]</kbd>) aplicando las tasas oficiales de conversión de los comerciantes del juego (misma subcategoría o cruzada).</li>
+    <li><strong>Localización de comerciantes y brokers:</strong> muestra el <kbd>Comerciante más cercano</kbd> (de materias primas, fabricados o codificados) y el <kbd>Broker de tecnología más cercano</kbd> (Humano o Guardian) indicando estación, sistema, plataforma de aterrizaje y distancia, con botón directo <kbd>Copiar sistema</kbd>.</li>
+  </ul>
+
+  <!-- SECCIÓN 08 -->
+  <h1 id="cap8">08. Combate, Misiones y Jurisdicción (Crimen)</h1>
+
+  <h2>8.1 Módulo «Combate»</h2>
+  <ul>
+    <li><strong>Objetivo fijado:</strong> al seleccionar y escanear una nave en el juego, muestra el nombre del piloto, modelo de nave, rango de combate, facción, estatus legal (limpio o buscado con recompensa), porcentaje de escudos, porcentaje de casco y salud del subsistema apuntado.</li>
+    <li><strong>Zonas de Conflicto y Combate Anti-Xeno (AX):</strong> contabiliza bajas, bonos de combate acumulados en sesión, progreso de bandos en zonas de conflicto y telemetría específica de enfrentamientos contra interceptores Thargoides.</li>
+  </ul>
+
+  <h2>8.2 Módulo «Misiones» y agrupación de masacres</h2>
+  <ul>
+    <li><strong>Registro de contratos activos:</strong> lista todas las misiones aceptadas con su sistema/estación de destino, recompensa y tiempo restante antes de expirar. En misiones de transporte de pasajeros o turismo, compara el pago frente al parámetro <kbd>Referencia de turismo (cr/al)</kbd> de <kbd>Ajustes</kbd>.</li>
+    <li><strong>Tabla de misiones de masacre por facción:</strong> cuando acepta varias misiones de eliminación de piratas dirigidas contra una misma facción objetivo, TMC las agrupa en columnas según la <em>facción emisora</em>. Dado que en <em>Elite Dangerous</em> una baja cuenta simultáneamente para una misión de cada facción emisora distinta (pero en serie si dos misiones provienen de la misma facción), la tabla calcula el número total de bajas necesarias por facción y las bajas restantes para completar todo el lote.</li>
+  </ul>
+
+  <h2>8.3 Módulo «Crimen» (Estado legal y Notoriedad)</h2>
+  <ul>
+    <li><strong>Multas, recompensas y carga ilegal:</strong> desglosa las multas y recompensas activas por jurisdicción y advierte si transporta mercancías marcadas como ilegales o robadas en la bodega.</li>
+    <li><strong>Seguimiento de Notoriedad:</strong> muestra su puntuación actual de notoriedad (0 a 10). De acuerdo con las reglas del juego, cada punto de notoriedad tarda 2 horas de sesión activa en decaer; mientras la notoriedad sea mayor que 0, los contactos de <em>Interstellar Factors</em> no permiten saldar recompensas.</li>
+    <li><strong>Búsqueda de servicios neutrales:</strong> localiza los sistemas más próximos con servicio de <em>Interstellar Factors</em> (para pagar multas o recompensas con notoriedad 0 sin ser enviado a una nave prisión) y estaciones con <em>Mercado negro</em> activo.</li>
+  </ul>
+
+  <!-- SECCIÓN 09 -->
+  <h1 id="cap9">09. Minería, Comercio, Fleet Carrier, Colonización, Powerplay 2.0 y BGS</h1>
+
+  <h2>9.1 Minería</h2>
+  <ul>
+    <li><strong>Lectura de drones prospectores:</strong> cada vez que un dron prospector analiza un asteroide, el panel registra los minerales presentes, su porcentaje de composición, la riqueza de materiales y la presencia de mineral de núcleo (<em>core</em>), resaltando aquellos incluidos en su lista de interés.</li>
+    <li><strong>Métricas de sesión y puntos de venta:</strong> calcula la velocidad de refinado en toneladas por hora (t/h), el llenado de bodega y consulta estaciones cercanas donde vender los minerales extraídos.</li>
+    <li><strong>Parámetros en <kbd>Ajustes</kbd>:</strong> puede añadir o quitar <kbd>Minerales de interés</kbd>, fijar el <kbd>Umbral de valor de minería (cr)</kbd> y definir el <kbd>Radio de búsqueda de venta (al, 10–500)</kbd>.</li>
+  </ul>
+
+  <h2>9.2 Comercio</h2>
+  <ul>
+    <li>Muestra la carga actual en bodega, compara los precios de compra y venta del mercado local (al abrir el mercado de una estación en el juego) respecto a la media galáctica y permite buscar rutas comerciales filtrando por capacidad de carga, tamaño de plataforma de aterrizaje (Mediana o Grande) y antigüedad de los precios recibidos por EDDN (ajustable mediante <kbd>Radio de datos EDDN (al, 20–500)</kbd> en <kbd>Ajustes</kbd>).</li>
+  </ul>
+
+  <h2>9.3 Fleet Carrier</h2>
+  <ul>
+    <li>Supervisa el estado de su portaaviones a partir de los eventos <code>CarrierStats</code>, <code>CarrierJumpRequest</code> y <code>FCMaterials</code>: ubicación actual, destino y temporizador de cuenta atrás cuando hay un salto programado, nivel del depósito de Tritio (y reservas adicionales en bodega), distribución de espacio ocupado por servicios/carga/órdenes de mercado, saldo financiero del Carrier y coste de mantenimiento semanal.</li>
+  </ul>
+
+  <h2>9.4 Colonización, Powerplay 2.0 y BGS</h2>
+  <ul>
+    <li><strong>Colonización:</strong> registra el avance de suministro en proyectos de colonización de sistemas, detallando las cantidades entregadas y pendientes de cada materia prima requerida para completar la construcción de la instalación o puerto.</li>
+    <li><strong>Powerplay 2.0:</strong> muestra la potencia galáctica a la que está vinculado el comandante, rango actual, méritos ganados durante la sesión y acumulados en el ciclo semanal, así como el estado de control del sistema visitado.</li>
+    <li><strong>BGS (Background Simulation):</strong> al entrar en un sistema poblado, lista todas las facciones menores presentes con su porcentaje de influencia, gobierno, lealtad, estados activos/pendientes/en recuperación (Guerra, Elecciones, Auge, Hambruna, etc.) y lleva la cuenta de misiones, bonos o cartografía entregados en la sesión que afectan a cada facción.</li>
+  </ul>
+
+  <!-- SECCIÓN 10 -->
+  <h1 id="cap10">10. Cuentas y Sincronización con Servicios Externos</h1>
+  <p>
+    Todas las integraciones con servicios comunitarios o de Frontier son <strong>opcionales</strong>. Si desea operar TMC de manera 100 % local sin tráfico saliente, desactive en <kbd>Ajustes</kbd> el interruptor <kbd>Consultar servicios online (Spansh, EDSM, Canonn)</kbd> y mantenga desactivados los interruptores del módulo <kbd>Cuentas</kbd>.
+  </p>
+
+  <h2>10.1 Elite Dangerous Data Network (EDDN)</h2>
+  <ol>
+    <li>Abra el módulo <kbd>Cuentas</kbd> en la barra lateral.</li>
+    <li>En la tarjeta <strong>Elite Dangerous Data Network (EDDN)</strong>, active el interruptor <kbd>Transmisión a EDDN activa</kbd>.</li>
+    <li>TMC retransmitirá automáticamente los esquemas públicos de precios de mercado, equipamiento, astillero y saltos estelares (solo en galaxia Live 4.0). No requiere cuenta ni contraseña; su identificador de envío (<code>Uploader ID</code>) se seudonimiza localmente mediante una sal criptográfica aleatoria.</li>
+  </ol>
+
+  <h2>10.2 Elite Dangerous Star Map (EDSM)</h2>
+  <ol>
+    <li>Obtenga su nombre de comandante y su clave API en su cuenta de <code>https://www.edsm.net</code> (menú <em>My Account → API Key</em>).</li>
+    <li>En la tarjeta <strong>Elite Dangerous Star Map (EDSM)</strong> del módulo <kbd>Cuentas</kbd>, rellene los campos <kbd>Comandante EDSM</kbd> y <kbd>Clave API de EDSM</kbd>.</li>
+    <li>Pulse <kbd>Guardar credenciales</kbd> (quedarán almacenadas de forma persistente en la base de datos local para próximas ejecuciones) y active el interruptor <kbd>Sincronización EDSM activa</kbd>. Puede forzar un envío puntual con <kbd>Sincronizar ahora</kbd>.</li>
+  </ol>
+
+  <h2>10.3 Inara (InAPI v1)</h2>
+  <p>
+    TMC está registrado en la <em>whitelist</em> oficial de Inara bajo el identificador de aplicación <code>The Multipurpose Companion (TMC)</code> y agrupa automáticamente los eventos en lotes para respetar la cuota oficial (máximo 2 peticiones cada 60 segundos).
+  </p>
+  <ol>
+    <li>Genere su clave personal en <code>https://inara.cz/elite/cmdr-settings-api/</code>.</li>
+    <li>En la tarjeta <strong>Inara (InAPI v1)</strong>, introduzca su <kbd>Comandante Inara</kbd> y su <kbd>InAPI Key personal</kbd>.</li>
+    <li>Pulse <kbd>Guardar credenciales</kbd> y compruebe la validez pulsando <kbd>Probar conexión</kbd> (debe aparecer <kbd>Conexión exitosa con Inara</kbd>).</li>
+    <li>Active el interruptor <kbd>Sincronización Inara activa</kbd>. El panel mostrará los eventos pendientes en cola y el tiempo hasta la siguiente ventana de envío (o puede pulsar <kbd>Transmitir lote ahora</kbd> cuando haya cuota disponible).</li>
+  </ol>
+
+  <h2>10.4 Frontier Companion API (CAPI — OAuth2 PKCE)</h2>
+  <p>
+    Permite consultar desde TMC su perfil oficial de Frontier y la lista de naves almacenadas en astilleros remotos de otros sistemas sin que TMC conozca nunca su contraseña de Frontier:
+  </p>
+  <ol>
+    <li>En la tarjeta <strong>Frontier Companion API (CAPI)</strong>, active <kbd>Integración CAPI activa</kbd> y pulse <kbd>Vincular con Frontier Store</kbd>.</li>
+    <li>Se abrirá su navegador web predeterminado en la página oficial de autenticación de Frontier. Inicie sesión (con su cuenta Frontier, Steam o Epic vinculada) y autorice el acceso.</li>
+    <li>Al finalizar, el navegador redirigirá automáticamente a TMC y el estado cambiará a <kbd>Cuenta vinculada oficialmente</kbd>. Los tokens se renuevan y restauran automáticamente al reiniciar TMC.</li>
+    <li><strong>Procedimiento alternativo si el navegador bloquea la redirección local:</strong> si su navegador impide volver automáticamente al puerto local tras autorizar en Frontier, pulse en TMC el enlace <kbd>¿Problemas de redirección? Pegar URL</kbd>, copie la dirección URL completa que muestra la barra de direcciones de su navegador tras autorizar, péguela en el cuadro de texto y pulse <kbd>Completar</kbd>.</li>
+    <li>Pulse <kbd>Actualizar flota</kbd> para descargar el listado de naves almacenadas en astilleros. <em>Nota:</em> los servidores CAPI de Frontier actualizan la instantánea de naves cuando usted atraca en una estación o abre el menú de Astillero dentro de <em>Elite Dangerous</em> (Live 4.0).</li>
+  </ol>
+
+  <!-- SECCIÓN 11 -->
+  <h1 id="cap11">11. Síntesis de Voz (TTS), Asistente Vocal, VoiceAttack y Red Local (LAN)</h1>
+
+  <h2>11.1 Configuración de avisos hablados (Síntesis de Voz / TTS)</h2>
+  <ol>
+    <li>Abra <kbd>Ajustes</kbd> (abajo a la izquierda) y localice la sección <strong>Copiloto de voz y alertas de cabina</strong>.</li>
+    <li>Active el interruptor <kbd>Activar copiloto auditivo</kbd>.</li>
+    <li>Seleccione el <kbd>Motor de síntesis</kbd>:
+      <ul>
+        <li><kbd>Nativo del sistema operativo (Ultraligero)</kbd>: utiliza directamente las voces instaladas en el sistema operativo (SAPI5 / OneCore en Windows). No requiere dependencias adicionales y consume menos de 2 MB de memoria.</li>
+        <li><kbd>Motor neuronal KokoroTTS</kbd>: síntesis neuronal local mediante ONNX. Requiere disponer del entorno Python local con <code>kokoro-onnx</code> y los archivos del modelo Kokoro-82M. Se ejecuta en un proceso auxiliar sin ventana que se suspende automáticamente tras 60 segundos sin locuciones para liberar memoria RAM.</li>
+      </ul>
+    </li>
+    <li>Elija la <kbd>Voz del copiloto</kbd>, ajuste los controles deslizantes de <kbd>Volumen de cabina</kbd> y <kbd>Velocidad de locución</kbd>, y marque únicamente los <kbd>Canales de aviso activos</kbd> que desee escuchar (<code>Combate y alertas críticas</code>, <code>Navegación y repostaje estelar</code>, <code>Exploración y exobiología</code>, <code>Minería y prospección</code>, <code>Fleet Carrier</code>).</li>
+    <li>Pulse <kbd>🔊 Probar voz de copiloto</kbd> para verificar la salida de audio.</li>
+  </ol>
+
+  <h2>11.2 Asistencia por voz (Reconocimiento STT) e integración con VoiceAttack</h2>
+  <ul>
+    <li><strong>Consultas por micrófono integradas:</strong> en <kbd>Ajustes</kbd> → <strong>Asistencia por voz e integración</strong>, puede activar <kbd>Activar asistencia por voz</kbd>, seleccionar el modo (<kbd>Pulsar para hablar (Push-to-Talk)</kbd> con tecla configurable o <kbd>Escucha continua</kbd>) y elegir el motor de reconocimiento (<kbd>Whisper AI Local</kbd> offline de ~39 MB o <kbd>Nativo del navegador / Sistema</kbd>). Permite consultar por voz: estado general de la nave, siguiente salto estelar, copiar siguiente sistema, nivel de combustible, señales biológicas en el sistema, resumen de materiales fijados, estado legal/multas, factor interestelar más cercano y mercado negro más cercano.</li>
+    <li><strong>Uso con VoiceAttack:</strong> si utiliza el programa externo <em>VoiceAttack</em>, diríjase al bloque <strong>Integración con VoiceAttack</strong> dentro de <kbd>Ajustes</kbd> y pulse <kbd>Descargar perfil (.vap)</kbd> para guardar el archivo <code>TMC-Copiloto.vap</code>. En VoiceAttack, abra <em>Import Profile</em> y seleccione <code>TMC-Copiloto.vap</code>; los comandos de voz del perfil se comunicarán con la API local de TMC.</li>
+  </ul>
+
+  <h2>11.3 Uso en Tablet o Teléfono mediante Red Local (LAN QR)</h2>
+  <p>
+    Puede abrir la interfaz completa de TMC en una tablet o teléfono móvil para usarla como panel auxiliar táctil sin ocupar espacio en el monitor del ordenador:
+  </p>
+  <ol>
+    <li>Conecte su tablet o teléfono a la misma red local (Wi-Fi / LAN) que el PC donde se ejecuta TMC.</li>
+    <li>En TMC, abra <kbd>Ajustes</kbd> y active el interruptor <kbd>Acceso por red local</kbd>.</li>
+    <li>Aparecerá en pantalla el bloque <kbd>Código QR de emparejamiento</kbd> (que incluye la dirección IP local, el puerto y un token de acceso de sesión).</li>
+    <li>Escanee el código QR con la cámara de su dispositivo móvil y abra el enlace en su navegador web. La pantalla remota recibirá actualizaciones en tiempo real y permitirá interactuar con los paneles (como pulsar <kbd>Copiar siguiente sistema</kbd>, que copiará el sistema en el portapapeles del PC principal).</li>
+  </ol>
+
+  <!-- SECCIÓN 12 -->
+  <h1 id="cap12">12. Resolución de Problemas, Código Fuente y Soporte</h1>
+
+  <h2>12.1 Tabla de diagnóstico de incidencias frecuentes</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Síntoma observado</th>
+        <th>Causa habitual y procedimiento de solución</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Aparece <em>«El juego no está en ejecución»</em> o no cargan datos del comandante.</td>
+        <td>Compruebe que existen archivos <code>Journal.*.log</code> en <code>%USERPROFILE%\Saved Games\Frontier Developments\Elite Dangerous\</code>. Si su instalación guarda los diarios en otra ruta o disco, inicie TMC con el parámetro <code>--journal-dir "D:\Ruta\A\Diarios"</code>.</td>
+      </tr>
+      <tr>
+        <td>El planificador de rutas muestra que no está disponible o que falta el FSD.</td>
+        <td>1) Verifique en <kbd>Ajustes</kbd> que <kbd>Consultar servicios online</kbd> está activado.<br>2) Compruebe en la barra superior que no se encuentra en una sesión <code>LEGACY</code>.<br>3) Entre con su nave al juego al menos una vez para que el diario emita el evento <code>Loadout</code> con los datos físicos del motor FSD.</td>
+      </tr>
+      <tr>
+        <td>La lista de «Flota remota almacenada» en CAPI aparece vacía tras vincular.</td>
+        <td>Frontier CAPI solo devuelve naves almacenadas cuando el servidor de Frontier refresca el perfil en vivo. Entre en <em>Elite Dangerous</em> (Live 4.0), atraque en una estación o abra el menú de <em>Astillero</em> y pulse después <kbd>Actualizar flota</kbd> en TMC.</td>
+      </tr>
+      <tr>
+        <td>Al escanear el código QR LAN desde la tablet, la página no termina de cargar.</td>
+        <td>1) Verifique que el perfil de red en Windows está configurado como <em>Red privada</em> y no como <em>Red pública</em>.<br>2) Autorice a <code>TMC.exe</code> (puerto TCP <code>47320</code>) en el Firewall de Windows Defender para redes privadas.<br>3) Compruebe que su router Wi-Fi no tiene activado el aislamiento entre clientes (<em>AP Isolation</em>).</td>
+      </tr>
+      <tr>
+        <td>El motor KokoroTTS no emite voz al seleccionarlo.</td>
+        <td>KokoroTTS es opcional y requiere tener instalado Python con el paquete <code>kokoro-onnx</code> y los pesos del modelo local. Si no desea instalar Python, seleccione <kbd>Nativo del sistema operativo (Ultraligero)</kbd>, que funciona sin dependencias externas.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>12.2 Cómo reportar errores o enviar sugerencias (GitHub Issues)</h2>
+  <p>
+    Al ser un proyecto de código abierto, el seguimiento de fallos y propuestas de mejora se gestiona públicamente en GitHub:
+  </p>
+  <ol>
+    <li>Abra <kbd>Ajustes</kbd> en la barra lateral de TMC y desplácese hasta la tarjeta <strong>Soporte, Feedback y Comunidad</strong>.</li>
+    <li>Pulse el botón <kbd>Reportar problema o sugerencia en GitHub</kbd>.</li>
+    <li>Se abrirá en su navegador el formulario de nueva incidencia en <code>https://github.com/Danikuso/TheMultipurposeCompanion/issues/new</code> con una plantilla técnica prellenada (versión de TMC, sistema operativo e idioma activo, sin incluir ningún dato personal ni identificadores de comandante). Describa los pasos para reproducir el problema y envíe el reporte.</li>
+  </ol>
+
+  <h2>12.3 Auditoría y compilación desde el código fuente</h2>
+  <p>
+    Cualquier usuario o desarrollador puede inspeccionar el código fuente completo o compilar sus propios binarios localmente conforme a la licencia <em>PolyForm Noncommercial 1.0.0</em>. Requisitos: <strong>Rust</strong> estable (1.90+, edición 2024 con herramientas MSVC en Windows), <strong>Node.js 22+</strong> y <strong>Tauri CLI v2</strong>.
+  </p>
+  <pre>git clone https://github.com/Danikuso/TheMultipurposeCompanion.git
+cd TheMultipurposeCompanion
+
+# 1. Instalar dependencias de interfaz y compilar el frontend (Svelte 5)
+npm --prefix ui ci
+npm --prefix ui run build
+
+# 2. Ejecutar las suites de pruebas automatizadas (Rust + Vitest)
+cargo test --workspace
+npm --prefix ui run test
+
+# 3. Compilar el binario Release o generar el instalador NSIS
+cargo build -p tmc-desktop --release
+cd apps/desktop &amp;&amp; cargo tauri build</pre>
 
 </body>
 </html>

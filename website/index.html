@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TMC — The Multipurpose Companion | Tu Copiloto de Cabina en Elite Dangerous</title>
-  <meta name="description" content="TMC es el ayudante en tiempo real y copiloto de cabina definitivo para Elite Dangerous. Guía paso a paso de ingenieros, radar de exobiología, copiloto con voz en español, pantalla para tablet y cero impacto en FPS.">
+  <title>TMC — The Multipurpose Companion | Herramienta de Código Abierto para Elite Dangerous</title>
+  <meta name="description" content="Aplicación auxiliar de código abierto en tiempo real para Elite Dangerous desarrollada en Rust, Tauri 2 y Svelte 5. Telemetría local, Spansh Exact Plotter, exploración, exobiología, ingeniería guiada, voz y pantalla LAN.">
   <link rel="stylesheet" href="styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,16 +31,16 @@
 
       <nav>
         <ul class="nav-links">
-          <li><a href="#soluciones" class="nav-link">¿Por qué TMC?</a></li>
-          <li><a href="#modulos" class="nav-link">Qué puede hacer (16 Módulos)</a></li>
-          <li><a href="#manual" class="nav-link">Manual de Vuelo</a></li>
-          <li><a href="#tutoriales" class="nav-link">Tutoriales Millonarios</a></li>
-          <li><a href="#faq" class="nav-link">Preguntas de Jugadores</a></li>
+          <li><a href="#arquitectura" class="nav-link">Arquitectura</a></li>
+          <li><a href="#modulos" class="nav-link">Módulos (16)</a></li>
+          <li><a href="#manual" class="nav-link">Manual de Uso</a></li>
+          <li><a href="#flujos" class="nav-link">Flujos de Trabajo</a></li>
+          <li><a href="#faq" class="nav-link">Preguntas Técnicas</a></li>
         </ul>
       </nav>
 
       <div class="nav-actions">
-        <button id="searchTriggerBtn" class="search-trigger-btn" title="Buscar cualquier función o tutorial (Ctrl + K)">
+        <button id="searchTriggerBtn" class="search-trigger-btn" title="Buscar módulos o instrucciones (Ctrl + K)">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
             <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
           </svg>
@@ -48,7 +48,7 @@
           <kbd>Ctrl K</kbd>
         </button>
 
-        <a href="#manual-install" class="btn-hud btn-hud-primary">Empezar a Volar</a>
+        <a href="https://github.com/Danikuso/TheMultipurposeCompanion" class="btn-hud btn-hud-secondary" target="_blank" rel="noopener">GitHub</a>
         <button class="menu-toggle" aria-label="Abrir menú">☰</button>
       </div>
     </div>
@@ -56,46 +56,45 @@
 
   <main>
     <!-- ===================================================================
-         2. HERO SECTION ORIENTADA AL PILOTO
+         2. PRESENTACIÓN TÉCNICA Y VISTA PREVIA DE INTERFAZ
          =================================================================== -->
     <section class="hero">
       <div class="container hero-grid">
         <div class="hero-content">
           <div class="hero-pill">
             <span class="pulse-dot"></span>
-            <span>Para Comandantes de Elite Dangerous · Odyssey & Horizons 4.0</span>
+            <span>Código Abierto · Rust + Tauri 2 + Svelte 5 · Live 4.0 &amp; Odyssey</span>
           </div>
 
           <h1 class="hero-title">
-            Tu Copiloto Táctico en <span>Elite Dangerous</span>
+            Asistente de Cabina en Tiempo Real para <span>Elite Dangerous</span>
           </h1>
 
           <p class="hero-description">
-            Olvídate de minimizar con <strong>Alt + Tab</strong> en mitad de una interdicción o perder horas buscando materiales a ciegas. 
-            TMC es el ayudante inteligente que te <strong>avisa por voz</strong> en español, te muestra los <strong>planetas más rentables</strong>, te guía paso a paso con los <strong>ingenieros</strong> y convierte tu <strong>tablet en una pantalla táctil de cabina</strong>... sin quitarle ni un solo fotograma por segundo a tu juego.
+            <strong>TMC (The Multipurpose Companion)</strong> es una herramienta auxiliar de código abierto que lee de forma pasiva los diarios locales del juego para centralizar telemetría de nave, planificación física de rutas con <strong>Spansh Exact Plotter</strong>, cartografía, exobiología, guía secuencial de ingeniería, síntesis de voz y acceso desde tablets en red local con un consumo mínimo de recursos.
           </p>
 
           <div class="hero-cta">
-            <a href="https://github.com/Danikuso/TheMultipurposeCompanion/releases/latest" class="btn-hud btn-hud-primary" target="_blank" rel="noopener">📥 Descargar TMC v0.1.0</a>
-            <a href="Manual_TMC_Comandante.pdf" class="btn-hud btn-hud-secondary" download>📄 Manual de Usuario (PDF)</a>
-            <a href="#manual-install" class="btn-hud btn-hud-cyan">Guía de Inicio Rápido</a>
+            <a href="https://github.com/Danikuso/TheMultipurposeCompanion/releases/latest" class="btn-hud btn-hud-primary" target="_blank" rel="noopener">📥 Descargar v0.1.0 (Windows)</a>
+            <a href="Manual_TMC_Comandante.pdf" class="btn-hud btn-hud-secondary" download>📄 Manual de Instrucciones (PDF)</a>
+            <a href="https://github.com/Danikuso/TheMultipurposeCompanion" class="btn-hud btn-hud-cyan" target="_blank" rel="noopener">💻 Código Fuente en GitHub</a>
           </div>
 
           <div class="gameplay-pill-bar">
-            <span class="gameplay-pill active">🚀 0% Lag / 0 FPS de impacto</span>
-            <span class="gameplay-pill active">🎙️ Copiloto con voz hablada</span>
-            <span class="gameplay-pill active">📱 Pantalla táctil en Tablet/Móvil</span>
-            <span class="gameplay-pill active">🛡️ 100% Legal y Seguro</span>
-            <span class="gameplay-pill active">⚡ Abrir y jugar en 10 segundos</span>
+            <span class="gameplay-pill active">🦀 Motor en Rust (&lt; 60 MB RAM)</span>
+            <span class="gameplay-pill active">🔓 Código abierto auditable</span>
+            <span class="gameplay-pill active">🎙️ Voz SAPI5/Kokoro + Whisper STT</span>
+            <span class="gameplay-pill active">📱 Panel LAN mediante código QR</span>
+            <span class="gameplay-pill active">🌍 5 idiomas (ES · EN · FR · DE · PT)</span>
           </div>
         </div>
 
-        <!-- SIMULADOR INTERACTIVO DE CABINA HUD -->
+        <!-- VISTA PREVIA INTERACTIVA DE INTERFAZ GLASS HUD -->
         <div class="cockpit-preview">
           <div class="cockpit-header">
             <div class="cockpit-indicator">
               <span class="pulse-dot"></span>
-              <span>SIMULADOR DE CABINA EN DIRECTO</span>
+              <span>GLASS HUD</span>
             </div>
             <div class="cockpit-modes">
               <button class="cockpit-mode-btn active" data-mode="exploration">Exploración</button>
@@ -109,7 +108,7 @@
             <!-- Telemetría superior -->
             <div class="cockpit-telemetry">
               <div class="metric-card">
-                <span class="metric-label">Modo de Nave</span>
+                <span class="metric-label">Modo de Vuelo</span>
                 <span id="simModeBadge" class="badge badge-cyan">SUPERCRUCERO</span>
               </div>
               <div class="metric-card">
@@ -121,28 +120,28 @@
                 <span id="simShield" class="metric-val text-cyan">100 %</span>
               </div>
               <div class="metric-card">
-                <span class="metric-label">Ganancias Sesión</span>
+                <span class="metric-label">Balance Sesión</span>
                 <span id="simCredits" class="metric-val text-gold">14.280.000 Cr</span>
               </div>
             </div>
 
-            <!-- Banner pegajoso de ruta -->
+            <!-- Tira de ruta -->
             <div class="sim-route-strip">
               <div class="sim-route-info">
-                <span id="simRouteTitle" class="sim-route-title">Siguiente Salto (Neutrones Spansh)</span>
+                <span id="simRouteTitle" class="sim-route-title">Siguiente Salto (Spansh Exact Plotter)</span>
                 <span id="simRouteTarget" class="sim-route-target">Eol Prou SS-T d3-128</span>
               </div>
-              <button id="simCopyBtn" class="sim-route-action" title="Pulsa para copiar al portapapeles y pegar en el mapa de galaxia del juego (Ctrl+V)">
+              <button id="simCopyBtn" class="sim-route-action" title="Copia el nombre del sistema al portapapeles para pegarlo en el mapa galáctico (Ctrl+V)">
                 <span>📋</span>
-                <span>Copiar Salto</span>
+                <span>Copiar Sistema</span>
               </button>
             </div>
 
             <!-- Panel dinámico del modo -->
             <div class="sim-dynamic-card">
               <div class="sim-card-header">
-                <span id="simCardTitle" class="sim-card-title">🔭 Cuerpos Celestes & Cartografía FSS</span>
-                <span class="badge badge-green">3 CUERPOS DE INTERÉS</span>
+                <span id="simCardTitle" class="sim-card-title">🔭 Cuerpos Celestes &amp; Cartografía FSS</span>
+                <span class="badge badge-green">TELEMETRÍA EN VIVO</span>
               </div>
               <div id="simRowsContainer" style="display: flex; flex-direction: column; gap: 0.45rem;">
                 <!-- Filas renderizadas por JS -->
@@ -151,10 +150,10 @@
           </div>
 
           <div class="cockpit-footer">
-            <span>Cambia de modo para ver cómo TMC se adapta a lo que haces en el juego</span>
-            <button id="simAudioBtn" class="audio-test-btn" title="Probar cómo te hablará tu copiloto de cabina">
+            <span>Alterna entre disposiciones para ver cómo se estructura cada módulo</span>
+            <button id="simAudioBtn" class="audio-test-btn" title="Escuchar ejemplo de aviso hablado mediante síntesis de voz del navegador">
               <span>🔊</span>
-              <span>Probar Copiloto de Voz</span>
+              <span>Probar Locución TTS</span>
             </button>
           </div>
         </div>
@@ -162,99 +161,86 @@
     </section>
 
     <!-- ===================================================================
-         3. LOS 4 GRANDES DOLORES QUE TMC TE ELIMINA EN TU PARTIDA
+         3. CUALIDADES TÉCNICAS, DISEÑO Y CÓDIGO ABIERTO
          =================================================================== -->
-    <section id="soluciones" class="section-spacing">
+    <section id="arquitectura" class="section-spacing">
       <div class="container">
         <div class="section-header">
-          <div class="section-tag">DISEÑADO POR Y PARA JUGADORES</div>
-          <h2 class="section-title">¿Qué Problemas Te Resuelve en Tu Partida?</h2>
+          <div class="section-tag">INGENIERÍA Y FILOSOFÍA DEL PROYECTO</div>
+          <h2 class="section-title">Cualidades Técnicas y Principios de Diseño</h2>
           <p class="section-desc">
-            Elite Dangerous es un simulador colosal, pero su interfaz te obliga constantemente a pausar o buscar en páginas externas. TMC nació para que disfrutes pilotando sin frustraciones.
+            TMC se desarrolla como un proyecto abierto y auditable para la comunidad, priorizando el bajo impacto en el sistema operativo, la claridad operativa y el control local de los datos.
           </p>
         </div>
 
-        <div class="pain-grid">
-          <!-- Dolor 1: Ingenieros -->
-          <div class="pain-card">
-            <div class="pain-card-header">
-              <span>🔧</span>
-              <span>El Laberinto de los Ingenieros</span>
-            </div>
-            <div class="pain-box">
-              <strong>❌ Sin TMC:</strong> Quieres mejorar tus motores o saltos y no sabes qué te pide el ingeniero. Viajas 400 años luz para enterarte de que no te conoce, tienes que mirar 5 guías en internet y pasas 10 horas buscando materiales a ciegas.
-            </div>
-            <div class="solution-box">
-              <strong>✅ Con TMC:</strong> Te guía de la mano paso a paso: cómo conocerlo, qué donación entregarle y dónde comprarla con 1 clic. Además, analiza tus materiales sobrantes y te dice qué cambiar en los comerciantes para tener <strong>Grado 5</strong> sin farmear de más.
-            </div>
-          </div>
-
-          <!-- Dolor 2: Exobiología -->
-          <div class="pain-card">
-            <div class="pain-card-header">
-              <span>🌿</span>
-              <span>Exobiología a Ciegas</span>
-            </div>
-            <div class="pain-box">
-              <strong>❌ Sin TMC:</strong> Aterrizas en un planeta, escaneas una bacteria, caminas 300 metros y el juego te dice <em>«Diversidad genética insuficiente»</em> porque no sabes a qué distancia está la siguiente muestra. Pierdes tiempo y no sabes qué especies valen dinero.
-            </div>
-            <div class="solution-box">
-              <strong>✅ Con TMC:</strong> Un semáforo visual en tu pantalla y una voz te avisan en el instante exacto en que alcanzas la distancia requerida. Te resalta las plantas de <strong>19.5 Millones de créditos</strong> y multiplica por 5 el valor si eres el primero en pisarlo.
-            </div>
-          </div>
-
-          <!-- Dolor 3: Alt + Tab Infinito -->
-          <div class="pain-card">
-            <div class="pain-card-header">
-              <span>📱</span>
-              <span>El Peligro del Alt + Tab en Mitad del Vuelo</span>
-            </div>
-            <div class="pain-box">
-              <strong>❌ Sin TMC:</strong> Tienes 15 pestañas de Chrome abiertas (Inara, Spansh, Reddit, tablas de Excel). Minimizar el juego mientras vuelas en supercrucero puede hacer que te estrelles contra una estrella o que un pirata te destruya antes de volver a la ventana.
-            </div>
-            <div class="solution-box">
-              <strong>✅ Con TMC:</strong> Escaneas un código QR con tu móvil o tablet y lo colocas junto a tu joystick, teclado o mando. Toda la información de navegación, mercados y naves está al alcance de tus dedos en una <strong>pantalla táctil de cabina</strong>.
-            </div>
-          </div>
-
-          <!-- Dolor 4: Rendimiento y Complicaciones -->
-          <div class="pain-card">
-            <div class="pain-card-header">
-              <span>⚡</span>
-              <span>Programas Lentos y Complicados</span>
-            </div>
-            <div class="pain-box">
-              <strong>❌ Sin TMC:</strong> Otras herramientas comunitarias tardan minutos en abrirse, consumen gigabytes de memoria, requieren instalar Python o configurar bases de datos complejas, y a menudo provocan tirones de fotogramas (FPS) en combate.
-            </div>
-            <div class="solution-box">
-              <strong>✅ Con TMC:</strong> Solo haces doble clic y en 1 segundo está listo. Detecta tu nave y tu comandante al instante, consume menos de 150 MB de memoria RAM y el impacto en tus FPS es de un rotundo <strong>0%</strong>.
-            </div>
-          </div>
-        </div>
-
-        <!-- TESTIMONIO / EXPERIENCIA DE VUELO -->
-        <div class="pilot-quote-card">
-          <div class="pilot-avatar">👨‍🚀</div>
-          <div class="pilot-quote-body">
-            <p class="pilot-quote-text">
-              «Antes de usar TMC tenía que pausar el juego cada dos por tres para mirar rutas de neutrones o recordar qué donación quería Felicity Farseer. Ahora tengo mi tablet apoyada en el soporte del HOTAS: mi copiloto me canta las estrellas para repostar, sé qué planetas escanear para ganar millones y el juego va a 144 FPS sin un solo tirón.»
+        <div class="features-grid">
+          <!-- Cualidad 1 -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">🧭</div>
+            <h3 class="feature-title">Asistencia Secuencial sin Bloqueos</h3>
+            <p class="feature-text">
+              Diseñado para orientar tanto a jugadores nuevos como veteranos. Si seleccionas una mejora de ingeniería cuyo ingeniero aún no conoces o no has invitado, la interfaz expone primero los pasos de descubrimiento, invitación y donación leídos de tu diario, y después el desglose de materiales e intercambios.
             </p>
-            <span class="pilot-quote-author">CMDR Eric Vance — Piloto de Exploración y Combate AX</span>
+          </div>
+
+          <!-- Cualidad 2 -->
+          <div class="feature-card cyan">
+            <div class="feature-icon-wrapper">⚡</div>
+            <h3 class="feature-title">Bajo Consumo en Rust Nativo</h3>
+            <p class="feature-text">
+              El núcleo está escrito en Rust (edición 2024) con lectura incremental de diarios por desplazamiento de bytes, evitando relecturas completas de disco. Mantiene un uso inferior al 1 % de CPU en reposo y libera el proceso gráfico WebView2 cuando se minimiza a la bandeja del sistema.
+            </p>
+          </div>
+
+          <!-- Cualidad 3 -->
+          <div class="feature-card purple">
+            <div class="feature-icon-wrapper">🎛️</div>
+            <h3 class="feature-title">Ergonomía «TMC Glass HUD»</h3>
+            <p class="feature-text">
+              Cada panel reserva su tercio superior a las métricas prioritarias y controles directos, agrupando listados extensos en bloques desplegables. Las tablas ajustan su altura al número real de filas sin barras vacías y mantienen fija la barra de desplazamiento horizontal.
+            </p>
+          </div>
+
+          <!-- Cualidad 4 -->
+          <div class="feature-card green">
+            <div class="feature-icon-wrapper">🔒</div>
+            <h3 class="feature-title">Almacenamiento Local y Aislamiento Legacy</h3>
+            <p class="feature-text">
+              El historial, inventario y credenciales se almacenan localmente en SQLite (modo WAL). TMC detecta en la cabecera del diario si la sesión pertenece a la galaxia Legacy 3.8 y bloquea de forma automática cualquier envío a EDDN, EDSM o Inara para preservar la integridad de datos.
+            </p>
+          </div>
+
+          <!-- Cualidad 5 -->
+          <div class="feature-card cyan">
+            <div class="feature-icon-wrapper">📱</div>
+            <h3 class="feature-title">Acceso en Red Local mediante QR</h3>
+            <p class="feature-text">
+              El servidor HTTP y SSE local puede exponerse opcionalmente a la red doméstica desde Ajustes. Al escanear el código QR con una tablet o teléfono, se abre la misma interfaz sincronizada a 10 Hz autenticada por token de sesión, sin instalar software adicional en el dispositivo móvil.
+            </p>
+          </div>
+
+          <!-- Cualidad 6 -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">💻</div>
+            <h3 class="feature-title">Código Abierto y Verificable</h3>
+            <p class="feature-text">
+              El repositorio incluye la totalidad de los crates de Rust, la interfaz en Svelte 5, los archivos de localización Fluent en 5 idiomas y más de 1.800 pruebas unitarias e integrales, permitiendo auditar el comportamiento del programa, compilarlo en local o enviar contribuciones.
+            </p>
           </div>
         </div>
       </div>
     </section>
 
     <!-- ===================================================================
-         4. CATÁLOGO COMPLETO DE LOS 16 MÓDULOS (QUÉ GANA EL JUGADOR)
+         4. CATÁLOGO TÉCNICO DE LOS 16 MÓDULOS
          =================================================================== -->
     <section id="modulos" class="section-spacing">
       <div class="container">
         <div class="section-header">
-          <div class="section-tag purple">ARSENAL DE HERRAMIENTAS</div>
-          <h2 class="section-title">Todo lo que TMC Puede Hacer por Ti</h2>
+          <div class="section-tag purple">ARQUITECTURA MODULAR</div>
+          <h2 class="section-title">Catálogo Técnico de los 16 Módulos</h2>
           <p class="section-desc">
-            No importa si tu pasión es el combate contra alienígenas, el comercio a gran escala, la minería de asteroides o cruzar la galaxia hacia Colonia: hay un módulo diseñado a la medida de tu partida.
+            Cada actividad del juego está implementada como un módulo independiente. Pueden consultarse de forma individual desde la barra lateral o agruparse mediante 11 disposiciones de cabina preconfiguradas.
           </p>
         </div>
 
@@ -262,16 +248,16 @@
         <div class="modules-filter-bar">
           <div class="filter-categories">
             <button class="filter-btn active" data-category="all">Todos los Módulos (16)</button>
-            <button class="filter-btn" data-category="flight">Vuelo & Cabina</button>
-            <button class="filter-btn" data-category="science">Exploración & Bio</button>
-            <button class="filter-btn" data-category="combat">Combate & Seguridad</button>
-            <button class="filter-btn" data-category="economy">Minería & Comercio</button>
-            <button class="filter-btn" data-category="galaxy">Flota, BGS & Política</button>
+            <button class="filter-btn" data-category="flight">Vuelo &amp; Cabina</button>
+            <button class="filter-btn" data-category="science">Exploración &amp; Bio</button>
+            <button class="filter-btn" data-category="combat">Combate &amp; Jurisdicción</button>
+            <button class="filter-btn" data-category="economy">Minería &amp; Comercio</button>
+            <button class="filter-btn" data-category="galaxy">Flota, BGS &amp; Cuentas</button>
           </div>
 
           <div class="module-search-box">
             <span class="module-search-icon">🔍</span>
-            <input type="text" id="moduleSearchInput" class="module-search-input" placeholder="Buscar por palabra clave (ej. Thargoide, Platino, Farseer, Multas)...">
+            <input type="text" id="moduleSearchInput" class="module-search-input" placeholder="Filtrar por función o evento (ej. Spansh, CAPI, Tritio, FSS, FSD)...">
           </div>
         </div>
 
@@ -282,25 +268,25 @@
               <div class="module-icon-title">
                 <div class="module-icon">🛰️</div>
                 <div>
-                  <h3 class="module-name">Panel General & Cabina</h3>
-                  <span class="module-category">Información Vital de Nave</span>
+                  <h3 class="module-name">Panel General (Dashboard)</h3>
+                  <span class="module-category">Estado de Comandante &amp; Sesión</span>
                 </div>
               </div>
-              <span class="badge badge-orange">ESENCIAL</span>
+              <span class="badge badge-orange">TELEMETRÍA</span>
             </div>
             <p class="module-desc">
-              Tu cuadro de mandos principal. Te ofrece una vista limpia y en tiempo real de tu comandante, el dinero ganado en la sesión, el estado del casco y alertas que te salvan la vida antes de que sea tarde.
+              Vista resumida del estado actual del comandante, nave activa, ubicación, banderas de cabina en vivo leídas de <code>Status.json</code> y métricas acumuladas durante la sesión.
             </p>
             <div class="module-player-benefit">
-              <span class="benefit-title">¿Qué ganas en tu partida?</span>
-              Avisos inmediatos de sobrecalentamiento crítico, alertas de interdicción pirata y resumen de cuánto dinero estás ganando por hora de juego.
+              <span class="benefit-title">Capacidades operativas</span>
+              Supervisión unificada de rangos, saldo de créditos, coste de recompra, banderas activas (escudos, tren, anclajes, SCO) y alertas de cabina.
             </div>
             <div class="module-panels-list">
               <div class="module-panel-item">
-                <span class="module-panel-tag">Alertas Tácticas:</span> Avisos visuales y sonoros si el casco baja del 25%, si te quedas sin oxígeno o si se sobrecalienta la nave en supercrucero.
+                <span class="module-panel-tag">Banderas y Alertas:</span> Avisos inmediatos ante combustible bajo, sobrecalentamiento, daño estructural en casco, oxígeno bajo o interdicción.
               </div>
               <div class="module-panel-item">
-                <span class="module-panel-tag">Contador de Sesión:</span> Tiempo de vuelo real, saltos completados, años luz recorridos y balance neto de créditos.
+                <span class="module-panel-tag">Métricas de Sesión:</span> Tiempo activo, conteo de saltos, distancia recorrida en años luz y balance neto de créditos.
               </div>
             </div>
           </div>
@@ -311,25 +297,25 @@
               <div class="module-icon-title">
                 <div class="module-icon">🚀</div>
                 <div>
-                  <h3 class="module-name">Taller de Nave & Energía</h3>
-                  <span class="module-category">Salud de Componentes & Pips</span>
+                  <h3 class="module-name">Nave &amp; Equipamiento</h3>
+                  <span class="module-category">Inspección de Ranuras &amp; Loadout</span>
                 </div>
               </div>
-              <span class="badge badge-cyan">TELEMETRÍA</span>
+              <span class="badge badge-cyan">OUTFITTING</span>
             </div>
             <p class="module-desc">
-              Inspecciona el equipamiento completo de tu nave. Mira la integridad exacta de cada módulo, qué planos de ingeniería tienes montados y gestiona tus prioridades de energía.
+              Lee el evento <code>Loadout</code> y <code>ModulesInfo.json</code> para desglosar todas las ranuras instaladas, su integridad porcentual, prioridades de energía y modificaciones aplicadas.
             </p>
             <div class="module-player-benefit">
-              <span class="benefit-title">¿Qué ganas en tu partida?</span>
-              Evita que se te apague la nave al sacar las armas en combate configurando correctamente tus grupos de energía y vigilando la salud de tu planta de potencia.
+              <span class="benefit-title">Capacidades operativas</span>
+              Auditoría rápida por rol (Exploración, Combate, Carga/Minería) para verificar antes de despegar si falta equipamiento clave como recolector, DSS, AFMU o drones.
             </div>
             <div class="module-panels-list">
               <div class="module-panel-item">
-                <span class="module-panel-tag">Salud de Subsistemas:</span> Barras de integridad individuales para impulsores, motor de saltos (FSD) y armas.
+                <span class="module-panel-tag">Filtro por Ranuras:</span> Búsqueda y filtrado entre anclajes de armas, módulos primarios, opcionales y utilidades.
               </div>
               <div class="module-panel-item">
-                <span class="module-panel-tag">Etiquetas de Ingeniería:</span> Mira qué modificaciones (G1 a G5) y efectos experimentales tienes aplicados en cada pieza.
+                <span class="module-panel-tag">Metadatos de Ingeniería:</span> Visualización del blueprint, grado (G1–G5) y efecto experimental montado en cada componente.
               </div>
             </div>
           </div>
@@ -340,25 +326,25 @@
               <div class="module-icon-title">
                 <div class="module-icon">🗺️</div>
                 <div>
-                  <h3 class="module-name">Navegación & Autopista Spansh</h3>
-                  <span class="module-category">Rutas Interestelares Rápidas</span>
+                  <h3 class="module-name">Navegación &amp; Planificador Spansh</h3>
+                  <span class="module-category">Exact Plotter &amp; Autopista de Neutrones</span>
                 </div>
               </div>
-              <span class="badge badge-green">1-CLIC COPY</span>
+              <span class="badge badge-green">SPANSH API</span>
             </div>
             <p class="module-desc">
-              Conexión directa con el planificador galáctico de Spansh (rutas normales y autopista de neutrones). Mantén siempre visible el siguiente sistema en el banner superior y cópialo con un solo clic.
+              Integra dos motores de trazado con Spansh: <strong>Ruta exacta (Exact Plotter)</strong> y <strong>Autopista de neutrones</strong>, junto con la tira superior <code>RouteStrip</code> y copia automática al portapapeles.
             </p>
             <div class="module-player-benefit">
-              <span class="benefit-title">¿Qué ganas en tu partida?</span>
-              Viaja el triple de rápido: llegas a un sistema, pulsas un botón, pegas en el mapa de galaxia y saltas al instante sin equivocarte de estrella.
+              <span class="benefit-title">Capacidades operativas</span>
+              Extrae automáticamente del diario la masa vacía, depósitos, perfil FSD ingenierizado y bonificador Guardian para trazar en Exact Plotter sin exportar archivos a Coriolis o EDSY.
             </div>
             <div class="module-panels-list">
               <div class="module-panel-item">
-                <span class="module-panel-tag">Banner RouteStrip:</span> Te acompaña en cabina mostrando los saltos restantes y el siguiente destino siempre a mano.
+                <span class="module-panel-tag">Resolución 3D en Espacio Profundo:</span> Si el sistema actual no está indexado en Spansh, resuelve el origen mediante coordenadas <code>StarPos</code> (<code>/api/nearest</code>).
               </div>
               <div class="module-panel-item">
-                <span class="module-panel-tag">Detección Fuera de Ruta:</span> Si te desvías para repostar o explorar, te avisa y te permite recalcular o borrar el plan sin líos.
+                <span class="module-panel-tag">Gestión de Desvíos:</span> Indicador de paradas de repostaje, detección de estado «Fuera de ruta» y botones para recalcular o descartar el plan.
               </div>
             </div>
           </div>
@@ -370,24 +356,24 @@
                 <div class="module-icon">🌌</div>
                 <div>
                   <h3 class="module-name">Exploración Cartográfica</h3>
-                  <span class="module-category">Radar FSS / DSS & Planetas Ricos</span>
+                  <span class="module-category">Escaneo FSS / DSS &amp; Cuerpos Celestes</span>
                 </div>
               </div>
-              <span class="badge badge-cyan">MILLONES EN CRÉDITOS</span>
+              <span class="badge badge-cyan">FSS / DSS</span>
             </div>
             <p class="module-desc">
-              Escanea con el FSS y TMC clasificará al instante todos los cuerpos del sistema, mostrándote el valor estimado que te pagará Universal Cartographics antes de mover la nave.
+              Procesa los eventos <code>FSSDiscoveryScan</code>, <code>Scan</code> y <code>SAAScanComplete</code> para catalogar estrellas, planetas y anillos del sistema actual con sus propiedades físicas.
             </p>
             <div class="module-player-benefit">
-              <span class="benefit-title">¿Qué ganas en tu partida?</span>
-              Sabrás al segundo qué planetas merecen la pena ser sondeados (Mundos Acuáticos, Tierras ELW y Terraformables) para ganar millones y cuáles puedes ignorar.
+              <span class="benefit-title">Capacidades operativas</span>
+              Cálculo del valor cartográfico estimado y marcado automático de cuerpos recomendados para sondeo DSS según un umbral de créditos configurable en Ajustes.
             </div>
             <div class="module-panels-list">
               <div class="module-panel-item">
-                <span class="module-panel-tag">Estrellas Repostables:</span> Distingue al entrar si la estrella principal permite repostar combustible con el recolector (KGBFOAM).
+                <span class="module-panel-tag">Tabla Adaptativa:</span> Muestra distancia de llegada, gravedad, atmósfera, vulcanismo, aterrizabilidad y señales geológicas o biológicas.
               </div>
               <div class="module-panel-item">
-                <span class="module-panel-tag">Sondeo Recomendado:</span> Insignias doradas en los planetas que pagan más de 1.000.000 Cr por ser cartografiados con sondas.
+                <span class="module-panel-tag">Clasificación Estelar:</span> Identificación inmediata de estrellas aptas para recolección de combustible (clases O, B, A, F, G, K, M).
               </div>
             </div>
           </div>
@@ -398,25 +384,25 @@
               <div class="module-icon-title">
                 <div class="module-icon">🌿</div>
                 <div>
-                  <h3 class="module-name">Asistente de Exobiología (Odyssey)</h3>
-                  <span class="module-category">Escáner Artemis & Bono x5</span>
+                  <h3 class="module-name">Exobiología de Superficie</h3>
+                  <span class="module-category">Muestreo Genético &amp; Distancias GPS</span>
                 </div>
               </div>
-              <span class="badge badge-purple">EL MÁS RENTABLE</span>
+              <span class="badge badge-purple">ODYSSEY</span>
             </div>
             <p class="module-desc">
-              El copiloto soñado para ganar dinero a pie en Odyssey. Te dice qué especies biológicas hay en la superficie, cuánto pagan en Vista Genomics y supervisa tus 3 muestras genéticas.
+              Asiste durante la recolección biológica con el traje Artemis calculando especies candidatas según parámetros planetarios y midiendo por coordenadas la separación entre muestras.
             </p>
             <div class="module-player-benefit">
-              <span class="benefit-title">¿Qué ganas en tu partida?</span>
-              Se acabó el frustrante mensaje de <em>«diversidad genética insuficiente»</em>: el semáforo cambia a verde y tu copiloto te habla cuando te alejas la distancia exacta.
+              <span class="benefit-title">Capacidades operativas</span>
+              Calcula en tiempo real mediante latitud, longitud y radio planetario los metros recorridos respecto a las muestras 1/3 y 2/3 hasta superar el radio mínimo clonal de la especie.
             </div>
             <div class="module-panels-list">
               <div class="module-panel-item">
-                <span class="module-panel-tag">Semáforo Clonal:</span> Medidor visual en metros que te avisa cuándo puedes recolectar la segunda y tercera muestra.
+                <span class="module-panel-tag">Indicador Clonal y Rumbo:</span> Semáforo de distancia mínima por género biológico y rumbo en grados sobre la superficie.
               </div>
               <div class="module-panel-item">
-                <span class="module-panel-tag">Bono Primer Descubrimiento:</span> Calcula automáticamente el multiplicador x5 (hasta 95 millones por un solo Stratum Tectonicas).
+                <span class="module-panel-tag">Registro Vista Genomics:</span> Estimación de valor base, detección de cuerpos sin pisada previa (bonificador ×5) y total pendiente de entrega.
               </div>
             </div>
           </div>
@@ -427,25 +413,25 @@
               <div class="module-icon-title">
                 <div class="module-icon">⚔️</div>
                 <div>
-                  <h3 class="module-name">Combate & Guerra Thargoide (AX)</h3>
-                  <span class="module-category">Caza de Bonos & Monitoreo AX</span>
+                  <h3 class="module-name">Combate &amp; Actividad Anti-Xeno</h3>
+                  <span class="module-category">Objetivo Fijado, CZ &amp; Thargoides</span>
                 </div>
               </div>
-              <span class="badge badge-danger">TÁCTICO</span>
+              <span class="badge badge-danger">TÁCTICO / AX</span>
             </div>
             <p class="module-desc">
-              Tanto si cazas piratas en zonas de extracción como si defiendes la humanidad contra la invasión Thargoide, este módulo te da la ventaja táctica en el fragor de la batalla.
+              Presenta los datos del evento <code>ShipTargeted</code>, el progreso en Zonas de Conflicto, el registro de recompensas obtenidas y métricas específicas para enfrentamientos Anti-Xeno.
             </p>
             <div class="module-player-benefit">
-              <span class="benefit-title">¿Qué ganas en tu partida?</span>
-              En combate AX sabrás qué corazón del interceptor alienígena está expuesto y cuándo caen sus escudos; en Zonas de Conflicto, qué facción va ganando.
+              <span class="benefit-title">Capacidades operativas</span>
+              Lectura clara del modelo de nave objetivo, rango del piloto, facción, estado legal e integridad porcentual de escudos, casco y subsistema seleccionado.
             </div>
             <div class="module-panels-list">
               <div class="module-panel-item">
-                <span class="module-panel-tag">Monitor Anti-Xeno:</span> Salud de corazones de interceptores (Cyclops, Basilisk, Medusa, Hydra) y alertas de enjambre.
+                <span class="module-panel-tag">Seguimiento AX:</span> Referencia de interceptores Thargoides, estado de corazones y alertas de combate configurables por voz.
               </div>
               <div class="module-panel-item">
-                <span class="module-panel-tag">Bounty Hunter:</span> Conteo en vivo de piratas abatidos, recompensas sobre objetivos y total acumulado para cobrar.
+                <span class="module-panel-tag">Contabilidad de Bonos:</span> Desglose de bonos de combate y recompensas acumuladas pendientes de canje en estación.
               </div>
             </div>
           </div>
@@ -456,25 +442,25 @@
               <div class="module-icon-title">
                 <div class="module-icon">⛏️</div>
                 <div>
-                  <h3 class="module-name">Minería de Alto Rendimiento</h3>
-                  <span class="module-category">Análisis de Asteroides & SellPanel</span>
+                  <h3 class="module-name">Minería &amp; Prospección</h3>
+                  <span class="module-category">Asteroides, Refinería &amp; Estaciones de Venta</span>
                 </div>
               </div>
-              <span class="badge badge-orange">MÁXIMO BENEFICIO</span>
+              <span class="badge badge-orange">PROSPECCIÓN</span>
             </div>
             <p class="module-desc">
-              Convierte las horas picando roca en auténticas fortunas. Lee los drones prospectores en tiempo real y te dice en qué estación cercana vender tu cargamento al precio más alto.
+              Procesa cada impacto de dron prospector (<code>ProspectedAsteroid</code>) y el avance de refinado para medir la sesión de extracción y localizar mercados cercanos donde vender la carga.
             </p>
             <div class="module-player-benefit">
-              <span class="benefit-title">¿Qué ganas en tu partida?</span>
-              Descubre en pantalla si el asteroide tiene Platino o Painita de alta pureza sin abrir pestañas y vende siempre en la estación que mejor pague de la galaxia.
+              <span class="benefit-title">Capacidades operativas</span>
+              Permite definir una lista personalizada de minerales de interés, un umbral mínimo de valor y un radio de búsqueda de estaciones de venta entre 10 y 500 años luz.
             </div>
             <div class="module-panels-list">
               <div class="module-panel-item">
-                <span class="module-panel-tag">Lectura de Prospectores:</span> Porcentajes exactos de minerales valiosos y detección de núcleos detonables en supercrucero o anillo.
+                <span class="module-panel-tag">Detalle de Prospector:</span> Porcentaje exacto de cada mineral, proporción de materiales y aviso de núcleo detonable (<em>core</em>).
               </div>
               <div class="module-panel-item">
-                <span class="module-panel-tag">Rendimiento t/h:</span> Mide tu eficiencia de extracción en toneladas por hora para saber si el anillo es rentable.
+                <span class="module-panel-tag">Cadencia de Extracción:</span> Cálculo continuo de toneladas por hora (t/h) y ocupación de la bodega de carga.
               </div>
             </div>
           </div>
@@ -483,56 +469,56 @@
           <div class="module-card" id="mod-trade" data-category="economy">
             <div class="module-card-top">
               <div class="module-icon-title">
-                <div class="module-icon">💰</div>
+                <div class="module-icon">📦</div>
                 <div>
-                  <h3 class="module-name">Comercio & Rutas de Mercancías</h3>
-                  <span class="module-category">Mercados Locales & Rutas Loop</span>
+                  <h3 class="module-name">Comercio &amp; Mercados</h3>
+                  <span class="module-category">Comparativa Local &amp; Rutas Comerciales</span>
                 </div>
               </div>
-              <span class="badge badge-green">OPTIMIZADOR</span>
+              <span class="badge badge-green">MERCADOS</span>
             </div>
             <p class="module-desc">
-              Diseñado para comandantes que pilotan naves de transporte masivo como la Type-9 o la Imperial Cutter. Analiza precios de compra/venta y localiza las rutas más lucrativas.
+              Inspecciona el inventario de mercancías en bodega, analiza los precios de <code>Market.json</code> al atracar y consulta rutas de transporte ajustadas a las características de la nave.
             </p>
             <div class="module-player-benefit">
-              <span class="benefit-title">¿Qué ganas en tu partida?</span>
-              Multiplica tus beneficios por salto comercial: encuentra estaciones que demandan tu carga a precios desorbitados y llena tu bodega con productos seguros.
+              <span class="benefit-title">Capacidades operativas</span>
+              Comparación de precios de compra y venta de la estación actual frente a promedios conocidos, con filtros por capacidad de carga, tamaño de plataforma y antigüedad del dato.
             </div>
             <div class="module-panels-list">
               <div class="module-panel-item">
-                <span class="module-panel-tag">Comparador de Mercado:</span> Compara los precios de la estación actual frente al promedio galáctico para saber si compras barato.
+                <span class="module-panel-tag">Recepción EDDN:</span> Actualización local de precios de mercados cercanos dentro de un radio configurable (20–500 AL).
               </div>
               <div class="module-panel-item">
-                <span class="module-panel-tag">Rutas Circulares:</span> Algoritmo de rutas de ida y vuelta para no volver nunca con la bodega vacía.
+                <span class="module-panel-tag">Filtros Operativos:</span> Adecuación a plataformas medianas o grandes y control sobre inclusión de mercados en portaaviones.
               </div>
             </div>
           </div>
 
-          <!-- 9. Misiones & Massacre Stacking -->
+          <!-- 9. Misiones -->
           <div class="module-card" id="mod-missions" data-category="combat">
             <div class="module-card-top">
               <div class="module-icon-title">
                 <div class="module-icon">📜</div>
                 <div>
-                  <h3 class="module-name">Misiones & Massacre Stacking</h3>
-                  <span class="module-category">Apilamiento de Contratos</span>
+                  <h3 class="module-name">Misiones &amp; Contratos</h3>
+                  <span class="module-category">Seguimiento Activo &amp; Agrupación por Facción</span>
                 </div>
               </div>
-              <span class="badge badge-danger">MULTIPLICADOR CR</span>
+              <span class="badge badge-cyan">CONTRATOS</span>
             </div>
             <p class="module-desc">
-              Control total de tus misiones activas y el famoso truco del <em>Massacre Stacking</em>: agrupa misiones de caza por facciones distintas para que cada baja cuente varias veces.
+              Registra las misiones aceptadas, entregadas o expiradas, evaluando contratos de transporte/turismo y organizando en columnas las misiones de eliminación por facción emisora.
             </p>
             <div class="module-player-benefit">
-              <span class="benefit-title">¿Qué ganas en tu partida?</span>
-              Destruyes a un solo pirata y completas el objetivo de 4 o 5 misiones simultáneamente, cobrando entre 60 y 120 millones de créditos por sesión de combate.
+              <span class="benefit-title">Capacidades operativas</span>
+              Desglosa las misiones de masacre según la facción que las otorga para visualizar cuántas bajas se computan en paralelo y cuántas restan para cerrar todos los contratos.
             </div>
             <div class="module-panels-list">
               <div class="module-panel-item">
-                <span class="module-panel-tag">Monitor de Facción:</span> Te dice claramente cuántos piratas te faltan por facción para no matar de más en balde.
+                <span class="module-panel-tag">Matriz por Facción:</span> Conteo individual y agregado de objetivos abatidos frente a objetivos requeridos por cada facción emisora.
               </div>
               <div class="module-panel-item">
-                <span class="module-panel-tag">Avisos de Expiración:</span> Alertas antes de que caduque una misión para no perder reputación ni recibir multas.
+                <span class="module-panel-tag">Control Temporal y Turismo:</span> Temporizadores de caducidad y evaluación cr/AL para rutas de pasajeros respecto a una referencia configurable.
               </div>
             </div>
           </div>
@@ -543,25 +529,25 @@
               <div class="module-icon-title">
                 <div class="module-icon">🔧</div>
                 <div>
-                  <h3 class="module-name">Ingeniería & Asistente Proactivo</h3>
-                  <span class="module-category">Desbloqueo de Ingenieros & Materiales</span>
+                  <h3 class="module-name">Ingeniería &amp; Materiales</h3>
+                  <span class="module-category">Desbloqueo Guiado, Recetas &amp; Trueques</span>
                 </div>
               </div>
-              <span class="badge badge-orange">EL AYUDANTE</span>
+              <span class="badge badge-orange">ENGINEERFLOW</span>
             </div>
             <p class="module-desc">
-              La joya de la corona de TMC. Si un ingeniero está bloqueado, te guía desde el rumor inicial hasta la donación. Incluye almacén con semáforos y optimizador de comerciantes.
+              Gestiona el almacén de materiales de nave (materias primas, fabricados y codificados), la taquilla de Odyssey, el estado de los ingenieros y la lista de la compra de mejoras.
             </p>
             <div class="module-player-benefit">
-              <span class="benefit-title">¿Qué ganas en tu partida?</span>
-              Se acabó el caos de los ingenieros: sabrás exactamente qué hacer para desbloquear a Felicity Farseer o Palin y cómo conseguir tus materiales sin volverte loco.
+              <span class="benefit-title">Capacidades operativas</span>
+              Integra el asistente <code>EngineerFlow</code> (guía de desbloqueo en 3 etapas si el ingeniero aún no está disponible), cálculo por tiradas configurables (G1–G5) y propuestas de canje.
             </div>
             <div class="module-panels-list">
               <div class="module-panel-item">
-                <span class="module-panel-tag">Guía Paso a Paso:</span> Stepper visual con los 4 estados: Descubrimiento ➔ Invitación ➔ Donación ➔ Grado 5.
+                <span class="module-panel-tag">Guía de Desbloqueo:</span> Muestra secuencialmente los requisitos de Descubrimiento, Invitación y Tarea de Desbloqueo antes de los materiales.
               </div>
               <div class="module-panel-item">
-                <span class="module-panel-tag">Calculadora Material Traders:</span> Te indica qué materiales de tu inventario puedes intercambiar para obtener lo que necesitas ya.
+                <span class="module-panel-tag">Soluciones de Intercambio:</span> Calcula trueques concretos usando tus excedentes no reservados y localiza el <em>Material Trader</em> o <em>Tech Broker</em> más próximo.
               </div>
             </div>
           </div>
@@ -572,25 +558,25 @@
               <div class="module-icon-title">
                 <div class="module-icon">⚓</div>
                 <div>
-                  <h3 class="module-name">Fleet Carrier (Mega-naves)</h3>
-                  <span class="module-category">Tritio, Saltos & Finanzas</span>
+                  <h3 class="module-name">Fleet Carrier</h3>
+                  <span class="module-category">Tritio, Saltos Programados &amp; Presupuesto</span>
                 </div>
               </div>
-              <span class="badge badge-cyan">LOGÍSTICA</span>
+              <span class="badge badge-cyan">PORTAAVIONES</span>
             </div>
             <p class="module-desc">
-              La central de control para los propietarios de un Carrier. Supervisa el combustible de Tritio en el depósito y bodega, programa saltos con cuenta atrás y controla el mantenimiento semanal.
+              Consolida la telemetría de tu portaaviones a partir de <code>CarrierStats</code>, <code>CarrierJumpRequest</code> y <code>FCMaterials</code> para supervisar su logística a distancia.
             </p>
             <div class="module-player-benefit">
-              <span class="benefit-title">¿Qué ganas en tu partida?</span>
-              Nunca te quedarás tirado en el espacio profundo sin combustible de Tritio y sabrás exactamente cuántas semanas de mantenimiento tienes cubiertas con tu saldo.
+              <span class="benefit-title">Capacidades operativas</span>
+              Control del depósito de Tritio y reservas en bodega, temporizador de preparación y enfriamiento de salto, ocupación por servicios y cobertura de mantenimiento semanal.
             </div>
             <div class="module-panels-list">
               <div class="module-panel-item">
-                <span class="module-panel-tag">Consumo de Tritio:</span> Cálculo exacto de consumo según la masa total del Carrier y los años luz a saltar.
+                <span class="module-panel-tag">Combustible y Alcance:</span> Visualización del nivel del tanque de Tritio y estimación de consumo por salto según masa.
               </div>
               <div class="module-panel-item">
-                <span class="module-panel-tag">Cuenta Atrás de Salto:</span> Cronómetro en cabina que te avisa de la fase de preparación y enfriamiento de los motores.
+                <span class="module-panel-tag">Cuenta Atrás y Avisos:</span> Cronómetro del salto programado con aviso opcional por voz un minuto antes de la secuencia.
               </div>
             </div>
           </div>
@@ -602,24 +588,24 @@
                 <div class="module-icon">🏗️</div>
                 <div>
                   <h3 class="module-name">Colonización de Sistemas</h3>
-                  <span class="module-category">Construcción de Puertos Espaciales</span>
+                  <span class="module-category">Seguimiento de Suministros &amp; Construcción</span>
                 </div>
               </div>
-              <span class="badge badge-green">NUEVA ERA</span>
+              <span class="badge badge-green">SUMINISTROS</span>
             </div>
             <p class="module-desc">
-              Supervisa los proyectos comunitarios de colonización galáctica. Rastrea los materiales de construcción necesarios para levantar nuevas estaciones y puertos planetarios.
+              Registra los requisitos de materiales de construcción en proyectos de colonización de sistemas y supervisa el progreso de entregas hacia nuevas instalaciones espaciales.
             </p>
             <div class="module-player-benefit">
-              <span class="benefit-title">¿Qué ganas en tu partida?</span>
-              Participa en la expansión de la humanidad: visualiza las materias primas que faltan y localiza las estaciones cercanas donde comprarlas para entregarlas rápido.
+              <span class="benefit-title">Capacidades operativas</span>
+              Desglose de toneladas entregadas y restantes por cada mercancía requerida, facilitando la planificación de viajes de abastecimiento.
             </div>
             <div class="module-panels-list">
               <div class="module-panel-item">
-                <span class="module-panel-tag">Progreso de Obras:</span> Barras de porcentaje de suministro completado en cada puerto espacial o base.
+                <span class="module-panel-tag">Estado de Construcción:</span> Barras de avance porcentual por recurso y progreso global de la obra.
               </div>
               <div class="module-panel-item">
-                <span class="module-panel-tag">Rutas de Suministro:</span> Te indica qué sistemas vecinos tienen existencias de los materiales requeridos.
+                <span class="module-panel-tag">Localización de Oferta:</span> Consulta de mercados cercanos con disponibilidad de las materias primas pendientes.
               </div>
             </div>
           </div>
@@ -631,24 +617,24 @@
                 <div class="module-icon">👑</div>
                 <div>
                   <h3 class="module-name">Powerplay 2.0</h3>
-                  <span class="module-category">Méritos, Rangos & Módulos Únicos</span>
+                  <span class="module-category">Potencia Vinculada, Rango &amp; Méritos</span>
                 </div>
               </div>
-              <span class="badge badge-purple">POLÍTICA</span>
+              <span class="badge badge-purple">CICLO SEMANAL</span>
             </div>
             <p class="module-desc">
-              Totalmente adaptado a las nuevas reglas de Powerplay 2.0. Supervisa tu lealtad a los líderes de la galaxia (Aisling Duval, Felicia Winters, etc.) y tus méritos semanales.
+              Adaptado a los eventos del diario de Powerplay 2.0 para llevar el registro de la potencia a la que sirve el comandante, su rango actual y los méritos obtenidos.
             </p>
             <div class="module-player-benefit">
-              <span class="benefit-title">¿Qué ganas en tu partida?</span>
-              Asegúrate de desbloquear módulos icónicos (como los Escudos Prismáticos o los Cañones Pacifier) controlando tus méritos antes del cierre del ciclo semanal.
+              <span class="benefit-title">Capacidades operativas</span>
+              Seguimiento en vivo de méritos sumados durante la sesión, acumulado total y estado político de los sistemas visitados dentro del ciclo semanal.
             </div>
             <div class="module-panels-list">
               <div class="module-panel-item">
-                <span class="module-panel-tag">Seguimiento de Méritos:</span> Cuenta de méritos acumulados y proyección de rango para no quedarte a las puertas.
+                <span class="module-panel-tag">Progreso de Rango:</span> Conteo de méritos actuales y umbrales hacia los siguientes niveles de desbloqueo de la potencia.
               </div>
               <div class="module-panel-item">
-                <span class="module-panel-tag">Control de Sistemas:</span> Estado de fortificación, preparación y expansión en los sistemas de tu potencia.
+                <span class="module-panel-tag">Situación del Sistema:</span> Lectura de la potencia controladora y estado estratégico del sistema estelar actual.
               </div>
             </div>
           </div>
@@ -659,54 +645,54 @@
               <div class="module-icon-title">
                 <div class="module-icon">🌐</div>
                 <div>
-                  <h3 class="module-name">Guerra de Facciones (BGS)</h3>
-                  <span class="module-category">Influencia & Escuadrones</span>
+                  <h3 class="module-name">Simulación de Fondo (BGS)</h3>
+                  <span class="module-category">Influencia, Estados &amp; Facciones Locales</span>
                 </div>
               </div>
-              <span class="badge badge-cyan">ESTRATEGIA</span>
+              <span class="badge badge-cyan">FACCIONES</span>
             </div>
             <p class="module-desc">
-              Imprescindible para miembros de escuadrones y jugadores de rol político. Monitoriza la influencia de las facciones menores del sistema y el impacto de tus misiones.
+              Orientado a escuadrones y seguimiento político de sistemas poblados. Extrae la distribución de facciones menores, porcentajes de influencia y estados en curso.
             </p>
             <div class="module-player-benefit">
-              <span class="benefit-title">¿Qué ganas en tu partida?</span>
-              Ayuda a tu facción a ganar guerras civiles, elecciones o auges económicos viendo en vivo cómo sube su porcentaje de influencia con tus entregas.
+              <span class="benefit-title">Capacidades operativas</span>
+              Visualización ordenada de influencia por facción menor y registro de las acciones realizadas por el comandante en la sesión (misiones, bonos, comercio y cartografía).
             </div>
             <div class="module-panels-list">
               <div class="module-panel-item">
-                <span class="module-panel-tag">Gráfico de Influencia:</span> Porcentaje de control de cada facción local con alertas de conflicto inminente.
+                <span class="module-panel-tag">Tabla de Influencia:</span> Gobierno, lealtad y porcentaje exacto de presencia de cada facción del sistema.
               </div>
               <div class="module-panel-item">
-                <span class="module-panel-tag">Estados Activos:</span> Detecta si el sistema está en Guerra, Hambruna, Boom económico o Inversión.
+                <span class="module-panel-tag">Estados de Sistema:</span> Indicadores de estados activos, pendientes y en recuperación (Guerra, Elecciones, Auge, Brote, etc.).
               </div>
             </div>
           </div>
 
-          <!-- 15. Crimen, Notoriedad & Piratería -->
+          <!-- 15. Crimen, Notoriedad & Jurisdicción -->
           <div class="module-card" id="mod-crime" data-category="combat">
             <div class="module-card-top">
               <div class="module-icon-title">
                 <div class="module-icon">⚖️</div>
                 <div>
-                  <h3 class="module-name">Mundo Criminal, Multas & Contrabando</h3>
-                  <span class="module-category">Notoriedad & Interstellar Factors</span>
+                  <h3 class="module-name">Crimen &amp; Jurisdicción</h3>
+                  <span class="module-category">Multas, Notoriedad &amp; Servicios Neutrales</span>
                 </div>
               </div>
-              <span class="badge badge-danger">SUBMUNDO</span>
+              <span class="badge badge-danger">JURISDICCIÓN</span>
             </div>
             <p class="module-desc">
-              ¿Le has disparado a quien no debías o te dedicas a la piratería? Controla tu estatus legal, vigila el decaimiento de notoriedad y encuentra dónde vender contrabando.
+              Refleja el estado legal de la nave conforme a las reglas de <em>Crime &amp; Punishment</em> de Frontier: multas, recompensas activas, nivel de notoriedad y mercancías ilegales.
             </p>
             <div class="module-player-benefit">
-              <span class="benefit-title">¿Qué ganas en tu partida?</span>
-              Evita que la policía destruya tu nave: mira el reloj exacto para que baje tu notoriedad y encuentra el Interstellar Factor neutral más cercano para pagar multas.
+              <span class="benefit-title">Capacidades operativas</span>
+              Seguimiento del decaimiento de notoriedad (2 horas de sesión activa por punto) y búsqueda de estaciones cercanas con <em>Interstellar Factors</em> o <em>Mercado negro</em>.
             </div>
             <div class="module-panels-list">
               <div class="module-panel-item">
-                <span class="module-panel-tag">Reloj de Notoriedad:</span> Temporizador en vivo que te dice cuántos minutos de vuelo te faltan para limpiar tu historial criminal.
+                <span class="module-panel-tag">Control de Notoriedad:</span> Indicación clara de cuándo la notoriedad llega a 0 para poder liquidar sanciones sin traslado a nave prisión.
               </div>
               <div class="module-panel-item">
-                <span class="module-panel-tag">Mercados Negros:</span> Detecta mercancías ilegales en tu bodega y localiza bases cercanas donde venderlas a buen precio.
+                <span class="module-panel-tag">Alerta de Bodega:</span> Aviso de mercancías prohibidas o robadas según la jurisdicción actual y copia directa de destinos neutrales.
               </div>
             </div>
           </div>
@@ -717,25 +703,25 @@
               <div class="module-icon-title">
                 <div class="module-icon">🔗</div>
                 <div>
-                  <h3 class="module-name">Tu Perfil en Inara, EDSM & EDDN</h3>
-                  <span class="module-category">Sincronización Automática</span>
+                  <h3 class="module-name">Cuentas &amp; Sincronización</h3>
+                  <span class="module-category">Frontier CAPI, Inara, EDSM &amp; EDDN</span>
                 </div>
               </div>
-              <span class="badge badge-green">COMUNIDAD</span>
+              <span class="badge badge-green">CAPI / INAPI</span>
             </div>
             <p class="module-desc">
-              Mantén tu ficha de piloto y tu flota siempre actualizadas en la comunidad de Elite Dangerous sin tener que subir archivos a mano ni instalar tres programas distintos.
+              Gestiona de forma centralizada y opcional la conexión oficial con Frontier Companion API (OAuth2 PKCE) y el envío de eventos comunitarios a Inara, EDSM y EDDN.
             </p>
             <div class="module-player-benefit">
-              <span class="benefit-title">¿Qué ganas en tu partida?</span>
-              Presume de flota, rango y viajes en Inara y EDSM automáticamente, y contribuye al mapa galáctico compartiendo precios de mercados con la red EDDN.
+              <span class="benefit-title">Capacidades operativas</span>
+              Consulta de tu flota remota almacenada en astilleros mediante Frontier CAPI y sincronización con Inara bajo <em>whitelist</em> oficial (<code>The Multipurpose Companion (TMC)</code>).
             </div>
             <div class="module-panels-list">
               <div class="module-panel-item">
-                <span class="module-panel-tag">Sincronización Silenciosa:</span> Envía tus progresos a Inara y EDSM respetando tu privacidad y sin saturar tu conexión.
+                <span class="module-panel-tag">Cuotas y Persistencia:</span> Envío por lotes respetando el límite de 2 peticiones/minuto de Inara y persistencia local de credenciales en SQLite.
               </div>
               <div class="module-panel-item">
-                <span class="module-panel-tag">Protección Legacy:</span> Si juegas en la versión antigua 3.8, TMC bloquea envíos externos para no dañar los datos de la galaxia en vivo.
+                <span class="module-panel-tag">Privacidad y Seudonimización:</span> Identificador de envío a EDDN seudonimizado con sal criptográfica local y bloqueo automático en sesiones Legacy.
               </div>
             </div>
           </div>
@@ -744,29 +730,30 @@
     </section>
 
     <!-- ===================================================================
-         5. MANUAL DE VUELO DEL COMANDANTE (FÁCIL Y DIRECTO)
+         5. GUÍA RÁPIDA DE INSTRUCCIONES Y OPERACIÓN
          =================================================================== -->
     <section id="manual" class="section-spacing" style="background: rgba(15, 18, 29, 0.4);">
       <div class="container">
         <div class="section-header">
-          <div class="section-tag cyan">GUÍA DE INICIO RÁPIDO</div>
-          <h2 class="section-title">Manual de Vuelo del Comandante</h2>
+          <div class="section-tag cyan">DOCUMENTACIÓN DE OPERACIÓN</div>
+          <h2 class="section-title">Guía Rápida de Configuración y Uso</h2>
           <p class="section-desc">
-            Sin manuales aburridos de 200 páginas: esto es todo lo que necesitas saber para tener TMC funcionando junto a tu nave en menos de 2 minutos.
+            Instrucciones básicas para instalar, configurar y operar TMC. Para consultar todos los parámetros y tablas de diagnóstico, descarga el Manual de Instrucciones completo en PDF.
           </p>
         </div>
 
         <div class="manual-layout">
           <!-- Menú lateral del manual -->
           <aside class="manual-sidebar">
-            <span class="manual-sidebar-title">Guía de Cabina</span>
-            <a href="#manual-install" class="manual-nav-item active">1. Instalación y Arranque</a>
-            <a href="#manual-lan" class="manual-nav-item">2. Ponerlo en tu Tablet/Móvil</a>
-            <a href="#manual-hud" class="manual-nav-item">3. Cómo Funciona en Partida</a>
-            <a href="#manual-voice" class="manual-nav-item">4. Copiloto de Voz & VoiceAttack</a>
-            <a href="#manual-accounts" class="manual-nav-item">5. Vincular Inara, EDSM y CAPI</a>
+            <span class="manual-sidebar-title">Índice Operativo</span>
+            <a href="#manual-install" class="manual-nav-item active">1. Instalación y Archivos</a>
+            <a href="#manual-hud" class="manual-nav-item">2. Interfaz y Auto-companion</a>
+            <a href="#manual-lan" class="manual-nav-item">3. Pantalla Auxiliar LAN (QR)</a>
+            <a href="#manual-voice" class="manual-nav-item">4. Voz (TTS/STT) y VoiceAttack</a>
+            <a href="#manual-accounts" class="manual-nav-item">5. CAPI, Inara, EDSM y EDDN</a>
+            <a href="#manual-build" class="manual-nav-item">6. Compilar Código Fuente</a>
             <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--hud-border-subtle, rgba(255,255,255,0.1));">
-              <a href="Manual_TMC_Comandante.pdf" class="btn-hud btn-hud-primary" style="width: 100%; text-align: center; font-size: 0.78rem; padding: 0.5rem; display: block;" download>📄 Descargar Manual (PDF)</a>
+              <a href="Manual_TMC_Comandante.pdf" class="btn-hud btn-hud-primary" style="width: 100%; text-align: center; font-size: 0.78rem; padding: 0.5rem; display: block;" download>📄 Manual Completo (PDF)</a>
             </div>
           </aside>
 
@@ -775,104 +762,116 @@
             <!-- Capítulo 1 -->
             <article class="manual-chapter" id="manual-install">
               <h3 class="manual-chapter-title">
-                <span class="num">01.</span> Instalación Oficial y Arranque Rápido
+                <span class="num">01.</span> Instalación, SmartScreen y Archivos Locales
               </h3>
               <div class="manual-body">
                 <p>
-                  TMC se distribuye tanto con instalador guiado para Windows como en versión portable de un solo archivo:
+                  Procedimiento de instalación en Windows 10/11 (64 bits):
                 </p>
                 <ol>
-                  <li>Descarga <strong><code>TMC_0.1.0_x64-setup.exe</code></strong> desde <a href="https://github.com/Danikuso/TheMultipurposeCompanion/releases" target="_blank" rel="noopener" style="color: var(--hud-cyan); font-weight: 600;">GitHub Releases</a>.</li>
-                  <li>Ejecuta el instalador. Si Windows muestra la advertencia azul de <em>Microsoft Defender SmartScreen</em> por ser una aplicación comunitaria sin certificado de pago, haz clic en <strong>«Más información» → «Ejecutar de todas formas»</strong>.</li>
-                  <li>Abre Elite Dangerous y lanza <strong>TMC</strong>: detectará automáticamente tu comandante, nave equipada, sistema y créditos en menos de 1 segundo leyendo tu carpeta de <code>Saved Games\Frontier Developments\Elite Dangerous</code>.</li>
+                  <li>Descarga el instalador <strong><code>TMC_0.1.0_x64-setup.exe</code></strong> desde la página de <a href="https://github.com/Danikuso/TheMultipurposeCompanion/releases" target="_blank" rel="noopener" style="color: var(--hud-cyan); font-weight: 600;">Releases en GitHub</a>.</li>
+                  <li>Al ser un proyecto independiente de código abierto sin certificado corporativo EV de pago, la primera ejecución en Windows puede mostrar la ventana preventiva de <em>Windows Defender SmartScreen</em>. Pulsa en <strong>«Más información» → «Ejecutar de todas formas»</strong>.</li>
+                  <li>Al iniciar TMC, el programa detecta automáticamente los diarios en <code>%USERPROFILE%\Saved Games\Frontier Developments\Elite Dangerous\</code>. Si utilizas otra ruta, puedes iniciarlo con <code>--journal-dir "D:\Ruta\Diarios"</code>.</li>
                 </ol>
                 <div class="manual-callout">
-                  <span class="manual-callout-title">💡 ¿Dónde lee TMC mis datos?</span>
-                  TMC lee los archivos de registro oficiales que el propio juego crea en tu carpeta de <code>Juegos Guardados</code> (Saved Games). No toca la memoria de tu juego, no inyecta nada y es <strong>100% legal y permitido por Frontier Developments</strong>.
+                  <span class="manual-callout-title">Comportamiento de bandeja y archivos locales</span>
+                  La configuración se guarda en <code>%APPDATA%\TMC\config.toml</code> y la base de datos SQLite en <code>%APPDATA%\TMC\tmc.db</code>. Al cerrar la ventana con <code>✕</code>, TMC permanece activo en la bandeja del sistema pero destruye temporalmente el proceso WebView2 para liberar memoria RAM; usa clic derecho sobre el icono de bandeja para <strong>«Abrir TMC»</strong> o <strong>«Salir de TMC»</strong>.
                 </div>
               </div>
             </article>
 
             <!-- Capítulo 2 -->
-            <article class="manual-chapter" id="manual-lan">
+            <article class="manual-chapter" id="manual-hud">
               <h3 class="manual-chapter-title">
-                <span class="num">02.</span> Convierte tu Tablet o Móvil en la Pantalla de tu Nave
+                <span class="num">02.</span> Anatomía de la Interfaz, Disposiciones y «Auto-companion»
               </h3>
               <div class="manual-body">
                 <p>
-                  Si tienes un solo monitor, juegas en pantalla completa o usas gafas de Realidad Virtual (VR), esta es la mejor forma de usar TMC:
+                  La ventana principal se organiza en tres elementos:
                 </p>
-                <ol>
-                  <li>Abre TMC en tu ordenador y haz clic en el icono de <strong>Ajustes</strong> (el engranaje abajo a la izquierda).</li>
-                  <li>Activa la casilla <strong>«Acceso por red local (LAN)»</strong>.</li>
-                  <li>Verás aparecer un <strong>Código QR</strong> en pantalla.</li>
-                  <li>Abre la cámara de tu tablet (iPad, Android) o móvil y apunta al código.</li>
-                </ol>
-                <p>
-                  Se abrirá tu navegador con el panel de cabina completo de TMC sincronizado en tiempo real. Apóyalo en tu escritorio junto al teclado o HOTAS: podrás pulsar botones de copiado de saltos, mirar exobiología o consultar materiales tocando la pantalla con los dedos.
-                </p>
+                <ul>
+                  <li><strong>Barra superior (TopBar):</strong> muestra el estado de conexión local, la galaxia detectada (<code>LIVE 4.0</code> o <code>LEGACY</code>), sistema actual, modo de vuelo, barras de combustible y casco, carga, créditos, micrófono y el interruptor <strong><code>Auto-companion</code></strong>.</li>
+                  <li><strong>Barra lateral — Disposiciones vs. Módulos:</strong> el bloque <em>Disposiciones</em> agrupa varios paneles relacionados en una misma vista (p. ej. Exploración combina tira de ruta, resumen estelar, selector Cuerpos/Exobiología y planificador), mientras que <em>Módulos</em> abre individualmente cualquiera de los 16 módulos a ancho completo.</li>
+                  <li><strong>Paneles desplegables:</strong> el tercio superior expone las métricas principales; pulsa <strong>«Ver información adicional»</strong> para abrir las tablas detalladas o inventarios completos.</li>
+                </ul>
+                <div class="manual-callout cyan">
+                  <span class="manual-callout-title">Uso de Auto-companion</span>
+                  Con <strong><code>Auto-companion</code></strong> activado en la barra superior, TMC conmuta automáticamente la disposición cuando cambia tu actividad en el diario (salto interestelar, lanzamiento de dron prospector, despliegue de armas o descenso a pie). Desactívalo cuando prefieras mantener fija una pantalla concreta.
+                </div>
               </div>
             </article>
 
             <!-- Capítulo 3 -->
-            <article class="manual-chapter" id="manual-hud">
+            <article class="manual-chapter" id="manual-lan">
               <h3 class="manual-chapter-title">
-                <span class="num">03.</span> El Modo «Auto-Companion»: TMC Piensa por Ti
+                <span class="num">03.</span> Conexión de Pantalla Auxiliar en Red Local (Código QR)
               </h3>
               <div class="manual-body">
                 <p>
-                  Lo mejor de TMC es que no tienes que estar cambiando de pantalla mientras juegas gracias a su función <strong>Auto-Companion</strong>:
+                  Para consultar y manejar TMC desde una tablet o teléfono sin ocupar espacio en el monitor principal:
                 </p>
-                <ul>
-                  <li><strong>¿Estás saltando de estrella en estrella?</strong> TMC te mantiene fijada la ruta de saltos y los cuerpos de interés para explorar.</li>
-                  <li><strong>¿Llegas a un cinturón de asteroides y lanzas un dron?</strong> Se activa automáticamente el panel de prospección minera.</li>
-                  <li><strong>¿Sacas las armas o entras en una Zona de Conflicto?</strong> Cambia de inmediato al radar táctico de combate y objetivos.</li>
-                  <li><strong>¿Aterrizas en un planeta con vida?</strong> Se despliega el asistente de Exobiología con el medidor de muestras.</li>
-                </ul>
-                <div class="manual-callout cyan">
-                  <span class="manual-callout-title">📌 ¿Quieres dejar fija una pantalla?</span>
-                  Si quieres que una pantalla no cambie sola (por ejemplo, quieres ver todo el rato los cuerpos celestes), pulsa el icono de la <strong>chincheta (Pin)</strong> en la barra superior.
-                </div>
+                <ol>
+                  <li>Verifica que el PC y la tablet o teléfono estén conectados a la misma red local (Wi-Fi / LAN).</li>
+                  <li>En TMC, abre <strong><code>Ajustes</code></strong> (esquina inferior izquierda) y activa el interruptor <strong>«Acceso por red local»</strong>.</li>
+                  <li>Escanea el <strong>«Código QR de emparejamiento»</strong> mostrado en pantalla con la cámara de tu dispositivo.</li>
+                </ol>
+                <p>
+                  El navegador del dispositivo abrirá la interfaz autenticada mediante un token de sesión local. Si la página no carga, comprueba que el perfil de red en Windows esté configurado como <em>Red privada</em> y que el Firewall de Windows permita tráfico local hacia <code>TMC.exe</code> (puerto TCP <code>47320</code>).
+                </p>
               </div>
             </article>
 
             <!-- Capítulo 4 -->
             <article class="manual-chapter" id="manual-voice">
               <h3 class="manual-chapter-title">
-                <span class="num">04.</span> Copiloto con Voz Hablada & VoiceAttack
+                <span class="num">04.</span> Síntesis de Voz (TTS), Reconocimiento y VoiceAttack
               </h3>
               <div class="manual-body">
                 <p>
-                  Tu nave cobra vida. TMC cuenta con un copiloto auditivo que te habla en español (y en otros 4 idiomas) para que no tengas que apartar la vista del punto de mira:
+                  En <strong><code>Ajustes</code></strong> puedes configurar de forma independiente los avisos hablados (salida TTS) y las consultas por micrófono (entrada STT):
                 </p>
                 <ul>
-                  <li>Te avisa cuando entras a un sistema con una estrella donde puedes repostar combustible.</li>
-                  <li>Te canta en voz alta cuando hay planetas con bioseñales millonarias.</li>
-                  <li>En combate contra Thargoides, te avisa: <em>«¡Corazón expuesto!»</em> o <em>«¡Escudos de la nave al 50%!»</em>.</li>
+                  <li><strong>Salida de voz (TTS):</strong> activa <strong>«Activar copiloto auditivo»</strong> y elige entre el motor <em>Nativo del sistema operativo</em> (voces SAPI5/OneCore instaladas, sin dependencias externas) o el motor opcional <em>KokoroTTS</em> (síntesis neuronal local ONNX bajo demanda con suspensión a los 60 s de inactividad). Puedes habilitar o silenciar por separado cada canal (Combate, Navegación, Exploración, Minería y Fleet Carrier) y verificar el audio con <strong>«🔊 Probar voz de copiloto»</strong>.</li>
+                  <li><strong>Consultas por voz (STT):</strong> en <em>Asistencia por voz e integración</em>, permite consultar por micrófono (modo continuo o <em>Push-to-Talk</em>) mediante el motor offline <em>Whisper AI Local</em> (~39 MB) o el motor nativo del sistema.</li>
+                  <li><strong>VoiceAttack:</strong> si utilizas VoiceAttack, pulsa <strong>«Descargar perfil (.vap)»</strong> en Ajustes para exportar <code>TMC-Copiloto.vap</code> e impórtalo en VoiceAttack.</li>
                 </ul>
-                <p>
-                  <strong>Integración con VoiceAttack:</strong> Si usas VoiceAttack con tu micrófono, ve a Ajustes y pulsa <strong>«Descargar Perfil VoiceAttack (.vap)»</strong>. Impórtalo en tu programa y podrás preguntarle a tu nave con tu propia voz: <em>«¿Cuánto falta para el destino?»</em> o <em>«¿Dónde está el comerciante de materiales más cercano?»</em>.
-                </p>
               </div>
             </article>
 
             <!-- Capítulo 5 -->
             <article class="manual-chapter" id="manual-accounts">
               <h3 class="manual-chapter-title">
-                <span class="num">05.</span> Conexión con Inara, EDSM y EDDN
+                <span class="num">05.</span> Vinculación Opcional: Frontier CAPI, Inara, EDSM y EDDN
               </h3>
               <div class="manual-body">
                 <p>
-                  Si eres de los que disfruta viendo su perfil y su flota en Inara o registrando sus descubrimientos en EDSM:
+                  Todas las conexiones externas son opcionales y se configuran en el módulo <strong><code>Cuentas</code></strong>:
                 </p>
-                <ol>
-                  <li>Accede al módulo <code>Cuentas</code> en la barra lateral de TMC.</li>
-                  <li>Pega tu API Key personal de Inara o tu clave de EDSM.</li>
-                  <li>¡Y listo! TMC sincronizará tu dinero, tus naves y tus progresos automáticamente mientras juegas.</li>
-                </ol>
+                <ul>
+                  <li><strong>Frontier CAPI (OAuth2 PKCE):</strong> activa la integración y pulsa <strong>«Vincular con Frontier Store»</strong> para autorizar en el navegador oficial sin compartir tu contraseña. Si el navegador bloquea la redirección local, usa <strong>«¿Problemas de redirección? Pegar URL»</strong> para completar el canje manualmente. Después pulsa <strong>«Actualizar flota»</strong> para consultar naves en astilleros remotos.</li>
+                  <li><strong>Inara y EDSM:</strong> introduce tu nombre de comandante y clave API personal, pulsa <strong>«Guardar credenciales»</strong> (se conservan en SQLite local entre ejecuciones) y verifica con <strong>«Probar conexión»</strong>.</li>
+                  <li><strong>Modo 100 % local:</strong> si desactivas <strong>«Consultar servicios online»</strong> en Ajustes y los interruptores de Cuentas, TMC operará únicamente sobre los archivos locales de tu equipo.</li>
+                </ul>
+              </div>
+            </article>
+
+            <!-- Capítulo 6 -->
+            <article class="manual-chapter" id="manual-build">
+              <h3 class="manual-chapter-title">
+                <span class="num">06.</span> Compilación desde el Código Fuente
+              </h3>
+              <div class="manual-body">
                 <p>
-                  Si prefieres jugar en privado y sin conexión a internet, simplemente no pongas claves. TMC funciona al 100% en modo local sin enviar nada al exterior.
+                  Si deseas auditar o compilar TMC directamente desde el repositorio público (requiere <strong>Rust 1.90+</strong> edición 2024, <strong>Node.js 22+</strong> y <strong>Tauri CLI v2</strong>):
                 </p>
+                <div class="code-snippet">
+                  <button class="code-copy-btn">Copiar</button>
+                  git clone https://github.com/Danikuso/TheMultipurposeCompanion.git<br>
+                  cd TheMultipurposeCompanion<br>
+                  npm --prefix ui ci &amp;&amp; npm --prefix ui run build<br>
+                  cargo test --workspace<br>
+                  cargo build -p tmc-desktop --release
+                </div>
               </div>
             </article>
           </div>
@@ -881,188 +880,188 @@
     </section>
 
     <!-- ===================================================================
-         6. TUTORIALES PRÁCTICOS DE CABINA (CÓMO HACERTE MILLONARIO)
+         6. FLUJOS DE TRABAJO PASO A PASO
          =================================================================== -->
-    <section id="tutoriales" class="section-spacing">
+    <section id="flujos" class="section-spacing">
       <div class="container">
         <div class="section-header">
-          <div class="section-tag green">GUÍAS DE ÉXITO EN EL JUEGO</div>
-          <h2 class="section-title">Tutoriales Prácticos: Cómo Ganar Millones</h2>
+          <div class="section-tag green">PROCEDIMIENTOS DE CABINA</div>
+          <h2 class="section-title">Flujos de Trabajo Paso a Paso</h2>
           <p class="section-desc">
-            Aprende a exprimir las mecánicas más rentables y satisfactorias de Elite Dangerous utilizando TMC como tu copiloto de confianza.
+            Procedimientos prácticos de operación con TMC durante cuatro tareas habituales en <em>Elite Dangerous</em>.
           </p>
         </div>
 
         <div class="tutorials-grid">
-          <!-- Tutorial 1 -->
+          <!-- Flujo 1 -->
           <div class="tutorial-card" id="tut-exobiology">
             <div class="tutorial-header">
               <div>
-                <h3 class="tutorial-title">La Ruta de Exobiología de 100 Millones</h3>
+                <h3 class="tutorial-title">Muestreo Genético en Exobiología</h3>
                 <div class="tutorial-meta">
                   <span class="badge badge-purple">ODYSSEY</span>
-                  <span class="badge badge-green">MÁXIMA RENTABILIDAD</span>
+                  <span class="badge badge-cyan">MUESTREO 3/3</span>
                 </div>
               </div>
               <span style="font-size: 2rem;">🌿</span>
             </div>
             <p class="module-desc">
-              La exobiología en Odyssey es actualmente la forma más rápida de amasar cientos de millones de créditos. Te explicamos cómo hacerlo sin perder tiempo.
+              Cómo utilizar el selector de contexto y el medidor de coordenadas planetarias para registrar las tres muestras genéticas respetando el radio mínimo de diversidad clonal.
             </p>
             <div class="stepper">
               <div class="step-item">
                 <div class="step-num">1</div>
                 <div class="step-content">
-                  <span class="step-title">Escanea el sistema con el FSS</span>
-                  <span class="step-desc">Al saltar a un sistema nuevo, usa el escáner FSS. Mira tu pantalla de TMC: clasificará de inmediato los planetas con vida biológica y su valor.</span>
+                  <span class="step-title">Escaneo FSS y sondeo DSS del cuerpo</span>
+                  <span class="step-desc">Tras escanear el sistema con el FSS y mapear un cuerpo con señales biológicas, abre la disposición <code>Exploración</code> y selecciona la pestaña <code>Exobiología</code>.</span>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">2</div>
                 <div class="step-content">
-                  <span class="step-title">Busca las plantas más caras</span>
-                  <span class="step-desc">TMC te resaltará especies como <em>Stratum Tectonicas</em> (19.5M Cr de base). Con el bono de primer descubrimiento, ¡ese único planeta te pagará casi 100 Millones!</span>
+                  <span class="step-title">Consulta de especies candidatas</span>
+                  <span class="step-desc">El panel muestra las especies compatibles con la gravedad, temperatura y atmósfera del cuerpo, indicando su pago base y si aplica bonificador de primer registro.</span>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">3</div>
                 <div class="step-content">
-                  <span class="step-title">Aterriza y toma la primera muestra</span>
-                  <span class="step-desc">Baja con tu traje Artemis y toma la primera muestra. El indicador de TMC se pondrá en rojo marcando la distancia que debes alejarte (ej. 500 m).</span>
+                  <span class="step-title">Toma de la primera muestra (1/3)</span>
+                  <span class="step-desc">Al escanear el primer ejemplar con el traje Artemis, TMC fija sus coordenadas planetarias y muestra la distancia clonal requerida por esa especie (100 m a 800 m).</span>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">4</div>
                 <div class="step-content">
-                  <span class="step-title">Espera al semáforo verde</span>
-                  <span class="step-desc">Vuela rasante con tu nave o conduce tu SRV. En cuanto superes la distancia, el medidor cambiará a <strong>VERDE</strong> y tu copiloto te hablará. Escanea y cobra tu fortuna.</span>
+                  <span class="step-title">Desplazamiento hasta luz verde (2/3 y 3/3)</span>
+                  <span class="step-desc">Desplázate a pie, en SRV o en nave observando los metros calculados en tiempo real. Cuando el indicador cambie a estado listo, podrás recoger la siguiente muestra.</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Tutorial 2 -->
+          <!-- Flujo 2 -->
           <div class="tutorial-card" id="tut-engineering">
             <div class="tutorial-header">
               <div>
-                <h3 class="tutorial-title">Desbloquea a Felicity Farseer y Salta al Máximo</h3>
+                <h3 class="tutorial-title">Desbloqueo de Ingenieros e Intercambio</h3>
                 <div class="tutorial-meta">
                   <span class="badge badge-orange">INGENIERÍA</span>
-                  <span class="badge badge-cyan">IMPRESCINDIBLE</span>
+                  <span class="badge badge-cyan">ENGINEERFLOW</span>
                 </div>
               </div>
               <span style="font-size: 2rem;">🔧</span>
             </div>
             <p class="module-desc">
-              Mejorar el motor de saltos (FSD) a Grado 5 es lo primero que todo piloto debe hacer. Te enseñamos a lograrlo con la guía de TMC sin atascarte nunca.
+              Procedimiento para planificar una modificación de módulo desde cero, revisar requisitos de acceso al ingeniero y cubrir materiales faltantes en un comerciante.
             </p>
             <div class="stepper">
               <div class="step-item">
                 <div class="step-num">1</div>
                 <div class="step-content">
-                  <span class="step-title">Abre el módulo de Ingeniería en TMC</span>
-                  <span class="step-desc">Verás el asistente <code>EngineerFlow</code> arriba del todo. Si no conoces a Felicity, te mostrará la condición exacta: alcanzar rango Explorador Scout.</span>
+                  <span class="step-title">Selección del módulo y blueprint</span>
+                  <span class="step-desc">En el módulo <code>Ingeniería</code>, elige una pieza en <em>Mi nave modificada</em>, selecciona el blueprint, el grado objetivo (G1–G5) y pulsa <code>Calcular materiales</code>.</span>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">2</div>
                 <div class="step-content">
-                  <span class="step-title">Consigue la Meta-Aleación en 1 clic</span>
-                  <span class="step-desc">Para invitarte pide 1 Meta-Aleación. TMC te da el botón para copiar el sistema <em>Maia</em> (Darnielle's Progress) para comprarla al instante sin buscar en foros.</span>
+                  <span class="step-title">Revisión de la secuencia de desbloqueo</span>
+                  <span class="step-desc">Si el ingeniero aún no está desbloqueado, consulta las 3 etapas superiores (<em>1. Descubrimiento</em>, <em>2. Invitación</em> y <em>3. Tarea de Desbloqueo</em>) y copia su sistema.</span>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">3</div>
                 <div class="step-content">
-                  <span class="step-title">Entrega y abre tu Lista de la Compra</span>
-                  <span class="step-desc">En TMC añade la receta de «Alcance FSD Grado 5». Te dirá con colores qué materiales tienes y cuáles te faltan.</span>
+                  <span class="step-title">Reserva en la Lista de la compra</span>
+                  <span class="step-desc">Pulsa <code>Añadir a la lista de la compra</code> para reservar en tu inventario las unidades existentes y visualizar exactamente qué materiales faltan.</span>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">4</div>
                 <div class="step-content">
-                  <span class="step-title">Intercambia en el Material Trader más cercano</span>
-                  <span class="step-desc">Usa la calculadora de comerciantes de TMC: te dirá qué materiales que te sobran puedes cambiar para tener los necesarios hoy mismo sin farmear de más.</span>
+                  <span class="step-title">Canje de excedentes en Material Traders</span>
+                  <span class="step-desc">Consulta el panel <code>Intercambios</code>: TMC indicará qué materiales sobrantes entregar para cubrir los faltantes y cuál es el comerciante más cercano.</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Tutorial 3 -->
+          <!-- Flujo 3 -->
           <div class="tutorial-card" id="tut-massacre">
             <div class="tutorial-header">
               <div>
-                <h3 class="tutorial-title">Cobra 5 Veces por Pirata con Massacre Stacking</h3>
+                <h3 class="tutorial-title">Seguimiento de Misiones por Facción</h3>
                 <div class="tutorial-meta">
-                  <span class="badge badge-danger">COMBATE</span>
-                  <span class="badge badge-orange">80M - 120M CR/H</span>
+                  <span class="badge badge-cyan">MISIONES</span>
+                  <span class="badge badge-orange">AGRUPACIÓN</span>
                 </div>
               </div>
-              <span style="font-size: 2rem;">⚔️</span>
+              <span style="font-size: 2rem;">📜</span>
             </div>
             <p class="module-desc">
-              El secreto mejor guardado de los pilotos de combate: cómo hacer que cada nave destruida complete varias misiones a la vez para multiplicar tus créditos.
+              Cómo supervisar contratos múltiples de eliminación de piratas agrupados por facción emisora para controlar las bajas restantes y los tiempos de expiración.
             </p>
             <div class="stepper">
               <div class="step-item">
                 <div class="step-num">1</div>
                 <div class="step-content">
-                  <span class="step-title">Acepta misiones de facciones diferentes</span>
-                  <span class="step-desc">En las estaciones de la zona, acepta misiones de caza de piratas contra la misma banda enemiga, pero ofrecidas por facciones distintas.</span>
+                  <span class="step-title">Lectura automática al aceptar contratos</span>
+                  <span class="step-desc">Cada evento <code>MissionAccepted</code> queda registrado con su facción emisora, facción objetivo, número de bajas solicitadas, recompensa y plazo límite.</span>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">2</div>
                 <div class="step-content">
-                  <span class="step-title">Comprueba tus columnas en TMC</span>
-                  <span class="step-desc">Abre <code>MassacrePanel</code>. TMC colocará las misiones en columnas según la facción proveedora y te dirá cuántos piratas necesitas abatir en total.</span>
+                  <span class="step-title">Verificación de columnas en el módulo Misiones</span>
+                  <span class="step-desc">Las misiones de la misma facción emisora se suman en serie, mientras que las de facciones emisoras distintas progresan en paralelo con cada objetivo abatido.</span>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">3</div>
                 <div class="step-content">
-                  <span class="step-title">Destruye a los piratas y cobra en masa</span>
-                  <span class="step-desc">Entra a un Sitio de Extracción de Recursos (RES). Cada pirata que destruyas descontará 1 baja en todas las columnas a la vez. ¡Cobra decenas de millones en bonos!</span>
+                  <span class="step-title">Control de bajas pendientes y entrega</span>
+                  <span class="step-desc">La tabla muestra el máximo de bajas requerido entre las columnas para saber cuántas faltan en total y en qué estaciones entregar los contratos completados.</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Tutorial 4 -->
+          <!-- Flujo 4 -->
           <div class="tutorial-card" id="tut-crime">
             <div class="tutorial-header">
               <div>
-                <h3 class="tutorial-title">Limpia tu Notoriedad y Sal de la Lista Negra</h3>
+                <h3 class="tutorial-title">Gestión de Notoriedad e Interstellar Factors</h3>
                 <div class="tutorial-meta">
-                  <span class="badge badge-danger">ILEGALIDAD</span>
-                  <span class="badge badge-cyan">SUPERVIVENCIA</span>
+                  <span class="badge badge-danger">JURISDICCIÓN</span>
+                  <span class="badge badge-cyan">ESTADO LEGAL</span>
                 </div>
               </div>
               <span style="font-size: 2rem;">⚖️</span>
             </div>
             <p class="module-desc">
-              ¿Le has disparado a un policía sin querer o te persigue la ley? Aprende a limpiar tus antecedentes sin arriesgarte a que te destruyan o te encierren en una colonia penal.
+              Procedimiento para regularizar multas o recompensas sobre la nave respetando las reglas de notoriedad sin ser trasladado a una instalación penitenciaria.
             </p>
             <div class="stepper">
               <div class="step-item">
                 <div class="step-num">1</div>
                 <div class="step-content">
-                  <span class="step-title">Mira tu Notoriedad en TMC</span>
-                  <span class="step-desc">Abre el panel de <code>Crimen</code>. Verás tu nivel de notoriedad y un cronómetro en tiempo real. La notoriedad decae 1 nivel por cada 2 horas de vuelo.</span>
+                  <span class="step-title">Comprobación de sanciones y notoriedad</span>
+                  <span class="step-desc">Abre el módulo <code>Crimen</code> para verificar las multas o recompensas activas por facción y tu puntuación actual de notoriedad (0 a 10).</span>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">2</div>
                 <div class="step-content">
-                  <span class="step-title">No vayas a estaciones normales</span>
-                  <span class="step-desc">Si tienes notoriedad alta, la policía te atacará y los Interstellar Factors se negarán a atenderte. Vuela tranquilo hasta que el contador llegue a cero.</span>
+                  <span class="step-title">Espera de decaimiento si la notoriedad es mayor que 0</span>
+                  <span class="step-desc">En <em>Elite Dangerous</em>, cada punto de notoriedad requiere 2 horas de sesión activa para decaer. Con notoriedad &gt; 0 no es posible pagar recompensas.</span>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">3</div>
                 <div class="step-content">
-                  <span class="step-title">Salta al Interstellar Factor recomendado</span>
-                  <span class="step-desc">TMC te mostrará el sistema neutral más cercano con un botón de copiado. Salta allí, atraca seguro, paga tus multas y vuelve a volar con tu historial impoluto.</span>
+                  <span class="step-title">Liquidación en un contacto de Interstellar Factors</span>
+                  <span class="step-desc">Con notoriedad 0, copia desde el panel el sistema cercano con servicio <em>Interstellar Factors</em> donde la facción sancionadora no tenga presencia y salda el importe.</span>
                 </div>
               </div>
             </div>
@@ -1072,76 +1071,76 @@
     </section>
 
     <!-- ===================================================================
-         7. PREGUNTAS FRECUENTES DE LOS JUGADORES (FAQ)
+         7. PREGUNTAS TÉCNICAS FRECUENTES (FAQ)
          =================================================================== -->
     <section id="faq" class="section-spacing" style="background: rgba(15, 18, 29, 0.4);">
       <div class="container">
         <div class="section-header">
-          <div class="section-tag">PREGUNTAS FRECUENTES</div>
-          <h2 class="section-title">Lo que Todo Jugador Quiere Saber</h2>
+          <div class="section-tag">REFERENCIA Y LICENCIA</div>
+          <h2 class="section-title">Preguntas Técnicas Frecuentes</h2>
           <p class="section-desc">
-            Resolvemos tus dudas sobre seguridad, rendimiento, compatibilidad y facilidad de uso.
+            Detalles sobre el funcionamiento interno, consumo de recursos, compatibilidad de versiones y licencia de código abierto.
           </p>
         </div>
 
         <div class="faq-list">
           <div class="faq-item active">
             <button class="faq-question">
-              <span>¿Me pueden banear de Elite Dangerous por usar TMC?</span>
+              <span>¿Cómo interactúa TMC con Elite Dangerous y cumple las directrices de Frontier?</span>
               <span class="faq-toggle-icon">+</span>
             </button>
             <div class="faq-answer">
-              <strong>No, es 100% legal y seguro.</strong> TMC no modifica los archivos del juego ni inyecta código en la memoria. Funciona leyendo exclusivamente los archivos de registro oficiales (Journals) que Frontier Developments genera en tu ordenador expresamente para herramientas comunitarias. Miles de comandantes usan aplicaciones complementarias a diario sin ningún problema.
+              TMC opera de forma <strong>estrictamente pasiva</strong>: no accede a la memoria del proceso del juego, no inyecta librerías ni modifica ningún archivo de instalación. Lee únicamente los registros locales <code>Journal.*.log</code> y los archivos de estado <code>.json</code> que Frontier Developments genera en la carpeta <em>Saved Games</em> precisamente para aplicaciones complementarias de la comunidad, además de utilizar el flujo oficial OAuth2 PKCE para Frontier CAPI.
             </div>
           </div>
 
           <div class="faq-item">
             <button class="faq-question">
-              <span>¿Le va a quitar fotogramas (FPS) a mi juego o me dará tirones?</span>
+              <span>¿Qué consumo de memoria RAM y procesador tiene durante el juego?</span>
               <span class="faq-toggle-icon">+</span>
             </button>
             <div class="faq-answer">
-              <strong>Cero impacto en FPS.</strong> TMC está programado en Rust, uno de los lenguajes más rápidos y eficientes del mundo. Consume menos de 150 MB de memoria RAM y menos del 1% de tu procesador mientras juegas. No notarás que está encendido, incluso en combates espaciales masivos o en estaciones abarrotadas.
+              El backend está compilado en <strong>Rust nativo</strong> y limita el flujo de eventos hacia la interfaz a un máximo de 10 actualizaciones por segundo sin bucles de animación continuos. El consumo habitual del motor ronda los 35–60 MB de RAM (con un límite de diseño estricto inferior a 150 MB con la interfaz abierta) y menos del 1 % de CPU en reposo. Al cerrar la ventana hacia la bandeja del sistema, se destruye la instancia de WebView2 para liberar también la memoria gráfica.
             </div>
           </div>
 
           <div class="faq-item">
             <button class="faq-question">
-              <span>¿Funciona con Odyssey y también con Horizons?</span>
+              <span>¿Es compatible con Odyssey, Horizons 4.0 y la galaxia Legacy 3.8?</span>
               <span class="faq-toggle-icon">+</span>
             </button>
             <div class="faq-answer">
-              <strong>Sí, con ambos.</strong> Es totalmente compatible con Elite Dangerous Live 4.0, tanto si juegas a Odyssey a pie explorando planetas como si juegas en Horizons 4.0 desde la cabina de tu nave. Además, si alguna vez juegas en la galaxia Legacy 3.8, TMC la detecta solo para no mezclar tus datos.
+              Sí. Todas las funciones (incluyendo taquilla a pie y exobiología) están adaptadas a <strong>Live 4.0 (Horizons y Odyssey)</strong>. Si inicias el juego en la versión <strong>Legacy 3.8</strong>, TMC lo detecta automáticamente en la cabecera del diario, muestra un aviso en la barra superior y mantiene todos los datos en modo local, bloqueando envíos a EDDN, EDSM e Inara para no mezclar ambas galaxias.
             </div>
           </div>
 
           <div class="faq-item">
             <button class="faq-question">
-              <span>¿Puedo usarlo en una tablet o móvil mientras juego en pantalla completa?</span>
+              <span>¿Es obligatorio configurar cuentas externas o tener conexión a internet?</span>
               <span class="faq-toggle-icon">+</span>
             </button>
             <div class="faq-answer">
-              <strong>¡Sí, y es una de sus mejores funciones!</strong> No necesitas tener dos monitores en tu ordenador. Solo abres los Ajustes de TMC, activas la opción de Red Local y escaneas el código QR con la cámara de tu iPad, tablet Android o teléfono. Tendrás tu panel de cabina táctil al lado de tu teclado o joystick al instante.
+              No. TMC guarda su estado en una base de datos SQLite local (<code>tmc.db</code>). La vinculación con Frontier CAPI, Inara, EDSM o EDDN es completamente opcional, y en <em>Ajustes</em> puedes desactivar el interruptor <strong>«Consultar servicios online»</strong> si deseas que el programa no realice ninguna petición externa.
             </div>
           </div>
 
           <div class="faq-item">
             <button class="faq-question">
-              <span>Acabo de empezar a jugar y tengo una Sidewinder, ¿me sirve de algo?</span>
+              <span>¿Funciona en Linux además de Windows?</span>
               <span class="faq-toggle-icon">+</span>
             </button>
             <div class="faq-answer">
-              <strong>¡Es precisamente cuando más lo necesitas!</strong> Elite Dangerous tiene una curva de aprendizaje pronunciada. TMC te acompaña desde tu primer salto: te ayuda a no quedarte sin combustible indicándote qué estrellas puedes recolectar, te guía para desbloquear a tus primeros ingenieros sin perderte y te ayuda a conseguir tus primeros millones rápidamente.
+              Sí. El código en Rust y Tauri 2 es multiplataforma. En Linux puede compilarse tanto la aplicación de escritorio (con WebKitGTK) como el binario sin ventana <code>tmc-headless</code> indicando la ruta a los diarios del prefijo Proton/Steam mediante <code>--journal-dir</code>, accediendo a la interfaz desde cualquier navegador local o tablet en la LAN.
             </div>
           </div>
 
           <div class="faq-item">
             <button class="faq-question">
-              <span>¿Tengo que pagar algo o tiene micropagos?</span>
+              <span>¿Qué implica que sea de código abierto bajo licencia PolyForm Noncommercial 1.0.0?</span>
               <span class="faq-toggle-icon">+</span>
             </button>
             <div class="faq-answer">
-              <strong>Es 100% gratuito.</strong> Desarrollado bajo licencia sin fines comerciales (PolyForm Noncommercial 1.0.0) por y para la comunidad de jugadores de habla hispana y comandantes de todo el mundo. Sin suscripciones, sin publicidad y sin trampas.
+              Todo el código fuente de TMC es público en GitHub. Cualquier persona puede inspeccionarlo, auditar su seguridad, compilarlo por su cuenta, abrir incidencias o proponer mejoras mediante <em>Pull Requests</em>. La licencia <strong>PolyForm Noncommercial 1.0.0</strong> permite el uso, modificación y redistribución gratuitos con fines personales, educativos o comunitarios sin ánimo de lucro, reservando únicamente la explotación comercial.
             </div>
           </div>
         </div>
@@ -1149,20 +1148,26 @@
     </section>
 
     <!-- ===================================================================
-         8. LLAMADA A LA ACCIÓN FINAL (CTA BANNER)
+         8. BLOQUE DE CÓDIGO ABIERTO Y COLABORACIÓN EN GITHUB
          =================================================================== -->
     <section class="container">
       <div class="cta-banner">
-        <h2 class="cta-banner-title">¿Listo para Despegar con Tu Nuevo Copiloto?</h2>
+        <h2 class="cta-banner-title">Código Abierto y Desarrollo Comunitario</h2>
         <p class="cta-banner-desc">
-          No vuelvas a volar solo ni a perderte en menús infinitos. Abre TMC, arranca tus motores y domina la galaxia de Elite Dangerous como un auténtico comandante.
+          El código fuente, las suites de pruebas, el manual de instrucciones y los instaladores compilados están disponibles públicamente en GitHub. Si encuentras un fallo o quieres proponer una mejora técnica, puedes abrir una incidencia directamente desde Ajustes o en el repositorio.
         </p>
         <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
-          <a href="#manual-install" class="btn-hud btn-hud-primary" style="padding: 0.85rem 2rem; font-size: 1rem;">
-            🚀 Empezar a Volar Ahora
+          <a href="https://github.com/Danikuso/TheMultipurposeCompanion" class="btn-hud btn-hud-primary" target="_blank" rel="noopener" style="padding: 0.8rem 1.65rem; font-size: 0.95rem;">
+            💻 Ver Repositorio en GitHub
           </a>
-          <a href="#tutoriales" class="btn-hud btn-hud-secondary" style="padding: 0.85rem 1.75rem; font-size: 1rem;">
-            📚 Explorar Guías de Juego
+          <a href="https://github.com/Danikuso/TheMultipurposeCompanion/releases/latest" class="btn-hud btn-hud-secondary" target="_blank" rel="noopener" style="padding: 0.8rem 1.65rem; font-size: 0.95rem;">
+            📥 Descargar Release v0.1.0
+          </a>
+          <a href="Manual_TMC_Comandante.pdf" class="btn-hud btn-hud-cyan" download style="padding: 0.8rem 1.65rem; font-size: 0.95rem;">
+            📄 Manual de Instrucciones (PDF)
+          </a>
+          <a href="https://github.com/Danikuso/TheMultipurposeCompanion/issues" class="btn-hud btn-hud-secondary" target="_blank" rel="noopener" style="padding: 0.8rem 1.65rem; font-size: 0.95rem;">
+            💬 Reportar Issue / Sugerencia
           </a>
         </div>
       </div>
@@ -1188,50 +1193,52 @@
             </div>
           </div>
           <p style="font-size: 0.9rem; color: var(--hud-muted); line-height: 1.6; max-width: 320px;">
-            El copiloto táctico en tiempo real para comandantes de Elite Dangerous. Menos tiempo en menús, más créditos en tu cuenta y toda la galaxia en tus manos.
+            Aplicación auxiliar de código abierto en tiempo real para Elite Dangerous. Desarrollada en Rust, Tauri 2 y Svelte 5 con almacenamiento local SQLite.
           </p>
         </div>
 
         <div>
-          <h4 class="footer-col-title">Módulos de Cabina</h4>
+          <h4 class="footer-col-title">Módulos Principales</h4>
           <ul class="footer-links">
-            <li><a href="#mod-dashboard">Dashboard & Telemetría</a></li>
-            <li><a href="#mod-navigation">Rutas Spansh 1-Clic</a></li>
-            <li><a href="#mod-exploration">Radar de Cuerpos Ricos</a></li>
-            <li><a href="#mod-exobiology">Exobiología Semáforo</a></li>
-            <li><a href="#mod-combat">Combate & Thargoides AX</a></li>
-            <li><a href="#mod-engineering">Guía de Ingenieros</a></li>
+            <li><a href="#mod-dashboard">Panel General (Dashboard)</a></li>
+            <li><a href="#mod-navigation">Navegación &amp; Spansh Exact Plotter</a></li>
+            <li><a href="#mod-exploration">Exploración Cartográfica</a></li>
+            <li><a href="#mod-exobiology">Exobiología de Superficie</a></li>
+            <li><a href="#mod-combat">Combate &amp; Actividad AX</a></li>
+            <li><a href="#mod-engineering">Ingeniería &amp; Materiales</a></li>
           </ul>
         </div>
 
         <div>
-          <h4 class="footer-col-title">Guías de Vuelo</h4>
+          <h4 class="footer-col-title">Instrucciones de Uso</h4>
           <ul class="footer-links">
-            <li><a href="#manual-install">Cómo Empezar en 10s</a></li>
-            <li><a href="#manual-lan">Panel Táctil para Tablet</a></li>
-            <li><a href="#manual-hud">Modo Auto-Companion</a></li>
-            <li><a href="#manual-voice">Copiloto de Voz & VoiceAttack</a></li>
-            <li><a href="#manual-accounts">Sincronizar con Inara</a></li>
-            <li><a href="#tutoriales">Guías de Créditos Fáciles</a></li>
+            <li><a href="#manual-install">Instalación y Archivos Locales</a></li>
+            <li><a href="#manual-hud">Interfaz y Auto-companion</a></li>
+            <li><a href="#manual-lan">Pantalla Auxiliar LAN (QR)</a></li>
+            <li><a href="#manual-voice">Síntesis de Voz y VoiceAttack</a></li>
+            <li><a href="#manual-accounts">CAPI, Inara, EDSM y EDDN</a></li>
+            <li><a href="#manual-build">Compilar desde Código Fuente</a></li>
           </ul>
         </div>
 
         <div>
-          <h4 class="footer-col-title">Comunidad & Legal</h4>
+          <h4 class="footer-col-title">Proyecto y Código Abierto</h4>
           <ul class="footer-links">
-            <li><a href="#soluciones">¿Por qué usar TMC?</a></li>
-            <li><a href="#faq">Preguntas de Jugadores</a></li>
-            <li><a href="https://github.com/Danikuso/TheMultipurposeCompanion" target="_blank" rel="noopener">Repositorio en GitHub</a></li>
+            <li><a href="#arquitectura">Arquitectura y Diseño</a></li>
+            <li><a href="#faq">Preguntas Técnicas</a></li>
+            <li><a href="Manual_TMC_Comandante.pdf" download>Manual de Instrucciones (PDF)</a></li>
+            <li><a href="https://github.com/Danikuso/TheMultipurposeCompanion" target="_blank" rel="noopener">Código Fuente en GitHub</a></li>
+            <li><a href="https://github.com/Danikuso/TheMultipurposeCompanion/issues" target="_blank" rel="noopener">Incidencias (GitHub Issues)</a></li>
           </ul>
         </div>
       </div>
 
       <div class="footer-disclaimer">
         <p>
-          Licencia del proyecto: <strong>PolyForm Noncommercial 1.0.0</strong>. Proyecto comunitario sin ánimo de lucro creado por y para pilotos de Elite Dangerous.
+          Código abierto distribuido bajo licencia <strong>PolyForm Noncommercial 1.0.0</strong> (uso personal, educativo y comunitario sin fines comerciales).
         </p>
         <p>
-          Descargo de responsabilidad: «Elite Dangerous» y todos sus logotipos son marcas registradas propiedad de Frontier Developments plc. TMC es una herramienta complementaria independiente que utiliza las interfaces de registro oficiales autorizadas por Frontier.
+          Aviso de marca registrada: «Elite Dangerous», «Horizons» y «Odyssey» son marcas registradas propiedad de Frontier Developments plc. TMC es un proyecto independiente no afiliado con Frontier que lee exclusivamente los archivos de diario locales documentados oficialmente para herramientas de la comunidad.
         </p>
       </div>
     </div>
@@ -1246,7 +1253,7 @@
         <svg viewBox="0 0 24 24">
           <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
         </svg>
-        <input type="text" id="searchModalInput" class="search-modal-input" placeholder="Buscar por función, material, planeta, tutorial..." autocomplete="off">
+        <input type="text" id="searchModalInput" class="search-modal-input" placeholder="Buscar módulo, ajuste, instrucción o flujo de trabajo..." autocomplete="off">
         <kbd class="search-esc-badge">ESC</kbd>
       </div>
       <div id="searchResultsList" class="search-results-list">
