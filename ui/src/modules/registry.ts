@@ -1,5 +1,5 @@
 import type { Component } from 'svelte';
-import { dashboardPanels, ShipPanel } from './dashboard';
+import { dashboardPanels, ShipPanel, OutfittingSearchPanel } from './dashboard';
 import { navigationPanels } from './navigation';
 import { explorationPanels } from './exploration';
 import { exobiologyPanels } from './exobiology';
@@ -34,7 +34,7 @@ export const modules: UiModuleDef[] = [
     id: 'ship',
     icon: 'rocket',
     titleKey: 'nav-ship',
-    panels: [ShipPanel],
+    panels: [ShipPanel, OutfittingSearchPanel],
   },
   {
     id: 'navigation',

@@ -21,7 +21,7 @@ import { CarrierOverviewPanel, CarrierJumpPanel, CarrierFinancesPanel } from '..
 import { ColonisationProgressPanel, ColonisationSupplyPanel } from '../modules/colonisation';
 import { PowerplayPanel } from '../modules/powerplay';
 import { BgsPanel } from '../modules/bgs';
-import { ShipPanel as DashboardShipPanel } from '../modules/dashboard';
+import { ShipPanel as DashboardShipPanel, OutfittingSearchPanel } from '../modules/dashboard';
 import { topic } from '../lib/ws.svelte';
 
 export interface LayoutCtx {
@@ -137,6 +137,7 @@ export const layouts: LayoutDef[] = [{
     { id: 'ship-detail', panel: DashboardShipPanel, span: 2 },
     { id: 'ship-jump', panel: JumpPanel, span: 1 },
     { id: 'ship-cargo', panel: CargoPanel, span: 1 },
+    { id: 'ship-outfitting-search', panel: OutfittingSearchPanel, span: 2 },
   ],
 }, {
   id: 'combat',

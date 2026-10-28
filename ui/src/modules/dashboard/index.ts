@@ -6,6 +6,7 @@ import StatusPanel from './StatusPanel.svelte';
 import RoutePanel from './RoutePanel.svelte';
 import SessionPanel from './SessionPanel.svelte';
 import AlertsPanel from './AlertsPanel.svelte';
+import OutfittingSearchPanel from './OutfittingSearchPanel.svelte';
 
 export const dashboardPanels: Component[] = [
   CmdrPanel,
@@ -20,6 +21,7 @@ export const dashboardPanels: Component[] = [
 export {
   CmdrPanel,
   ShipPanel,
+  OutfittingSearchPanel,
   LocationPanel,
   StatusPanel,
   RoutePanel,
