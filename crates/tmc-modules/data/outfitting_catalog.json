@@ -1,0 +1,1261 @@
+{
+  "source": "Hechos públicos del juego e identificadores de consulta compatibles con Spansh, curados por TMC",
+  "license": "Datos factuales propios del proyecto (PolyForm Noncommercial 1.0.0); sin código ni bases de datos GPL/AGPL",
+  "version": 1,
+  "ships": [
+    {
+      "name": "Adder",
+      "symbol": "adder",
+      "pad": "S"
+    },
+    {
+      "name": "Alliance Challenger",
+      "symbol": "typex_3",
+      "pad": "M"
+    },
+    {
+      "name": "Alliance Chieftain",
+      "symbol": "typex",
+      "pad": "M"
+    },
+    {
+      "name": "Alliance Crusader",
+      "symbol": "typex_2",
+      "pad": "M"
+    },
+    {
+      "name": "Anaconda",
+      "symbol": "anaconda",
+      "pad": "L"
+    },
+    {
+      "name": "Asp Explorer",
+      "symbol": "asp",
+      "pad": "M"
+    },
+    {
+      "name": "Asp Scout",
+      "symbol": "asp_scout",
+      "pad": "M"
+    },
+    {
+      "name": "Beluga Liner",
+      "symbol": "belugaliner",
+      "pad": "L"
+    },
+    {
+      "name": "Caspian Explorer",
+      "symbol": "explorer_nx",
+      "pad": "L"
+    },
+    {
+      "name": "Cobra MkIII",
+      "symbol": "cobramkiii",
+      "pad": "S"
+    },
+    {
+      "name": "Cobra MkIV",
+      "symbol": "cobramkiv",
+      "pad": "S"
+    },
+    {
+      "name": "Cobra MkV",
+      "symbol": "cobramkv",
+      "pad": "S"
+    },
+    {
+      "name": "Corsair",
+      "symbol": "corsair",
+      "pad": "M"
+    },
+    {
+      "name": "Diamondback Explorer",
+      "symbol": "diamondbackxl",
+      "pad": "S"
+    },
+    {
+      "name": "Diamondback Scout",
+      "symbol": "diamondback",
+      "pad": "S"
+    },
+    {
+      "name": "Dolphin",
+      "symbol": "dolphin",
+      "pad": "S"
+    },
+    {
+      "name": "Eagle",
+      "symbol": "eagle",
+      "pad": "S"
+    },
+    {
+      "name": "Federal Assault Ship",
+      "symbol": "federation_dropship_mkii",
+      "pad": "M"
+    },
+    {
+      "name": "Federal Corvette",
+      "symbol": "federation_corvette",
+      "pad": "L"
+    },
+    {
+      "name": "Federal Dropship",
+      "symbol": "federation_dropship",
+      "pad": "M"
+    },
+    {
+      "name": "Federal Gunship",
+      "symbol": "federation_gunship",
+      "pad": "M"
+    },
+    {
+      "name": "Fer-de-Lance",
+      "symbol": "ferdelance",
+      "pad": "M"
+    },
+    {
+      "name": "Hauler",
+      "symbol": "hauler",
+      "pad": "S"
+    },
+    {
+      "name": "Imperial Clipper",
+      "symbol": "empire_trader",
+      "pad": "L"
+    },
+    {
+      "name": "Imperial Courier",
+      "symbol": "empire_courier",
+      "pad": "S"
+    },
+    {
+      "name": "Imperial Cutter",
+      "symbol": "cutter",
+      "pad": "L"
+    },
+    {
+      "name": "Imperial Eagle",
+      "symbol": "empire_eagle",
+      "pad": "S"
+    },
+    {
+      "name": "Keelback",
+      "symbol": "independant_trader",
+      "pad": "M"
+    },
+    {
+      "name": "Kestrel Mk II",
+      "symbol": "kestrel",
+      "pad": "S"
+    },
+    {
+      "name": "Krait MkII",
+      "symbol": "krait_mkii",
+      "pad": "M"
+    },
+    {
+      "name": "Krait Phantom",
+      "symbol": "krait_light",
+      "pad": "M"
+    },
+    {
+      "name": "Lynx Highliner",
+      "symbol": "lynx_highliner",
+      "pad": "L"
+    },
+    {
+      "name": "Mamba",
+      "symbol": "mamba",
+      "pad": "M"
+    },
+    {
+      "name": "Mandalay",
+      "symbol": "mandalay",
+      "pad": "M"
+    },
+    {
+      "name": "Orca",
+      "symbol": "orca",
+      "pad": "L"
+    },
+    {
+      "name": "Panther Clipper MkII",
+      "symbol": "panthermkii",
+      "pad": "L"
+    },
+    {
+      "name": "Python",
+      "symbol": "python",
+      "pad": "M"
+    },
+    {
+      "name": "Python MkII",
+      "symbol": "python_nx",
+      "pad": "M"
+    },
+    {
+      "name": "Sidewinder",
+      "symbol": "sidewinder",
+      "pad": "S"
+    },
+    {
+      "name": "Type-10 Defender",
+      "symbol": "type9_military",
+      "pad": "L"
+    },
+    {
+      "name": "Type-11 Prospector",
+      "symbol": "type11",
+      "pad": "L"
+    },
+    {
+      "name": "Type-6 Transporter",
+      "symbol": "type6",
+      "pad": "M"
+    },
+    {
+      "name": "Type-7 Transporter",
+      "symbol": "type7",
+      "pad": "L"
+    },
+    {
+      "name": "Type-8 Transporter",
+      "symbol": "type8",
+      "pad": "M"
+    },
+    {
+      "name": "Type-9 Heavy",
+      "symbol": "type9",
+      "pad": "L"
+    },
+    {
+      "name": "Viper MkIII",
+      "symbol": "viper",
+      "pad": "S"
+    },
+    {
+      "name": "Viper MkIV",
+      "symbol": "viper_mkiv",
+      "pad": "S"
+    },
+    {
+      "name": "Vulture",
+      "symbol": "vulture",
+      "pad": "S"
+    }
+  ],
+  "modules": [
+    {
+      "name": "Abrasion Blaster",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Advanced Docking Computer",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Advanced Missile Rack",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Advanced Multi-Cannon",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Advanced Planetary Approach Suite",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Advanced Plasma Accelerator",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Auto Field-Maintenance Unit",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "AX Missile Rack",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "AX Multi-Cannon",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Balanced Power Distributor",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Beam Laser",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Bi-Weave Shield Generator",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Burst Laser",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Business Class Passenger Cabin",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Cannon",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Cargo Rack",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Cargo Scanner",
+      "category": "utility",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Caustic Sink Launcher",
+      "category": "utility",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Chaff Launcher",
+      "category": "utility",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Collector Limpet Controller",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Concord Cannon",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Corrosion Resistant Cargo Rack",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Cytoscrambler Burst Laser",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Decontamination Limpet Controller",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Detailed Surface Scanner",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Double Screaming Fragment Cannon",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Economy Class Passenger Cabin",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Electronic Countermeasure",
+      "category": "utility",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Enduring Feedback Rail Gun",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Enforcer Cannon",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Enhanced AX Missile Rack",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Enhanced AX Multi-Cannon",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Enhanced Performance Thrusters",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Enhanced Xeno Scanner",
+      "category": "utility",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Enzyme Missile Rack",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Experimental Weapon Stabiliser",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Exposing Missiles",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Extended Cargo Rack",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Far-Reaching Abrasion Blaster",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Fighter Hangar",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "First Class Passenger Cabin",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Force Impact Cannon",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Fragment Cannon",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Frame Shift Drive",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Frame Shift Drive (SCO)",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Frame Shift Drive Interdictor",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Frame Shift Wake Scanner",
+      "category": "utility",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Fuel Scoop",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Fuel Tank",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Fuel Transfer Limpet Controller",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Guardian FSD Booster",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Guardian Gauss Cannon",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Guardian Hull Reinforcement",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Guardian Hybrid Power Distributor",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Guardian Hybrid Power Plant",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Guardian Module Reinforcement",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Guardian Nanite Torpedo Pylon",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Guardian Plasma Charger",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Guardian Shard Cannon",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Guardian Shield Reinforcement",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Hatch Breaker Limpet Controller",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Heat Sink Launcher",
+      "category": "utility",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Heavy Duty Module Reinforcement Package",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "High-Yield Enzyme Missile Rack",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Hull Reinforcement Package",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Imperial Hammer Rail Gun",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Kill Warrant Scanner",
+      "category": "utility",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Large Planetary Vehicle Hangar",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Life Support",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Lightweight Alloy",
+      "category": "armour",
+      "has_weapon_mode": false,
+      "is_armour": true
+    },
+    {
+      "name": "Lockdown Seeker Missile Rack",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Long Range Detailed Surface Scanner",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Long Range Mining Laser",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Luxury Class Passenger Cabin",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Meta Alloy Hull Reinforcement",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Military Grade Composite",
+      "category": "armour",
+      "has_weapon_mode": false,
+      "is_armour": true
+    },
+    {
+      "name": "Mine Launcher",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Mining Lance",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Mining Laser",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Mining Multi Limpet Controller",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Mining Volley Repeater",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Mirrored Surface Composite",
+      "category": "armour",
+      "has_weapon_mode": false,
+      "is_armour": true
+    },
+    {
+      "name": "Missile Rack",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Mk II Ablative Lightweight Alloys",
+      "category": "armour",
+      "has_weapon_mode": false,
+      "is_armour": true
+    },
+    {
+      "name": "Mk II Ablative Military Grade Composite",
+      "category": "armour",
+      "has_weapon_mode": false,
+      "is_armour": true
+    },
+    {
+      "name": "Mk II Ablative Mirrored Surface Composite",
+      "category": "armour",
+      "has_weapon_mode": false,
+      "is_armour": true
+    },
+    {
+      "name": "Mk II Ablative Reactive Surface Composite",
+      "category": "armour",
+      "has_weapon_mode": false,
+      "is_armour": true
+    },
+    {
+      "name": "Mk II Ablative Reinforced Alloys",
+      "category": "armour",
+      "has_weapon_mode": false,
+      "is_armour": true
+    },
+    {
+      "name": "Mk II Agile Boost Thrusters",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Mk II Business Class Passenger Cabin",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Mk II Cargo Rack",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Mk II Economy Class Passenger Cabin",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Mk II Gravity Optimised Thrusters",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Mk II Large Planetary Vehicle Hangar",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Mk II Mining Multi-Limpet Controller",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Mk II Plasma Shock Accelerator",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Mk II Supercharge Optimised Frame Shift Drive (SCO)",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Mk II Vessel Hangar",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "MkII Business Class Passenger Cabin",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "MkII Economy Class Passenger Cabin",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Module Reinforcement Package",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Multi-Cannon",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Operations Multi Limpet Controller",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Overloaded Beam Laser",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Pacifier Frag-Cannon",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Pack-Hound Missile Rack",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Planetary Approach Suite",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Planetary Vehicle Hangar",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Plasma Accelerator",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Point Defence",
+      "category": "utility",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Power Distributor",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Power Plant",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Prismatic Shield Generator",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Prospector Limpet Controller",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Pulse Disruptor Laser",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Pulse Laser",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Pulse Wave Analyser",
+      "category": "utility",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Pulse Wave Xeno Scanner",
+      "category": "utility",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Rail Gun",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Rapid Phase Multi-Cannon",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Reactive Surface Composite",
+      "category": "armour",
+      "has_weapon_mode": false,
+      "is_armour": true
+    },
+    {
+      "name": "Recon Limpet Controller",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Refinery",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Regenerative Burst Laser",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Reinforced Alloy",
+      "category": "armour",
+      "has_weapon_mode": false,
+      "is_armour": true
+    },
+    {
+      "name": "Remote Release Flak Launcher",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Remote Release Flechette Launcher",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Repair Limpet Controller",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Rescue Multi Limpet Controller",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Research Limpet Controller",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Retributor Beam Laser",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Rocket Propelled FSD Disruptor",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Seeker Missile Rack",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Seismic Charge Launcher",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Sensors",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Shield Booster",
+      "category": "utility",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Shield Cell Bank",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Shield Generator",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Shock Cannon",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Shock Mine Launcher",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Shutdown Field Neutraliser",
+      "category": "utility",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Standard Docking Computer",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Sub-Surface Displacement Missile",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Sub-Surface Extraction Missile",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Supercruise Assist",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Support Focused Power Distributor",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Thargoid Pulse Neutraliser",
+      "category": "utility",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Thrusters",
+      "category": "core_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Torpedo Pylon",
+      "category": "hardpoint",
+      "has_weapon_mode": true,
+      "is_armour": false
+    },
+    {
+      "name": "Universal Multi Limpet Controller",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Vessel Hangar",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Xeno Multi Limpet Controller",
+      "category": "optional_internal",
+      "has_weapon_mode": false,
+      "is_armour": false
+    },
+    {
+      "name": "Xeno Scanner",
+      "category": "utility",
+      "has_weapon_mode": false,
+      "is_armour": false
+    }
+  ],
+  "classes": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "ratings": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I"
+  ],
+  "permit_systems": [
+    {
+      "system": "Shinrarta Dezhra",
+      "permit_key": "permit-founders",
+      "requires_elite": true
+    },
+    {
+      "system": "Sol",
+      "permit_key": "permit-federation",
+      "requires_elite": false
+    },
+    {
+      "system": "Beta Hydri",
+      "permit_key": "permit-federation",
+      "requires_elite": false
+    },
+    {
+      "system": "Vega",
+      "permit_key": "permit-federation",
+      "requires_elite": false
+    },
+    {
+      "system": "PLX 695",
+      "permit_key": "permit-federation",
+      "requires_elite": false
+    },
+    {
+      "system": "Ross 128",
+      "permit_key": "permit-federation",
+      "requires_elite": false
+    },
+    {
+      "system": "Exbeur",
+      "permit_key": "permit-federation",
+      "requires_elite": false
+    },
+    {
+      "system": "Hors",
+      "permit_key": "permit-federation",
+      "requires_elite": false
+    },
+    {
+      "system": "Achenar",
+      "permit_key": "permit-empire",
+      "requires_elite": false
+    },
+    {
+      "system": "Summerland",
+      "permit_key": "permit-empire",
+      "requires_elite": false
+    },
+    {
+      "system": "Facece",
+      "permit_key": "permit-empire",
+      "requires_elite": false
+    },
+    {
+      "system": "Alioth",
+      "permit_key": "permit-alliance",
+      "requires_elite": false
+    },
+    {
+      "system": "Sirius",
+      "permit_key": "permit-independent",
+      "requires_elite": false
+    },
+    {
+      "system": "CD-43 11917",
+      "permit_key": "permit-cqc",
+      "requires_elite": false
+    }
+  ]
+}

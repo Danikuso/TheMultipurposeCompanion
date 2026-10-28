@@ -51,6 +51,7 @@ pub mod missions;
 pub mod navigation;
 pub mod powerplay;
 pub mod registry;
+pub mod ship;
 pub(crate) mod topicx;
 pub mod trade;
 pub use dashboard::Dashboard;

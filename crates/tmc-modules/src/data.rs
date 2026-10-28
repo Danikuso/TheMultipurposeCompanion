@@ -453,6 +453,73 @@ pub fn trader_rules() -> &'static TraderRules {
     RULES.get_or_init(|| parse_trader_rules(include_str!("../data/trader_rules.json")))
 }
 
+/// Nave comprable en astillero dentro del catálogo estático de equipamiento.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OutfittingShipEntry {
+    pub name: String,
+    pub symbol: String,
+    pub pad: String,
+}
+
+/// Familia de módulos de equipamiento con categoría y metadatos de filtro.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OutfittingModuleEntry {
+    pub name: String,
+    pub category: String,
+    #[serde(default)]
+    pub has_weapon_mode: bool,
+    #[serde(default)]
+    pub is_armour: bool,
+}
+
+/// Sistema poblado que requiere permiso para entrar.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PermitSystemEntry {
+    pub system: String,
+    pub permit_key: String,
+    #[serde(default)]
+    pub requires_elite: bool,
+}
+
+/// Catálogo estático embebido de naves, componentes y sistemas con permiso.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OutfittingCatalog {
+    #[serde(default)]
+    pub ships: Vec<OutfittingShipEntry>,
+    #[serde(default)]
+    pub modules: Vec<OutfittingModuleEntry>,
+    #[serde(default)]
+    pub classes: Vec<u8>,
+    #[serde(default)]
+    pub ratings: Vec<String>,
+    #[serde(default)]
+    pub permit_systems: Vec<PermitSystemEntry>,
+}
+
+impl OutfittingCatalog {
+    /// Busca si `system_name` exige permiso (insensible a mayúsculas/minúsculas).
+    pub fn permit_for(&self, system_name: &str) -> Option<&PermitSystemEntry> {
+        let target = system_name.trim();
+        self.permit_systems
+            .iter()
+            .find(|p| p.system.eq_ignore_ascii_case(target))
+    }
+}
+
+fn parse_outfitting_catalog(json: &str) -> OutfittingCatalog {
+    serde_json::from_str(json).unwrap_or_else(|error| {
+        tracing::error!(file = "outfitting_catalog.json", %error, "catálogo de equipamiento inválido; usando vacío");
+        OutfittingCatalog::default()
+    })
+}
+
+/// Catálogo embebido de 48 naves, 153 familias de módulos y sistemas con permiso.
+pub fn outfitting_catalog() -> &'static OutfittingCatalog {
+    static CATALOG: OnceLock<OutfittingCatalog> = OnceLock::new();
+    CATALOG
+        .get_or_init(|| parse_outfitting_catalog(include_str!("../data/outfitting_catalog.json")))
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct Ingredient {
     pub material: String,

@@ -12,6 +12,7 @@ use crate::mining::Mining;
 use crate::missions::Missions;
 use crate::navigation::Navigation;
 use crate::powerplay::PowerplayModule;
+use crate::ship::ShipModule;
 use crate::trade::Trade;
 use tmc_core::Module;
 
@@ -32,6 +33,7 @@ pub fn all_modules() -> Vec<Box<dyn Module>> {
         Box::new(Bgs::new()),
         Box::new(AccountsModule::new()),
         Box::new(Crime::new()),
+        Box::new(ShipModule::new()),
     ]
 }
 
