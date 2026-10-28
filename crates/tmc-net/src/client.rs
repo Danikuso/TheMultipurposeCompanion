@@ -41,7 +41,10 @@ use crate::limiter::{RateLimiter, Service};
 use crate::spansh::{self, RoutePoll, TradePoll};
 use crate::transport::{HttpReply, Transport, TransportError};
 use chrono::{DateTime, Utc};
-use tmc_model::net::{NearbyService, NetFailure, NetOutcome, NetQuery, NetSource};
+use tmc_model::net::{
+    NearbyService, NetFailure, NetOutcome, NetQuery, NetSource, OutfittingFallbackEntry,
+    OutfittingSearchParams, OutfittingSearchResult, OutfittingStationHit,
+};
 
 const POLL_EVERY: Duration = Duration::from_secs(2);
 const MAX_TRANSIENT_POLL_FAILURES: u32 = 2;
@@ -95,6 +98,8 @@ fn endpoint_of(req: &Req) -> &'static str {
                     "spansh.stations.technology_broker"
                 } else if has("/filters/material_trader") {
                     "spansh.stations.material_trader"
+                } else if has("/filters/ships") || has("/filters/modules") {
+                    "spansh.stations.outfitting"
                 } else {
                     "unknown"
                 }
@@ -509,8 +514,151 @@ impl NetClient {
                     .await;
                 (NetSource::Edcd, out)
             }
-            NetQuery::OutfittingSearch(_) => (NetSource::Spansh, NetOutcome::NoData),
+            NetQuery::OutfittingSearch(params) => self.outfitting_search(params, online).await,
         }
+    }
+
+    async fn query_outfitting_hits(
+        &self,
+        params: &OutfittingSearchParams,
+        use_coords: bool,
+        online: Option<&AtomicBool>,
+    ) -> Result<Vec<OutfittingStationHit>, Miss> {
+        let body = spansh::outfitting_search_body(params, use_coords).to_string();
+        let req = Req::PostJson(spansh::station_search_url(), body);
+        let out = self
+            .fetch(Service::Spansh, req, online, |b| {
+                spansh::parse_outfitting_search(b, params).map(|stations| {
+                    Some(NetOutcome::OutfittingStations(OutfittingSearchResult {
+                        stations,
+                        fallback: Vec::new(),
+                    }))
+                })
+            })
+            .await;
+        match out {
+            NetOutcome::OutfittingStations(res) => Ok(res.stations),
+            NetOutcome::Disabled => Err(Miss::Disabled),
+            NetOutcome::Failed(f) => Err(Miss::Fail(f)),
+            _ => Err(Miss::NoData),
+        }
+    }
+
+    async fn outfitting_search(
+        &self,
+        params: &OutfittingSearchParams,
+        online: Option<&AtomicBool>,
+    ) -> (NetSource, NetOutcome) {
+        let ship_opt = params
+            .ship
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty());
+        let valid_mods: Vec<_> = params
+            .modules
+            .iter()
+            .filter(|m| !m.name.trim().is_empty())
+            .cloned()
+            .collect();
+        if ship_opt.is_none() && valid_mods.is_empty() {
+            return (NetSource::Spansh, NetOutcome::NoData);
+        }
+
+        let mut use_coords = false;
+        let stations = match self.query_outfitting_hits(params, false, online).await {
+            Ok(hits) => hits,
+            Err(Miss::Fail(NetFailure::UnknownOrigin | NetFailure::Http(400)))
+                if params.reference_coords.is_some() =>
+            {
+                use_coords = true;
+                match self.query_outfitting_hits(params, true, online).await {
+                    Ok(hits) => hits,
+                    Err(miss) => return (NetSource::Spansh, miss.into()),
+                }
+            }
+            Err(miss) => return (NetSource::Spansh, miss.into()),
+        };
+
+        if !stations.is_empty() {
+            return (
+                NetSource::Spansh,
+                NetOutcome::OutfittingStations(OutfittingSearchResult {
+                    stations,
+                    fallback: Vec::new(),
+                }),
+            );
+        }
+
+        let total_items = usize::from(ship_opt.is_some()) + valid_mods.len();
+        if !(2..=6).contains(&total_items) {
+            return (NetSource::Spansh, NetOutcome::NoData);
+        }
+
+        const ARMOURS: &[&str] = &[
+            "Lightweight Alloy",
+            "Reinforced Alloy",
+            "Military Grade Composite",
+            "Mirrored Surface Composite",
+            "Reactive Surface Composite",
+        ];
+
+        let mut fallback = Vec::with_capacity(total_items);
+        if let Some(ship_name) = ship_opt {
+            if !online_allowed(online) {
+                return (NetSource::Cache, NetOutcome::Disabled);
+            }
+            let single = OutfittingSearchParams {
+                ship: Some(ship_name.to_string()),
+                modules: Vec::new(),
+                ..params.clone()
+            };
+            let nearest_station = self
+                .query_outfitting_hits(&single, use_coords, online)
+                .await
+                .ok()
+                .and_then(|v| v.into_iter().next());
+            fallback.push(OutfittingFallbackEntry {
+                item_label: ship_name.to_string(),
+                nearest_station,
+            });
+        }
+
+        for mut mq in valid_mods {
+            if !online_allowed(online) {
+                return (NetSource::Cache, NetOutcome::Disabled);
+            }
+            let item_label = mq.display_label();
+            if mq.armour_ship.is_none()
+                && let Some(ship_name) = ship_opt
+                && ARMOURS
+                    .iter()
+                    .any(|a| a.eq_ignore_ascii_case(mq.name.trim()))
+            {
+                mq.armour_ship = Some(ship_name.to_string());
+            }
+            let single = OutfittingSearchParams {
+                ship: None,
+                modules: vec![mq],
+                ..params.clone()
+            };
+            let nearest_station = self
+                .query_outfitting_hits(&single, use_coords, online)
+                .await
+                .ok()
+                .and_then(|v| v.into_iter().next());
+            fallback.push(OutfittingFallbackEntry {
+                item_label,
+                nearest_station,
+            });
+        }
+
+        (
+            NetSource::Spansh,
+            NetOutcome::OutfittingStations(OutfittingSearchResult {
+                stations: Vec::new(),
+                fallback,
+            }),
+        )
     }
 
     /// Coordenadas por nombre: Ardent y, solo si está caído, EDSM.
@@ -2463,6 +2611,98 @@ mod tests {
         }
     }
 
+    const OUTFITTING_FIXTURE: &str =
+        include_str!("../../../tests/fixtures/net/spansh_stations_outfitting.json");
+
+    #[tokio::test(start_paused = true)]
+    async fn outfitting_search_retries_with_reference_coords_when_system_unknown() {
+        use tmc_model::net::OutfittingSearchParams;
+        let t = FakeTransport::new();
+        t.script(
+            "/stations/search",
+            vec![
+                ok(400, r#"{"error":"Could not find reference system"}"#),
+                ok(200, OUTFITTING_FIXTURE),
+            ],
+        );
+        let c = client(&t);
+        let q = NetQuery::OutfittingSearch(OutfittingSearchParams {
+            reference_system: "Procedural Sector XX-Y d1-99".into(),
+            reference_coords: Some([-120.5, 44.0, 310.25]),
+            ship: Some("Mandalay".into()),
+            modules: vec![],
+            min_pad: PadSize::Large,
+            only_lyr_discount: false,
+            include_own_stronghold: false,
+            pledged_power: None,
+            include_carriers: false,
+            include_planetary: false,
+        });
+        let (src, out) = c.execute(&q).await;
+        assert_eq!(src, NetSource::Spansh);
+        let NetOutcome::OutfittingStations(res) = out else {
+            panic!("se esperaba OutfittingStations, llegó {out:?}");
+        };
+        assert_eq!(res.stations.len(), 2);
+        assert!(res.fallback.is_empty());
+        let bodies = t.json_bodies.lock().unwrap();
+        assert_eq!(bodies.len(), 2);
+        assert!(bodies[0].contains("reference_system"));
+        assert!(bodies[1].contains("reference_coords"));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn outfitting_search_builds_per_item_fallback_when_combined_basket_is_empty() {
+        use tmc_model::net::{OutfittingModuleQuery, OutfittingSearchParams};
+        let t = FakeTransport::new();
+        // 1ª petición (cesta combinada): 0 resultados.
+        // 2ª petición (nave Mandalay sola): fixture con estaciones.
+        // 3ª petición (componente inexistente 8A Rail Gun): 0 resultados.
+        t.script(
+            "/stations/search",
+            vec![
+                ok(200, r#"{"count":0,"results":[]}"#),
+                ok(200, OUTFITTING_FIXTURE),
+                ok(200, r#"{"count":0,"results":[]}"#),
+            ],
+        );
+        let c = client(&t);
+        let q = NetQuery::OutfittingSearch(OutfittingSearchParams {
+            reference_system: "Sol".into(),
+            reference_coords: None,
+            ship: Some("Mandalay".into()),
+            modules: vec![OutfittingModuleQuery {
+                name: "Rail Gun".into(),
+                class: Some(8),
+                rating: Some("A".into()),
+                weapon_mode: None,
+                armour_ship: None,
+            }],
+            min_pad: PadSize::Large,
+            only_lyr_discount: false,
+            include_own_stronghold: false,
+            pledged_power: None,
+            include_carriers: false,
+            include_planetary: false,
+        });
+        let (_, out) = c.execute(&q).await;
+        let NetOutcome::OutfittingStations(res) = out else {
+            panic!("se esperaba OutfittingStations con fallback, llegó {out:?}");
+        };
+        assert!(res.stations.is_empty());
+        assert_eq!(res.fallback.len(), 2);
+        assert_eq!(res.fallback[0].item_label, "Mandalay");
+        assert_eq!(
+            res.fallback[0]
+                .nearest_station
+                .as_ref()
+                .map(|s| s.station_name.as_str()),
+            Some("Ray Gateway")
+        );
+        assert_eq!(res.fallback[1].item_label, "8A Rail Gun");
+        assert!(res.fallback[1].nearest_station.is_none());
+    }
+
     #[cfg(debug_assertions)]
     mod diagnostics {
         use super::*;
@@ -2519,6 +2759,28 @@ mod tests {
                 assert!(all.contains(label), "{label} no emitido en {all}");
                 assert!(!all.contains("https://"), "{all}");
             }
+
+            let t = FakeTransport::new();
+            t.script("/stations/search", vec![ok(200, OUTFITTING_FIXTURE)]);
+            let records = run(
+                &t,
+                NetQuery::OutfittingSearch(tmc_model::net::OutfittingSearchParams {
+                    reference_system: "Sol?token=CANARYOUT".into(),
+                    reference_coords: None,
+                    ship: Some("Mandalay".into()),
+                    modules: vec![],
+                    min_pad: PadSize::Large,
+                    only_lyr_discount: false,
+                    include_own_stronghold: false,
+                    pledged_power: None,
+                    include_carriers: false,
+                    include_planetary: false,
+                }),
+            );
+            let all: String = records.iter().map(|r| r.payload.clone()).collect();
+            assert!(all.contains("spansh.stations.outfitting"), "{all}");
+            assert!(!all.contains("CANARYOUT"), "{all}");
+            assert!(!all.contains("https://"), "{all}");
         }
 
         #[test]

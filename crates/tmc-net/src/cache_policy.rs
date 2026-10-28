@@ -25,6 +25,7 @@ pub enum CacheKind {
     ArdentExports,
     SystemCoords,
     BgsTick,
+    SpanshOutfitting,
 }
 
 pub fn ttl_for(kind: CacheKind) -> TtlPolicy {
@@ -64,6 +65,11 @@ pub fn ttl_for(kind: CacheKind) -> TtlPolicy {
         CacheKind::BgsTick => TtlPolicy {
             fresh: Duration::from_secs(30 * 60),
             max_stale: Duration::from_secs(60 * 60),
+        },
+        // Existencias de astilleros y equipamiento: 5 min por huella de parámetros.
+        CacheKind::SpanshOutfitting => TtlPolicy {
+            fresh: Duration::from_secs(5 * 60),
+            max_stale: Duration::from_secs(5 * 60),
         },
     }
 }
@@ -141,7 +147,13 @@ pub fn cache_keys(q: &NetQuery) -> Vec<(CacheKind, String)> {
             format!("coords:{}", name.trim().to_lowercase()),
         )],
         NetQuery::BgsTick => vec![(CacheKind::BgsTick, "edcd:bgs_tick".to_string())],
-        NetQuery::OutfittingSearch(_) => Vec::new(),
+        NetQuery::OutfittingSearch(p) => vec![(
+            CacheKind::SpanshOutfitting,
+            format!(
+                "spansh:outfitting:{:016x}",
+                fnv1a(&serde_json::to_string(p).unwrap_or_default())
+            ),
+        )],
         NetQuery::CommodityImportsNearby {
             system_address,
             commodity,
@@ -400,5 +412,40 @@ mod tests {
             }),
             vec![(CacheKind::SystemCoords, "coords:hip 1".to_string())]
         );
+    }
+
+    #[test]
+    fn outfitting_search_cached_five_minutes_per_params_fingerprint() {
+        use tmc_model::net::{OutfittingModuleQuery, OutfittingSearchParams};
+        let ttl = ttl_for(CacheKind::SpanshOutfitting);
+        assert_eq!(ttl.fresh, Duration::from_secs(5 * 60));
+        assert_eq!(ttl.max_stale, Duration::from_secs(5 * 60));
+
+        let mk = |only_lyr_discount: bool| {
+            NetQuery::OutfittingSearch(OutfittingSearchParams {
+                reference_system: "Sol".into(),
+                reference_coords: None,
+                ship: Some("Mandalay".into()),
+                modules: vec![OutfittingModuleQuery {
+                    name: "Fuel Scoop".into(),
+                    class: Some(6),
+                    rating: Some("A".into()),
+                    weapon_mode: None,
+                    armour_ship: None,
+                }],
+                min_pad: PadSize::Large,
+                only_lyr_discount,
+                include_own_stronghold: false,
+                pledged_power: None,
+                include_carriers: false,
+                include_planetary: false,
+            })
+        };
+        let k1 = cache_keys(&mk(false));
+        let k2 = cache_keys(&mk(true));
+        assert_eq!(k1.len(), 1);
+        assert_eq!(k1[0].0, CacheKind::SpanshOutfitting);
+        assert!(k1[0].1.starts_with("spansh:outfitting:"));
+        assert_ne!(k1, k2);
     }
 }

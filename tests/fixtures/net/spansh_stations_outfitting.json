@@ -1,0 +1,169 @@
+{
+  "count": 7,
+  "from": 0,
+  "reference": {
+    "name": "Sol",
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0
+  },
+  "results": [
+    {
+      "name": "Stronghold Carrier",
+      "market_id": 3900099999,
+      "type": "Planetary Outpost",
+      "system_name": "Sol",
+      "distance": 4.0,
+      "distance_to_arrival": 80.0,
+      "is_planetary": false,
+      "large_pads": 2,
+      "medium_pads": 4,
+      "small_pads": 4,
+      "system_controlling_power": "Jerome Archer",
+      "updated_at": "2026-10-28T12:00:00+00:00",
+      "ships": [
+        { "name": "Mandalay", "price": 17639221, "symbol": "Mandalay" }
+      ],
+      "modules": [
+        { "category": "standard", "class": 5, "rating": "A", "name": "Frame Shift Drive (SCO)", "price": 6124743 },
+        { "category": "hardpoint", "class": 2, "rating": "F", "name": "Multi-Cannon", "weapon_mode": "Gimbal", "price": 57000 },
+        { "category": "standard", "class": 1, "rating": "I", "name": "Military Grade Composite", "ship": "Mandalay", "price": 15882353 }
+      ]
+    },
+    {
+      "name": "K7Q-B2X",
+      "market_id": 3700001111,
+      "type": "Drake-Class Carrier",
+      "system_name": "Alpha Centauri",
+      "distance": 4.3,
+      "distance_to_arrival": 500.0,
+      "is_planetary": false,
+      "large_pads": 4,
+      "medium_pads": 4,
+      "small_pads": 4,
+      "system_controlling_power": null,
+      "updated_at": "2026-10-28T12:00:00+00:00",
+      "ships": [
+        { "name": "Mandalay", "price": 17639221, "symbol": "Mandalay" }
+      ],
+      "modules": [
+        { "category": "standard", "class": 5, "rating": "A", "name": "Frame Shift Drive (SCO)", "price": 6124743 },
+        { "category": "hardpoint", "class": 2, "rating": "F", "name": "Multi-Cannon", "weapon_mode": "Gimbal", "price": 57000 },
+        { "category": "standard", "class": 1, "rating": "I", "name": "Military Grade Composite", "ship": "Mandalay", "price": 15882353 }
+      ]
+    },
+    {
+      "name": "Fixed-Only Outpost",
+      "market_id": 128000555,
+      "type": "Outpost",
+      "system_name": "Barnard's Star",
+      "distance": 5.9,
+      "distance_to_arrival": 200.0,
+      "is_planetary": false,
+      "large_pads": 0,
+      "medium_pads": 1,
+      "small_pads": 2,
+      "system_controlling_power": null,
+      "updated_at": "2026-10-28T09:00:00+00:00",
+      "ships": [
+        { "name": "Mandalay", "price": 17639221, "symbol": "Mandalay" }
+      ],
+      "modules": [
+        { "category": "standard", "class": 5, "rating": "A", "name": "Frame Shift Drive (SCO)", "price": 6124743 },
+        { "category": "hardpoint", "class": 2, "rating": "F", "name": "Multi-Cannon", "weapon_mode": "Fixed", "price": 40000 },
+        { "category": "standard", "class": 1, "rating": "I", "name": "Military Grade Composite", "ship": "Cobra Mk III", "price": 200000 }
+      ]
+    },
+    {
+      "name": "Stronghold Carrier",
+      "market_id": 3900012345,
+      "type": "Planetary Outpost",
+      "system_name": "Cubeo",
+      "distance": 8.2,
+      "distance_to_arrival": 120.0,
+      "is_planetary": true,
+      "large_pads": 2,
+      "medium_pads": 4,
+      "small_pads": 4,
+      "system_controlling_power": "Aisling Duval",
+      "updated_at": "2026-10-28T12:00:00+00:00",
+      "ships": [
+        { "name": "Mandalay", "price": 17639221, "symbol": "Mandalay" }
+      ],
+      "modules": [
+        { "category": "standard", "class": 5, "rating": "A", "name": "Frame Shift Drive (SCO)", "price": 6124743 },
+        { "category": "hardpoint", "class": 2, "rating": "F", "name": "Multi-Cannon", "weapon_mode": "Gimbal", "price": 57000 },
+        { "category": "standard", "class": 1, "rating": "I", "name": "Military Grade Composite", "ship": "Mandalay", "price": 15882353 }
+      ]
+    },
+    {
+      "name": "Ray Gateway",
+      "market_id": 3228945152,
+      "type": "Coriolis Starport",
+      "system_name": "Diaguandri",
+      "distance": 12.5,
+      "distance_to_arrival": 455.2,
+      "is_planetary": false,
+      "large_pads": 9,
+      "medium_pads": 18,
+      "small_pads": 14,
+      "system_controlling_power": "Li Yong-Rui",
+      "shipyard_updated_at": "2026-10-28T10:00:00+00:00",
+      "outfitting_updated_at": "2026-10-28T11:30:00+00:00",
+      "updated_at": "2026-10-28T11:30:00+00:00",
+      "ships": [
+        { "name": "Mandalay", "price": 14993338, "symbol": "Mandalay" }
+      ],
+      "modules": [
+        { "category": "standard", "class": 5, "rating": "A", "name": "Frame Shift Drive (SCO)", "price": 5206032 },
+        { "category": "hardpoint", "class": 2, "rating": "F", "name": "Multi-Cannon", "weapon_mode": "Gimbal", "price": 48450 },
+        { "category": "standard", "class": 1, "rating": "I", "name": "Military Grade Composite", "ship": "Mandalay", "price": 13500000 }
+      ]
+    },
+    {
+      "name": "Jameson Memorial",
+      "market_id": 128666762,
+      "type": "Orbis Starport",
+      "system_name": "Shinrarta Dezhra",
+      "distance": 64.3,
+      "distance_to_arrival": 346.5,
+      "is_planetary": false,
+      "large_pads": 9,
+      "medium_pads": 18,
+      "small_pads": 14,
+      "system_controlling_power": null,
+      "updated_at": "2026-10-28T12:05:00+00:00",
+      "ships": [
+        { "name": "Mandalay", "price": 15875299, "symbol": "Mandalay" }
+      ],
+      "modules": [
+        { "category": "standard", "class": 5, "rating": "A", "name": "Frame Shift Drive (SCO)", "price": 5512269 },
+        { "category": "hardpoint", "class": 2, "rating": "F", "name": "Multi-Cannon", "weapon_mode": "Gimbal", "price": 51300 },
+        { "category": "standard", "class": 1, "rating": "I", "name": "Military Grade Composite", "ship": "Mandalay", "price": 14294118 }
+      ]
+    },
+    {
+      "name": "I Sola Prospect",
+      "market_id": 353000111,
+      "type": "Planetary Port",
+      "system_name": "Brestla",
+      "distance": 95.0,
+      "distance_to_arrival": 1400.0,
+      "is_planetary": true,
+      "large_pads": 8,
+      "medium_pads": 6,
+      "small_pads": 4,
+      "system_controlling_power": null,
+      "updated_at": "2026-10-28T08:00:00+00:00",
+      "ships": [
+        { "name": "Mandalay", "price": 21167065, "symbol": "Mandalay" }
+      ],
+      "modules": [
+        { "category": "standard", "class": 5, "rating": "A", "name": "Frame Shift Drive (SCO)", "price": 7349692 },
+        { "category": "hardpoint", "class": 2, "rating": "F", "name": "Multi-Cannon", "weapon_mode": "Gimbal", "price": 68400 },
+        { "category": "standard", "class": 1, "rating": "I", "name": "Military Grade Composite", "ship": "Mandalay", "price": 19058824 }
+      ]
+    }
+  ],
+  "size": 20
+}

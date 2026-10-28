@@ -6,8 +6,9 @@ use chrono::{DateTime, Utc};
 use serde_json::Value;
 use tmc_model::market::is_fleet_carrier;
 use tmc_model::net::{
-    BrokerKind, GalaxyRouteParams, NearbyService, NetFailure, NeutronRouteParams, PadSize,
-    PlannedHop, PlannedRoute, RemoteStation, RemoteSystem, SystemSuggestion, TradeCommodity,
+    BrokerKind, GalaxyRouteParams, NearbyService, NetFailure, NeutronRouteParams,
+    OutfittingModuleQuery, OutfittingSearchParams, OutfittingStationHit, PadSize, PlannedHop,
+    PlannedRoute, RemoteStation, RemoteSystem, StockedItemPrice, SystemSuggestion, TradeCommodity,
     TradeRouteParams, TradeRoutePlan, TradeStop, TraderKind,
 };
 
@@ -73,7 +74,10 @@ pub fn parse_submit_error(body: &str) -> Option<NetFailure> {
     let root = jsonx::as_obj(&v).ok()?;
     let err = jsonx::opt_str(root, "error").ok()??;
     let err_lower = err.to_ascii_lowercase();
-    if err_lower.contains("starting system") || err_lower.contains("source system") {
+    if err_lower.contains("starting system")
+        || err_lower.contains("source system")
+        || err_lower.contains("reference system")
+    {
         Some(NetFailure::UnknownOrigin)
     } else if err_lower.contains("finishing system") || err_lower.contains("destination system") {
         Some(NetFailure::UnknownDestination)
@@ -560,6 +564,422 @@ pub fn parse_station_search(
     }
     out.sort_by(|a, b| a.distance_ly.total_cmp(&b.distance_ly));
     out.truncate(MAX_STATIONS);
+    Ok(out)
+}
+
+/// Máximo de estaciones pedidas a Spansh y máximo devuelto tras el filtro local.
+const OUTFITTING_FETCH_SIZE: usize = 20;
+const MAX_OUTFITTING_STATIONS: usize = 15;
+
+/// Tipos de estación regulares en Spansh (excluye `Drake-Class Carrier`, obras y asentamientos).
+/// Nota: los `Stronghold Carrier` de Powerplay 2.0 aparecen en Spansh como `"Planetary Outpost"`,
+/// por lo que se filtran localmente según `include_own_stronghold` y `pledged_power`.
+const REGULAR_STATION_TYPES: &[&str] = &[
+    "Asteroid base",
+    "Coriolis Starport",
+    "Dockable Planet Station",
+    "Dodec Starport",
+    "Mega ship",
+    "Ocellus Starport",
+    "Orbis Starport",
+    "Outpost",
+    "Planetary Outpost",
+    "Planetary Port",
+];
+
+/// Construye el cuerpo JSON de `POST /api/stations/search` para naves y componentes.
+/// Si `use_coords` es `true` (o `reference_system` está vacío) y hay `reference_coords`,
+/// emplea `"reference_coords": { "x", "y", "z" }` en lugar de `"reference_system"`.
+pub fn outfitting_search_body(params: &OutfittingSearchParams, use_coords: bool) -> Value {
+    let mut filters = serde_json::Map::new();
+
+    if let Some(ship) = params
+        .ship
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        filters.insert(
+            "ships".to_string(),
+            serde_json::json!([{ "name": { "value": [ship] } }]),
+        );
+    }
+
+    if !params.modules.is_empty() {
+        let mods: Vec<Value> = params
+            .modules
+            .iter()
+            .filter(|m| !m.name.trim().is_empty())
+            .map(|m| {
+                let mut obj = serde_json::Map::new();
+                obj.insert(
+                    "name".to_string(),
+                    serde_json::json!({ "value": [m.name.trim()] }),
+                );
+                if let Some(c) = m.class {
+                    obj.insert("class".to_string(), serde_json::json!({ "value": [c] }));
+                }
+                if let Some(r) = m.rating.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+                    obj.insert("rating".to_string(), serde_json::json!({ "value": [r] }));
+                }
+                Value::Object(obj)
+            })
+            .collect();
+        if !mods.is_empty() {
+            filters.insert("modules".to_string(), Value::Array(mods));
+        }
+    }
+
+    if !params.include_carriers {
+        filters.insert(
+            "type".to_string(),
+            serde_json::json!({ "value": REGULAR_STATION_TYPES }),
+        );
+    }
+
+    if params.min_pad == PadSize::Large {
+        filters.insert(
+            "has_large_pad".to_string(),
+            serde_json::json!({ "value": true }),
+        );
+    }
+
+    // Spansh etiqueta erróneamente algunos Stronghold Carriers orbitales con `is_planetary: true`.
+    // Si el usuario activa `include_own_stronghold` o `include_carriers`, el filtro planetario
+    // se aplica únicamente en local sobre las estaciones regulares no-carrier.
+    if !params.include_planetary && !params.include_own_stronghold && !params.include_carriers {
+        filters.insert(
+            "is_planetary".to_string(),
+            serde_json::json!({ "value": false }),
+        );
+    }
+
+    if params.only_lyr_discount {
+        filters.insert(
+            "system_controlling_power".to_string(),
+            serde_json::json!({ "value": ["Li Yong-Rui"] }),
+        );
+    }
+
+    let mut root = serde_json::Map::new();
+    root.insert("filters".to_string(), Value::Object(filters));
+    root.insert(
+        "sort".to_string(),
+        serde_json::json!([{ "distance": { "direction": "asc" } }]),
+    );
+    root.insert("size".to_string(), serde_json::json!(OUTFITTING_FETCH_SIZE));
+    root.insert("page".to_string(), serde_json::json!(0));
+
+    let sys = params.reference_system.trim();
+    if (use_coords || sys.is_empty())
+        && let Some([x, y, z]) = params.reference_coords
+    {
+        root.insert(
+            "reference_coords".to_string(),
+            serde_json::json!({ "x": x, "y": y, "z": z }),
+        );
+    } else {
+        root.insert("reference_system".to_string(), serde_json::json!(sys));
+    }
+
+    Value::Object(root)
+}
+
+fn is_construction_or_onfoot(name: &str, station_type: Option<&str>) -> bool {
+    let lower = name.to_ascii_lowercase();
+    lower.contains("construction site")
+        || lower.contains("construction depot")
+        || lower.contains("colonisationship")
+        || lower.contains("colonisation ship")
+        || matches!(
+            station_type,
+            Some(
+                "OnFootSettlement"
+                    | "Settlement"
+                    | "Surface Settlement"
+                    | "Planetary Construction Depot"
+                    | "Space Construction Depot"
+            )
+        )
+}
+
+fn match_stocked_ship(o: &jsonx::Obj, target_ship: &str) -> Option<StockedItemPrice> {
+    let ships = o.get("ships")?.as_array()?;
+    let mut found = false;
+    let mut best_price: Option<u64> = None;
+    for entry in ships {
+        let Some(so) = entry.as_object() else {
+            continue;
+        };
+        let Some(name) = so.get("name").and_then(Value::as_str) else {
+            continue;
+        };
+        if name.eq_ignore_ascii_case(target_ship) {
+            found = true;
+            if let Some(p) = so.get("price").and_then(Value::as_u64) {
+                best_price = Some(best_price.map_or(p, |cur| cur.min(p)));
+            }
+        }
+    }
+    found.then(|| StockedItemPrice {
+        label: target_ship.to_string(),
+        price_cr: best_price,
+    })
+}
+
+fn match_stocked_module(
+    o: &jsonx::Obj,
+    q: &OutfittingModuleQuery,
+    basket_ship: Option<&str>,
+) -> Option<StockedItemPrice> {
+    let modules = o.get("modules")?.as_array()?;
+    let target_name = q.name.trim();
+    let target_rating = q.rating.as_deref().map(str::trim).filter(|s| !s.is_empty());
+    let explicit_armour = q
+        .armour_ship
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+
+    let mut found = false;
+    let mut best_price: Option<u64> = None;
+    for entry in modules {
+        let Some(mo) = entry.as_object() else {
+            continue;
+        };
+        let Some(name) = mo.get("name").and_then(Value::as_str) else {
+            continue;
+        };
+        if !name.eq_ignore_ascii_case(target_name) {
+            continue;
+        }
+        if let Some(c) = q.class
+            && mo.get("class").and_then(Value::as_u64) != Some(u64::from(c))
+        {
+            continue;
+        }
+        if let Some(r) = target_rating
+            && !mo
+                .get("rating")
+                .and_then(Value::as_str)
+                .is_some_and(|mr| mr.eq_ignore_ascii_case(r))
+        {
+            continue;
+        }
+        if let Some(wm) = q.weapon_mode
+            && !mo
+                .get("weapon_mode")
+                .and_then(Value::as_str)
+                .is_some_and(|mw| mw.eq_ignore_ascii_case(wm.as_spansh_str()))
+        {
+            continue;
+        }
+        let mod_ship = mo.get("ship").and_then(Value::as_str);
+        if let Some(armour_hull) = explicit_armour {
+            if !mod_ship.is_some_and(|ms| ms.eq_ignore_ascii_case(armour_hull)) {
+                continue;
+            }
+        } else if let (Some(ms), Some(bs)) = (mod_ship, basket_ship)
+            && !ms.eq_ignore_ascii_case(bs)
+        {
+            continue;
+        }
+
+        found = true;
+        if let Some(p) = mo.get("price").and_then(Value::as_u64) {
+            best_price = Some(best_price.map_or(p, |cur| cur.min(p)));
+        }
+    }
+
+    found.then(|| StockedItemPrice {
+        label: q.display_label(),
+        price_cr: best_price,
+    })
+}
+
+/// Parsea `results[]` de `POST /api/stations/search` verificando localmente tamaño de pista,
+/// reglas de *Stronghold Carrier* de la propia potencia vs. rivales, portaaviones privados,
+/// filtro planetario, montajes de arma, blindajes por modelo de nave y precios individuales.
+pub fn parse_outfitting_search(
+    body: &str,
+    params: &OutfittingSearchParams,
+) -> Result<Vec<OutfittingStationHit>, NetFailure> {
+    let v = jsonx::parse(body)?;
+    let root = jsonx::as_obj(&v)?;
+    let items = jsonx::req_array(root, "results")?;
+    let (total, mut bad) = (items.len(), 0);
+    let mut out = Vec::new();
+
+    let target_ship = params
+        .ship
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let pledged = params
+        .pledged_power
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+
+    for item in items {
+        let parsed = (|| -> Result<Option<OutfittingStationHit>, NetFailure> {
+            let o = jsonx::as_obj(item)?;
+            let station_name = jsonx::req_str(o, "name")?;
+            let system_name = jsonx::req_str(o, "system_name")?;
+            let station_type = jsonx::opt_str(o, "type")?;
+            let market_id = jsonx::opt_u64(o, "market_id")?;
+
+            if is_construction_or_onfoot(&station_name, station_type.as_deref()) {
+                return Ok(None);
+            }
+
+            let max_pad = if opt_count(o, "large_pads")? > 0 {
+                Some(PadSize::Large)
+            } else if opt_count(o, "medium_pads")? > 0 {
+                Some(PadSize::Medium)
+            } else if opt_count(o, "small_pads")? > 0 {
+                Some(PadSize::Small)
+            } else {
+                None
+            };
+            if !max_pad.is_some_and(|p| p.fits(params.min_pad)) {
+                return Ok(None);
+            }
+
+            let is_stronghold_carrier = station_name.eq_ignore_ascii_case("Stronghold Carrier");
+            let is_carrier = !is_stronghold_carrier
+                && (station_type.as_deref() == Some("Drake-Class Carrier")
+                    || is_fleet_carrier(
+                        market_id.unwrap_or(0),
+                        station_type.as_deref(),
+                        Some(&station_name),
+                    ));
+
+            let controlling_power = jsonx::opt_str(o, "system_controlling_power")?;
+
+            if is_stronghold_carrier {
+                let allowed = params.include_own_stronghold
+                    && pledged.is_some_and(|pp| {
+                        controlling_power
+                            .as_deref()
+                            .is_some_and(|cp| cp.eq_ignore_ascii_case(pp))
+                    });
+                if !allowed {
+                    return Ok(None);
+                }
+            } else if is_carrier && !params.include_carriers {
+                return Ok(None);
+            }
+
+            let is_planetary = if is_stronghold_carrier || is_carrier {
+                false
+            } else {
+                jsonx::opt_bool(o, "is_planetary")?.unwrap_or(false)
+            };
+            if !params.include_planetary && is_planetary {
+                return Ok(None);
+            }
+
+            if params.only_lyr_discount
+                && !controlling_power
+                    .as_deref()
+                    .is_some_and(|cp| cp.eq_ignore_ascii_case("Li Yong-Rui"))
+            {
+                return Ok(None);
+            }
+
+            let mut item_prices = Vec::new();
+            if let Some(ship_name) = target_ship {
+                let Some(sp) = match_stocked_ship(o, ship_name) else {
+                    return Ok(None);
+                };
+                item_prices.push(sp);
+            }
+            for mq in &params.modules {
+                if mq.name.trim().is_empty() {
+                    continue;
+                }
+                let Some(mp) = match_stocked_module(o, mq, target_ship) else {
+                    return Ok(None);
+                };
+                item_prices.push(mp);
+            }
+
+            let total_price_cr = if item_prices.is_empty() {
+                None
+            } else {
+                item_prices
+                    .iter()
+                    .map(|i| i.price_cr)
+                    .try_fold(0u64, |acc, p| p.and_then(|v| acc.checked_add(v)))
+            };
+
+            let ts = |key: &str| -> Result<Option<DateTime<Utc>>, NetFailure> {
+                Ok(jsonx::opt_str(o, key)?.and_then(|s| s.parse().ok()))
+            };
+            let sy_ts = ts("shipyard_updated_at")?;
+            let out_ts = ts("outfitting_updated_at")?;
+            let gen_ts = ts("updated_at")?.or(ts("market_updated_at")?);
+            let updated_at = match (target_ship.is_some(), !params.modules.is_empty()) {
+                (true, true) => match (sy_ts, out_ts) {
+                    (Some(a), Some(b)) => Some(a.min(b)),
+                    (a, b) => a.or(b).or(gen_ts),
+                },
+                (true, false) => sy_ts.or(gen_ts).or(out_ts),
+                (false, true) => out_ts.or(gen_ts).or(sy_ts),
+                (false, false) => gen_ts.or(out_ts).or(sy_ts),
+            };
+
+            let discount_tag = if station_name.eq_ignore_ascii_case("I Sola Prospect") {
+                Some("brestla_plus20".to_string())
+            } else if controlling_power
+                .as_deref()
+                .is_some_and(|p| p.eq_ignore_ascii_case("Li Yong-Rui"))
+            {
+                Some("lyr_15".to_string())
+            } else if system_name.eq_ignore_ascii_case("Shinrarta Dezhra") {
+                Some("elite_10".to_string())
+            } else {
+                None
+            };
+
+            let distance_to_arrival_ls = match o.get("distance_to_arrival") {
+                None | Some(Value::Null) => None,
+                Some(d) => Some(d.as_f64().ok_or(NetFailure::Malformed)?),
+            };
+
+            Ok(Some(OutfittingStationHit {
+                station_name,
+                system_name,
+                station_type,
+                market_id,
+                distance_ly: jsonx::req_f64(o, "distance")?,
+                distance_to_arrival_ls,
+                max_pad,
+                is_planetary,
+                is_carrier,
+                is_stronghold_carrier,
+                controlling_power,
+                discount_tag,
+                updated_at,
+                item_prices,
+                total_price_cr,
+            }))
+        })();
+
+        match parsed {
+            Ok(Some(hit)) => out.push(hit),
+            Ok(None) => {}
+            Err(_) => bad += 1,
+        }
+    }
+
+    if total > 0 && bad == total {
+        return Err(NetFailure::Malformed);
+    }
+
+    out.sort_by(|a, b| a.distance_ly.total_cmp(&b.distance_ly));
+    out.truncate(MAX_OUTFITTING_STATIONS);
     Ok(out)
 }
 
@@ -1059,6 +1479,158 @@ mod tests {
         assert_eq!(
             parse_station_search(r#"{"foo":1}"#, PadSize::Small),
             Err(NetFailure::Malformed)
+        );
+    }
+
+    const OUTFITTING: &str =
+        include_str!("../../../tests/fixtures/net/spansh_stations_outfitting.json");
+
+    fn sample_outfitting_params() -> tmc_model::net::OutfittingSearchParams {
+        use tmc_model::net::{OutfittingModuleQuery, OutfittingSearchParams, WeaponMode};
+        OutfittingSearchParams {
+            reference_system: "Sol".into(),
+            reference_coords: Some([0.0, 0.0, 0.0]),
+            ship: Some("Mandalay".into()),
+            modules: vec![
+                OutfittingModuleQuery {
+                    name: "Frame Shift Drive (SCO)".into(),
+                    class: Some(5),
+                    rating: Some("A".into()),
+                    weapon_mode: None,
+                    armour_ship: None,
+                },
+                OutfittingModuleQuery {
+                    name: "Multi-Cannon".into(),
+                    class: Some(2),
+                    rating: Some("F".into()),
+                    weapon_mode: Some(WeaponMode::Gimbal),
+                    armour_ship: None,
+                },
+                OutfittingModuleQuery {
+                    name: "Military Grade Composite".into(),
+                    class: Some(1),
+                    rating: Some("I".into()),
+                    weapon_mode: None,
+                    armour_ship: Some("Mandalay".into()),
+                },
+            ],
+            min_pad: PadSize::Large,
+            only_lyr_discount: false,
+            include_own_stronghold: false,
+            pledged_power: Some("Aisling Duval".into()),
+            include_carriers: false,
+            include_planetary: false,
+        }
+    }
+
+    #[test]
+    fn builds_outfitting_search_body_for_system_and_coords() {
+        let mut p = sample_outfitting_params();
+        p.only_lyr_discount = true;
+        let b = outfitting_search_body(&p, false);
+        assert_eq!(b["reference_system"], "Sol");
+        assert!(b.get("reference_coords").is_none());
+        assert_eq!(b["size"], 20);
+        assert_eq!(b["page"], 0);
+        assert_eq!(b["sort"][0]["distance"]["direction"], "asc");
+        assert_eq!(
+            b["filters"]["ships"],
+            serde_json::json!([{ "name": { "value": ["Mandalay"] } }])
+        );
+        assert_eq!(b["filters"]["modules"].as_array().unwrap().len(), 3);
+        assert_eq!(
+            b["filters"]["modules"][0],
+            serde_json::json!({
+                "name": { "value": ["Frame Shift Drive (SCO)"] },
+                "class": { "value": [5] },
+                "rating": { "value": ["A"] }
+            })
+        );
+        assert_eq!(b["filters"]["has_large_pad"]["value"], true);
+        assert_eq!(b["filters"]["is_planetary"]["value"], false);
+        assert_eq!(
+            b["filters"]["system_controlling_power"]["value"],
+            serde_json::json!(["Li Yong-Rui"])
+        );
+        let types = b["filters"]["type"]["value"].as_array().unwrap();
+        assert!(!types.iter().any(|t| t == "Drake-Class Carrier"));
+
+        // Con `include_own_stronghold = true`, no se envía `is_planetary: false` en servidor
+        // para no descartar Stronghold Carriers orbitales mal etiquetados en Spansh.
+        p.include_own_stronghold = true;
+        let b_coords = outfitting_search_body(&p, true);
+        assert!(b_coords.get("reference_system").is_none());
+        assert_eq!(
+            b_coords["reference_coords"],
+            serde_json::json!({ "x": 0.0, "y": 0.0, "z": 0.0 })
+        );
+        assert!(b_coords["filters"].get("is_planetary").is_none());
+    }
+
+    #[test]
+    fn parses_outfitting_stations_with_stronghold_carrier_and_local_filters() {
+        let mut p = sample_outfitting_params();
+        // Por defecto: sin Stronghold Carriers, sin Fleet Carriers, sin planetarias.
+        // Quedan solo Ray Gateway (Diaguandri, LYR -15%) y Jameson Memorial (Shinrarta Dezhra, -10%).
+        let hits = parse_outfitting_search(OUTFITTING, &p).unwrap();
+        assert_eq!(hits.len(), 2);
+        assert_eq!(hits[0].station_name, "Ray Gateway");
+        assert_eq!(hits[0].system_name, "Diaguandri");
+        assert_eq!(hits[0].discount_tag.as_deref(), Some("lyr_15"));
+        assert_eq!(hits[0].item_prices.len(), 4);
+        assert_eq!(
+            hits[0].total_price_cr,
+            Some(14_993_338 + 5_206_032 + 48_450 + 13_500_000)
+        );
+        assert_eq!(hits[1].station_name, "Jameson Memorial");
+        assert_eq!(hits[1].discount_tag.as_deref(), Some("elite_10"));
+
+        // Al activar `include_own_stronghold` para Aisling Duval (incluso con `include_planetary = false`):
+        // entra el Stronghold Carrier de Cubeo (Aisling Duval, con `is_planetary` corregido a `false`),
+        // pero sigue excluido el Stronghold Carrier rival de Sol (Jerome Archer) y el Carrier privado K7Q-B2X.
+        p.include_own_stronghold = true;
+        let hits_sh = parse_outfitting_search(OUTFITTING, &p).unwrap();
+        assert_eq!(hits_sh.len(), 3);
+        assert_eq!(hits_sh[0].station_name, "Stronghold Carrier");
+        assert_eq!(hits_sh[0].system_name, "Cubeo");
+        assert!(hits_sh[0].is_stronghold_carrier);
+        assert!(!hits_sh[0].is_carrier);
+        assert!(!hits_sh[0].is_planetary);
+        assert_eq!(
+            hits_sh[0].controlling_power.as_deref(),
+            Some("Aisling Duval")
+        );
+
+        // Al activar `include_planetary = true`, entra I Sola Prospect (+20%), pero sigue fuera Fixed-Only Outpost
+        // (por pad Mediano, montaje Fixed en lugar de Gimbal y blindaje de Cobra Mk III).
+        p.include_planetary = true;
+        let hits_plan = parse_outfitting_search(OUTFITTING, &p).unwrap();
+        assert_eq!(hits_plan.len(), 4);
+        assert_eq!(hits_plan[3].station_name, "I Sola Prospect");
+        assert!(hits_plan[3].is_planetary);
+        assert_eq!(hits_plan[3].discount_tag.as_deref(), Some("brestla_plus20"));
+
+        // Incluso con `min_pad = Medium`, Fixed-Only Outpost sigue descartado por `weapon_mode: Gimbal` y `armour_ship: Mandalay`.
+        p.min_pad = PadSize::Medium;
+        let hits_med = parse_outfitting_search(OUTFITTING, &p).unwrap();
+        assert!(
+            !hits_med
+                .iter()
+                .any(|h| h.station_name == "Fixed-Only Outpost")
+        );
+
+        // Al activar `include_carriers = true`, entra el Fleet Carrier privado K7Q-B2X, pero NO el Stronghold rival.
+        p.include_carriers = true;
+        let hits_fc = parse_outfitting_search(OUTFITTING, &p).unwrap();
+        assert!(
+            hits_fc
+                .iter()
+                .any(|h| h.station_name == "K7Q-B2X" && h.is_carrier)
+        );
+        assert!(
+            !hits_fc
+                .iter()
+                .any(|h| h.system_name == "Sol" && h.is_stronghold_carrier)
         );
     }
 }
