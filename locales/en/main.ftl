@@ -18,6 +18,7 @@ nav-ship = Ship
 panel-accounts = Accounts & Sync
 panel-cmdr = Commander
 panel-ship = Ship
+panel-ship-outfitting = Shipyards & Outfitting
 panel-location = Location
 panel-status = Live status
 panel-route = Route

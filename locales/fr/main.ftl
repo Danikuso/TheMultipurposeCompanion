@@ -18,6 +18,7 @@ nav-ship = Vaisseau
 panel-accounts = Comptes et synchronisation
 panel-cmdr = Commandant
 panel-ship = Vaisseau
+panel-ship-outfitting = Chantiers navals et Équipement
 panel-location = Position
 panel-status = État en direct
 panel-route = Itinéraire

@@ -18,6 +18,7 @@ nav-ship = Nave
 panel-accounts = Cuentas y Sincronización
 panel-cmdr = Comandante
 panel-ship = Nave
+panel-ship-outfitting = Astilleros y Equipamiento
 panel-location = Ubicación
 panel-status = Estado en vivo
 panel-route = Ruta
