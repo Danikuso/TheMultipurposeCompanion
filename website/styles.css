@@ -949,10 +949,11 @@ h1, h2, h3, h4, .hud-title {
 }
 
 .filter-btn {
-  padding: 0.45rem 0.95rem;
+  padding: 0.45rem 0.75rem;
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
   background: rgba(255, 255, 255, 0.03);
   color: var(--hud-muted);
   border: 1px solid transparent;
@@ -975,9 +976,8 @@ h1, h2, h3, h4, .hud-title {
 
 .module-search-box {
   position: relative;
-  min-width: 310px;
+  min-width: 280px;
   flex: 1;
-  max-width: 410px;
 }
 
 .module-search-input {
@@ -987,8 +987,8 @@ h1, h2, h3, h4, .hud-title {
   border: 1px solid var(--hud-border-subtle);
   border-radius: var(--radius-sm);
   color: #fff;
-  font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
   outline: none;
   transition: var(--transition-fast);
 }

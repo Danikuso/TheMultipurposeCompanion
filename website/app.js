@@ -1,6 +1,6 @@
 /**
  * TMC — The Multipurpose Companion
- * Scripts interactivos del portal de documentación y vista previa Glass HUD
+ * Interactividad de la página de presentación
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ===================================================================
-// 1. VISTA PREVIA INTERACTIVA DE INTERFAZ («GLASS HUD»)
+// 1. VISTA PREVIA INTERACTIVA DE CABINA
 // ===================================================================
 
 const SIM_DATA = {
@@ -28,17 +28,17 @@ const SIM_DATA = {
     shield: '100 %',
     shieldFill: '100%',
     credits: '14.280.000 Cr',
-    routeTitle: 'Siguiente Salto (Spansh Exact Plotter)',
+    routeTitle: 'Siguiente Salto Planificado',
     routeTarget: 'Eol Prou SS-T d3-128',
     routeAction: 'Copiar',
     systemName: 'Synuefe GT-H b43-1',
-    cardTitle: '🔭 Cuerpos Celestes & Cartografía FSS',
+    cardTitle: '🔭 Cuerpos Descubiertos en el Sistema',
     rows: [
       { name: 'Synuefe GT-H b43-1 3 (Mundo Acuático)', badge: 'TERRAFORMABLE', badgeClass: 'badge-cyan', val: '3.250.000 Cr' },
       { name: 'Synuefe GT-H b43-1 4 a (Superficie)', badge: '4 BIOSEÑALES', badgeClass: 'badge-purple', val: '19.000.000 Cr' },
-      { name: 'Synuefe GT-H b43-1 5 (Tipo Tierra)', badge: 'ELW · MAPEAR', badgeClass: 'badge-green', val: '4.800.000 Cr' }
+      { name: 'Synuefe GT-H b43-1 5 (Tipo Tierra)', badge: 'MAPEAR CON SONDAS', badgeClass: 'badge-green', val: '4.800.000 Cr' }
     ],
-    ttsAudio: 'Salto completado a Synuefe. Estrella repostable. Detectadas señales biológicas en un cuerpo.'
+    ttsAudio: 'Salto completado a Synuefe. Estrella apta para repostar. Detectadas señales biológicas en un cuerpo.'
   },
   combat: {
     badgeMode: 'ZONA DE CONFLICTO AX',
@@ -50,17 +50,17 @@ const SIM_DATA = {
     shield: '64 %',
     shieldFill: '64%',
     credits: '48.000.000 Cr',
-    routeTitle: 'Objetivo Fijado (ShipTargeted)',
+    routeTitle: 'Objetivo en el Punto de Mira',
     routeTarget: 'Interceptor Clase Medusa',
-    routeAction: 'Copiar Sistema',
+    routeAction: 'Copiar Destino',
     systemName: 'HIP 23716',
-    cardTitle: '⚔️ Telemetría de Objetivo & Estado AX',
+    cardTitle: '⚔️ Estado del Combate Anti-Xeno',
     rows: [
-      { name: 'Corazón Thargoide 1 / 4', badge: 'DESTRUIDO', badgeClass: 'badge-green', val: '0 %' },
-      { name: 'Corazón Thargoide 2 / 4', badge: 'EXPUESTO', badgeClass: 'badge-danger', val: '38 %' },
-      { name: 'Enjambre Thargoide (32 unidades)', badge: 'ACTIVO', badgeClass: 'badge-orange', val: 'Flak' }
+      { name: 'Corazón Thargoide 1 de 4', badge: 'DESTRUIDO', badgeClass: 'badge-green', val: '0 %' },
+      { name: 'Corazón Thargoide 2 de 4', badge: 'EXPUESTO', badgeClass: 'badge-danger', val: '38 %' },
+      { name: 'Enjambre Thargoide (32 unidades)', badge: 'ACTIVO', badgeClass: 'badge-orange', val: 'Atención' }
     ],
-    ttsAudio: 'Advertencia de combate: escudos al sesenta y cuatro por ciento. Corazón número dos expuesto.'
+    ttsAudio: 'Atención en cabina: escudos al sesenta y cuatro por ciento. Segundo corazón expuesto.'
   },
   mining: {
     badgeMode: 'ANILLO PLANETARIO',
@@ -72,20 +72,20 @@ const SIM_DATA = {
     shield: '100 %',
     shieldFill: '100%',
     credits: '96,4 t/h',
-    routeTitle: 'Estación de Venta en Radio (18 AL)',
+    routeTitle: 'Estación Cercana Recomendada (18 AL)',
     routeTarget: 'Jameson Memorial (Shinrarta Dezhra)',
-    routeAction: 'Copiar Sistema',
+    routeAction: 'Copiar Destino',
     systemName: 'Delkar 7 (Anillo Metálico A)',
-    cardTitle: '⛏️ Último Dron Prospector & Bodega',
+    cardTitle: '⛏️ Último Asteroide Analizado y Bodega',
     rows: [
-      { name: 'Platino (Mineral de interés)', badge: '58,4 % · ALTO', badgeClass: 'badge-cyan', val: '282.000 Cr/t' },
-      { name: 'Painita', badge: '34,2 % · MEDIO', badgeClass: 'badge-green', val: '240.000 Cr/t' },
-      { name: 'Ocupación de Bodega', badge: '112 / 128 t', badgeClass: 'badge-orange', val: '87,5 %' }
+      { name: 'Platino (Marcado como favorito)', badge: 'PUREZA 58,4 %', badgeClass: 'badge-cyan', val: '282.000 Cr/t' },
+      { name: 'Painita', badge: 'PUREZA 34,2 %', badgeClass: 'badge-green', val: '240.000 Cr/t' },
+      { name: 'Espacio en Bodega de Carga', badge: '112 / 128 t', badgeClass: 'badge-orange', val: '87,5 %' }
     ],
-    ttsAudio: 'Asteroide prospectado con cincuenta y ocho por ciento de Platino.'
+    ttsAudio: 'Asteroide analizado con cincuenta y ocho por ciento de Platino.'
   },
   trade: {
-    badgeMode: 'ATRACADO',
+    badgeMode: 'ATRACADO EN ESTACIÓN',
     badgeClass: 'badge-green',
     hull: '100 %',
     hullFill: '100%',
@@ -94,17 +94,17 @@ const SIM_DATA = {
     shield: '100 %',
     shieldFill: '100%',
     credits: '86.200.000 Cr',
-    routeTitle: 'Destino Comercial Seleccionado',
+    routeTitle: 'Siguiente Estación Comercial',
     routeTarget: 'Wally Bei (Malerba Orbital)',
-    routeAction: 'Copiar Sistema',
+    routeAction: 'Copiar Destino',
     systemName: 'Sol (Abraham Lincoln)',
-    cardTitle: '📦 Comparativa Market.json & Carga',
+    cardTitle: '📦 Precios del Mercado y Bodega',
     rows: [
-      { name: 'Carga en bodega: Plata (720 t)', badge: 'COMPRA: 34.800 Cr/t', badgeClass: 'badge-cyan', val: '720 / 720 t' },
-      { name: 'Precio receptor (datos EDDN < 2 h)', badge: 'VENTA: 48.950 Cr/t', badgeClass: 'badge-green', val: '+14.150 Cr/t' },
-      { name: 'Plataforma y Demanda en Destino', badge: 'GRANDE · 18.500 t', badgeClass: 'badge-orange', val: '14,2 AL' }
+      { name: 'Carga a bordo: Plata (720 t)', badge: 'COMPRA: 34.800 Cr/t', badgeClass: 'badge-cyan', val: '720 / 720 t' },
+      { name: 'Precio en estación de destino', badge: 'VENTA: 48.950 Cr/t', badgeClass: 'badge-green', val: '+14.150 Cr/t' },
+      { name: 'Tamaño de aterrizaje en destino', badge: 'PLATAFORMA GRANDE', badgeClass: 'badge-orange', val: '14,2 AL' }
     ],
-    ttsAudio: 'Datos de mercado local actualizados. Ruta comercial de un salto verificada para plataforma grande.'
+    ttsAudio: 'Precios del mercado local actualizados. Ruta de un salto lista para plataforma grande.'
   }
 };
 
@@ -130,7 +130,7 @@ function initCockpitSimulator() {
   if (copyBtn) {
     copyBtn.addEventListener('click', () => {
       const targetSystem = document.getElementById('simRouteTarget').textContent.trim();
-      copyToClipboard(targetSystem, `Elemento «${targetSystem}» copiado al portapapeles.`);
+      copyToClipboard(targetSystem, `Destino «${targetSystem}» copiado al portapapeles.`);
     });
   }
 
@@ -201,9 +201,9 @@ function playCockpitVoice(text) {
     if (esVoice) utterance.voice = esVoice;
 
     window.speechSynthesis.speak(utterance);
-    showToast(`🔊 Locución TTS: «${text}»`);
+    showToast(`🔊 Voz de cabina: «${text}»`);
   } else {
-    showToast(`🔊 Locución TTS: ${text}`);
+    showToast(`🔊 Voz de cabina: ${text}`);
   }
 }
 
@@ -212,40 +212,39 @@ function playCockpitVoice(text) {
 // ===================================================================
 
 const SEARCH_DATABASE = [
-  // Arquitectura y código abierto
-  { title: 'Arquitectura y Principios de Diseño', category: 'Ingeniería', url: '#arquitectura', snippet: 'Motor en Rust, ergonomía Glass HUD (regla del 33 %), SQLite WAL local, aislamiento Legacy y código abierto.' },
+  // Cualidades
+  { title: 'Cualidades Principales de TMC', category: 'Filosofía', url: '#cualidades', snippet: 'Guía paso a paso sin bloqueos, ligereza en segundo plano, lectura clara, voz, uso en tablet y código abierto.' },
 
   // Módulos (16)
-  { title: 'Panel General (Dashboard)', category: 'Módulo', url: '#mod-dashboard', snippet: 'Estado del comandante, créditos, rangos, banderas en vivo de Status.json, métricas de sesión y alertas.' },
-  { title: 'Nave & Equipamiento (Loadout)', category: 'Módulo', url: '#mod-ship', snippet: 'Auditoría por rol (Exploración, Combate, Carga) y desglose de ranuras con integridad e ingeniería aplicada.' },
-  { title: 'Navegación & Planificador Spansh', category: 'Módulo', url: '#mod-navigation', snippet: 'Ruta exacta (Exact Plotter con física leída del diario), Autopista de neutrones, coordenadas 3D y RouteStrip.' },
-  { title: 'Exploración Cartográfica', category: 'Módulo', url: '#mod-exploration', snippet: 'Progreso FSS, tabla adaptativa de cuerpos celestes y umbral configurable de mapeo DSS.' },
-  { title: 'Exobiología de Superficie', category: 'Módulo', url: '#mod-exobiology', snippet: 'Predicción de especies candidatas en Odyssey y cálculo GPS en tiempo real de distancias mínimas clonales (3 muestras).' },
-  { title: 'Combate & Actividad Anti-Xeno', category: 'Módulo', url: '#mod-combat', snippet: 'Lectura de objetivo fijado (ShipTargeted), subsistemas, Zonas de Conflicto, bonos y seguimiento AX.' },
-  { title: 'Minería & Prospección', category: 'Módulo', url: '#mod-mining', snippet: 'Análisis de drones prospectores, cadencia en toneladas/hora, minerales de interés y radio de venta.' },
-  { title: 'Comercio & Mercados', category: 'Módulo', url: '#mod-trade', snippet: 'Inventario de carga, comparativa de Market.json frente a datos EDDN y filtros por plataforma.' },
-  { title: 'Misiones & Contratos', category: 'Módulo', url: '#mod-missions', snippet: 'Seguimiento de expiración, referencia de turismo y agrupación de misiones de masacre por facción emisora.' },
-  { title: 'Ingeniería & Materiales (EngineerFlow)', category: 'Módulo', url: '#mod-engineering', snippet: 'Guía secuencial de desbloqueo de ingenieros, almacén, taquilla Odyssey, lista de la compra y Material Traders.' },
-  { title: 'Fleet Carrier', category: 'Módulo', url: '#mod-carrier', snippet: 'Reserva y consumo de Tritio, cuenta atrás de saltos programados, ocupación y presupuesto semanal.' },
-  { title: 'Colonización de Sistemas', category: 'Módulo', url: '#mod-colonisation', snippet: 'Control de entregas de materias primas de construcción y localización de oferta en mercados cercanos.' },
-  { title: 'Powerplay 2.0', category: 'Módulo', url: '#mod-powerplay', snippet: 'Potencia vinculada, rango actual, méritos acumulados en el ciclo semanal y estado estratégico del sistema.' },
-  { title: 'Simulación de Fondo (BGS)', category: 'Módulo', url: '#mod-bgs', snippet: 'Tabla de facciones menores, porcentajes de influencia, estados activos/pendientes y acciones de sesión.' },
-  { title: 'Crimen & Jurisdicción', category: 'Módulo', url: '#mod-crime', snippet: 'Multas, recompensas, decaimiento de notoriedad (2 h/punto), carga ilegal e Interstellar Factors cercanos.' },
-  { title: 'Cuentas & Sincronización', category: 'Módulo', url: '#mod-accounts', snippet: 'Frontier CAPI (OAuth2 PKCE y flota remota), Inara InAPI v1 (whitelist oficial), EDSM y EDDN.' },
+  { title: 'Panel General', category: 'Módulo', url: '#mod-dashboard', snippet: 'Resumen de tu comandante, créditos, rangos, estado general de la nave, sesión actual y avisos importantes.' },
+  { title: 'Nave y Equipamiento', category: 'Módulo', url: '#mod-ship', snippet: 'Revisión de piezas instaladas, estado de salud, mejoras aplicadas y listas rápidas antes de despegar.' },
+  { title: 'Navegación y Planificador de Rutas', category: 'Módulo', url: '#mod-navigation', snippet: 'Rutas exactas adaptadas a tu nave actual o por estrellas de neutrones, paradas de repostaje y copia de saltos.' },
+  { title: 'Exploración Cartográfica', category: 'Módulo', url: '#mod-exploration', snippet: 'Estrellas donde repostar, planetas descubiertos en el sistema y recomendación de cuáles mapear con sondas.' },
+  { title: 'Exobiología', category: 'Módulo', url: '#mod-exobiology', snippet: 'Especies posibles en la superficie del planeta y medidor visual de distancia para completar las tres muestras.' },
+  { title: 'Combate y Defensa Anti-Xeno', category: 'Módulo', url: '#mod-combat', snippet: 'Datos claros de la nave objetivo, Zonas de Conflicto, recompensas acumuladas y combates contra Thargoides.' },
+  { title: 'Minería', category: 'Módulo', url: '#mod-mining', snippet: 'Composición de asteroides al prospectar, ritmo de extracción, minerales favoritos y estaciones de venta cercanas.' },
+  { title: 'Comercio y Mercados', category: 'Módulo', url: '#mod-trade', snippet: 'Contenido de tu bodega, comparación de precios en la estación actual y rutas según tamaño de aterrizaje.' },
+  { title: 'Misiones', category: 'Módulo', url: '#mod-missions', snippet: 'Control de tiempos de entrega y organización por facciones en misiones de caza de piratas.' },
+  { title: 'Ingeniería y Materiales', category: 'Módulo', url: '#mod-engineering', snippet: 'Pasos para desbloquear cada ingeniero, almacén, taquilla a pie, lista de la compra e intercambios con sobrantes.' },
+  { title: 'Fleet Carrier', category: 'Módulo', url: '#mod-carrier', snippet: 'Reservas de Tritio, cuenta atrás de saltos programados, espacio disponible y gastos semanales del portaaviones.' },
+  { title: 'Colonización de Sistemas', category: 'Módulo', url: '#mod-colonisation', snippet: 'Progreso de materiales entregados para levantar nuevas estaciones y mercados cercanos donde comprarlos.' },
+  { title: 'Powerplay 2.0', category: 'Módulo', url: '#mod-powerplay', snippet: 'Potencia galáctica a la que apoyas, rango actual, méritos semanales y situación de los sistemas visitados.' },
+  { title: 'Facciones y Política Local (BGS)', category: 'Módulo', url: '#mod-bgs', snippet: 'Porcentajes de influencia de las facciones del sistema, estados activos y registro de tus aportaciones.' },
+  { title: 'Estado Legal y Multas', category: 'Módulo', url: '#mod-crime', snippet: 'Multas pendientes, nivel de notoriedad, carga ilegal y localización de contactos neutrales Interstellar Factors.' },
+  { title: 'Cuentas de la Comunidad', category: 'Módulo', url: '#mod-accounts', snippet: 'Consulta dónde tienes guardadas tus otras naves con Frontier y sincroniza opcionalmente con Inara y EDSM.' },
 
-  // Guía de instrucciones
-  { title: 'Instalación, SmartScreen y Archivos Locales', category: 'Instrucciones', url: '#manual-install', snippet: 'Instalador NSIS, nota sobre Windows SmartScreen, config.toml, tmc.db, bandeja del sistema y flag --journal-dir.' },
-  { title: 'Anatomía de Interfaz, Disposiciones y Auto-companion', category: 'Instrucciones', url: '#manual-hud', snippet: 'TopBar, diferencia entre Disposiciones combinadas y Módulos individuales, y paneles desplegables.' },
-  { title: 'Pantalla Auxiliar en Red Local (Código QR)', category: 'Instrucciones', url: '#manual-lan', snippet: 'Cómo abrir la interfaz en una tablet o teléfono en la misma red Wi-Fi escaneando el código QR.' },
-  { title: 'Síntesis de Voz (TTS), Reconocimiento y VoiceAttack', category: 'Instrucciones', url: '#manual-voice', snippet: 'Voces SAPI5/OneCore y KokoroTTS, reconocimiento Whisper AI Local y exportación del perfil TMC-Copiloto.vap.' },
-  { title: 'Vinculación Opcional: CAPI, Inara, EDSM y EDDN', category: 'Instrucciones', url: '#manual-accounts', snippet: 'Configuración paso a paso de servicios externos y modo de funcionamiento 100 % local.' },
-  { title: 'Compilación desde el Código Fuente', category: 'Código Abierto', url: '#manual-build', snippet: 'Comandos git clone, npm build, cargo test y cargo build --release para compilar TMC localmente.' },
+  // Primeros pasos
+  { title: 'Instalación y Puesta en Marcha', category: 'Primeros Pasos', url: '#manual-install', snippet: 'Cómo instalar TMC en Windows, abrirlo junto al juego y encontrarlo en el icono junto al reloj.' },
+  { title: 'Moverse por la Aplicación y Modo Automático', category: 'Primeros Pasos', url: '#manual-hud', snippet: 'Vistas combinadas, módulos individuales, detalles desplegables y cambio automático Auto-companion.' },
+  { title: 'Usarlo en tu Tablet o Móvil', category: 'Primeros Pasos', url: '#manual-lan', snippet: 'Escanea el código QR en Ajustes para manejar los paneles desde una pantalla táctil en tu mismo Wi-Fi.' },
+  { title: 'Avisos Hablados y Control por Voz', category: 'Primeros Pasos', url: '#manual-voice', snippet: 'Cómo activar la voz del copiloto, hacer consultas con micrófono o descargar el perfil para VoiceAttack.' },
+  { title: 'Conectar Inara, EDSM o Frontier', category: 'Primeros Pasos', url: '#manual-accounts', snippet: 'Pasos opcionales para sincronizar tu perfil comunitario o ver tu flota aparcada en otras estaciones.' },
 
-  // Flujos de trabajo
-  { title: 'Flujo: Muestreo Genético en Exobiología', category: 'Procedimiento', url: '#tut-exobiology', snippet: 'Secuencia de escaneo FSS/DSS y toma de las 3 muestras respetando el radio mínimo clonal.' },
-  { title: 'Flujo: Desbloqueo de Ingenieros e Intercambio', category: 'Procedimiento', url: '#tut-engineering', snippet: 'Cálculo de blueprint, verificación de pasos de desbloqueo, lista de la compra y trueque de excedentes.' },
-  { title: 'Flujo: Seguimiento de Misiones por Facción', category: 'Procedimiento', url: '#tut-massacre', snippet: 'Control de columnas por facción emisora para computar bajas en paralelo y plazos de entrega.' },
-  { title: 'Flujo: Gestión de Notoriedad e Interstellar Factors', category: 'Procedimiento', url: '#tut-crime', snippet: 'Comprobación de notoriedad 0 y localización de contactos neutrales para liquidar sanciones.' }
+  // Guías de uso
+  { title: 'Guía: Recoger Muestras de Exobiología', category: 'Guía de Uso', url: '#tut-exobiology', snippet: 'Cómo usar el indicador de distancia para saber cuándo escanear la segunda y tercera muestra.' },
+  { title: 'Guía: Desbloquear un Ingeniero y Mejorar tu Nave', category: 'Guía de Uso', url: '#tut-engineering', snippet: 'Cómo seguir los pasos de acceso al taller, guardar tu lista de la compra y canjear materiales repetidos.' },
+  { title: 'Guía: Organizar Misiones de Caza por Facciones', category: 'Guía de Uso', url: '#tut-massacre', snippet: 'Cómo ver en columnas cuántos objetivos te faltan por cada facción que te ha contratado.' },
+  { title: 'Guía: Saldar Multas y Gestionar la Notoriedad', category: 'Guía de Uso', url: '#tut-crime', snippet: 'Cómo comprobar cuándo tu notoriedad baja a cero y acudir al contacto neutral más cercano.' }
 ];
 
 function initSearchModal() {
@@ -387,7 +386,7 @@ function initFaqAccordion() {
 }
 
 // ===================================================================
-// 5. BOTONES DE COPIAR CÓDIGO Y RUTAS CON FEEDBACK
+// 5. BOTONES DE COPIADO CON AVISO VISUAL
 // ===================================================================
 
 function initCodeCopyButtons() {
@@ -399,7 +398,7 @@ function initCodeCopyButtons() {
       if (!snippet) return;
 
       const codeText = snippet.innerText.replace(btn.innerText, '').trim();
-      copyToClipboard(codeText, 'Comandos copiados al portapapeles');
+      copyToClipboard(codeText, 'Texto copiado al portapapeles');
 
       const originalText = btn.textContent;
       btn.textContent = 'Copiado';
