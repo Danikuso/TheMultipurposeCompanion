@@ -333,3 +333,119 @@ fn search_blocks_network_in_replay_legacy_and_offline_and_supports_fallback_and_
     );
     assert_eq!(m.topic_value(TOPIC_SEARCH).unwrap()["status"], "idle");
 }
+
+#[test]
+fn multi_component_basket_search_aggregates_items_at_same_station() {
+    let mut m = ShipModule::new();
+    let mut state = GameState::default();
+    apply_journal(
+        &mut m,
+        &mut state,
+        r#"{"timestamp":"2026-10-28T10:00:00Z","event":"LoadGame","Commander":"Cmdr","FID":"F3","Ship":"krait_mkii","Credits":60000000}"#,
+    );
+    apply_journal(
+        &mut m,
+        &mut state,
+        r#"{"timestamp":"2026-10-28T10:00:01Z","event":"Loadout","Ship":"krait_mkii","ShipID":1,"Rebuy":2500000,"Modules":[]}"#,
+    );
+    apply_journal(
+        &mut m,
+        &mut state,
+        r#"{"timestamp":"2026-10-28T10:00:03Z","event":"Location","Docked":false,"StarSystem":"Sol","SystemAddress":10477373803,"StarPos":[0.0,0.0,0.0]}"#,
+    );
+
+    let mut ctx = ModuleCtx::new("ship", false, 99);
+    let changed = m.on_event(
+        &SourceEvent::Action {
+            name: ACTION_SEARCH.into(),
+            args: json!({
+                "modules": [
+                    { "name": "Power Plant", "class": 5, "rating": "A" },
+                    { "name": "Thrusters", "class": 5, "rating": "A" },
+                    { "name": "Frame Shift Drive (SCO)", "class": 5, "rating": "A" },
+                    { "name": "Power Distributor", "class": 5, "rating": "A" },
+                    { "name": "Shield Generator", "class": 5, "rating": "A" }
+                ],
+                "only_lyr_discount": true
+            }),
+        },
+        &state,
+        &mut ctx,
+    );
+    assert!(changed.contains(TOPIC_SEARCH));
+    let (reqs, _, _) = ctx.take_outputs();
+    assert_eq!(reqs.len(), 1);
+    let NetQuery::OutfittingSearch(ref p) = reqs[0].query else {
+        panic!("esperaba OutfittingSearch");
+    };
+    assert_eq!(p.modules.len(), 5);
+    assert!(p.ship.is_none());
+    assert!(p.only_lyr_discount);
+
+    // Simular que una estación tiene los 5 componentes en la misma ubicación
+    let hit_kyriazi = OutfittingStationHit {
+        station_name: "Kyriazi Survey".into(),
+        system_name: "Tascheter Sector IX-K a8-3".into(),
+        station_type: Some("Orbis Starport".into()),
+        market_id: Some(999),
+        distance_ly: 36.93,
+        distance_to_arrival_ls: Some(3501.0),
+        max_pad: Some(PadSize::Large),
+        is_planetary: false,
+        is_carrier: false,
+        is_stronghold_carrier: false,
+        controlling_power: None,
+        discount_tag: Some("lyr_15".into()),
+        updated_at: Some(Utc::now()),
+        item_prices: vec![
+            StockedItemPrice {
+                label: "5A Power Plant".into(),
+                price_cr: Some(3_675_145),
+            },
+            StockedItemPrice {
+                label: "5A Thrusters".into(),
+                price_cr: Some(4_338_358),
+            },
+            StockedItemPrice {
+                label: "5A Frame Shift Drive (SCO)".into(),
+                price_cr: Some(5_206_032),
+            },
+            StockedItemPrice {
+                label: "5A Power Distributor".into(),
+                price_cr: Some(1_055_122),
+            },
+            StockedItemPrice {
+                label: "5A Shield Generator".into(),
+                price_cr: Some(4_338_358),
+            },
+        ],
+        total_price_cr: Some(18_613_015),
+    };
+
+    let resp = NetResponse {
+        id: 99,
+        module: "ship".into(),
+        key: reqs[0].key.clone(),
+        source: NetSource::Spansh,
+        fetched_at: Utc::now(),
+        outcome: NetOutcome::OutfittingStations(OutfittingSearchResult {
+            stations: vec![hit_kyriazi],
+            fallback: Vec::new(),
+        }),
+    };
+
+    let mut ctx2 = ModuleCtx::new("ship", false, 100);
+    m.on_event(&SourceEvent::Net(resp), &state, &mut ctx2);
+
+    let s = m.topic_value(TOPIC_SEARCH).unwrap();
+    assert_eq!(s["status"], "ok");
+    let stations = s["stations"].as_array().unwrap();
+    assert_eq!(stations.len(), 1);
+    let st = &stations[0];
+    assert_eq!(st["station_name"], "Kyriazi Survey");
+    assert_eq!(st["system_name"], "Tascheter Sector IX-K a8-3");
+    assert_eq!(st["total_price_cr"], 18_613_015);
+    assert_eq!(st["item_prices"].as_array().unwrap().len(), 5);
+    // 60M - 18.6M = 41.4M > 2.5M de seguro -> "ok"
+    assert_eq!(st["affordability"], "ok");
+}
