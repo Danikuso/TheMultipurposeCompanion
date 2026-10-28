@@ -58,6 +58,8 @@ pub enum NetQuery {
     },
     /// Consulta del último tick galáctico del BGS (EDCD).
     BgsTick,
+    /// Búsqueda de astilleros (naves) y equipamiento (módulos) cercanos (Spansh).
+    OutfittingSearch(OutfittingSearchParams),
 }
 
 /// Tamaño de plataforma de aterrizaje.
@@ -204,6 +206,7 @@ pub enum NetOutcome {
     Exports(Vec<RemoteExport>),
     Coords(SystemCoords),
     BgsTick(BgsTickInfo),
+    OutfittingStations(OutfittingSearchResult),
     NoData,
     Disabled,
     Failed(NetFailure),
@@ -223,6 +226,7 @@ impl NetOutcome {
             Self::Exports(v) => ("exports", v.len()),
             Self::Coords(_) => ("coords", 1),
             Self::BgsTick(_) => ("bgs_tick", 1),
+            Self::OutfittingStations(res) => ("outfitting_stations", res.stations.len()),
             Self::NoData => ("no_data", 0),
             Self::Disabled => ("disabled", 0),
             Self::Failed(_) => ("failed", 0),
@@ -409,6 +413,127 @@ pub struct RemoteStation {
     pub distance_to_arrival_ls: Option<f64>,
     pub max_pad: Option<PadSize>,
     pub updated_at: Option<DateTime<Utc>>,
+}
+
+/// Modo de montaje en armas de anclaje (`weapon_mode` en Spansh).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum WeaponMode {
+    Fixed,
+    Gimbal,
+    Turret,
+}
+
+impl WeaponMode {
+    pub fn as_spansh_str(self) -> &'static str {
+        match self {
+            Self::Fixed => "Fixed",
+            Self::Gimbal => "Gimbal",
+            Self::Turret => "Turret",
+        }
+    }
+}
+
+/// Componente de nave solicitado en una búsqueda de equipamiento.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OutfittingModuleQuery {
+    pub name: String,
+    #[serde(default)]
+    pub class: Option<u8>,
+    #[serde(default)]
+    pub rating: Option<String>,
+    #[serde(default)]
+    pub weapon_mode: Option<WeaponMode>,
+    #[serde(default)]
+    pub armour_ship: Option<String>,
+}
+
+impl OutfittingModuleQuery {
+    /// Etiqueta legible del componente buscado (ej. `5A Frame Shift Drive (SCO)`).
+    pub fn display_label(&self) -> String {
+        let mut prefix = String::new();
+        if let Some(c) = self.class {
+            prefix.push_str(&c.to_string());
+        }
+        if let Some(r) = &self.rating {
+            prefix.push_str(r);
+        }
+        let mut label = if prefix.is_empty() {
+            self.name.clone()
+        } else {
+            format!("{prefix} {}", self.name)
+        };
+        if let Some(mode) = self.weapon_mode {
+            label.push_str(&format!(" ({})", mode.as_spansh_str()));
+        }
+        if let Some(ship) = &self.armour_ship {
+            label.push_str(&format!(" [{ship}]"));
+        }
+        label
+    }
+}
+
+/// Parámetros de búsqueda combinada de naves y componentes en estaciones cercanas.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OutfittingSearchParams {
+    pub reference_system: String,
+    #[serde(default)]
+    pub reference_coords: Option<[f64; 3]>,
+    #[serde(default)]
+    pub ship: Option<String>,
+    #[serde(default)]
+    pub modules: Vec<OutfittingModuleQuery>,
+    pub min_pad: PadSize,
+    #[serde(default)]
+    pub only_lyr_discount: bool,
+    #[serde(default)]
+    pub include_own_stronghold: bool,
+    #[serde(default)]
+    pub pledged_power: Option<String>,
+    #[serde(default)]
+    pub include_carriers: bool,
+    #[serde(default)]
+    pub include_planetary: bool,
+}
+
+/// Precio reportado de un elemento solicitado en una estación concreta.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StockedItemPrice {
+    pub label: String,
+    pub price_cr: Option<u64>,
+}
+
+/// Estación cercana con disponibilidad de la nave y/o componentes solicitados.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OutfittingStationHit {
+    pub station_name: String,
+    pub system_name: String,
+    pub station_type: Option<String>,
+    pub market_id: Option<u64>,
+    pub distance_ly: f64,
+    pub distance_to_arrival_ls: Option<f64>,
+    pub max_pad: Option<PadSize>,
+    pub is_planetary: bool,
+    pub is_carrier: bool,
+    pub is_stronghold_carrier: bool,
+    pub controlling_power: Option<String>,
+    pub discount_tag: Option<String>,
+    pub updated_at: Option<DateTime<Utc>>,
+    pub item_prices: Vec<StockedItemPrice>,
+    pub total_price_cr: Option<u64>,
+}
+
+/// Resultado de respaldo individual por elemento cuando ninguna estación reúne toda la cesta.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OutfittingFallbackEntry {
+    pub item_label: String,
+    pub nearest_station: Option<OutfittingStationHit>,
+}
+
+/// Resultado completo de una consulta de astilleros y equipamiento.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct OutfittingSearchResult {
+    pub stations: Vec<OutfittingStationHit>,
+    pub fallback: Vec<OutfittingFallbackEntry>,
 }
 
 #[cfg(test)]
@@ -640,5 +765,78 @@ mod tests {
         }));
         let back: NetResponse = serde_json::from_str(&serde_json::to_string(&r).unwrap()).unwrap();
         assert_eq!(back, r);
+    }
+
+    #[test]
+    fn outfitting_search_query_and_outcome_roundtrip_and_summarize() {
+        let params = OutfittingSearchParams {
+            reference_system: "Sol".into(),
+            reference_coords: Some([0.0, 0.0, 0.0]),
+            ship: Some("Mandalay".into()),
+            modules: vec![
+                OutfittingModuleQuery {
+                    name: "Frame Shift Drive (SCO)".into(),
+                    class: Some(5),
+                    rating: Some("A".into()),
+                    weapon_mode: None,
+                    armour_ship: None,
+                },
+                OutfittingModuleQuery {
+                    name: "Multi-Cannon".into(),
+                    class: Some(3),
+                    rating: Some("C".into()),
+                    weapon_mode: Some(WeaponMode::Gimbal),
+                    armour_ship: None,
+                },
+            ],
+            min_pad: PadSize::Medium,
+            only_lyr_discount: true,
+            include_own_stronghold: true,
+            pledged_power: Some("Li Yong-Rui".into()),
+            include_carriers: false,
+            include_planetary: true,
+        };
+        let q = NetQuery::OutfittingSearch(params);
+        let back_q: NetQuery = serde_json::from_str(&serde_json::to_string(&q).unwrap()).unwrap();
+        assert_eq!(back_q, q);
+
+        let hit = OutfittingStationHit {
+            station_name: "Ray Gateway".into(),
+            system_name: "Diaguandri".into(),
+            station_type: Some("Coriolis Starport".into()),
+            market_id: Some(128066403),
+            distance_ly: 123.4,
+            distance_to_arrival_ls: Some(392.0),
+            max_pad: Some(PadSize::Large),
+            is_planetary: false,
+            is_carrier: false,
+            is_stronghold_carrier: false,
+            controlling_power: Some("Li Yong-Rui".into()),
+            discount_tag: Some("lyr_15".into()),
+            updated_at: Some("2026-10-28T12:00:00Z".parse().unwrap()),
+            item_prices: vec![
+                StockedItemPrice {
+                    label: "Mandalay".into(),
+                    price_cr: Some(14_993_338),
+                },
+                StockedItemPrice {
+                    label: "5A Frame Shift Drive (SCO)".into(),
+                    price_cr: Some(5_206_031),
+                },
+            ],
+            total_price_cr: Some(20_199_369),
+        };
+        let outcome = NetOutcome::OutfittingStations(OutfittingSearchResult {
+            stations: vec![hit.clone()],
+            fallback: vec![OutfittingFallbackEntry {
+                item_label: "Mandalay".into(),
+                nearest_station: Some(hit),
+            }],
+        });
+        assert_eq!(outcome.diag_summary(), ("outfitting_stations", 1));
+        let r = response(outcome);
+        let back_r: NetResponse =
+            serde_json::from_str(&serde_json::to_string(&r).unwrap()).unwrap();
+        assert_eq!(back_r, r);
     }
 }

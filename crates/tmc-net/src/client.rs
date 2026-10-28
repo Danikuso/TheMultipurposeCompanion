@@ -509,6 +509,7 @@ impl NetClient {
                     .await;
                 (NetSource::Edcd, out)
             }
+            NetQuery::OutfittingSearch(_) => (NetSource::Spansh, NetOutcome::NoData),
         }
     }
 

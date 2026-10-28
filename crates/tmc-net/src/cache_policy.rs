@@ -141,6 +141,7 @@ pub fn cache_keys(q: &NetQuery) -> Vec<(CacheKind, String)> {
             format!("coords:{}", name.trim().to_lowercase()),
         )],
         NetQuery::BgsTick => vec![(CacheKind::BgsTick, "edcd:bgs_tick".to_string())],
+        NetQuery::OutfittingSearch(_) => Vec::new(),
         NetQuery::CommodityImportsNearby {
             system_address,
             commodity,

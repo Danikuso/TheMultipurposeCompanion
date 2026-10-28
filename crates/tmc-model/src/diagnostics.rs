@@ -250,9 +250,12 @@ const TOPICS: &[&str] = &[
     "bgs.tick",
     "accounts.status",
     "crime.status",
+    "ship.outfitting_catalog",
+    "ship.outfitting_search",
 ];
 const MODULES: &[&str] = &[
     "dashboard",
+    "ship",
     "navigation",
     "exploration",
     "exobiology",
@@ -271,6 +274,8 @@ const MODULES: &[&str] = &[
 const ACTIONS: &[&str] = &[
     "clipboard.copy-next-system",
     "crime.copy_system",
+    "ship.outfitting_search",
+    "ship.outfitting_clear",
     "navigation.plan",
     "navigation.recalculate",
     "navigation.accept-plan",
@@ -685,6 +690,8 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
                 | "trade_route"
                 | "exports"
                 | "coords"
+                | "bgs_tick"
+                | "outfitting_stations"
                 | "no_data"
                 | "disabled"
                 | "failed"
@@ -805,6 +812,7 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
                     | "ardent.nearest.technology_broker"
                     | "spansh.stations.material_trader"
                     | "spansh.stations.technology_broker"
+                    | "spansh.stations.outfitting"
                     | "spansh.trade.job"
                     | "ardent.nearby.exports"
                     | "ardent.system.coords"
@@ -1816,5 +1824,26 @@ mod tests {
             let safe = redact_diagnostic(&json!({"route":route}), DiagnosticContext::Http);
             assert_eq!(safe["route"], REDACTED);
         }
+    }
+
+    #[test]
+    fn ship_outfitting_topics_actions_and_endpoints_are_registered() {
+        assert!(is_registered_topic("ship.outfitting_catalog"));
+        assert!(is_registered_topic("ship.outfitting_search"));
+        assert!(is_registered_action("ship.outfitting_search"));
+        assert!(is_registered_action("ship.outfitting_clear"));
+        let safe = redact_diagnostic(
+            &json!({
+                "module": "ship",
+                "endpoint": "spansh.stations.outfitting",
+                "outcome": "outfitting_stations",
+                "pledged_power": "CANARY_SECRET"
+            }),
+            DiagnosticContext::NetOutcome,
+        );
+        assert_eq!(safe["module"], "ship");
+        assert_eq!(safe["endpoint"], "spansh.stations.outfitting");
+        assert_eq!(safe["outcome"], "outfitting_stations");
+        assert_eq!(safe["pledged_power"], REDACTED);
     }
 }
