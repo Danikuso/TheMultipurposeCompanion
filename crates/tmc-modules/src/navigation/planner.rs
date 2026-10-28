@@ -203,7 +203,10 @@ impl Navigation {
                 let supercharge_multiplier = fsd.map_or(4.0, |f| {
                     supercharge_multiplier(f.kind, StarSpecial::Neutron)
                 });
-                let from_coords = if state.location.system.eq_ignore_ascii_case(&req.from) {
+                let from_coords = if state.location.system.eq_ignore_ascii_case(&req.from)
+                    || (state.location.system_address != 0
+                        && req.from_id64 == Some(state.location.system_address))
+                {
                     let p = state.location.star_pos;
                     (p[0] != 0.0 || p[1] != 0.0 || p[2] != 0.0).then_some(p)
                 } else {
@@ -234,7 +237,10 @@ impl Navigation {
                 else {
                     return Err(ERR_NO_RANGE);
                 };
-                let from_coords = if state.location.system.eq_ignore_ascii_case(&req.from) {
+                let from_coords = if state.location.system.eq_ignore_ascii_case(&req.from)
+                    || (state.location.system_address != 0
+                        && req.from_id64 == Some(state.location.system_address))
+                {
                     let p = state.location.star_pos;
                     (p[0] != 0.0 || p[1] != 0.0 || p[2] != 0.0).then_some(p)
                 } else {
@@ -437,7 +443,7 @@ impl Navigation {
         let keep = self.planner.req_id;
         match &r.outcome {
             NetOutcome::Route(route) if route.hops.len() > MAX_HOPS => self.plan_fail(ERR_TOO_LONG),
-            NetOutcome::Route(route) if route.hops.len() >= 2 => {
+            NetOutcome::Route(route) if !route.hops.is_empty() => {
                 self.planner.status = PlanStatus::Ready;
                 self.planner.result = Some(route.clone());
                 self.planner.error_key = None;

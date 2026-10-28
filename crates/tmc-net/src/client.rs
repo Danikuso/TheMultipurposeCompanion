@@ -796,10 +796,6 @@ impl NetClient {
         parse: impl Fn(&str) -> Result<Step, NetFailure>,
     ) -> NetOutcome {
         let service = Service::Spansh;
-        if self.is_down(service) {
-            net_event!("net.health.skipped_down", {"source": source_of(service)});
-            return NetOutcome::Failed(NetFailure::Down);
-        }
         let _one_at_a_time = self.route_lock.lock().await;
         net_event!("net.route.lock_acquired", {});
         let job = match self.call(service, post, online).await {
@@ -818,7 +814,7 @@ impl NetClient {
         let deadline = tokio::time::Instant::now() + limit;
         loop {
             let body = match self
-                .call(service, Req::Get(spansh::results_url(&job)), online)
+                .call_poll(service, Req::Get(spansh::results_url(&job)), online)
                 .await
             {
                 Ok(body) => {
@@ -834,6 +830,7 @@ impl NetClient {
                     if transient > MAX_TRANSIENT_POLL_FAILURES
                         || tokio::time::Instant::now() >= deadline
                     {
+                        self.fail(service);
                         return NetOutcome::Failed(f);
                     }
                     tokio::time::sleep(POLL_EVERY).await;
@@ -854,10 +851,9 @@ impl NetClient {
                 }
                 Ok(Step::Pending) => {
                     net_event!("net.route.poll.pending", {});
-                    self.succeed(service)
+                    self.succeed(service);
                 }
                 Err(e) => {
-                    self.fail(service);
                     return NetOutcome::Failed(e);
                 }
             }
@@ -869,6 +865,15 @@ impl NetClient {
         }
     }
 
+    async fn call_poll(
+        &self,
+        service: Service,
+        req: Req,
+        online: Option<&AtomicBool>,
+    ) -> Result<String, Miss> {
+        self.call_with_policy(service, req, online, false).await
+    }
+
     /// Limitador + transporte + traducción de estado HTTP. `Ok(cuerpo)` solo
     /// para 2xx; el éxito de salud lo registra quien interpreta el cuerpo.
     async fn call(
@@ -876,6 +881,16 @@ impl NetClient {
         service: Service,
         req: Req,
         online: Option<&AtomicBool>,
+    ) -> Result<String, Miss> {
+        self.call_with_policy(service, req, online, true).await
+    }
+
+    async fn call_with_policy(
+        &self,
+        service: Service,
+        req: Req,
+        online: Option<&AtomicBool>,
+        record_failure: bool,
     ) -> Result<String, Miss> {
         if !online_allowed(online) {
             net_event!("net.optout.blocked", {"stage": 1, "source": source_of(service)});
@@ -909,12 +924,16 @@ impl NetClient {
             "bytes": reply.as_ref().map_or(0, |r| r.body.len())});
         match reply {
             Err(TransportError::Timeout) => {
-                self.fail(service);
+                if record_failure {
+                    self.fail(service);
+                }
                 Err(Miss::Fail(NetFailure::Timeout))
             }
             Err(TransportError::Connect(msg)) => {
                 tracing::debug!(%msg, ?service, "fallo de conexión");
-                self.fail(service);
+                if record_failure {
+                    self.fail(service);
+                }
                 Err(Miss::Fail(NetFailure::Down))
             }
             Ok(HttpReply { status, body }) => match status {
@@ -924,7 +943,9 @@ impl NetClient {
                     Err(Miss::NoData)
                 }
                 429 => {
-                    self.fail(service);
+                    if record_failure {
+                        self.fail(service);
+                    }
                     Err(Miss::Fail(NetFailure::RateLimited))
                 }
                 500..=599 => {
@@ -936,7 +957,9 @@ impl NetClient {
                     {
                         return Ok(body);
                     }
-                    self.fail(service);
+                    if record_failure {
+                        self.fail(service);
+                    }
                     Err(Miss::Fail(NetFailure::Http(status)))
                 }
                 // Otros 4xx: petición rechazada, no es un fallo del servicio.
