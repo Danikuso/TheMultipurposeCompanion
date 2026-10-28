@@ -472,44 +472,51 @@ function showToast(message) {
 // ===================================================================
 
 function initScrollSpy() {
-  const sections = document.querySelectorAll('section[id]');
-  const chapters = document.querySelectorAll('.manual-chapter[id]');
+  const sections = Array.from(document.querySelectorAll('section[id]'));
+  const chapters = Array.from(document.querySelectorAll('.manual-chapter[id]'));
   const navLinks = document.querySelectorAll('.nav-link');
   const manualNavItems = document.querySelectorAll('.manual-nav-item');
 
-  window.addEventListener('scroll', () => {
-    const scrollPos = window.scrollY + 140;
+  function updateActiveItems() {
+    const sectionTriggerY = Math.min(200, window.innerHeight * 0.25);
+    const chapterTriggerY = Math.min(220, window.innerHeight * 0.28);
 
-    sections.forEach((section) => {
-      const top = section.offsetTop;
-      const height = section.offsetHeight;
-      const id = section.getAttribute('id');
-
-      if (scrollPos >= top && scrollPos < top + height) {
-        navLinks.forEach((link) => {
-          link.classList.remove('active');
-          if (link.getAttribute('href') === `#${id}`) {
-            link.classList.add('active');
-          }
-        });
+    // 1. Barra de navegación superior
+    let activeSectionId = null;
+    for (const section of sections) {
+      const rect = section.getBoundingClientRect();
+      if (rect.top <= sectionTriggerY && rect.bottom > sectionTriggerY) {
+        activeSectionId = section.getAttribute('id');
       }
+    }
+
+    navLinks.forEach((link) => {
+      const isMatch = activeSectionId && link.getAttribute('href') === `#${activeSectionId}`;
+      link.classList.toggle('active', Boolean(isMatch));
     });
 
-    chapters.forEach((chapter) => {
-      const top = chapter.offsetTop;
-      const height = chapter.offsetHeight;
-      const id = chapter.getAttribute('id');
+    // 2. Índice lateral de «Guía Rápida» (usando coordenadas reales del viewport,
+    // inmune a contenedores padres con position: relative como .container)
+    if (chapters.length > 0) {
+      let activeChapterId = chapters[0].getAttribute('id');
 
-      if (scrollPos >= top && scrollPos < top + height) {
-        manualNavItems.forEach((link) => {
-          link.classList.remove('active');
-          if (link.getAttribute('href') === `#${id}`) {
-            link.classList.add('active');
-          }
-        });
+      for (const chapter of chapters) {
+        const rect = chapter.getBoundingClientRect();
+        if (rect.top <= chapterTriggerY) {
+          activeChapterId = chapter.getAttribute('id');
+        }
       }
-    });
-  });
+
+      manualNavItems.forEach((link) => {
+        const isMatch = link.getAttribute('href') === `#${activeChapterId}`;
+        link.classList.toggle('active', isMatch);
+      });
+    }
+  }
+
+  window.addEventListener('scroll', updateActiveItems, { passive: true });
+  window.addEventListener('resize', updateActiveItems, { passive: true });
+  updateActiveItems();
 }
 
 // ===================================================================
