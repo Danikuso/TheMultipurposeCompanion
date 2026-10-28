@@ -1,6 +1,6 @@
 # Spike de diario F4 (materiales, ingenieros, taquilla)
 
-Fecha: 2026-10-21. Método: script desechable de solo lectura sobre los 9 diarios del propietario (Odyssey, 5 sesiones `LoadGame`); solo se anotan **agregados** y claves de datos del juego (AGENTS.md §6). Lo no visto se completa con el manual público del diario de Frontier y se marca «no visto / documentación».
+Fecha: 2026-10-21. Método: script desechable de solo lectura sobre los 9 diarios del propietario (Odyssey, 5 sesiones `LoadGame`); solo se anotan **agregados** y claves de datos del juego (política de licencias del proyecto). Lo no visto se completa con el manual público del diario de Frontier y se marca «no visto / documentación».
 
 ## 1. Recuentos y campos por evento (9 ficheros, 5 sesiones)
 

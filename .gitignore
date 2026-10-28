@@ -2,7 +2,6 @@
 .remember/
 .playwright-mcp/
 
-
 # Rust
 target/
 
@@ -32,4 +31,3 @@ target-f3/
 target-f2/
 target-f4/
 .tmp/
-

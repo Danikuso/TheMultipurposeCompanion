@@ -63,8 +63,8 @@ Sirve para predicción **por propiedades** (variantes cuyo rango contiene graved
 
 ## 5. Licencia y condiciones de uso
 
-- Datos y código de Canonn: **GPL-3.0** (`Canonn-GCloud` confirmado: `LICENSE` GPL v3; resto en `spike_licencias_f1.md`). Consumo por red sí; copiar al repo no (AGENTS.md §6). Respetado: solo hay fixtures sintéticos.
-- **Condición de uso explícita** (README de `Canonn-GCloud/query`, «Usage»; última modificación del archivo: commit `11b5167775`, 2024-09-15; leído el 2026-10-17): para usar esas funciones en software propio *«we require that you make a formal request to Canonn and that if appropriate you also include code in your application to capture the data from your users»*. No hay clave ni registro técnico (el servicio responde sin autenticación), pero **sin esa solicitud formal el uso por TMC no tiene permiso expreso**. Es una acción externa del propietario (AGENTS.md §9).
+- Datos y código de Canonn: **GPL-3.0** (`Canonn-GCloud` confirmado: `LICENSE` GPL v3; resto en `spike_licencias_f1.md`). Consumo por red sí; copiar al repo no (política de licencias del proyecto). Respetado: solo hay fixtures sintéticos.
+- **Condición de uso explícita** (README de `Canonn-GCloud/query`, «Usage»; última modificación del archivo: commit `11b5167775`, 2024-09-15; leído el 2026-10-17): para usar esas funciones en software propio *«we require that you make a formal request to Canonn and that if appropriate you also include code in your application to capture the data from your users»*. No hay clave ni registro técnico (el servicio responde sin autenticación), pero **sin esa solicitud formal el uso por TMC no tiene permiso expreso**.
 - «Capturar datos de los usuarios» chocaría con la privacidad de TMC (F1 solo consulta, no envía). Debe aclararse en la solicitud.
 - No hay límite publicado. Política propia: 1 petición/s global, una consulta por sistema con caché en `api_cache` (TTL sugerido: 24 h `getSystemPoi`, 7 días `biostats`), retroceso ante 5xx y UA identificable.
 - Los CSV de Dumpr declaran que «pueden usarse por terceros», pero no traen el cuerpo: no sirven para la capa 3.
@@ -74,8 +74,8 @@ Sirve para predicción **por propiedades** (variantes cuyo rango contiene graved
 Criterio del brief: la capa 3 se desactiva si no hay endpoint usable por cuerpo o por propiedades, **o** si la licencia no permite ni la consulta.
 
 - Hay endpoint usable por cuerpo (`getSystemPoi`, filtrando) y por propiedades (`biostats`). La licencia GPL-3.0 no impide la consulta por red.
-- Pero hay un requisito de permiso sin cumplir: la solicitud formal a Canonn. Decisión propuesta: **la capa 3 es técnicamente viable y se implementa (Task 6/10), pero queda desactivada hasta que el propietario envíe la solicitud formal y lo confirme**. Mientras tanto el adaptador devuelve `NetOutcome::Disabled` para `NetQuery::BodyBio` (el comportamiento que prevé el criterio) y F1 sigue con las capas 1 y 2 sin bloqueo (spec §11).
-- Es una **desviación** de la spec §5.3 («activada por defecto»): el ajuste de usuario con opt-out existe, pero la capa 3 permanece desactivada hasta que el propietario confirme el permiso de Canonn. Debe anotarse en el plan (Desviaciones) y en `status.md` (Bloqueos y pendientes del propietario) por quien coordine.
+- Pero hay un requisito de permiso sin cumplir: la solicitud formal a Canonn. Decisión propuesta: **la capa 3 es técnicamente viable y se implementa, pero queda desactivada hasta que se confirme la solicitud formal**. Mientras tanto el adaptador devuelve `NetOutcome::Disabled` para `NetQuery::BodyBio` y la predicción sigue con las capas 1 y 2 sin bloqueo.
+- El ajuste de usuario con opt-out existe, pero la capa 3 permanece desactivada hasta confirmación.
 
 ## 7. Huecos y riesgos
 

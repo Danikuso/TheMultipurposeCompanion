@@ -4,7 +4,7 @@ Fecha: 2026-10-18 · Archivo: `crates/tmc-modules/data/bio_rules.json` · Códig
 
 ## Cómo se han producido
 
-- Las ha redactado TMC (agente implementador de la Task 25) con **conocimiento propio de la mecánica del juego**: tipo de cuerpo, tipo de atmósfera, gravedad baja (~0,27 g; ~0,15 g en Tubus), tramos de temperatura, vulcanismo y, en Electricae Pluma, la clase de la estrella principal.
+- Han sido redactadas para TMC con **conocimiento propio de la mecánica del juego**: tipo de cuerpo, tipo de atmósfera, gravedad baja (~0,27 g; ~0,15 g en Tubus), tramos de temperatura, vulcanismo y, en Electricae Pluma, la clase de la estrella principal.
 - **No** se han consultado ni copiado los `bio-criteria` de SrvSurvey (GPL), ni las tablas de la wiki de Fandom (CC-BY-SA), ni los datos de Canonn (`biostats`/`codex`, GPL-3.0). Ver `spike_licencias_f1.md` y `spike_canonn_f1.md`.
 - Cada regla lleva en `source` la base específica de su género y la nota «redactada por TMC con conocimiento propio del juego; no derivada de SrvSurvey ni copiada de wikis; umbrales a verificar con tmc-headless eval».
 - Licencia: datos propios del proyecto (PolyForm Noncommercial 1.0.0).
@@ -31,7 +31,7 @@ Fecha: 2026-10-18 · Archivo: `crates/tmc-modules/data/bio_rules.json` · Códig
 1. Con `tmc-headless eval` (cuando exista) sobre el historial del propietario: para cada cuerpo con señales biológicas y alguna especie muestreada (`ScanOrganic` Analyse), comprobar si esa especie está entre los candidatos «Alta» o «Media». **Criterio de aceptación §10.6: ≥ 70 % de los cuerpos.**
 2. Revisar los fallos por género: ajustar los umbrales (temperatura, gravedad, atmósfera) en el JSON, sin tocar código, y subir `version`.
 3. Registrar en el registro de este documento cada ajuste, con la fecha y la cifra del eval antes y después.
-4. La capa de historial (Task 25) compensa con el uso: con ≥ 3 casos en la misma clave de perfil, una especie sin regla llega a «Media».
+4. La capa de historial compensa con el uso: con ≥ 3 casos en la misma clave de perfil, una especie sin regla llega a «Media».
 
 ## Registro
 

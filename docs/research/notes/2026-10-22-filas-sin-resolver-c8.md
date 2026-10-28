@@ -1,6 +1,6 @@
 # Filas `unresolved` del importador de ingeniería (C8): evidencia y recomendación
 
-Fecha: 2026-10-22. Contexto: la auditoría C1 dejó 8 filas de nave sin resolver del snapshot fijado de EDDiscovery (`7d30920`, `eddiscovery-RecipesEngineering.cs`). Esta nota solo registra hechos de juego con cita; no se copia código ni tablas con licencia incompatible (AGENTS.md §6).
+Fecha: 2026-10-22. Contexto: la auditoría C1 dejó 8 filas de nave sin resolver del snapshot fijado de EDDiscovery (`7d30920`, `eddiscovery-RecipesEngineering.cs`). Esta nota solo registra hechos de juego con cita; no se copia código ni tablas con licencia incompatible (política de licencias del proyecto).
 
 ## Resumen de recomendaciones
 

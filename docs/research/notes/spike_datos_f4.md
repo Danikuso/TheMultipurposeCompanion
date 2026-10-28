@@ -34,7 +34,7 @@ Fecha: 2026-10-21. Alcance: decidir A (dataset comunitario con licencia de datos
 ### 1.4 Otros
 
 - **EDDN** (BSD-3-Clause): código y esquemas, no contiene tablas de blueprints.
-- **Wikis (Fandom, Inara)**: contenido CC BY-SA o propietario; excluidos (AGENTS.md §6; SrvSurvey y plugins EDMC GPL también excluidos).
+- **Wikis (Fandom, Inara)**: contenido CC BY-SA o propietario; excluidos (política de licencias del proyecto; SrvSurvey y plugins EDMC GPL también excluidos).
 - **Diario del juego (fuente primaria, hecho del juego)**: `Materials` / `MaterialCollected` traen `Name` (clave interna) y `Name_Localised` en el idioma del juego del jugador; `EngineerCraft` trae `BlueprintName` (clave interna, p. ej. `FSD_LongRange`), `Level`, `ExperimentalEffect` y `ExperimentalEffect_Localised`, `Engineer`, `Ingredients[]`; `EngineerProgress` trae ingeniero, `Progress` y `Rank`. Los nombres de blueprint **no** vienen localizados en el diario (solo la clave interna).
 - **Localización oficial publicada de blueprints/experimentales (es/fr/de/pt)**: no se ha encontrado ningún archivo público con licencia. Los textos del juego son IP de Frontier y viven dentro del cliente; no se pueden redistribuir.
 
