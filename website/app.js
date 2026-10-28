@@ -217,7 +217,7 @@ const SEARCH_DATABASE = [
 
   // Módulos (16)
   { title: 'Panel General (7 paneles)', category: 'Módulo', url: '#mod-dashboard', snippet: 'Créditos, 6 rangos de la Federación de Pilotos + Superpotencias, 7 testigos en cabina (SCO), ruta, sesión y alertas críticas.' },
-  { title: 'Nave y Equipamiento', category: 'Módulo', url: '#mod-ship', snippet: 'Listas antes de despegar (Exploración, Combate, Minería), munición, defensas y comparativa antes/después de mejoras aplicadas.' },
+  { title: 'Nave, Astilleros y Equipamiento', category: 'Módulo', url: '#mod-ship', snippet: 'Buscador de naves y componentes cercanos desde tu sistema actual (−15 % Li Yong-Rui y Stronghold Carriers de tu potencia), listas antes de despegar y mejoras.' },
   { title: 'Navegación y Planificador de Rutas', category: 'Módulo', url: '#mod-navigation', snippet: 'Ruta exacta con las características reales de tu nave, Autopista de neutrones, salida desde espacio profundo y copiado salto a salto.' },
   { title: 'Exploración Cartográfica', category: 'Módulo', url: '#mod-exploration', snippet: 'Estrellas repostables, avance de escaneo, recomendación ★ Mapear con meta de sondas y alerta de Datos en riesgo.' },
   { title: 'Exobiología (Odyssey)', category: 'Módulo', url: '#mod-exobiology', snippet: 'Bono ×5 en mundos sin registrar, posibles especies, distancia mínima y dirección relativa hacia la muestra anterior.' },

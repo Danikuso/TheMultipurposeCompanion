@@ -83,7 +83,7 @@ En el menú lateral izquierdo dispones de dos formas de navegar (además del bot
 | Disposición combinada | Paneles que reúne en una sola pantalla |
 |---|---|
 | **1. `Exploración`** | Tira de `Ruta`, `Panel de contexto` (conmutador `Cuerpos` / `Exobiología`), `Planificador de rutas` y `Alcance de salto`. |
-| **2. `Nave`** | `Nave` (equipamiento e ingeniería), `Alcance de salto` y `Mi carga`. |
+| **2. `Nave`** | `Nave` (equipamiento e ingeniería), `Alcance de salto`, `Mi carga` y `Astilleros y Equipamiento`. |
 | **3. `Combate`** | `Objetivo`, `Sesión de caza`, `Mi nave` y paneles automáticos de `Zona de conflicto` y `AX` (Thargoides) cuando están activos. |
 | **4. `Minería`** | `Prospector`, `Sesión de minería` y `Dónde vender`. |
 | **5. `Comercio`** | `Mercado actual`, `Mi carga`, `Sesión de comercio`, `Ruta comercial` y `Buscar mercancía`. |
@@ -106,13 +106,17 @@ Debajo de las disposiciones encontrarás la lista de los **16 Módulos individua
 - **`Ruta` y `Sesión`:** siguiente sistema con botón **`Copiar siguiente sistema`**, saltos pendientes, duración de la sesión, saltos completados, años luz recorridos y créditos ganados.
 - **`Alertas`:** avisos inmediatos ante *Combustible bajo, Sobrecalentamiento, Interdicción en curso, Bajo ataque, Daño en el casco, Oxígeno bajo, Salud baja* o fallo de un módulo.
 
-### 2. `Nave` (Auditoría por rol y desglose técnico)
-- **Cabecera y medidores:** modelo canónico, nombre, matrícula, masa en vacío, coste de recompra (*rebuy*) y medidores de casco, escudos, depósito principal + reserva y carga.
+### 2. `Nave` (2 paneles: Auditoría técnica y compra de Naves/Equipamiento)
+- **Cabecera y medidores (`Nave`):** modelo canónico, nombre, matrícula, masa en vacío, coste de recompra (*rebuy*) y medidores de casco, escudos, depósito principal + reserva y carga.
 - **3 pestañas de revisión rápida antes de despegar:**
   - **`🧭 Exploración`:** alcance máximo y lista de comprobación (`✅` / `⚪`) para recolector de combustible, potenciador FSD Guardián, escáner de superficie DSS, hangar SRV y unidad de reparación AFMU.
   - **`⚔️ Combate`:** escudos, calor, reparto `SYS/ENG/WPN`, armas instaladas con munición `[cargador / reserva]` y recuento de utilidades defensivas (*potenciadores de escudo, señuelos, defensas de punto y disipadores térmicos*).
   - **`📦 Carga y Minería`:** capacidad total, bodegas instaladas, refinería, controladores de drones y mercancías a bordo.
 - **`Desglose módulo por módulo`:** filtrable por categoría (*Todos, Anclajes, Primarios, Opcionales, Utilidades*) y por texto. Muestra clase `[5A]`, integridad `%`, encendido `ON/OFF`, prioridad `P1..P5` e insignia dorada `G1..G5 ★` que, al pulsarla, despliega la receta, el ingeniero, el efecto experimental y la **comparativa exacta de cada atributo (valor mejorado frente a valor original)**.
+- **`Astilleros y Equipamiento` (Buscador de compra en parada única):**
+  - **Cesta combinada desde tu ubicación actual:** parte automáticamente de tu sistema actual (incluso en espacio profundo no indexado mediante coordenadas 3D) y permite elegir **1 nave opcional** (48 modelos) y/o **hasta 10 componentes** (153 familias con filtro de categoría, clase `0..8`, calificación `A..I`, montaje *Fijo/Cardán/Torreta* en armas y casco en blindajes) para encontrar las estaciones más cercanas que venden **toda la cesta a la vez**.
+  - **Respaldo inteligente por pieza:** si ninguna estación cercana reúne toda la combinación simultáneamente, localiza automáticamente la estación más cercana para cada artículo por separado e identifica qué pieza carece de stock conocido.
+  - **Interruptores y salvaguardas de ayudante:** filtro **`−15 % Li Yong-Rui`** (que reduce también tu futuro seguro de recompra), interruptor dedicado **`Stronghold de tu potencia`** para incluir los *Stronghold Carriers* orbitales de tu facción de Powerplay 2.0 (manteniendo excluidos los de potencias rivales y los portaaviones privados salvo que los actives aparte), protección de sistemas con permiso (`Shinrarta Dezhra`, `Sol`, `Achenar`, `Sirius`, `Alioth`…), **semáforo de seguro de recompra** (`Recompra OK` / `Ajusta recompra` / `Saldo insuf.`), desglose individual de precios y botones de un clic **`Copiar`** y **`Ruta`**.
 
 ### 3. `Navegación` (3 paneles y doble planificador Spansh)
 - **Tira `Ruta`:** muestra tu plan activo de Spansh o, si no hay ninguno, la ruta trazada en el mapa galáctico del juego. Si te desvías, aparece el aviso **`Fuera de ruta`** con botones **`Recalcular`** y **`Borrar plan`**. Detalla en 4 columnas el salto (distancia, clases de estrellas, si **`Se puede repostar`**, combustible restante estimado), exploración (descubierto/no descubierto, visitas previas, neutrones/enana blanca), política (lealtad, gobierno, facción y **`⚠ Estado de peligro`** en guerras o brotes) y economía/seguridad/Powerplay.
@@ -236,10 +240,10 @@ El proyecto está organizado como un workspace modular en **Rust estable (edici�
 | `crates/tmc-journal` | Descubrimiento multiplataforma de carpetas (Win32 `FOLDERID_SavedGames`, Proton/Flatpak en Linux), ingesta incremental por *byte offset* de `Journal.*.log` y sondeo tolerante a escrituras parciales de `Status.json` + 9 archivos `.json` compañeros. |
 | `crates/tmc-store` | Persistencia en **SQLite (modo WAL)** (`rusqlite`), migraciones aditivas, historial de exploración/comercio/listas de compra, almacén local de credenciales y autocuración ante corrupción. |
 | `crates/tmc-i18n` | Carga y resolución de catálogos **Project Fluent** (`locales/{es,en,fr,de,pt}/*.ftl`) con test automatizado de paridad total de claves respecto a `es`. |
-| `crates/tmc-net` | Clientes HTTP asíncronos con limitadores de tasa, caché y degradación offline: *Spansh* (Neutron Plotter, Exact Plotter `/api/generic/route` y rescate espacial `/api/nearest`), *Ardent*, *Canonn*, *tick.edcd.io*, *EDSM*, *Inara InAPI v1* (lotes máx. 2 req/min) y *Frontier CAPI* (OAuth2 S256 PKCE). |
+| `crates/tmc-net` | Clientes HTTP asíncronos con limitadores de tasa, caché y degradación offline: *Spansh* (Neutron Plotter, Exact Plotter `/api/generic/route`, búsqueda combinada de astilleros/equipamiento `POST /api/stations/search` con respaldo por pieza y rescate espacial `/api/nearest`), *Ardent*, *Canonn*, *tick.edcd.io*, *EDSM*, *Inara InAPI v1* (lotes máx. 2 req/min) y *Frontier CAPI* (OAuth2 S256 PKCE). |
 | `crates/tmc-eddn` | Emisor HTTP POST de esquemas oficiales a *EDDN* (`journal/1`, `commodity/3`, `outfitting/2`, `shipyard/2`) con sal local seudonimizada y suscriptor ZeroMQ filtrando mercados por radio espacial. |
 | `crates/tmc-tts` | Cola priorizada de locución con deduplicación y *cooldowns* (`TtsQueue`), motor nativo de Windows (SAPI5 / OneCore `< 2 MB` RAM) y proceso worker neuronal desacoplado (`Kokoro-82M` ONNX con suspensión tras 60 s de inactividad). |
-| `crates/tmc-modules` | Lógica aislada por rol para los 16 módulos de juego, cálculo de relevancia contextual y proyecciones hacia la interfaz. |
+| `crates/tmc-modules` | Lógica aislada por rol para los 16 módulos de juego (incluyendo el catálogo embebido `outfitting_catalog.json` con 48 naves, 153 familias de módulos y permisos estelares en `ship`), cálculo de relevancia contextual y proyecciones hacia la interfaz. |
 | `crates/tmc-core` | Actor central de estado, enrutamiento de eventos, generador táctico `VoiceAdvisor` y resolvedor léxico multilingüe `VoiceIntentResolver` (9 intenciones vocales). |
 | `crates/tmc-server` | Servidor HTTP/REST y WebSocket (`/ws`) sobre **axum**, *coalescing* de tópicos cada 100 ms (máx. 10 act/s), generador de perfil `.vap` para *VoiceAttack*, protección DNS-rebinding/CSRF y autenticación LAN por token de 128 bits (`HttpOnly; SameSite=Strict`). |
 | `crates/tmc-app` | Composición de servicios, arranque, importación histórica con *throttling* adaptativo y bucle de supervisión. |
