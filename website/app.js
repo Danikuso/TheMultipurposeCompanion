@@ -213,38 +213,43 @@ function playCockpitVoice(text) {
 
 const SEARCH_DATABASE = [
   // Cualidades
-  { title: 'Cualidades Principales de TMC', category: 'Filosofía', url: '#cualidades', snippet: 'Guía paso a paso sin bloqueos, ligereza en segundo plano, lectura clara, voz, uso en tablet y código abierto.' },
+  { title: 'Cualidades Principales de TMC', category: 'Filosofía', url: '#cualidades', snippet: 'Guía sin bloqueos, colores sincronizados con tu cabina (HUD automático), 10 disposiciones, voz, pantalla QR en tablet y código abierto.' },
 
   // Módulos (16)
-  { title: 'Panel General', category: 'Módulo', url: '#mod-dashboard', snippet: 'Resumen de tu comandante, créditos, rangos, estado general de la nave, sesión actual y avisos importantes.' },
-  { title: 'Nave y Equipamiento', category: 'Módulo', url: '#mod-ship', snippet: 'Revisión de piezas instaladas, estado de salud, mejoras aplicadas y listas rápidas antes de despegar.' },
-  { title: 'Navegación y Planificador de Rutas', category: 'Módulo', url: '#mod-navigation', snippet: 'Rutas exactas adaptadas a tu nave actual o por estrellas de neutrones, paradas de repostaje y copia de saltos.' },
-  { title: 'Exploración Cartográfica', category: 'Módulo', url: '#mod-exploration', snippet: 'Estrellas donde repostar, planetas descubiertos en el sistema y recomendación de cuáles mapear con sondas.' },
-  { title: 'Exobiología', category: 'Módulo', url: '#mod-exobiology', snippet: 'Especies posibles en la superficie del planeta y medidor visual de distancia para completar las tres muestras.' },
-  { title: 'Combate y Defensa Anti-Xeno', category: 'Módulo', url: '#mod-combat', snippet: 'Datos claros de la nave objetivo, Zonas de Conflicto, recompensas acumuladas y combates contra Thargoides.' },
-  { title: 'Minería', category: 'Módulo', url: '#mod-mining', snippet: 'Composición de asteroides al prospectar, ritmo de extracción, minerales favoritos y estaciones de venta cercanas.' },
-  { title: 'Comercio y Mercados', category: 'Módulo', url: '#mod-trade', snippet: 'Contenido de tu bodega, comparación de precios en la estación actual y rutas según tamaño de aterrizaje.' },
-  { title: 'Misiones', category: 'Módulo', url: '#mod-missions', snippet: 'Control de tiempos de entrega y organización por facciones en misiones de caza de piratas.' },
-  { title: 'Ingeniería y Materiales', category: 'Módulo', url: '#mod-engineering', snippet: 'Pasos para desbloquear cada ingeniero, almacén, taquilla a pie, lista de la compra e intercambios con sobrantes.' },
-  { title: 'Fleet Carrier', category: 'Módulo', url: '#mod-carrier', snippet: 'Reservas de Tritio, cuenta atrás de saltos programados, espacio disponible y gastos semanales del portaaviones.' },
-  { title: 'Colonización de Sistemas', category: 'Módulo', url: '#mod-colonisation', snippet: 'Progreso de materiales entregados para levantar nuevas estaciones y mercados cercanos donde comprarlos.' },
-  { title: 'Powerplay 2.0', category: 'Módulo', url: '#mod-powerplay', snippet: 'Potencia galáctica a la que apoyas, rango actual, méritos semanales y situación de los sistemas visitados.' },
-  { title: 'Facciones y Política Local (BGS)', category: 'Módulo', url: '#mod-bgs', snippet: 'Porcentajes de influencia de las facciones del sistema, estados activos y registro de tus aportaciones.' },
-  { title: 'Estado Legal y Multas', category: 'Módulo', url: '#mod-crime', snippet: 'Multas pendientes, nivel de notoriedad, carga ilegal y localización de contactos neutrales Interstellar Factors.' },
-  { title: 'Cuentas de la Comunidad', category: 'Módulo', url: '#mod-accounts', snippet: 'Consulta dónde tienes guardadas tus otras naves con Frontier y sincroniza opcionalmente con Inara y EDSM.' },
+  { title: 'Panel General (7 paneles)', category: 'Módulo', url: '#mod-dashboard', snippet: 'Créditos, 6 rangos de la Federación de Pilotos + Superpotencias, 7 testigos en cabina (SCO), ruta, sesión y alertas críticas.' },
+  { title: 'Nave y Equipamiento', category: 'Módulo', url: '#mod-ship', snippet: 'Listas antes de despegar (Exploración, Combate, Minería), munición, defensas y comparativa antes/después de mejoras aplicadas.' },
+  { title: 'Navegación y Planificador de Rutas', category: 'Módulo', url: '#mod-navigation', snippet: 'Ruta exacta con las características reales de tu nave, Autopista de neutrones, salida desde espacio profundo y copiado salto a salto.' },
+  { title: 'Exploración Cartográfica', category: 'Módulo', url: '#mod-exploration', snippet: 'Estrellas repostables, avance de escaneo, recomendación ★ Mapear con meta de sondas y alerta de Datos en riesgo.' },
+  { title: 'Exobiología (Odyssey)', category: 'Módulo', url: '#mod-exobiology', snippet: 'Bono ×5 en mundos sin registrar, posibles especies, distancia mínima y dirección relativa hacia la muestra anterior.' },
+  { title: 'Combate y Defensa Anti-Xeno', category: 'Módulo', url: '#mod-combat', snippet: 'Aviso LIMPIO / BUSCADO, salud del subsistema apuntado, vales sin cobrar (−25 % en gestores neutrales), Zonas de Conflicto y Thargoides.' },
+  { title: 'Minería', category: 'Módulo', url: '#mod-mining', snippet: 'Veredicto ✔ merece la pena, aviso ◆ Núcleo, gráfico de últimos 8 asteroides, drones restantes, tolvas de refinería y dónde vender.' },
+  { title: 'Comercio y Mercados', category: 'Módulo', url: '#mod-trade', snippet: 'Mercancías raras, precio medio pagado en bodega (VENDER AQUÍ / LLEVAR), rutas comerciales multiparada y buscador de productos.' },
+  { title: 'Misiones, Turismo y Objetivos Comunitarios', category: 'Módulo', url: '#mod-missions', snippet: 'Pila de masacre por facción emisora, alerta de pasajero buscado, Ruta óptima de balizas turísticas y seguimiento de eventos CG.' },
+  { title: 'Ingeniería y Materiales (Nave y Odyssey)', category: 'Módulo', url: '#mod-engineering', snippet: 'Almacén y Taquilla a pie, Guía en 3 pasos para ingenieros bloqueados, Lista de la compra con prioridades, trueques y Brokers.' },
+  { title: 'Fleet Carrier', category: 'Módulo', url: '#mod-carrier', snippet: 'Tritio combinado en depósito y bodega, saltos posibles de 500 AL, cuenta atrás de 15 min y semanas cubiertas de mantenimiento.' },
+  { title: 'Colonización de Sistemas', category: 'Módulo', url: '#mod-colonisation', snippet: 'Porcentaje de avance de la obra, materiales pendientes y cálculo automático de Viajes estimados según la bodega de tu nave.' },
+  { title: 'Powerplay 2.0', category: 'Módulo', url: '#mod-powerplay', snippet: 'Potencia galáctica, semanas de lealtad, rango hasta 100, ritmo de méritos por hora y cuenta atrás al cierre semanal.' },
+  { title: 'Facciones y Política Local (BGS)', category: 'Módulo', url: '#mod-bgs', snippet: 'Barras de influencia local, estados activos, gobierno y monitor del corte diario galáctico (Tick).' },
+  { title: 'Estado Legal, Multas y Contrabando', category: 'Módulo', url: '#mod-crime', snippet: 'Reloj de notoriedad (pausado en estación), contacto Interstellar Factor más cercano y guía en 3 pasos de entrada sigilosa a mercados negros.' },
+  { title: 'Cuentas y Flota Guardada', category: 'Módulo', url: '#mod-accounts', snippet: 'Visor de naves aparcadas en otros sistemas con Frontier, sincronización oficial con Inara (Whitelist), EDSM y red comunitaria EDDN.' },
 
-  // Primeros pasos
-  { title: 'Instalación y Puesta en Marcha', category: 'Primeros Pasos', url: '#manual-install', snippet: 'Cómo instalar TMC en Windows, abrirlo junto al juego y encontrarlo en el icono junto al reloj.' },
-  { title: 'Moverse por la Aplicación y Modo Automático', category: 'Primeros Pasos', url: '#manual-hud', snippet: 'Vistas combinadas, módulos individuales, detalles desplegables y cambio automático Auto-companion.' },
-  { title: 'Usarlo en tu Tablet o Móvil', category: 'Primeros Pasos', url: '#manual-lan', snippet: 'Escanea el código QR en Ajustes para manejar los paneles desde una pantalla táctil en tu mismo Wi-Fi.' },
-  { title: 'Avisos Hablados y Control por Voz', category: 'Primeros Pasos', url: '#manual-voice', snippet: 'Cómo activar la voz del copiloto, hacer consultas con micrófono o descargar el perfil para VoiceAttack.' },
-  { title: 'Conectar Inara, EDSM o Frontier', category: 'Primeros Pasos', url: '#manual-accounts', snippet: 'Pasos opcionales para sincronizar tu perfil comunitario o ver tu flota aparcada en otras estaciones.' },
+  // Guía rápida (6 capítulos)
+  { title: 'Instalación y Puesta en Marcha', category: 'Guía Rápida', url: '#manual-install', snippet: 'Cómo instalar TMC en Windows (y detección en Linux / Steam Deck), importar tu historial y usarlo junto al reloj del sistema.' },
+  { title: 'Cómo Moverte por la Pantalla y Modo Automático', category: 'Guía Rápida', url: '#manual-hud', snippet: 'Los 6 indicadores superiores, las 10 Disposiciones combinadas, los 16 Módulos, Auto-companion y detalles desplegables.' },
+  { title: 'Colores HUD Automático, Preferencias y Sugerencias', category: 'Guía Rápida', url: '#manual-settings', snippet: 'Sincroniza los colores con la cabina de tu nave, 5 idiomas, umbrales por actividad, modo sin internet y buzón de sugerencias.' },
+  { title: 'Usarlo como Pantalla Táctil en Tablet o Móvil', category: 'Guía Rápida', url: '#manual-lan', snippet: 'Escanea el código QR en Ajustes para manejar todos los paneles desde tu mismo Wi-Fi y copiar destinos al ordenador.' },
+  { title: 'Avisos Hablados, 9 Preguntas por Micrófono y VoiceAttack', category: 'Guía Rápida', url: '#manual-voice', snippet: 'Voces del sistema o IA Kokoro, 5 canales de aviso, las 9 consultas habladas (incluso sin internet) y perfil automático .vap.' },
+  { title: 'Conectar Frontier, Inara, EDSM o Red Comunitaria', category: 'Guía Rápida', url: '#manual-accounts', snippet: 'Pasos opcionales para localizar tu flota aparcada con Frontier o sincronizar tus viajes con Inara y EDSM.' },
 
-  // Guías de uso
-  { title: 'Guía: Recoger Muestras de Exobiología', category: 'Guía de Uso', url: '#tut-exobiology', snippet: 'Cómo usar el indicador de distancia para saber cuándo escanear la segunda y tercera muestra.' },
-  { title: 'Guía: Desbloquear un Ingeniero y Mejorar tu Nave', category: 'Guía de Uso', url: '#tut-engineering', snippet: 'Cómo seguir los pasos de acceso al taller, guardar tu lista de la compra y canjear materiales repetidos.' },
-  { title: 'Guía: Organizar Misiones de Caza por Facciones', category: 'Guía de Uso', url: '#tut-massacre', snippet: 'Cómo ver en columnas cuántos objetivos te faltan por cada facción que te ha contratado.' },
-  { title: 'Guía: Saldar Multas y Gestionar la Notoriedad', category: 'Guía de Uso', url: '#tut-crime', snippet: 'Cómo comprobar cuándo tu notoriedad baja a cero y acudir al contacto neutral más cercano.' }
+  // Tutoriales (8 guías paso a paso)
+  { title: 'Tutorial: Trazar un Viaje Largo Adaptado a tu Nave', category: 'Tutorial', url: '#tut-navigation', snippet: 'Cómo calcular una Ruta exacta o Autopista de neutrones en Spansh y pegar cada salto con Ctrl + V.' },
+  { title: 'Tutorial: Explorar un Sistema y Mapear lo Valioso', category: 'Tutorial', url: '#tut-exploration', snippet: 'Cómo identificar estrellas repostables, planetas marcados con ★ Mapear y vigilar tus datos cartográficos.' },
+  { title: 'Tutorial: Recoger las 3 Muestras de Exobiología', category: 'Tutorial', url: '#tut-exobiology', snippet: 'Cómo seguir los metros restantes y la indicación de dirección respecto a la muestra anterior.' },
+  { title: 'Tutorial: Desbloquear un Ingeniero y Mejorar tu Nave', category: 'Tutorial', url: '#tut-engineering', snippet: 'Cómo completar los 3 pasos de acceso al taller, priorizar tu lista de la compra y canjear materiales sobrantes.' },
+  { title: 'Tutorial: Minería de Asteroides y Venta al Mejor Precio', category: 'Tutorial', url: '#tut-mining', snippet: 'Cómo leer el veredicto de cada roca, detectar núcleos, controlar tus drones y vender en la mejor estación cercana.' },
+  { title: 'Tutorial: Comercio Multiparada y Obras de Colonización', category: 'Tutorial', url: '#tut-trade', snippet: 'Cómo seguir rutas comerciales de varias escalas, vender mercancías raras y calcular los viajes restantes de una obra.' },
+  { title: 'Tutorial: Caza por Facciones (Masacre) y Turismo', category: 'Tutorial', url: '#tut-massacre', snippet: 'Cómo solapar misiones piratas de distintas facciones y ordenar balizas turísticas en la ruta más corta.' },
+  { title: 'Tutorial: Limpiar Multas y Entrar con Sigilo a Puerto', category: 'Tutorial', url: '#tut-crime', snippet: 'Cómo esperar a que baje la notoriedad para pagar en contactos neutrales o entrar sin escaneos a un mercado negro.' }
 ];
 
 function initSearchModal() {

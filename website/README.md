@@ -1,6 +1,6 @@
-# TMC — The Multipurpose Companion · Web de Presentación
+# TMC — The Multipurpose Companion · Web para Jugadores
 
-Página web estática orientada a presentar las cualidades, funciones y guías de uso de **TMC — The Multipurpose Companion** para jugadores de *Elite Dangerous*, con un enfoque claro, accesible, de código abierto y sin lenguaje comercial ni tecnicismos de desarrollo (la documentación técnica y de compilación reside en el [`README.md`](../README.md) de la raíz del repositorio).
+Página web estática orientada exclusivamente a jugadores de *Elite Dangerous* para presentar con claridad todas las cualidades, las 10 disposiciones combinadas, los 16 módulos completos, la guía rápida de configuración y 8 tutoriales prácticos paso a paso de **TMC — The Multipurpose Companion**, manteniendo un tono abierto, gratuito y accesible sin eslóganes comerciales ni tecnicismos de programación (toda la documentación para desarrolladores reside junto a la guía de usuario en el [`README.md`](../README.md) de la raíz del repositorio).
 
 ## Cómo abrir la web
 
@@ -8,9 +8,9 @@ Haz doble clic sobre [`index.html`](index.html) para abrirla directamente en cua
 
 ## Secciones incluidas
 
-- **Presentación y Vista Previa de Cabina:** Resumen claro de qué es TMC, enlaces de descarga para Windows, Manual de Instrucciones en PDF (`Manual_TMC_Comandante.pdf`) y proyecto en GitHub, junto a una demostración interactiva de los paneles de juego.
-- **Cualidades Principales (`#cualidades`):** Los seis pilares de la experiencia de usuario (guía paso a paso que nunca deja bloqueado al jugador, ligereza en segundo plano, lectura clara de un vistazo, uso en tablet/móvil mediante código QR, avisos y consultas por voz, y proyecto gratuito de código abierto).
-- **16 Módulos para Todos los Roles (`#modulos`):** Descripción accesible y filtrable de todas las herramientas disponibles en el juego.
-- **Primeros Pasos (`#manual`):** 5 pasos sencillos para instalar, moverse por la aplicación, abrirla en una tablet, configurar las voces y conectar cuentas opcionales de la comunidad.
-- **Guías Prácticas Paso a Paso (`#flujos`):** Ejemplos cotidianos en partida (exobiología, ingenieros, misiones por facciones y gestión de multas/notoriedad).
-- **Preguntas Frecuentes (`#faq`):** Respuestas sencillas sobre seguridad, fluidez, compatibilidad y código abierto.
+- **Presentación y Vista Previa Interactiva de Cabina:** Resumen claro de TMC, descarga del instalador para Windows, Manual de Instrucciones y Tutoriales en PDF ([`Manual_TMC_Comandante.pdf`](Manual_TMC_Comandante.pdf)) y demostración interactiva con ejemplo de voz.
+- **Cualidades Principales (`#cualidades`):** Guía paso a paso sin bloqueos, tema `HUD automático` sincronizado con los colores de tu cabina del juego, lectura clara con detalles desplegables, pantalla táctil en tablet o móvil por código QR, avisos hablados + 9 preguntas por micrófono + *VoiceAttack*, y ejecución ligera y respetuosa con tus datos.
+- **10 Disposiciones y 16 Módulos (`#modulos`):** Catálogo filtrable con todas las funcionalidades y paneles reales de cada rol del juego.
+- **Guía Rápida del Jugador (`#manual`):** 6 capítulos prácticos (instalación, navegación y modo `Auto-companion`, colores HUD y ajustes, pantalla en tablet/móvil, voces/micrófono/VoiceAttack y cuentas comunitarias opcionales).
+- **8 Tutoriales Paso a Paso (`#flujos`):** Guías prácticas para viajes largos en Spansh, exploración cartográfica, exobiología con dirección y metros, desbloqueo de ingenieros, minería de asteroides, comercio multiparada y colonización, caza por facciones y turismo, y limpieza de multas o entrada sigilosa a mercados negros.
+- **Preguntas Frecuentes (`#faq`) y Buscador Instantáneo (`Ctrl + K`).**
