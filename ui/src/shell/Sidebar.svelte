@@ -22,14 +22,16 @@
   const liveModules = $derived(topic<LiveModuleState[]>('core.modules'));
 
   const displayModules = $derived(
-    modules.map((regMod) => {
-      const liveState = liveModules?.find((m) => m.id === regMod.id);
-      return {
-        id: regMod.id,
-        titleKey: regMod.titleKey,
-        relevance: (liveState?.relevance ?? 'normal').toLowerCase(),
-      };
-    }),
+    modules
+      .filter((regMod) => regMod.id !== 'accounts')
+      .map((regMod) => {
+        const liveState = liveModules?.find((m) => m.id === regMod.id);
+        return {
+          id: regMod.id,
+          titleKey: regMod.titleKey,
+          relevance: (liveState?.relevance ?? 'normal').toLowerCase(),
+        };
+      }),
   );
 
   const LAYOUT_ICONS: Record<string, string> = {

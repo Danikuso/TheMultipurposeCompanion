@@ -150,6 +150,10 @@
   });
 
   function selectTab(id: string) {
+    if (id === 'accounts') {
+      view = 'settings';
+      return;
+    }
     if (id.startsWith('layout:')) { pin = id; view = null; } else view = id;
   }
 
@@ -198,7 +202,7 @@
   <ImportProgress />
   <div class="app-body">
     <Sidebar {activeTab} onSelect={selectTab} />
-    <Grid>
+    <Grid {activeTab}>
       {#if activeTab === 'settings'}
         <Settings />
       {:else if activeLayout}
@@ -217,7 +221,7 @@
           </div>
         {/each}
       {:else if activeModule}
-        {#each activeModule.panels as PanelComp, idx (idx)}
+        {#each activeModule.panels as PanelComp, idx (`${activeModule.id}-${idx}`)}
           <PanelComp />
         {/each}
       {/if}

@@ -10,6 +10,7 @@
   import Pairing from './Pairing.svelte';
   import { integer } from '../lib/format';
   import { voiceAssistant } from '../lib/voiceAssistant.svelte';
+  import AccountsSection from '../modules/accounts/AccountsSection.svelte';
 
   const DEFAULT_MINERALS = ['platinum', 'painite', 'lowtemperaturediamond', 'opal', 'alexandrite',
     'grandidierite', 'monazite', 'musgravite', 'rhodplumsite', 'serendibite', 'benitoite'];
@@ -474,11 +475,13 @@
   }
 </script>
 
-<Panel titleKey="nav-settings">
+<Panel titleKey="nav-settings" span="full">
   {#if validationError}<p role="alert" data-testid="validation-error">{t('settings-mining-invalid')}</p>{/if}
   {#if saveError}<p role="alert">{t('settings-save-error')}</p>{/if}
   <div class="settings-form" oninput={() => { draftRevision++; }}>
-    <div class="settings-grid">
+    <div class="settings-two-panes">
+      <div class="settings-main-pane">
+        <div class="settings-grid">
       <!-- Columna 1: Configuración General, Minería y Tiradas de Ingeniería -->
       <div class="settings-col">
         <fieldset class="settings-card">
@@ -982,6 +985,15 @@
       </div>
     </div>
   </div>
+
+  <div class="settings-accounts-pane" data-testid="settings-accounts-pane">
+    <fieldset class="settings-card accounts-wrapper-card">
+      <legend>📡 {t('panel-accounts')}</legend>
+      <AccountsSection />
+    </fieldset>
+  </div>
+</div>
+</div>
 </Panel>
 
 <style>
@@ -990,12 +1002,49 @@
     flex-direction: column;
     gap: 1rem;
     width: 100%;
-    max-width: 1240px;
+    max-width: 100%;
+  }
+
+  .settings-two-panes {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    align-items: start;
+    width: 100%;
+  }
+
+  @media (min-width: 1280px) {
+    .settings-two-panes {
+      grid-template-columns: minmax(460px, 1fr) minmax(480px, 1.15fr);
+    }
+  }
+
+  @media (min-width: 1680px) {
+    .settings-two-panes {
+      grid-template-columns: minmax(520px, 1fr) minmax(580px, 1.25fr);
+    }
+  }
+
+  .settings-main-pane {
+    min-width: 0;
+  }
+
+  .settings-accounts-pane {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+  }
+
+  .accounts-wrapper-card {
+    padding: 0.85rem 1rem;
+    background: transparent;
+    border: none;
   }
 
   .settings-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
     gap: 1.25rem;
     align-items: start;
   }

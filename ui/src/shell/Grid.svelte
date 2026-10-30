@@ -1,10 +1,18 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  let { children }: { children?: Snippet } = $props();
+  let { children, activeTab }: { children?: Snippet; activeTab?: string } = $props();
+  let gridEl: HTMLElement | null = $state(null);
+
+  $effect(() => {
+    // Al conmutar de pestaña o disposición, resetear siempre el desplazamiento vertical arriba del todo
+    if (activeTab !== undefined && gridEl) {
+      gridEl.scrollTop = 0;
+    }
+  });
 </script>
 
-<main class="hud-grid">
+<main class="hud-grid" bind:this={gridEl}>
   {@render children?.()}
 </main>
 
