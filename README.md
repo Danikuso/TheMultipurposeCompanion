@@ -70,12 +70,20 @@ Su objetivo es servir de copiloto integral tanto para pilotos que acaban de empe
 Siempre visible en la parte alta de la pantalla:
 - **Estado y galaxia:** indicador luminoso de conexión en vivo, insignia **`LIVE 4.0`** o **`LEGACY`** y avisos contextuales (`El juego no está en ejecución` o `Galaxia Legacy: los datos permanecen locales`).
 - **6 indicadores instantáneos:** **`Sistema`** actual, **`MODO`** (entre 10 estados: *Atracado, Aterrizado, Espacio normal, Supercrucero, Hiperespacio, A pie, En vehículo de superficie, En caza, En taxi, Multitripulación*), **`Combustible`** (con aviso visual por debajo del 25 %), **`Casco`** (con alerta roja por debajo del 30 %), **`Carga`** (`usada / capacidad`) y **`Créditos`**.
-- **Controles rápidos a la derecha:** botón de micrófono **`🎙️`** (para consultas habladas) e interruptor **`Auto-companion`**.
+- **Controles rápidos a la derecha:** botón de candado táctico **`🔓` / `🔒`** (con atajo **`Alt + L`** para congelar la pantalla de inmediato), botón de micrófono **`🎙️`** (para consultas habladas) e interruptor **`Auto-companion`**.
 
-### 3.2 Modo `Auto-companion` y `Panel de contexto`
-- Con **`Auto-companion` activado**, TMC cambia solo a la vista combinada más útil según lo que ocurra en tu partida (por ejemplo: pasa a *Combate* al entrar en batalla, a *Minería* al prospectar un asteroide, a *Comercio* o *Ingeniería* en estación, a *Fleet Carrier* o *Colonización* cuando operas con ellos, y a *Exploración* al viajar).
+### 3.2 Modo Auto-Companion Pro: Inteligencia Predictiva, Candado Táctico y Prioridades
+- **Conmutación inteligente y continua:** Con **`Auto-companion` activado**, TMC cambia automáticamente a la disposición más relevante según los acontecimientos en la cabina (combate, prospección de asteroides, atraque en estación, ingeniería, salto de Fleet Carrier, colonización o salto hiperespacial).
+- **Bloqueo Táctico de 1 Clic (`Alt + L` / Candado):** En cualquier instante crítico o de consulta intensiva, pulsa el botón del candado en la barra superior o presiona **`Alt + L`** para congelar la pantalla actual. El candado brillará en tono ámbar *Glass HUD* impidiendo que ningún evento automático mueva tu vista hasta que decidas desbloquearlo.
+- **Histéresis y Retención Anti-Salto (`linger_seconds`):** Tras salir de un combate, terminar una prospección o cerrar una transacción, la pantalla no cambia bruscamente. Mantiene la cabina activa durante el margen de retención configurado (por defecto 20 segundos, ajustable de 0 a 60 s en Ajustes) para permitirte revisar el botín, daños y estadísticas con calma.
+- **Transiciones Predictivas:** TMC se anticipa a los eventos antes de que ocurran:
+  - *Interdicción inminente:* si sufres una interdicción o inicias una interdicción en supercrucero, la pantalla conmuta inmediatamente a *Combate* durante la lucha por el vector de escape.
+  - *Aproximación a anillos:* al descender hacia anillos o cinturones planetarios portando equipamiento de minería, conmuta proactivamente a *Minería*.
+  - *Autorización de atraque:* al recibir autorización de atraque en una estación o puerto espacial, conmuta a *Comercio* preparando el mercado y servicios.
+- **Prioridades de Cabina a tu Medida:** En `Ajustes` puedes personalizar el orden de jerarquía de los 9 roles usando sencillas flechas `▲` y `▼`, o pulsar `Restablecer orden estándar` para volver a la configuración táctica recomendada.
+- **Feedback Sensorial de Cabina:** Activa el sutil bip acústico de cabina (*Glass HUD Chime*, sintetizado en tiempo real a 880 Hz ➔ 1320 Hz sin archivos pesados) o los avisos de voz del copiloto (TTS) para saber cuándo ha cambiado la pantalla sin apartar la vista de tus instrumentos de vuelo.
 - Dentro de la vista de **`Exploración`**, el **`Panel de contexto`** alterna automáticamente entre **`Cuerpos`** y **`Exobiología`** cuando desciendes a la superficie de un mundo con señales biológicas.
-- Si seleccionas manualmente otra vista mientras `Auto-companion` está activo, TMC respeta tu elección temporal hasta que cambie la actividad en el juego. Si desactivas `Auto-companion`, la pantalla permanece fija donde la dejes.
+- Si seleccionas manualmente otra vista mientras `Auto-companion` está activo (sin el candado puesto), TMC respeta tu elección temporal hasta que cambie la actividad en el juego. Si desactivas `Auto-companion`, la pantalla permanece fija donde la dejes.
 
 ### 3.3 Las 10 Disposiciones de Cabina frente a los 16 Módulos
 En el menú lateral izquierdo dispones de dos formas de navegar (además del botón **`⚙️ Ajustes`** fijo abajo):
@@ -232,7 +240,8 @@ Si juegas con un solo monitor o en realidad virtual, entra en `Ajustes`, activa 
 ## 6. Personalización en Ajustes y Soporte
 
 - **Idioma y Tema visual:** selección entre **5 idiomas** (`es`, `en`, `fr`, `de`, `pt`) y **3 temas** (**`HUD automático`** sincronizado con los colores de tu cabina del juego, **`Naranja clásico`** y **`Alto contraste`**).
-- **Preferencias operativas:** copiado automático del siguiente salto, `Auto-companion`, acceso por red local, interruptor global de privacidad **`Consultar servicios online (Spansh, EDSM, Canonn)`** (desactívalo para trabajar 100 % sin conexión), **`Umbral de «Mapear» (cr)`** y **`Eficiencia predeterminada del planificador (%)`**.
+- **Auto-Companion Pro:** reordenación táctica de prioridades para los 9 roles (`▲` / `▼`) con botón de restablecimiento, deslizador de histéresis (0–60 s con visualizador numérico en vivo), interruptor de transiciones predictivas y casillas de feedback sensorial (bip sintético *Glass HUD Chime* y locución TTS del copiloto).
+- **Preferencias operativas:** copiado automático del siguiente salto, interruptor general de `Auto-companion`, acceso por red local, interruptor global de privacidad **`Consultar servicios online (Spansh, EDSM, Canonn)`** (desactívalo para trabajar 100 % sin conexión), **`Umbral de «Mapear» (cr)`** y **`Eficiencia predeterminada del planificador (%)`**.
 - **Economía, Turismo e Ingeniería:** lista editable de hasta 30 **`Minerales de interés`** (con 11 preconfigurados), **`Umbral de valor de minería (cr)`**, **`Radio de búsqueda de venta (al)`**, **`Radio de datos EDDN (al)`**, **`Referencia de turismo (cr/al)`** y **`Tiradas de ingeniería por grado (G1–G5)`**.
 - **Canal directo de Soporte y Feedback:** en `Ajustes` → **Soporte, Feedback y Comunidad**, pulsa **`🚀 Reportar problema o sugerencia en GitHub`** para abrir un ticket en [GitHub Issues](https://github.com/Danikuso/TheMultipurposeCompanion/issues) con la versión, idioma y sistema operativo prellenados (sin incluir datos personales).
 
@@ -246,21 +255,21 @@ El proyecto está organizado como un workspace modular en **Rust estable (edici�
 
 | Ruta | Responsabilidad técnica |
 |---|---|
-| `crates/tmc-model` | Tipos de dominio fuertemente tipados, eventos del diario, estado volátil, tópicos de suscripción y configuración. |
+| `crates/tmc-model` | Tipos de dominio fuertemente tipados, eventos del diario, estado volátil, tópicos de suscripción, diagnósticos estrictos de cabina (`app.toggle_lock`, `app.set_auto_priorities`, etc.) y configuración (`auto_companion_priorities`, `auto_companion_linger_seconds`, predictivo y avisos). |
 | `crates/tmc-journal` | Descubrimiento multiplataforma de carpetas (Win32 `FOLDERID_SavedGames`, Proton/Flatpak en Linux), ingesta incremental por *byte offset* de `Journal.*.log` y sondeo tolerante a escrituras parciales de `Status.json` + 9 archivos `.json` compañeros. |
 | `crates/tmc-store` | Persistencia en **SQLite (modo WAL)** (`rusqlite`), migraciones aditivas, historial de exploración/comercio/listas de compra, almacén local de credenciales y autocuración ante corrupción. |
 | `crates/tmc-i18n` | Carga y resolución de catálogos **Project Fluent** (`locales/{es,en,fr,de,pt}/*.ftl`) con test automatizado de paridad total de claves respecto a `es`. |
 | `crates/tmc-net` | Clientes HTTP asíncronos con limitadores de tasa, caché y degradación offline: *Spansh* (Neutron Plotter, Exact Plotter `/api/generic/route`, búsqueda combinada de astilleros/equipamiento `POST /api/stations/search`, búsqueda de yacimientos/anillos `/api/bodies/search` y mercados de venta óptima con bucle triangular, y rescate espacial `/api/nearest`), *Ardent*, *Canonn*, *tick.edcd.io*, *EDSM*, *Inara InAPI v1* (lotes máx. 2 req/min) y *Frontier CAPI* (OAuth2 S256 PKCE). |
 | `crates/tmc-eddn` | Emisor HTTP POST de esquemas oficiales a *EDDN* (`journal/1`, `commodity/3`, `outfitting/2`, `shipyard/2`) con sal local seudonimizada y suscriptor ZeroMQ filtrando mercados por radio espacial. |
 | `crates/tmc-tts` | Cola priorizada de locución con deduplicación y *cooldowns* (`TtsQueue`), motor nativo de Windows (SAPI5 / OneCore `< 2 MB` RAM) y proceso worker neuronal desacoplado (`Kokoro-82M` ONNX con suspensión tras 60 s de inactividad). |
-| `crates/tmc-modules` | Lógica aislada por rol para los 16 módulos de juego (incluyendo el catálogo de compra `outfitting_catalog.json` en `ship` y el catálogo de yacimientos de alta densidad `mining_hotspots.json` con hot-swap atómico en `mining`), cálculo de relevancia contextual y proyecciones hacia la interfaz. |
+| `crates/tmc-modules` | Lógica aislada por rol para los 16 módulos de juego (incluyendo el catálogo de compra `outfitting_catalog.json` en `ship` y el catálogo de yacimientos de alta densidad `mining_hotspots.json` con hot-swap atómico en `mining`), cálculo de relevancia contextual con histéresis temporal anti-salto (`linger_seconds`), disparadores predictivos (`DockingGranted`, aproximación a anillos/cinturones con instrumental minero, e interdicciones) y proyecciones hacia la interfaz. |
 | `crates/tmc-core` | Actor central de estado, enrutamiento de eventos, generador táctico `VoiceAdvisor` y resolvedor léxico multilingüe `VoiceIntentResolver` (9 intenciones vocales). |
 | `crates/tmc-server` | Servidor HTTP/REST y WebSocket (`/ws`) sobre **axum**, *coalescing* de tópicos cada 100 ms (máx. 10 act/s), generador de perfil `.vap` para *VoiceAttack*, protección DNS-rebinding/CSRF y autenticación LAN por token de 128 bits (`HttpOnly; SameSite=Strict`). |
 | `crates/tmc-app` | Composición de servicios, arranque, importación histórica con *throttling* adaptativo y bucle de supervisión. |
 | `crates/tmc-replay` | Herramienta CLI para reproducción temporal controlada de sesiones (`play`) y anonimización determinista de diarios reales (`anonymize`) para fixtures. |
 | `apps/desktop` | Aplicación nativa **Tauri 2** (`TMC.exe`), gestión de instancia única, persistencia de ventana, bandeja del sistema (*System Tray*) y optimización de memoria WebView2. |
 | `apps/headless` | Servidor autónomo sin ventana gráfica y motor de auditoría matemática (`tmc-headless eval`). |
-| `ui/` | Interfaz reactiva en **Svelte 5** (runes), TypeScript, sistema de diseño *TMC Glass HUD*, listas virtualizadas de altura dinámica y reconocimiento vocal offline en WebAssembly (`Whisper` vía `@huggingface/transformers`). |
+| `ui/` | Interfaz reactiva en **Svelte 5** (runes), TypeScript, sistema de diseño *TMC Glass HUD*, bloqueo táctico (`Alt + L` / candado en `TopBar`), reordenación dinámica de prioridades en `Settings`, síntesis sonora de cabina (Web Audio API), listas virtualizadas de altura dinámica y reconocimiento vocal offline en WebAssembly (`Whisper` vía `@huggingface/transformers`). |
 | `locales/` | Archivos `.ftl` sincronizados en `es` (referencia), `en`, `fr`, `de` y `pt`. |
 
 ---

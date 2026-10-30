@@ -235,7 +235,7 @@ const SEARCH_DATABASE = [
 
   // Guía rápida (6 capítulos)
   { title: 'Instalación y Puesta en Marcha', category: 'Guía Rápida', url: '#manual-install', snippet: 'Cómo instalar TMC en Windows (y detección en Linux / Steam Deck), importar tu historial y usarlo junto al reloj del sistema.' },
-  { title: 'Cómo Moverte por la Pantalla y Modo Automático', category: 'Guía Rápida', url: '#manual-hud', snippet: 'Los 6 indicadores superiores, las 10 Disposiciones combinadas, los 16 Módulos, Auto-companion y detalles desplegables.' },
+  { title: 'Cómo Moverte por la Pantalla y Modo Automático (Auto-Companion Pro)', category: 'Guía Rápida', url: '#manual-hud', snippet: 'Indicadores superiores, candado táctico (Alt + L), prioridades a tu medida, anticipación y las 10 Disposiciones combinadas.' },
   { title: 'Colores HUD Automático, Preferencias y Sugerencias', category: 'Guía Rápida', url: '#manual-settings', snippet: 'Sincroniza los colores con la cabina de tu nave, 5 idiomas, umbrales por actividad, modo sin internet y buzón de sugerencias.' },
   { title: 'Usarlo como Pantalla Táctil en Tablet o Móvil', category: 'Guía Rápida', url: '#manual-lan', snippet: 'Escanea el código QR en Ajustes para manejar todos los paneles desde tu mismo Wi-Fi y copiar destinos al ordenador.' },
   { title: 'Avisos Hablados, 9 Preguntas por Micrófono y VoiceAttack', category: 'Guía Rápida', url: '#manual-voice', snippet: 'Voces del sistema o IA Kokoro, 5 canales de aviso, las 9 consultas habladas (incluso sin internet) y perfil automático .vap.' },
