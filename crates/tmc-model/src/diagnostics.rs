@@ -275,6 +275,8 @@ const MODULES: &[&str] = &[
     "crime",
 ];
 const ACTIONS: &[&str] = &[
+    "app.toggle_lock",
+    "app.set_auto_priorities",
     "clipboard.copy-next-system",
     "crime.copy_system",
     "ship.outfitting_search",
@@ -1886,5 +1888,11 @@ mod tests {
         assert_eq!(safe["endpoint"], "spansh.bodies.mining");
         assert_eq!(safe["outcome"], "mining_targets");
         assert_eq!(safe["commander"], REDACTED);
+    }
+
+    #[test]
+    fn auto_companion_actions_are_registered() {
+        assert!(is_registered_action("app.toggle_lock"));
+        assert!(is_registered_action("app.set_auto_priorities"));
     }
 }
