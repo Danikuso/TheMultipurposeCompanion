@@ -34,11 +34,11 @@
 
   const DANGER_STATES = ['war', 'civilwar', 'civilunrest', 'outbreak'];
 
-  const remoteOk = $derived(card.remote.status === 'ok' && card.remote.data != null);
-  const pol = $derived<Politics | null>(remoteOk ? card.remote.data : card.local_politics);
-  const isCache = $derived((card.remote.source ?? '').toLowerCase() === 'cache');
+  const remoteOk = $derived(card?.remote?.status === 'ok' && card?.remote?.data != null);
+  const pol = $derived<Politics | null>(remoteOk ? card?.remote?.data : (card?.local_politics ?? null));
+  const isCache = $derived((card?.remote?.source ?? '').toLowerCase() === 'cache');
   const cacheAge = $derived.by(() => {
-    if (!isCache || !card.remote.fetched_at) return null;
+    if (!isCache || !card?.remote?.fetched_at) return null;
     const ms = Date.now() - Date.parse(card.remote.fetched_at);
     return Number.isNaN(ms) ? null : ageShort(ms / 1000);
   });
@@ -46,15 +46,15 @@
     DANGER_STATES.includes((pol?.faction_state ?? '').replace(/[\s_-]/g, '').toLowerCase()),
   );
   const specialKey = $derived(
-    card.special === 'neutron'
+    card?.special === 'neutron'
       ? 'strip-neutron'
-      : card.special === 'white_dwarf'
+      : card?.special === 'white_dwarf'
         ? 'strip-white-dwarf'
         : null,
   );
   const noData = $derived(t('empty-no-data'));
   const discovered = $derived(
-    !remoteOk || card.remote.data?.discovered == null
+    !remoteOk || card?.remote?.data?.discovered == null
       ? noData
       : card.remote.data.discovered
         ? t('strip-discovered')
@@ -63,22 +63,22 @@
   const population = $derived(
     pol?.population == null ? null : new Intl.NumberFormat(getLocale()).format(pol.population),
   );
-  const jumpLy = $derived(ly(card.jump_ly));
+  const jumpLy = $derived(ly(card?.jump_ly));
 
   $effect(() => {
     if (!diagOn()) return;
     diag('ui.card.system', {
-      system: card.name,
+      system: card?.name,
       big,
-      state: card.remote.status,
+      state: card?.remote?.status,
       remote_ok: remoteOk,
       cache: isCache,
       stale_known: cacheAge !== null,
       has_politics: pol !== null,
       danger,
-      kind: card.special ?? 'none',
-      scoopable: card.scoopable,
-      reachable: card.reachable,
+      kind: card?.special ?? 'none',
+      scoopable: card?.scoopable,
+      reachable: card?.reachable,
       has_label: label !== null,
       has_star_classes: (starClasses?.length ?? 0) > 0,
     });

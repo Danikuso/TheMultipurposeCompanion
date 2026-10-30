@@ -8,7 +8,7 @@
 
   const system = $derived(topic<SystemTopic>('exploration.system'));
   const unsold = $derived(topic<UnsoldTopic>('exploration.unsold'));
-  const progress = $derived(system?.fss.complete ? 1 : Math.max(0, Math.min(1, system?.fss.progress ?? 0)));
+  const progress = $derived(system?.fss?.complete ? 1 : Math.max(0, Math.min(1, system?.fss?.progress ?? 0)));
   const columns = ['body', 'type', 'distance', 'scanned', 'mapped', 'signals', 'marks', 'advice'];
   const markKeys = ['terraformable', 'landable', 'scoopable', 'first-discovery', 'already-mapped', 'mapped-by-you'];
   function marks(body: BodyRow): string {
@@ -83,10 +83,10 @@
 
       <div class="fss-card">
         <div class="fss-label-row">
-          <label for="exploration-fss" class="fss-title">{t('exploration-fss-progress')} {system.fss.complete ? pct(1) : pct(system.fss.progress)}</label>
+          <label for="exploration-fss" class="fss-title">{t('exploration-fss-progress')} {system?.fss?.complete ? pct(1) : pct(system?.fss?.progress ?? 0)}</label>
         </div>
         <progress id="exploration-fss" value={progress} max="1"></progress>
-        <span class="fss-count">{t('exploration-scanned-count', { scanned: system.fss.scanned, total: system.fss.body_count ?? '—' })}</span>
+        <span class="fss-count">{t('exploration-scanned-count', { scanned: system?.fss?.scanned ?? 0, total: system?.fss?.body_count ?? '—' })}</span>
       </div>
 
       <div class="metric-card value-card">
@@ -109,11 +109,11 @@
       {/if}
       <div class="table-container">
         <div class="table-scroll" bind:this={tableScrollEl} onscroll={onTableScroll} class:no-overflow={!hasHorizontalOverflow}>
-          <div role="table" aria-label={t('panel-system-bodies')} aria-rowcount={system.rows.length + 1} class="body-table" bind:this={tableEl}>
+          <div role="table" aria-label={t('panel-system-bodies')} aria-rowcount={(system.rows?.length ?? 0) + 1} class="body-table" bind:this={tableEl}>
             <div class="body-grid headings" role="row">
               {#each columns as column}<span role="columnheader">{t(`exploration-col-${column}`)}</span>{/each}
             </div>
-            <VirtualList items={system.rows} rowHeight={30} height={listHeight} label={t('panel-system-bodies')}>
+            <VirtualList items={system.rows ?? []} rowHeight={30} height={listHeight} label={t('panel-system-bodies')}>
               {#snippet row(body, index)}
                 <div role="row" aria-rowindex={index + 2} class="body-grid body-row" class:map-advice={body.advice?.includes('map')}
                   data-testid="body-row" data-body-id={body.body_id}>

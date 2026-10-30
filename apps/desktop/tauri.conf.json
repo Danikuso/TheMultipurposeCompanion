@@ -2,12 +2,12 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "TMC",
   "mainBinaryName": "TMC",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "identifier": "io.github.danikuso.tmc",
   "build": {
     "frontendDist": "http://127.0.0.1:47320",
     "beforeBuildCommand": {
-      "script": "npm --prefix ../../ui run build",
+      "script": "cmd /c npm --prefix ../../ui run build",
       "cwd": "."
     }
   },

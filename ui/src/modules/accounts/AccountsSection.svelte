@@ -661,10 +661,10 @@
   }
 
   .glass-card {
-    background: var(--glass-surface, rgba(14, 22, 33, 0.85));
+    background: var(--hud-surface, rgba(14, 22, 33, 0.95));
     border: 1px solid var(--glass-border, rgba(0, 212, 178, 0.2));
     border-radius: 8px;
-    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   }
 
   .privacy-banner {

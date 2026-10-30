@@ -45,7 +45,7 @@
         <span class="dim"> · {label('exploration-kind-', body.kind_key, body.kind)} · {gravity(body.gravity_g)} · {kelvin(body.temperature_k)} · {label('exobiology-atmosphere-', body.atmosphere_key, body.atmosphere)}</span>
       </div>
       <div class="badges">
-        <span class="badge">{t('exobiology-signals', { count: body.bio_signals })}</span>
+        <span class="badge">{t('exobiology-signals', { count: body.bio_signals ?? 0 })}</span>
         {#if body.first_logged}
           <span class="badge warn" data-testid="first-logged">{t('exobiology-first-logged-estimated')}</span>
         {/if}
@@ -84,7 +84,7 @@
           {/if}
           {#if unsold}
             <div class="unsold" data-testid="unsold">
-              <div class="dim">{t('exobiology-unsold')} · {t('exobiology-unsold-species', { count: unsold.species })}</div>
+              <div class="dim">{t('exobiology-unsold')} · {t('exobiology-unsold-species', { count: unsold.species ?? 0 })}</div>
               <strong class="amount number">{credits(unsold.total)}</strong>
               {#if sampling && !sampling.complete}
                 <span class="dim">{t('exobiology-unsold-after', { after: credits(sampling.unsold_after), species: sampling.species_name ?? sampling.genus_name ?? '—' })}</span>
@@ -107,7 +107,7 @@
     {#if body}
       <section class="box candidates">
         <h3>{t('exobiology-candidates')}</h3>
-        {#if body.candidates.length > 0}
+        {#if (body.candidates?.length ?? 0) > 0}
           <div class="scroll">
             <table>
               <thead>
@@ -117,7 +117,7 @@
                 </tr>
               </thead>
               <tbody>
-                {#each body.candidates as c, index (index)}
+                {#each (body.candidates ?? []) as c, index (index)}
                   <tr data-testid="candidate-row" class:active={c.status === 'in-progress'}>
                     <td>{name(c)}</td>
                     <td class="number">{credits(c.value)}</td>
@@ -125,7 +125,7 @@
                     <td class="number">{meters(c.min_m)}</td>
                     <td>
                       <span class="likelihood {c.likelihood}">{t(`exobiology-likelihood-${c.likelihood}`)}</span>
-                      {#if c.sources.length > 0}<span class="dim origin">({origin(c)})</span>{/if}
+                      {#if (c.sources?.length ?? 0) > 0}<span class="dim origin">({origin(c)})</span>{/if}
                     </td>
                     <td class:done={c.status === 'done'} class:dim={c.status === 'none'}>{state(c)}</td>
                   </tr>
@@ -137,8 +137,8 @@
           <p class="dim">{t('exobiology-no-candidates')}</p>
         {/if}
         <p class="dim" data-testid="genera">
-          {body.confirmed_genera.length > 0 ? t('exobiology-genera-confirmed', { genera }) : t('exobiology-genera-unconfirmed')}
-          · {t('exobiology-completed', { completed: body.completed, signals: body.bio_signals })}
+          {(body.confirmed_genera?.length ?? 0) > 0 ? t('exobiology-genera-confirmed', { genera }) : t('exobiology-genera-unconfirmed')}
+          · {t('exobiology-completed', { completed: body.completed ?? 0, signals: body.bio_signals ?? 0 })}
         </p>
       </section>
     {/if}

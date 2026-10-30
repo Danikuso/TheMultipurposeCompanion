@@ -8,7 +8,7 @@
   <a href="README.pt.md"><strong>Português</strong></a>
 </p>
 
-[![Version](https://img.shields.io/badge/version-0.1.0-orange.svg)](https://github.com/Danikuso/TheMultipurposeCompanion/releases)
+[![Version](https://img.shields.io/badge/version-1.0.0-orange.svg)](https://github.com/Danikuso/TheMultipurposeCompanion/releases)
 [![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20%7C%20Linux%20%2F%20Steam%20Deck-green.svg)]()
 [![Inara Whitelist](https://img.shields.io/badge/Inara%20InAPI%20v1-Official%20Whitelist-success.svg)]()
@@ -55,7 +55,7 @@ Its mission is to serve as an all-in-one copilot for both novice pilots and vete
 
 ### Windows 10 / 11 (64-bit)
 
-1. Download the installer **`TMC_0.1.0_x64-setup.exe`** from the [Releases](https://github.com/Danikuso/TheMultipurposeCompanion/releases) section (installer wizard available in all 5 languages).
+1. Download the installer **`TMC_1.0.0_x64-setup.exe`** from the [Releases](https://github.com/Danikuso/TheMultipurposeCompanion/releases) section (installer wizard available in all 5 languages).
 2. Run the installer and follow the on-screen steps.
 
 > [!NOTE]

@@ -447,7 +447,7 @@
   }
 
   function openGitHubFeedback() {
-    const tmcVersion = '0.1.0';
+    const tmcVersion = '1.0.0';
     const osInfo = typeof navigator !== 'undefined' ? navigator.userAgent : 'Windows';
     const lang = fullConfig.language || 'es';
     const issueTitle = encodeURIComponent('[Feedback / Reporte] ');
@@ -475,7 +475,7 @@
   }
 </script>
 
-<Panel titleKey="nav-settings" span="full">
+<Panel titleKey="nav-settings" span="full" class="no-scroll">
   {#if validationError}<p role="alert" data-testid="validation-error">{t('settings-mining-invalid')}</p>{/if}
   {#if saveError}<p role="alert">{t('settings-save-error')}</p>{/if}
   <div class="settings-form" oninput={() => { draftRevision++; }}>
@@ -1209,13 +1209,52 @@
     align-items: center;
   }
 
-  .engineering-rolls input {
+  input[type="number"],
+  input[type="text"],
+  input:not([type="checkbox"]):not([type="range"]):not([type="radio"]) {
     background: var(--hud-surface-alt, #151a29);
-    color: var(--hud-text);
+    color: var(--hud-text, #f1f5f9);
     border: 1px solid var(--hud-border-subtle, rgba(255, 255, 255, 0.15));
     border-radius: 4px;
-    padding: 0.35rem 0.6rem;
+    padding: 0.4rem 0.65rem;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.85rem;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  input[type="number"]:focus,
+  input[type="text"]:focus,
+  input:not([type="checkbox"]):not([type="range"]):not([type="radio"]):focus {
+    border-color: var(--hud-primary, #ff7100);
+    box-shadow: 0 0 6px rgba(255, 113, 0, 0.35);
+  }
+
+  input[type="number"] {
+    text-align: right;
+  }
+
+  .engineering-rolls input {
     width: 60px;
+    text-align: center;
+  }
+
+  button[data-testid="mining-add"] {
+    background: rgba(255, 113, 0, 0.15);
+    color: var(--hud-primary, #ff7100);
+    border: 1px solid var(--hud-primary, #ff7100);
+    border-radius: 4px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  button[data-testid="mining-add"]:hover {
+    background: var(--hud-primary, #ff7100);
+    color: #0b0f19;
   }
 
   .help-text {

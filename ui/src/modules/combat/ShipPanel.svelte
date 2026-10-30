@@ -71,9 +71,9 @@
     {#if ship.pips}
       <PipsGauge pips={ship.pips} />
     {/if}
-    {#if ship.alerts.length > 0}
+    {#if (ship.alerts?.length ?? 0) > 0}
       <ul class="alerts" data-testid="ship-alerts">
-        {#each ship.alerts as a (a)}
+        {#each (ship.alerts ?? []) as a (a)}
           <li>{t(`combat-alert-${a.replaceAll('_', '-')}`, { pct: pct(ship.hull_pct) })}</li>
         {/each}
       </ul>

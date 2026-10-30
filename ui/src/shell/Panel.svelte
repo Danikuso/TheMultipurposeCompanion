@@ -10,6 +10,7 @@
     size = 'normal',
     collapsible = false,
     defaultExpanded = false,
+    class: className = '',
     details,
     children,
   }: {
@@ -18,6 +19,7 @@
     size?: 'normal' | 'large';
     collapsible?: boolean;
     defaultExpanded?: boolean;
+    class?: string;
     details?: Snippet;
     children?: Snippet;
   } = $props();
@@ -42,7 +44,7 @@
   );
 </script>
 
-<section class="hud-panel" class:large={size === 'large'} style:grid-column={gridColumn}>
+<section class="hud-panel {className}" class:large={size === 'large'} style:grid-column={gridColumn}>
   <header class="hud-panel-header">
     <h2>{t(titleKey)}</h2>
     {#if details || collapsible}
@@ -142,6 +144,10 @@
 
   .hud-panel.large .hud-panel-body {
     font-size: var(--font-body-lg);
+  }
+
+  .hud-panel.no-scroll .hud-panel-body {
+    overflow: visible;
   }
 
   .hud-panel-body {

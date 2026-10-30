@@ -46,6 +46,31 @@ button:disabled {
   cursor: not-allowed;
 }
 
+input[type="text"],
+input[type="number"],
+input[type="password"],
+input[type="search"],
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]) {
+  background: var(--hud-surface-alt, #151a29);
+  color: var(--hud-text, #f1f5f9);
+  border: 1px solid var(--hud-border-subtle, rgba(255, 255, 255, 0.15));
+  border-radius: 4px;
+  padding: 0.35rem 0.65rem;
+  font-family: var(--font-mono, monospace);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):focus {
+  border-color: var(--hud-primary, #ff7100);
+  box-shadow: 0 0 6px rgba(255, 113, 0, 0.35);
+}
+
 /* =====================================================================
    TMC Glass HUD — Clases Comunes del Sistema de Diseño
    ===================================================================== */

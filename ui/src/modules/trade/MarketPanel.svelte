@@ -19,7 +19,7 @@
 
   // Un único setInterval de 30 s para las antigüedades; no corre sin filas.
   $effect(() => {
-    if (!m || m.rows.length === 0) return;
+    if (!m || (m.rows?.length ?? 0) === 0) return;
     skew = journalSkew(m.as_of);
     tick = Date.now();
     const id = setInterval(() => {

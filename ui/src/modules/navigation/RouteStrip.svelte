@@ -76,7 +76,7 @@
         starClasses={!route.next ? currentStarClasses : null}
         remainingJumps={route.remaining_jumps} totalLy={route.total_ly} />
       <div class="following">
-        {#each route.following.slice(0, 3) as c, i (`${i}-${c.name}`)}
+        {#each (route.following ?? []).slice(0, 3) as c, i (`${i}-${c.name}`)}
           <SystemCard card={c} />
         {/each}
       </div>

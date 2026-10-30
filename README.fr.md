@@ -8,7 +8,7 @@
   <a href="README.pt.md"><strong>Português</strong></a>
 </p>
 
-[![Version](https://img.shields.io/badge/version-0.1.0-orange.svg)](https://github.com/Danikuso/TheMultipurposeCompanion/releases)
+[![Version](https://img.shields.io/badge/version-1.0.0-orange.svg)](https://github.com/Danikuso/TheMultipurposeCompanion/releases)
 [![Licence: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/licence-PolyForm%20Noncommercial%201.0.0-blue.svg)](LICENSE)
 [![Plateforme](https://img.shields.io/badge/plateforme-Windows%2010%2F11%20%7C%20Linux%20%2F%20Steam%20Deck-green.svg)]()
 [![Inara Whitelist](https://img.shields.io/badge/Inara%20InAPI%20v1-Whitelist%20Officielle-success.svg)]()
