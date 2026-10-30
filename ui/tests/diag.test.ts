@@ -106,7 +106,7 @@ describe('ui diagnostics', () => {
     unmount(panel);
     expect(diagEnabled()).toBe(false);
     expect(vi.getTimerCount()).toBe(0);
-    expect(addSpy.mock.calls.filter(([t]) => t === 'error' || t === 'unhandledrejection')).toHaveLength(0);
+    expect(addSpy.mock.calls.filter(([t]: [string, ...unknown[]]) => t === 'error' || t === 'unhandledrejection')).toHaveLength(0);
     await vi.advanceTimersByTimeAsync(5000);
     expect(diagCalls(fetchMock)).toHaveLength(0);
     expect(fetchMock).toHaveBeenCalledTimes(1); // solo la acción de negocio
@@ -120,7 +120,7 @@ describe('ui diagnostics', () => {
   test('capability on batches at most once per second', async () => {
     const ws = hello({ diagnostics: true });
     expect(diagEnabled()).toBe(true);
-    expect(addSpy.mock.calls.some(([t]) => t === 'error')).toBe(true);
+    expect(addSpy.mock.calls.some(([t]: [string, ...unknown[]]) => t === 'error')).toBe(true);
     for (let i = 1; i <= 3; i++) ws.receive({ type: 'update', seq: 100 + i, topics: { 'core.status': {} } });
     expect(fetchMock).not.toHaveBeenCalled(); // temporizador pendiente, nada enviado aún
     await vi.advanceTimersByTimeAsync(0);
