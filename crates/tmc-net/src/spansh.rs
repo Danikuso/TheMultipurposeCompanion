@@ -6,7 +6,8 @@ use chrono::{DateTime, Utc};
 use serde_json::Value;
 use tmc_model::market::is_fleet_carrier;
 use tmc_model::net::{
-    BrokerKind, GalaxyRouteParams, NearbyService, NetFailure, NeutronRouteParams,
+    BrokerKind, GalaxyRouteParams, MiningLoopPlan, MiningMultiSellHit, MiningRingTarget,
+    MiningSellStation, MiningTargetQuery, NearbyService, NetFailure, NeutronRouteParams,
     OutfittingModuleQuery, OutfittingSearchParams, OutfittingStationHit, PadSize, PlannedHop,
     PlannedRoute, RemoteStation, RemoteSystem, StockedItemPrice, SystemSuggestion, TradeCommodity,
     TradeRouteParams, TradeRoutePlan, TradeStop, TraderKind,
@@ -470,6 +471,11 @@ const MAX_STATIONS: usize = 5;
 /// Búsqueda de estaciones (`POST`, cuerpo JSON).
 pub fn station_search_url() -> String {
     format!("{BASE}/stations/search")
+}
+
+/// Búsqueda de cuerpos celestes y anillos (`POST`, cuerpo JSON).
+pub fn bodies_search_url() -> String {
+    format!("{BASE}/bodies/search")
 }
 
 /// Cuerpo de `POST /stations/search`: las estaciones más cercanas a
@@ -983,6 +989,322 @@ pub fn parse_outfitting_search(
     Ok(out)
 }
 
+const MAX_MINING_TARGETS: usize = 20;
+const MAX_MINING_STATIONS: usize = 10;
+
+/// Construye el cuerpo JSON de `POST /api/bodies/search` para localizar anillos
+/// con puntos calientes (hotspots) del mineral solicitado.
+pub fn mining_bodies_search_body(query: &MiningTargetQuery, use_coords: bool) -> Value {
+    let mut filters = serde_json::Map::new();
+
+    let mut signal_obj = serde_json::Map::new();
+    signal_obj.insert(
+        "name".to_string(),
+        serde_json::json!({ "value": [query.commodity.trim()] }),
+    );
+    if query.min_hotspots > 1 {
+        signal_obj.insert(
+            "count".to_string(),
+            serde_json::json!({ "comparison": ">=", "value": query.min_hotspots }),
+        );
+    }
+    filters.insert(
+        "ring_signals".to_string(),
+        Value::Array(vec![Value::Object(signal_obj)]),
+    );
+
+    if query.populated_only {
+        filters.insert(
+            "population".to_string(),
+            serde_json::json!({ "comparison": ">", "value": 0 }),
+        );
+    }
+
+    let mut body = serde_json::Map::new();
+    body.insert("filters".to_string(), Value::Object(filters));
+    body.insert(
+        "sort".to_string(),
+        serde_json::json!([{ "distance": { "direction": "asc" } }]),
+    );
+    body.insert("size".to_string(), serde_json::json!(20));
+    body.insert("page".to_string(), serde_json::json!(0));
+
+    if let Some([x, y, z]) = query.reference_coords.filter(|_| use_coords) {
+        body.insert(
+            "reference_coords".to_string(),
+            serde_json::json!({ "x": x, "y": y, "z": z }),
+        );
+    } else {
+        body.insert(
+            "reference_system".to_string(),
+            serde_json::json!(query.reference_system.trim()),
+        );
+    }
+
+    Value::Object(body)
+}
+
+/// Parsea la respuesta de `POST /api/bodies/search` extrayendo los anillos y puntos calientes.
+pub fn parse_mining_bodies(
+    json: &str,
+    query: &MiningTargetQuery,
+) -> Result<Vec<MiningRingTarget>, NetFailure> {
+    let root: Value = serde_json::from_str(json).map_err(|_| NetFailure::Malformed)?;
+
+    let results = root
+        .get("results")
+        .and_then(Value::as_array)
+        .ok_or(NetFailure::Malformed)?;
+
+    let mut targets = Vec::new();
+    let target_commodity_lower = query.commodity.trim().to_lowercase();
+
+    for b in results {
+        let system_name = b
+            .get("system_name")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        let distance_ly = b.get("distance").and_then(Value::as_f64).unwrap_or(0.0);
+        let body_name = b
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        let arrival_distance_ls = b.get("distance_to_arrival").and_then(Value::as_f64);
+
+        if let Some(rings) = b.get("rings").and_then(Value::as_array) {
+            for ring in rings {
+                let ring_name = ring
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string();
+                let ring_type = ring
+                    .get("type")
+                    .and_then(Value::as_str)
+                    .unwrap_or("Metallic")
+                    .to_string();
+
+                let mut hotspot_count = 0u8;
+                let mut other_hotspots = Vec::new();
+
+                if let Some(signals) = ring.get("signals").and_then(Value::as_array) {
+                    for sig in signals {
+                        let sig_name = sig.get("name").and_then(Value::as_str).unwrap_or_default();
+                        let sig_count = sig.get("count").and_then(Value::as_u64).unwrap_or(1) as u8;
+
+                        if sig_name.to_lowercase() == target_commodity_lower {
+                            hotspot_count = sig_count;
+                        } else if !sig_name.is_empty() {
+                            other_hotspots.push(format!("{sig_name}:{sig_count}"));
+                        }
+                    }
+                }
+
+                if hotspot_count >= query.min_hotspots {
+                    targets.push(MiningRingTarget {
+                        system_name: system_name.clone(),
+                        distance_ly,
+                        body_name: body_name.clone(),
+                        ring_name,
+                        ring_type,
+                        arrival_distance_ls,
+                        hotspot_count,
+                        res_intensity: None,
+                        res_distance_km: None,
+                        other_hotspots,
+                        nearest_best_sell: None,
+                    });
+                }
+            }
+        }
+    }
+
+    targets.sort_by(|a, b| a.distance_ly.total_cmp(&b.distance_ly));
+    targets.truncate(MAX_MINING_TARGETS);
+    Ok(targets)
+}
+
+/// Construye el cuerpo JSON de `POST /api/stations/search` para buscar estaciones compradoras
+/// de uno o varios minerales de la bodega.
+pub fn mining_stations_search_body(
+    commodities: &[String],
+    reference_system: &str,
+    reference_coords: Option<[f64; 3]>,
+    use_coords: bool,
+    min_pad: PadSize,
+) -> Value {
+    let mut filters = serde_json::Map::new();
+
+    let clean_commodities: Vec<&str> = commodities
+        .iter()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    if !clean_commodities.is_empty() {
+        filters.insert(
+            "market".to_string(),
+            serde_json::json!({ "value": clean_commodities }),
+        );
+    }
+
+    if min_pad == PadSize::Large {
+        filters.insert(
+            "has_large_pad".to_string(),
+            serde_json::json!({ "value": true }),
+        );
+    }
+
+    filters.insert(
+        "has_market".to_string(),
+        serde_json::json!({ "value": true }),
+    );
+
+    filters.insert(
+        "type".to_string(),
+        serde_json::json!({ "value": REGULAR_STATION_TYPES }),
+    );
+
+    let mut body = serde_json::Map::new();
+    body.insert("filters".to_string(), Value::Object(filters));
+    body.insert(
+        "sort".to_string(),
+        serde_json::json!([{ "distance": { "direction": "asc" } }]),
+    );
+    body.insert("size".to_string(), serde_json::json!(20));
+    body.insert("page".to_string(), serde_json::json!(0));
+
+    if let Some([x, y, z]) = reference_coords.filter(|_| use_coords) {
+        body.insert(
+            "reference_coords".to_string(),
+            serde_json::json!({ "x": x, "y": y, "z": z }),
+        );
+    } else {
+        body.insert(
+            "reference_system".to_string(),
+            serde_json::json!(reference_system.trim()),
+        );
+    }
+
+    Value::Object(body)
+}
+
+/// Parsea la respuesta de `POST /api/stations/search` para venta multimineral.
+pub fn parse_mining_multi_sell(
+    json: &str,
+    commodities: &[String],
+    min_pad: PadSize,
+) -> Result<Vec<MiningMultiSellHit>, NetFailure> {
+    let root: Value = serde_json::from_str(json).map_err(|_| NetFailure::Malformed)?;
+
+    let results = root
+        .get("results")
+        .and_then(Value::as_array)
+        .ok_or(NetFailure::Malformed)?;
+
+    let mut hits = Vec::new();
+
+    for s in results {
+        let has_large = s
+            .get("has_large_pad")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let pad = if has_large {
+            PadSize::Large
+        } else {
+            PadSize::Medium
+        };
+
+        if !pad.fits(min_pad) {
+            continue;
+        }
+
+        let station_name = s
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        let system_name = s
+            .get("system_name")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        let distance_ly = s.get("distance").and_then(Value::as_f64).unwrap_or(0.0);
+        let updated_at = s
+            .get("market_updated_at")
+            .and_then(Value::as_str)
+            .and_then(|t| t.parse::<DateTime<Utc>>().ok());
+
+        let mut item_prices = Vec::new();
+        let mut total_revenue_cr = 0u64;
+
+        if let Some(market) = s.get("market").and_then(Value::as_array) {
+            for req_comm in commodities {
+                let req_lower = req_comm.trim().to_lowercase();
+                let found = market.iter().find(|m| {
+                    m.get("commodity")
+                        .or_else(|| m.get("name"))
+                        .and_then(Value::as_str)
+                        .map(|n| n.to_lowercase() == req_lower)
+                        .unwrap_or(false)
+                });
+
+                if let Some(m) = found {
+                    let buy_p = m
+                        .get("buy_price")
+                        .or_else(|| m.get("sell_price"))
+                        .and_then(Value::as_u64);
+                    item_prices.push(StockedItemPrice {
+                        label: req_comm.clone(),
+                        price_cr: buy_p,
+                    });
+                    if let Some(p) = buy_p {
+                        total_revenue_cr = total_revenue_cr.saturating_add(p);
+                    }
+                } else {
+                    item_prices.push(StockedItemPrice {
+                        label: req_comm.clone(),
+                        price_cr: None,
+                    });
+                }
+            }
+        }
+
+        if item_prices.iter().any(|i| i.price_cr.is_some()) {
+            hits.push(MiningMultiSellHit {
+                station_name,
+                system_name,
+                distance_ly,
+                pad,
+                item_prices,
+                total_revenue_cr,
+                updated_at,
+            });
+        }
+    }
+
+    hits.sort_by(|a, b| a.distance_ly.total_cmp(&b.distance_ly));
+    hits.truncate(MAX_MINING_STATIONS);
+    Ok(hits)
+}
+
+/// Calcula el bucle de minería más corto: Origen -> Anillo -> Mercado.
+pub fn compute_mining_loop(
+    origin: &str,
+    ring: &MiningRingTarget,
+    sell: &MiningSellStation,
+) -> MiningLoopPlan {
+    let total_distance_ly = ring.distance_ly + sell.distance_from_ring_ly;
+    MiningLoopPlan {
+        origin_system: origin.to_string(),
+        ring_target: ring.clone(),
+        sell_station: sell.clone(),
+        total_distance_ly,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1484,6 +1806,10 @@ mod tests {
 
     const OUTFITTING: &str =
         include_str!("../../../tests/fixtures/net/spansh_stations_outfitting.json");
+    const MINING_BODIES: &str =
+        include_str!("../../../tests/fixtures/net/spansh_mining_bodies.json");
+    const MINING_STATIONS: &str =
+        include_str!("../../../tests/fixtures/net/spansh_mining_stations.json");
 
     fn sample_outfitting_params() -> tmc_model::net::OutfittingSearchParams {
         use tmc_model::net::{OutfittingModuleQuery, OutfittingSearchParams, WeaponMode};
@@ -1632,5 +1958,127 @@ mod tests {
                 .iter()
                 .any(|h| h.system_name == "Sol" && h.is_stronghold_carrier)
         );
+    }
+
+    #[test]
+    fn builds_mining_bodies_search_body_with_signals_and_coords() {
+        let q = MiningTargetQuery {
+            reference_system: "Sol".into(),
+            reference_coords: Some([0.0, 0.0, 0.0]),
+            commodity: "Platinum".into(),
+            min_hotspots: 2,
+            require_res_combo: false,
+            populated_only: true,
+            min_pad: PadSize::Large,
+        };
+
+        let body_sys = mining_bodies_search_body(&q, false);
+        assert_eq!(body_sys["reference_system"], "Sol");
+        assert!(body_sys.get("reference_coords").is_none());
+        assert_eq!(
+            body_sys["filters"]["ring_signals"][0]["name"]["value"][0],
+            "Platinum"
+        );
+        assert_eq!(body_sys["filters"]["ring_signals"][0]["count"]["value"], 2);
+        assert_eq!(body_sys["filters"]["population"]["value"], 0);
+
+        let body_coords = mining_bodies_search_body(&q, true);
+        assert!(body_coords.get("reference_system").is_none());
+        assert_eq!(body_coords["reference_coords"]["x"], 0.0);
+    }
+
+    #[test]
+    fn parses_mining_bodies_and_filters_rings_by_hotspots() {
+        let q_min2 = MiningTargetQuery {
+            reference_system: "Sol".into(),
+            reference_coords: None,
+            commodity: "Platinum".into(),
+            min_hotspots: 2,
+            require_res_combo: false,
+            populated_only: false,
+            min_pad: PadSize::Large,
+        };
+
+        // En el fixture, Delkar 7 A Ring tiene 2 de Platinum, pero Paesia 2 A Ring solo 1.
+        let targets = parse_mining_bodies(MINING_BODIES, &q_min2).unwrap();
+        assert_eq!(targets.len(), 1);
+        let delkar = &targets[0];
+        assert_eq!(delkar.system_name, "Delkar");
+        assert_eq!(delkar.body_name, "Delkar 7");
+        assert_eq!(delkar.ring_name, "Delkar 7 A Ring");
+        assert_eq!(delkar.ring_type, "Metallic");
+        assert_eq!(delkar.hotspot_count, 2);
+        assert_eq!(delkar.arrival_distance_ls, Some(2802.0));
+        assert!(delkar.other_hotspots.contains(&"Painite:2".to_string()));
+        assert!(delkar.other_hotspots.contains(&"Monazite:3".to_string()));
+
+        // Con min_hotspots = 1, entran tanto Delkar como Paesia.
+        let mut q_min1 = q_min2;
+        q_min1.min_hotspots = 1;
+        let targets_all = parse_mining_bodies(MINING_BODIES, &q_min1).unwrap();
+        assert_eq!(targets_all.len(), 2);
+        assert_eq!(targets_all[0].system_name, "Delkar");
+        assert_eq!(targets_all[1].system_name, "Paesia");
+    }
+
+    #[test]
+    fn builds_and_parses_mining_multi_sell_and_loop_plan() {
+        let commodities = vec!["Platinum".to_string(), "Painite".to_string()];
+        let body = mining_stations_search_body(&commodities, "Sol", None, false, PadSize::Large);
+        assert_eq!(body["reference_system"], "Sol");
+        assert_eq!(body["filters"]["has_large_pad"]["value"], true);
+        assert_eq!(body["filters"]["has_market"]["value"], true);
+
+        // Parseo con PadSize::Large: Matthews Dock (Large) entra, Small Outpost (Medium/Small) se descarta.
+        let hits_l =
+            parse_mining_multi_sell(MINING_STATIONS, &commodities, PadSize::Large).unwrap();
+        assert_eq!(hits_l.len(), 1);
+        let m = &hits_l[0];
+        assert_eq!(m.station_name, "Matthews Dock");
+        assert_eq!(m.system_name, "Tofana");
+        assert_eq!(m.distance_ly, 97.3);
+        assert_eq!(m.item_prices.len(), 2);
+        assert_eq!(m.item_prices[0].label, "Platinum");
+        assert_eq!(m.item_prices[0].price_cr, Some(295_400));
+        assert_eq!(m.item_prices[1].label, "Painite");
+        assert_eq!(m.item_prices[1].price_cr, Some(310_000));
+        assert_eq!(m.total_revenue_cr, 605_400);
+
+        // Con PadSize::Medium, entran ambas.
+        let hits_m =
+            parse_mining_multi_sell(MINING_STATIONS, &commodities, PadSize::Medium).unwrap();
+        assert_eq!(hits_m.len(), 2);
+
+        // Cálculo de ruta triangular: Sol (origen) -> Delkar (anillo a 83.1 al) -> Matthews Dock en Tofana (a 14.2 al de Delkar)
+        let ring = MiningRingTarget {
+            system_name: "Delkar".into(),
+            distance_ly: 83.1,
+            body_name: "Delkar 7".into(),
+            ring_name: "7 A Ring".into(),
+            ring_type: "Metallic".into(),
+            arrival_distance_ls: Some(2802.0),
+            hotspot_count: 2,
+            res_intensity: Some("Hazardous".into()),
+            res_distance_km: Some(15.0),
+            other_hotspots: vec![],
+            nearest_best_sell: None,
+        };
+        let sell = MiningSellStation {
+            system_name: "Tofana".into(),
+            station_name: "Matthews Dock".into(),
+            station_type: Some("Coriolis Starport".into()),
+            distance_from_ring_ly: 14.2,
+            distance_from_ref_ly: 97.3,
+            arrival_distance_ls: Some(350.0),
+            pad: PadSize::Large,
+            price_cr: 295_400,
+            demand: 42_100,
+            demand_tax_risk: false,
+            updated_at: Utc::now(),
+        };
+
+        let loop_plan = compute_mining_loop("Sol", &ring, &sell);
+        assert_eq!(loop_plan.origin_system, "Sol");
+        assert!((loop_plan.total_distance_ly - 97.3).abs() < 1e-4);
     }
 }

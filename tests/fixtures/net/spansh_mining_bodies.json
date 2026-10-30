@@ -1,0 +1,68 @@
+{
+  "count": 2,
+  "results": [
+    {
+      "id64": 104773738031,
+      "name": "Delkar 7",
+      "system_name": "Delkar",
+      "distance": 83.11,
+      "distance_to_arrival": 2802.0,
+      "type": "Gas giant with water based life",
+      "reserve_level": "Pristine",
+      "rings": [
+        {
+          "name": "Delkar 7 A Ring",
+          "type": "Metallic",
+          "inner_radius": 113130000,
+          "outer_radius": 131160000,
+          "mass": 116880000000,
+          "signal_count": 11,
+          "signals_updated_at": "2026-10-30T00:00:00Z",
+          "signals": [
+            { "name": "Platinum", "count": 2 },
+            { "name": "Painite", "count": 2 },
+            { "name": "Monazite", "count": 3 },
+            { "name": "Serendibite", "count": 3 },
+            { "name": "Rhodplumsite", "count": 1 }
+          ]
+        },
+        {
+          "name": "Delkar 7 B Ring",
+          "type": "Metal-Rich",
+          "inner_radius": 131260000,
+          "outer_radius": 270620000,
+          "mass": 1592500000000,
+          "signal_count": 4,
+          "signals_updated_at": "2026-10-30T00:00:00Z",
+          "signals": [
+            { "name": "Alexandrite", "count": 2 },
+            { "name": "Grandidierite", "count": 2 }
+          ]
+        }
+      ]
+    },
+    {
+      "id64": 104773738032,
+      "name": "Paesia 2",
+      "system_name": "Paesia",
+      "distance": 112.5,
+      "distance_to_arrival": 821.0,
+      "type": "Gas giant with ammonia based life",
+      "reserve_level": "Pristine",
+      "rings": [
+        {
+          "name": "Paesia 2 A Ring",
+          "type": "Metallic",
+          "inner_radius": 95000000,
+          "outer_radius": 120000000,
+          "mass": 98000000000,
+          "signal_count": 3,
+          "signals_updated_at": "2026-10-30T00:00:00Z",
+          "signals": [
+            { "name": "Platinum", "count": 1 }
+          ]
+        }
+      ]
+    }
+  ]
+}

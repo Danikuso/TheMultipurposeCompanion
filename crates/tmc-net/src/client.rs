@@ -42,8 +42,9 @@ use crate::spansh::{self, RoutePoll, TradePoll};
 use crate::transport::{HttpReply, Transport, TransportError};
 use chrono::{DateTime, Utc};
 use tmc_model::net::{
-    NearbyService, NetFailure, NetOutcome, NetQuery, NetSource, OutfittingFallbackEntry,
-    OutfittingSearchParams, OutfittingSearchResult, OutfittingStationHit,
+    MiningMultiSellHit, MiningMultiSellQuery, MiningRingTarget, MiningTargetQuery, NearbyService,
+    NetFailure, NetOutcome, NetQuery, NetSource, OutfittingFallbackEntry, OutfittingSearchParams,
+    OutfittingSearchResult, OutfittingStationHit,
 };
 
 const POLL_EVERY: Duration = Duration::from_secs(2);
@@ -515,6 +516,11 @@ impl NetClient {
                 (NetSource::Edcd, out)
             }
             NetQuery::OutfittingSearch(params) => self.outfitting_search(params, online).await,
+            NetQuery::MiningSearch(params) => self.mining_search(params, online).await,
+            NetQuery::MiningMultiSell(params) => self.mining_multi_sell(params, online).await,
+            NetQuery::MiningHotspotsSync(version) => {
+                self.mining_hotspots_sync(version, online).await
+            }
         }
     }
 
@@ -1216,6 +1222,130 @@ impl NetClient {
                     at.saturating_duration_since(now()).as_millis() as u64)});
         }
         tracing::debug!(source = ?source_of(service), "fallo registrado");
+    }
+
+    async fn mining_search(
+        &self,
+        query: &MiningTargetQuery,
+        online: Option<&AtomicBool>,
+    ) -> (NetSource, NetOutcome) {
+        if query.commodity.trim().is_empty() {
+            return (NetSource::Spansh, NetOutcome::NoData);
+        }
+
+        let mut use_coords = false;
+        let targets = match self.query_mining_targets(query, false, online).await {
+            Ok(hits) => hits,
+            Err(Miss::Fail(NetFailure::UnknownOrigin | NetFailure::Http(400)))
+                if query.reference_coords.is_some() =>
+            {
+                use_coords = true;
+                match self.query_mining_targets(query, true, online).await {
+                    Ok(hits) => hits,
+                    Err(miss) => return (NetSource::Spansh, NetOutcome::from(miss)),
+                }
+            }
+            Err(miss) => return (NetSource::Spansh, NetOutcome::from(miss)),
+        };
+
+        let _ = use_coords;
+        (NetSource::Spansh, NetOutcome::MiningTargets(targets))
+    }
+
+    async fn query_mining_targets(
+        &self,
+        query: &MiningTargetQuery,
+        use_coords: bool,
+        online: Option<&AtomicBool>,
+    ) -> Result<Vec<MiningRingTarget>, Miss> {
+        let body = spansh::mining_bodies_search_body(query, use_coords).to_string();
+        let req = Req::PostJson(spansh::bodies_search_url(), body);
+        let out = self
+            .fetch(Service::Spansh, req, online, |b| {
+                spansh::parse_mining_bodies(b, query)
+                    .map(|targets| Some(NetOutcome::MiningTargets(targets)))
+            })
+            .await;
+        match out {
+            NetOutcome::MiningTargets(targets) => Ok(targets),
+            NetOutcome::Disabled => Err(Miss::Disabled),
+            NetOutcome::Failed(f) => Err(Miss::Fail(f)),
+            _ => Err(Miss::NoData),
+        }
+    }
+
+    async fn mining_multi_sell(
+        &self,
+        query: &MiningMultiSellQuery,
+        online: Option<&AtomicBool>,
+    ) -> (NetSource, NetOutcome) {
+        let valid_commodities: Vec<_> = query
+            .commodities
+            .iter()
+            .filter(|c| !c.trim().is_empty())
+            .cloned()
+            .collect();
+        if valid_commodities.is_empty() {
+            return (NetSource::Spansh, NetOutcome::NoData);
+        }
+
+        let hits = match self.query_mining_multi_sell(query, false, online).await {
+            Ok(hits) => hits,
+            Err(Miss::Fail(NetFailure::UnknownOrigin | NetFailure::Http(400)))
+                if query.reference_coords.is_some() =>
+            {
+                match self.query_mining_multi_sell(query, true, online).await {
+                    Ok(hits) => hits,
+                    Err(miss) => return (NetSource::Spansh, NetOutcome::from(miss)),
+                }
+            }
+            Err(miss) => return (NetSource::Spansh, NetOutcome::from(miss)),
+        };
+
+        (NetSource::Spansh, NetOutcome::MiningMultiSell(hits))
+    }
+
+    async fn query_mining_multi_sell(
+        &self,
+        query: &MiningMultiSellQuery,
+        use_coords: bool,
+        online: Option<&AtomicBool>,
+    ) -> Result<Vec<MiningMultiSellHit>, Miss> {
+        let body = spansh::mining_stations_search_body(
+            &query.commodities,
+            &query.reference_system,
+            query.reference_coords,
+            use_coords,
+            query.min_pad,
+        )
+        .to_string();
+        let req = Req::PostJson(spansh::station_search_url(), body);
+        let out = self
+            .fetch(Service::Spansh, req, online, |b| {
+                spansh::parse_mining_multi_sell(b, &query.commodities, query.min_pad)
+                    .map(|hits| Some(NetOutcome::MiningMultiSell(hits)))
+            })
+            .await;
+        match out {
+            NetOutcome::MiningMultiSell(hits) => Ok(hits),
+            NetOutcome::Disabled => Err(Miss::Disabled),
+            NetOutcome::Failed(f) => Err(Miss::Fail(f)),
+            _ => Err(Miss::NoData),
+        }
+    }
+
+    async fn mining_hotspots_sync(
+        &self,
+        _version: &str,
+        online: Option<&AtomicBool>,
+    ) -> (NetSource, NetOutcome) {
+        if online
+            .map(|b| !b.load(std::sync::atomic::Ordering::Relaxed))
+            .unwrap_or(false)
+        {
+            return (NetSource::Spansh, NetOutcome::Disabled);
+        }
+        (NetSource::Spansh, NetOutcome::MiningHotspotsUpdate(None))
     }
 
     fn succeed(&self, service: Service) {

@@ -487,6 +487,9 @@ fn api_cache_key(query: &NetQuery) -> Option<(CacheKind, String)> {
         | NetQuery::SystemCoordsByName { .. }
         | NetQuery::BgsTick
         | NetQuery::OutfittingSearch(_)
+        | NetQuery::MiningSearch(_)
+        | NetQuery::MiningMultiSell(_)
+        | NetQuery::MiningHotspotsSync(_)
         | NetQuery::BodyBio { .. } => cache_keys(query).into_iter().next(),
         _ => None,
     }
@@ -513,6 +516,15 @@ async fn read_api_cache(store: &Store, query: &NetQuery) -> Option<(NetOutcome, 
         CacheKind::BgsTick => NetOutcome::BgsTick(serde_json::from_str(&entry.value).ok()?),
         CacheKind::SpanshOutfitting => {
             NetOutcome::OutfittingStations(serde_json::from_str(&entry.value).ok()?)
+        }
+        CacheKind::SpanshMiningTargets => {
+            NetOutcome::MiningTargets(serde_json::from_str(&entry.value).ok()?)
+        }
+        CacheKind::SpanshMiningMultiSell => {
+            NetOutcome::MiningMultiSell(serde_json::from_str(&entry.value).ok()?)
+        }
+        CacheKind::MiningHotspotsSync => {
+            NetOutcome::MiningHotspotsUpdate(serde_json::from_str(&entry.value).ok()?)
         }
         _ => NetOutcome::Stations(serde_json::from_str(&entry.value).ok()?),
     };

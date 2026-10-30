@@ -26,6 +26,9 @@ pub enum CacheKind {
     SystemCoords,
     BgsTick,
     SpanshOutfitting,
+    SpanshMiningTargets,
+    SpanshMiningMultiSell,
+    MiningHotspotsSync,
 }
 
 pub fn ttl_for(kind: CacheKind) -> TtlPolicy {
@@ -70,6 +73,16 @@ pub fn ttl_for(kind: CacheKind) -> TtlPolicy {
         CacheKind::SpanshOutfitting => TtlPolicy {
             fresh: Duration::from_secs(5 * 60),
             max_stale: Duration::from_secs(5 * 60),
+        },
+        // Yacimientos y mercados de minería: 15 min fresco, servible hasta 60 min.
+        CacheKind::SpanshMiningTargets | CacheKind::SpanshMiningMultiSell => TtlPolicy {
+            fresh: Duration::from_secs(15 * 60),
+            max_stale: Duration::from_secs(60 * 60),
+        },
+        // Comprobación de sincronización de catálogo de minería: 24 h fresco.
+        CacheKind::MiningHotspotsSync => TtlPolicy {
+            fresh: secs(24),
+            max_stale: secs(24 * 7),
         },
     }
 }
@@ -153,6 +166,24 @@ pub fn cache_keys(q: &NetQuery) -> Vec<(CacheKind, String)> {
                 "spansh:outfitting:{:016x}",
                 fnv1a(&serde_json::to_string(p).unwrap_or_default())
             ),
+        )],
+        NetQuery::MiningSearch(q) => vec![(
+            CacheKind::SpanshMiningTargets,
+            format!(
+                "spansh:mining:targets:{:016x}",
+                fnv1a(&serde_json::to_string(q).unwrap_or_default())
+            ),
+        )],
+        NetQuery::MiningMultiSell(q) => vec![(
+            CacheKind::SpanshMiningMultiSell,
+            format!(
+                "spansh:mining:multisell:{:016x}",
+                fnv1a(&serde_json::to_string(q).unwrap_or_default())
+            ),
+        )],
+        NetQuery::MiningHotspotsSync(v) => vec![(
+            CacheKind::MiningHotspotsSync,
+            format!("tmc:mining:hotspots_sync:{v}"),
         )],
         NetQuery::CommodityImportsNearby {
             system_address,

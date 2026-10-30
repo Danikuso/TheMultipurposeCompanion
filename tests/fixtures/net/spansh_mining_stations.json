@@ -1,0 +1,57 @@
+{
+  "count": 2,
+  "results": [
+    {
+      "id64": 128001001,
+      "market_id": 322441,
+      "name": "Matthews Dock",
+      "system_name": "Tofana",
+      "type": "Coriolis Starport",
+      "distance": 97.3,
+      "distance_to_arrival": 350.0,
+      "has_large_pad": true,
+      "has_market": true,
+      "market_updated_at": "2026-10-30T09:00:00Z",
+      "market": [
+        {
+          "commodity": "Platinum",
+          "category": "Metals",
+          "buy_price": 295400,
+          "sell_price": 295400,
+          "demand": 42100,
+          "supply": 0
+        },
+        {
+          "commodity": "Painite",
+          "category": "Minerals",
+          "buy_price": 310000,
+          "sell_price": 310000,
+          "demand": 15000,
+          "supply": 0
+        }
+      ]
+    },
+    {
+      "id64": 128001002,
+      "market_id": 322442,
+      "name": "Small Outpost",
+      "system_name": "Ross 128",
+      "type": "Outpost",
+      "distance": 12.0,
+      "distance_to_arrival": 120.0,
+      "has_large_pad": false,
+      "has_market": true,
+      "market_updated_at": "2026-10-30T08:00:00Z",
+      "market": [
+        {
+          "commodity": "Platinum",
+          "category": "Metals",
+          "buy_price": 305000,
+          "sell_price": 305000,
+          "demand": 500,
+          "supply": 0
+        }
+      ]
+    }
+  ]
+}
