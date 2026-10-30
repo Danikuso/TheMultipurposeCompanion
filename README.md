@@ -1,379 +1,387 @@
 # TMC — The Multipurpose Companion
 
-[![Versión](https://img.shields.io/badge/versi%C3%B3n-0.1.0-orange.svg)](https://github.com/Danikuso/TheMultipurposeCompanion/releases)
-[![Licencia: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/licencia-PolyForm%20Noncommercial%201.0.0-blue.svg)](LICENSE)
-[![Plataforma](https://img.shields.io/badge/plataforma-Windows%2010%2F11%20%7C%20Linux%20%2F%20Steam%20Deck-green.svg)]()
-[![Inara Whitelist](https://img.shields.io/badge/Inara%20InAPI%20v1-Whitelist%20Oficial-success.svg)]()
+<p align="center">
+  <a href="README.md"><strong>English</strong></a> ·
+  <a href="README.es.md"><strong>Español</strong></a> ·
+  <a href="README.fr.md"><strong>Français</strong></a> ·
+  <a href="README.de.md"><strong>Deutsch</strong></a> ·
+  <a href="README.pt.md"><strong>Português</strong></a>
+</p>
 
-**TMC (*The Multipurpose Companion*)** es un ayudante de cabina gratuito y de código abierto en tiempo real para ***Elite Dangerous*** (*Live 4.0 / Odyssey / Horizons* y *Legacy 3.8*), construido con **Rust**, **Tauri 2** y **Svelte 5**.
+[![Version](https://img.shields.io/badge/version-0.1.0-orange.svg)](https://github.com/Danikuso/TheMultipurposeCompanion/releases)
+[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20%7C%20Linux%20%2F%20Steam%20Deck-green.svg)]()
+[![Inara Whitelist](https://img.shields.io/badge/Inara%20InAPI%20v1-Official%20Whitelist-success.svg)]()
 
-Su objetivo es servir de copiloto integral tanto para pilotos que acaban de empezar como para comandantes veteranos: reúne en una única aplicación ultraligera **10 disposiciones de cabina combinadas**, **16 módulos especializados**, **planificación de rutas**, **guía paso a paso de ingenieros**, **copiloto auditivo y consultas por voz** y **pantalla táctil auxiliar para tablet o móvil**.
+**TMC (*The Multipurpose Companion*)** is a free, open-source, real-time cockpit companion for ***Elite Dangerous*** (*Live 4.0 / Odyssey / Horizons* and *Legacy 3.8*), built with **Rust**, **Tauri 2**, and **Svelte 5**.
 
----
-
-## Índice de este Documento
-
-- **Recursos para Jugadores:** [Manual de Instrucciones y Tutoriales (PDF)](website/Manual_TMC_Comandante.pdf) · [Web de Presentación (`website/`)](website/index.html)
-- **[Parte I — Guía para Jugadores y Usuarios](#parte-i--guía-para-jugadores-y-usuarios)**
-  1. [Filosofía y Cualidades Clave](#1-filosofía-y-cualidades-clave)
-  2. [Instalación y Puesta en Marcha (Windows y Linux / Steam Deck)](#2-instalación-y-puesta-en-marcha)
-  3. [Cómo Funciona la Interfaz (`TopBar`, `Auto-companion` y las 10 Disposiciones)](#3-cómo-funciona-la-interfaz)
-  4. [Todas las Funcionalidades: Los 16 Módulos al Detalle](#4-todas-las-funcionalidades-los-16-módulos-al-detalle)
-  5. [Copiloto de Voz, Consultas por Micrófono, VoiceAttack y Tablet / Móvil (QR)](#5-voz-micrófono-voiceattack-y-pantalla-en-tablet-o-móvil)
-  6. [Personalización en Ajustes y Soporte / Feedback](#6-personalización-en-ajustes-y-soporte)
-- **[Parte II — Documentación Técnica para Desarrolladores](#parte-ii--documentación-técnica-para-desarrolladores)**
-  7. [Arquitectura del Workspace (12 Crates + 2 Apps + Frontend)](#7-arquitectura-del-workspace)
-  8. [Ingesta del Diario, Almacenamiento, Seguridad y Rendimiento](#8-ingesta-del-diario-almacenamiento-seguridad-y-rendimiento)
-  9. [Rutas Locales, Argumentos CLI y Variables de Entorno](#9-rutas-locales-argumentos-cli-y-variables-de-entorno)
-  10. [Herramientas de Desarrollo (`tmc-replay`, `tmc-headless eval`, Footprint)](#10-herramientas-de-desarrollo-reproducción-y-auditoría)
-  11. [Compilación, Pruebas Automatizadas y Empaquetado NSIS](#11-compilación-pruebas-automatizadas-y-empaquetado)
-  12. [Contribución, Privacidad y Licencia](#12-contribución-privacidad-y-licencia)
+Its mission is to serve as an all-in-one copilot for both novice pilots and veteran commanders: bringing together **10 combined cockpit layouts**, **16 specialized modules**, **route plotting**, **step-by-step engineer unlock guides**, **audio copilot and voice queries**, and an **auxiliary touch screen for tablet or mobile** in a single ultra-lightweight application.
 
 ---
 
-# Parte I — Guía para Jugadores y Usuarios
+## Table of Contents
 
-## 1. Filosofía y Cualidades Clave
-
-- **Un guía que nunca te deja bloqueado:** si quieres mejorar un módulo de tu nave pero todavía no conoces o no has desbloqueado al ingeniero necesario, TMC no te muestra un aviso vacío: despliega primero **paso a paso cómo descubrirlo, cómo conseguir su invitación y qué tarea o entrega pide su taller** (leyendo tu avance real del diario), y justo debajo calcula los materiales y trueques necesarios.
-- **Claridad visual («TMC Glass HUD») y color sincronizado con tu nave:** cada panel muestra en su parte superior la información esencial con medidores visuales, semáforos y botones de un clic, dejando las tablas extensas plegadas bajo **`Ver información adicional`**. Además, el tema **`HUD automático`** detecta los colores personalizados de la cabina de tu juego para adoptar tu misma paleta visual.
-- **Ligero y silencioso en segundo plano:** diseñado para no restar fotogramas ni recursos al juego. Al cerrar la ventana (`✕`), TMC permanece activo junto al reloj del sistema liberando su memoria gráfica mientras mantiene activos los avisos por voz y el copiado automático de saltos.
-- **100 % respetuoso con tus datos y con la galaxia Legacy:** funciona localmente desde el primer segundo sin cuentas obligatorias. Si detecta que juegas en la galaxia **Legacy 3.8**, bloquea de forma automática cualquier envío a portales externos (EDDN, EDSM, Inara) para no mezclar ambas partidas.
-- **5 idiomas completos:** interfaz, datos de ingeniería y voces disponibles en **Español**, **Inglés**, **Francés**, **Alemán** y **Portugués**.
+- **Player Resources:** [Commander's User Manual & Tutorials (PDF)](website/Manual_TMC_Comandante.pdf) · [Overview Website (`website/`)](website/index.html)
+- **[Part I — Player and User Guide](#part-i--player-and-user-guide)**
+  1. [Philosophy and Key Qualities](#1-philosophy-and-key-qualities)
+  2. [Installation and Getting Started (Windows and Linux / Steam Deck)](#2-installation-and-getting-started)
+  3. [How the Interface Works (`TopBar`, `Auto-companion`, and the 10 Layouts)](#3-how-the-interface-works)
+  4. [All Features: The 16 Modules in Detail](#4-all-features-the-16-modules-in-detail)
+  5. [Voice Copilot, Microphone Queries, VoiceAttack, and Tablet / Mobile (QR)](#5-voice-copilot-microphone-queries-voiceattack-and-tablet--mobile)
+  6. [Settings Customization and Support / Feedback](#6-settings-customization-and-support--feedback)
+- **[Part II — Developer Technical Documentation](#part-ii--developer-technical-documentation)**
+  7. [Workspace Architecture (12 Crates + 2 Apps + Frontend)](#7-workspace-architecture)
+  8. [Journal Ingestion, Storage, Security, and Performance](#8-journal-ingestion-storage-security-and-performance)
+  9. [Local Paths, CLI Arguments, and Environment Variables](#9-local-paths-cli-arguments-and-environment-variables)
+  10. [Development Tools, Replay, and Scientific Audit](#10-development-tools-replay-and-scientific-audit)
+  11. [Compilation, Automated Tests, and NSIS Packaging](#11-compilation-automated-tests-and-nsis-packaging)
+  12. [Contributing, Privacy, and Licensing](#12-contributing-privacy-and-licensing)
 
 ---
 
-## 2. Instalación y Puesta en Marcha
+# Part I — Player and User Guide
 
-### Windows 10 / 11 (64 bits)
+## 1. Philosophy and Key Qualities
 
-1. Descarga el instalador **`TMC_0.1.0_x64-setup.exe`** desde la sección [Releases](https://github.com/Danikuso/TheMultipurposeCompanion/releases) (asistente disponible en los 5 idiomas).
-2. Ejecuta el instalador y completa los pasos.
+- **A companion that never leaves you stranded:** if you want to engineer a ship module but haven't yet discovered or unlocked the required engineer, TMC won't show you a blank warning: it first displays **step-by-step instructions on how to discover them, obtain their invite, and what workshop donation or task they require** (reading your real journal progress), and right below calculates the necessary materials and barter exchanges.
+- **Visual clarity («TMC Glass HUD») and ship-synchronized colors:** every panel displays essential information at the top using gauges, status lights, and one-click actions, keeping large tables tucked away under **`View additional information`**. Furthermore, the **`Auto HUD`** theme automatically detects your game cockpit's custom color matrix to mirror your exact ship palette.
+- **Lightweight and quiet in the background:** engineered not to impact game framerates or PC resources. When minimizing or closing the window (`✕`), TMC continues running in the system tray, freeing its WebView2 memory while keeping audio callouts and auto-copying of hyperspace jumps active.
+- **100% respectful of your privacy and the Legacy galaxy:** works locally from the very first second with zero mandatory accounts. If it detects you are playing in the **Legacy 3.8** galaxy, it automatically blocks all transmissions to external community networks (EDDN, EDSM, Inara) to prevent contaminating live databases.
+- **5 fully supported languages:** user interface, engineering data, and voice speech available in **English**, **Spanish**, **French**, **German**, and **Portuguese**.
+
+---
+
+## 2. Installation and Getting Started
+
+### Windows 10 / 11 (64-bit)
+
+1. Download the installer **`TMC_0.1.0_x64-setup.exe`** from the [Releases](https://github.com/Danikuso/TheMultipurposeCompanion/releases) section (installer wizard available in all 5 languages).
+2. Run the installer and follow the on-screen steps.
 
 > [!NOTE]
-> **Aviso preventivo de Windows Defender SmartScreen:**  
-> Al ser un proyecto gratuito de código abierto sin certificado corporativo comercial de pago, la primera vez Windows puede mostrar la pantalla azul *«Windows protegió su PC»*. Pulsa en **«Más información»** y a continuación en **«Ejecutar de todas formas»**.
+> **Windows Defender SmartScreen Notice:**  
+> As a free, non-commercial open-source project without an expensive corporate signing certificate, Windows might show the blue *«Windows protected your PC»* dialog upon first run. Click on **«More info»** and then **«Run anyway»**.
 
-3. Abre **TMC** antes o después de iniciar *Elite Dangerous*. Detectará automáticamente tu carpeta de partida guardada, importará tu historial en segundo plano (`Importando historial: X de Y`) y recordará el tamaño y posición de su ventana entre sesiones.
-4. **Bandeja del sistema:** al pulsar `✕` en la ventana, TMC sigue funcionando en el icono junto al reloj de Windows. Haz clic izquierdo en el icono (o clic derecho → **`Abrir TMC`**) para restaurar la ventana, o elige **`Salir`** para cerrarlo por completo.
+3. Launch **TMC** before or after starting *Elite Dangerous*. It will automatically locate your saved games folder, import your history in the background (`Importing history: X of Y`), and restore its window size and position between sessions.
+4. **System Tray:** clicking `✕` on the window minimizes TMC to the system tray next to the Windows clock. Left-click the tray icon (or right-click → **`Open TMC`**) to restore the window, or select **`Quit`** to exit completely.
 
-### Linux y SteamOS (Steam Deck)
+### Linux and SteamOS (Steam Deck)
 
-- TMC detecta automáticamente la carpeta de diarios de *Elite Dangerous* dentro de los prefijos **Proton** de Steam (tanto en instalaciones nativas como en Flatpak, AppID `359320`).
-- Puedes ejecutar la aplicación de escritorio (`tmc-desktop`) o lanzar el servidor ligero sin ventana (`tmc-headless`) para abrir la interfaz desde el navegador o desde una tablet en la misma red Wi-Fi.
+- TMC automatically detects the *Elite Dangerous* journal directory inside Steam **Proton** prefixes (both native and Flatpak installations, AppID `359320`).
+- You can run the desktop GUI application (`tmc-desktop`) or start the lightweight headless server (`tmc-headless`) to view the interface from any browser or tablet on the same local Wi-Fi.
 
 ---
 
-## 3. Cómo Funciona la Interfaz
+## 3. How the Interface Works
 
-### 3.1 Barra Superior (`TopBar`)
-Siempre visible en la parte alta de la pantalla:
-- **Estado y galaxia:** indicador luminoso de conexión en vivo, insignia **`LIVE 4.0`** o **`LEGACY`** y avisos contextuales (`El juego no está en ejecución` o `Galaxia Legacy: los datos permanecen locales`).
-- **6 indicadores instantáneos:** **`Sistema`** actual, **`MODO`** (entre 10 estados: *Atracado, Aterrizado, Espacio normal, Supercrucero, Hiperespacio, A pie, En vehículo de superficie, En caza, En taxi, Multitripulación*), **`Combustible`** (con aviso visual por debajo del 25 %), **`Casco`** (con alerta roja por debajo del 30 %), **`Carga`** (`usada / capacidad`) y **`Créditos`**.
-- **Controles rápidos a la derecha:** botón de candado táctico **`🔓` / `🔒`** (con atajo **`Alt + L`** para congelar la pantalla de inmediato), botón de micrófono **`🎙️`** (para consultas habladas) e interruptor **`Auto-companion`**.
+### 3.1 Top Bar (`TopBar`)
+Always docked at the top of the screen:
+- **Status and Galaxy:** live WebSocket connection indicator, **`LIVE 4.0`** or **`LEGACY`** badge, and contextual alerts (`Game not running` or `Legacy Galaxy: data remains strictly local`).
+- **6 Instant Flight Metrics:** current **`System`**, **`MODE`** (across 10 flight/surface states: *Docked, Landed, Normal Space, Supercruise, Hyperspace, On Foot, In SRV, In Fighter, In Taxi, Multicrew*), **`Fuel`** (with amber warning below 25%), **`Hull`** (with red alarm below 30%), **`Cargo`** (`used / capacity`), and **`Credits`**.
+- **Quick Controls on the Right:** tactical lock button **`🔓` / `🔒`** (with **`Alt + L`** shortcut to instantly freeze the screen), voice microphone button **`🎙️`**, and **`Auto-companion`** switch.
 
-### 3.2 Modo Auto-Companion Pro: Inteligencia Predictiva, Candado Táctico y Prioridades
-- **Conmutación inteligente y continua:** Con **`Auto-companion` activado**, TMC cambia automáticamente a la disposición más relevante según los acontecimientos en la cabina (combate, prospección de asteroides, atraque en estación, ingeniería, salto de Fleet Carrier, colonización o salto hiperespacial).
-- **Bloqueo Táctico de 1 Clic (`Alt + L` / Candado):** En cualquier instante crítico o de consulta intensiva, pulsa el botón del candado en la barra superior o presiona **`Alt + L`** para congelar la pantalla actual. El candado brillará en tono ámbar *Glass HUD* impidiendo que ningún evento automático mueva tu vista hasta que decidas desbloquearlo.
-- **Histéresis y Retención Anti-Salto (`linger_seconds`):** Tras salir de un combate, terminar una prospección o cerrar una transacción, la pantalla no cambia bruscamente. Mantiene la cabina activa durante el margen de retención configurado (por defecto 20 segundos, ajustable de 0 a 60 s en Ajustes) para permitirte revisar el botín, daños y estadísticas con calma.
-- **Transiciones Predictivas:** TMC se anticipa a los eventos antes de que ocurran:
-  - *Interdicción inminente:* si sufres una interdicción o inicias una interdicción en supercrucero, la pantalla conmuta inmediatamente a *Combate* durante la lucha por el vector de escape.
-  - *Aproximación a anillos:* al descender hacia anillos o cinturones planetarios portando equipamiento de minería, conmuta proactivamente a *Minería*.
-  - *Autorización de atraque:* al recibir autorización de atraque en una estación o puerto espacial, conmuta a *Comercio* preparando el mercado y servicios.
-- **Prioridades de Cabina a tu Medida:** En `Ajustes` puedes personalizar el orden de jerarquía de los 9 roles usando sencillas flechas `▲` y `▼`, o pulsar `Restablecer orden estándar` para volver a la configuración táctica recomendada.
-- **Feedback Sensorial de Cabina:** Activa el sutil bip acústico de cabina (*Glass HUD Chime*, sintetizado en tiempo real a 880 Hz ➔ 1320 Hz sin archivos pesados) o los avisos de voz del copiloto (TTS) para saber cuándo ha cambiado la pantalla sin apartar la vista de tus instrumentos de vuelo.
-- Dentro de la vista de **`Exploración`**, el **`Panel de contexto`** alterna automáticamente entre **`Cuerpos`** y **`Exobiología`** cuando desciendes a la superficie de un mundo con señales biológicas.
-- Si seleccionas manualmente otra vista mientras `Auto-companion` está activo (sin el candado puesto), TMC respeta tu elección temporal hasta que cambie la actividad en el juego. Si desactivas `Auto-companion`, la pantalla permanece fija donde la dejes.
+### 3.2 Auto-Companion Pro: Predictive Intelligence, Tactical Lock, and Priority Management
+- **Intelligent, Continuous Context Switching:** with **`Auto-companion` enabled**, TMC smoothly transitions to the most relevant cockpit layout according to in-game actions (combat, asteroid prospecting, station docking, engineering, Fleet Carrier jump, colonization, or hyperspace navigation).
+- **1-Click Tactical Lock (`Alt + L` / Lock Button):** during intense combat, route auditing, or recipe inspection, click the padlock button in the top bar or press **`Alt + L`** to freeze the current cockpit. The lock glows amber in *Glass HUD* style, preventing any automatic event from switching your view until you unlock it.
+- **Hysteresis & Anti-Jerk Retention (`linger_seconds`):** when finishing a dogfight, mining an asteroid, or completing a trade transaction, the screen won't abruptly jump away. It retains the active cockpit for the configured duration (default 20 seconds, adjustable from 0 to 60s in Settings) so you can review loot, damage, and rewards peacefully.
+- **Predictive In-Flight Transitions:** TMC anticipates events before they occur:
+  - *Imminent Interdiction:* whether being interdicted or initiating an interdiction in supercruise, the cockpit switches to *Combat* immediately during the escape vector struggle.
+  - *Ring Approach:* descending toward planetary rings or asteroid belts with mining gear equipped switches proactively to *Mining*.
+  - *Docking Clearance Granted:* receiving docking permission at a starport or outpost pre-switches to *Trade*, preparing the local commodity market and station services.
+- **Custom Cockpit Priority Order:** in `Settings`, you can customize the hierarchy order of all 9 roles using simple `▲` and `▼` buttons, or click `Reset to standard order` to restore the recommended tactical hierarchy.
+- **Cockpit Audio Feedback:** enable the subtle *Glass HUD Chime* (synthesized natively via Web Audio API at 880 Hz ➔ 1320 Hz without heavy audio assets) or TTS copilot voice callouts to know when the screen switches without taking your eyes off your flight instruments.
+- Within the **`Exploration`** layout, the **`Context Panel`** automatically flips between **`System Bodies`** and **`Exobiology`** when you touch down on a world with biological signals.
+- If you manually click another layout while `Auto-companion` is active (without the lock engaged), TMC respects your temporary manual choice until in-game activity changes. Turning `Auto-companion` off fixes the screen wherever you leave it.
 
-### 3.3 Las 10 Disposiciones de Cabina frente a los 16 Módulos
-En el menú lateral izquierdo dispones de dos formas de navegar (además del botón **`⚙️ Ajustes`** fijo abajo):
+### 3.3 The 10 Combined Layouts vs. The 16 Modules
+The left sidebar offers two complementary navigation modes (in addition to the pinned **`⚙️ Settings`** button):
 
-| Disposición combinada | Paneles que reúne en una sola pantalla |
+| Combined Layout | Panels Grouped in a Single Screen |
 |---|---|
-| **1. `Exploración`** | Tira de `Ruta`, `Panel de contexto` (conmutador `Cuerpos` / `Exobiología`), `Planificador de rutas` y `Alcance de salto`. |
-| **2. `Nave`** | `Nave` (equipamiento e ingeniería), `Alcance de salto`, `Mi carga` y `Astilleros y Equipamiento`. |
-| **3. `Combate`** | `Objetivo`, `Sesión de caza`, `Mi nave` y paneles automáticos de `Zona de conflicto` y `AX` (Thargoides) cuando están activos. |
-| **4. `Minería`** | `Objetivos de minería` (bucle triangular y venta óptima), `Prospector`, `Sesión de minería` y `Dónde vender`. |
-| **5. `Comercio`** | `Mercado actual`, `Mi carga`, `Sesión de comercio`, `Ruta comercial` y `Buscar mercancía`. |
-| **6. `Misiones`** | `Misiones activas`, `Avisos`, `Recompensas de la sesión` y paneles automáticos de `Pila de masacre`, `Pasajeros`, `Turismo` y `Objetivos comunitarios`. |
-| **7. `Ingeniería`** | `Materiales`, `Ingenieros`, `Avisos de ingeniería`, `Mi nave modificada`, `Ingenierizar un módulo` (al elegir pieza), `Lista de la compra`, `Intercambios` y `Dónde conseguirlo`. |
-| **8. `Fleet Carrier`** | `Estado del Fleet Carrier`, `Secuencia de salto` y `Finanzas y mantenimiento`. |
-| **9. `Colonización`** | `Depósito de construcción` y `Suministro y compras`. |
-| **10. `Powerplay 2.0`** | `Estado de Powerplay` y `Facciones del sistema` (BGS). |
+| **1. `Exploration`** | `Route Strip`, `Context Panel` (`Bodies` / `Exobiology` toggle), `Route Planner`, and `Jump Range`. |
+| **2. `Ship`** | `Ship` (outfitting and engineering), `Jump Range`, `Cargo Inventory`, and `Shipyard & Outfitting Search`. |
+| **3. `Combat`** | `Target Info`, `Hunting Session`, `My Ship`, and automatic `Conflict Zone` and `Anti-Xeno (AX)` panels when active. |
+| **4. `Mining`** | `Mining Target Finder` (triangular loop and best sell), `Prospector`, `Mining Session`, and `Where to Sell`. |
+| **5. `Trade`** | `Current Market`, `Cargo Inventory`, `Trade Session`, `Trade Route Optimizer`, and `Find Commodity`. |
+| **6. `Missions`** | `Active Missions`, `Notices`, `Session Rewards`, and automatic `Massacre Stack`, `Passengers`, `Tourism`, and `Community Goals` panels. |
+| **7. `Engineering`** | `Materials Inventory`, `Engineers`, `Engineering Notices`, `Modified Ship`, `Engineer a Module`, `Shopping List`, `Barter Exchanges`, and `Where to Find`. |
+| **8. `Fleet Carrier`** | `Carrier Status`, `Jump Sequence Countdown`, and `Finances & Upkeep`. |
+| **9. `Colonization`** | `Construction Depot` and `Supply & Procurement`. |
+| **10. `Powerplay 2.0`** | `Powerplay Status` and `System Factions` (Background Simulation - BGS). |
 
-Debajo de las disposiciones encontrarás la lista de los **16 Módulos individuales** (con un punto luminoso que indica cuáles tienen actividad relevante en ese momento) para abrir cualquiera de ellos de forma dedicada.
-
----
-
-## 4. Todas las Funcionalidades: Los 16 Módulos al Detalle
-
-### 1. `Panel general` (7 paneles)
-- **`Comandante`:** nombre, saldo de créditos y barras de progreso con porcentaje en los 6 rangos de la *Federación de Pilotos* (*Combate, Comercio, Exploración, Soldado, Exobiólogo, CQC*) y los 2 de *Superpotencias* (*Federación, Imperio*).
-- **`Nave` y `Ubicación`:** resumen de tu nave activa, sistema estelar, cuerpo celeste más cercano, estación y modo actual.
-- **`Estado en vivo`:** 7 testigos instantáneos de cabina (*Escudos, Anclajes de armas, Tren de aterrizaje, Bloqueo de masa, Navegación silenciosa, Recolector de carga* y *Sobrecarga de supercrucero SCO*) junto a las barras de energía `SYS`, `ENG` y `WEP` (0 a 4 pips).
-- **`Ruta` y `Sesión`:** siguiente sistema con botón **`Copiar siguiente sistema`**, saltos pendientes, duración de la sesión, saltos completados, años luz recorridos y créditos ganados.
-- **`Alertas`:** avisos inmediatos ante *Combustible bajo, Sobrecalentamiento, Interdicción en curso, Bajo ataque, Daño en el casco, Oxígeno bajo, Salud baja* o fallo de un módulo.
-
-### 2. `Nave` (2 paneles: Auditoría técnica y compra de Naves/Equipamiento)
-- **Cabecera y medidores (`Nave`):** modelo canónico, nombre, matrícula, masa en vacío, coste de recompra (*rebuy*) y medidores de casco, escudos, depósito principal + reserva y carga.
-- **3 pestañas de revisión rápida antes de despegar:**
-  - **`🧭 Exploración`:** alcance máximo y lista de comprobación (`✅` / `⚪`) para recolector de combustible, potenciador FSD Guardián, escáner de superficie DSS, hangar SRV y unidad de reparación AFMU.
-  - **`⚔️ Combate`:** escudos, calor, reparto `SYS/ENG/WPN`, armas instaladas con munición `[cargador / reserva]` y recuento de utilidades defensivas (*potenciadores de escudo, señuelos, defensas de punto y disipadores térmicos*).
-  - **`📦 Carga y Minería`:** capacidad total, bodegas instaladas, refinería, controladores de drones y mercancías a bordo.
-- **`Desglose módulo por módulo`:** filtrable por categoría (*Todos, Anclajes, Primarios, Opcionales, Utilidades*) y por texto. Muestra clase `[5A]`, integridad `%`, encendido `ON/OFF`, prioridad `P1..P5` e insignia dorada `G1..G5 ★` que, al pulsarla, despliega la receta, el ingeniero, el efecto experimental y la **comparativa exacta de cada atributo (valor mejorado frente a valor original)**.
-- **`Astilleros y Equipamiento` (Buscador de compra en parada única):**
-  - **Cesta combinada desde tu ubicación actual:** parte automáticamente de tu sistema actual (incluso en espacio profundo no indexado mediante coordenadas 3D) y permite elegir **1 nave opcional** (48 modelos) y/o **hasta 10 componentes** (153 familias con filtro de categoría, clase `0..8`, calificación `A..I`, montaje *Fijo/Cardán/Torreta* en armas y casco en blindajes) para encontrar las estaciones más cercanas que venden **toda la cesta a la vez**.
-  - **Respaldo inteligente por pieza:** si ninguna estación cercana reúne toda la combinación simultáneamente, localiza automáticamente la estación más cercana para cada artículo por separado e identifica qué pieza carece de stock conocido.
-  - **Interruptores y salvaguardas de ayudante:** filtro **`−15 % Li Yong-Rui`** (que reduce también tu futuro seguro de recompra), interruptor dedicado **`Stronghold de tu potencia`** para incluir los *Stronghold Carriers* orbitales de tu facción de Powerplay 2.0 (manteniendo excluidos los de potencias rivales y los portaaviones privados salvo que los actives aparte), protección de sistemas con permiso (`Shinrarta Dezhra`, `Sol`, `Achenar`, `Sirius`, `Alioth`…), **semáforo de seguro de recompra** (`Recompra OK` / `Ajusta recompra` / `Saldo insuf.`), desglose individual de precios y botones de un clic **`Copiar`** y **`Ruta`**.
-
-### 3. `Navegación` (3 paneles y doble planificador Spansh)
-- **Tira `Ruta`:** muestra tu plan activo de Spansh o, si no hay ninguno, la ruta trazada en el mapa galáctico del juego. Si te desvías, aparece el aviso **`Fuera de ruta`** con botones **`Recalcular`** y **`Borrar plan`**. Detalla en 4 columnas el salto (distancia, clases de estrellas, si **`Se puede repostar`**, combustible restante estimado), exploración (descubierto/no descubierto, visitas previas, neutrones/enana blanca), política (lealtad, gobierno, facción y **`⚠ Estado de peligro`** en guerras o brotes) y economía/seguridad/Powerplay.
-- **`Alcance de salto`:** salto actual (con indicador **`Supercargado ×N`** por cono de neutrones o inyección), salto con depósito lleno, combustible actual y consumo máximo por salto.
-- **`Planificador de rutas`:** autocompletado de sistemas, salida automática por coordenadas 3D incluso desde sistemas lejanos aún no registrados en bases de datos públicas, y 2 modos:
-  - **`⚡ Autopista de neutrones`:** cálculo por estrellas de neutrones con porcentaje de **`Eficiencia (%)`** configurable.
-  - **`🗺️ Ruta exacta (Exact Plotter)`:** lee automáticamente el peso, depósitos, carga, motor FSD mejorado y potenciador Guardián de tu nave actual (sin exportar nada a webs externas), con opciones **`Repostar en estrellas escoop`** (marcando paradas `⛽ Sí`) y **`Usar inyecciones FSD`**. Al pulsar **`Aceptar`**, guarda la ruta y copia automáticamente cada próximo destino al portapapeles salto tras salto.
-
-### 4. `Exploración` (`Cuerpos del sistema`)
-- **Resumen superior:** estado descubierto/no descubierto del sistema, todas las clases de estrellas presentes (destacando en verde las repostables *O, B, A, F, G, K, M*), progreso de **`Escaneo FSS`**, tarjetas comparativas **`Valor del sistema`** frente a **`Si mapeas los recomendados`**, cuerpos pendientes de identificar y tarjeta **`Datos sin vender`** con alerta roja **`Datos en riesgo`** si tu nave ha sufrido daños.
-- **Tabla detallada desplegable:** 27 clases estelares y planetarias, distancia en segundos luz, valor de escaneo y de mapeo, señales `Bio` y `Geo`, marcas (*Terraformable, Aterrizable, Recogible, 1.º descubrimiento, Ya mapeado*) y columna **`Consejo`** (`★ Mapear` según tu umbral en créditos, `Aterrizar (exobiología)` o `No compensa`, junto con la meta de eficiencia en número de sondas DSS).
-
-### 5. `Exobiología` (Asistente de muestreo en superficie para Odyssey)
-- **Cabecera del mundo:** gravedad, temperatura, tipo de atmósfera, número de señales biológicas e insignia **`SIN REGISTRAR · ×5 (estimado)`** cuando nadie ha registrado antes ese planeta.
-- **Guía de `Muestreo en curso` (`1/3 → 2/3 → 3/3`):** barra y contador en vivo de **`Distancia a la muestra anterior`** comparada con la distancia mínima clonal que exige esa especie (`Te faltan X m`), **indicación direccional relativa y rumbo cardinal** según hacia dónde miras (p. ej. *«la anterior está detrás a tu izquierda (SO)»*), alerta si descartas una muestra a medias y tarjeta de valor **`Sin vender en la nave`** con proyección de ganancias al terminar la especie actual.
-- **Tabla `Posibles especies (ordenadas por valor)`:** combina condiciones astrofísicas, tu historial y datos de *Canonn* mostrando pago base, pago `Con ×5`, distancia mínima, probabilidad y géneros confirmados por las sondas DSS.
-
-### 6. `Combate` (5 paneles tácticos y Anti-Xeno)
-- **`Objetivo`:** nave seleccionada con emblema, piloto, rango, facción, aviso de alta visibilidad **`LIMPIO · NO DISPARAR`** (verde) o **`BUSCADO · recompensa`** (rojo), barras de escudos y casco, y salud porcentual del **`Subsistema`** apuntado (*Planta de energía, Propulsores, Motor FSD, Armas…*), manteniendo los datos 10 segundos tras perder puntería.
-- **`Mi nave`:** estado de escudos, barra de casco en 10 bloques, estado térmico con cronómetro en caso de sobrecalentamiento, medidor visual de pips (`SIS`, `MOT`, `ARM`) y alertas activas.
-- **`Sesión de caza`:** bajas, créditos ganados, ritmo por hora, avance del rango de combate, botón **`Reiniciar sesión`**, desglose de **`Vales sin cobrar`** por facción (calculando también el importe neto con **`−25 % en IF`**) y localización del *Interstellar Factors* más cercano.
-- **`Zona de conflicto` y `AX` (automáticos):** bando elegido, bajas y bonos en zonas de guerra; alerta de presencia Thargoide, bonos AX y conteo de bajas por variante (*Explorador, Cíclope, Basilisco, Medusa, Hidra, Guadaña, Glaive, Orthrus…*).
-
-### 7. `Minería` (4 paneles: Localizador de Objetivos, Prospector, Sesión y Dónde vender)
-- **`Objetivos de minería y venta óptima (Miner's Companion)`:**
-  - **Bucle triangular más corto:** calcula en cabina el circuito óptimo completo: desde tu sistema actual ➔ al mejor yacimiento o anillo ➔ a la estación más cercana con el mayor precio de venta para tus minerales.
-  - **3 perfiles especializados y chips de preset rápido:**
-    - **Láser:** enfocado en platino en anillos metálicos, painite y osmio. Incluye combinaciones con sitios de extracción *Hazardous RES* (+100 % de fragmentos por roca) y *High RES* (+75 % de fragmentos) y solapamientos (*overlaps*) comprobados.
-    - **Núcleo profundo (*Core*):** enfocado en musgravita, monazita, alejandrita, ópalos del vacío y grandidierita en anillos rocosos e inertes.
-    - **Misiones e Ingenieros:** bromellita (para el desbloqueo del ingeniero Bill Turner en Alioth), tritio (para repostar *Fleet Carriers*) y osmio.
-  - **Alerta de riesgo de penalización de demanda (*Demand Tax Risk*):** la economía de *Elite Dangerous* reduce drásticamente el precio pagado si la carga a bordo supera el 25 % de la demanda de la estación de destino. TMC advierte de forma preventiva con semáforo ámbar/rojo en cabina y muestra el umbral de seguridad para no perder créditos.
-  - **Venta de bodega actual en 1 clic (*Multi-Sell*):** lee los minerales y metales reales almacenados en tu nave y localiza la estación óptima que compra toda la combinación con el mayor beneficio conjunto.
-  - **Catálogo curado offline y sincronización atómica online:** integra de serie más de 40 yacimientos de alta densidad comprobados por la comunidad (*EDTools/Spansh*), funcionando de forma inmediata sin conexión a internet y actualizándose en caliente en segundo plano cuando hay conexión disponible.
-  - **Acción directa de cabina:** botones **`📋 Copiar sistema`** y **`🚀 Trazar ruta`** directos en cada tarjeta y en la tabla adaptativa con desplazamiento horizontal fijo.
-- **`Prospector`:** nivel de contenido (*bajo/medio/alto*), aviso destacado **`◆ Núcleo: mineral`** para detonación profunda, barra multicolor de composición, lista de minerales resaltando tus favoritos con `★`, veredicto automático **`✔ merece la pena`** o **`✘ no compensa`** según tu umbral en créditos y gráfico comparativo de los **`Últimos 8 asteroides`**.
-- **`Sesión de minería`:** duración, toneladas refinadas y ritmo `t/h`, ganancias estimadas y `cr/h`, drones **`Limpets`** restantes y lanzados por tipo, llenado de bodega, desglose por mineral y estimación de las tolvas de **`Refinería`**.
-- **`Dónde vender`:** mejor estación global recomendada para toda tu carga y opciones desplegables por cada mineral con estación, sistema (con botón copiar `⎘`), distancia, precio, demanda, tamaño de pista (`S/M/L` con aviso si falta confirmación) y antigüedad del precio.
-
-### 8. `Comercio` (5 paneles)
-- **`Mercado actual`:** destaca las mejores oportunidades de las últimas 48 h y despliega el catálogo completo identificando mercancías **`RARA`** (con su distancia óptima de venta), precios de compra, oferta, mejor estación compradora cercana, plataforma y beneficio por tonelada.
-- **`Mi carga`:** ocupación de bodega y seguimiento por lote del **`Precio pagado`** medio, etiquetas de *carga de misión* o *carga robada*, comparativa entre vender en la estación actual o en el mejor mercado cercano y consejo directo **`VENDER AQUÍ`** o **`LLEVAR`**.
-- **`Ruta comercial`:** optimizador multiparada desde la estación donde estás atracado, detallando qué comprar y vender en cada escala, saltos, beneficio total y copiado automático del próximo destino.
-- **`Sesión de comercio` y `Buscar mercancía`:** balance de beneficio neto, `cr/h`, toneladas movidas, mejor operación, avance de rango comercial y buscador con autocompletado para localizar dónde comprar cualquier producto cerca de tu sistema.
-
-### 9. `Misiones` (7 paneles: Contratos, Masacres, Pasajeros, Turismo y CG)
-- **`Misiones activas` y `Avisos`:** contratos agrupados por destino marcando `▶ Siguiente parada` con botón **`A la ruta`**, tipo, facción, progreso, cuenta atrás de caducidad (en rojo si queda `< 1 h`) y alertas por desvío de destino o falta de mercancía de misión en bodega.
-- **`Pila de masacre`:** agrupa encargos contra una misma banda pirata en barras paralelas por facción emisora (donde cada baja cuenta a la vez en todas las facciones distintas), calculando cuántas bajas reales faltan para cerrar toda la pila y la recompensa total.
-- **`Pasajeros`:** plazas ocupadas por clase de cabina (*Económica, Business, Primera, Lujo*), grupos **`VIP`** / **`BUSCADO`** y alerta roja crítica **`⚠ Pasajero buscado a bordo: riesgo al ser escaneado en zonas de seguridad`**.
-- **`Turismo`:** ordena automáticamente las balizas turísticas en la **`Ruta óptima`** más corta frente al orden del tablón (mostrando años luz y saltos ahorrados), calcula `cr/al` y `cr/h` respecto a tu media histórica o referencia y emite veredicto **`✔ RENTABLE`** o **`✖ NO COMPENSA`**.
-- **`Recompensas de la sesión` y `Objetivos comunitarios`:** resumen de créditos, materiales y cambios de reputación/influencia por facción, más seguimiento en vivo de *Community Goals* (*aportación, nivel, percentil, tiempo restante y recompensa prevista*).
-
-### 10. `Ingeniería` (8 paneles para nave y trajes/armas a pie de Odyssey)
-- **`Materiales`:** 4 pestañas (*Materias primas, Fabricados, Codificados* y *Taquilla* de Odyssey dividida en *Artículos, Componentes, Consumibles y Datos*), buscador instantáneo, historial de **`Cambios de la sesión`** por origen (*Misión, Escaneo, Minería, Intercambio, Ingeniería…*) y aviso **`MÁXIMO`** en depósitos llenos.
-- **`Ingenieros` y `Mi nave modificada`:** catálogo filtrable (*Todos, Desbloqueados, Pendientes*) de **ingenieros de nave e ingenieros a pie de Odyssey** con rango `★`, distancia y progreso del siguiente requisito; selector rápido de cualquier módulo ingenierizable instalado en tu nave.
-- **`Ingenierizar un módulo`:** elige mejora, efecto experimental, grado `G1..G5` y tiradas por grado. Si aún no tienes acceso a ningún ingeniero capaz de aplicar ese grado, muestra primero la **`GUÍA DE AYUDANTE — DESBLOQUEO DEL INGENIERO`** con los 3 pasos secuenciales (*1. Descubrimiento → 2. Invitación → 3. Tarea de Desbloqueo*), sistema con copia rápida y progreso actual, y debajo el coste por grado y la tabla semáforo de materiales (`OK`, **`Cubierto con intercambio`** o `Falta`).
-- **`Lista de la compra`, `Intercambios`, `Dónde conseguirlo` y `Avisos`:** guarda varios proyectos, ordénalos por prioridad (**`▲ Subir` / `▼ Bajar`**) para reservar materiales, obtén las conversiones exactas con tus excedentes sin reservar (`Das X → Recibes Y`) y localiza el **Comerciante de materiales** o **Broker de tecnología** (*Humano* y *Guardián*) más cercano junto con guías de recolección.
-
-### 11. `Fleet Carrier` (3 paneles)
-- **`Estado del Fleet Carrier`:** matrícula, nombre, insignia `A BORDO`, sistema actual, saltos posibles (500 al/salto), permisos de atraque, nivel de **`Tritio`** combinando depósito (`1.000 t`) + reservas en bodega y reparto de capacidad libre/ocupada.
-- **`Secuencia de salto`:** estado operativo y cronómetro `MM:SS` en vivo para la cuenta atrás de salto (15 min) y el enfriamiento posterior (5 min), con sistema destino y botón **`Copiar destino`**.
-- **`Finanzas y mantenimiento`:** semáforo financiero (*Saludable, Advertencia, Crítico*), **`Semanas cubiertas`**, saldo del Carrier, mantenimiento semanal, reserva y fecha del próximo cobro.
-
-### 12. `Colonización` (2 paneles)
-- **`Depósito de construcción`:** avance porcentual global de la obra, toneladas aportadas y pendientes, cálculo dinámico de **`Viajes estimados`** según las toneladas que caben en la bodega de tu nave actual y tabla desglosada recurso por recurso.
-- **`Suministro y compras`:** tarjetas de materiales pendientes ordenadas por urgencia con toneladas, viajes restantes y botón **`Copiar`** para abastecerte rápidamente.
-
-### 13. `Powerplay 2.0` y 14. `BGS`
-- **`Estado de Powerplay`:** emblema de potencia y superpotencia, semanas de lealtad, rango actual (`X / 100`), méritos acumulados y restantes para el siguiente nivel, méritos de la sesión, **`Tasa de méritos/hora`** y cuenta atrás al cierre semanal (*Jueves 07:00 UTC*).
-- **`Facciones del sistema` (BGS):** facción controladora, estado activo, monitor del **`Tick galáctico`** diario (`Hace X h`, indicando si es reciente o desactualizado) y tabla de todas las facciones locales con barras de influencia, estados, lealtad y gobierno.
-
-### 15. `Crimen y Notoriedad` (5 tarjetas tácticas)
-- **`Estado Legal y Notoriedad`:** medidor de 0 a 10 con temporizador de enfriamiento (2 horas de vuelo activo por punto) que detecta y muestra **`⏸️ Decaimiento pausado (atracado en estación)`** cuando estás en puerto.
-- **`Guía de Limpieza de Nombre`:** avisa si los contactos neutrales están bloqueados por notoriedad o, cuando estás a 0, muestra directamente el **`Interstellar Factor más cercano`** con distancia, plataforma y botón **`Copiar sistema`**.
-- **`Contrabando y Mercados Negros`:** lista mercancías robadas en bodega, localiza el **`Mercado Negro más cercano`** e incluye una guía en 3 pasos de **`Consejos de Aproximación Sigilosa`** (alineación a 8–10 km, navegación silenciosa / disipador a `< 4 km` y entrada ágil).
-- **`Desglose de Facciones y Multas` y `Seguridad del Sistema`:** multas y recompensas por jurisdicción + nivel de seguridad local con tiempo estimado de respuesta policial.
-
-### 16. `Cuentas` (Sincronización comunitaria opcional)
-- **`Elite Dangerous Data Network (EDDN)`:** comparte precios, astilleros y saltos de forma anónima con la red comunitaria y recibe actualizaciones de mercados cercanos en tu radio configurado.
-- **`Elite Dangerous Star Map (EDSM)`:** guarda tu clave API de forma persistente para sincronizar cuaderno de bitácora, rangos y créditos.
-- **`Inara`:** aplicación aprobada oficialmente en la **Whitelist de Inara** bajo el nombre **`The Multipurpose Companion (TMC)`**, con agrupación inteligente por lotes (máx. 2 envíos cada 60 s) y botón de prueba de conexión.
-- **`Frontier Companion API (CAPI)`:** inicio de sesión directo y seguro en la web oficial de Frontier (con opción desplegable para pegar la URL si tu navegador bloquea el retorno automático) y visor interactivo de **`Flota remota almacenada`** con todas tus naves aparcadas en otros sistemas, su estación, valor y distancia en años luz.
+Below the layouts, you will find the list of **16 Individual Modules** (with a glowing activity dot when they hold active data) to open any tool in dedicated full-width view.
 
 ---
 
-## 5. Voz, Micrófono, VoiceAttack y Pantalla en Tablet o Móvil
+## 4. All Features: The 16 Modules in Detail
 
-### 5.1 Copiloto Auditivo (Avisos hablados / TTS)
-En `Ajustes` → **Copiloto de voz y alertas de cabina** puedes elegir entre:
-- **`Nativo del sistema operativo (Ultraligero)`:** utiliza al instante las voces instaladas en tu sistema sin descargas adicionales.
-- **`Motor neuronal KokoroTTS (Voz IA cinematográfica)`:** 10 voces naturales locales en varios idiomas con suspensión automática en reposo para no ocupar memoria (y respaldo automático a la voz del sistema si no está instalado).
-- Incluye control de **volumen**, **velocidad**, botón **`🔊 Probar voz de copiloto`** y **5 canales independientes** (*Combate y alertas críticas*, *Navegación y repostaje estelar*, *Exploración y exobiología*, *Minería y prospección* y *Fleet Carrier*).
+### 1. `Dashboard` (7 panels)
+- **`Commander`:** name, credit balance, and progress bars with percentage for all 6 *Pilots Federation* ranks (*Combat, Trade, Exploration, Mercenary, Exobiologist, CQC*) and 2 *Superpowers* (*Federation, Empire*).
+- **`Ship & Location`:** summary of active ship, star system, nearest celestial body, station, and current flight mode.
+- **`Live Status`:** 7 instant cockpit flags (*Shields, Hardpoints, Landing Gear, Mass Lock, Silent Running, Cargo Scoop, Supercruise Overcharge SCO*) alongside power distributor pips for `SYS`, `ENG`, and `WEP` (0 to 4 pips).
+- **`Route & Session`:** next system with **`Copy next system`** button, remaining jumps, session duration, completed jumps, light-years traveled, and total credits earned.
+- **`Alerts`:** immediate notifications for *Low Fuel, Overheating, Interdiction in Progress, Under Attack, Hull Damage, Low Oxygen, Low Health*, or module malfunction.
 
-### 5.2 Asistente por Micrófono (9 consultas habladas en 5 idiomas)
-En `Ajustes` → **Asistencia por voz e integración** puedes activar el reconocimiento mediante **`Whisper AI Local`** (~39 MB, 100 % offline y privado, descargable con un clic desde el propio panel) o el motor del sistema, en **Escucha continua** o **Pulsar para hablar** (botón `🎙️` de la barra superior). Puedes preguntarle con voz natural por:
-1. **Estado general de la nave** (casco, escudos y combustible).
-2. **Nivel de combustible** (porcentaje y toneladas).
-3. **Siguiente salto estelar** (dice cuál es tu próximo destino).
-4. **Copiar siguiente sistema** (lo anuncia y lo **copia al portapapeles** listo para pegar en el mapa galáctico).
-5. **Señales biológicas en el sistema** (recuento de bioseñales detectadas).
-6. **Resumen de materiales fijados** (avance de tu lista de ingeniería).
-7. **Estado legal y multas** (notoriedad, multas y recompensas).
-8. **Factor interestelar más cercano** (dice estación, sistema y distancia, y **copia el sistema al portapapeles**).
-9. **Mercado negro más cercano** (dice estación, sistema y distancia, y **copia el sistema al portapapeles**).
+### 2. `Ship` (2 panels: Technical Audit and Shipyard/Outfitting Finder)
+- **Header & Meters (`Ship`):** canonical model, ship name, ship ID, unladen mass, rebuy cost, and gauges for hull integrity, shields, main + reservoir fuel tanks, and cargo.
+- **3 Pre-Flight Checklist Tabs:**
+  - **`🧭 Exploration`:** maximum jump range and verification checklist (`✅` / `⚪`) for Fuel Scoop, Guardian FSD Booster, Detailed Surface Scanner (DSS), SRV Hangar, and Auto Field-Maintenance Unit (AFMU).
+  - **`⚔️ Combat`:** shield strength, thermal load, `SYS/ENG/WEP` distribution, hardpoints with ammunition `[clip / reserve]`, and defensive utility count (*Shield Boosters, Chaff Launchers, Point Defences, Heat Sinks*).
+  - **`📦 Cargo & Mining`:** total capacity, installed cargo racks, refinery, limpet controllers, and onboard cargo.
+- **`Module Breakdown`:** filterable by category (*All, Hardpoints, Core, Optional, Utility*) and search query. Displays class & rating `[5A]`, health `%`, power state `ON/OFF`, power priority `P1..P5`, and golden badge `G1..G5 ★` which opens blueprint recipe details, engineer, experimental effect, and an **exact attribute comparison (engineered value vs. stock value)**.
+- **`Shipyard & Outfitting Search` (One-Stop Shop Finder):**
+  - **Combined Basket from Current Location:** starts automatically from your current star system (even in unindexed deep space via 3D coordinates) and allows selecting **1 optional ship** (48 hulls) and/or **up to 10 outfitting modules** (153 families with category, class `0..8`, rating `A..I`, weapon mount *Fixed/Gimballed/Turret*, and armor hull type) to find the nearest stations that sell the **entire basket in a single stop**.
+  - **Smart Fallback per Item:** if no single station sells all items at once, it automatically locates the closest station for each missing item individually, identifying any piece lacking known stock.
+  - **Pilot Safeguards and Toggles:** **`−15% Li Yong-Rui discount`** toggle (which also permanently lowers your ship rebuy cost), dedicated **`Your Power's Stronghold Carriers`** switch to include friendly orbital carrier stations from Powerplay 2.0 (excluding rival power carriers and private carriers unless explicitly enabled), permit-locked system protection (`Shinrarta Dezhra`, `Sol`, `Achenar`, `Sirius`, `Alioth`…), **Rebuy Safety Traffic Light** (`Rebuy OK` / `Adjust Rebuy` / `Insufficient Balance`), itemized price breakdown, and one-click **`Copy`** and **`Route`** buttons.
 
-### 5.3 Integración con `VoiceAttack`
-TMC detecta automáticamente si tienes *VoiceAttack* instalado y en ejecución, genera en tu equipo el perfil actualizado **`TMC-Copiloto.vap`** con las órdenes preconfiguradas y ofrece el botón **`📥 Descargar perfil (.vap)`** en Ajustes listo para importar.
+### 3. `Navigation` (3 panels and dual Spansh router)
+- **`Route Strip`:** displays your active Spansh route plan or the in-game galaxy map route. If you go off course, a **`Off Route`** alert appears with **`Recalculate`** and **`Clear Plan`** buttons. Details each jump across 4 columns: navigation (distance, star class, scoopable status **`⛽ Scoopable`**, estimated remaining fuel), exploration (discovered/undiscovered, prior visits, neutron/white dwarf), politics (allegiance, government, faction, and **`⚠ Danger State`** in war or outbreak), and economy/security/Powerplay.
+- **`Jump Range`:** current jump range (with **`Supercharged ×N`** badge from neutron stars or synthesis), full-tank jump range, current fuel level, and maximum fuel per jump.
+- **`Route Planner`:** system autocomplete, automatic 3D coordinate origin (even from remote systems not yet in public databases), and 2 calculation engines:
+  - **`⚡ Neutron Highway`:** rapid neutron star hopping with configurable **`Efficiency (%)`**.
+  - **`🗺️ Exact Route (Exact Plotter)`:** automatically reads unladen mass, fuel tanks, cargo load, engineered FSD, and Guardian Booster directly from your active ship without uploading data to third-party servers, offering **`Scoopable stars only`** and **`Use FSD injections`** options. Clicking **`Accept`** stores the route and auto-copies each subsequent waypoint to your clipboard jump after jump.
 
-### 5.4 Pantalla Táctil en Tablet o Móvil (`Código QR`)
-Si juegas con un solo monitor o en realidad virtual, entra en `Ajustes`, activa **`Acceso por red local`** y escanea con la cámara de tu tablet o teléfono (conectado al mismo Wi-Fi) el **`Código QR de emparejamiento`**. Se abrirá la cabina completa en el navegador móvil sin instalar nada; incluso al tocar «Copiar sistema» en la tablet, se copiará directamente en el portapapeles de tu ordenador de juego.
+### 4. `Exploration` (`System Bodies`)
+- **Top Summary:** system discovered/undiscovered status, all star classes present (highlighting scoopable *O, B, A, F, G, K, M* in green), **`FSS Discovery Progress`**, comparative value cards for **`System Value`** vs. **`Value with Recommended Maps`**, unmapped high-value bodies, and **`Unsold Data`** card with a red **`Data at Risk`** alert if your hull has taken damage.
+- **Detailed Expandable Table:** 27 star and planet classifications, distance in light-seconds, scan and map values, `Bio` and `Geo` signals, flags (*Terraformable, Landable, Scoopable, First Discovery, Previously Mapped*), and **`Recommendation`** column (`★ Map` based on your credit threshold, `Land (Exobiology)`, or `Skip`, alongside the DSS probe efficiency target).
+
+### 5. `Exobiology` (Odyssey Surface Sampling Assistant)
+- **World Header:** surface gravity, surface temperature, atmospheric composition, biological signal count, and **`FIRST LOGGED · ×5 (estimated)`** badge when you are the first commander to log specimens on that planet.
+- **`Live Sampling Tracker` (`1/3 → 2/3 → 3/3`):** progress bar and live counter for **`Distance to Previous Sample`** compared against the species' required clonal separation distance (`X m remaining`), **relative directional guidance and cardinal heading** based on where you are facing (e.g. *«previous sample is behind to your left (SW)»*), warning if you attempt to discard a partial sample, and **`Unsold Onboard Value`** card projecting total earnings upon completing the genus.
+- **`Potential Species Table (Sorted by Value)`:** combines astrophysical criteria, personal flight logs, and *Canonn* telemetry to show base reward, `With ×5 Bonus` payout, minimum clonal distance, scan probability, and confirmed DSS surface signals.
+
+### 6. `Combat` (5 tactical panels and Anti-Xeno)
+- **`Target`:** selected ship with faction emblem, pilot name, combat rank, faction allegiance, high-visibility **`CLEAN · DO NOT FIRE`** (green) or **`WANTED · bounty`** (red) banner, shield and hull health bars, and percentage health of the targeted **`Subsystem`** (*Power Plant, Thrusters, FSD, Weapons…*), retaining data for 10 seconds if target lock is broken.
+- **`My Ship`:** shield status, 10-block hull integrity bar, thermal level with countdown timer upon overheating, visual power distributor pip meters (`SYS`, `ENG`, `WEP`), and active cockpit warnings.
+- **`Hunting Session`:** kills, credits earned, hourly rate (`cr/h`), combat rank progress, **`Reset Session`** button, breakdown of **`Unclaimed Bounties`** by faction (including net calculation with **`−25% at Interstellar Factors`**), and nearest *Interstellar Factors* location.
+- **`Conflict Zone & Anti-Xeno (AX)` (Automatic):** selected war faction, kills, and combat bonds; Thargoid presence alert, AX bonds, and kill counter by variant (*Scout, Cyclops, Basilisk, Medusa, Hydra, Scythe, Glaive, Orthrus…*).
+
+### 7. `Mining` (4 panels: Target Finder, Prospector, Session, and Where to Sell)
+- **`Mining Target Finder & Optimal Sale (Miner's Companion)`:**
+  - **Shortest Triangular Loop:** calculates the complete optimal circuit right in your cockpit: from your current system ➔ to the best pristine ring or belt ➔ to the closest station offering the highest sale price for your minerals.
+  - **3 Specialized Mining Profiles & Instant Preset Chips:**
+    - **Laser:** focused on Platinum in metallic rings, Painite, and Osmium. Includes combinations with *Hazardous RES* (+100% fragments per rock) and *High RES* (+75% fragments) extraction sites, plus verified double/triple overlaps.
+    - **Core:** focused on Musgravite, Monazite, Alexandrite, Void Opals, and Grandidierite in rocky and icy rings.
+    - **Missions & Engineers:** Bromellite (for unlocking engineer Bill Turner in Alioth), Tritium (for fueling *Fleet Carriers*), and Osmium.
+  - **Demand Tax Risk Warning:** *Elite Dangerous* market mechanics drastically decrease payouts if your cargo exceeds 25% of a station's total commodity demand. TMC gives you an advance traffic light warning with the exact safe tonnage limit to avoid lost profits.
+  - **1-Click Multi-Sell Optimizer:** reads the exact minerals and metals in your ship's hold and finds the optimal station that buys the whole mix for maximum aggregate profit.
+  - **Offline Curated Catalog & Atomic Online Sync:** ships with over 40 community-verified high-density hotspots (*EDTools/Spansh*), working immediately offline and updating seamlessly in the background when an internet connection is available.
+  - **Cockpit Actions:** **`📋 Copy System`** and **`🚀 Plot Route`** buttons on every target card and within the adaptive table with sticky horizontal scrolling.
+- **`Prospector`:** mineral content level (*Low/Medium/High*), prominent **`◆ Core: Mineral`** banner for deep-core detonation, multi-color composition bar, mineral list highlighting favorites with `★`, automatic **`✔ Worth Mining`** or **`✘ Skip`** verdict based on your credit threshold, and a comparative graph of the **`Last 8 Asteroids`**.
+- **`Mining Session`:** session duration, refined tonnage and `t/h` rate, estimated revenue and `cr/h`, remaining and expended **`Limpets`** by type, cargo hold fill percentage, breakdown per mineral, and real-time hopper status of the **`Refinery`**.
+- **`Where to Sell`:** top recommended station for your entire cargo hold, plus expandable breakdowns per mineral showing station name, system (with copy button `⎘`), distance, market price, demand, pad size (`S/M/L` with warning if unconfirmed), and price age.
+
+### 8. `Trade` (5 panels)
+- **`Current Market`:** highlights top trading opportunities over the last 48 hours and displays the full station catalog, flagging **`RARE`** commodities (with optimal 160 ly sale distance), buy prices, supply, best nearby buyer, pad size, and profit per ton.
+- **`My Cargo`:** hold utilization and lot-by-lot tracking of **`Average Price Paid`**, mission cargo or stolen tags, comparison between selling at current dock vs. the best nearby market, and direct **`SELL HERE`** or **`HAUL`** guidance.
+- **`Trade Route`:** multi-stop route optimizer originating from your current dock, detailing what to buy and sell at each stop, jump count, total profit, and automatic clipboard copying of each destination.
+- **`Trade Session & Find Commodity`:** net profit balance, `cr/h`, tonnage hauled, best trade run, trade rank progression, and autocomplete search to locate where to buy any commodity near your location.
+
+### 9. `Missions` (7 panels: Contracts, Massacres, Passengers, Tourism, and CGs)
+- **`Active Missions & Notices`:** contracts grouped by destination indicating `▶ Next Stop` with **`Add to Route`** button, mission type, faction, progress, expiration countdown (turns red if `< 1 h`), and alerts for route deviation or missing mission cargo in hold.
+- **`Massacre Stack`:** groups pirate hunting contracts against the same target faction into parallel bars by issuing faction (where each kill counts simultaneously across all distinct factions), calculating remaining kills needed to complete the stack and total payout.
+- **`Passengers`:** cabin occupancy by class (*Economy, Business, First, Luxury*), **`VIP`** / **`WANTED`** passenger tags, and critical red warning **`⚠ Wanted passenger onboard: scan risk in station security zones`**.
+- **`Tourism`:** automatically reorders tourist beacons into the shortest **`Optimal TSP Route`** versus the mission board order (showing saved light-years and jumps), calculates `cr/ly` and `cr/h` against historical averages, and issues a **`✔ PROFITABLE`** or **`✖ NOT WORTH IT`** verdict.
+- **`Session Rewards & Community Goals`:** credit earnings, engineering materials awarded, and faction reputation/influence shifts, plus live tracking of active *Community Goals* (*contribution, tier, percentile rank, time remaining, and projected reward*).
+
+### 10. `Engineering` (8 panels for ship modules and Odyssey suits/weapons)
+- **`Materials Inventory`:** 4 tabs (*Raw, Manufactured, Encoded*, and Odyssey *Locker* split into *Items, Components, Consumables, and Data*), instant search, **`Session History`** tracking provenance (*Mission, Scan, Mining, Trade, Engineering…*), and **`CAPACITY MAX`** warnings on full bins.
+- **`Engineers & My Modified Ship`:** filterable catalog (*All, Unlocked, Pending*) of **ship and Odyssey ground engineers** with rank `★`, distance, and next unlock requirement progress; fast selector for any engineerable module installed on your active ship.
+- **`Engineer a Module`:** select blueprint modification, experimental effect, grade `G1..G5`, and rolls per grade. If you don't yet have access to an engineer capable of crafting that grade, it first reveals the **`COMPANION GUIDE — ENGINEER UNLOCK`** with 3 sequential steps (*1. Discovery → 2. Invitation → 3. Workshop Unlock Donation*), system with quick-copy, and current progress, followed below by exact material costs and status lights (`OK`, **`Covered via Trade`**, or `Missing`).
+- **`Shopping List, Material Exchanges, Where to Find, and Notices`:** manage multiple engineering projects, prioritize them (**`▲ Up` / `▼ Down`**) to allocate materials, compute exact barter conversions using unallocated surpluses (`Give X → Receive Y`), and locate the closest **Material Trader** or **Technology Broker** (*Human* and *Guardian*) along with gathering guides.
+
+### 11. `Fleet Carrier` (3 panels)
+- **`Carrier Status`:** callsign, carrier name, `ONBOARD` badge, current system, remaining jumps (500 ly/jump), docking access permissions, **`Tritium`** fuel level combining depot (`1,000 t`) + cargo reserve, and breakdown of free vs. allocated cargo capacity.
+- **`Jump Sequence`:** operational status and live `MM:SS` timer for the 15-minute jump countdown and 5-minute post-jump cooldown, displaying destination system and **`Copy Destination`** button.
+- **`Finances & Upkeep`:** financial health indicator (*Healthy, Warning, Critical*), **`Weeks Covered`**, carrier balance, weekly upkeep, maintenance reserve, and date of next weekly deduction.
+
+### 12. `Colonization` (2 panels)
+- **`Construction Depot`:** overall depot completion percentage, delivered vs. outstanding tonnage, dynamic **`Estimated Hauling Trips`** based on your active ship's cargo capacity, and an itemized resource-by-resource table.
+- **`Supply & Procurement`:** outstanding material cards ordered by urgency with required tonnage, remaining trips, and one-click **`Copy`** button for rapid market purchasing.
+
+### 13. `Powerplay 2.0` and 14. `BGS`
+- **`Powerplay Status`:** power and superpower crests, loyalty weeks, current rank (`X / 100`), accumulated and remaining merits to next rank, session merits, **`Merit Rate per Hour`**, and countdown to weekly server tick (*Thursday 07:00 UTC*).
+- **`System Factions (BGS)`:** controlling faction, active states, daily **`Galactic Tick Tracker`** (`X hours ago`, showing whether data is fresh or pending tick update), and a full local faction table with influence bars, states, allegiance, and government.
+
+### 15. `Crime & Notoriety` (5 tactical cards)
+- **`Legal Status & Notoriety`:** notoriety meter from 0 to 10 with cooldown decay timer (2 active flight hours per point) that detects and displays **`⏸️ Decay Paused (docked at station)`** while in port.
+- **`Clean Slate Guide`:** warns if neutral contacts are locked due to active notoriety or, when notoriety is 0, displays the **`Nearest Interstellar Factors`** with distance, pad size, and **`Copy System`** button.
+- **`Contraband & Black Markets`:** lists illegal goods in hold, locates the **`Nearest Black Market`**, and includes a 3-step **`Silent Running Infiltration Guide`** (8–10 km alignment, silent running / heat sink at `< 4 km`, and fast mail slot entry).
+- **`Faction Fines & System Security`:** fines and bounties itemized by jurisdiction + local security level with estimated police response times.
+
+### 16. `Accounts` (Optional Community Sync)
+- **`Elite Dangerous Data Network (EDDN)`:** share market prices, outfitting, shipyard, and star jump telemetry anonymously with the community network, and receive local market updates within your configured light-year radius.
+- **`Elite Dangerous Star Map (EDSM)`:** securely save your API key to sync flight logs, commander ranks, and credits.
+- **`Inara`:** officially approved on the **Inara Whitelist** under the application name **`The Multipurpose Companion (TMC)`**, featuring smart batching (max 2 API requests per 60s) and a live connection test button.
+- **`Frontier Companion API (CAPI)`:** secure OAuth2 login through Frontier's official authorization portal (with manual URL fallback if your browser prevents automatic callback) and interactive **`Stored Remote Fleet Viewer`** showing all ships parked in other systems, their station, value, and distance in light-years.
 
 ---
 
-## 6. Personalización en Ajustes y Soporte
+## 5. Voice Copilot, Microphone Queries, VoiceAttack, and Tablet / Mobile
 
-- **Idioma y Tema visual:** selección entre **5 idiomas** (`es`, `en`, `fr`, `de`, `pt`) y **3 temas** (**`HUD automático`** sincronizado con los colores de tu cabina del juego, **`Naranja clásico`** y **`Alto contraste`**).
-- **Auto-Companion Pro:** reordenación táctica de prioridades para los 9 roles (`▲` / `▼`) con botón de restablecimiento, deslizador de histéresis (0–60 s con visualizador numérico en vivo), interruptor de transiciones predictivas y casillas de feedback sensorial (bip sintético *Glass HUD Chime* y locución TTS del copiloto).
-- **Preferencias operativas:** copiado automático del siguiente salto, interruptor general de `Auto-companion`, acceso por red local, interruptor global de privacidad **`Consultar servicios online (Spansh, EDSM, Canonn)`** (desactívalo para trabajar 100 % sin conexión), **`Umbral de «Mapear» (cr)`** y **`Eficiencia predeterminada del planificador (%)`**.
-- **Economía, Turismo e Ingeniería:** lista editable de hasta 30 **`Minerales de interés`** (con 11 preconfigurados), **`Umbral de valor de minería (cr)`**, **`Radio de búsqueda de venta (al)`**, **`Radio de datos EDDN (al)`**, **`Referencia de turismo (cr/al)`** y **`Tiradas de ingeniería por grado (G1–G5)`**.
-- **Canal directo de Soporte y Feedback:** en `Ajustes` → **Soporte, Feedback y Comunidad**, pulsa **`🚀 Reportar problema o sugerencia en GitHub`** para abrir un ticket en [GitHub Issues](https://github.com/Danikuso/TheMultipurposeCompanion/issues) con la versión, idioma y sistema operativo prellenados (sin incluir datos personales).
+### 5.1 Audio Copilot (Spoken Warnings / TTS)
+In `Settings` → **Voice Copilot & Cockpit Alerts**, choose between:
+- **`Operating System Native (Ultra-lightweight)`:** uses your installed OS voices with zero additional downloads.
+- **`KokoroTTS Neural Engine (Cinematic AI Voice)`:** 10 natural offline neural voices across multiple languages, featuring automatic standby hibernation when idle to conserve RAM (with seamless fallback to the OS voice if unavailable).
+- Includes **volume** and **speech rate** sliders, **`🔊 Test Voice Copilot`** button, and **5 independent channel toggles** (*Combat & Critical Alerts*, *Navigation & Fuel Scooping*, *Exploration & Exobiology*, *Mining & Prospecting*, and *Fleet Carrier*).
+
+### 5.2 Microphone Voice Assistant (9 Spoken Queries in 5 Languages)
+In `Settings` → **Voice Assistant & Integration**, enable speech recognition via **`Whisper AI Local`** (~39 MB, 100% offline and private, downloadable with one click from the panel) or the system engine, operating in **Continuous Listening** or **Push-to-Talk** (top bar `🎙️` button). Ask natural language questions for:
+1. **Ship status** (hull, shields, and fuel).
+2. **Fuel level** (percentage and tons).
+3. **Next navigation jump** (announces next system).
+4. **Copy next system** (announces and **copies system to clipboard** ready to paste into the galaxy map).
+5. **Biological signals in system** (count of bio signals detected).
+6. **Pinned materials summary** (progress on your active engineering shopping list).
+7. **Legal status & fines** (notoriety, active fines, and bounties).
+8. **Nearest Interstellar Factors** (announces station, system, distance, and **copies system to clipboard**).
+9. **Nearest Black Market** (announces station, system, distance, and **copies system to clipboard**).
+
+### 5.3 `VoiceAttack` Integration
+TMC automatically detects if *VoiceAttack* is running on your machine, generates an updated **`TMC-Copiloto.vap`** profile pre-configured with all commands, and provides a **`📥 Download Profile (.vap)`** button in Settings ready for 1-click import.
+
+### 5.4 Auxiliary Touch Screen on Tablet or Mobile (`QR Code`)
+If you play with a single monitor or in VR, open `Settings`, toggle **`Local Network Access`**, and scan the on-screen **`Pairing QR Code`** with your phone or tablet camera connected to the same home Wi-Fi. The complete interactive cockpit opens in your mobile browser with zero app installation required; tapping «Copy System» on the tablet instantly places the destination into your PC clipboard.
 
 ---
 
-# Parte II — Documentación Técnica para Desarrolladores
+## 6. Settings Customization and Support / Feedback
 
-## 7. Arquitectura del Workspace
+- **Language and Themes:** select among **5 languages** (`es`, `en`, `fr`, `de`, `pt`) and **3 visual themes** (**`Auto HUD`** synchronized with your in-game cockpit colors, **`Classic Orange`**, and **`High Contrast`**).
+- **Auto-Companion Pro:** reorder cockpit priority for all 9 roles (`▲` / `▼`) with a reset button, hysteresis slider (0–60s with live counter), predictive transition switch, and sensory cues (*Glass HUD Chime* sound and TTS voice).
+- **Operational Preferences:** auto-copy next hyperspace jump, master `Auto-companion` switch, local network LAN access, global privacy toggle **`Query online services (Spansh, EDSM, Canonn)`** (disable for 100% air-gapped offline use), **`Detailed Surface Map Threshold (cr)`**, and **`Default Route Planner Efficiency (%)`**.
+- **Economy, Tourism, and Engineering:** customizable list of up to 30 **`Minerals of Interest`** (11 pre-selected), **`Mining Value Threshold (cr)`**, **`Trade Sell Search Radius (ly)`**, **`EDDN Market Data Radius (ly)`**, **`Tourism Benchmark (cr/ly)`**, and **`Engineering Rolls per Grade (G1–G5)`**.
+- **Direct Support & Community Channel:** in `Settings` → **Support, Feedback & Community**, click **`🚀 Report issue or suggestion on GitHub`** to open a pre-filled ticket on [GitHub Issues](https://github.com/Danikuso/TheMultipurposeCompanion/issues) with app version, language, and OS pre-populated (with no private player data included).
 
-El proyecto está organizado como un workspace modular en **Rust estable (edición 2024)** con responsabilidades estrictamente acotadas y sin dependencias cíclicas, acompañado de un frontend en **Svelte 5 + TypeScript + Vite** y catálogos **Fluent** para internacionalización:
+---
 
-| Ruta | Responsabilidad técnica |
+# Part II — Developer Technical Documentation
+
+## 7. Workspace Architecture
+
+The project is structured as a modular workspace in **stable Rust (2024 edition)** with strictly decoupled responsibilities and zero circular dependencies, paired with a modern frontend in **Svelte 5 + TypeScript + Vite** and **Fluent** localization catalogs:
+
+| Crate / Directory | Technical Responsibility |
 |---|---|
-| `crates/tmc-model` | Tipos de dominio fuertemente tipados, eventos del diario, estado volátil, tópicos de suscripción, diagnósticos estrictos de cabina (`app.toggle_lock`, `app.set_auto_priorities`, etc.) y configuración (`auto_companion_priorities`, `auto_companion_linger_seconds`, predictivo y avisos). |
-| `crates/tmc-journal` | Descubrimiento multiplataforma de carpetas (Win32 `FOLDERID_SavedGames`, Proton/Flatpak en Linux), ingesta incremental por *byte offset* de `Journal.*.log` y sondeo tolerante a escrituras parciales de `Status.json` + 9 archivos `.json` compañeros. |
-| `crates/tmc-store` | Persistencia en **SQLite (modo WAL)** (`rusqlite`), migraciones aditivas, historial de exploración/comercio/listas de compra, almacén local de credenciales y autocuración ante corrupción. |
-| `crates/tmc-i18n` | Carga y resolución de catálogos **Project Fluent** (`locales/{es,en,fr,de,pt}/*.ftl`) con test automatizado de paridad total de claves respecto a `es`. |
-| `crates/tmc-net` | Clientes HTTP asíncronos con limitadores de tasa, caché y degradación offline: *Spansh* (Neutron Plotter, Exact Plotter `/api/generic/route`, búsqueda combinada de astilleros/equipamiento `POST /api/stations/search`, búsqueda de yacimientos/anillos `/api/bodies/search` y mercados de venta óptima con bucle triangular, y rescate espacial `/api/nearest`), *Ardent*, *Canonn*, *tick.edcd.io*, *EDSM*, *Inara InAPI v1* (lotes máx. 2 req/min) y *Frontier CAPI* (OAuth2 S256 PKCE). |
-| `crates/tmc-eddn` | Emisor HTTP POST de esquemas oficiales a *EDDN* (`journal/1`, `commodity/3`, `outfitting/2`, `shipyard/2`) con sal local seudonimizada y suscriptor ZeroMQ filtrando mercados por radio espacial. |
-| `crates/tmc-tts` | Cola priorizada de locución con deduplicación y *cooldowns* (`TtsQueue`), motor nativo de Windows (SAPI5 / OneCore `< 2 MB` RAM) y proceso worker neuronal desacoplado (`Kokoro-82M` ONNX con suspensión tras 60 s de inactividad). |
-| `crates/tmc-modules` | Lógica aislada por rol para los 16 módulos de juego (incluyendo el catálogo de compra `outfitting_catalog.json` en `ship` y el catálogo de yacimientos de alta densidad `mining_hotspots.json` con hot-swap atómico en `mining`), cálculo de relevancia contextual con histéresis temporal anti-salto (`linger_seconds`), disparadores predictivos (`DockingGranted`, aproximación a anillos/cinturones con instrumental minero, e interdicciones) y proyecciones hacia la interfaz. |
-| `crates/tmc-core` | Actor central de estado, enrutamiento de eventos, generador táctico `VoiceAdvisor` y resolvedor léxico multilingüe `VoiceIntentResolver` (9 intenciones vocales). |
-| `crates/tmc-server` | Servidor HTTP/REST y WebSocket (`/ws`) sobre **axum**, *coalescing* de tópicos cada 100 ms (máx. 10 act/s), generador de perfil `.vap` para *VoiceAttack*, protección DNS-rebinding/CSRF y autenticación LAN por token de 128 bits (`HttpOnly; SameSite=Strict`). |
-| `crates/tmc-app` | Composición de servicios, arranque, importación histórica con *throttling* adaptativo y bucle de supervisión. |
-| `crates/tmc-replay` | Herramienta CLI para reproducción temporal controlada de sesiones (`play`) y anonimización determinista de diarios reales (`anonymize`) para fixtures. |
-| `apps/desktop` | Aplicación nativa **Tauri 2** (`TMC.exe`), gestión de instancia única, persistencia de ventana, bandeja del sistema (*System Tray*) y optimización de memoria WebView2. |
-| `apps/headless` | Servidor autónomo sin ventana gráfica y motor de auditoría matemática (`tmc-headless eval`). |
-| `ui/` | Interfaz reactiva en **Svelte 5** (runes), TypeScript, sistema de diseño *TMC Glass HUD*, bloqueo táctico (`Alt + L` / candado en `TopBar`), reordenación dinámica de prioridades en `Settings`, síntesis sonora de cabina (Web Audio API), listas virtualizadas de altura dinámica y reconocimiento vocal offline en WebAssembly (`Whisper` vía `@huggingface/transformers`). |
-| `locales/` | Archivos `.ftl` sincronizados en `es` (referencia), `en`, `fr`, `de` y `pt`. |
+| `crates/tmc-model` | Strongly-typed domain models, journal events, volatile game state, WebSocket subscription topics, strict diagnostic events (`app.toggle_lock`, `app.set_auto_priorities`), and settings schemas (`auto_companion_priorities`, `auto_companion_linger_seconds`, etc.). |
+| `crates/tmc-journal` | Cross-platform directory discovery (Win32 `FOLDERID_SavedGames`, Proton/Flatpak on Linux), non-intrusive incremental *byte offset* tailing of `Journal.*.log`, and retry polling for `Status.json` + 9 companion `.json` files. |
+| `crates/tmc-store` | Persistence in **SQLite (WAL mode)** via `rusqlite`, additive migrations, historical exploration/trade/shopping records, local credential vault, and self-healing database recovery. |
+| `crates/tmc-i18n` | Loading and resolution of **Project Fluent** catalogs (`locales/{es,en,fr,de,pt}/*.ftl`) with automated tests enforcing 100% key parity against `es`. |
+| `crates/tmc-net` | Asynchronous HTTP clients with rate limiters, caching, and offline fallback: *Spansh* (Neutron Plotter, Exact Plotter `/api/generic/route`, shipyard/outfitting search `POST /api/stations/search`, body/ring search `/api/bodies/search`, and nearest search `/api/nearest`), *Ardent*, *Canonn*, *tick.edcd.io*, *EDSM*, *Inara InAPI v1* (max 2 req/min batches), and *Frontier CAPI* (OAuth2 S256 PKCE). |
+| `crates/tmc-eddn` | HTTP POST client submitting official schemas to *EDDN* (`journal/1`, `commodity/3`, `outfitting/2`, `shipyard/2`) with salted local pseudonyms, plus a ZeroMQ listener filtering local commodity markets by radius. |
+| `crates/tmc-tts` | Prioritized speech queue with deduplication and cooldowns (`TtsQueue`), Windows native engine (SAPI5 / OneCore `< 2 MB` RAM), and decoupled neural worker process (`Kokoro-82M` ONNX with 60-second idle hibernation). |
+| `crates/tmc-modules` | Domain logic for all 16 game modules (including `outfitting_catalog.json` in `ship` and curated `mining_hotspots.json` with in-memory atomic hot-swapping in `mining`), context relevance calculation with hysteresis (`linger_seconds`), predictive flight triggers, and UI projection. |
+| `crates/tmc-core` | Central state actor, event routing bus, tactical `VoiceAdvisor`, and multilingual intent parser `VoiceIntentResolver` (9 voice intents). |
+| `crates/tmc-server` | HTTP/REST and WebSocket (`/ws`) server built on **axum**, 100ms topic coalescing (max 10 updates/s), `.vap` profile generator for *VoiceAttack*, DNS-rebinding/CSRF protections, and 128-bit LAN token authentication (`HttpOnly; SameSite=Strict`). |
+| `crates/tmc-app` | Service composition, application lifecycle, historical journal import with adaptive throttling, and supervisor loop. |
+| `crates/tmc-replay` | CLI utility for time-accelerated journal playback (`play`) and deterministic PII anonymization (`anonymize`) for creating test fixtures. |
+| `apps/desktop` | Native **Tauri 2** application (`TMC.exe`), single-instance mutex, window state persistence, system tray lifecycle, and WebView2 memory suspension. |
+| `apps/headless` | Standalone CLI server without GUI and mathematical audit runner (`tmc-headless eval`). |
+| `ui/` | Reactive UI in **Svelte 5** (runes), TypeScript, *TMC Glass HUD* design system, tactical screen lock (`Alt + L`), dynamic priority reorderer, Web Audio API synthesizer, dynamic virtual lists, and offline in-browser speech recognition in WebAssembly (`Whisper` via `@huggingface/transformers`). |
+| `locales/` | Synchronized `.ftl` translation catalogs for `es` (reference), `en`, `fr`, `de`, and `pt`. |
 
 ---
 
-## 8. Ingesta del Diario, Almacenamiento, Seguridad y Rendimiento
+## 8. Journal Ingestion, Storage, Security, and Performance
 
-- **Lectura no intrusiva por desplazamiento de bytes (*byte offset*):** las notificaciones del sistema operativo solo se emplean para detectar la rotación a un archivo `Journal.*.log` nuevo; la lectura línea a línea avanza por offset sin bloquear descriptores de archivo de `EliteDangerous64.exe`. Los archivos volátiles (`Status.json`, `Cargo.json`, `Market.json`, `Outfitting.json`, `Shipyard.json`, `ModulesInfo.json`, `NavRoute.json`, `Backpack.json`, `ShipLocker.json`, `FCMaterials.json`) aplican hasta 10 reintentos de 50 ms ante escrituras truncadas.
-- **Resiliencia y autocuración:** líneas JSON malformadas o eventos futuros desconocidos nunca detienen el actor. Si `tmc.db` presenta corrupción al iniciar, se respalda como `tmc.db.corrupt-YYYYMMDDHHMMSS`, se recrea el esquema limpio y se reimporta el historial de diarios. Si `config.toml` es inválido, se preserva en `config.toml.bak` y se restauran valores seguros.
-- **Seguridad del servidor local:** escucha por defecto exclusivamente en `127.0.0.1:47320` (buscando puerto libre en `47320..=47340` si está ocupado), validando cabeceras `Host` y `Origin`. Al activar `lan = true` (`0.0.0.0`), toda petición externa a loopback exige el token aleatorio de sesión de 128 bits entregado en el código QR.
-- **Presupuesto estricto de recursos (requisito verificable):** `< 150 MB` de RAM total con ventana abierta (habitualmente ~35–112 MB), `< 1 %` de CPU en reposo, cero bucles `requestAnimationFrame` continuos y máximo 10 actualizaciones/s por WebSocket. Al cerrar a la bandeja en Windows, invoca `COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW` y `SetIsVisible(false)`.
-
----
-
-## 9. Rutas Locales, Argumentos CLI y Variables de Entorno
-
-### Rutas predeterminadas
-- **Diarios del juego:**
-  - Windows: `%USERPROFILE%\Saved Games\Frontier Developments\Elite Dangerous\` (y colores HUD en `%LOCALAPPDATA%\Frontier Developments\Elite Dangerous\Options\Graphics\GraphicsConfigurationOverride.xml`).
-  - Linux / SteamOS: prefijos Proton de AppID `359320` en `~/.steam/steam/...`, `~/.local/share/Steam/...` o `~/.var/app/com.valvesoftware.Steam/...`.
-- **Configuración:** `%APPDATA%\TMC\config.toml` (Windows) / `~/.config/tmc/config.toml` (Linux).
-- **Base de datos SQLite y logs rotativos (máx. 7 días):** `%LOCALAPPDATA%\TMC\tmc.db` y `tmc*.log` (Windows) / `~/.local/share/tmc/tmc.db` (Linux).
-
-### Argumentos de línea de comandos (`tmc-desktop` y `tmc-headless`)
-- `--journal-dir <carpeta>`: fuerza la lectura de diarios y archivos `.json` desde un directorio específico.
-- `--config <archivo>`: utiliza un archivo `config.toml` alternativo.
-- `--ui-dir <carpeta>`: sirve los activos compilados de la interfaz web desde una ruta personalizada.
-
-### Variables de entorno opcionales
-- `TMC_CAPI_CLIENT_ID`: identificador de aplicación OAuth2 registrado en el portal de desarrolladores de Frontier para sobrescribir la configuración local de CAPI (nunca debe subirse ningún secreto al repositorio; usar `.env` local ignorado por Git).
-- `VOICEATTACK_PATH` / `VOICEATTACK_DIR`: ruta personalizada de instalación de *VoiceAttack* si reside fuera de las unidades estándar.
+- **Non-Intrusive Byte-Offset Reading:** operating system file system notifications are only used to detect the creation of a new `Journal.*.log` file; line-by-line reading advances through byte offsets without locking file descriptors on `EliteDangerous64.exe`. Volatile files (`Status.json`, `Cargo.json`, `Market.json`, `Outfitting.json`, `Shipyard.json`, `ModulesInfo.json`, `NavRoute.json`, `Backpack.json`, `ShipLocker.json`, `FCMaterials.json`) apply up to 10 retries of 50ms to handle partial writes safely.
+- **Resilience and Self-Healing:** malformed JSON lines or unknown future journal events never crash the application. If `tmc.db` suffers corruption on startup, it is automatically backed up as `tmc.db.corrupt-YYYYMMDDHHMMSS`, a clean schema is instantiated, and history is re-imported. If `config.toml` fails validation, it is preserved in `config.toml.bak` and safe defaults are restored.
+- **Local Server Security:** binds by default exclusively to loopback `127.0.0.1:47320` (probing `47320..=47340` if occupied), validating `Host` and `Origin` headers. When `lan = true` (`0.0.0.0`), all non-loopback requests strictly require the random 128-bit session token provided in the QR code.
+- **Strict Resource Budget (Hard Requirement):** `< 150 MB` total RAM with window open (~35–112 MB typical), `< 1%` idle CPU, zero continuous `requestAnimationFrame` loops, and maximum 10 UI updates/second over WebSocket. When minimized to the tray on Windows, invokes `COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW` and `SetIsVisible(false)`.
 
 ---
 
-## 10. Herramientas de Desarrollo, Reproducción y Auditoría
+## 9. Local Paths, CLI Arguments, and Environment Variables
+
+### Default File Paths
+- **Game Journals:**
+  - Windows: `%USERPROFILE%\Saved Games\Frontier Developments\Elite Dangerous\` (and custom HUD colors in `%LOCALAPPDATA%\Frontier Developments\Elite Dangerous\Options\Graphics\GraphicsConfigurationOverride.xml`).
+  - Linux / SteamOS: Proton prefixes for AppID `359320` in `~/.steam/steam/...`, `~/.local/share/Steam/...` or `~/.var/app/com.valvesoftware.Steam/...`.
+- **Configuration:** `%APPDATA%\TMC\config.toml` (Windows) / `~/.config/tmc/config.toml` (Linux).
+- **SQLite Database and Rolling Logs (7-day max retention):** `%LOCALAPPDATA%\TMC\tmc.db` and `tmc*.log` (Windows) / `~/.local/share/tmc/tmc.db` (Linux).
+
+### Command Line Arguments (`tmc-desktop` and `tmc-headless`)
+- `--journal-dir <path>`: override the journal directory.
+- `--config <path>`: use a custom `config.toml` file.
+- `--ui-dir <path>`: serve precompiled web UI assets from a custom directory.
+
+### Optional Environment Variables
+- `TMC_CAPI_CLIENT_ID`: OAuth2 client ID registered on Frontier's developer portal to override default CAPI credentials (never commit secrets to git; use local `.env`).
+- `VOICEATTACK_PATH` / `VOICEATTACK_DIR`: custom installation directory for *VoiceAttack*.
+
+---
+
+## 10. Development Tools, Replay, and Scientific Audit
 
 ```powershell
-# 1. Ejecutar el servidor + núcleo sin ventana gráfica (ideal para Linux remoto o desarrollo UI)
+# 1. Run headless server + core without GUI (ideal for remote Linux or frontend dev)
 cargo run -p tmc-headless -- --journal-dir tests/fixtures/journal
 
-# 2. Reproducir un diario de prueba en tiempo acelerado (10x) hacia una carpeta temporal
+# 2. Replay a test journal in accelerated time (10x) to a temporary directory
 cargo run -p tmc-replay -- play --from tests/fixtures/journal/basic_session.log --to $env:TEMP\tmc-sim --speed 10
 
-# 3. Anonimizar un diario real antes de convertirlo en fixture (elimina amigos, redacta chats y sustituye CMDR/FID)
-cargo run -p tmc-replay -- anonymize --from C:\Ruta\Journal.log --to tests\fixtures\journal\nuevo_fixture.log
+# 3. Anonymize a real journal before committing it as a fixture (strips friends, redacts chat, substitutes CMDR/FID)
+cargo run -p tmc-replay -- anonymize --from C:\Path\Journal.log --to tests\fixtures\journal\new_fixture.log
 
-# 4. Evaluador científico sobre diarios reales sin imprimir ningún dato personal (8 oráculos matemáticos + tiempos SQLite)
+# 4. Run scientific evaluation against real journals without printing personal data (8 math oracles + SQLite timings)
 cargo run -p tmc-headless -- eval --timings
 
-# 5. Medir huella real de memoria RAM y CPU en reposo frente al presupuesto (< 150 MB RAM, < 1 % CPU)
+# 5. Measure real memory footprint and idle CPU against budget (< 150 MB RAM, < 1% CPU)
 pwsh scripts/measure-footprint.ps1 -Exe target/release/TMC.exe -JournalDir tests/fixtures/journal
 ```
 
-El subcomando `tmc-headless eval` audita contra diarios reales (sin exponer PII en consola) la precisión del alcance FSD (`±0,05 al`), valores de Universal Cartographics (`±5 %`), predicción exobiológica y multiplicador `×5`, conciliación de vales de combate, refinado minero, coste medio comercial, bajas en pilas de masacre e inventario de materiales de ingeniería.
+The `tmc-headless eval` subcommand audits real journals without leaking PII to verify FSD jump range accuracy (`±0.05 ly`), Universal Cartographics payouts (`±5%`), exobiology predictions and `×5` multiplier, combat bond settlements, refinery yields, trade profit margins, massacre mission stack kill tracking, and engineering inventory bookkeeping.
 
 ---
 
-## 11. Compilación, Pruebas Automatizadas y Empaquetado
+## 11. Compilation, Automated Tests, and NSIS Packaging
 
-### Requisitos previos
-- **Rust** estable (`1.90+`, edición 2024) con toolchain nativo (MSVC Build Tools en Windows; `libwebkit2gtk-4.1-dev` en Linux para escritorio).
-- **Node.js** `22+` y `npm`.
-- **Tauri CLI v2** (`cargo install tauri-cli@^2`) para generar el instalador.
+### Prerequisites
+- **Rust** stable (`1.90+`, 2024 edition) with native toolchain (MSVC Build Tools on Windows; `libwebkit2gtk-4.1-dev` on Linux for GUI desktop).
+- **Node.js** `22+` and `npm`.
+- **Tauri CLI v2** (`cargo install tauri-cli@^2`) for packaging the installer.
 
-### Flujo completo de verificación y build
+### Full Build & Verification Workflow
 
 ```powershell
-# 1. Instalar dependencias del frontend y compilar la interfaz estática (Svelte 5 + Vite)
+# 1. Install frontend dependencies and build static assets (Svelte 5 + Vite)
 npm.cmd --prefix ui ci
 npm.cmd --prefix ui run build
 
-# 2. Calidad y pruebas del frontend (TypeScript / svelte-check + Vitest)
+# 2. Frontend quality checks & tests (TypeScript / svelte-check + Vitest)
 npm.cmd --prefix ui run check
 npm.cmd --prefix ui run test
 
-# 3. Calidad y pruebas del backend en Rust (formato, clippy sin warnings y > 1.400 tests del workspace)
+# 3. Rust backend quality checks & tests (formatting, zero clippy warnings, and >1,400 workspace tests)
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 
-# 4. Desarrollo con recarga de interfaz en caliente (proxy Vite -> 127.0.0.1:47320)
-# Terminal 1: cargo run -p tmc-headless -- --journal-dir <carpeta>
+# 4. Live UI development with hot-reload (Vite proxy -> 127.0.0.1:47320)
+# Terminal 1: cargo run -p tmc-headless -- --journal-dir <path>
 # Terminal 2: npm.cmd --prefix ui run dev
 
-# 5. Compilar binarios Release
+# 5. Build optimized Release binaries
 cargo build -p tmc-desktop --release
 cargo build -p tmc-headless --release
 
-# 6. Empaquetar instalador NSIS multiidioma para Windows
+# 6. Build multilingual Windows NSIS installer
 Push-Location apps/desktop
 cargo tauri build
 Pop-Location
-# Salida: target/release/bundle/nsis/TMC_0.1.0_x64-setup.exe
+# Output: target/release/bundle/nsis/TMC_0.1.0_x64-setup.exe
 ```
 
-> **Nota sobre higiene de compilación:** utiliza siempre el directorio estándar `target/` del workspace (no definas `CARGO_TARGET_DIR` adicionales para evitar duplicar decenas de gigabytes de artefactos).
+> **Note on disk hygiene:** always compile to the standard workspace `target/` directory (never define custom `CARGO_TARGET_DIR` variables to avoid duplicating dozens of gigabytes in cached dependencies).
 
 ---
 
-## 12. Contribución, Privacidad y Licencia
+## 12. Contributing, Privacy, and Licensing
 
-- **Licencia:** distribuido bajo **[PolyForm Noncommercial 1.0.0](LICENSE)** (permite consultar, auditar, modificar, compilar y compartir el software de forma gratuita para fines personales, educativos o comunitarios sin ánimo de lucro). Queda prohibido incorporar código o conjuntos de datos con licencias incompatibles como GPL/AGPL; toda dependencia externa debe registrarse en [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
-- **Reglas para contribuciones:**
-  - Ninguna cadena visible en la interfaz o en voz debe escribirse fija en el código: toda etiqueta se declara en `locales/{es,en,fr,de,pt}/*.ftl` (`es` es el idioma de referencia validado por `cargo test -p tmc-i18n`).
-  - Nunca subas claves API, tokens ni diarios reales sin pasar previamente por `tmc-replay anonymize` y revisión manual.
-  - Consulta el sistema de diseño de cabina en [`docs/design-system-glass-hud.md`](docs/design-system-glass-hud.md).
-- **Privacidad:** TMC no incluye telemetría propia ni analíticas de usuario. Las credenciales opcionales se almacenan únicamente en la base de datos local del equipo, Frontier CAPI utiliza OAuth2 PKCE directo contra Frontier Store y EDDN emplea un identificador seudonimizado con sal aleatoria local.
-- **Aviso legal:** *Elite Dangerous*, *Horizons* y *Odyssey* son marcas registradas de Frontier Developments plc. TMC es una herramienta comunitaria independiente no afiliada ni respaldada oficialmente por Frontier Developments.
+- **License:** distributed under **[PolyForm Noncommercial 1.0.0](LICENSE)** (permits inspecting, auditing, modifying, building, and sharing the software for personal, educational, or non-profit community purposes). Incorporating code or datasets with incompatible licenses such as GPL/AGPL is strictly prohibited; all third-party dependencies are documented in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+- **Contribution Guidelines:**
+  - No user-visible strings or spoken cues may be hardcoded: all UI and voice strings must be defined in `locales/{es,en,fr,de,pt}/*.ftl` (`es` serves as the reference catalog validated by `cargo test -p tmc-i18n`).
+  - Never commit API keys, private tokens, or real player journal files without first running them through `tmc-replay anonymize` and conducting manual inspection.
+  - Adhere strictly to the cockpit design system in [`docs/design-system-glass-hud.md`](docs/design-system-glass-hud.md).
+- **Privacy:** TMC does not include any telemetry, analytics, or remote tracking. Optional third-party API keys are stored solely in your local database, Frontier CAPI uses direct PKCE OAuth2 against Frontier Store, and EDDN submissions use locally salted pseudonyms.
+- **Legal Notice:** *Elite Dangerous*, *Horizons*, and *Odyssey* are registered trademarks of Frontier Developments plc. TMC is an independent community project and is not affiliated with or officially endorsed by Frontier Developments.
