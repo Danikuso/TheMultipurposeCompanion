@@ -85,7 +85,7 @@ En el menú lateral izquierdo dispones de dos formas de navegar (además del bot
 | **1. `Exploración`** | Tira de `Ruta`, `Panel de contexto` (conmutador `Cuerpos` / `Exobiología`), `Planificador de rutas` y `Alcance de salto`. |
 | **2. `Nave`** | `Nave` (equipamiento e ingeniería), `Alcance de salto`, `Mi carga` y `Astilleros y Equipamiento`. |
 | **3. `Combate`** | `Objetivo`, `Sesión de caza`, `Mi nave` y paneles automáticos de `Zona de conflicto` y `AX` (Thargoides) cuando están activos. |
-| **4. `Minería`** | `Prospector`, `Sesión de minería` y `Dónde vender`. |
+| **4. `Minería`** | `Objetivos de minería` (bucle triangular y venta óptima), `Prospector`, `Sesión de minería` y `Dónde vender`. |
 | **5. `Comercio`** | `Mercado actual`, `Mi carga`, `Sesión de comercio`, `Ruta comercial` y `Buscar mercancía`. |
 | **6. `Misiones`** | `Misiones activas`, `Avisos`, `Recompensas de la sesión` y paneles automáticos de `Pila de masacre`, `Pasajeros`, `Turismo` y `Objetivos comunitarios`. |
 | **7. `Ingeniería`** | `Materiales`, `Ingenieros`, `Avisos de ingeniería`, `Mi nave modificada`, `Ingenierizar un módulo` (al elegir pieza), `Lista de la compra`, `Intercambios` y `Dónde conseguirlo`. |
@@ -140,7 +140,17 @@ Debajo de las disposiciones encontrarás la lista de los **16 Módulos individua
 - **`Sesión de caza`:** bajas, créditos ganados, ritmo por hora, avance del rango de combate, botón **`Reiniciar sesión`**, desglose de **`Vales sin cobrar`** por facción (calculando también el importe neto con **`−25 % en IF`**) y localización del *Interstellar Factors* más cercano.
 - **`Zona de conflicto` y `AX` (automáticos):** bando elegido, bajas y bonos en zonas de guerra; alerta de presencia Thargoide, bonos AX y conteo de bajas por variante (*Explorador, Cíclope, Basilisco, Medusa, Hidra, Guadaña, Glaive, Orthrus…*).
 
-### 7. `Minería` (3 paneles)
+### 7. `Minería` (4 paneles: Localizador de Objetivos, Prospector, Sesión y Dónde vender)
+- **`Objetivos de minería y venta óptima (Miner's Companion)`:**
+  - **Bucle triangular más corto:** calcula en cabina el circuito óptimo completo: desde tu sistema actual ➔ al mejor yacimiento o anillo ➔ a la estación más cercana con el mayor precio de venta para tus minerales.
+  - **3 perfiles especializados y chips de preset rápido:**
+    - **Láser:** enfocado en platino en anillos metálicos, painite y osmio. Incluye combinaciones con sitios de extracción *Hazardous RES* (+100 % de fragmentos por roca) y *High RES* (+75 % de fragmentos) y solapamientos (*overlaps*) comprobados.
+    - **Núcleo profundo (*Core*):** enfocado en musgravita, monazita, alejandrita, ópalos del vacío y grandidierita en anillos rocosos e inertes.
+    - **Misiones e Ingenieros:** bromellita (para el desbloqueo del ingeniero Bill Turner en Alioth), tritio (para repostar *Fleet Carriers*) y osmio.
+  - **Alerta de riesgo de penalización de demanda (*Demand Tax Risk*):** la economía de *Elite Dangerous* reduce drásticamente el precio pagado si la carga a bordo supera el 25 % de la demanda de la estación de destino. TMC advierte de forma preventiva con semáforo ámbar/rojo en cabina y muestra el umbral de seguridad para no perder créditos.
+  - **Venta de bodega actual en 1 clic (*Multi-Sell*):** lee los minerales y metales reales almacenados en tu nave y localiza la estación óptima que compra toda la combinación con el mayor beneficio conjunto.
+  - **Catálogo curado offline y sincronización atómica online:** integra de serie más de 40 yacimientos de alta densidad comprobados por la comunidad (*EDTools/Spansh*), funcionando de forma inmediata sin conexión a internet y actualizándose en caliente en segundo plano cuando hay conexión disponible.
+  - **Acción directa de cabina:** botones **`📋 Copiar sistema`** y **`🚀 Trazar ruta`** directos en cada tarjeta y en la tabla adaptativa con desplazamiento horizontal fijo.
 - **`Prospector`:** nivel de contenido (*bajo/medio/alto*), aviso destacado **`◆ Núcleo: mineral`** para detonación profunda, barra multicolor de composición, lista de minerales resaltando tus favoritos con `★`, veredicto automático **`✔ merece la pena`** o **`✘ no compensa`** según tu umbral en créditos y gráfico comparativo de los **`Últimos 8 asteroides`**.
 - **`Sesión de minería`:** duración, toneladas refinadas y ritmo `t/h`, ganancias estimadas y `cr/h`, drones **`Limpets`** restantes y lanzados por tipo, llenado de bodega, desglose por mineral y estimación de las tolvas de **`Refinería`**.
 - **`Dónde vender`:** mejor estación global recomendada para toda tu carga y opciones desplegables por cada mineral con estación, sistema (con botón copiar `⎘`), distancia, precio, demanda, tamaño de pista (`S/M/L` con aviso si falta confirmación) y antigüedad del precio.
@@ -240,10 +250,10 @@ El proyecto está organizado como un workspace modular en **Rust estable (edici�
 | `crates/tmc-journal` | Descubrimiento multiplataforma de carpetas (Win32 `FOLDERID_SavedGames`, Proton/Flatpak en Linux), ingesta incremental por *byte offset* de `Journal.*.log` y sondeo tolerante a escrituras parciales de `Status.json` + 9 archivos `.json` compañeros. |
 | `crates/tmc-store` | Persistencia en **SQLite (modo WAL)** (`rusqlite`), migraciones aditivas, historial de exploración/comercio/listas de compra, almacén local de credenciales y autocuración ante corrupción. |
 | `crates/tmc-i18n` | Carga y resolución de catálogos **Project Fluent** (`locales/{es,en,fr,de,pt}/*.ftl`) con test automatizado de paridad total de claves respecto a `es`. |
-| `crates/tmc-net` | Clientes HTTP asíncronos con limitadores de tasa, caché y degradación offline: *Spansh* (Neutron Plotter, Exact Plotter `/api/generic/route`, búsqueda combinada de astilleros/equipamiento `POST /api/stations/search` con respaldo por pieza y rescate espacial `/api/nearest`), *Ardent*, *Canonn*, *tick.edcd.io*, *EDSM*, *Inara InAPI v1* (lotes máx. 2 req/min) y *Frontier CAPI* (OAuth2 S256 PKCE). |
+| `crates/tmc-net` | Clientes HTTP asíncronos con limitadores de tasa, caché y degradación offline: *Spansh* (Neutron Plotter, Exact Plotter `/api/generic/route`, búsqueda combinada de astilleros/equipamiento `POST /api/stations/search`, búsqueda de yacimientos/anillos `/api/bodies/search` y mercados de venta óptima con bucle triangular, y rescate espacial `/api/nearest`), *Ardent*, *Canonn*, *tick.edcd.io*, *EDSM*, *Inara InAPI v1* (lotes máx. 2 req/min) y *Frontier CAPI* (OAuth2 S256 PKCE). |
 | `crates/tmc-eddn` | Emisor HTTP POST de esquemas oficiales a *EDDN* (`journal/1`, `commodity/3`, `outfitting/2`, `shipyard/2`) con sal local seudonimizada y suscriptor ZeroMQ filtrando mercados por radio espacial. |
 | `crates/tmc-tts` | Cola priorizada de locución con deduplicación y *cooldowns* (`TtsQueue`), motor nativo de Windows (SAPI5 / OneCore `< 2 MB` RAM) y proceso worker neuronal desacoplado (`Kokoro-82M` ONNX con suspensión tras 60 s de inactividad). |
-| `crates/tmc-modules` | Lógica aislada por rol para los 16 módulos de juego (incluyendo el catálogo embebido `outfitting_catalog.json` con 48 naves, 153 familias de módulos y permisos estelares en `ship`), cálculo de relevancia contextual y proyecciones hacia la interfaz. |
+| `crates/tmc-modules` | Lógica aislada por rol para los 16 módulos de juego (incluyendo el catálogo de compra `outfitting_catalog.json` en `ship` y el catálogo de yacimientos de alta densidad `mining_hotspots.json` con hot-swap atómico en `mining`), cálculo de relevancia contextual y proyecciones hacia la interfaz. |
 | `crates/tmc-core` | Actor central de estado, enrutamiento de eventos, generador táctico `VoiceAdvisor` y resolvedor léxico multilingüe `VoiceIntentResolver` (9 intenciones vocales). |
 | `crates/tmc-server` | Servidor HTTP/REST y WebSocket (`/ws`) sobre **axum**, *coalescing* de tópicos cada 100 ms (máx. 10 act/s), generador de perfil `.vap` para *VoiceAttack*, protección DNS-rebinding/CSRF y autenticación LAN por token de 128 bits (`HttpOnly; SameSite=Strict`). |
 | `crates/tmc-app` | Composición de servicios, arranque, importación histórica con *throttling* adaptativo y bucle de supervisión. |

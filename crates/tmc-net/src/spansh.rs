@@ -1114,6 +1114,7 @@ pub fn parse_mining_bodies(
                         res_intensity: None,
                         res_distance_km: None,
                         other_hotspots,
+                        comment: None,
                         nearest_best_sell: None,
                     });
                 }
@@ -2061,6 +2062,7 @@ mod tests {
             res_intensity: Some("Hazardous".into()),
             res_distance_km: Some(15.0),
             other_hotspots: vec![],
+            comment: None,
             nearest_best_sell: None,
         };
         let sell = MiningSellStation {
