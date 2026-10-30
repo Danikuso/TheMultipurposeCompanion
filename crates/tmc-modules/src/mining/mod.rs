@@ -119,6 +119,7 @@ pub struct Mining {
     inventory: BTreeMap<String, u32>,
     last_drone: Option<DateTime<Utc>>,
     last_prospect: Option<DateTime<Utc>>,
+    predictive_mining_at: Option<DateTime<Utc>>,
     /// Sistema para el que valen `results`, `answered` y `failed`.
     addr: u64,
     /// Última plataforma conocida de la nave.
@@ -154,6 +155,7 @@ impl Mining {
             inventory: BTreeMap::new(),
             last_drone: None,
             last_prospect: None,
+            predictive_mining_at: None,
             addr: 0,
             pad: None,
             last_session_render: None,
@@ -327,6 +329,32 @@ impl Mining {
                 {
                     self.last_drone = Some(at);
                 }
+            }
+            EventKind::ApproachBody(b) => {
+                if self.settings.auto_companion_predictive {
+                    let has_gear = state.ship.as_ref().is_some_and(|ship| {
+                        ship.modules.iter().any(|m| {
+                            m.item.as_deref().is_some_and(|item| {
+                                let s = item.to_ascii_lowercase();
+                                s.contains("refinery")
+                                    || s.contains("mining")
+                                    || s.contains("prospector")
+                                    || s.contains("seismic")
+                                    || s.contains("abrasion")
+                            })
+                        })
+                    });
+                    let is_ring = b.body.as_deref().is_some_and(|name| {
+                        let s = name.to_ascii_lowercase();
+                        s.contains("ring") || s.contains("belt")
+                    });
+                    if has_gear || is_ring {
+                        self.predictive_mining_at = Some(at);
+                    }
+                }
+            }
+            EventKind::LeaveBody(_) | EventKind::FsdJump(_) | EventKind::SupercruiseEntry(_) => {
+                self.predictive_mining_at = None;
             }
             EventKind::LoadGame(_) => {
                 // Nueva partida: los resultados de venta se piden de nuevo.
@@ -1225,10 +1253,17 @@ impl Module for Mining {
         let window = Duration::minutes(ACTIVE_WINDOW_MIN);
         let recent = |t: Option<DateTime<Utc>>| t.is_some_and(|t| now - t <= window);
         if recent(self.last_drone) || recent(self.last_prospect) {
-            Relevance::Active
-        } else {
-            Relevance::Normal
+            return Relevance::Active;
         }
+        if self.settings.auto_companion_predictive
+            && let Some(pred_at) = self.predictive_mining_at
+        {
+            let linger = (self.settings.auto_companion_linger_seconds as i64).max(60);
+            if (now - pred_at).num_seconds() <= linger {
+                return Relevance::Active;
+            }
+        }
+        Relevance::Normal
     }
 }
 

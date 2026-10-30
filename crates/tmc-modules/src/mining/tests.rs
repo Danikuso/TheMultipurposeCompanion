@@ -1015,3 +1015,26 @@ fn search_multi_sell_and_clear_targets() {
     let loop_topic = h.m.topic_value("mining.loop").unwrap();
     assert_eq!(loop_topic["status"], "idle");
 }
+
+#[test]
+fn approach_body_triggers_predictive_mining_relevance() {
+    let mut h = H::new();
+    h.start();
+    assert_eq!(h.m.relevance(&h.state), Relevance::Normal);
+
+    // Approaching ring at t=10
+    h.journal(
+        10,
+        "ApproachBody",
+        r#","Body":"HIP 21991 1 Ring A","BodyID":12,"SystemAddress":100"#,
+    );
+    assert_eq!(h.m.relevance(&h.state), Relevance::Active);
+
+    // Leaving body at t=15 resets predictive relevance
+    h.journal(
+        15,
+        "LeaveBody",
+        r#","Body":"HIP 21991 1 Ring A","BodyID":12,"SystemAddress":100"#,
+    );
+    assert_eq!(h.m.relevance(&h.state), Relevance::Normal);
+}

@@ -148,6 +148,7 @@ pub struct Trade {
     route_key: Option<String>,
     /// Último `Docked` propio: `LocationState` no lo conserva.
     docked: Option<Docked>,
+    predictive_dock_at: Option<DateTime<Utc>>,
     /// Último `Market.json` crudo: puede llegar antes que `Docked`.
     raw_market: Option<Value>,
     market: Option<MarketSnapshot>,
@@ -194,6 +195,7 @@ impl Trade {
             route_hop_range: None,
             route_key: None,
             docked: None,
+            predictive_dock_at: None,
             raw_market: None,
             market: None,
             addr: 0,
@@ -316,6 +318,7 @@ impl Trade {
         decide!("trade.cmdr.changed", {"switched": switched});
         self.basis = CostBasis::default();
         self.inventory.clear();
+        self.predictive_dock_at = None;
         self.cost_loaded = false;
         self.pending.clear();
         self.commodities_loaded = false;
@@ -424,7 +427,13 @@ impl Trade {
                     self.inventory = inv.clone();
                 }
             }
-            EventKind::Undocked(_) => {
+            EventKind::DockingGranted(_) => {
+                if self.settings.auto_companion_predictive {
+                    self.predictive_dock_at = Some(at);
+                }
+            }
+            EventKind::Undocked(_) | EventKind::FsdJump(_) | EventKind::SupercruiseEntry(_) => {
+                self.predictive_dock_at = None;
                 self.docked = None;
                 self.market = None;
                 self.sells_sent = None;
@@ -1390,7 +1399,12 @@ impl Module for Trade {
     fn relevance(&self, state: &GameState) -> Relevance {
         let at_market = state.location.mode == FlightMode::Docked
             && self.docked.as_ref().is_some_and(Docked::has_market);
-        if at_market || !self.cargo_keys().is_empty() {
+        let predictive = self.settings.auto_companion_predictive
+            && self.predictive_dock_at.is_some_and(|t| {
+                let linger = (self.settings.auto_companion_linger_seconds as i64).max(30);
+                (self.clock() - t).num_seconds() <= linger
+            });
+        if at_market || !self.cargo_keys().is_empty() || predictive {
             Relevance::Active
         } else {
             Relevance::Normal

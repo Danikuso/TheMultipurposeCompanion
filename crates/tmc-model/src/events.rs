@@ -290,6 +290,16 @@ pub struct LandingPads {
     pub large: u32,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct DockingGranted {
+    pub landing_pad: Option<u32>,
+    #[serde(rename = "MarketID")]
+    pub market_id: Option<u64>,
+    pub station_name: Option<String>,
+    pub station_type: Option<String>,
+}
+
 /// `LandingPads` tolerante: un tipo inesperado da `None` sin romper el evento.
 fn lenient_pads<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<LandingPads>, D::Error> {
     let v = Json::deserialize(d)?;
@@ -524,6 +534,15 @@ pub struct UnderAttack {
 pub struct Interdicted {
     pub submitted: Option<bool>,
     pub interdictor: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct Interdiction {
+    pub success: Option<bool>,
+    pub interdicted: Option<String>,
+    pub is_player: Option<bool>,
+    pub combat_overseer: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -1736,6 +1755,7 @@ pub enum EventKind {
     FsdJump(Box<LocationInfo>),
     CarrierJump(Box<LocationInfo>),
     Docked(Docked),
+    DockingGranted(DockingGranted),
     Undocked(Undocked),
     SupercruiseEntry(SupercruiseEntry),
     SupercruiseExit(SupercruiseExit),
@@ -1754,6 +1774,7 @@ pub enum EventKind {
     HullDamage(HullDamage),
     UnderAttack(UnderAttack),
     Interdicted(Interdicted),
+    Interdiction(Interdiction),
     FuelScoop(FuelScoop),
     RefuelAll(Refuel),
     RefuelPartial(Refuel),
@@ -1868,6 +1889,7 @@ fn classify(name: &str, raw: &RawValue) -> EventKind {
         "FSDJump" => de::<LocationInfo>(name, raw).map(|l| EventKind::FsdJump(Box::new(l))),
         "CarrierJump" => de::<LocationInfo>(name, raw).map(|l| EventKind::CarrierJump(Box::new(l))),
         "Docked" => de(name, raw).map(EventKind::Docked),
+        "DockingGranted" => de(name, raw).map(EventKind::DockingGranted),
         "Undocked" => de(name, raw).map(EventKind::Undocked),
         "SupercruiseEntry" => de(name, raw).map(EventKind::SupercruiseEntry),
         "SupercruiseExit" => de(name, raw).map(EventKind::SupercruiseExit),
@@ -1886,6 +1908,7 @@ fn classify(name: &str, raw: &RawValue) -> EventKind {
         "HullDamage" => de(name, raw).map(EventKind::HullDamage),
         "UnderAttack" => de(name, raw).map(EventKind::UnderAttack),
         "Interdicted" => de(name, raw).map(EventKind::Interdicted),
+        "Interdiction" => de(name, raw).map(EventKind::Interdiction),
         "FuelScoop" => de(name, raw).map(EventKind::FuelScoop),
         "RefuelAll" => de(name, raw).map(EventKind::RefuelAll),
         "RefuelPartial" => de(name, raw).map(EventKind::RefuelPartial),
@@ -3295,6 +3318,28 @@ mod tests {
             panic!("Docked")
         };
         assert_eq!(n.max_pad(), None);
+    }
+
+    #[test]
+    fn docking_granted_and_interdiction_parse() {
+        let EventKind::DockingGranted(dg) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"DockingGranted","LandingPad":2,"MarketID":128666762,"StationName":"Seven Meadow","StationType":"Coriolis"}"#,
+        ) else {
+            panic!("DockingGranted")
+        };
+        assert_eq!(dg.landing_pad, Some(2));
+        assert_eq!(dg.market_id, Some(128666762));
+        assert_eq!(dg.station_name.as_deref(), Some("Seven Meadow"));
+        assert_eq!(dg.station_type.as_deref(), Some("Coriolis"));
+
+        let EventKind::Interdiction(it) = ev(
+            r#"{"timestamp":"2026-04-10T20:00:00Z","event":"Interdiction","Success":true,"Interdicted":"Pirate Raider","IsPlayer":false,"CombatOverseer":false}"#,
+        ) else {
+            panic!("Interdiction")
+        };
+        assert_eq!(it.success, Some(true));
+        assert_eq!(it.interdicted.as_deref(), Some("Pirate Raider"));
+        assert_eq!(it.is_player, Some(false));
     }
 
     #[test]

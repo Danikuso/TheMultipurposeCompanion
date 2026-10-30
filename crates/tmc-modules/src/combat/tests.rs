@@ -511,9 +511,13 @@ fn relevance_active_with_locked_target() {
     h.lock(10, true);
     assert_eq!(h.m.relevance(&h.state), Relevance::Active);
     h.lock(12, false);
+    // A los 10 s (t=22) caduca el topic del objetivo, pero la histéresis de 20 s retiene Active
     h.status(23, Flags::empty());
-    assert_eq!(h.m.relevance(&h.state), Relevance::Normal);
     assert_eq!(h.val("combat.target"), json!(null));
+    assert_eq!(h.m.relevance(&h.state), Relevance::Active);
+    // Tras superar la histéresis (t=35 > 12 + 20), vuelve a Normal
+    h.status(35, Flags::empty());
+    assert_eq!(h.m.relevance(&h.state), Relevance::Normal);
 }
 
 #[test]
@@ -625,4 +629,41 @@ fn carrier_jump_updates_ax_presence() {
         r#","StarSystem":"Synthetic AX","SystemAddress":9,"StarPos":[0,0,0],"ThargoidWar":{"CurrentState":"Thargoid_Probing"}"#,
     );
     assert_eq!(h.val("combat.ax")["presence"], true);
+}
+
+#[test]
+fn combat_linger_retains_active_status_after_target_lost() {
+    let mut h = H::new();
+    h.start();
+    // Default linger_seconds is 20
+    assert_eq!(h.m.relevance(&h.state), Relevance::Normal);
+
+    // Target locked at t=10
+    h.lock(10, true);
+    assert_eq!(h.m.relevance(&h.state), Relevance::Active);
+
+    // Target unlocked/lost at t=15
+    h.lock(15, false);
+    // At t=25 (10s after last combat activity, <= 20s linger), relevance is still Active!
+    h.status(25, Flags::SHIELDS_UP);
+    assert_eq!(h.m.relevance(&h.state), Relevance::Active);
+
+    // At t=40 (25s after last combat activity, > 20s linger), relevance reverts to Normal!
+    h.status(40, Flags::SHIELDS_UP);
+    assert_eq!(h.m.relevance(&h.state), Relevance::Normal);
+}
+
+#[test]
+fn interdiction_event_triggers_immediate_active_combat_relevance() {
+    let mut h = H::new();
+    h.start();
+    assert_eq!(h.m.relevance(&h.state), Relevance::Normal);
+
+    // Event Interdicted at t=10
+    h.journal(
+        10,
+        "Interdicted",
+        r#","Submitted":false,"Interdictor":"Pirate Boss""#,
+    );
+    assert_eq!(h.m.relevance(&h.state), Relevance::Active);
 }

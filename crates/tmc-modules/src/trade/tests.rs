@@ -619,6 +619,29 @@ fn relevance_active_when_docked_with_market() {
 }
 
 #[test]
+fn docking_granted_triggers_predictive_trade_relevance() {
+    let mut h = H::new();
+    h.journal(0, "Commander", r#","FID":"F1","Name":"TESTER""#);
+    assert_eq!(h.m.relevance(&h.state), Relevance::Normal);
+
+    // DockingGranted at t=5
+    h.journal(
+        5,
+        "DockingGranted",
+        r#","LandingPad":2,"MarketID":128,"StationName":"Seven Meadow","StationType":"Coriolis""#,
+    );
+    assert_eq!(h.m.relevance(&h.state), Relevance::Active);
+
+    // Undocked/supercruise clears predictive window
+    h.journal(
+        10,
+        "SupercruiseEntry",
+        r#","StarSystem":"Seven Meadow System""#,
+    );
+    assert_eq!(h.m.relevance(&h.state), Relevance::Normal);
+}
+
+#[test]
 fn relevance_ignores_limpets_mission_and_stolen_cargo() {
     let mut h = H::new();
     h.journal(0, "Commander", r#","FID":"F1","Name":"TESTER""#);

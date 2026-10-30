@@ -280,6 +280,9 @@ impl ConfigHost for AppActions {
         updated
             .validate_f4()
             .map_err(|e| ActionError::Failed(e.into()))?;
+        updated
+            .validate_auto_companion()
+            .map_err(|e| ActionError::Failed(e.into()))?;
         if updated.server.lan {
             updated.ensure_lan_token();
         }

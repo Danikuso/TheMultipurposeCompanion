@@ -4,7 +4,10 @@ use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tmc_model::events::commodity_key;
-use tmc_model::settings::{DEFAULT_ENGINEERING_ROLLS, DEFAULT_MINING_INTEREST, ModuleSettings};
+use tmc_model::settings::{
+    DEFAULT_ENGINEERING_ROLLS, DEFAULT_MINING_INTEREST, ModuleSettings, default_auto_priorities,
+    default_linger_seconds, default_true,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -33,6 +36,16 @@ pub struct Config {
     pub auto_copy_next_system: bool,
     /// Auto-companion: la UI cambia sola de disposición y de panel de contexto.
     pub auto_companion: bool,
+    #[serde(default = "default_auto_priorities")]
+    pub auto_companion_priorities: Vec<String>,
+    #[serde(default = "default_linger_seconds")]
+    pub auto_companion_linger_seconds: u32,
+    #[serde(default)]
+    pub auto_companion_voice_cues: bool,
+    #[serde(default = "default_true")]
+    pub auto_companion_sound_cues: bool,
+    #[serde(default = "default_true")]
+    pub auto_companion_predictive: bool,
     pub alerts_enabled: bool,
     /// Consultas a servicios en línea (Spansh, EDSM, Canonn). Desactivarlo no envía nada.
     pub online_services: bool,
@@ -64,6 +77,11 @@ impl Default for Config {
             server: ServerSection::default(),
             auto_copy_next_system: true,
             auto_companion: true,
+            auto_companion_priorities: default_auto_priorities(),
+            auto_companion_linger_seconds: default_linger_seconds(),
+            auto_companion_voice_cues: false,
+            auto_companion_sound_cues: true,
+            auto_companion_predictive: true,
             alerts_enabled: true,
             online_services: true,
             map_value_threshold: 500_000,
@@ -146,6 +164,7 @@ impl Config {
                 cfg.sanitize_f2();
                 cfg.sanitize_f3();
                 cfg.sanitize_f4();
+                cfg.sanitize_auto_companion();
                 #[cfg(debug_assertions)]
                 cfg.record_bootstrap(
                     serde_json::json!({"fallback":false,"loaded":true,"normalized":normalized}),
@@ -266,6 +285,28 @@ impl Config {
         }
     }
 
+    /// Valida los campos de Auto-Companion Pro (histéresis y prioridades).
+    pub fn validate_auto_companion(&mut self) -> Result<(), &'static str> {
+        if self.auto_companion_linger_seconds > 60 {
+            return Err("invalid-auto-companion-linger");
+        }
+        self.auto_companion_priorities =
+            ModuleSettings::normalize_auto_priorities(&self.auto_companion_priorities);
+        Ok(())
+    }
+
+    /// Al cargar: histéresis y prioridades fuera de límites se sanean.
+    fn sanitize_auto_companion(&mut self) {
+        if self.auto_companion_linger_seconds > 60 {
+            tracing::warn!(
+                "auto_companion_linger_seconds fuera de rango; usando valor por defecto"
+            );
+            self.auto_companion_linger_seconds = 20;
+        }
+        self.auto_companion_priorities =
+            ModuleSettings::normalize_auto_priorities(&self.auto_companion_priorities);
+    }
+
     pub fn save(&self) -> anyhow::Result<()> {
         self.save_to(&config_path())
     }
@@ -307,6 +348,11 @@ impl Config {
             tourism_reference_cr_ly: self.tourism_reference_cr_ly,
             engineering_rolls: self.engineering_rolls,
             tts: self.tts.clone(),
+            auto_companion_priorities: self.auto_companion_priorities.clone(),
+            auto_companion_linger_seconds: self.auto_companion_linger_seconds,
+            auto_companion_voice_cues: self.auto_companion_voice_cues,
+            auto_companion_sound_cues: self.auto_companion_sound_cues,
+            auto_companion_predictive: self.auto_companion_predictive,
         }
     }
 

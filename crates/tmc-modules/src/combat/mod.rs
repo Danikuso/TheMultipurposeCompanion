@@ -135,6 +135,8 @@ pub struct Combat {
     inflight: Inflight,
     if_state: Option<(u64, IfState)>,
     prev_alerts: Vec<ShipAlert>,
+    /// Último instante en que hubo actividad de combate (para histéresis `linger_seconds`).
+    last_combat_at: Option<DateTime<Utc>>,
     /// Ya se vio un `Status`. Decisión: el primer `Status` fija la línea base de avisos
     /// sin avisar, porque un `Status` suelto sin `SHIELDS_UP` (p. ej. al arrancar con la
     /// nave sin escudos) no es una caída de escudos real; solo avisan las transiciones.
@@ -164,6 +166,7 @@ impl Combat {
             inflight: Inflight::default(),
             if_state: None,
             prev_alerts: Vec::new(),
+            last_combat_at: None,
             status_seen: false,
             #[cfg(test)]
             session_renders: 0,
@@ -211,6 +214,7 @@ impl Combat {
             self.session = HuntingSession::new(self.clock());
             self.target = TargetTracker::default();
             self.prev_alerts.clear();
+            self.last_combat_at = None;
             self.cz = CzTracker::default();
             self.ax = AxTracker::default();
         }
@@ -247,6 +251,13 @@ impl Combat {
         if let EventKind::Location(l) | EventKind::FsdJump(l) | EventKind::CarrierJump(l) = &je.kind
         {
             self.ax.on_location(l);
+        }
+        if matches!(
+            &je.kind,
+            EventKind::Interdiction(_) | EventKind::Interdicted(_)
+        ) && self.settings.auto_companion_predictive
+        {
+            self.last_combat_at = Some(now);
         }
         match &je.kind {
             EventKind::ShipTargeted(t) => {
@@ -601,6 +612,14 @@ impl Module for Combat {
         let ship_view = self.ship.view(now);
         self.emit_alerts(ctx, &ship_view, baseline);
 
+        let locked = self.target.view(now).is_some_and(|t| t.lost_at.is_none());
+        let under_attack = ship_view.alerts.contains(&ShipAlert::UnderAttack);
+        let interdicted = ship_view.alerts.contains(&ShipAlert::Interdiction);
+        let in_zone = ship_view.hardpoints && self.cz.view().is_some();
+        if locked || under_attack || interdicted || in_zone || self.ax.active(now) {
+            self.last_combat_at = Some(now);
+        }
+
         let mut dirty = TopicSet::new();
         let ship = serde_json::to_value(&ship_view).unwrap_or_default();
         self.set(TOPIC_SHIP, ship, &mut dirty);
@@ -660,12 +679,19 @@ impl Module for Combat {
         let locked = self.target.view(now).is_some_and(|t| t.lost_at.is_none());
         let ship = self.ship.view(now);
         let under_attack = ship.alerts.contains(&ShipAlert::UnderAttack);
+        let interdicted = ship.alerts.contains(&ShipAlert::Interdiction);
         let in_zone = ship.hardpoints && self.cz.view().is_some();
-        if locked || under_attack || in_zone || self.ax.active(now) {
-            Relevance::Active
-        } else {
-            Relevance::Normal
+        let active_now = locked || under_attack || interdicted || in_zone || self.ax.active(now);
+        if active_now {
+            return Relevance::Active;
         }
+        if let Some(last) = self.last_combat_at {
+            let linger = self.settings.auto_companion_linger_seconds as i64;
+            if linger > 0 && (now - last).num_seconds() <= linger {
+                return Relevance::Active;
+            }
+        }
+        Relevance::Normal
     }
 }
 

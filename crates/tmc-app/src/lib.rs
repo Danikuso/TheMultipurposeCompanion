@@ -132,6 +132,37 @@ lan = false
         assert_eq!(actions.get_config()["auto_companion"], false);
     }
 
+    #[tokio::test]
+    async fn put_config_persists_custom_auto_priorities_and_linger() {
+        let dir = tempdir().unwrap();
+        let (actions, _core, _online) = runtime_actions(dir.path());
+        let before = actions.get_config();
+        assert_eq!(before["auto_companion_linger_seconds"], 20);
+
+        // Reject linger > 60
+        let mut bad = before.clone();
+        bad["auto_companion_linger_seconds"] = json!(65);
+        assert!(matches!(
+            actions.put_config(bad),
+            Err(ActionError::Failed(_))
+        ));
+
+        // Valid update with reordered priorities and custom linger
+        let mut ok = before.clone();
+        ok["auto_companion_linger_seconds"] = json!(35);
+        ok["auto_companion_priorities"] = json!(["trade", "combat", "mining"]);
+        ok["auto_companion_voice_cues"] = json!(true);
+        let saved = actions.put_config(ok).unwrap();
+        assert_eq!(saved["auto_companion_linger_seconds"], 35);
+        assert_eq!(saved["auto_companion_voice_cues"], true);
+        // Normalized priorities: trade, combat, mining first, then remaining defaults
+        let priors = saved["auto_companion_priorities"].as_array().unwrap();
+        assert_eq!(priors[0], "trade");
+        assert_eq!(priors[1], "combat");
+        assert_eq!(priors[2], "mining");
+        assert_eq!(priors.len(), 9);
+    }
+
     #[test]
     fn f1_config_without_mining_fields_loads_with_defaults() {
         let dir = tempdir().unwrap();
