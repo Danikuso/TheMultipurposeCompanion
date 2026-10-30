@@ -60,11 +60,20 @@ pub enum NetQuery {
     BgsTick,
     /// Búsqueda de astilleros (naves) y equipamiento (módulos) cercanos (Spansh).
     OutfittingSearch(OutfittingSearchParams),
+    /// Búsqueda de yacimientos y puntos calientes (hotspots) de minería (Spansh).
+    MiningSearch(MiningTargetQuery),
+    /// Búsqueda de mejor estación para vender múltiples minerales de la bodega (Spansh).
+    MiningMultiSell(MiningMultiSellQuery),
+    /// Comprobación y sincronización del catálogo curado de yacimientos de minería.
+    MiningHotspotsSync(String),
 }
 
 /// Tamaño de plataforma de aterrizaje.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
 pub enum PadSize {
+    #[default]
     Small,
     Medium,
     Large,
@@ -207,6 +216,9 @@ pub enum NetOutcome {
     Coords(SystemCoords),
     BgsTick(BgsTickInfo),
     OutfittingStations(OutfittingSearchResult),
+    MiningTargets(Vec<MiningRingTarget>),
+    MiningMultiSell(Vec<MiningMultiSellHit>),
+    MiningHotspotsUpdate(Option<MiningHotspotsCatalog>),
     NoData,
     Disabled,
     Failed(NetFailure),
@@ -227,6 +239,9 @@ impl NetOutcome {
             Self::Coords(_) => ("coords", 1),
             Self::BgsTick(_) => ("bgs_tick", 1),
             Self::OutfittingStations(res) => ("outfitting_stations", res.stations.len()),
+            Self::MiningTargets(targets) => ("mining_targets", targets.len()),
+            Self::MiningMultiSell(hits) => ("mining_multi_sell", hits.len()),
+            Self::MiningHotspotsUpdate(cat) => ("mining_hotspots_update", cat.is_some() as usize),
             Self::NoData => ("no_data", 0),
             Self::Disabled => ("disabled", 0),
             Self::Failed(_) => ("failed", 0),
@@ -536,6 +551,129 @@ pub struct OutfittingSearchResult {
     pub fallback: Vec<OutfittingFallbackEntry>,
 }
 
+fn default_min_hotspots() -> u8 {
+    1
+}
+
+/// Parámetros de consulta para localizar yacimientos y hotspots de minería.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MiningTargetQuery {
+    pub reference_system: String,
+    #[serde(default)]
+    pub reference_coords: Option<[f64; 3]>,
+    pub commodity: String,
+    #[serde(default = "default_min_hotspots")]
+    pub min_hotspots: u8,
+    #[serde(default)]
+    pub require_res_combo: bool,
+    #[serde(default)]
+    pub populated_only: bool,
+    #[serde(default)]
+    pub min_pad: PadSize,
+}
+
+/// Estación compradora óptima para minerales.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MiningSellStation {
+    pub system_name: String,
+    pub station_name: String,
+    #[serde(default)]
+    pub station_type: Option<String>,
+    pub distance_from_ring_ly: f64,
+    pub distance_from_ref_ly: f64,
+    #[serde(default)]
+    pub arrival_distance_ls: Option<f64>,
+    pub pad: PadSize,
+    pub price_cr: u64,
+    pub demand: u64,
+    #[serde(default)]
+    pub demand_tax_risk: bool,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Yacimiento de minería devuelto (anillo planetario con puntos calientes).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MiningRingTarget {
+    pub system_name: String,
+    pub distance_ly: f64,
+    pub body_name: String,
+    pub ring_name: String,
+    pub ring_type: String,
+    #[serde(default)]
+    pub arrival_distance_ls: Option<f64>,
+    pub hotspot_count: u8,
+    #[serde(default)]
+    pub res_intensity: Option<String>,
+    #[serde(default)]
+    pub res_distance_km: Option<f64>,
+    #[serde(default)]
+    pub other_hotspots: Vec<String>,
+    #[serde(default)]
+    pub nearest_best_sell: Option<MiningSellStation>,
+}
+
+/// Bucle de minería más corto: Origen -> Anillo -> Mercado de venta óptimo.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MiningLoopPlan {
+    pub origin_system: String,
+    pub ring_target: MiningRingTarget,
+    pub sell_station: MiningSellStation,
+    pub total_distance_ly: f64,
+}
+
+/// Consulta para vender múltiples minerales de la bodega en una estación común.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MiningMultiSellQuery {
+    pub commodities: Vec<String>,
+    pub reference_system: String,
+    #[serde(default)]
+    pub reference_coords: Option<[f64; 3]>,
+    #[serde(default)]
+    pub min_pad: PadSize,
+}
+
+/// Estación que compra varios minerales simultáneos de la carga.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MiningMultiSellHit {
+    pub station_name: String,
+    pub system_name: String,
+    pub distance_ly: f64,
+    pub pad: PadSize,
+    pub item_prices: Vec<StockedItemPrice>,
+    pub total_revenue_cr: u64,
+    #[serde(default)]
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+/// Entrada individual de yacimiento en el catálogo curado offline/sincronizado.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MiningHotspotEntry {
+    pub system_name: String,
+    pub coords: [f64; 3],
+    pub body_name: String,
+    pub ring_name: String,
+    pub ring_type: String,
+    pub commodity: String,
+    pub hotspot_count: u8,
+    #[serde(default)]
+    pub res_intensity: Option<String>,
+    #[serde(default)]
+    pub comment: Option<String>,
+}
+
+/// Catálogo de yacimientos curados de minería con metadatos de sincronización.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct MiningHotspotsCatalog {
+    #[serde(default)]
+    pub schema_version: u32,
+    #[serde(default)]
+    pub catalog_version: String,
+    #[serde(default)]
+    pub updated_at: String,
+    #[serde(default)]
+    pub hotspots: Vec<MiningHotspotEntry>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -838,5 +976,123 @@ mod tests {
         let back_r: NetResponse =
             serde_json::from_str(&serde_json::to_string(&r).unwrap()).unwrap();
         assert_eq!(back_r, r);
+    }
+
+    #[test]
+    fn mining_target_and_multi_sell_queries_and_outcomes_roundtrip_and_summarize() {
+        let q_target = MiningTargetQuery {
+            reference_system: "Sol".into(),
+            reference_coords: Some([0.0, 0.0, 0.0]),
+            commodity: "Platinum".into(),
+            min_hotspots: 2,
+            require_res_combo: true,
+            populated_only: true,
+            min_pad: PadSize::Large,
+        };
+        let q1 = NetQuery::MiningSearch(q_target);
+        let back_q1: NetQuery = serde_json::from_str(&serde_json::to_string(&q1).unwrap()).unwrap();
+        assert_eq!(back_q1, q1);
+
+        let q_multi = MiningMultiSellQuery {
+            commodities: vec!["Platinum".into(), "Painite".into()],
+            reference_system: "Sol".into(),
+            reference_coords: Some([0.0, 0.0, 0.0]),
+            min_pad: PadSize::Large,
+        };
+        let q2 = NetQuery::MiningMultiSell(q_multi);
+        let back_q2: NetQuery = serde_json::from_str(&serde_json::to_string(&q2).unwrap()).unwrap();
+        assert_eq!(back_q2, q2);
+
+        let q3 = NetQuery::MiningHotspotsSync("2026-10-30.1".into());
+        let back_q3: NetQuery = serde_json::from_str(&serde_json::to_string(&q3).unwrap()).unwrap();
+        assert_eq!(back_q3, q3);
+
+        let sell_station = MiningSellStation {
+            system_name: "Tofana".into(),
+            station_name: "Matthews Dock".into(),
+            station_type: Some("Coriolis Starport".into()),
+            distance_from_ring_ly: 14.2,
+            distance_from_ref_ly: 97.3,
+            arrival_distance_ls: Some(350.0),
+            pad: PadSize::Large,
+            price_cr: 295_400,
+            demand: 42_100,
+            demand_tax_risk: false,
+            updated_at: "2026-10-30T10:00:00Z".parse().unwrap(),
+        };
+
+        let ring_target = MiningRingTarget {
+            system_name: "Delkar".into(),
+            distance_ly: 83.1,
+            body_name: "Delkar 7".into(),
+            ring_name: "7 A Ring".into(),
+            ring_type: "Metallic".into(),
+            arrival_distance_ls: Some(2802.0),
+            hotspot_count: 2,
+            res_intensity: Some("Hazardous".into()),
+            res_distance_km: Some(15.4),
+            other_hotspots: vec!["Monazite:3".into(), "Painite:2".into()],
+            nearest_best_sell: Some(sell_station.clone()),
+        };
+
+        let loop_plan = MiningLoopPlan {
+            origin_system: "Sol".into(),
+            ring_target: ring_target.clone(),
+            sell_station: sell_station.clone(),
+            total_distance_ly: 97.3,
+        };
+        assert_eq!(loop_plan.origin_system, "Sol");
+        assert_eq!(loop_plan.total_distance_ly, 97.3);
+
+        let outcome1 = NetOutcome::MiningTargets(vec![ring_target]);
+        assert_eq!(outcome1.diag_summary(), ("mining_targets", 1));
+        let r1 = response(outcome1);
+        let back_r1: NetResponse =
+            serde_json::from_str(&serde_json::to_string(&r1).unwrap()).unwrap();
+        assert_eq!(back_r1, r1);
+
+        let multi_hit = MiningMultiSellHit {
+            station_name: "Matthews Dock".into(),
+            system_name: "Tofana".into(),
+            distance_ly: 97.3,
+            pad: PadSize::Large,
+            item_prices: vec![
+                StockedItemPrice {
+                    label: "Platinum".into(),
+                    price_cr: Some(295_400),
+                },
+                StockedItemPrice {
+                    label: "Painite".into(),
+                    price_cr: Some(310_000),
+                },
+            ],
+            total_revenue_cr: 605_400,
+            updated_at: Some("2026-10-30T10:00:00Z".parse().unwrap()),
+        };
+        let outcome2 = NetOutcome::MiningMultiSell(vec![multi_hit]);
+        assert_eq!(outcome2.diag_summary(), ("mining_multi_sell", 1));
+
+        let catalog = MiningHotspotsCatalog {
+            schema_version: 1,
+            catalog_version: "2026-10-30.1".into(),
+            updated_at: "2026-10-30T10:00:00Z".into(),
+            hotspots: vec![MiningHotspotEntry {
+                system_name: "Delkar".into(),
+                coords: [80.0, -10.0, 20.0],
+                body_name: "Delkar 7".into(),
+                ring_name: "7 A Ring".into(),
+                ring_type: "Metallic".into(),
+                commodity: "Platinum".into(),
+                hotspot_count: 2,
+                res_intensity: Some("Hazardous".into()),
+                comment: Some("Haz RES combo".into()),
+            }],
+        };
+        let outcome3 = NetOutcome::MiningHotspotsUpdate(Some(catalog.clone()));
+        assert_eq!(outcome3.diag_summary(), ("mining_hotspots_update", 1));
+
+        let back_cat: MiningHotspotsCatalog =
+            serde_json::from_str(&serde_json::to_string(&catalog).unwrap()).unwrap();
+        assert_eq!(back_cat, catalog);
     }
 }

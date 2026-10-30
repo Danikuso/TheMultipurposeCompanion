@@ -217,6 +217,9 @@ const TOPICS: &[&str] = &[
     "mining.prospector",
     "mining.session",
     "mining.sell",
+    "mining.targets",
+    "mining.loop",
+    "mining.cargo_sell",
     "trade.market",
     "trade.cargo",
     "trade.route",
@@ -282,6 +285,10 @@ const ACTIONS: &[&str] = &[
     "navigation.clear-plan",
     "combat.reset_session",
     "mining.reset_session",
+    "mining.search_targets",
+    "mining.select_target",
+    "mining.search_multi_sell",
+    "mining.clear_targets",
     "trade.reset_session",
     "trade.route_request",
     "trade.route_clear",
@@ -692,6 +699,9 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
                 | "coords"
                 | "bgs_tick"
                 | "outfitting_stations"
+                | "mining_targets"
+                | "mining_multi_sell"
+                | "mining_hotspots_update"
                 | "no_data"
                 | "disabled"
                 | "failed"
@@ -813,6 +823,9 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
                     | "spansh.stations.material_trader"
                     | "spansh.stations.technology_broker"
                     | "spansh.stations.outfitting"
+                    | "spansh.bodies.mining"
+                    | "spansh.stations.mining_sell"
+                    | "tmc.mining.hotspots_sync"
                     | "spansh.trade.job"
                     | "ardent.nearby.exports"
                     | "ardent.system.coords"
@@ -1847,5 +1860,29 @@ mod tests {
         assert_eq!(safe["endpoint"], "spansh.stations.outfitting");
         assert_eq!(safe["outcome"], "outfitting_stations");
         assert_eq!(safe["pledged_power"], REDACTED);
+    }
+
+    #[test]
+    fn mining_targets_topics_actions_and_outcomes_are_registered() {
+        assert!(is_registered_topic("mining.targets"));
+        assert!(is_registered_topic("mining.loop"));
+        assert!(is_registered_topic("mining.cargo_sell"));
+        assert!(is_registered_action("mining.search_targets"));
+        assert!(is_registered_action("mining.select_target"));
+        assert!(is_registered_action("mining.search_multi_sell"));
+        assert!(is_registered_action("mining.clear_targets"));
+        let safe = redact_diagnostic(
+            &json!({
+                "module": "mining",
+                "endpoint": "spansh.bodies.mining",
+                "outcome": "mining_targets",
+                "commander": "CANARY_SECRET"
+            }),
+            DiagnosticContext::NetOutcome,
+        );
+        assert_eq!(safe["module"], "mining");
+        assert_eq!(safe["endpoint"], "spansh.bodies.mining");
+        assert_eq!(safe["outcome"], "mining_targets");
+        assert_eq!(safe["commander"], REDACTED);
     }
 }
