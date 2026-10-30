@@ -7,11 +7,11 @@ const SUPPORTED_LANGS = ['es', 'en', 'fr', 'de', 'pt'];
 const DEFAULT_LANG = 'es';
 
 const LANG_CONFIG = {
-  es: { code: 'ES', flag: '🇪🇸', label: 'Español' },
-  en: { code: 'EN', flag: '🇬🇧', label: 'English' },
-  fr: { code: 'FR', flag: '🇫🇷', label: 'Français' },
-  de: { code: 'DE', flag: '🇩🇪', label: 'Deutsch' },
-  pt: { code: 'PT', flag: '🇵🇹', label: 'Português' },
+  es: { code: 'ES', label: 'Español' },
+  en: { code: 'EN', label: 'English' },
+  fr: { code: 'FR', label: 'Français' },
+  de: { code: 'DE', label: 'Deutsch' },
+  pt: { code: 'PT', label: 'Português' },
 };
 
 let currentLang = DEFAULT_LANG;
@@ -116,16 +116,12 @@ function applyTranslations(lang) {
  */
 function updateSelectorUI(lang) {
   const currentSpan = document.getElementById('langCurrentCode');
-  const flagSpan = document.getElementById('langCurrentFlag');
 
   if (currentSpan && LANG_CONFIG[lang]) {
     currentSpan.textContent = LANG_CONFIG[lang].code;
   }
-  if (flagSpan && LANG_CONFIG[lang]) {
-    flagSpan.textContent = LANG_CONFIG[lang].flag;
-  }
 
-  // Opciones activas en el dropdown y en el menú móvil
+  // Opciones activas en el dropdown
   document.querySelectorAll('.lang-option').forEach((opt) => {
     const optLang = opt.getAttribute('data-lang');
     if (optLang === lang) {
@@ -168,6 +164,7 @@ function initLanguageSelector() {
     selectBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const isOpen = dropdown.classList.toggle('open');
+      dropdown.style.display = isOpen ? 'flex' : 'none';
       selectBtn.setAttribute('aria-expanded', String(isOpen));
     });
 
@@ -175,6 +172,7 @@ function initLanguageSelector() {
     document.addEventListener('click', (e) => {
       if (!dropdown.contains(e.target) && e.target !== selectBtn) {
         dropdown.classList.remove('open');
+        dropdown.style.display = 'none';
         selectBtn.setAttribute('aria-expanded', 'false');
       }
     });
@@ -183,12 +181,13 @@ function initLanguageSelector() {
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && dropdown.classList.contains('open')) {
         dropdown.classList.remove('open');
+        dropdown.style.display = 'none';
         selectBtn.setAttribute('aria-expanded', 'false');
       }
     });
   }
 
-  // Event listeners para todas las opciones de idioma (escritorio y móvil)
+  // Event listeners para todas las opciones de idioma
   document.querySelectorAll('.lang-option').forEach((opt) => {
     opt.addEventListener('click', (e) => {
       e.preventDefault();
@@ -197,6 +196,7 @@ function initLanguageSelector() {
         setLanguage(targetLang);
         if (dropdown) {
           dropdown.classList.remove('open');
+          dropdown.style.display = 'none';
           if (selectBtn) selectBtn.setAttribute('aria-expanded', 'false');
         }
       }

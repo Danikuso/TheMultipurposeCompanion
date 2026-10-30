@@ -1887,7 +1887,8 @@ h1, h2, h3, h4, .hud-title {
 
 .lang-selector-dropdown {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
 }
 
 .lang-select-btn {
@@ -1914,14 +1915,15 @@ h1, h2, h3, h4, .hud-title {
   box-shadow: 0 0 10px rgba(255, 113, 0, 0.25);
 }
 
-.lang-flag {
-  font-size: 1rem;
+.lang-globe {
+  font-size: 0.95rem;
   line-height: 1;
 }
 
 .lang-current {
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   color: var(--hud-primary);
+  font-weight: 700;
 }
 
 .lang-chevron {
@@ -1938,21 +1940,21 @@ h1, h2, h3, h4, .hud-title {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  min-width: 170px;
-  background: rgba(14, 20, 32, 0.96);
+  min-width: 175px;
+  background: rgba(14, 20, 32, 0.98);
   border: 1px solid var(--hud-border);
   border-radius: var(--radius-md);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6), 0 0 15px rgba(255, 113, 0, 0.15);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7), 0 0 15px rgba(255, 113, 0, 0.2);
   backdrop-filter: blur(12px);
   padding: 0.35rem;
-  display: none;
+  display: none !important;
   flex-direction: column;
-  gap: 0.2rem;
-  z-index: 1000;
+  gap: 0.25rem;
+  z-index: 9999;
 }
 
 .lang-dropdown-menu.open {
-  display: flex;
+  display: flex !important;
   animation: dropdownFadeIn 0.15s ease-out;
 }
 
@@ -1970,8 +1972,8 @@ h1, h2, h3, h4, .hud-title {
 .lang-option {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.5rem 0.75rem;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
@@ -1983,6 +1985,7 @@ h1, h2, h3, h4, .hud-title {
   cursor: pointer;
   transition: var(--transition-fast);
   width: 100%;
+  white-space: nowrap;
 }
 
 .lang-option:hover {
@@ -1995,36 +1998,4 @@ h1, h2, h3, h4, .hud-title {
   color: var(--hud-primary);
   border-left: 3px solid var(--hud-primary);
   font-weight: 700;
-}
-
-/* Selector en Drawer Móvil */
-.mobile-lang-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem;
-  padding: 0.85rem 1rem;
-  margin-top: 1rem;
-  border-top: 1px solid var(--hud-border-subtle);
-}
-
-.mobile-lang-title {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--hud-muted);
-  text-transform: uppercase;
-}
-
-.mobile-lang-options {
-  display: flex;
-  gap: 0.3rem;
-  flex-wrap: wrap;
-}
-
-.mobile-lang-options .lang-option {
-  padding: 0.3rem 0.55rem;
-  font-size: 0.75rem;
-  width: auto;
-  border: 1px solid var(--hud-border-subtle);
-  border-radius: var(--radius-sm);
 }

@@ -5,7 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TMC — The Multipurpose Companion | Ayudante Abierto para Elite Dangerous</title>
   <meta name="description" content="TMC es un ayudante de cabina gratuito y de código abierto para Elite Dangerous. Incluye 10 disposiciones combinadas, 16 módulos para todos los roles, guía paso a paso de ingenieros, avisos y consultas por voz, y pantalla táctil para tablet o móvil.">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=1.0.2">
+  <style>
+    /* Prevención crítica de FOUC para el selector de idioma Glass HUD */
+    .lang-selector-dropdown { position: relative; display: inline-flex; align-items: center; }
+    .lang-dropdown-menu { display: none !important; position: absolute; top: calc(100% + 8px); right: 0; min-width: 175px; z-index: 9999; }
+    .lang-dropdown-menu.open { display: flex !important; }
+  </style>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
@@ -36,16 +42,6 @@
           <li><a href="#manual" class="nav-link" data-i18n="nav_manual">Guía Rápida</a></li>
           <li><a href="#flujos" class="nav-link" data-i18n="nav_workflows">Tutoriales (8)</a></li>
           <li><a href="#faq" class="nav-link" data-i18n="nav_faq">Preguntas Frecuentes</a></li>
-          <li class="mobile-lang-row">
-            <span class="mobile-lang-title">Idioma / Lang:</span>
-            <div class="mobile-lang-options">
-              <button class="lang-option active" data-lang="es">🇪🇸 ES</button>
-              <button class="lang-option" data-lang="en">🇬🇧 EN</button>
-              <button class="lang-option" data-lang="fr">🇫🇷 FR</button>
-              <button class="lang-option" data-lang="de">🇩🇪 DE</button>
-              <button class="lang-option" data-lang="pt">🇵🇹 PT</button>
-            </div>
-          </li>
         </ul>
       </nav>
 
@@ -61,16 +57,16 @@
         <!-- Selector de idioma Glass HUD -->
         <div class="lang-selector-dropdown">
           <button id="langSelectBtn" class="lang-select-btn" aria-haspopup="true" aria-expanded="false" title="Cambiar idioma / Change language">
-            <span id="langCurrentFlag" class="lang-flag">🇪🇸</span>
+            <span class="lang-globe">🌐</span>
             <span id="langCurrentCode" class="lang-current">ES</span>
             <span class="lang-chevron">▾</span>
           </button>
-          <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
-            <button class="lang-option active" data-lang="es" role="menuitem">🇪🇸 Español (ES)</button>
-            <button class="lang-option" data-lang="en" role="menuitem">🇬🇧 English (EN)</button>
-            <button class="lang-option" data-lang="fr" role="menuitem">🇫🇷 Français (FR)</button>
-            <button class="lang-option" data-lang="de" role="menuitem">🇩🇪 Deutsch (DE)</button>
-            <button class="lang-option" data-lang="pt" role="menuitem">🇵🇹 Português (PT)</button>
+          <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu" style="display: none;">
+            <button class="lang-option active" data-lang="es" role="menuitem">Español (ES)</button>
+            <button class="lang-option" data-lang="en" role="menuitem">English (EN)</button>
+            <button class="lang-option" data-lang="fr" role="menuitem">Français (FR)</button>
+            <button class="lang-option" data-lang="de" role="menuitem">Deutsch (DE)</button>
+            <button class="lang-option" data-lang="pt" role="menuitem">Português (PT)</button>
           </div>
         </div>
 
