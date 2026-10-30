@@ -3,7 +3,7 @@
   import { connect, topic } from './lib/ws.svelte';
   import { diag, diagOn } from './lib/diag.svelte';
   import { t } from './lib/i18n';
-  import { loadPrefs, prefs, prefsFallback, readPlacement, savePlacement } from './lib/prefs.svelte';
+  import { loadPrefs, prefs, prefsFallback, readPlacement, savePlacement, toggleTacticalLock } from './lib/prefs.svelte';
   import { modules } from './modules/registry';
   import Settings from './settings/Settings.svelte';
   import Grid from './shell/Grid.svelte';
@@ -11,7 +11,7 @@
   import Sidebar from './shell/Sidebar.svelte';
   import Toasts from './shell/Toasts.svelte';
   import TopBar from './shell/TopBar.svelte';
-  import { autoLayout, contextPanel, layouts, nextPin } from './shell/layouts';
+  import { DEFAULT_PRIORITIES, autoLayout, contextPanel, layouts, nextPin } from './shell/layouts';
 
   let pin = $state<string | null>(null);
   let view = $state<string | null>(null);
@@ -33,7 +33,55 @@
     matchingExoBody?.body_id != null ? { id: matchingExoBody.body_id }
       : { name: location?.body ?? matchingExoBody?.body ?? null },
   ]));
-  const auto = $derived(autoLayout(liveModules, null));
+  const auto = $derived(autoLayout(liveModules, null, prefs.autoCompanionPriorities, prefs.locked));
+
+  function playGlassHudChime() {
+    try {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.04, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.12);
+    } catch {
+      // AudioContext no disponible o bloqueado por política de autoplay
+    }
+  }
+
+  function playVoiceCue(layoutId: string) {
+    try {
+      if (!('speechSynthesis' in window)) return;
+      let key = '';
+      if (layoutId === 'combat') key = 'voice-auto-combat';
+      else if (layoutId === 'mining') key = 'voice-auto-mining';
+      else if (layoutId === 'trade') key = 'voice-auto-trade';
+      else if (layoutId === 'engineering') key = 'voice-auto-engineering';
+      if (!key) return;
+      const text = t(key);
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.05;
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      // Voz TTS no disponible
+    }
+  }
+
+  function playCockpitCue(layoutId: string) {
+    if (prefs.autoCompanionSoundCues) {
+      playGlassHudChime();
+    }
+    if (prefs.autoCompanionVoiceCues) {
+      playVoiceCue(layoutId);
+    }
+  }
 
   // Auto-companion apagado o durante arranque: la disposición y el panel de contexto se quedan estables.
   let heldLayout = $state('exploration');
@@ -67,8 +115,12 @@
     const a = auto;
     const current = untrack(() => pin);
     const next = nextPin(lastAuto, a, current);
+    const changed = lastAuto !== OFF_MARK && lastAuto !== null && a !== null && a !== lastAuto;
     lastAuto = a;
     if (next !== current) pin = next;
+    if (changed) {
+      playCockpitCue(a);
+    }
   });
 
   // Con Auto-companion apagado se recuerda dónde lo dejó el usuario para el próximo arranque.
@@ -124,9 +176,19 @@
       }
       loadPrefs(cfg);
     }).catch(prefsFallback);
+
+    function handleKeydown(e: KeyboardEvent) {
+      if (e.altKey && (e.key === 'l' || e.key === 'L')) {
+        e.preventDefault();
+        toggleTacticalLock();
+      }
+    }
+    window.addEventListener('keydown', handleKeydown);
+
     const timer = setTimeout(prefsFallback, 3000);
     return () => {
       clearTimeout(timer);
+      window.removeEventListener('keydown', handleKeydown);
     };
   });
 </script>

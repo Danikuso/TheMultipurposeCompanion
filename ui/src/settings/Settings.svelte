@@ -3,6 +3,7 @@
   import { getLocale, setLocale, t } from '../lib/i18n';
   import { applyTheme, type HudThemeInput } from '../lib/theme';
   import { loadPrefs, prefs, setAutoCompanion } from '../lib/prefs.svelte';
+  import { DEFAULT_PRIORITIES } from '../shell/layouts';
   import { topic } from '../lib/ws.svelte';
   import Panel from '../shell/Panel.svelte';
   import { diag } from '../lib/diag.svelte';
@@ -39,6 +40,11 @@
     language?: string;
     auto_copy_next_system?: boolean;
     auto_companion?: boolean;
+    auto_companion_priorities?: string[];
+    auto_companion_linger_seconds?: number;
+    auto_companion_voice_cues?: boolean;
+    auto_companion_sound_cues?: boolean;
+    auto_companion_predictive?: boolean;
     alerts_enabled?: boolean;
     online_services?: boolean;
     map_value_threshold?: number;
@@ -70,6 +76,28 @@
   let miningThreshold = $state<number | undefined>(1000000);
   let sellRadius = $state<number | undefined>(100);
   let extraMineral = $state('');
+  let autoPriorities = $state<string[]>([...prefs.autoCompanionPriorities]);
+  let lingerSeconds = $state<number>(prefs.autoCompanionLingerSeconds);
+  let voiceCues = $state<boolean>(prefs.autoCompanionVoiceCues);
+  let soundCues = $state<boolean>(prefs.autoCompanionSoundCues);
+  let predictive = $state<boolean>(prefs.autoCompanionPredictive);
+
+  function movePriority(index: number, direction: 'up' | 'down') {
+    const target = direction === 'up' ? index - 1 : index + 1;
+    if (target < 0 || target >= autoPriorities.length) return;
+    const list = [...autoPriorities];
+    const [moved] = list.splice(index, 1);
+    list.splice(target, 0, moved);
+    autoPriorities = list;
+    prefs.autoCompanionPriorities = [...list];
+    saveConfig();
+  }
+
+  function resetPriorities() {
+    autoPriorities = [...DEFAULT_PRIORITIES];
+    prefs.autoCompanionPriorities = [...DEFAULT_PRIORITIES];
+    saveConfig();
+  }
   let engineeringRolls = $state<(number | undefined)[]>([...DEFAULT_ROLLS]);
   let rollsInvalid = $state(false);
   let rollsEdits = 0;
@@ -179,6 +207,26 @@
         // servidor. Los envíos hechos antes del GET conservan su propia referencia.
         if (saveRevision === 0) lastSubmitted = undefined;
         loadPrefs(cfg);
+        if (Array.isArray(cfg.auto_companion_priorities)) {
+          autoPriorities = [...cfg.auto_companion_priorities];
+          prefs.autoCompanionPriorities = [...autoPriorities];
+        }
+        if (typeof cfg.auto_companion_linger_seconds === 'number') {
+          lingerSeconds = cfg.auto_companion_linger_seconds;
+          prefs.autoCompanionLingerSeconds = lingerSeconds;
+        }
+        if (typeof cfg.auto_companion_voice_cues === 'boolean') {
+          voiceCues = cfg.auto_companion_voice_cues;
+          prefs.autoCompanionVoiceCues = voiceCues;
+        }
+        if (typeof cfg.auto_companion_sound_cues === 'boolean') {
+          soundCues = cfg.auto_companion_sound_cues;
+          prefs.autoCompanionSoundCues = soundCues;
+        }
+        if (typeof cfg.auto_companion_predictive === 'boolean') {
+          predictive = cfg.auto_companion_predictive;
+          prefs.autoCompanionPredictive = predictive;
+        }
         onlineServices = cfg.online_services ?? true;
         mapThreshold = cfg.map_value_threshold ?? 500000;
         plannerEfficiency = cfg.default_neutron_efficiency ?? 60;
@@ -235,6 +283,26 @@
 
   function restoreSavedConfig() {
     autoCopy = fullConfig.auto_copy_next_system ?? true;
+    if (Array.isArray(fullConfig.auto_companion_priorities)) {
+      autoPriorities = [...fullConfig.auto_companion_priorities];
+      prefs.autoCompanionPriorities = [...autoPriorities];
+    }
+    if (typeof fullConfig.auto_companion_linger_seconds === 'number') {
+      lingerSeconds = fullConfig.auto_companion_linger_seconds;
+      prefs.autoCompanionLingerSeconds = lingerSeconds;
+    }
+    if (typeof fullConfig.auto_companion_voice_cues === 'boolean') {
+      voiceCues = fullConfig.auto_companion_voice_cues;
+      prefs.autoCompanionVoiceCues = voiceCues;
+    }
+    if (typeof fullConfig.auto_companion_sound_cues === 'boolean') {
+      soundCues = fullConfig.auto_companion_sound_cues;
+      prefs.autoCompanionSoundCues = soundCues;
+    }
+    if (typeof fullConfig.auto_companion_predictive === 'boolean') {
+      predictive = fullConfig.auto_companion_predictive;
+      prefs.autoCompanionPredictive = predictive;
+    }
     onlineServices = fullConfig.online_services ?? true;
     mapThreshold = fullConfig.map_value_threshold ?? 500000;
     plannerEfficiency = fullConfig.default_neutron_efficiency ?? 60;
@@ -291,6 +359,11 @@
       language,
       auto_copy_next_system: autoCopy,
       auto_companion: prefs.autoCompanion,
+      auto_companion_priorities: [...autoPriorities],
+      auto_companion_linger_seconds: lingerSeconds,
+      auto_companion_voice_cues: voiceCues,
+      auto_companion_sound_cues: soundCues,
+      auto_companion_predictive: predictive,
       online_services: onlineServices,
       map_value_threshold: mapThreshold,
       default_neutron_efficiency: plannerEfficiency,
@@ -469,6 +542,101 @@
           <label class="field-row">
             <span>{t('settings-planner-efficiency')}</span>
             <input type="number" min="0" max="100" step="1" bind:value={plannerEfficiency} onchange={saveConfig} data-testid="planner-efficiency" />
+          </label>
+        </fieldset>
+
+        <fieldset class="settings-card auto-companion-card" data-testid="auto-companion-pro-settings">
+          <legend>{t('auto-companion-priorities-title')}</legend>
+          <p class="help-text card-intro-desc">{t('auto-companion-priorities-desc')}</p>
+
+          <div class="priorities-list" data-testid="priorities-list">
+            {#each autoPriorities as role, i (role)}
+              <div class="priority-item" data-role={role}>
+                <span class="priority-rank">#{i + 1}</span>
+                <span class="priority-label">{t(`layout-${role}`)}</span>
+                <div class="priority-btns">
+                  <button
+                    type="button"
+                    class="btn-arrow"
+                    data-testid="priority-up-{role}"
+                    disabled={i === 0}
+                    aria-label="Subir {t(`layout-${role}`)}"
+                    onclick={() => movePriority(i, 'up')}
+                  >▲</button>
+                  <button
+                    type="button"
+                    class="btn-arrow"
+                    data-testid="priority-down-{role}"
+                    disabled={i === autoPriorities.length - 1}
+                    aria-label="Bajar {t(`layout-${role}`)}"
+                    onclick={() => movePriority(i, 'down')}
+                  >▼</button>
+                </div>
+              </div>
+            {/each}
+          </div>
+
+          <div class="field-actions">
+            <button
+              type="button"
+              class="btn-reset-priorities"
+              data-testid="btn-reset-priorities"
+              onclick={resetPriorities}
+            >
+              {t('auto-companion-priorities-reset')}
+            </button>
+          </div>
+
+          <div class="toggle-group linger-slider-group">
+            <label class="field-row">
+              <span>{t('auto-companion-linger-label')}: <strong class="val-gold font-mono">{lingerSeconds} s</strong></span>
+              <input
+                type="range"
+                min="0"
+                max="60"
+                step="5"
+                data-testid="auto-linger-slider"
+                bind:value={lingerSeconds}
+                onchange={() => { prefs.autoCompanionLingerSeconds = lingerSeconds; saveConfig(); }}
+              />
+            </label>
+            <p class="help-text">{t('auto-companion-linger-help')}</p>
+          </div>
+
+          <label class="field-row">
+            <span>{t('auto-companion-predictive-label')}</span>
+            <input
+              type="checkbox"
+              role="switch"
+              class="hud-switch"
+              data-testid="auto-predictive-switch"
+              bind:checked={predictive}
+              onchange={() => { prefs.autoCompanionPredictive = predictive; saveConfig(); }}
+            />
+          </label>
+
+          <label class="field-row">
+            <span>{t('auto-companion-sound-cues')}</span>
+            <input
+              type="checkbox"
+              role="switch"
+              class="hud-switch"
+              data-testid="auto-sound-switch"
+              bind:checked={soundCues}
+              onchange={() => { prefs.autoCompanionSoundCues = soundCues; saveConfig(); }}
+            />
+          </label>
+
+          <label class="field-row">
+            <span>{t('auto-companion-voice-cues')}</span>
+            <input
+              type="checkbox"
+              role="switch"
+              class="hud-switch"
+              data-testid="auto-voice-switch"
+              bind:checked={voiceCues}
+              onchange={() => { prefs.autoCompanionVoiceCues = voiceCues; saveConfig(); }}
+            />
           </label>
         </fieldset>
 
@@ -854,6 +1022,102 @@
     color: var(--hud-primary, #ff7100);
     padding: 0 0.4rem;
     letter-spacing: 0.03em;
+  }
+
+  .auto-companion-card .card-intro-desc {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--hud-muted);
+  }
+
+  .priorities-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-top: 0.25rem;
+  }
+
+  .priority-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.35rem 0.65rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--hud-border-subtle);
+    border-radius: 4px;
+    gap: 0.5rem;
+  }
+
+  .priority-rank {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--hud-accent, #00d4b2);
+    min-width: 1.6rem;
+  }
+
+  .priority-label {
+    flex: 1;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--hud-text);
+  }
+
+  .priority-btns {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .btn-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: var(--hud-surface-card);
+    border: 1px solid var(--hud-border-subtle);
+    border-radius: 4px;
+    color: var(--hud-text);
+    cursor: pointer;
+    font-size: 0.65rem;
+    flex-shrink: 0;
+    transition: all 120ms ease;
+  }
+
+  .btn-arrow:hover:not(:disabled) {
+    background: var(--hud-surface-active, rgba(0, 212, 178, 0.15));
+    border-color: var(--hud-border);
+    color: var(--hud-accent);
+  }
+
+  .btn-arrow:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .field-actions {
+    display: flex;
+    margin-top: 0.25rem;
+  }
+
+  .btn-reset-priorities {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 4px;
+    background: var(--hud-surface-card);
+    border: 1px solid var(--hud-border-subtle);
+    color: var(--hud-muted);
+    cursor: pointer;
+    transition: all 120ms ease;
+  }
+
+  .btn-reset-priorities:hover {
+    color: var(--hud-text);
+    border-color: var(--hud-border);
+  }
+
+  .linger-slider-group {
+    margin-top: 0.5rem;
   }
 
   .field-row {

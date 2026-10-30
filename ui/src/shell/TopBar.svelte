@@ -1,7 +1,7 @@
 <script lang="ts">
   import { credits, pct } from '../lib/format';
   import { t } from '../lib/i18n';
-  import { prefs, setAutoCompanion } from '../lib/prefs.svelte';
+  import { prefs, setAutoCompanion, toggleTacticalLock } from '../lib/prefs.svelte';
   import { live, topic } from '../lib/ws.svelte';
   import { diag, diagOn } from '../lib/diag.svelte';
   import { voiceAssistant } from '../lib/voiceAssistant.svelte';
@@ -182,6 +182,18 @@
         <span class="capsule-text">{t('auto-companion')}</span>
       </span>
     </label>
+
+    <button
+      type="button"
+      class="btn-lock"
+      class:locked={prefs.locked}
+      data-testid="topbar-tactical-lock"
+      title={t('auto-companion-lock-tooltip')}
+      onclick={() => { toggleTacticalLock(); }}
+    >
+      <span class="lock-icon" aria-hidden="true">{prefs.locked ? '🔒' : '🔓'}</span>
+      <span class="lock-label">{prefs.locked ? 'LOCKED' : 'LOCK'}</span>
+    </button>
     {#if game?.galaxy === 'Legacy'}
       <span class="badge badge-warning">{t('galaxy-legacy-warning')}</span>
     {/if}
@@ -388,6 +400,44 @@
   .switch-capsule.on .capsule-led {
     background: var(--hud-success);
     box-shadow: 0 0 6px var(--hud-success);
+  }
+
+  .btn-lock {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--hud-surface-card);
+    border: 1px solid var(--hud-border-subtle);
+    border-radius: 20px;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--hud-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 150ms ease;
+  }
+
+  .btn-lock:hover {
+    border-color: var(--hud-border);
+    color: var(--hud-text);
+  }
+
+  .btn-lock.locked {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: #f59e0b;
+    color: #fbbf24;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+  }
+
+  .lock-icon {
+    font-size: 0.8rem;
+    line-height: 1;
+  }
+
+  .lock-label {
+    text-transform: uppercase;
   }
 
   .badge-warning {

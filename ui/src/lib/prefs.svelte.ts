@@ -1,15 +1,54 @@
 import { diag } from './diag.svelte';
+import { DEFAULT_PRIORITIES } from '../shell/layouts';
 
 /** Preferencias de la UI persistidas en `config.toml` (vía `/api/config`). `loaded` es false hasta conocer el valor guardado. */
-export const prefs = $state({ autoCompanion: true, loaded: false });
+export const prefs = $state({
+  autoCompanion: true,
+  autoCompanionPriorities: [...DEFAULT_PRIORITIES],
+  autoCompanionLingerSeconds: 20,
+  autoCompanionVoiceCues: false,
+  autoCompanionSoundCues: true,
+  autoCompanionPredictive: true,
+  locked: false,
+  loaded: false,
+});
 
 let confirmed = true;
 let pending = 0;
 let queue: Promise<void> = Promise.resolve();
 
-export function loadPrefs(cfg: { auto_companion?: unknown }): void {
+export function toggleTacticalLock(): boolean {
+  prefs.locked = !prefs.locked;
+  return prefs.locked;
+}
+
+export function loadPrefs(cfg: {
+  auto_companion?: unknown;
+  auto_companion_priorities?: unknown;
+  auto_companion_linger_seconds?: unknown;
+  auto_companion_voice_cues?: unknown;
+  auto_companion_sound_cues?: unknown;
+  auto_companion_predictive?: unknown;
+}): void {
   confirmed = typeof cfg.auto_companion === 'boolean' ? cfg.auto_companion : true;
   prefs.autoCompanion = confirmed;
+  if (Array.isArray(cfg.auto_companion_priorities)) {
+    prefs.autoCompanionPriorities = cfg.auto_companion_priorities.filter(
+      (x): x is string => typeof x === 'string',
+    );
+  }
+  if (typeof cfg.auto_companion_linger_seconds === 'number') {
+    prefs.autoCompanionLingerSeconds = cfg.auto_companion_linger_seconds;
+  }
+  if (typeof cfg.auto_companion_voice_cues === 'boolean') {
+    prefs.autoCompanionVoiceCues = cfg.auto_companion_voice_cues;
+  }
+  if (typeof cfg.auto_companion_sound_cues === 'boolean') {
+    prefs.autoCompanionSoundCues = cfg.auto_companion_sound_cues;
+  }
+  if (typeof cfg.auto_companion_predictive === 'boolean') {
+    prefs.autoCompanionPredictive = cfg.auto_companion_predictive;
+  }
   prefs.loaded = true;
 }
 

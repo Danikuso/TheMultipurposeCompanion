@@ -6,7 +6,7 @@ import { setLocale } from '../src/lib/i18n';
 import Panel from '../src/shell/Panel.svelte';
 import App from '../src/App.svelte';
 import { disconnect, live } from '../src/lib/ws.svelte';
-import { loadPrefs, prefs } from '../src/lib/prefs.svelte';
+import { loadPrefs, prefs, toggleTacticalLock } from '../src/lib/prefs.svelte';
 import { RouteStrip, PlannerPanel, JumpPanel } from '../src/modules/navigation';
 import SystemBodiesPanel from '../src/modules/exploration/SystemBodiesPanel.svelte';
 import ExobiologyPanel from '../src/modules/exobiology/ExobiologyPanel.svelte';
@@ -274,6 +274,29 @@ describe('trade and missions layouts', () => {
   });
   test('trade beats exploration', () => {
     expect(autoLayout([m('trade', 'active'), m('exploration', 'active')], null)).toBe('trade');
+  });
+  test('autoLayoutDynamic: custom priorities order determines winner', () => {
+    const mods = [m('combat', 'active'), m('trade', 'active'), m('mining', 'active')];
+    // Default order: combat beats trade
+    expect(autoLayout(mods, null)).toBe('combat');
+    // Custom order: trade beats combat
+    const tradeFirst = ['trade', 'combat', 'mining', 'exploration'];
+    expect(autoLayout(mods, null, tradeFirst)).toBe('trade');
+    // Custom order: mining beats trade and combat
+    const miningFirst = ['mining', 'trade', 'combat'];
+    expect(autoLayout(mods, null, miningFirst)).toBe('mining');
+  });
+  test('autoLayoutLocked: when locked is true, returns null freezing current cockpit', () => {
+    const mods = [m('combat', 'urgent'), m('trade', 'active')];
+    expect(autoLayout(mods, null, undefined, false)).toBe('combat');
+    expect(autoLayout(mods, null, undefined, true)).toBeNull();
+  });
+  test('toggleTacticalLock toggles lock state in prefs', () => {
+    prefs.locked = false;
+    expect(toggleTacticalLock()).toBe(true);
+    expect(prefs.locked).toBe(true);
+    expect(toggleTacticalLock()).toBe(false);
+    expect(prefs.locked).toBe(false);
   });
   test('manual pin lasts until auto changes', () => {
     expect(autoLayout([m('missions', 'active')], 'trade')).toBe('trade');

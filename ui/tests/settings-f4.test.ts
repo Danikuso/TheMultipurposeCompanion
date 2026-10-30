@@ -192,3 +192,42 @@ test('renders feedback and github issues card with link and button', async () =>
   expect(openSpy.mock.calls[0][0]).toContain('github.com/Danikuso/TheMultipurposeCompanion/issues/new');
   openSpy.mockRestore();
 });
+
+test('auto-companion pro priorities and linger controls work and trigger PUT', async () => {
+  const put = await render();
+  const card = target.querySelector('[data-testid="auto-companion-pro-settings"]');
+  expect(card).not.toBeNull();
+
+  // Test down button for first priority (carrier)
+  const downBtn = target.querySelector('[data-testid="priority-down-carrier"]') as HTMLButtonElement;
+  expect(downBtn).not.toBeNull();
+  downBtn.click();
+  await settle();
+
+  expect(put).toHaveBeenCalledTimes(1);
+  const putBody = JSON.parse(put.mock.calls[0][1].body as string);
+  expect(putBody.auto_companion_priorities[0]).toBe('combat');
+  expect(putBody.auto_companion_priorities[1]).toBe('carrier');
+
+  // Test reset priorities button
+  const resetBtn = target.querySelector('[data-testid="btn-reset-priorities"]') as HTMLButtonElement;
+  expect(resetBtn).not.toBeNull();
+  resetBtn.click();
+  await settle();
+
+  expect(put).toHaveBeenCalledTimes(2);
+  const resetBody = JSON.parse(put.mock.calls[1][1].body as string);
+  expect(resetBody.auto_companion_priorities[0]).toBe('carrier');
+
+  // Test linger slider
+  const slider = target.querySelector('[data-testid="auto-linger-slider"]') as HTMLInputElement;
+  expect(slider).not.toBeNull();
+  slider.value = '45';
+  slider.dispatchEvent(new Event('input', { bubbles: true }));
+  slider.dispatchEvent(new Event('change', { bubbles: true }));
+  await settle();
+
+  expect(put).toHaveBeenCalledTimes(3);
+  const lingerBody = JSON.parse(put.mock.calls[2][1].body as string);
+  expect(lingerBody.auto_companion_linger_seconds).toBe(45);
+});

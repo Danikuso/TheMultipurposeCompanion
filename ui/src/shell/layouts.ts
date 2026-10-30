@@ -93,21 +93,51 @@ const MANUAL: string[] = [
   'powerplay',
 ];
 
-/** Disposición elegida por relevancia: manual > carrier > combate > colonización > minería > ingeniería > misiones > comercio > powerplay > exploración > null. */
+export const DEFAULT_PRIORITIES: string[] = [
+  'carrier',
+  'combat',
+  'colonisation',
+  'mining',
+  'engineering',
+  'missions',
+  'trade',
+  'powerplay',
+  'exploration',
+];
+
+/** Disposición elegida por relevancia: bloqueo táctico (null) > manual > prioridades configurables > null. */
 export function autoLayout(
   mods: { id: string; relevance: string }[],
   manual: string | null,
+  priorities: string[] = DEFAULT_PRIORITIES,
+  locked = false,
 ): AutoLayout | null {
+  if (locked) return null;
   if (manual !== null && MANUAL.includes(manual)) return manual as AutoLayout;
-  if (isActive(rel(mods, 'carrier'))) return 'carrier';
-  if (isActive(rel(mods, 'combat'))) return 'combat';
-  if (isActive(rel(mods, 'colonisation'))) return 'colonisation';
-  if (rel(mods, 'mining') === 'active') return 'mining';
-  if (isActive(rel(mods, 'engineering'))) return 'engineering';
-  if (isActive(rel(mods, 'missions'))) return 'missions';
-  if (isActive(rel(mods, 'trade'))) return 'trade';
-  if (isActive(rel(mods, 'powerplay'))) return 'powerplay';
-  if (isActive(rel(mods, 'exploration')) || isActive(rel(mods, 'exobiology'))) return 'exploration';
+  const list = priorities && priorities.length > 0 ? priorities : DEFAULT_PRIORITIES;
+  for (const role of list) {
+    if (role === 'carrier') {
+      if (isActive(rel(mods, 'carrier'))) return 'carrier';
+    } else if (role === 'combat') {
+      if (isActive(rel(mods, 'combat'))) return 'combat';
+    } else if (role === 'colonisation') {
+      if (isActive(rel(mods, 'colonisation'))) return 'colonisation';
+    } else if (role === 'mining') {
+      if (rel(mods, 'mining') === 'active') return 'mining';
+    } else if (role === 'engineering') {
+      if (isActive(rel(mods, 'engineering'))) return 'engineering';
+    } else if (role === 'missions') {
+      if (isActive(rel(mods, 'missions'))) return 'missions';
+    } else if (role === 'trade') {
+      if (isActive(rel(mods, 'trade'))) return 'trade';
+    } else if (role === 'powerplay') {
+      if (isActive(rel(mods, 'powerplay'))) return 'powerplay';
+    } else if (role === 'exploration') {
+      if (isActive(rel(mods, 'exploration')) || isActive(rel(mods, 'exobiology'))) return 'exploration';
+    } else if (MANUAL.includes(role)) {
+      if (isActive(rel(mods, role))) return role as AutoLayout;
+    }
+  }
   return null;
 }
 
