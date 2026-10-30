@@ -967,6 +967,7 @@ impl ActionHost for AppActions {
 
     fn frontier_exchange_code(&self, code: &str, state: &str, redirect_uri: &str) -> ActionFut {
         let capi = self.capi_service.clone();
+        let events = self.runtime.as_ref().map(|r| r.events.clone());
         let code = code.to_owned();
         let state = state.to_owned();
         let redirect_uri = redirect_uri.to_owned();
@@ -978,6 +979,15 @@ impl ActionHost for AppActions {
                 .handle_callback(&code, &state, &redirect_uri)
                 .await
                 .map_err(|e| ActionError::Failed(e.to_string()))?;
+            if let Some(events) = events {
+                let _ = events.try_send(SourceEvent::Action {
+                    name: "accounts.set_settings".to_string(),
+                    args: serde_json::json!({
+                        "capi_connected": true,
+                        "capi_enabled": true,
+                    }),
+                });
+            }
             Ok(json!({
                 "ok": true,
                 "token_type": token.token_type,

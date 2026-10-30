@@ -411,7 +411,11 @@ pub async fn get_frontier_callback(
     {
         Ok(res) => {
             if wants_json {
-                Json(res).into_response()
+                (
+                    [(axum::http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")],
+                    Json(res),
+                )
+                    .into_response()
             } else {
                 render_oauth_html_response(
                     true,
@@ -425,7 +429,12 @@ pub async fn get_frontier_callback(
                 ActionError::NotFound => "Servicio CAPI no configurado".to_string(),
             };
             if wants_json {
-                (StatusCode::BAD_REQUEST, Json(json!({ "error": msg }))).into_response()
+                (
+                    StatusCode::BAD_REQUEST,
+                    [(axum::http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")],
+                    Json(json!({ "error": msg })),
+                )
+                    .into_response()
             } else {
                 render_oauth_html_response(
                     false,

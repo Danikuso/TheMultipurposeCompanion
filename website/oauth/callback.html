@@ -295,36 +295,11 @@
       directBtn.href = targetUrl;
       directBtn.style.display = 'inline-flex';
 
-      // Intento 1: Llamada asíncrona local (fetch)
-      fetch(targetUrl, {
-        headers: { 'Accept': 'application/json' },
-      })
-      .then(res => {
-        if (res.ok) {
-          titleEl.textContent = '¡Vinculación Exitosa!';
-          titleEl.style.color = 'var(--hud-success)';
-          subTitleEl.textContent = 'Tu cuenta de Frontier Store ha sido vinculada con TMC en tu equipo.';
-          radarEl.style.display = 'none';
-          statusEl.textContent = 'Sesión iniciada correctamente. Ya puedes cerrar esta pestaña.';
-          statusEl.style.color = 'var(--hud-success)';
-          statusEl.style.borderColor = 'rgba(34, 197, 94, 0.4)';
-          statusEl.style.background = 'rgba(34, 197, 94, 0.1)';
-          directBtn.textContent = 'Volver a TMC';
-        } else {
-          fallbackRedirect();
-        }
-      })
-      .catch(() => {
-        // En caso de que el navegador bloquee subrecursos por Mixed Content, saltar por navegación
-        fallbackRedirect();
-      });
-
-      function fallbackRedirect() {
-        statusEl.textContent = 'Redirigiendo a la cabina de TMC...';
-        setTimeout(() => {
-          window.location.href = targetUrl;
-        }, 600);
-      }
+      // Transferir directamente mediante navegación a TMC local (evita peticiones duplicadas y bloqueos CORS)
+      statusEl.textContent = 'Conectando con la cabina de TMC...';
+      setTimeout(() => {
+        window.location.replace(targetUrl);
+      }, 600);
     })();
   </script>
 </body>
