@@ -2,7 +2,9 @@ use super::*;
 use chrono::Duration;
 use serde_json::json;
 use tmc_model::events::parse_line;
-use tmc_model::net::{NetOutcome, NetRequest, NetResponse, NetSource, PadSize, RemoteMarket};
+use tmc_model::net::{
+    NetOutcome, NetRequest, NetResponse, NetSource, PadSize, RemoteMarket, StockedItemPrice,
+};
 
 const FIXTURE: &str = include_str!("../../../../tests/fixtures/journal/mining_session.log");
 
@@ -846,4 +848,170 @@ fn local_sells_filter_pad_and_exclude_carriers() {
     assert_eq!(names, ["Unknown", "Big"]);
     assert_eq!(opts[0]["pad_ok"], json!(null));
     assert_eq!(opts[1]["pad_ok"], json!(true));
+}
+
+#[test]
+fn offline_search_targets_resolves_instantly_with_sorted_distances() {
+    let mut h = H::new();
+    h.m.settings.online_services = false;
+    h.state.location.system = "Sol".into();
+    h.state.location.star_pos = [0.0, 0.0, 0.0];
+
+    let d = h.send(SourceEvent::Action {
+        name: "mining.search_targets".into(),
+        args: json!({
+            "commodity": "Platinum",
+            "reference_system": "Sol",
+            "min_hotspots": 1
+        }),
+    });
+
+    assert!(d.contains("mining.targets"));
+    assert!(d.contains("mining.loop"));
+
+    let topic = h.m.topic_value("mining.targets").unwrap();
+    assert_eq!(topic["status"], "ok");
+    assert_eq!(topic["commodity"], "Platinum");
+
+    let targets = topic["targets"].as_array().unwrap();
+    assert!(!targets.is_empty());
+
+    // Verificar que las distancias están ordenadas ascendentemente
+    for i in 1..targets.len() {
+        let prev = targets[i - 1]["distance_ly"].as_f64().unwrap();
+        let curr = targets[i]["distance_ly"].as_f64().unwrap();
+        assert!(curr >= prev, "targets deben estar ordenados por distancia");
+    }
+
+    // Verificar que Delkar está presente
+    let delkar = targets
+        .iter()
+        .find(|t| t["system_name"] == "Delkar")
+        .expect("Delkar debe estar en los resultados de Platino");
+    assert_eq!(delkar["hotspot_count"], 2);
+    assert_eq!(delkar["res_intensity"], "High");
+}
+
+#[test]
+fn search_targets_require_res_combo_filters_correctly() {
+    let mut h = H::new();
+    h.state.location.system = "Sol".into();
+    h.state.location.star_pos = [0.0, 0.0, 0.0];
+
+    let _ = h.send(SourceEvent::Action {
+        name: "mining.search_targets".into(),
+        args: json!({
+            "commodity": "Platinum",
+            "require_res_combo": true
+        }),
+    });
+
+    let topic = h.m.topic_value("mining.targets").unwrap();
+    let targets = topic["targets"].as_array().unwrap();
+    assert!(!targets.is_empty());
+
+    // Todos deben tener res_intensity no nulo
+    for t in targets {
+        assert!(
+            !t["res_intensity"].is_null(),
+            "con require_res_combo todos los objetivos deben tener RES"
+        );
+    }
+}
+
+#[test]
+fn select_target_and_loop_plan_with_demand_warning() {
+    let mut h = H::new();
+    h.state.location.system = "Sol".into();
+    h.state.location.star_pos = [0.0, 0.0, 0.0];
+
+    // Búsqueda inicial
+    let _ = h.send(SourceEvent::Action {
+        name: "mining.search_targets".into(),
+        args: json!({ "commodity": "Platinum" }),
+    });
+
+    // Seleccionar Delkar 7
+    let _ = h.send(SourceEvent::Action {
+        name: "mining.select_target".into(),
+        args: json!({
+            "system_name": "Delkar",
+            "body_name": "Delkar 7",
+            "ring_name": "Delkar 7 A Ring"
+        }),
+    });
+
+    // Añadir 30 t de platino en bodega
+    h.m.inventory.insert("platinum".into(), 30);
+
+    // Simular respuesta de estación compradora para el bucle (demanda 100 t -> 30 t es > 25 %, alerta activa)
+    let hits = vec![tmc_model::net::MiningMultiSellHit {
+        station_name: "Matthews Dock".into(),
+        system_name: "Tofana".into(),
+        distance_ly: 14.2,
+        pad: PadSize::Large,
+        item_prices: vec![StockedItemPrice {
+            label: "Platinum".into(),
+            price_cr: Some(285_400),
+        }],
+        total_revenue_cr: 285_400,
+        updated_at: None,
+    }];
+
+    let d = h.send(SourceEvent::Net(NetResponse {
+        id: 1,
+        module: "mining".into(),
+        key: "mining_loop_sell:1".into(),
+        source: NetSource::Spansh,
+        fetched_at: Utc::now(),
+        outcome: NetOutcome::MiningMultiSell(hits),
+    }));
+
+    assert!(d.contains("mining.loop"));
+    let loop_topic = h.m.topic_value("mining.loop").unwrap();
+    assert_eq!(loop_topic["status"], "ok");
+
+    let plan = &loop_topic["plan"];
+    assert_eq!(plan["ring_target"]["system_name"], "Delkar");
+    assert_eq!(plan["sell_station"]["station_name"], "Matthews Dock");
+}
+
+#[test]
+fn search_multi_sell_and_clear_targets() {
+    let mut h = H::new();
+    h.state.location.system = "Sol".into();
+    h.state.location.star_pos = [0.0, 0.0, 0.0];
+    h.m.settings.online_services = true;
+
+    // Con bodega con Platinum y Osmium
+    h.m.inventory.insert("platinum".into(), 40);
+    h.m.inventory.insert("osmium".into(), 20);
+
+    let _ = h.send(SourceEvent::Action {
+        name: "mining.search_multi_sell".into(),
+        args: json!({}),
+    });
+
+    assert!(!h.requests.is_empty());
+    let req = &h.requests[0];
+    match &req.query {
+        NetQuery::MiningMultiSell(q) => {
+            assert!(q.commodities.contains(&"platinum".into()));
+            assert!(q.commodities.contains(&"osmium".into()));
+        }
+        other => panic!("query inesperada: {other:?}"),
+    }
+
+    // Limpiar objetivos
+    let _ = h.send(SourceEvent::Action {
+        name: "mining.clear_targets".into(),
+        args: json!({}),
+    });
+
+    let targets_topic = h.m.topic_value("mining.targets").unwrap();
+    assert_eq!(targets_topic["status"], "idle");
+    assert!(targets_topic["targets"].as_array().unwrap().is_empty());
+
+    let loop_topic = h.m.topic_value("mining.loop").unwrap();
+    assert_eq!(loop_topic["status"], "idle");
 }

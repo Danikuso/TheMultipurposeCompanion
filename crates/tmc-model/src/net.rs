@@ -607,6 +607,8 @@ pub struct MiningRingTarget {
     #[serde(default)]
     pub res_distance_km: Option<f64>,
     #[serde(default)]
+    pub comment: Option<String>,
+    #[serde(default)]
     pub other_hotspots: Vec<String>,
     #[serde(default)]
     pub nearest_best_sell: Option<MiningSellStation>,

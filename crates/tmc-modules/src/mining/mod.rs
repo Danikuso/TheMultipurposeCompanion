@@ -17,6 +17,7 @@ pub mod prices;
 pub mod prospector;
 pub mod sell;
 pub mod session;
+pub mod targets;
 
 use crate::data::ship_pads;
 use crate::inflight::Inflight;
@@ -28,11 +29,15 @@ use serde::Serialize;
 use serde_json::{Value, json};
 use session::MiningSession;
 use std::collections::{BTreeMap, HashMap};
+use targets::MiningTargetsManager;
 use tmc_core::{Module, ModuleCtx, Relevance, TopicSet};
 use tmc_model::companion::{CompanionFile, CompanionKind};
 use tmc_model::events::{EventKind, JournalEvent, commodity_key};
 use tmc_model::market::{MarketIdentity, PriceOrigin, PricedMarket};
-use tmc_model::net::{NetOutcome, NetQuery, NetResponse, PadSize, RemoteMarket};
+use tmc_model::net::{
+    MiningMultiSellQuery, MiningSellStation, MiningTargetQuery, NetOutcome, NetQuery, NetResponse,
+    PadSize, RemoteMarket,
+};
 use tmc_model::settings::ModuleSettings;
 use tmc_model::source::{EddnNotice, SourceEvent};
 use tmc_model::state::{Galaxy, GameState};
@@ -40,7 +45,17 @@ use tmc_model::state::{Galaxy, GameState};
 const TOPIC_PROSPECTOR: &str = "mining.prospector";
 const TOPIC_SESSION: &str = "mining.session";
 const TOPIC_SELL: &str = "mining.sell";
-const TOPICS: [&str; 3] = [TOPIC_PROSPECTOR, TOPIC_SESSION, TOPIC_SELL];
+const TOPIC_TARGETS: &str = "mining.targets";
+const TOPIC_LOOP: &str = "mining.loop";
+const TOPIC_CARGO_SELL: &str = "mining.cargo_sell";
+const TOPICS: [&str; 6] = [
+    TOPIC_PROSPECTOR,
+    TOPIC_SESSION,
+    TOPIC_SELL,
+    TOPIC_TARGETS,
+    TOPIC_LOOP,
+    TOPIC_CARGO_SELL,
+];
 
 const TAG_PRICES: &str = "mining.prices";
 const TAG_LOCAL: &str = "mining.local_sells";
@@ -54,6 +69,10 @@ const MAX_CANDIDATES: usize = 50;
 const EDDN_REQUERY_MIN_S: i64 = 10;
 const PRICES_KEY: &str = "prices";
 const ACTION_RESET: &str = "mining.reset_session";
+const ACTION_SEARCH_TARGETS: &str = "mining.search_targets";
+const ACTION_SELECT_TARGET: &str = "mining.select_target";
+const ACTION_SEARCH_MULTI_SELL: &str = "mining.search_multi_sell";
+const ACTION_CLEAR_TARGETS: &str = "mining.clear_targets";
 /// Minerales de la carga consultados (y mostrados) como máximo.
 const MAX_CARGO_QUERIES: usize = 10;
 /// Un resultado de venta se refresca pasado este tiempo (igual que la vigencia
@@ -118,6 +137,8 @@ pub struct Mining {
     values: HashMap<&'static str, Value>,
     /// Clave de materia -> nombre localizado, aprendido de los eventos.
     names: BTreeMap<String, String>,
+    targets_mgr: MiningTargetsManager,
+    targets_seq: u64,
 }
 
 impl Mining {
@@ -146,6 +167,8 @@ impl Mining {
             inflight: Inflight::default(),
             values: HashMap::new(),
             names: BTreeMap::new(),
+            targets_mgr: MiningTargetsManager::new(),
+            targets_seq: 0,
         }
     }
 
@@ -765,6 +788,182 @@ impl Mining {
             dirty.insert(topic.to_owned());
         }
     }
+
+    fn handle_search_targets(
+        &mut self,
+        args: &Value,
+        state: &GameState,
+        ctx: &mut ModuleCtx,
+    ) -> bool {
+        let commodity = args
+            .get("commodity")
+            .and_then(Value::as_str)
+            .unwrap_or("Platinum")
+            .trim()
+            .to_string();
+        let min_hotspots = args
+            .get("min_hotspots")
+            .and_then(Value::as_u64)
+            .unwrap_or(1) as u8;
+        let require_res_combo = args
+            .get("require_res_combo")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let populated_only = args
+            .get("populated_only")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+
+        let ref_system = args
+            .get("reference_system")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(&state.location.system)
+            .to_string();
+
+        let ref_coords = if ref_system == state.location.system {
+            Some(state.location.star_pos)
+        } else {
+            None
+        };
+
+        let min_pad = self.pad.unwrap_or(PadSize::Large);
+
+        let query = MiningTargetQuery {
+            reference_system: ref_system,
+            reference_coords: ref_coords,
+            commodity: commodity.clone(),
+            min_hotspots,
+            require_res_combo,
+            populated_only,
+            min_pad,
+        };
+
+        decide!("mining.search_targets", {
+            "commodity": query.commodity,
+            "min_hotspots": query.min_hotspots,
+            "res_combo": query.require_res_combo,
+        });
+
+        // 1. Búsqueda instantánea offline en el catálogo curado
+        self.targets_mgr.search_offline(query.clone(), ref_coords);
+
+        // 2. Si hay conexión online, enviar consulta a Spansh
+        if self.online(state) {
+            self.targets_seq = self.targets_seq.saturating_add(1);
+            let key = format!("mining_targets:{}", self.targets_seq);
+            let _ = ctx.request(key, NetQuery::MiningSearch(query.clone()));
+            self.targets_mgr.targets_status = "loading";
+        }
+
+        // Si se seleccionó automáticamente un anillo, consultar posibles mercados
+        self.trigger_sell_stations_for_selected(state, ctx);
+
+        true
+    }
+
+    fn trigger_sell_stations_for_selected(&mut self, state: &GameState, ctx: &mut ModuleCtx) {
+        if !self.online(state) {
+            return;
+        }
+        let Some(target) = &self.targets_mgr.selected_target else {
+            return;
+        };
+        let Some(query) = &self.targets_mgr.active_query else {
+            return;
+        };
+        self.targets_seq = self.targets_seq.saturating_add(1);
+        let key = format!("mining_loop_sell:{}", self.targets_seq);
+        let multi_q = MiningMultiSellQuery {
+            commodities: vec![query.commodity.clone()],
+            reference_system: target.system_name.clone(),
+            reference_coords: None,
+            min_pad: self.pad.unwrap_or(PadSize::Large),
+        };
+        let _ = ctx.request(key, NetQuery::MiningMultiSell(multi_q));
+    }
+
+    fn handle_select_target(
+        &mut self,
+        args: &Value,
+        state: &GameState,
+        ctx: &mut ModuleCtx,
+    ) -> bool {
+        let sys = args
+            .get("system_name")
+            .and_then(Value::as_str)
+            .unwrap_or("");
+        let body = args.get("body_name").and_then(Value::as_str).unwrap_or("");
+        let ring = args.get("ring_name").and_then(Value::as_str).unwrap_or("");
+
+        decide!("mining.select_target", {
+            "system": sys,
+            "body": body,
+            "ring": ring,
+        });
+
+        if self.targets_mgr.select_target(sys, body, ring) {
+            self.trigger_sell_stations_for_selected(state, ctx);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn handle_search_multi_sell(
+        &mut self,
+        args: &Value,
+        state: &GameState,
+        ctx: &mut ModuleCtx,
+    ) -> bool {
+        let mut commodities: Vec<String> = args
+            .get("commodities")
+            .and_then(Value::as_array)
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(Value::as_str)
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .map(String::from)
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        if commodities.is_empty() {
+            // Autodetectar minerales de la bodega
+            for (key, count) in &self.inventory {
+                if *count > 0 && targets::is_mineable_commodity(key) {
+                    commodities.push(key.clone());
+                }
+            }
+        }
+
+        decide!("mining.search_multi_sell", {
+            "commodities": commodities.len(),
+        });
+
+        if commodities.is_empty() || !self.online(state) {
+            return false;
+        }
+
+        self.targets_seq = self.targets_seq.saturating_add(1);
+        let key = format!("mining_cargo_sell:{}", self.targets_seq);
+        let multi_q = MiningMultiSellQuery {
+            commodities,
+            reference_system: state.location.system.clone(),
+            reference_coords: Some(state.location.star_pos),
+            min_pad: self.pad.unwrap_or(PadSize::Large),
+        };
+        let _ = ctx.request(key, NetQuery::MiningMultiSell(multi_q));
+        true
+    }
+
+    fn handle_clear_targets(&mut self) -> bool {
+        decide!("mining.clear_targets", {});
+        self.targets_mgr.clear();
+        true
+    }
 }
 
 fn inventory_of<'a>(items: impl Iterator<Item = (&'a str, u32)>) -> BTreeMap<String, u32> {
@@ -839,6 +1038,8 @@ impl Module for Mining {
                 if f.vessel.as_deref().is_none_or(|v| v == "Ship") {
                     self.inventory =
                         inventory_of(f.inventory.iter().map(|i| (i.name.as_str(), i.count)));
+                    let hits = self.targets_mgr.cargo_multi_hits.clone();
+                    self.targets_mgr.update_cargo_sell(&self.inventory, hits);
                     request = true;
                     session_dirty = true;
                 }
@@ -875,18 +1076,106 @@ impl Module for Mining {
                 self.on_eddn(n, state, ctx);
                 return TopicSet::new();
             }
-            SourceEvent::Net(r) if r.module == "mining" => {
-                recompute |= self.apply_response(r, state);
-            }
-            SourceEvent::Action { name, .. } if name == ACTION_RESET => {
-                let now = self.clock();
-                self.session.reset(now);
-                decide!(
-                    "mining.session.reset.applied",
-                    tmc_model::diagnostics::json!({})
-                );
-                session_dirty = true;
-            }
+            SourceEvent::Net(r) if r.module == "mining" => match &r.outcome {
+                NetOutcome::MiningTargets(targets) => {
+                    self.targets_mgr.merge_online_targets(targets.clone());
+                    self.trigger_sell_stations_for_selected(state, ctx);
+                    recompute = true;
+                }
+                NetOutcome::MiningMultiSell(hits) => {
+                    if r.key.starts_with("mining_loop_sell:") {
+                        let commodity = self
+                            .targets_mgr
+                            .active_query
+                            .as_ref()
+                            .map(|q| q.commodity.clone())
+                            .unwrap_or_default();
+                        let stations: Vec<MiningSellStation> = hits
+                            .iter()
+                            .map(|h| {
+                                let price = h
+                                    .item_prices
+                                    .iter()
+                                    .find(|p| p.label.eq_ignore_ascii_case(&commodity))
+                                    .and_then(|p| p.price_cr)
+                                    .unwrap_or(0);
+                                MiningSellStation {
+                                    system_name: h.system_name.clone(),
+                                    station_name: h.station_name.clone(),
+                                    station_type: None,
+                                    distance_from_ring_ly: h.distance_ly,
+                                    distance_from_ref_ly: 0.0,
+                                    arrival_distance_ls: None,
+                                    pad: h.pad,
+                                    price_cr: price,
+                                    demand: 10_000,
+                                    demand_tax_risk: false,
+                                    updated_at: h.updated_at.unwrap_or_else(Utc::now),
+                                }
+                            })
+                            .collect();
+                        let cargo_qty = self
+                            .inventory
+                            .get(&commodity_key(&commodity))
+                            .copied()
+                            .unwrap_or(0);
+                        self.targets_mgr.update_loop_with_sell_stations(
+                            &state.location.system,
+                            Some(state.location.star_pos),
+                            &stations,
+                            cargo_qty,
+                        );
+                        recompute = true;
+                    } else {
+                        self.targets_mgr
+                            .update_cargo_sell(&self.inventory, hits.clone());
+                        recompute = true;
+                    }
+                }
+                NetOutcome::MiningHotspotsUpdate(Some(catalog)) => {
+                    crate::data::update_mining_hotspots_cache(catalog.clone(), None);
+                    if let Some(q) = self.targets_mgr.active_query.clone() {
+                        self.targets_mgr
+                            .search_offline(q, Some(state.location.star_pos));
+                        recompute = true;
+                    }
+                }
+                _ => {
+                    recompute |= self.apply_response(r, state);
+                }
+            },
+            SourceEvent::Action { name, args } => match name.as_str() {
+                ACTION_RESET => {
+                    let now = self.clock();
+                    self.session.reset(now);
+                    decide!(
+                        "mining.session.reset.applied",
+                        tmc_model::diagnostics::json!({})
+                    );
+                    session_dirty = true;
+                }
+                ACTION_SEARCH_TARGETS => {
+                    if self.handle_search_targets(args, state, ctx) {
+                        recompute = true;
+                    }
+                }
+                ACTION_SELECT_TARGET => {
+                    if self.handle_select_target(args, state, ctx) {
+                        recompute = true;
+                    }
+                }
+                ACTION_SEARCH_MULTI_SELL => {
+                    if self.handle_search_multi_sell(args, state, ctx) {
+                        recompute = true;
+                    }
+                }
+                ACTION_CLEAR_TARGETS => {
+                    if self.handle_clear_targets() {
+                        recompute = true;
+                    }
+                }
+                _ => return TopicSet::new(),
+            },
             _ => return TopicSet::new(),
         }
         if recompute {
@@ -910,6 +1199,16 @@ impl Module for Mining {
         }
         let v = self.render_sell(state);
         self.set(TOPIC_SELL, v, &mut dirty);
+
+        let v_targets = json!(self.targets_mgr.build_targets_topic());
+        self.set(TOPIC_TARGETS, v_targets, &mut dirty);
+
+        let v_loop = json!(self.targets_mgr.build_loop_topic());
+        self.set(TOPIC_LOOP, v_loop, &mut dirty);
+
+        let v_cargo_sell = json!(self.targets_mgr.build_cargo_sell_topic());
+        self.set(TOPIC_CARGO_SELL, v_cargo_sell, &mut dirty);
+
         dirty
     }
 

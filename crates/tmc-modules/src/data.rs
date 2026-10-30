@@ -4,9 +4,9 @@ use crate::exobiology::predict::BioRules;
 use crate::exobiology::species::SpeciesTable;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock, RwLock};
 use tmc_model::events::{AsteroidContent, MaterialCategory};
-use tmc_model::net::PadSize;
+use tmc_model::net::{MiningHotspotsCatalog, PadSize};
 
 use crate::engineering::ship::CurrentEng;
 
@@ -518,6 +518,49 @@ pub fn outfitting_catalog() -> &'static OutfittingCatalog {
     static CATALOG: OnceLock<OutfittingCatalog> = OnceLock::new();
     CATALOG
         .get_or_init(|| parse_outfitting_catalog(include_str!("../data/outfitting_catalog.json")))
+}
+
+static MINING_HOTSPOTS: OnceLock<RwLock<Arc<MiningHotspotsCatalog>>> = OnceLock::new();
+
+fn parse_mining_hotspots(json: &str) -> MiningHotspotsCatalog {
+    serde_json::from_str(json).unwrap_or_else(|error| {
+        tracing::error!(file = "mining_hotspots.json", %error, "catálogo de hotspots de minería inválido; usando vacío");
+        MiningHotspotsCatalog::default()
+    })
+}
+
+/// Obtiene el catálogo de hotspots de minería activo (embebido o actualizado en caliente).
+pub fn mining_hotspots() -> Arc<MiningHotspotsCatalog> {
+    let lock = MINING_HOTSPOTS.get_or_init(|| {
+        let embedded = parse_mining_hotspots(include_str!("../data/mining_hotspots.json"));
+        RwLock::new(Arc::new(embedded))
+    });
+    lock.read().unwrap().clone()
+}
+
+/// Actualiza en caliente el catálogo de yacimientos en memoria y opcionalmente en disco.
+pub fn update_mining_hotspots_cache(
+    new_cat: MiningHotspotsCatalog,
+    app_cache_dir: Option<&std::path::Path>,
+) -> bool {
+    let lock = MINING_HOTSPOTS.get_or_init(|| {
+        let embedded = parse_mining_hotspots(include_str!("../data/mining_hotspots.json"));
+        RwLock::new(Arc::new(embedded))
+    });
+
+    if let Some(dir) = app_cache_dir {
+        let path = dir.join("mining_hotspots.json");
+        if let Ok(serialized) = serde_json::to_string_pretty(&new_cat) {
+            let _ = std::fs::create_dir_all(dir);
+            if let Err(err) = std::fs::write(&path, serialized) {
+                tracing::warn!(?path, %err, "no se pudo guardar mining_hotspots.json en caché local");
+            }
+        }
+    }
+
+    let mut guard = lock.write().unwrap();
+    *guard = Arc::new(new_cat);
+    true
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -2926,5 +2969,29 @@ mod tests {
         );
         assert!(report.iter().any(|r| r.contains("ghost_one")));
         assert!(report.iter().any(|r| r.contains("ghost_two")));
+    }
+
+    #[test]
+    fn mining_hotspots_catalog_loads_and_hot_swaps() {
+        let cat = mining_hotspots();
+        assert!(!cat.hotspots.is_empty());
+        assert!(
+            cat.hotspots
+                .iter()
+                .any(|h| h.system_name == "Delkar" && h.commodity == "Platinum")
+        );
+        assert!(
+            cat.hotspots
+                .iter()
+                .any(|h| h.system_name == "Paesia"
+                    && h.res_intensity.as_deref() == Some("Hazardous"))
+        );
+
+        // Hot swap test
+        let mut updated = (*cat).clone();
+        updated.catalog_version = "9999.99.99".into();
+        assert!(update_mining_hotspots_cache(updated, None));
+        let swapped = mining_hotspots();
+        assert_eq!(swapped.catalog_version, "9999.99.99");
     }
 }
