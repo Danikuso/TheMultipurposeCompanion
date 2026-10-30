@@ -1124,7 +1124,7 @@ tourism_reference_cr_ly = 200000
                     .reply
                     .lock()
                     .unwrap()
-                    .take()
+                    .clone()
                     .unwrap_or_else(|| Err(TransportError::Connect("no reply".into())));
                 Box::pin(async move { res })
             }
@@ -1137,7 +1137,7 @@ tourism_reference_cr_ly = 200000
                     .reply
                     .lock()
                     .unwrap()
-                    .take()
+                    .clone()
                     .unwrap_or_else(|| Err(TransportError::Connect("no reply".into())));
                 Box::pin(async move { res })
             }
@@ -1250,6 +1250,53 @@ tourism_reference_cr_ly = 200000
         let resp_logout = router.clone().oneshot(req_logout).await.unwrap();
         assert_eq!(resp_logout.status(), StatusCode::OK);
         assert_eq!(store.get_account_credential("frontier_capi").unwrap(), None);
+
+        // 6. Probar inicio de sesión con redirect_uri personalizado (GitHub Pages)
+        let custom_redirect =
+            "https://danikuso.github.io/TheMultipurposeCompanion/oauth/callback.html";
+        let mut req_custom_login = Request::builder()
+            .uri(format!(
+                "/api/auth/frontier/login?redirect_uri={custom_redirect}"
+            ))
+            .header(header::HOST, "127.0.0.1:47320")
+            .header(header::ACCEPT, "application/json")
+            .body(Body::empty())
+            .unwrap();
+        req_custom_login.extensions_mut().insert(ConnectInfo(
+            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
+        ));
+        let resp_custom = router.clone().oneshot(req_custom_login).await.unwrap();
+        assert_eq!(resp_custom.status(), StatusCode::OK);
+        let custom_bytes = axum::body::to_bytes(resp_custom.into_body(), 4096)
+            .await
+            .unwrap();
+        let custom_json: Value = serde_json::from_slice(&custom_bytes).unwrap();
+        let custom_auth_url = custom_json["url"].as_str().unwrap();
+        let custom_state = custom_json["state"].as_str().unwrap();
+        assert!(custom_auth_url.contains("danikuso.github.io"));
+
+        // 7. Probar frontier.submit_callback autodetectando redirect_uri de la URL pegada
+        let pasted_url = format!("{custom_redirect}?code=mock_code_pasted&state={custom_state}");
+        let mut req_pasted = Request::builder()
+            .method("POST")
+            .uri("/api/actions/frontier.submit_callback")
+            .header(header::HOST, "127.0.0.1:47320")
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(
+                serde_json::to_string(&json!({ "url": pasted_url })).unwrap(),
+            ))
+            .unwrap();
+        req_pasted.extensions_mut().insert(ConnectInfo(
+            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
+        ));
+        let resp_pasted = router.oneshot(req_pasted).await.unwrap();
+        assert_eq!(resp_pasted.status(), StatusCode::OK);
+        assert!(
+            store
+                .get_account_credential("frontier_capi")
+                .unwrap()
+                .is_some()
+        );
     }
 
     #[tokio::test]

@@ -282,6 +282,7 @@ pub(crate) async fn no_store_engineering_pages(
 pub struct FrontierLoginQuery {
     pub redirect: Option<bool>,
     pub open: Option<bool>,
+    pub redirect_uri: Option<String>,
 }
 
 pub fn open_url_in_browser(url: &str) -> bool {
@@ -311,7 +312,10 @@ pub async fn get_frontier_login(
     headers: axum::http::HeaderMap,
 ) -> Response {
     let port = state.port;
-    let redirect_uri = format!("https://localhost:{port}/api/auth/frontier/callback");
+    let redirect_uri = query
+        .redirect_uri
+        .or_else(|| std::env::var("TMC_CAPI_REDIRECT_URI").ok())
+        .unwrap_or_else(|| format!("https://localhost:{port}/api/auth/frontier/callback"));
     match state.host.frontier_login_url(&redirect_uri).await {
         Ok(v) => {
             let auth_url = v
@@ -356,6 +360,7 @@ pub struct FrontierCallbackParams {
     pub state: Option<String>,
     pub error: Option<String>,
     pub error_description: Option<String>,
+    pub redirect_uri: Option<String>,
 }
 
 pub async fn get_frontier_callback(
@@ -390,10 +395,15 @@ pub async fn get_frontier_callback(
         );
     };
 
-    let redirect_uri = format!(
-        "https://localhost:{}/api/auth/frontier/callback",
-        state.port
-    );
+    let redirect_uri = params
+        .redirect_uri
+        .or_else(|| std::env::var("TMC_CAPI_REDIRECT_URI").ok())
+        .unwrap_or_else(|| {
+            format!(
+                "https://localhost:{}/api/auth/frontier/callback",
+                state.port
+            )
+        });
     match state
         .host
         .frontier_exchange_code(&code, &auth_state, &redirect_uri)

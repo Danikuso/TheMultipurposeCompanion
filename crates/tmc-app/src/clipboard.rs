@@ -375,9 +375,13 @@ impl ActionHost for AppActions {
                 let redirect_uri = args
                     .get("redirect_uri")
                     .and_then(|u| u.as_str())
-                    .unwrap_or("https://localhost:47320/api/auth/frontier/callback");
+                    .map(|s| s.to_string())
+                    .or_else(|| std::env::var("TMC_CAPI_REDIRECT_URI").ok())
+                    .unwrap_or_else(|| {
+                        "https://localhost:47320/api/auth/frontier/callback".to_string()
+                    });
                 let capi = self.capi_service.as_ref().ok_or(ActionError::NotFound)?;
-                let (url, state) = capi.start_login(redirect_uri);
+                let (url, state) = capi.start_login(&redirect_uri);
                 return Ok(json!({ "url": url, "state": state }));
             }
             "frontier.logout" => {
@@ -430,11 +434,21 @@ impl ActionHost for AppActions {
                     return Err(ActionError::Failed("missing-authorization-code".into()));
                 }
 
+                let detected_uri =
+                    if raw_input.starts_with("http://") || raw_input.starts_with("https://") {
+                        raw_input.split('?').next().map(|s| s.to_string())
+                    } else {
+                        None
+                    };
                 let redirect_uri = args
                     .get("redirect_uri")
                     .and_then(|u| u.as_str())
-                    .unwrap_or("https://localhost:47320/api/auth/frontier/callback")
-                    .to_string();
+                    .map(|s| s.to_string())
+                    .or(detected_uri)
+                    .or_else(|| std::env::var("TMC_CAPI_REDIRECT_URI").ok())
+                    .unwrap_or_else(|| {
+                        "https://localhost:47320/api/auth/frontier/callback".to_string()
+                    });
 
                 let capi_cloned = capi.clone();
                 let events = self.runtime.as_ref().map(|r| r.events.clone());

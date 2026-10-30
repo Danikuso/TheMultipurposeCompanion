@@ -144,19 +144,27 @@
     }
   }
 
+  const officialRedirectUri = 'https://danikuso.github.io/TheMultipurposeCompanion/oauth/callback.html';
+
   async function startFrontierLogin() {
     loginOpening = true;
     try {
-      const res = await fetch('/api/auth/frontier/login?open=true', {
-        headers: { Accept: 'application/json' },
-      });
+      const res = await fetch(
+        `/api/auth/frontier/login?open=true&redirect_uri=${encodeURIComponent(officialRedirectUri)}`,
+        {
+          headers: { Accept: 'application/json' },
+        }
+      );
       if (res.ok) {
         const data = await res.json();
         if (!data.opened && data.url && typeof window !== 'undefined') {
           window.open(data.url, '_blank');
         }
       } else if (typeof window !== 'undefined') {
-        window.open('/api/auth/frontier/login', '_blank');
+        window.open(
+          `/api/auth/frontier/login?redirect_uri=${encodeURIComponent(officialRedirectUri)}`,
+          '_blank'
+        );
       }
     } catch {
       if (typeof window !== 'undefined') {
@@ -502,7 +510,7 @@
                       <input
                         class="glass-input mono"
                         type="text"
-                        placeholder="https://localhost:47320/api/auth/frontier/callback?code=..."
+                        placeholder="https://.../oauth/callback.html?code=... o código directo"
                         bind:value={manualCapiInput}
                         data-testid="capi-manual-input"
                       />
