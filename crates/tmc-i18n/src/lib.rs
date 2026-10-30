@@ -349,6 +349,10 @@ mod tests {
                 ("amount", FluentValue::from("10.000")),
                 ("hours", FluentValue::from(1)),
                 ("minutes", FluentValue::from(30)),
+                ("system", FluentValue::from("Sol")),
+                ("body", FluentValue::from("Delkar 7")),
+                ("ring", FluentValue::from("A Ring")),
+                ("dist", FluentValue::from("83.1")),
             ] {
                 args.set(name, value);
             }
