@@ -201,7 +201,7 @@ describe('combat and mining layouts', () => {
     live.topics['combat.ax'] = { active: true };
     live.topics['combat.conflict_zone'] = { system: 'X', side: null, kills: 0, bonds_by_faction: {} };
     expect(visible('combat')).toHaveLength(5);
-    expect(visible('mining')).toHaveLength(3);
+    expect(visible('mining')).toHaveLength(4);
   });
 });
 

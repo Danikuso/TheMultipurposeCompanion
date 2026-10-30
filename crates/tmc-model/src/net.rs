@@ -1034,6 +1034,7 @@ mod tests {
             res_intensity: Some("Hazardous".into()),
             res_distance_km: Some(15.4),
             other_hotspots: vec!["Monazite:3".into(), "Painite:2".into()],
+            comment: Some("Haz-RES Platinum mining".into()),
             nearest_best_sell: Some(sell_station.clone()),
         };
 

@@ -3,7 +3,7 @@ import { RouteStrip, PlannerPanel, JumpPanel } from '../modules/navigation';
 import SystemBodiesPanel from '../modules/exploration/SystemBodiesPanel.svelte';
 import ExobiologyPanel from '../modules/exobiology/ExobiologyPanel.svelte';
 import { TargetPanel, ShipPanel, HuntingPanel, ConflictZonePanel, AxPanel } from '../modules/combat';
-import { ProspectorPanel, MiningSessionPanel, SellPanel } from '../modules/mining';
+import { ProspectorPanel, MiningSessionPanel, SellPanel, MiningTargetsPanel } from '../modules/mining';
 import {
   MarketPanel, CargoPanel, RoutePanel as TradeRoutePanel, TradeSessionPanel, SearchPanel,
 } from '../modules/trade';
@@ -155,6 +155,7 @@ export const layouts: LayoutDef[] = [{
   titleKey: 'layout-mining',
   icon: 'pickaxe',
   slots: [
+    { id: 'mining-targets', panel: MiningTargetsPanel, span: 2 },
     { id: 'prospector', panel: ProspectorPanel, span: 2 },
     { id: 'mining-session', panel: MiningSessionPanel, span: 1 },
     { id: 'sell', panel: SellPanel, span: 1 },
