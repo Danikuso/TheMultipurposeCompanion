@@ -92,10 +92,17 @@
       <div class="metric-card value-card">
         <span class="metric-label">{t('exploration-value-now')}</span>
         <strong class="metric-val gold">{credits(system.value_now)}</strong>
+        <span class="metric-sub">{t('exploration-scanned-bodies', { count: system.fss?.scanned ?? 0 })}</span>
       </div>
       <div class="metric-card value-card">
         <span class="metric-label">{t('exploration-value-if-mapped')}</span>
-        <strong class="metric-val green">{credits(system.value_if_mapped)}</strong>
+        {#if (system.map_targets ?? 0) > 0 || (system.value_if_mapped ?? 0) > (system.value_now ?? 0)}
+          <strong class="metric-val green">{credits(system.value_if_mapped)}</strong>
+          <span class="metric-sub green">+{credits((system.value_if_mapped ?? 0) - (system.value_now ?? 0))} · {t('exploration-map-targets-count', { count: system.map_targets ?? 1 })}</span>
+        {:else}
+          <strong class="metric-val text-dim">{credits(system.value_now)}</strong>
+          <span class="metric-sub text-dim">{t('exploration-no-map-targets')}</span>
+        {/if}
       </div>
     </div>
   {:else}
@@ -172,6 +179,9 @@
   .number { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
   .font-mono { font-family: var(--font-mono); }
   .gold { color: #fbbf24; }
+  .metric-sub { font-size: 0.72rem; color: var(--hud-muted); margin-top: 0.2rem; font-family: var(--font-mono); white-space: nowrap; }
+  .metric-sub.green { color: var(--hud-success); font-weight: 600; }
+  .text-dim { color: var(--hud-muted); opacity: 0.85; }
   
   .table-container { position: relative; display: flex; flex-direction: column; min-height: 0; }
   .table-scroll { overflow-x: auto; scrollbar-width: none; }

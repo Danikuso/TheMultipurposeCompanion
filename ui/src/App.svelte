@@ -11,6 +11,8 @@
   import Sidebar from './shell/Sidebar.svelte';
   import Toasts from './shell/Toasts.svelte';
   import TopBar from './shell/TopBar.svelte';
+  import UpdateModal from './shell/UpdateModal.svelte';
+  import { fetchUpdateStatus } from './lib/updater.svelte';
   import { DEFAULT_PRIORITIES, autoLayout, contextPanel, layouts, nextPin } from './shell/layouts';
 
   let pin = $state<string | null>(null);
@@ -190,8 +192,13 @@
     window.addEventListener('keydown', handleKeydown);
 
     const timer = setTimeout(prefsFallback, 3000);
+    const updateTimer = setTimeout(() => {
+      void fetchUpdateStatus();
+    }, 3500);
+
     return () => {
       clearTimeout(timer);
+      clearTimeout(updateTimer);
       window.removeEventListener('keydown', handleKeydown);
     };
   });
@@ -228,6 +235,7 @@
     </Grid>
   </div>
   <Toasts />
+  <UpdateModal />
 </div>
 
 <style>

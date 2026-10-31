@@ -130,6 +130,8 @@ pub struct SystemTopic {
     /// `value_now` más lo que añadiría mapear las filas con consejo `Map`
     /// (valor de mapeo menos valor escaneado de cada una).
     pub value_if_mapped: u64,
+    /// Número de cuerpos recomendados para mapear aún pendientes.
+    pub map_targets: u32,
     /// Cuerpos del FSS aún sin escanear (`body_count` − escaneados).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub unidentified: Option<u32>,
@@ -371,8 +373,12 @@ impl SystemBodies {
         let sig = self.signals.get(&id).copied().unwrap_or_default();
         let landable = scan.landable == Some(true);
         let mapped_by_you = body.mapping.is_some();
+        let kind = kind_key(scan);
+        let is_priority_target =
+            matches!(kind.as_str(), "earthlike" | "water-world" | "ammonia-world");
+        let meets_threshold = mapped_value.is_some_and(|v| v >= threshold);
         let mut advice = Vec::new();
-        if !mapped_by_you && mapped_value.is_some_and(|v| v >= threshold) {
+        if !mapped_by_you && mapped_value.is_some() && (is_priority_target || meets_threshold) {
             advice.push(Advice::Map);
         }
         if sig.bio > 0 && landable {
@@ -424,12 +430,14 @@ impl SystemBodies {
         });
         let mut value_now = 0u64;
         let mut extra = 0u64;
+        let mut map_targets = 0u32;
         for r in &rows {
             value_now = value_now.saturating_add(match (r.mapped_by_you, r.mapped_value) {
                 (true, Some(m)) => m,
                 _ => r.scanned_value,
             });
             if r.advice.contains(&Advice::Map) {
+                map_targets = map_targets.saturating_add(1);
                 extra = extra
                     .saturating_add(r.mapped_value.unwrap_or(0).saturating_sub(r.scanned_value));
             }
@@ -489,6 +497,7 @@ impl SystemBodies {
             },
             value_now,
             value_if_mapped: value_now.saturating_add(extra),
+            map_targets,
             unidentified: self.body_count.map(|n| n.saturating_sub(scanned)),
             star_classes,
             rows,
@@ -501,7 +510,18 @@ fn mapped_with(scan: &Scan, odyssey: bool, efficiency: bool) -> Option<u64> {
     let BodyKind::Planet { k } = body_kind(scan)? else {
         return None;
     };
-    let mass = scan.mass_em.filter(|m| m.is_finite() && *m > 0.0)?;
+    let mass = scan
+        .mass_em
+        .filter(|m| m.is_finite() && *m > 0.0)
+        .or_else(|| match (scan.surface_gravity, scan.radius) {
+            (Some(g), Some(r)) if g.is_finite() && g > 0.0 && r.is_finite() && r > 0.0 => {
+                let r_rel = r / 6_371_000.0;
+                let g_rel = g / 9.80665;
+                let m = g_rel * r_rel * r_rel;
+                (m.is_finite() && m > 0.0).then_some(m)
+            }
+            _ => None,
+        })?;
     let flags = ValueFlags {
         first_discovery: scan.was_discovered == Some(false),
         first_mapped: scan.was_mapped == Some(false),

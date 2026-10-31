@@ -457,20 +457,31 @@ async fn start_inner(
             .await;
     }
 
-    let server = serve(
-        server_cfg,
-        core.clone(),
-        store.clone(),
-        Arc::new(
-            AppActions::with_runtime(config, core.events.clone(), online, net)
-                .with_clipboard(clipboard.clone())
-                .with_settings_watch(settings_tx)
-                .with_capi_service(capi_service)
-                .with_edsm_service(edsm_service)
-                .with_inara_service(inara_service),
-        ),
-    )
-    .await?;
+    let auto_update_check = config.auto_update_check;
+    let auto_update_install = config.auto_update_install;
+    let actions = Arc::new(
+        AppActions::with_runtime(config, core.events.clone(), online.clone(), net)
+            .with_clipboard(clipboard.clone())
+            .with_settings_watch(settings_tx)
+            .with_capi_service(capi_service)
+            .with_edsm_service(edsm_service)
+            .with_inara_service(inara_service),
+    );
+
+    if auto_update_check && online.load(std::sync::atomic::Ordering::Relaxed) {
+        let update_state = actions.update_state.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+            if let Ok(st) = crate::updater::check_for_updates(update_state.clone()).await
+                && auto_update_install
+                && st.has_update
+            {
+                let _ = crate::updater::download_and_install_update(update_state).await;
+            }
+        });
+    }
+
+    let server = serve(server_cfg, core.clone(), store.clone(), actions).await?;
 
     tmc_model::diagnostic!(
         tmc_model::diagnostics::DiagnosticContext::State,

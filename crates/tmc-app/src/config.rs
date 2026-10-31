@@ -46,6 +46,10 @@ pub struct Config {
     pub auto_companion_sound_cues: bool,
     #[serde(default = "default_true")]
     pub auto_companion_predictive: bool,
+    #[serde(default = "default_true")]
+    pub auto_update_check: bool,
+    #[serde(default)]
+    pub auto_update_install: bool,
     pub alerts_enabled: bool,
     /// Consultas a servicios en línea (Spansh, EDSM, Canonn). Desactivarlo no envía nada.
     pub online_services: bool,
@@ -82,6 +86,8 @@ impl Default for Config {
             auto_companion_voice_cues: false,
             auto_companion_sound_cues: true,
             auto_companion_predictive: true,
+            auto_update_check: true,
+            auto_update_install: false,
             alerts_enabled: true,
             online_services: true,
             map_value_threshold: 500_000,

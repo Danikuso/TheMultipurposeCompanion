@@ -353,6 +353,7 @@ mod tests {
                 ("body", FluentValue::from("Delkar 7")),
                 ("ring", FluentValue::from("A Ring")),
                 ("dist", FluentValue::from("83.1")),
+                ("version", FluentValue::from("1.0.2")),
             ] {
                 args.set(name, value);
             }

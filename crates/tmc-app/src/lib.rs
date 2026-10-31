@@ -10,6 +10,7 @@ pub mod edsm_service;
 pub mod inara_service;
 pub mod logging;
 pub mod net_service;
+pub mod updater;
 pub mod voiceattack;
 pub mod wiring;
 

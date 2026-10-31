@@ -124,6 +124,7 @@ pub struct AppActions {
     edsm_service: Option<Arc<crate::edsm_service::EdsmService>>,
     inara_service: Option<Arc<crate::inara_service::InaraService>>,
     kokoro_engine: Mutex<Option<tmc_tts::KokoroEngine>>,
+    pub update_state: Arc<tokio::sync::RwLock<crate::updater::UpdateStatus>>,
 }
 
 impl AppActions {
@@ -147,6 +148,9 @@ impl AppActions {
             edsm_service: None,
             inara_service: None,
             kokoro_engine: Mutex::new(None),
+            update_state: Arc::new(tokio::sync::RwLock::new(
+                crate::updater::UpdateStatus::default(),
+            )),
         }
     }
 
@@ -161,6 +165,9 @@ impl AppActions {
             edsm_service: None,
             inara_service: None,
             kokoro_engine: Mutex::new(None),
+            update_state: Arc::new(tokio::sync::RwLock::new(
+                crate::updater::UpdateStatus::default(),
+            )),
         }
     }
 
@@ -993,6 +1000,34 @@ impl ActionHost for AppActions {
                 "token_type": token.token_type,
                 "expires_in": token.expires_in,
             }))
+        })
+    }
+
+    fn update_status(&self) -> ActionFut {
+        let state = self.update_state.clone();
+        Box::pin(async move {
+            let status = state.read().await.clone();
+            Ok(serde_json::to_value(status).unwrap_or_default())
+        })
+    }
+
+    fn check_for_updates(&self) -> ActionFut {
+        let state = self.update_state.clone();
+        Box::pin(async move {
+            match crate::updater::check_for_updates(state).await {
+                Ok(status) => Ok(serde_json::to_value(status).unwrap_or_default()),
+                Err(err) => Err(ActionError::Failed(err)),
+            }
+        })
+    }
+
+    fn install_update(&self) -> ActionFut {
+        let state = self.update_state.clone();
+        Box::pin(async move {
+            match crate::updater::download_and_install_update(state).await {
+                Ok(msg) => Ok(serde_json::json!({ "ok": true, "message": msg })),
+                Err(err) => Err(ActionError::Failed(err)),
+            }
         })
     }
 }

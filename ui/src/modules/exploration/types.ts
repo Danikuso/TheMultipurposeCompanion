@@ -20,6 +20,7 @@ export interface SystemTopic {
   fss: { progress?: number; body_count?: number; scanned: number; complete: boolean };
   value_now: number;
   value_if_mapped: number;
+  map_targets?: number;
   unidentified?: number;
   truncated?: number;
   star_classes?: string[];

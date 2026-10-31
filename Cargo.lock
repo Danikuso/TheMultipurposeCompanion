@@ -5002,6 +5002,7 @@ dependencies = [
  "chrono",
  "directories",
  "flate2",
+ "reqwest",
  "rusqlite",
  "serde",
  "serde_json",

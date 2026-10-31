@@ -76,6 +76,21 @@ pub trait ActionHost: Send + Sync + 'static {
     fn frontier_exchange_code(&self, _code: &str, _state: &str, _redirect_uri: &str) -> ActionFut {
         Box::pin(async { Err(ActionError::NotFound) })
     }
+
+    /// Devuelve el estado actual de comprobación/descarga de actualizaciones.
+    fn update_status(&self) -> ActionFut {
+        Box::pin(async { Err(ActionError::NotFound) })
+    }
+
+    /// Fuerza la comprobación de actualizaciones contra GitHub Releases.
+    fn check_for_updates(&self) -> ActionFut {
+        Box::pin(async { Err(ActionError::NotFound) })
+    }
+
+    /// Descarga y ejecuta la última versión de TMC.
+    fn install_update(&self) -> ActionFut {
+        Box::pin(async { Err(ActionError::NotFound) })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -216,6 +231,18 @@ pub fn build_router(
         .route(
             "/api/auth/frontier/callback",
             axum::routing::get(rest::get_frontier_callback),
+        )
+        .route(
+            "/api/update/status",
+            axum::routing::get(rest::get_update_status),
+        )
+        .route(
+            "/api/update/check",
+            axum::routing::post(rest::post_update_check),
+        )
+        .route(
+            "/api/update/install",
+            axum::routing::post(rest::post_update_install),
         )
         .route("/api/pairing", axum::routing::get(pairing::get_pairing))
         .fallback(axum::routing::get(assets::serve_asset))

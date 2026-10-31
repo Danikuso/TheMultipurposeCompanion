@@ -151,7 +151,19 @@ pub fn body_values(scan: &Scan, odyssey: bool) -> BodyValues {
             mapped: None,
         },
         Some(BodyKind::Planet { k }) => {
-            let Some(mass) = scan.mass_em.filter(|m| m.is_finite() && *m > 0.0) else {
+            let mass = scan
+                .mass_em
+                .filter(|m| m.is_finite() && *m > 0.0)
+                .or_else(|| match (scan.surface_gravity, scan.radius) {
+                    (Some(g), Some(r)) if g.is_finite() && g > 0.0 && r.is_finite() && r > 0.0 => {
+                        let r_rel = r / 6_371_000.0;
+                        let g_rel = g / 9.80665;
+                        let m = g_rel * r_rel * r_rel;
+                        (m.is_finite() && m > 0.0).then_some(m)
+                    }
+                    _ => None,
+                });
+            let Some(mass) = mass else {
                 return BodyValues {
                     scanned: 0,
                     mapped: None,

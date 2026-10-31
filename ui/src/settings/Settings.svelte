@@ -11,6 +11,7 @@
   import { integer } from '../lib/format';
   import { voiceAssistant } from '../lib/voiceAssistant.svelte';
   import AccountsSection from '../modules/accounts/AccountsSection.svelte';
+  import { updater, checkForUpdates } from '../lib/updater.svelte';
 
   const DEFAULT_MINERALS = ['platinum', 'painite', 'lowtemperaturediamond', 'opal', 'alexandrite',
     'grandidierite', 'monazite', 'musgravite', 'rhodplumsite', 'serendibite', 'benitoite'];
@@ -46,6 +47,8 @@
     auto_companion_voice_cues?: boolean;
     auto_companion_sound_cues?: boolean;
     auto_companion_predictive?: boolean;
+    auto_update_check?: boolean;
+    auto_update_install?: boolean;
     alerts_enabled?: boolean;
     online_services?: boolean;
     map_value_threshold?: number;
@@ -82,6 +85,8 @@
   let voiceCues = $state<boolean>(prefs.autoCompanionVoiceCues);
   let soundCues = $state<boolean>(prefs.autoCompanionSoundCues);
   let predictive = $state<boolean>(prefs.autoCompanionPredictive);
+  let autoUpdateCheck = $state(true);
+  let autoUpdateInstall = $state(false);
 
   function movePriority(index: number, direction: 'up' | 'down') {
     const target = direction === 'up' ? index - 1 : index + 1;
@@ -244,6 +249,12 @@
         if (typeof cfg.auto_copy_next_system === 'boolean') {
           autoCopy = cfg.auto_copy_next_system;
         }
+        if (typeof cfg.auto_update_check === 'boolean') {
+          autoUpdateCheck = cfg.auto_update_check;
+        }
+        if (typeof cfg.auto_update_install === 'boolean') {
+          autoUpdateInstall = cfg.auto_update_install;
+        }
         if (cfg.server && typeof cfg.server.lan === 'boolean') {
           lanEnabled = cfg.server.lan;
         }
@@ -365,6 +376,8 @@
       auto_companion_voice_cues: voiceCues,
       auto_companion_sound_cues: soundCues,
       auto_companion_predictive: predictive,
+      auto_update_check: autoUpdateCheck,
+      auto_update_install: autoUpdateInstall,
       online_services: onlineServices,
       map_value_threshold: mapThreshold,
       default_neutron_efficiency: plannerEfficiency,
@@ -957,6 +970,88 @@
         </fieldset>
 
         <Pairing />
+
+        <!-- Actualizaciones de TMC -->
+        <fieldset class="settings-card update-card" data-testid="settings-update-card">
+          <legend>🚀 {t('settings-update-title')}</legend>
+
+          <div class="update-version-status">
+            <div class="version-row">
+              <span class="version-label">{t('settings-update-installed')}</span>
+              <strong class="font-mono version-val">v{updater.status.current_version || '1.0.1'}</strong>
+            </div>
+            <div class="version-row">
+              <span class="version-label">{t('settings-update-latest')}</span>
+              {#if updater.status.has_update}
+                <span class="badge badge-gold">v{updater.status.latest_version}</span>
+              {:else if updater.status.latest_version}
+                <span class="badge badge-green">{t('settings-update-status-up-to-date')}</span>
+              {:else}
+                <span class="badge badge-muted">—</span>
+              {/if}
+            </div>
+          </div>
+
+          <div class="toggle-group">
+            <label class="field-row">
+              <span>{t('settings-auto-update-check')}</span>
+              <input
+                type="checkbox"
+                role="switch"
+                class="hud-switch"
+                data-testid="auto-update-check-switch"
+                bind:checked={autoUpdateCheck}
+                onchange={saveConfig}
+              />
+            </label>
+            <p class="help-text">{t('settings-auto-update-check-help')}</p>
+          </div>
+
+          <div class="toggle-group">
+            <label class="field-row">
+              <span>{t('settings-auto-update-install')}</span>
+              <input
+                type="checkbox"
+                role="switch"
+                class="hud-switch"
+                data-testid="auto-update-install-switch"
+                bind:checked={autoUpdateInstall}
+                onchange={saveConfig}
+              />
+            </label>
+            <p class="help-text">{t('settings-auto-update-install-help')}</p>
+          </div>
+
+          <div class="update-card-actions">
+            <button
+              type="button"
+              class="btn-update-check"
+              data-testid="btn-check-updates"
+              disabled={updater.status.is_checking || updater.status.is_downloading}
+              onclick={() => { void checkForUpdates(); }}
+            >
+              {updater.status.is_checking ? t('settings-update-checking') : t('settings-update-check-btn')}
+            </button>
+
+            {#if updater.status.has_update}
+              <button
+                type="button"
+                class="btn-update-install"
+                data-testid="btn-install-update"
+                disabled={updater.status.is_downloading}
+                onclick={() => { updater.isOpenModal = true; }}
+              >
+                🚀 {t('settings-update-install-btn', { version: updater.status.latest_version })}
+              </button>
+            {/if}
+          </div>
+
+          {#if updater.status.error}
+            <div class="update-error-text">
+              ⚠️ {updater.status.error}
+            </div>
+          {/if}
+        </fieldset>
 
         <!-- Soporte, Feedback y Comunidad -->
         <fieldset class="settings-card feedback-card" data-testid="settings-feedback-card">
@@ -1683,5 +1778,102 @@
   .feedback-btn-secondary:hover {
     background: rgba(255, 255, 255, 0.12);
     border-color: var(--hud-primary, #ff7100);
+  }
+
+  .update-card {
+    border-color: rgba(255, 170, 0, 0.28);
+    background: linear-gradient(180deg, rgba(20, 25, 35, 0.6) 0%, rgba(255, 170, 0, 0.04) 100%);
+  }
+
+  .update-version-status {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 0.65rem 0.85rem;
+    background: rgba(6, 10, 18, 0.6);
+    border: 1px solid var(--hud-border-subtle, rgba(255, 255, 255, 0.08));
+    border-radius: 6px;
+  }
+
+  .version-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+  }
+
+  .version-label {
+    color: var(--hud-muted, #7890a8);
+  }
+
+  .version-val {
+    color: var(--hud-text, #ffffff);
+  }
+
+  .update-card-actions {
+    display: flex;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 0.5rem;
+  }
+
+  .btn-update-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    background: rgba(0, 212, 178, 0.12);
+    color: var(--hud-cyan, #00d4b2);
+    border: 1px solid rgba(0, 212, 178, 0.35);
+    padding: 0.45rem 0.85rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-update-check:hover:not(:disabled) {
+    background: var(--hud-cyan, #00d4b2);
+    color: #000;
+  }
+
+  .btn-update-check:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .btn-update-install {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    background: linear-gradient(135deg, #ffaa00, #ff8800);
+    color: #000000;
+    font-weight: 700;
+    border: 1px solid #ffcc00;
+    padding: 0.45rem 0.85rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(255, 170, 0, 0.3);
+    transition: all 0.15s ease;
+  }
+
+  .btn-update-install:hover:not(:disabled) {
+    background: linear-gradient(135deg, #ffbb11, #ff9900);
+    box-shadow: 0 0 14px rgba(255, 170, 0, 0.5);
+  }
+
+  .btn-update-install:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .update-error-text {
+    margin-top: 0.4rem;
+    font-size: 0.78rem;
+    color: #ff5555;
   }
 </style>

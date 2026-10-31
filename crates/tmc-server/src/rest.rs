@@ -760,3 +760,24 @@ pub async fn post_voice_intent(
 
     (StatusCode::OK, Json(response)).into_response()
 }
+
+pub async fn get_update_status(State(state): State<AppState>) -> Response {
+    match state.host.update_status().await {
+        Ok(v) => Json(v).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
+pub async fn post_update_check(State(state): State<AppState>) -> Response {
+    match state.host.check_for_updates().await {
+        Ok(v) => Json(v).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
+pub async fn post_update_install(State(state): State<AppState>) -> Response {
+    match state.host.install_update().await {
+        Ok(v) => Json(v).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}

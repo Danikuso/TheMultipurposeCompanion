@@ -5,6 +5,7 @@
   import { live, topic } from '../lib/ws.svelte';
   import { diag, diagOn } from '../lib/diag.svelte';
   import { voiceAssistant } from '../lib/voiceAssistant.svelte';
+  import { updater } from '../lib/updater.svelte';
 
   interface LocationTopic {
     system?: string;
@@ -194,6 +195,18 @@
       <span class="lock-icon" aria-hidden="true">{prefs.locked ? '🔒' : '🔓'}</span>
       <span class="lock-label">{prefs.locked ? 'LOCKED' : 'LOCK'}</span>
     </button>
+    {#if updater.status.has_update}
+      <button
+        type="button"
+        class="update-pill"
+        data-testid="topbar-update-pill"
+        title={t('update-available-tooltip')}
+        onclick={() => { updater.isOpenModal = true; }}
+      >
+        <span class="update-icon" aria-hidden="true">🚀</span>
+        <span class="update-label">{t('update-available-pill', { version: updater.status.latest_version })}</span>
+      </button>
+    {/if}
     {#if game?.galaxy === 'Legacy'}
       <span class="badge badge-warning">{t('galaxy-legacy-warning')}</span>
     {/if}
@@ -429,6 +442,36 @@
     border-color: #f59e0b;
     color: #fbbf24;
     box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+  }
+
+  .update-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(255, 170, 0, 0.15);
+    border: 1px solid rgba(255, 170, 0, 0.5);
+    border-radius: 20px;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #ffaa00;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 150ms ease;
+    animation: pulseGlow 2s infinite ease-in-out;
+  }
+
+  .update-pill:hover {
+    background: rgba(255, 170, 0, 0.25);
+    border-color: #ffcc00;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 4px rgba(255, 170, 0, 0.2); }
+    50% { box-shadow: 0 0 10px rgba(255, 170, 0, 0.45); }
   }
 
   .lock-icon {
