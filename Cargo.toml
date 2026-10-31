@@ -4,7 +4,7 @@ members = ["crates/*", "apps/headless", "apps/desktop"]
 
 
 [workspace.package]
-version = "1.0.0"
+version = "1.0.1"
 edition = "2024"
 license-file = "LICENSE"
 repository = "https://github.com/Danikuso/TheMultipurposeCompanion"

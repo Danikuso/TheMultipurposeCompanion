@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initCodeCopyButtons();
   initScrollSpy();
   initMobileMenu();
+  initLatestRelease();
 });
 
 // ===================================================================
@@ -887,4 +888,52 @@ function initMobileMenu() {
       }
     });
   });
+}
+
+// ===================================================================
+// 8. CONSULTA DINÁMICA DE LA ÚLTIMA RELEASE EN GITHUB
+// ===================================================================
+
+async function initLatestRelease() {
+  const GITHUB_REPO = 'Danikuso/TheMultipurposeCompanion';
+  const LATEST_API = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
+
+  try {
+    const res = await fetch(LATEST_API, {
+      headers: { Accept: 'application/vnd.github.v3+json' },
+    });
+    if (!res.ok) return;
+
+    const release = await res.json();
+    const tagName = release.tag_name; // ej. "v1.0.1"
+    if (!tagName) return;
+
+    // Buscar el instalador (.exe con setup) o ejecutable portable
+    const setupAsset = release.assets?.find(
+      (a) => a.name.toLowerCase().endsWith('.exe') && (a.name.toLowerCase().includes('setup') || a.name.toLowerCase().includes('installer'))
+    );
+    const portableAsset = release.assets?.find(
+      (a) => a.name.toLowerCase() === 'tmc.exe' || a.name.toLowerCase().endsWith('.exe')
+    );
+
+    const downloadUrl = setupAsset?.browser_download_url || portableAsset?.browser_download_url;
+
+    // Actualizar botones de descarga
+    document.querySelectorAll('[data-role="download-latest"]').forEach((btn) => {
+      if (downloadUrl) {
+        btn.href = downloadUrl;
+      }
+      btn.title = `TMC ${tagName} (Windows)`;
+    });
+
+    // Actualizar badges con la versión exacta
+    document.querySelectorAll('[data-role="latest-version-badge"]').forEach((badge) => {
+      badge.textContent = tagName;
+      badge.style.display = 'inline-block';
+    });
+  } catch (err) {
+    // Si la API no responde o agota la cuota anónima, los enlaces ya apuntan
+    // por defecto a https://github.com/.../releases/latest/download/TMC-Setup.exe
+    console.debug('Aviso: usando enlace directo a última release de GitHub.', err);
+  }
 }
