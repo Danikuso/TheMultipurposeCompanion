@@ -21,7 +21,7 @@ Its mission is to serve as an all-in-one copilot for both novice pilots and vete
 
 ## Table of Contents
 
-- **Player Resources:** [Commander's User Manual & Tutorials (PDF)](website/Manual_TMC_Comandante.pdf) · [Overview Website (`website/`)](website/index.html)
+- **Player Resources:** [Manuals in Español, English, Français, Deutsch and Português](docs/manual/README.md) · [Overview Website (`website/`)](website/index.html)
 - **[Part I — Player and User Guide](#part-i--player-and-user-guide)**
   1. [Philosophy and Key Qualities](#1-philosophy-and-key-qualities)
   2. [Installation and Getting Started (Windows and Linux / Steam Deck)](#2-installation-and-getting-started)

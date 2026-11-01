@@ -1,5 +1,6 @@
 # Avisos de terceros
 
+
 Cada dependencia directa se registra aquí al añadirla (nombre, versión, licencia).
 Se registran las licencias admitidas por el proyecto (MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0, CC0 y las alternativas declaradas abajo). Una dependencia con licencia dual se utiliza bajo la alternativa compatible indicada.
 
@@ -437,6 +438,13 @@ Versión 1, licencia de datos propios del proyecto **PolyForm Noncommercial 1.0.
 - Versión: 0.10.9
 - Licencia: MIT OR Apache-2.0
 - Usada por: `tmc-net` (seudonimización determinista e irreversible de `uploaderID` para envíos a EDDN y generación de PKCE para CAPI)
+
+## Herramientas opcionales para generar los manuales
+
+No se incorporan al ejecutable de TMC. Se utilizan únicamente al generar la documentación PDF mediante `docs/manual/build_manuals.py`.
+
+- **ReportLab 4.4.9**: licencia BSD, copyright ReportLab Inc. Generación de PDF; https://www.reportlab.com/ .
+- **pypdf 6.10.0**: licencia BSD-3-Clause. Metadatos, marcadores e inspección de los PDF; https://github.com/py-pdf/pypdf .
 
 
 

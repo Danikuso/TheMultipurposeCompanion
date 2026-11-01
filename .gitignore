@@ -34,3 +34,6 @@ target-f3/
 target-f2/
 target-f4/
 .tmp/
+
+# Artefactos de documentación generados (copias publicadas en docs/manual/)
+/output/pdf/
