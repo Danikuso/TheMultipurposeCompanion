@@ -5,8 +5,9 @@
   import { pushToast } from '../../shell/Toasts.svelte';
 
   interface RouteHop {
-    system: string;
-    star_class?: string;
+    StarSystem: string;
+    SystemAddress: number;
+    StarClass?: string | null;
   }
 
   interface RouteTopic {
@@ -60,11 +61,11 @@
 
     {#if route.hops && route.hops.length > 0}
       <ul class="hops-list">
-        {#each route.hops as hop (hop.system)}
+        {#each route.hops as hop, index (index)}
           <li>
-            <span class="mono">{hop.system}</span>
-            {#if hop.star_class}
-              <span class="star-class">{hop.star_class}</span>
+            <span class="mono">{hop.StarSystem}</span>
+            {#if hop.StarClass}
+              <span class="star-class">{hop.StarClass}</span>
             {/if}
           </li>
         {/each}

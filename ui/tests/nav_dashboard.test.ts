@@ -77,6 +77,25 @@ describe('sequential navigation to dashboard', () => {
     }
   });
 
+  test.each(['exploration', 'navigation', 'ship', 'mining', 'trade'])('dashboard opens from %s with the backend route payload', (source) => {
+    live.topics['core.route'] = {
+      next_system: 'Test Beta',
+      remaining_jumps: 2,
+      hops: [
+        { StarSystem: 'Test Alpha', SystemAddress: 1, StarPos: [0, 0, 0], StarClass: 'K' },
+        { StarSystem: 'Test Beta', SystemAddress: 2, StarPos: [1, 0, 0], StarClass: 'G' },
+        { StarSystem: 'Test Gamma', SystemAddress: 3, StarPos: [2, 0, 0], StarClass: 'M' },
+      ],
+    };
+    (target.querySelector(`[data-module="${source}"]`) as HTMLButtonElement).click();
+    flushSync();
+    (target.querySelector('[data-module="dashboard"]') as HTMLButtonElement).click();
+    flushSync();
+    expect(target.querySelector('.cmdr-head')).not.toBeNull();
+    expect([...target.querySelectorAll('.hops-list li')].map((row) => row.textContent?.replace(/\s+/g, ' ').trim()))
+      .toEqual(['Test Alpha K', 'Test Beta G', 'Test Gamma M']);
+  });
+
   test('sequential navigation from each module to dashboard and back', () => {
     for (const mod of modules) {
       if (mod.id === 'dashboard' || mod.id === 'accounts') continue;

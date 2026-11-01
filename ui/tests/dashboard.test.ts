@@ -202,9 +202,9 @@ describe('dashboard panels', () => {
       next_system: 'Exampla',
       remaining_jumps: 2,
       hops: [
-        { system: 'Testia', star_class: 'G' },
-        { system: 'Exampla', star_class: 'K' },
-        { system: 'Sampleton', star_class: 'M' },
+        { StarSystem: 'Testia', SystemAddress: 1, StarClass: 'G' },
+        { StarSystem: 'Exampla', SystemAddress: 2, StarClass: 'K' },
+        { StarSystem: 'Sampleton', SystemAddress: 3, StarClass: 'M' },
       ],
     };
 
