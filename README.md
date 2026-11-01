@@ -55,7 +55,7 @@ Its mission is to serve as an all-in-one copilot for both novice pilots and vete
 
 ### Windows 10 / 11 (64-bit)
 
-1. Download the installer **`TMC_1.0.0_x64-setup.exe`** from the [Releases](https://github.com/Danikuso/TheMultipurposeCompanion/releases) section (installer wizard available in all 5 languages).
+1. Download the installer **`TMC-Setup.exe`** from the [latest release](https://github.com/Danikuso/TheMultipurposeCompanion/releases/latest/download/TMC-Setup.exe) (installer wizard available in all 5 languages).
 2. Run the installer and follow the on-screen steps.
 
 > [!NOTE]
@@ -369,7 +369,7 @@ cargo build -p tmc-headless --release
 Push-Location apps/desktop
 cargo tauri build
 Pop-Location
-# Output: target/release/bundle/nsis/TMC_0.1.0_x64-setup.exe
+# Output: target/release/bundle/nsis/TMC_<version>_x64-setup.exe
 ```
 
 > **Note on disk hygiene:** always compile to the standard workspace `target/` directory (never define custom `CARGO_TARGET_DIR` variables to avoid duplicating dozens of gigabytes in cached dependencies).

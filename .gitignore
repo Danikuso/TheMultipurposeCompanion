@@ -1,6 +1,9 @@
 # Herramientas locales
 .remember/
 .playwright-mcp/
+AGENTS.md
+status.md
+CLAUDE.md
 
 # Rust
 target/
