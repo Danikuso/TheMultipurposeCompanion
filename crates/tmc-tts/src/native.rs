@@ -416,6 +416,7 @@ mod tests {
         #[cfg(not(windows))]
         {
             assert!(!voices.is_empty());
+            engine.stop().expect("Stop debe ejecutarse sin error");
         }
     }
 }
