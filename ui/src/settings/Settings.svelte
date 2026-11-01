@@ -488,7 +488,7 @@
   }
 </script>
 
-<Panel titleKey="nav-settings" span="full" class="no-scroll">
+<Panel titleKey="nav-settings" span="full">
   {#if validationError}<p role="alert" data-testid="validation-error">{t('settings-mining-invalid')}</p>{/if}
   {#if saveError}<p role="alert">{t('settings-save-error')}</p>{/if}
   <div class="settings-form" oninput={() => { draftRevision++; }}>

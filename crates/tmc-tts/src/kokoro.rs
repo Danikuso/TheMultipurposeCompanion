@@ -445,6 +445,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requiere Python y el worker KokoroTTS instalados; ejecutar con --ignored"]
     fn kokoro_spawns_worker_and_speaks() {
         let mut engine = KokoroEngine::new().expect("KokoroEngine debe inicializarse");
         let res = engine.speak(

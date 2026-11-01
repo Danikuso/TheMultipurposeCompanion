@@ -30,7 +30,8 @@ jobs:
         run: mkdir -p ui/dist
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: cargo test --workspace
+      # Las pruebas de diagnóstico comparten el registro global de tracing.
+      - run: cargo test --workspace -- --test-threads=1
 
   ui:
     runs-on: ubuntu-latest
@@ -48,4 +49,8 @@ jobs:
       - run: npm run check
       - run: npm test
       - run: npm run build
+      - name: Instalar Chromium para la regresión de Ajustes
+        run: npx playwright install --with-deps chromium
+      - name: Comprobar scroll de Ajustes en tres resoluciones
+        run: npm run test:settings
 
