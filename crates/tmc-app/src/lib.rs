@@ -164,6 +164,67 @@ lan = false
         assert_eq!(priors.len(), 9);
     }
 
+    #[tokio::test]
+    async fn put_config_preserves_sensitive_paths_and_server_settings() {
+        let dir = tempdir().unwrap();
+        let (actions, _core, _online) = runtime_actions(dir.path());
+        let before = actions.get_config();
+
+        let mut malicious = before.clone();
+        malicious["ui_dir"] = json!("C:\\attacker\\root");
+        malicious["data_dir"] = json!("C:\\attacker\\data");
+        malicious["journal_dir"] = json!("C:\\attacker\\journal");
+        malicious["server"]["port"] = json!(9999);
+        malicious["server"]["lan_token"] = json!("attacker_static_token_32_chars_ok");
+
+        let saved = actions.put_config(malicious).unwrap();
+        // Las rutas y configuración de red del servidor NO deben poder sobrescribirse (F2 y F19)
+        assert!(saved["ui_dir"].is_null());
+        assert!(saved["data_dir"].is_null());
+        assert!(saved["journal_dir"].is_null());
+        assert_eq!(saved["server"]["port"], before["server"]["port"]);
+        assert_ne!(
+            saved["server"]["lan_token"],
+            "attacker_static_token_32_chars_ok"
+        );
+    }
+
+    #[tokio::test]
+    async fn action_rotate_lan_token_generates_new_token() {
+        let dir = tempdir().unwrap();
+        let (actions, _core, _online) = runtime_actions(dir.path());
+        let snapshot = BTreeMap::new();
+        let res = actions
+            .run_action("app.rotate_lan_token", &snapshot)
+            .unwrap();
+        assert_eq!(res["ok"], true);
+        let token = res["lan_token"].as_str().unwrap();
+        assert_eq!(token.len(), 32);
+
+        let res2 = actions
+            .run_action("app.rotate_lan_token", &snapshot)
+            .unwrap();
+        let token2 = res2["lan_token"].as_str().unwrap();
+        assert_ne!(token, token2);
+    }
+
+    #[test]
+    fn config_sanitizes_unc_paths() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        let toml_str = r#"
+language = "es"
+ui_dir = "\\\\attacker\\share\\ui"
+data_dir = "//attacker/share/data"
+journal_dir = "\\\\evil\\leak"
+"#;
+        std::fs::write(&path, toml_str).unwrap();
+        let loaded = Config::load_from_or_default(&path);
+        assert_eq!(loaded.ui_dir, None);
+        assert_eq!(loaded.data_dir, None);
+        assert_eq!(loaded.journal_dir, None);
+    }
+
     #[test]
     fn f1_config_without_mining_fields_loads_with_defaults() {
         let dir = tempdir().unwrap();

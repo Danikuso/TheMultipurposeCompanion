@@ -1,10 +1,10 @@
 //! Endpoints REST (/api/health, /api/history/events, /api/actions/{name}).
 
-use crate::{ActionError, AppState};
+use crate::{ActionError, AppState, security::ClientTrust};
 use axum::{
     Json,
     body::Bytes,
-    extract::{Path, Query, State},
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
@@ -165,7 +165,31 @@ pub async fn get_config(State(state): State<AppState>) -> Json<Value> {
     Json(state.host.get_config())
 }
 
-pub async fn put_config(State(state): State<AppState>, Json(payload): Json<Value>) -> Response {
+pub async fn put_config(
+    State(state): State<AppState>,
+    Extension(trust): Extension<ClientTrust>,
+    Json(payload): Json<Value>,
+) -> Response {
+    if !trust.is_loopback {
+        // F2: Los clientes LAN no pueden modificar la infraestructura de red ni rutas de servidor
+        if let Some(obj) = payload.as_object()
+            && (obj.contains_key("server")
+                || obj.contains_key("ui_dir")
+                || obj.contains_key("data_dir")
+                || obj.contains_key("journal_dir"))
+        {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Http,
+                "http.config.rejected",
+                tmc_model::diagnostics::json!({"reason": "lan_restricted_field"})
+            );
+            return (
+                StatusCode::FORBIDDEN,
+                Json(json!({ "error": "forbidden-lan-config" })),
+            )
+                .into_response();
+        }
+    }
     match state.host.put_config(payload) {
         Ok(value) => {
             tmc_model::diagnostic!(
@@ -363,6 +387,65 @@ pub struct FrontierCallbackParams {
     pub redirect_uri: Option<String>,
 }
 
+/// Escapa caracteres especiales de HTML (&, <, >, ", ') para prevenir inyecciones XSS.
+pub fn html_escape(input: &str) -> String {
+    let mut escaped = String::with_capacity(input.len());
+    for c in input.chars() {
+        match c {
+            '&' => escaped.push_str("&amp;"),
+            '<' => escaped.push_str("&lt;"),
+            '>' => escaped.push_str("&gt;"),
+            '"' => escaped.push_str("&quot;"),
+            '\'' => escaped.push_str("&#x27;"),
+            _ => escaped.push(c),
+        }
+    }
+    escaped
+}
+
+fn safe_oauth_error_message(error: &str, description: Option<&str>) -> String {
+    match error {
+        "access_denied" => {
+            "El usuario canceló o denegó la autorización en Frontier Store.".to_string()
+        }
+        "invalid_request" => {
+            "Solicitud de autorización no válida o parámetros incorrectos.".to_string()
+        }
+        "unauthorized_client" => {
+            "Cliente no autorizado para este flujo en Frontier Store.".to_string()
+        }
+        "server_error" => {
+            "Error interno en los servidores de autenticación de Frontier.".to_string()
+        }
+        "temporarily_unavailable" => {
+            "El servicio de autenticación de Frontier no está disponible temporalmente.".to_string()
+        }
+        _ => {
+            if let Some(desc) = description {
+                let sanitized: String = desc
+                    .chars()
+                    .filter(|c| {
+                        c.is_alphanumeric() || matches!(*c, ' ' | '.' | '-' | '_' | ':' | '/')
+                    })
+                    .take(100)
+                    .collect();
+                if sanitized.is_empty() {
+                    "Error de autenticación desconocido.".to_string()
+                } else {
+                    format!("Error de autenticación: {sanitized}")
+                }
+            } else {
+                let sanitized_err: String = error
+                    .chars()
+                    .filter(|c| c.is_alphanumeric() || matches!(*c, '-' | '_'))
+                    .take(50)
+                    .collect();
+                format!("Error de autenticación: {sanitized_err}")
+            }
+        }
+    }
+}
+
 pub async fn get_frontier_callback(
     State(state): State<AppState>,
     Query(params): Query<FrontierCallbackParams>,
@@ -374,11 +457,11 @@ pub async fn get_frontier_callback(
         .is_some_and(|a| a.contains("application/json"));
 
     if let Some(err) = params.error {
-        let desc = params.error_description.unwrap_or(err);
+        let msg = safe_oauth_error_message(&err, params.error_description.as_deref());
         if wants_json {
-            return (StatusCode::BAD_REQUEST, Json(json!({ "error": desc }))).into_response();
+            return (StatusCode::BAD_REQUEST, Json(json!({ "error": msg }))).into_response();
         }
-        return render_oauth_html_response(false, &format!("Error de autenticación: {desc}"));
+        return render_oauth_html_response(false, &msg);
     }
 
     let (Some(code), Some(auth_state)) = (params.code, params.state) else {
@@ -438,7 +521,7 @@ pub async fn get_frontier_callback(
             } else {
                 render_oauth_html_response(
                     false,
-                    &format!("No se pudo completar la vinculación: {msg}"),
+                    &format!("No se pudo completar la vinculación: {}", html_escape(&msg)),
                 )
             }
         }
@@ -459,13 +542,17 @@ fn render_oauth_html_response(success: bool, message: &str) -> Response {
         "ERROR DE AUTENTICACIÓN"
     };
 
+    let safe_title = html_escape(title);
+    let safe_subtitle = html_escape(subtitle);
+    let safe_message = html_escape(message);
+
     let html = format!(
         r#"<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{title}</title>
+    <title>{safe_title}</title>
     <style>
         :root {{
             --bg: #080c10;
@@ -537,9 +624,9 @@ fn render_oauth_html_response(success: bool, message: &str) -> Response {
 <body>
     <div class="card">
         <div class="icon">{icon}</div>
-        <div class="badge">{subtitle}</div>
-        <h1>{title}</h1>
-        <p>{message}</p>
+        <div class="badge">{safe_subtitle}</div>
+        <h1>{safe_title}</h1>
+        <p>{safe_message}</p>
         <div class="footer">The Multipurpose Companion · Elite Dangerous</div>
     </div>
 </body>
@@ -553,7 +640,19 @@ fn render_oauth_html_response(success: bool, message: &str) -> Response {
     };
     (
         status,
-        [(axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8")],
+        [
+            (axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8"),
+            (
+                axum::http::header::CONTENT_SECURITY_POLICY,
+                "default-src 'none'; style-src 'unsafe-inline'",
+            ),
+            (axum::http::header::X_FRAME_OPTIONS, "DENY"),
+            (axum::http::header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
+            (
+                axum::http::header::HeaderName::from_static("referrer-policy"),
+                "no-referrer",
+            ),
+        ],
         html,
     )
         .into_response()

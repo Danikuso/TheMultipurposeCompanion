@@ -290,6 +290,17 @@ impl ConfigHost for AppActions {
         updated
             .validate_auto_companion()
             .map_err(|e| ActionError::Failed(e.into()))?;
+
+        // F2 & F19: Preservar rutas del sistema y configuración de infraestructura del servidor
+        {
+            let current = self.config.lock().unwrap();
+            updated.ui_dir = current.ui_dir.clone();
+            updated.data_dir = current.data_dir.clone();
+            updated.journal_dir = current.journal_dir.clone();
+            updated.server.port = current.server.port;
+            updated.server.lan_token = current.server.lan_token.clone();
+        }
+
         if updated.server.lan {
             updated.ensure_lan_token();
         }
@@ -366,6 +377,15 @@ impl ActionHost for AppActions {
                 capi.clear_session()
                     .map_err(|e| ActionError::Failed(e.to_string()))?;
                 Ok(json!({ "ok": true }))
+            }
+            "app.rotate_lan_token" | "server.rotate_lan_token" => {
+                let mut guard = self.config.lock().unwrap();
+                let new_token = guard.rotate_lan_token();
+                let _ = match &self.save_path {
+                    Some(path) => guard.save_to(path),
+                    None => guard.save(),
+                };
+                Ok(json!({ "ok": true, "lan_token": new_token }))
             }
             _ => Err(ActionError::NotFound),
         }

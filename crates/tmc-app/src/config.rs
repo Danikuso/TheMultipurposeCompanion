@@ -171,6 +171,7 @@ impl Config {
                 cfg.sanitize_f3();
                 cfg.sanitize_f4();
                 cfg.sanitize_auto_companion();
+                cfg.sanitize_paths();
                 #[cfg(debug_assertions)]
                 cfg.record_bootstrap(
                     serde_json::json!({"fallback":false,"loaded":true,"normalized":normalized}),
@@ -313,6 +314,32 @@ impl Config {
             ModuleSettings::normalize_auto_priorities(&self.auto_companion_priorities);
     }
 
+    /// Al cargar: descarta rutas inseguras (UNC de red \\ o //) para evitar relay NTLM (F19).
+    fn sanitize_paths(&mut self) {
+        let is_safe = |p: &Path| -> bool {
+            let s = p.to_string_lossy();
+            !s.starts_with(r"\\") && !s.starts_with("//")
+        };
+        if let Some(ref p) = self.ui_dir
+            && !is_safe(p)
+        {
+            tracing::warn!("ui_dir contiene una ruta UNC insegura; se descarta");
+            self.ui_dir = None;
+        }
+        if let Some(ref p) = self.data_dir
+            && !is_safe(p)
+        {
+            tracing::warn!("data_dir contiene una ruta UNC insegura; se descarta");
+            self.data_dir = None;
+        }
+        if let Some(ref p) = self.journal_dir
+            && !is_safe(p)
+        {
+            tracing::warn!("journal_dir contiene una ruta UNC insegura; se descarta");
+            self.journal_dir = None;
+        }
+    }
+
     pub fn save(&self) -> anyhow::Result<()> {
         self.save_to(&config_path())
     }
@@ -381,6 +408,18 @@ impl Config {
         );
         let token = uuid::Uuid::new_v4().as_simple().to_string();
         self.server.lan_token = Some(token.clone());
+        token
+    }
+
+    /// Rota el token LAN generando un nuevo valor aleatorio y registrando el cambio (F18/F21).
+    pub fn rotate_lan_token(&mut self) -> String {
+        let token = uuid::Uuid::new_v4().as_simple().to_string();
+        self.server.lan_token = Some(token.clone());
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "config.lan_token.rotated",
+            serde_json::json!({"rotated":true})
+        );
         token
     }
 }

@@ -174,7 +174,14 @@ pub async fn enforce_security(
         crate::diag::auth_event!("auth.guard.loopback_accepted", {"ws": is_ws});
         req.extensions_mut()
             .insert(ClientTrust { is_loopback: true });
-        return Ok(next.run(req).await);
+        let mut response = next.run(req).await;
+        let headers = response.headers_mut();
+        headers.insert(
+            header::X_CONTENT_TYPE_OPTIONS,
+            HeaderValue::from_static("nosniff"),
+        );
+        headers.insert(header::X_FRAME_OPTIONS, HeaderValue::from_static("DENY"));
+        return Ok(response);
     }
 
     // Petición desde otra IP (LAN)
@@ -226,13 +233,19 @@ pub async fn enforce_security(
     req.extensions_mut()
         .insert(ClientTrust { is_loopback: false });
     let mut response = next.run(req).await;
+    let headers = response.headers_mut();
+    headers.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    headers.insert(header::X_FRAME_OPTIONS, HeaderValue::from_static("DENY"));
     if matched_query {
         let cookie_header = format!(
             "tmc_token={}; Path=/; HttpOnly; SameSite=Strict",
             state.cfg.token
         );
         if let Ok(val) = HeaderValue::from_str(&cookie_header) {
-            response.headers_mut().insert(header::SET_COOKIE, val);
+            headers.insert(header::SET_COOKIE, val);
         }
     }
     Ok(response)

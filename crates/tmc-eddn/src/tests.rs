@@ -323,3 +323,32 @@ fn full_index_rejects_farther_entry() {
     assert_eq!(idx.len(), COORD_INDEX_CAP);
     assert!(idx.get("muylejos").is_none());
 }
+
+#[test]
+fn oversized_strings_in_journal_and_commodity_are_corrupt() {
+    let huge_system = "A".repeat(500);
+    let j = journal(
+        "FSDJump",
+        "2026-01-01T12:00:00Z",
+        &format!(r#""StarSystem":"{huge_system}","StarPos":[1,2,3]"#),
+    );
+    assert_eq!(decode(&j, now()), Decoded::Ignored(DropReason::Corrupt));
+
+    let huge_commodity = format!(
+        r#"{{"$schemaRef":"{COMMODITY_SCHEMA}","header":{{}},"message":{{"timestamp":"2026-01-01T12:00:00Z","systemName":"Lave","stationName":"{huge_system}","marketId":42,"commodities":[]}}}}"#
+    );
+    assert_eq!(
+        decode(&z(&huge_commodity), now()),
+        Decoded::Ignored(DropReason::Corrupt)
+    );
+}
+
+#[test]
+fn coord_index_rejects_oversized_name_and_enforces_byte_limit() {
+    let mut idx = CoordIndex::new();
+    let huge = "X".repeat(200);
+    idx.insert(huge.clone(), None, [1.0, 0.0, 0.0], None);
+    assert_eq!(idx.len(), 0);
+    assert!(idx.get(&huge).is_none());
+    assert!(idx.total_bytes() <= crate::coords::COORD_INDEX_MAX_BYTES);
+}

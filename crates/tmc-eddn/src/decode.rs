@@ -15,6 +15,12 @@ pub const COMMODITY_SCHEMA: &str = "https://eddn.edcd.io/schemas/commodity/3";
 pub const JOURNAL_SCHEMA: &str = "https://eddn.edcd.io/schemas/journal/1";
 pub const MAX_INFLATED_BYTES: usize = 1 << 20;
 
+/// Límites de longitud para cadenas de EDDN (F17: defensa contra agotamiento de memoria).
+pub const MAX_SYSTEM_NAME_LEN: usize = 128;
+pub const MAX_STATION_NAME_LEN: usize = 128;
+pub const MAX_COMMODITY_NAME_LEN: usize = 128;
+pub const MAX_STATION_TYPE_LEN: usize = 64;
+
 const MAX_AGE_DAYS: i64 = 7;
 const FUTURE_TOLERANCE_MIN: i64 = 5;
 
@@ -209,6 +215,16 @@ fn decode_commodity(
         .map_err(|_| DropReason::Corrupt)?
         .message;
     check_time(m.timestamp, now)?;
+    if m.system_name.is_empty()
+        || m.system_name.len() > MAX_SYSTEM_NAME_LEN
+        || m.station_name.is_empty()
+        || m.station_name.len() > MAX_STATION_NAME_LEN
+        || m.commodities
+            .iter()
+            .any(|c| c.name.len() > MAX_COMMODITY_NAME_LEN)
+    {
+        return Err(DropReason::Corrupt);
+    }
     if carriers.contains(m.market_id) || is_fleet_carrier(m.market_id, None, Some(&m.station_name))
     {
         return Err(DropReason::Carrier);
@@ -272,6 +288,14 @@ fn decode_journal(
         return Err(DropReason::Corrupt);
     }
     let system = b.star_system.ok_or(DropReason::Corrupt)?;
+    if system.is_empty() || system.len() > MAX_SYSTEM_NAME_LEN {
+        return Err(DropReason::Corrupt);
+    }
+    if let Some(ref st) = b.station_type
+        && st.len() > MAX_STATION_TYPE_LEN
+    {
+        return Err(DropReason::Corrupt);
+    }
     let coords = b
         .star_pos
         .map(|p| (system.to_lowercase(), b.system_address, p));
@@ -283,6 +307,9 @@ fn decode_journal(
     }
     let market_id = b.market_id.ok_or(DropReason::Corrupt)?;
     let station_name = b.station_name.ok_or(DropReason::Corrupt)?;
+    if station_name.is_empty() || station_name.len() > MAX_STATION_NAME_LEN {
+        return Err(DropReason::Corrupt);
+    }
     if is_fleet_carrier(market_id, b.station_type.as_deref(), Some(&station_name)) {
         carriers.remember(market_id);
         return Err(DropReason::Carrier);

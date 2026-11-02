@@ -1979,4 +1979,81 @@ mod tests {
         assert!(xml_str.contains("<Profile"));
         assert!(xml_str.contains("TMC - The Multipurpose Companion"));
     }
+
+    #[tokio::test]
+    async fn frontier_oauth_callback_escapes_xss_and_sets_csp() {
+        let (app, _core, _store) = test_router(false, "");
+        let req = with_peer(
+            Request::builder()
+                .uri("/api/auth/frontier/callback?error=invalid_request&error_description=%3Cscript%3Ealert(1)%3C/script%3E")
+                .header(header::HOST, "127.0.0.1:47320")
+                .body(Body::empty())
+                .unwrap(),
+            "127.0.0.1:55000",
+        );
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        // Cabeceras de seguridad indispensables (F1)
+        assert_eq!(
+            resp.headers().get(header::CONTENT_SECURITY_POLICY).unwrap(),
+            "default-src 'none'; style-src 'unsafe-inline'"
+        );
+        assert_eq!(resp.headers().get(header::X_FRAME_OPTIONS).unwrap(), "DENY");
+        assert_eq!(
+            resp.headers().get(header::X_CONTENT_TYPE_OPTIONS).unwrap(),
+            "nosniff"
+        );
+
+        let body = axum::body::to_bytes(resp.into_body(), 1024 * 64)
+            .await
+            .unwrap();
+        let html = std::str::from_utf8(&body).unwrap();
+        assert!(!html.contains("<script>alert(1)</script>"));
+        assert!(!html.contains("<script>"));
+    }
+
+    #[tokio::test]
+    async fn lan_client_cannot_modify_server_or_infrastructure_config() {
+        let (app, _core, _store) = test_router(true, "0123456789abcdef0123456789abcdef");
+        let payload = serde_json::json!({
+            "ui_dir": "C:\\malicious",
+            "server": {
+                "port": 9999,
+                "lan": false
+            }
+        });
+        let req = with_peer(
+            Request::builder()
+                .method("PUT")
+                .uri("/api/config")
+                .header(header::HOST, "192.168.1.50:47320")
+                .header(header::COOKIE, "tmc_token=0123456789abcdef0123456789abcdef")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(payload.to_string()))
+                .unwrap(),
+            "192.168.1.100:55000",
+        );
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn all_responses_include_security_headers() {
+        let (app, _core, _store) = test_router(false, "");
+        let req = with_peer(
+            Request::builder()
+                .uri("/api/health")
+                .header(header::HOST, "127.0.0.1:47320")
+                .body(Body::empty())
+                .unwrap(),
+            "127.0.0.1:55000",
+        );
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(
+            resp.headers().get(header::X_CONTENT_TYPE_OPTIONS).unwrap(),
+            "nosniff"
+        );
+        assert_eq!(resp.headers().get(header::X_FRAME_OPTIONS).unwrap(), "DENY");
+    }
 }

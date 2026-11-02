@@ -86,13 +86,19 @@ impl FrameSource for ZmqSource {
 
     fn recv(&mut self, timeout: Duration) -> Result<Option<Vec<u8>>, EddnError> {
         let sock = self.sock.as_mut().ok_or(EddnError::NotConnected)?;
-        match self
-            .rt
-            .block_on(async { tokio::time::timeout(timeout, sock.recv()).await })
-        {
-            Err(_) => Ok(None),
-            Ok(Err(e)) => Err(terr(e)),
-            Ok(Ok(msg)) => {
+        // F20: catch_unwind ante posibles pánicos en zeromq por tramas corruptas o reservas desmedidas
+        let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            self.rt
+                .block_on(async { tokio::time::timeout(timeout, sock.recv()).await })
+        }));
+        match res {
+            Err(_) => {
+                self.disconnect();
+                Err(EddnError::Transport("zeromq frame decode panic".into()))
+            }
+            Ok(Err(_)) => Ok(None),
+            Ok(Ok(Err(e))) => Err(terr(e)),
+            Ok(Ok(Ok(msg))) => {
                 let parts: Vec<&[u8]> = msg.iter().map(|b| b.as_ref()).collect();
                 Ok(Some(frame_from_parts(&parts)))
             }
