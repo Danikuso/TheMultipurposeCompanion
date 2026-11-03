@@ -29,6 +29,11 @@
       "pad": "L"
     },
     {
+      "name": "Anaconda Mk II",
+      "symbol": "anacondamkii",
+      "pad": "L"
+    },
+    {
       "name": "Asp Explorer",
       "symbol": "asp",
       "pad": "M"
@@ -161,7 +166,7 @@
     {
       "name": "Lynx Highliner",
       "symbol": "lynx_highliner",
-      "pad": "L"
+      "pad": "M"
     },
     {
       "name": "Mamba",
@@ -206,7 +211,7 @@
     {
       "name": "Type-11 Prospector",
       "symbol": "type11",
-      "pad": "L"
+      "pad": "M"
     },
     {
       "name": "Type-6 Transporter",

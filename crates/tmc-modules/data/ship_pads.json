@@ -5,17 +5,27 @@
  "entries": [
   {
    "ship": "sidewinder",
-   "name": "Sidewinder Mk I",
+   "name": "Sidewinder",
    "pad": "S",
    "source": "hecho del juego (pantalla de astillero), transcrito por TMC 2026-10-18 Sin verificar: se contrastara con los Loadouts del propietario mediante eval (Task 27).",
-   "verified": false
+   "verified": false,
+   "aliases": [
+    "sidewinder_mk_i",
+    "sidewindermki",
+    "sidewindermk1"
+   ]
   },
   {
    "ship": "eagle",
-   "name": "Eagle Mk II",
+   "name": "Eagle",
    "pad": "S",
    "source": "hecho del juego (pantalla de astillero), transcrito por TMC 2026-10-18 Sin verificar: se contrastara con los Loadouts del propietario mediante eval (Task 27).",
-   "verified": false
+   "verified": false,
+   "aliases": [
+    "eagle_mk_ii",
+    "eaglemkii",
+    "eaglemk2"
+   ]
   },
   {
    "ship": "hauler",
@@ -285,9 +295,9 @@
   {
    "ship": "type8",
    "name": "Type-8 Transporter",
-   "pad": "L",
-   "source": "hecho del juego (pantalla de astillero), transcrito por TMC 2026-10-18 Sin verificar: se contrastara con los Loadouts del propietario mediante eval (Task 27).",
-   "verified": false
+   "pad": "M",
+   "source": "hecho del juego (pantalla de astillero y especificaciones oficiales), verificado TMC 2026-11-04.",
+   "verified": true
   },
   {
    "ship": "explorer_nx",
@@ -338,15 +348,21 @@
    "source": "hecho del juego (pantalla de astillero), transcrito por TMC 2026-10-18 Sin verificar: se contrastara con los Loadouts del propietario mediante eval (Task 27).",
    "verified": false,
    "aliases": [
-    "kestrel_mkii"
+    "kestrel_mkii",
+    "smallcombat01_nx",
+    "smallcombat01"
    ]
   },
   {
    "ship": "type11",
    "name": "Type-11 Prospector",
-   "pad": "L",
-   "source": "hecho del juego (pantalla de astillero), transcrito por TMC 2026-10-18 Sin verificar: se contrastara con los Loadouts del propietario mediante eval (Task 27). Tamano incierto: se prefiere el mayor para no ofrecer estaciones donde no puede acoplar.",
-   "verified": false
+   "pad": "M",
+   "source": "hecho del juego (pantalla de astillero y especificaciones oficiales), verificado TMC 2026-11-04.",
+   "verified": true,
+   "aliases": [
+    "lakonminer",
+    "lakon_miner"
+   ]
   },
   {
    "ship": "vulture",
@@ -354,6 +370,28 @@
    "pad": "S",
    "source": "hecho del juego (pantalla de astillero), transcrito por TMC 2026-10-18. Sin verificar: se contrastara con los Loadouts del propietario mediante eval (Task 27).",
    "verified": false
+  },
+  {
+   "ship": "lynx_highliner",
+   "name": "Lynx Highliner",
+   "pad": "M",
+   "source": "hecho del juego (pantalla de astillero y diario v4.4+), verificado TMC 2026-11-04.",
+   "verified": true,
+   "aliases": [
+    "mediumtransport01",
+    "mediumtransport_01"
+   ]
+  },
+  {
+   "ship": "anacondamkii",
+   "name": "Anaconda Mk II",
+   "pad": "L",
+   "source": "hecho del juego (pantalla de astillero y diario v4.4+), verificado TMC 2026-11-04.",
+   "verified": true,
+   "aliases": [
+    "anaconda_mkii",
+    "anacondamk2"
+   ]
   }
  ],
  "note": "Todas las entradas estan sin verificar; se contrastaran con los Loadouts del propietario mediante eval (Task 27)."

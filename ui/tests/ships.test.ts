@@ -9,9 +9,14 @@ describe('ships', () => {
   });
 
   it('formats canonical ships correctly', () => {
+    expect(formatShipName('sidewinder')).toBe('Sidewinder');
+    expect(formatShipName('sidewindermk1')).toBe('Sidewinder');
+    expect(formatShipName('eagle')).toBe('Eagle');
+    expect(formatShipName('eaglemk2')).toBe('Eagle');
     expect(formatShipName('mandalay')).toBe('Mandalay');
     expect(formatShipName('mandalay', null)).toBe('Mandalay');
     expect(formatShipName('cobramkiii')).toBe('Cobra Mk III');
+    expect(formatShipName('cobramkv')).toBe('Cobra Mk V');
     expect(formatShipName('diamondbackxl')).toBe('Diamondback Explorer');
     expect(formatShipName('independant_trader')).toBe('Keelback');
     expect(formatShipName('independent_trader')).toBe('Keelback');
@@ -26,8 +31,9 @@ describe('ships', () => {
     expect(formatShipName('typex_2')).toBe('Alliance Crusader');
     expect(formatShipName('typex_3')).toBe('Alliance Challenger');
     expect(formatShipName('type6')).toBe('Type-6 Transporter');
-    expect(formatShipName('MediumTransport01')).toBe('Type-6 Transporter');
-    expect(formatShipName('mediumtransport01')).toBe('Type-6 Transporter');
+    expect(formatShipName('MediumTransport01')).toBe('Lynx Highliner');
+    expect(formatShipName('mediumtransport01')).toBe('Lynx Highliner');
+    expect(formatShipName('lynx_highliner')).toBe('Lynx Highliner');
     expect(formatShipName('MediumTransport02')).toBe('Keelback');
     expect(formatShipName('viper')).toBe('Viper Mk III');
     expect(formatShipName('Viper')).toBe('Viper Mk III');
@@ -36,11 +42,15 @@ describe('ships', () => {
     expect(formatShipName('type8')).toBe('Type-8 Transporter');
     expect(formatShipName('type9')).toBe('Type-9 Heavy');
     expect(formatShipName('type11')).toBe('Type-11 Prospector');
+    expect(formatShipName('lakonminer')).toBe('Type-11 Prospector');
     expect(formatShipName('ferdelance')).toBe('Fer-de-Lance');
     expect(formatShipName('belugaliner')).toBe('Beluga Liner');
     expect(formatShipName('vulture')).toBe('Vulture');
     expect(formatShipName('kestrel_mkii')).toBe('Kestrel Mk II');
+    expect(formatShipName('smallcombat01_nx')).toBe('Kestrel Mk II');
     expect(formatShipName('corsair')).toBe('Corsair');
+    expect(formatShipName('anacondamkii')).toBe('Anaconda Mk II');
+    expect(formatShipName('anaconda_mkii')).toBe('Anaconda Mk II');
   });
 
   it('filters out raw unlocalized $ tokens and resolves canonical name', () => {

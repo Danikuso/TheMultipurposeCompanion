@@ -25,9 +25,9 @@ fn apply_journal(m: &mut ShipModule, state: &mut GameState, raw_json: &str) -> T
 }
 
 #[test]
-fn embedded_catalog_contains_48_ships_153_modules_and_permits() {
+fn embedded_catalog_contains_49_ships_153_modules_and_permits() {
     let cat = crate::data::outfitting_catalog();
-    assert_eq!(cat.ships.len(), 48);
+    assert_eq!(cat.ships.len(), 49);
     assert_eq!(cat.modules.len(), 153);
     assert_eq!(cat.classes, vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
     assert_eq!(cat.ratings.len(), 9);
@@ -72,7 +72,7 @@ fn syncs_commander_system_pad_elite_rank_and_pledged_power_into_catalog_topic() 
     );
 
     let v = m.topic_value(TOPIC_CATALOG).unwrap();
-    assert_eq!(v["ships"].as_array().unwrap().len(), 48);
+    assert_eq!(v["ships"].as_array().unwrap().len(), 49);
     assert_eq!(v["commander"]["current_system"], "Cubeo");
     assert_eq!(v["commander"]["current_ship_pad"], "Medium");
     assert_eq!(v["commander"]["pledged_power"], "Aisling Duval");

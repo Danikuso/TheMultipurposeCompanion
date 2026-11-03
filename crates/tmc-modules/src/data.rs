@@ -1821,7 +1821,7 @@ mod tests {
     fn every_ship_pad_entry_has_source_and_valid_pad() {
         let p = ship_pads();
         assert!(p.entries.len() >= 40, "{}", p.entries.len());
-        assert_eq!(p.entries.len(), 47);
+        assert_eq!(p.entries.len(), 49);
         for e in &p.entries {
             assert!(!e.source.is_empty(), "{}", e.ship);
             assert!(!e.name.is_empty(), "{}", e.ship);
@@ -1880,7 +1880,13 @@ mod tests {
             ("python", PadSize::Medium),
             ("cobramkiii", PadSize::Small),
             ("vulture", PadSize::Small),
-            ("type11", PadSize::Large),
+            ("type8", PadSize::Medium),
+            ("type11", PadSize::Medium),
+            ("lakonminer", PadSize::Medium),
+            ("lynx_highliner", PadSize::Medium),
+            ("mediumtransport01", PadSize::Medium),
+            ("anacondamkii", PadSize::Large),
+            ("anaconda_mkii", PadSize::Large),
             ("explorer_nx", PadSize::Large),
         ] {
             assert_eq!(p.pad_for(ship), Some(pad), "{ship}");
@@ -1888,6 +1894,11 @@ mod tests {
         assert_eq!(p.display_name("independant_trader"), Some("Keelback"));
         assert_eq!(p.pad_for("Kestrel_MkII"), Some(PadSize::Small));
         assert_eq!(p.display_name("kestrel_mkii"), Some("Kestrel Mk II"));
+        assert_eq!(p.display_name("smallcombat01_nx"), Some("Kestrel Mk II"));
+        assert_eq!(p.display_name("mediumtransport01"), Some("Lynx Highliner"));
+        assert_eq!(p.display_name("anacondamkii"), Some("Anaconda Mk II"));
+        assert_eq!(p.display_name("sidewinder"), Some("Sidewinder"));
+        assert_eq!(p.display_name("eagle"), Some("Eagle"));
     }
 
     #[test]

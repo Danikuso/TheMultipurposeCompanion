@@ -208,7 +208,7 @@ export function resolveManufacturer(shipType?: string | null): { key: string; na
   }
 
   // Core Dynamics
-  if (s.includes('corvette') || s.includes('gunship') || s.includes('dropship') || s.includes('assaultship') || s.includes('vulture') || s.includes('eagle') || s.includes('kestrel')) {
+  if (s.includes('corvette') || s.includes('gunship') || s.includes('dropship') || s.includes('assaultship') || s.includes('vulture') || s.includes('eagle') || s.includes('kestrel') || s.includes('smallcombat')) {
     return { key: 'core-dynamics', ...MANUFACTURERS['core-dynamics'] };
   }
 
@@ -218,14 +218,14 @@ export function resolveManufacturer(shipType?: string | null): { key: string; na
   }
 
   // Zorgon Peterson
-  if (s.includes('ferdelance') || s.includes('fdl') || s.includes('mamba') || s.includes('hauler') || s.includes('adder') || s.includes('mandalay') || s.includes('panther')) {
+  if (s.includes('ferdelance') || s.includes('fdl') || s.includes('mamba') || s.includes('hauler') || s.includes('adder') || s.includes('mandalay') || s.includes('panther') || s.includes('lynx') || s.includes('mediumtransport01') || s.includes('caspian') || s.includes('explorernx')) {
     return { key: 'zorgon-peterson', ...MANUFACTURERS['zorgon-peterson'] };
   }
 
   // Lakon
-  if (s.includes('type6') || s.includes('type7') || s.includes('type8') || s.includes('type9') || s.includes('type10') || s.includes('type11') ||
+  if (s.includes('type6') || s.includes('type7') || s.includes('type8') || s.includes('type9') || s.includes('type10') || s.includes('type11') || s.includes('lakonminer') ||
       s.includes('asp') || s.includes('diamondback') || s.includes('keelback') || s.includes('independanttrader') || s.includes('independenttrader') ||
-      s.includes('chieftain') || s.includes('crusader') || s.includes('challenger') || s.includes('typex') || s.includes('mediumtransport')) {
+      s.includes('chieftain') || s.includes('crusader') || s.includes('challenger') || s.includes('typex') || s.includes('mediumtransport02')) {
     return { key: 'lakon', ...MANUFACTURERS['lakon'] };
   }
 

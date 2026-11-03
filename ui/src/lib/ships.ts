@@ -4,9 +4,9 @@
  */
 
 export const CANONICAL_SHIPS: Record<string, string> = {
-  // Small Ships
-  sidewinder: 'Sidewinder Mk I',
-  eagle: 'Eagle Mk II',
+  // Small Ships (Pad S)
+  sidewinder: 'Sidewinder',
+  eagle: 'Eagle',
   hauler: 'Hauler',
   adder: 'Adder',
   viper: 'Viper Mk III',
@@ -19,16 +19,21 @@ export const CANONICAL_SHIPS: Record<string, string> = {
   empire_courier: 'Imperial Courier',
   dolphin: 'Dolphin',
   vulture: 'Vulture',
+  smallcombat01_nx: 'Kestrel Mk II',
   kestrel: 'Kestrel Mk II',
   kestrel_mkii: 'Kestrel Mk II',
   cobramkv: 'Cobra Mk V',
 
-  // Medium Ships
+  // Medium Ships (Pad M)
   asp: 'Asp Explorer',
   asp_scout: 'Asp Scout',
   independant_trader: 'Keelback',
   type6: 'Type-6 Transporter',
-  mediumtransport01: 'Type-6 Transporter',
+  type8: 'Type-8 Transporter',
+  type11: 'Type-11 Prospector',
+  lakonminer: 'Type-11 Prospector',
+  mediumtransport01: 'Lynx Highliner',
+  lynx_highliner: 'Lynx Highliner',
   mediumtransport02: 'Keelback',
   mediumtransport: 'Type-6 Transporter',
   typex: 'Alliance Chieftain',
@@ -46,18 +51,18 @@ export const CANONICAL_SHIPS: Record<string, string> = {
   mandalay: 'Mandalay',
   corsair: 'Corsair',
 
-  // Large Ships
+  // Large Ships (Pad L)
   type7: 'Type-7 Transporter',
-  type8: 'Type-8 Transporter',
   type9: 'Type-9 Heavy',
   type9_military: 'Type-10 Defender',
-  type11: 'Type-11 Prospector',
   empire_trader: 'Imperial Clipper',
   orca: 'Orca',
   belugaliner: 'Beluga Liner',
   federation_corvette: 'Federal Corvette',
   cutter: 'Imperial Cutter',
   anaconda: 'Anaconda',
+  anacondamkii: 'Anaconda Mk II',
+  anaconda_mkii: 'Anaconda Mk II',
   explorer_nx: 'Caspian Explorer',
   panthermkii: 'Panther Clipper Mk II',
 
@@ -108,10 +113,14 @@ const ALIASES: Record<string, string> = {
   pythonmk2: 'Python Mk II',
 
   // Type-6 & Keelback
-  mediumtransport01: 'Type-6 Transporter',
   mediumtransport02: 'Keelback',
   mediumtransport: 'Type-6 Transporter',
   type6transporter: 'Type-6 Transporter',
+
+  // Lynx Highliner
+  lynxhighliner: 'Lynx Highliner',
+  lynx: 'Lynx Highliner',
+  mediumtransport01: 'Lynx Highliner',
 
   // Krait Phantom
   kraitphantom: 'Krait Phantom',
@@ -122,6 +131,9 @@ const ALIASES: Record<string, string> = {
   // Type-10
   type10: 'Type-10 Defender',
   type10defender: 'Type-10 Defender',
+
+  // Type-8
+  type8transporter: 'Type-8 Transporter',
 
   // Diamondback Explorer / Scout
   diamondbackexplorer: 'Diamondback Explorer',
@@ -163,15 +175,23 @@ const ALIASES: Record<string, string> = {
   cobramk5: 'Cobra Mk V',
   vipermk3: 'Viper Mk III',
   vipermk4: 'Viper Mk IV',
-  eaglemk2: 'Eagle Mk II',
-  sidewindermk1: 'Sidewinder Mk I',
+  eaglemk2: 'Eagle',
+  eaglemkii: 'Eagle',
+  sidewindermk1: 'Sidewinder',
+  sidewindermki: 'Sidewinder',
 
   // Modern / New Ships
   caspian: 'Caspian Explorer',
   caspianexplorer: 'Caspian Explorer',
   pantherclipper: 'Panther Clipper Mk II',
   pantherclippermkii: 'Panther Clipper Mk II',
+  type11: 'Type-11 Prospector',
   type11prospector: 'Type-11 Prospector',
+  lakonminer: 'Type-11 Prospector',
+  smallcombat01nx: 'Kestrel Mk II',
+  smallcombat01: 'Kestrel Mk II',
+  anacondamkii: 'Anaconda Mk II',
+  anacondamk2: 'Anaconda Mk II',
 };
 
 for (const [alias, name] of Object.entries(ALIASES)) {

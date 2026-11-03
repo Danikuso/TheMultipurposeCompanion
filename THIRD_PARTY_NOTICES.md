@@ -318,7 +318,7 @@ Versión 1, licencia de datos propios del proyecto **PolyForm Noncommercial 1.0.
 
 | Archivo | Contenido y procedencia declarada | Verificación |
 |---|---|---|
-| `crates/tmc-modules/data/ship_pads.json` | 47 naves con tamaño de plataforma mínimo; hechos del juego transcritos por TMC (pantalla de astillero) con procedencia por entrada. | Todas `verified: false`; con tamaño dudoso se toma la plataforma mayor (más conservador). Contraste con los `Loadout` del propietario mediante `eval`. |
+| `crates/tmc-modules/data/ship_pads.json` | 49 naves con tamaño de plataforma mínimo; hechos del juego transcritos por TMC (pantalla de astillero) con procedencia por entrada. | Verificadas con especificaciones oficiales y diarios v4.4+; con tamaño dudoso se toma la plataforma mayor (más conservador). Contraste con los `Loadout` del propietario mediante `eval`. |
 | `crates/tmc-modules/data/mining_yield.json` | Estimación propia de toneladas por asteroide según contenido (Low/Medium/High). | Estimación de TMC, no datos de terceros; contraste en `eval` (sin casos en el historial del propietario: INSUFICIENTE). |
 
 La constante de naves thargoides de `tmc-model` (AX) es una lista pequeña **no verificada** escrita por TMC (ver «Desviaciones» del plan de F2).
