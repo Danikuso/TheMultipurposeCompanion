@@ -45,21 +45,142 @@ struct JournalReader {
     tail: Option<LineTailer>,
 }
 
+fn file_contains_commander(path: &Path) -> bool {
+    let Ok(file) = std::fs::File::open(path) else {
+        return false;
+    };
+    use std::io::{BufRead, BufReader};
+    let reader = BufReader::new(file);
+    for (idx, line) in reader.lines().enumerate() {
+        if idx >= 100 {
+            break;
+        }
+        let Ok(text) = line else { break };
+        if let Ok(ev) = parse_line(&text)
+            && ev.name == "Commander"
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn drain_tailer(tail: &mut LineTailer, replaying: bool, events: &mut Vec<SourceEvent>) -> bool {
+    let lines = match tail.read_new_lines() {
+        Ok(lines) => lines,
+        Err(error) => {
+            tracing::warn!(failure_class = ?error.kind(), "could not read journal");
+            return false;
+        }
+    };
+    let file = tail
+        .path()
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .into_owned();
+    #[cfg(debug_assertions)]
+    if !lines.is_empty() {
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "journal.reader.batch",
+            tmc_model::diagnostics::json!({"file":tmc_model::diagnostics::source_file(tail.path()),"lines":lines.len(),"replaying":replaying,"offset":tail.offset()})
+        );
+    }
+    for (line, text) in lines {
+        match parse_line(&text) {
+            Ok(ev) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Journal { event: &ev.name },
+                    "journal.reader.parsed",
+                    tmc_model::diagnostics::json!({"event":ev.name,"line":line,"replaying":replaying,"is_other":matches!(ev.kind,EventKind::Other),"file":tmc_model::diagnostics::source_file(tail.path())})
+                );
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::Journal { event: &ev.name },
+                    "journal.reader.payload",
+                    &ev.raw
+                );
+                events.push(SourceEvent::Journal {
+                    ev,
+                    file: file.clone(),
+                    line,
+                    replaying,
+                });
+            }
+            Err(_error) => {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::State,
+                    "journal.reader.invalid",
+                    tmc_model::diagnostics::json!({"file":tmc_model::diagnostics::source_file(tail.path()),"line":line,"bytes":text.len(),"failure_class":match _error {tmc_model::ParseError::Empty=>"empty",tmc_model::ParseError::Json(_)=>"json",tmc_model::ParseError::MissingField(_)=>"missing_field"}})
+                );
+                tracing::warn!(line, "invalid journal line skipped");
+            }
+        }
+    }
+    true
+}
+
 impl JournalReader {
-    fn startup(dir: PathBuf) -> Self {
-        let tail = match list_journals(&dir) {
-            Ok(paths) => paths.last().and_then(|p| Self::open(p)),
+    fn startup(dir: PathBuf) -> (Self, Vec<SourceEvent>) {
+        let paths = match list_journals(&dir) {
+            Ok(paths) => paths,
             Err(error) => {
                 tracing::warn!(failure_class = ?error.kind(), "could not list journals");
-                None
+                Vec::new()
             }
         };
+        let tail = paths.last().and_then(|p| Self::open(p));
         tmc_model::diagnostic!(
             tmc_model::diagnostics::DiagnosticContext::State,
             "journal.reader.started",
             tmc_model::diagnostics::json!({"selected":tail.is_some(),"file":tail.as_ref().map(|t|tmc_model::diagnostics::source_file(t.path()))})
         );
-        Self { dir, tail }
+        let mut reader = Self { dir, tail };
+        let mut events = Vec::new();
+        reader.drain(true, &mut events);
+
+        // Si el diario más reciente no contiene evento "Commander" (p. ej. el juego acaba de arrancar
+        // y solo ha emitido Fileheader, o fue una sesión abortada de 221 bytes en el menú),
+        // buscamos hacia atrás el diario más reciente que sí contenga "Commander" y precargamos
+        // sus eventos de forma histórica antes de los del diario actual.
+        let has_commander = events
+            .iter()
+            .any(|ev| matches!(ev, SourceEvent::Journal { ev, .. } if ev.name == "Commander"));
+
+        if !has_commander && paths.len() >= 2 {
+            let current_path = reader.tail.as_ref().map(|t| t.path());
+            let previous_candidates: Vec<&PathBuf> = paths
+                .iter()
+                .filter(|p| current_path.is_none_or(|curr| *p != curr))
+                .collect();
+
+            for prev_path in previous_candidates.into_iter().rev() {
+                if file_contains_commander(prev_path)
+                    && let Some(mut prev_tail) = Self::open(prev_path)
+                {
+                    let mut prev_events = Vec::new();
+                    drain_tailer(&mut prev_tail, true, &mut prev_events);
+                    tracing::info!(
+                        fallback = %prev_path.display(),
+                        events = prev_events.len(),
+                        "latest journal has no commander; seeded initial state from previous session"
+                    );
+                    tmc_model::diagnostic!(
+                        tmc_model::diagnostics::DiagnosticContext::State,
+                        "journal.reader.fallback_commander",
+                        tmc_model::diagnostics::json!({
+                            "fallback_file": tmc_model::diagnostics::source_file(prev_path),
+                            "events_prepended": prev_events.len()
+                        })
+                    );
+                    prev_events.append(&mut events);
+                    events = prev_events;
+                    break;
+                }
+            }
+        }
+
+        (reader, events)
     }
 
     fn open(path: &Path) -> Option<LineTailer> {
@@ -76,58 +197,7 @@ impl JournalReader {
         let Some(tail) = &mut self.tail else {
             return true;
         };
-        let lines = match tail.read_new_lines() {
-            Ok(lines) => lines,
-            Err(error) => {
-                tracing::warn!(failure_class = ?error.kind(), "could not read journal");
-                return false;
-            }
-        };
-        let file = tail
-            .path()
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .into_owned();
-        #[cfg(debug_assertions)]
-        if !lines.is_empty() {
-            tmc_model::diagnostic!(
-                tmc_model::diagnostics::DiagnosticContext::State,
-                "journal.reader.batch",
-                tmc_model::diagnostics::json!({"file":tmc_model::diagnostics::source_file(tail.path()),"lines":lines.len(),"replaying":replaying,"offset":tail.offset()})
-            );
-        }
-        for (line, text) in lines {
-            match parse_line(&text) {
-                Ok(ev) => {
-                    tmc_model::diagnostic!(
-                        tmc_model::diagnostics::DiagnosticContext::Journal { event: &ev.name },
-                        "journal.reader.parsed",
-                        tmc_model::diagnostics::json!({"event":ev.name,"line":line,"replaying":replaying,"is_other":matches!(ev.kind,EventKind::Other),"file":tmc_model::diagnostics::source_file(tail.path())})
-                    );
-                    tmc_model::diagnostic!(
-                        tmc_model::diagnostics::DiagnosticContext::Journal { event: &ev.name },
-                        "journal.reader.payload",
-                        &ev.raw
-                    );
-                    events.push(SourceEvent::Journal {
-                        ev,
-                        file: file.clone(),
-                        line,
-                        replaying,
-                    });
-                }
-                Err(_error) => {
-                    tmc_model::diagnostic!(
-                        tmc_model::diagnostics::DiagnosticContext::State,
-                        "journal.reader.invalid",
-                        tmc_model::diagnostics::json!({"file":tmc_model::diagnostics::source_file(tail.path()),"line":line,"bytes":text.len(),"failure_class":match _error {tmc_model::ParseError::Empty=>"empty",tmc_model::ParseError::Json(_)=>"json",tmc_model::ParseError::MissingField(_)=>"missing_field"}})
-                    );
-                    tracing::warn!(line, "invalid journal line skipped");
-                }
-            }
-        }
-        true
+        drain_tailer(tail, replaying, events)
     }
 
     fn poll(&mut self, scan: bool, replaying: bool) -> Vec<SourceEvent> {
@@ -370,11 +440,7 @@ async fn run(opts: WatchOptions, tx: mpsc::Sender<SourceEvent>) {
     let startup = tokio::select! {
         biased;
         _ = tx.closed() => return,
-        result = tokio::task::spawn_blocking(move || {
-            let mut reader = JournalReader::startup(dir);
-            let events = reader.poll(false, true);
-            (reader, events)
-        }) => result,
+        result = tokio::task::spawn_blocking(move || JournalReader::startup(dir)) => result,
     };
     let Ok((mut reader, events)) = startup else {
         tmc_model::diagnostic!(
@@ -685,6 +751,80 @@ mod tests {
         fs::write(dir.path().join(B), line(2)).unwrap();
         let (mut rx, handle) = start(dir.path());
         assert_eq!(journal(&mut rx).await, ("Test2".into(), B.into(), 1, true));
+        theme(&mut rx).await;
+        stop(rx, handle).await;
+    }
+
+    #[tokio::test]
+    async fn watcher_replays_previous_journal_when_latest_has_no_commander() {
+        let dir = tempdir().unwrap();
+        let fileheader_a =
+            "{\"timestamp\":\"2026-10-17T18:00:00Z\",\"event\":\"Fileheader\",\"part\":1}\n";
+        let cmdr_line = "{\"timestamp\":\"2026-10-17T18:00:01Z\",\"event\":\"Commander\",\"Name\":\"DANIKUSO\"}\n";
+        let fileheader_b =
+            "{\"timestamp\":\"2026-10-17T18:05:00Z\",\"event\":\"Fileheader\",\"part\":1}\n";
+
+        fs::write(dir.path().join(A), format!("{fileheader_a}{cmdr_line}")).unwrap();
+        fs::write(dir.path().join(B), fileheader_b).unwrap();
+
+        let (mut rx, handle) = start(dir.path());
+        assert_eq!(
+            journal(&mut rx).await,
+            ("Fileheader".into(), A.into(), 1, true)
+        );
+        assert_eq!(
+            journal(&mut rx).await,
+            ("Commander".into(), A.into(), 2, true)
+        );
+        assert_eq!(
+            journal(&mut rx).await,
+            ("Fileheader".into(), B.into(), 1, true)
+        );
+        theme(&mut rx).await;
+
+        let live_line = "{\"timestamp\":\"2026-10-17T18:05:10Z\",\"event\":\"Location\",\"StarSystem\":\"Sol\"}\n";
+        OpenOptions::new()
+            .append(true)
+            .open(dir.path().join(B))
+            .unwrap()
+            .write_all(live_line.as_bytes())
+            .unwrap();
+
+        assert_eq!(
+            journal(&mut rx).await,
+            ("Location".into(), B.into(), 2, false)
+        );
+        stop(rx, handle).await;
+    }
+
+    #[tokio::test]
+    async fn watcher_finds_commander_across_multiple_empty_intermediate_journals() {
+        let dir = tempdir().unwrap();
+        const C: &str = "Journal.2026-10-17T180200.01.log";
+        let fileheader_a =
+            "{\"timestamp\":\"2026-10-17T18:00:00Z\",\"event\":\"Fileheader\",\"part\":1}\n";
+        let cmdr_line = "{\"timestamp\":\"2026-10-17T18:00:01Z\",\"event\":\"Commander\",\"Name\":\"DANIKUSO\"}\n";
+        let abortive_b = "{\"timestamp\":\"2026-10-17T18:01:00Z\",\"event\":\"Fileheader\",\"part\":1}\n{\"timestamp\":\"2026-10-17T18:01:10Z\",\"event\":\"Shutdown\"}\n";
+        let fileheader_c =
+            "{\"timestamp\":\"2026-10-17T18:02:00Z\",\"event\":\"Fileheader\",\"part\":1}\n";
+
+        fs::write(dir.path().join(A), format!("{fileheader_a}{cmdr_line}")).unwrap();
+        fs::write(dir.path().join(B), abortive_b).unwrap();
+        fs::write(dir.path().join(C), fileheader_c).unwrap();
+
+        let (mut rx, handle) = start(dir.path());
+        assert_eq!(
+            journal(&mut rx).await,
+            ("Fileheader".into(), A.into(), 1, true)
+        );
+        assert_eq!(
+            journal(&mut rx).await,
+            ("Commander".into(), A.into(), 2, true)
+        );
+        assert_eq!(
+            journal(&mut rx).await,
+            ("Fileheader".into(), C.into(), 1, true)
+        );
         theme(&mut rx).await;
         stop(rx, handle).await;
     }
