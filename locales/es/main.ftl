@@ -203,6 +203,7 @@ cmdr-game-mode-group-generic = Grupo privado
 cmdr-rebuy = Recompra nave
 cmdr-copy-name = Copiar nombre
 cmdr-copied = ¡Copiado!
+cmdr-rank-max = Máx.
 field-coordinates = Coordenadas
 field-distance-sol = Distancia a Sol
 field-security = Seguridad

@@ -316,7 +316,10 @@ describe('dashboard panels', () => {
     expect(target.textContent).toContain(t('cmdr-loan'));
     expect(target.textContent).toContain(t('cmdr-rebuy'));
     expect(target.textContent).toContain(t('combat-rank-2'));
+    expect(target.textContent).toContain(t('combat-rank-3'));
     expect(target.textContent).toContain(t('trade-rank-6'));
+    expect(target.textContent).toContain(t('trade-rank-7'));
+    expect(target.textContent).toContain('Novice / Competent (67 %)');
   });
 
   test('location panel displays galactic telemetry, legal state, superpower and coordinates', () => {

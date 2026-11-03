@@ -47,6 +47,13 @@
   const cmdr = $derived(topic<CmdrTopic>('core.cmdr'));
   const ship = $derived(topic<ShipTopic>('core.ship'));
 
+  function getMaxRank(key: keyof RanksMap): number {
+    if (key === 'federation' || key === 'empire') {
+      return 14;
+    }
+    return 13; // Elite V
+  }
+
   function getRankTitle(key: keyof RanksMap, val: number): string {
     if (key === 'combat' || key === 'trade' || key === 'explore' || key === 'soldier' || key === 'exobiologist' || key === 'cqc') {
       if (val > 8) {
@@ -58,6 +65,12 @@
     const keyName = `${key}-rank-${val}`;
     const localized = t(keyName);
     return localized !== keyName ? localized : String(val);
+  }
+
+  function getNextRankTitle(key: keyof RanksMap, val: number): string | null {
+    const max = getMaxRank(key);
+    if (val >= max) return null;
+    return getRankTitle(key, val + 1);
   }
 
   let copied = $state(false);
@@ -139,12 +152,22 @@
             {#each group.keys as key (key)}
               {@const rankVal = cmdr.ranks?.[key] ?? 0}
               {@const progVal = Math.min(100, Math.max(0, cmdr.progress?.[key] ?? 0))}
-              {@const title = getRankTitle(key, rankVal)}
+              {@const currentTitle = getRankTitle(key, rankVal)}
+              {@const nextTitle = getNextRankTitle(key, rankVal)}
+              {@const tooltip = nextTitle
+                ? `${t(`rank-${key}`)}: ${currentTitle} (Nv. ${rankVal}) / ${nextTitle} (Nv. ${rankVal + 1}) · ${progVal} %`
+                : `${t(`rank-${key}`)}: ${currentTitle} (Nv. ${rankVal} · ${t('cmdr-rank-max')}) · ${progVal} %`}
               <div class="rank-row" data-rank-key={key}>
                 <div class="rank-meta">
                   <span class="rank-name">{t(`rank-${key}`)}</span>
-                  <span class="rank-num" title="{title} ({progVal} %)">
-                    <span class="rank-title-text">{title}</span>
+                  <span class="rank-num" title={tooltip}>
+                    <span class="rank-title-text">{currentTitle}</span>
+                    {#if nextTitle}
+                      <span class="rank-sep">/</span>
+                      <span class="rank-next-text">{nextTitle}</span>
+                    {:else}
+                      <span class="rank-max-pill font-mono">[{t('cmdr-rank-max')}]</span>
+                    {/if}
                     <span class="rank-pct">({progVal} %)</span>
                   </span>
                 </div>
@@ -315,20 +338,42 @@
     font-family: var(--font-mono);
     color: var(--hud-text);
     text-align: right;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.15rem 0.25rem;
   }
 
   .rank-title-text {
-    color: var(--hud-text);
+    color: #fff;
     font-weight: 600;
   }
 
-  .rank-pct {
+  .rank-sep {
     color: var(--hud-muted);
+    opacity: 0.6;
+    margin: 0 0.05rem;
+    user-select: none;
+  }
+
+  .rank-next-text {
+    color: var(--hud-muted);
+    font-size: 0.73rem;
+  }
+
+  .rank-max-pill {
+    color: var(--hud-primary);
+    font-size: 0.68rem;
+    font-weight: 700;
+    margin: 0 0.1rem;
+  }
+
+  .rank-pct {
+    color: var(--hud-primary, #ff7100);
+    font-weight: 600;
     font-size: 0.72rem;
-    margin-left: 0.2rem;
+    margin-left: 0.15rem;
   }
 
   .bar-track {
