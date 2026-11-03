@@ -204,6 +204,7 @@ cmdr-rebuy = Recompra de nave
 cmdr-copy-name = Copiar nome
 cmdr-copied = Copiado!
 cmdr-rank-max = Máx.
+cmdr-rank-promo-ready = Promoção disponível!
 field-coordinates = Coordenadas
 field-distance-sol = Distância a Sol
 field-security = Segurança

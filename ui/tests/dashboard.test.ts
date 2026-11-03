@@ -316,10 +316,17 @@ describe('dashboard panels', () => {
     expect(target.textContent).toContain(t('cmdr-loan'));
     expect(target.textContent).toContain(t('cmdr-rebuy'));
     expect(target.textContent).toContain(t('combat-rank-2'));
-    expect(target.textContent).toContain(t('combat-rank-3'));
+    expect(target.textContent).toContain('150 / 180 pts (67 %)');
     expect(target.textContent).toContain(t('trade-rank-6'));
-    expect(target.textContent).toContain(t('trade-rank-7'));
-    expect(target.textContent).toContain('Novice / Competent (67 %)');
+    expect(target.textContent).toContain('239.2 M / 390.0 M CR (42 %)');
+    expect(target.textContent).toContain('86.7 M / 90.0 M CR (94 %)');
+    expect(target.textContent).toContain('40 k / 100 k CR (40 %)');
+    expect(target.textContent).toContain('~6 / 22 mis. (25 %)');
+    expect(target.textContent).toContain(t('cmdr-rank-promo-ready'));
+
+    const combatNum = target.querySelector('[data-rank-key="combat"] .rank-num');
+    expect(combatNum?.getAttribute('title')).toContain(t('combat-rank-3'));
+    expect(combatNum?.getAttribute('title')).toContain('falta: 30 pts');
   });
 
   test('location panel displays galactic telemetry, legal state, superpower and coordinates', () => {

@@ -44,6 +44,62 @@
     },
   ];
 
+  interface RankProcessConfig {
+    unit: string;
+    thresholds: number[];
+    prestigeStep?: number;
+  }
+
+  interface RankProcessInfo {
+    currentFmt: string;
+    targetFmt: string;
+    remainingFmt: string;
+    unit: string;
+    isMax: boolean;
+    isPromoReady: boolean;
+  }
+
+  const RANK_CONFIGS: Record<keyof RanksMap, RankProcessConfig> = {
+    trade: {
+      unit: 'CR',
+      thresholds: [0, 20_000, 150_000, 1_000_000, 5_000_000, 25_000_000, 130_000_000, 390_000_000, 1_050_000_000],
+      prestigeStep: 1_050_000_000,
+    },
+    explore: {
+      unit: 'CR',
+      thresholds: [0, 20_000, 270_000, 1_000_000, 5_000_000, 35_000_000, 90_000_000, 180_000_000, 320_000_000],
+      prestigeStep: 320_000_000,
+    },
+    exobiologist: {
+      unit: 'CR',
+      thresholds: [0, 250_000, 1_000_000, 4_500_000, 17_500_000, 68_000_000, 310_000_000, 1_450_000_000, 8_500_000_000],
+      prestigeStep: 8_500_000_000,
+    },
+    soldier: {
+      unit: 'CR',
+      thresholds: [0, 100_000, 500_000, 2_500_000, 11_000_000, 45_000_000, 180_000_000, 600_000_000, 2_500_000_000],
+      prestigeStep: 2_500_000_000,
+    },
+    combat: {
+      unit: 'pts',
+      thresholds: [0, 40, 90, 180, 360, 720, 1_200, 2_400, 4_400],
+      prestigeStep: 2_200,
+    },
+    cqc: {
+      unit: 'XP',
+      thresholds: [0, 2_400, 12_000, 36_000, 84_000, 168_000, 300_000, 492_000, 750_000],
+      prestigeStep: 375_000,
+    },
+    federation: {
+      unit: 'mis.',
+      thresholds: [2, 4, 7, 11, 16, 22, 30, 40, 52, 66, 82, 100, 120, 145, 175],
+    },
+    empire: {
+      unit: 'mis.',
+      thresholds: [2, 4, 7, 11, 16, 22, 30, 40, 52, 66, 82, 100, 120, 145, 175],
+    },
+  };
+
   const cmdr = $derived(topic<CmdrTopic>('core.cmdr'));
   const ship = $derived(topic<ShipTopic>('core.ship'));
 
@@ -71,6 +127,104 @@
     const max = getMaxRank(key);
     if (val >= max) return null;
     return getRankTitle(key, val + 1);
+  }
+
+  function formatRankQty(val: number, unit: string): string {
+    if (val === 0) return '0';
+    if (unit === 'CR') {
+      if (val >= 1_000_000_000) {
+        const num = val / 1_000_000_000;
+        const formatted = num >= 10 ? num.toFixed(1) : num.toFixed(num % 1 === 0 ? 0 : (Math.round(num * 10) % 10 === 0 ? 1 : 2));
+        return `${formatted} B`;
+      }
+      if (val >= 1_000_000) {
+        const num = val / 1_000_000;
+        return `${num.toFixed(1)} M`;
+      }
+      if (val >= 1_000) {
+        const num = val / 1_000;
+        return `${num.toFixed(num % 1 === 0 ? 0 : 1)} k`;
+      }
+      return String(Math.round(val));
+    }
+    if (unit === 'XP') {
+      if (val >= 1_000_000) {
+        return `${(val / 1_000_000).toFixed(1)} M`;
+      }
+      if (val >= 10_000) {
+        const num = val / 1_000;
+        return `${num.toFixed(num % 1 === 0 ? 0 : 1)} k`;
+      }
+      return val.toLocaleString('es-ES');
+    }
+    if (unit === 'pts') {
+      if (val >= 10_000) {
+        return `${(val / 1_000).toFixed(1)} k`;
+      }
+      return String(Math.round(val));
+    }
+    if (unit === 'mis.') {
+      return String(Math.round(val));
+    }
+    return String(Math.round(val));
+  }
+
+  function getRankProcess(key: keyof RanksMap, rankVal: number, progVal: number): RankProcessInfo {
+    const max = getMaxRank(key);
+    const isMax = rankVal >= max;
+    const isPromoReady = !isMax && progVal >= 100;
+    const cfg = RANK_CONFIGS[key];
+    const unit = cfg.unit;
+
+    if (isMax) {
+      return {
+        currentFmt: '',
+        targetFmt: '',
+        remainingFmt: '',
+        unit,
+        isMax: true,
+        isPromoReady: false,
+      };
+    }
+
+    if (key === 'federation' || key === 'empire') {
+      const targetMissions = cfg.thresholds[rankVal] ?? 20;
+      const currentMissions = Math.round(targetMissions * (progVal / 100));
+      const remainingMissions = Math.max(0, targetMissions - currentMissions);
+      return {
+        currentFmt: `~${currentMissions}`,
+        targetFmt: `${targetMissions}`,
+        remainingFmt: `~${remainingMissions}`,
+        unit,
+        isMax: false,
+        isPromoReady,
+      };
+    }
+
+    let base = 0;
+    let target = 0;
+    if (rankVal < 8) {
+      base = cfg.thresholds[rankVal] ?? 0;
+      target = cfg.thresholds[rankVal + 1] ?? base;
+    } else {
+      const prestige = rankVal - 8;
+      const step = cfg.prestigeStep ?? 0;
+      base = (cfg.thresholds[8] ?? 0) + prestige * step;
+      target = base + step;
+    }
+
+    const delta = target - base;
+    const current = base + delta * (progVal / 100);
+    const remaining = Math.max(0, target - current);
+
+    return {
+      currentFmt: formatRankQty(current, unit),
+      targetFmt: formatRankQty(target, unit),
+      remainingFmt: formatRankQty(remaining, unit),
+      unit,
+      isMax: false,
+      isPromoReady,
+    };
   }
 
   let copied = $state(false);
@@ -154,25 +308,35 @@
               {@const progVal = Math.min(100, Math.max(0, cmdr.progress?.[key] ?? 0))}
               {@const currentTitle = getRankTitle(key, rankVal)}
               {@const nextTitle = getNextRankTitle(key, rankVal)}
-              {@const tooltip = nextTitle
-                ? `${t(`rank-${key}`)}: ${currentTitle} (Nv. ${rankVal}) / ${nextTitle} (Nv. ${rankVal + 1}) · ${progVal} %`
-                : `${t(`rank-${key}`)}: ${currentTitle} (Nv. ${rankVal} · ${t('cmdr-rank-max')}) · ${progVal} %`}
+              {@const process = getRankProcess(key, rankVal, progVal)}
+              {@const tooltip = process.isPromoReady
+                ? `${t(`rank-${key}`)}: ${currentTitle} (Nv. ${rankVal}) · ${t('cmdr-rank-promo-ready')} · 100 %`
+                : process.isMax
+                  ? `${t(`rank-${key}`)}: ${currentTitle} (Nv. ${rankVal} · ${t('cmdr-rank-max')}) · 100 %`
+                  : `${t(`rank-${key}`)}: ${currentTitle} (Nv. ${rankVal}) → ${nextTitle} (Nv. ${rankVal + 1}) · ${process.currentFmt} / ${process.targetFmt} ${process.unit} (falta: ${process.remainingFmt} ${process.unit}) · ${progVal} %`}
               <div class="rank-row" data-rank-key={key}>
                 <div class="rank-meta">
-                  <span class="rank-name">{t(`rank-${key}`)}</span>
+                  <div class="rank-name-col">
+                    <span class="rank-name">{t(`rank-${key}`)}</span>
+                    <span class="rank-current-badge">{currentTitle}</span>
+                  </div>
                   <span class="rank-num" title={tooltip}>
-                    <span class="rank-title-text">{currentTitle}</span>
-                    {#if nextTitle}
-                      <span class="rank-sep">/</span>
-                      <span class="rank-next-text">{nextTitle}</span>
-                    {:else}
+                    {#if process.isPromoReady}
+                      <span class="rank-promo-pill font-mono">{t('cmdr-rank-promo-ready')}</span>
+                      <span class="rank-pct">({progVal} %)</span>
+                    {:else if process.isMax}
                       <span class="rank-max-pill font-mono">[{t('cmdr-rank-max')}]</span>
+                      <span class="rank-pct">({progVal} %)</span>
+                    {:else}
+                      <span class="rank-val-current">{process.currentFmt}</span>
+                      <span class="rank-sep">/</span>
+                      <span class="rank-val-target">{process.targetFmt} {process.unit}</span>
+                      <span class="rank-pct">({progVal} %)</span>
                     {/if}
-                    <span class="rank-pct">({progVal} %)</span>
                   </span>
                 </div>
                 <div class="bar-track">
-                  <div class="bar-fill" style="width: {progVal}%"></div>
+                  <div class="bar-fill" class:bar-fill-promo={process.isPromoReady} style="width: {progVal}%"></div>
                 </div>
               </div>
             {/each}
@@ -325,6 +489,15 @@
     color: var(--hud-muted);
     margin-bottom: 0.15rem;
     gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .rank-name-col {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    min-width: 0;
   }
 
   .rank-name {
@@ -332,6 +505,17 @@
     font-size: 0.7rem;
     letter-spacing: 0.04em;
     flex-shrink: 0;
+  }
+
+  .rank-current-badge {
+    font-size: 0.68rem;
+    padding: 0.05rem 0.35rem;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--hud-border-subtle);
+    color: var(--hud-text);
+    white-space: nowrap;
+    line-height: 1.2;
   }
 
   .rank-num {
@@ -342,10 +526,10 @@
     align-items: baseline;
     justify-content: flex-end;
     flex-wrap: wrap;
-    gap: 0.15rem 0.25rem;
+    gap: 0.15rem 0.2rem;
   }
 
-  .rank-title-text {
+  .rank-val-current {
     color: #fff;
     font-weight: 600;
   }
@@ -357,7 +541,7 @@
     user-select: none;
   }
 
-  .rank-next-text {
+  .rank-val-target {
     color: var(--hud-muted);
     font-size: 0.73rem;
   }
@@ -367,6 +551,12 @@
     font-size: 0.68rem;
     font-weight: 700;
     margin: 0 0.1rem;
+  }
+
+  .rank-promo-pill {
+    color: var(--hud-success, #34d399);
+    font-weight: 700;
+    font-size: 0.72rem;
   }
 
   .rank-pct {
@@ -388,5 +578,9 @@
     height: 100%;
     background: var(--hud-primary);
     transition: width 150ms ease;
+  }
+
+  .bar-fill-promo {
+    background: var(--hud-success, #34d399) !important;
   }
 </style>

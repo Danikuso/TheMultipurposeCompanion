@@ -204,6 +204,7 @@ cmdr-rebuy = Schiffsrückkauf
 cmdr-copy-name = Name kopieren
 cmdr-copied = Kopiert!
 cmdr-rank-max = Max.
+cmdr-rank-promo-ready = Beförderung bereit!
 field-coordinates = Koordinaten
 field-distance-sol = Entfernung zu Sol
 field-security = Sicherheit
