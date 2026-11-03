@@ -151,15 +151,16 @@
       if (val >= 1_000_000) {
         return `${(val / 1_000_000).toFixed(1)} M`;
       }
-      if (val >= 10_000) {
+      if (val >= 1_000) {
         const num = val / 1_000;
         return `${num.toFixed(num % 1 === 0 ? 0 : 1)} k`;
       }
-      return val.toLocaleString('es-ES');
+      return String(Math.round(val));
     }
     if (unit === 'pts') {
-      if (val >= 10_000) {
-        return `${(val / 1_000).toFixed(1)} k`;
+      if (val >= 1_000) {
+        const num = val / 1_000;
+        return `${num.toFixed(num % 1 === 0 ? 0 : 1)} k`;
       }
       return String(Math.round(val));
     }
@@ -314,26 +315,26 @@
                 : process.isMax
                   ? `${t(`rank-${key}`)}: ${currentTitle} (Nv. ${rankVal} · ${t('cmdr-rank-max')}) · 100 %`
                   : `${t(`rank-${key}`)}: ${currentTitle} (Nv. ${rankVal}) → ${nextTitle} (Nv. ${rankVal + 1}) · ${process.currentFmt} / ${process.targetFmt} ${process.unit} (falta: ${process.remainingFmt} ${process.unit}) · ${progVal} %`}
-              <div class="rank-row" data-rank-key={key}>
-                <div class="rank-meta">
-                  <div class="rank-name-col">
-                    <span class="rank-name">{t(`rank-${key}`)}</span>
-                    <span class="rank-current-badge">{currentTitle}</span>
-                  </div>
-                  <span class="rank-num" title={tooltip}>
-                    {#if process.isPromoReady}
-                      <span class="rank-promo-pill font-mono">{t('cmdr-rank-promo-ready')}</span>
-                      <span class="rank-pct">({progVal} %)</span>
-                    {:else if process.isMax}
-                      <span class="rank-max-pill font-mono">[{t('cmdr-rank-max')}]</span>
-                      <span class="rank-pct">({progVal} %)</span>
-                    {:else}
-                      <span class="rank-val-current">{process.currentFmt}</span>
-                      <span class="rank-sep">/</span>
-                      <span class="rank-val-target">{process.targetFmt} {process.unit}</span>
-                      <span class="rank-pct">({progVal} %)</span>
-                    {/if}
-                  </span>
+              <div class="rank-card" data-rank-key={key}>
+                <div class="rank-header-row">
+                  <span class="rank-name">{t(`rank-${key}`)}</span>
+                  <span class="rank-current-badge">{currentTitle}</span>
+                </div>
+                <div class="rank-values-row rank-num" title={tooltip}>
+                  {#if process.isPromoReady}
+                    <span class="rank-promo-pill font-mono">{t('cmdr-rank-promo-ready')}</span>
+                    <span class="rank-pct font-mono">100 %</span>
+                  {:else if process.isMax}
+                    <span class="rank-max-pill font-mono">[{t('cmdr-rank-max')}]</span>
+                    <span class="rank-pct font-mono">100 %</span>
+                  {:else}
+                    <span class="rank-quant-val font-mono">
+                      <strong class="val-curr">{process.currentFmt}</strong>
+                      <span class="val-sep">/</span>
+                      <span class="val-target">{process.targetFmt} {process.unit}</span>
+                    </span>
+                    <span class="rank-pct font-mono">({progVal} %)</span>
+                  {/if}
                 </div>
                 <div class="bar-track">
                   <div class="bar-fill" class:bar-fill-promo={process.isPromoReady} style="width: {progVal}%"></div>
@@ -478,37 +479,42 @@
   .ranks-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem 0.75rem;
+    gap: 0.45rem 0.65rem;
   }
 
-  .rank-meta {
+  .rank-card {
+    background: rgba(22, 28, 45, 0.45);
+    border: 1px solid var(--hud-border-subtle);
+    border-radius: 4px;
+    padding: 0.4rem 0.55rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    transition: border-color 150ms ease;
+  }
+
+  .rank-card:hover {
+    border-color: rgba(255, 113, 0, 0.35);
+  }
+
+  .rank-header-row {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
-    font-size: 0.75rem;
-    color: var(--hud-muted);
-    margin-bottom: 0.15rem;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-  }
-
-  .rank-name-col {
-    display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    flex-wrap: wrap;
-    min-width: 0;
   }
 
   .rank-name {
     text-transform: uppercase;
-    font-size: 0.7rem;
-    letter-spacing: 0.04em;
-    flex-shrink: 0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--hud-muted);
   }
 
   .rank-current-badge {
     font-size: 0.68rem;
+    font-weight: 600;
     padding: 0.05rem 0.35rem;
     border-radius: 2px;
     background: rgba(255, 255, 255, 0.06);
@@ -518,60 +524,66 @@
     line-height: 1.2;
   }
 
-  .rank-num {
-    font-family: var(--font-mono);
-    color: var(--hud-text);
-    text-align: right;
-    display: inline-flex;
+  .rank-values-row {
+    display: flex;
+    justify-content: space-between;
     align-items: baseline;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    gap: 0.15rem 0.2rem;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    gap: 0.35rem;
   }
 
-  .rank-val-current {
+  .rank-quant-val {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.15rem;
+    white-space: nowrap;
+  }
+
+  .val-curr {
     color: #fff;
     font-weight: 600;
   }
 
-  .rank-sep {
+  .val-sep {
     color: var(--hud-muted);
     opacity: 0.6;
     margin: 0 0.05rem;
-    user-select: none;
   }
 
-  .rank-val-target {
+  .val-target {
     color: var(--hud-muted);
-    font-size: 0.73rem;
-  }
-
-  .rank-max-pill {
-    color: var(--hud-primary);
-    font-size: 0.68rem;
-    font-weight: 700;
-    margin: 0 0.1rem;
+    font-size: 0.72rem;
   }
 
   .rank-promo-pill {
     color: var(--hud-success, #34d399);
     font-weight: 700;
     font-size: 0.72rem;
+    white-space: nowrap;
+  }
+
+  .rank-max-pill {
+    color: var(--hud-primary);
+    font-size: 0.7rem;
+    font-weight: 700;
   }
 
   .rank-pct {
     color: var(--hud-primary, #ff7100);
     font-weight: 600;
     font-size: 0.72rem;
-    margin-left: 0.15rem;
+    margin-left: auto;
+    white-space: nowrap;
   }
 
   .bar-track {
-    height: 5px;
+    height: 4px;
     background: var(--hud-bg);
-    border: 1px solid var(--hud-border);
+    border: 1px solid var(--hud-border-subtle);
     border-radius: 2px;
     overflow: hidden;
+    margin-top: 0.05rem;
   }
 
   .bar-fill {
@@ -582,5 +594,11 @@
 
   .bar-fill-promo {
     background: var(--hud-success, #34d399) !important;
+  }
+
+  @media (max-width: 640px) {
+    .ranks-grid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
