@@ -322,7 +322,9 @@ impl Config {
             ModuleSettings::normalize_auto_priorities(&self.auto_companion_priorities);
     }
 
-    /// Al cargar: descarta rutas inseguras (UNC de red \\ o //) para evitar relay NTLM (F19).
+    /// Al cargar: descarta rutas inseguras (UNC de red \\ o //) para ui_dir y data_dir (F19).
+    /// `journal_dir` se preserva porque es legítimo acceder a los diarios de Elite Dangerous
+    /// a través de una carpeta compartida de red (UNC) en tabletas o equipos secundarios (issue #4).
     fn sanitize_paths(&mut self) {
         let is_safe = |p: &Path| -> bool {
             let s = p.to_string_lossy();
@@ -339,12 +341,6 @@ impl Config {
         {
             tracing::warn!("data_dir contiene una ruta UNC insegura; se descarta");
             self.data_dir = None;
-        }
-        if let Some(ref p) = self.journal_dir
-            && !is_safe(p)
-        {
-            tracing::warn!("journal_dir contiene una ruta UNC insegura; se descarta");
-            self.journal_dir = None;
         }
     }
 

@@ -209,20 +209,25 @@ lan = false
     }
 
     #[test]
-    fn config_sanitizes_unc_paths() {
+    fn config_sanitizes_unc_paths_for_ui_and_data_but_preserves_journal_dir() {
         let dir = tempdir().unwrap();
         let path = dir.path().join("config.toml");
         let toml_str = r#"
 language = "es"
 ui_dir = "\\\\attacker\\share\\ui"
 data_dir = "//attacker/share/data"
-journal_dir = "\\\\evil\\leak"
+journal_dir = "\\\\Desktop-PC\\Saved Games\\Frontier Developments\\Elite Dangerous"
 "#;
         std::fs::write(&path, toml_str).unwrap();
         let loaded = Config::load_from_or_default(&path);
         assert_eq!(loaded.ui_dir, None);
         assert_eq!(loaded.data_dir, None);
-        assert_eq!(loaded.journal_dir, None);
+        assert_eq!(
+            loaded.journal_dir,
+            Some(std::path::PathBuf::from(
+                r"\\Desktop-PC\Saved Games\Frontier Developments\Elite Dangerous"
+            ))
+        );
     }
 
     #[test]

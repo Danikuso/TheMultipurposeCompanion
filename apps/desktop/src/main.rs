@@ -45,7 +45,15 @@ fn main() -> anyhow::Result<()> {
     let _log_guard = init_logging(&log_dir);
     _log_guard.application_started();
 
-    let running = tauri::async_runtime::block_on(start(config))?;
+    let running = match tauri::async_runtime::block_on(start(config)) {
+        Ok(running) => running,
+        Err(err) => {
+            tracing::error!("error al iniciar TMC: {err:?}");
+            #[cfg(windows)]
+            show_startup_error(&err);
+            return Err(err);
+        }
+    };
     let local_url: Url = running.server.local_url.parse()?;
     let single_instance_url = local_url.clone();
 
@@ -86,4 +94,40 @@ fn main() -> anyhow::Result<()> {
     });
 
     Ok(())
+}
+
+#[cfg(windows)]
+fn show_startup_error(err: &anyhow::Error) {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+
+    let message = format!(
+        "No se pudo iniciar TMC — The Multipurpose Companion:\n\n{err}\n\n\
+        Si juegas en otro equipo y accedes a los registros por red compartida,\n\
+        comprueba que la carpeta esté accesible y que 'journal_dir' en config.toml sea correcto."
+    );
+
+    let wide_title: Vec<u16> = OsStr::new("TMC — Error al iniciar")
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let wide_msg: Vec<u16> = OsStr::new(&message)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    #[link(name = "user32")]
+    unsafe extern "system" {
+        fn MessageBoxW(hwnd: isize, lpText: *const u16, lpCaption: *const u16, uType: u32) -> i32;
+    }
+    const MB_OK: u32 = 0x00000000;
+    const MB_ICONERROR: u32 = 0x00000010;
+    unsafe {
+        MessageBoxW(
+            0,
+            wide_msg.as_ptr(),
+            wide_title.as_ptr(),
+            MB_OK | MB_ICONERROR,
+        );
+    }
 }
