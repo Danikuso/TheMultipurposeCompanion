@@ -27,7 +27,7 @@ impl Default for ServerSection {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
     pub journal_dir: Option<PathBuf>,
@@ -71,6 +71,12 @@ pub struct Config {
     pub data_dir: Option<PathBuf>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ui_dir: Option<PathBuf>,
+    /// Sistema estelar determinado como Base de operaciones.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub home_system: Option<String>,
+    /// Coordenadas estelares [x, y, z] en años luz de la Base de operaciones.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub home_system_coords: Option<[f64; 3]>,
 }
 
 impl Default for Config {
@@ -98,6 +104,8 @@ impl Default for Config {
                 .collect(),
             mining_threshold_cr: 1_000_000,
             sell_search_radius_ly: 100,
+            home_system: None,
+            home_system_coords: None,
             eddn_radius_ly: 200,
             tourism_reference_cr_ly: 100_000,
             engineering_rolls: DEFAULT_ENGINEERING_ROLLS,
@@ -192,7 +200,7 @@ impl Config {
 
     #[cfg(any(debug_assertions, test))]
     pub(crate) fn diagnostic_snapshot(&self) -> serde_json::Value {
-        serde_json::json!({"language":self.language,"port":self.server.port,"lan":self.server.lan,"online_services":self.online_services,"alerts_enabled":self.alerts_enabled,"auto_copy_next_system":self.auto_copy_next_system,"auto_companion":self.auto_companion,"map_value_threshold":self.map_value_threshold,"default_neutron_efficiency":self.default_neutron_efficiency,"mining_interest_count":self.mining_interest.len(),"mining_threshold_cr":self.mining_threshold_cr,"sell_search_radius_ly":self.sell_search_radius_ly,"eddn_radius_ly":self.eddn_radius_ly,"tourism_reference_cr_ly":self.tourism_reference_cr_ly,"engineering_rolls":self.engineering_rolls,"journal_configured":self.journal_dir.is_some(),"data_configured":self.data_dir.is_some(),"ui_configured":self.ui_dir.is_some()})
+        serde_json::json!({"language":self.language,"port":self.server.port,"lan":self.server.lan,"online_services":self.online_services,"alerts_enabled":self.alerts_enabled,"auto_copy_next_system":self.auto_copy_next_system,"auto_companion":self.auto_companion,"map_value_threshold":self.map_value_threshold,"default_neutron_efficiency":self.default_neutron_efficiency,"mining_interest_count":self.mining_interest.len(),"mining_threshold_cr":self.mining_threshold_cr,"sell_search_radius_ly":self.sell_search_radius_ly,"eddn_radius_ly":self.eddn_radius_ly,"tourism_reference_cr_ly":self.tourism_reference_cr_ly,"engineering_rolls":self.engineering_rolls,"journal_configured":self.journal_dir.is_some(),"data_configured":self.data_dir.is_some(),"ui_configured":self.ui_dir.is_some(),"home_system":self.home_system})
     }
 
     #[cfg(debug_assertions)]
@@ -386,6 +394,8 @@ impl Config {
             auto_companion_voice_cues: self.auto_companion_voice_cues,
             auto_companion_sound_cues: self.auto_companion_sound_cues,
             auto_companion_predictive: self.auto_companion_predictive,
+            home_system: self.home_system.clone(),
+            home_system_coords: self.home_system_coords,
         }
     }
 

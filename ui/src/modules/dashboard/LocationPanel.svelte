@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
+  import { prefs, setHomeBase } from '../../lib/prefs.svelte';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
   import { pushToast } from '../../shell/Toasts.svelte';
@@ -60,6 +61,33 @@
   const distSol = $derived(
     coords ? Math.hypot(coords[0], coords[1], coords[2]).toFixed(1) : null
   );
+
+  const isCurrentSystemHome = $derived(
+    Boolean(
+      loc?.system &&
+      prefs.homeSystem &&
+      loc.system.trim().toLowerCase() === prefs.homeSystem.trim().toLowerCase()
+    )
+  );
+
+  const distBase = $derived.by(() => {
+    if (!coords || !prefs.homeSystemCoords || prefs.homeSystemCoords.length < 3) return null;
+    const [x1, y1, z1] = coords;
+    const [x2, y2, z2] = prefs.homeSystemCoords;
+    return Math.hypot(x1 - x2, y1 - y2, z1 - z2).toFixed(1);
+  });
+
+  function toggleHomeBase() {
+    if (!loc?.system) return;
+    if (isCurrentSystemHome) {
+      void setHomeBase(null, null);
+      pushToast(t('location-home-base-cleared'), 'Info');
+    } else {
+      const starPos = loc.star_pos ?? (loc.system.toLowerCase() === 'sol' ? [0, 0, 0] : null);
+      void setHomeBase(loc.system, starPos);
+      pushToast(t('location-home-base-set', { system: loc.system }), 'Info');
+    }
+  }
 
   const legalState = $derived(status?.legal_state ?? status?.LegalState ?? null);
   const lat = $derived(status?.latitude ?? status?.Latitude ?? null);
@@ -129,11 +157,29 @@
             >
               {copied ? '✓' : '📋'}
             </button>
+            <button
+              type="button"
+              class="home-btn"
+              class:is-home={isCurrentSystemHome}
+              title={isCurrentSystemHome ? t('location-home-base-active') : t('location-set-home-base')}
+              onclick={toggleHomeBase}
+              data-testid="toggle-home-base-btn"
+            >
+              {isCurrentSystemHome ? '🏠' : '📍'}
+            </button>
+            {#if isCurrentSystemHome}
+              <span class="badge home-badge">{t('field-home-base')}</span>
+            {/if}
           </div>
           {#if coords}
             <div class="coords-row font-mono" title="{t('field-coordinates')}: [{coords[0].toFixed(1)}, {coords[1].toFixed(1)}, {coords[2].toFixed(1)}] AL">
               <span class="coords-val">[{coords[0].toFixed(1)}, {coords[1].toFixed(1)}, {coords[2].toFixed(1)}] AL</span>
-              {#if distSol}
+              {#if isCurrentSystemHome}
+                <span class="dist-base base-current">· 🏠 {t('field-home-base')}</span>
+              {:else if distBase != null && prefs.homeSystem}
+                <span class="dist-base" data-testid="dist-base">· {distBase} AL {t('field-distance-base', { system: prefs.homeSystem })}</span>
+              {/if}
+              {#if distSol && (!prefs.homeSystem || prefs.homeSystem.toLowerCase() !== 'sol')}
                 <span class="dist-sol">· {distSol} AL {t('field-distance-sol')}</span>
               {/if}
             </div>
@@ -298,6 +344,47 @@
   .copy-btn:hover {
     border-color: var(--hud-primary);
     color: var(--hud-primary);
+  }
+
+  .home-btn {
+    background: transparent;
+    border: 1px solid var(--hud-border-subtle);
+    color: var(--hud-muted);
+    border-radius: 3px;
+    padding: 0.1rem 0.35rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    line-height: 1;
+    transition: all 120ms ease;
+  }
+
+  .home-btn:hover {
+    border-color: var(--hud-primary);
+    color: var(--hud-primary);
+  }
+
+  .home-btn.is-home {
+    border-color: var(--hud-cyan, #38bdf8);
+    background: rgba(56, 189, 248, 0.12);
+  }
+
+  .home-badge {
+    font-size: 0.68rem;
+    padding: 0.08rem 0.35rem;
+    border-radius: 3px;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid var(--hud-cyan, #38bdf8);
+    color: var(--hud-cyan, #38bdf8);
+    font-weight: 600;
+  }
+
+  .dist-base {
+    color: var(--hud-cyan, #38bdf8);
+    font-weight: 600;
+  }
+
+  .base-current {
+    color: var(--hud-success, #34d399);
   }
 
   .coords-row {

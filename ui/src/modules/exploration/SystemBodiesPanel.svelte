@@ -1,6 +1,7 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
   import { credits, isScoopable, num1, pct, starClassLabel } from '../../lib/format';
+  import { prefs } from '../../lib/prefs.svelte';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
   import VirtualList from '../../shell/VirtualList.svelte';
@@ -45,6 +46,21 @@
     const [x, y, z] = loc.star_pos;
     return Math.hypot(x, y, z).toFixed(1);
   });
+
+  const distBase = $derived.by(() => {
+    if (!loc?.star_pos || loc.star_pos.length < 3 || !prefs.homeSystemCoords || prefs.homeSystemCoords.length < 3) return null;
+    const [x1, y1, z1] = loc.star_pos;
+    const [x2, y2, z2] = prefs.homeSystemCoords;
+    return Math.hypot(x1 - x2, y1 - y2, z1 - z2).toFixed(1);
+  });
+
+  const isCurrentSystemHome = $derived(
+    Boolean(
+      loc?.system &&
+      prefs.homeSystem &&
+      loc.system.trim().toLowerCase() === prefs.homeSystem.trim().toLowerCase()
+    )
+  );
 
   const terraformableCount = $derived(
     system?.terraformable_count ?? 
@@ -133,7 +149,12 @@
           {#if system.system_address}
             <span class="sub-pill">{t('exploration-system-address')}: <span class="mono">#{system.system_address}</span></span>
           {/if}
-          {#if distSol}
+          {#if isCurrentSystemHome}
+            <span class="sub-pill home-pill">🏠 {t('field-home-base')}</span>
+          {:else if distBase != null && prefs.homeSystem}
+            <span class="sub-pill home-dist-pill">{distBase} AL {t('field-distance-base', { system: prefs.homeSystem })}</span>
+          {/if}
+          {#if distSol && (!prefs.homeSystem || prefs.homeSystem.toLowerCase() !== 'sol')}
             <span class="sub-pill">{t('exploration-distance-sol')}: <span class="mono">{distSol} AL</span></span>
           {/if}
         </div>
@@ -292,6 +313,16 @@
     border: 1px solid var(--hud-border-subtle);
     border-radius: 3px;
     padding: 0.1rem 0.4rem;
+  }
+  .home-pill {
+    color: var(--hud-cyan, #38bdf8);
+    border-color: rgba(56, 189, 248, 0.4);
+    background: rgba(56, 189, 248, 0.08);
+    font-weight: 600;
+  }
+  .home-dist-pill {
+    color: var(--hud-cyan, #38bdf8);
+    font-weight: 600;
   }
   .mono { font-family: var(--font-mono); }
 

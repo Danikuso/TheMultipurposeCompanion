@@ -93,17 +93,8 @@ const MANUAL: string[] = [
   'powerplay',
 ];
 
-export const DEFAULT_PRIORITIES: string[] = [
-  'carrier',
-  'combat',
-  'colonisation',
-  'mining',
-  'engineering',
-  'missions',
-  'trade',
-  'powerplay',
-  'exploration',
-];
+import { DEFAULT_PRIORITIES } from './priorities';
+export { DEFAULT_PRIORITIES };
 
 /** Disposición elegida por relevancia: bloqueo táctico (null) > manual > prioridades configurables > null. */
 export function autoLayout(

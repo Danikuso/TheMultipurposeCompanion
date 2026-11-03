@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ModuleSettings {
     pub alerts_enabled: bool,
@@ -37,6 +37,12 @@ pub struct ModuleSettings {
     /// Anticipación predictiva (aproximación a anillos, atraque, interdicción).
     #[serde(default = "default_true")]
     pub auto_companion_predictive: bool,
+    /// Sistema estelar determinado como Base de operaciones.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub home_system: Option<String>,
+    /// Coordenadas estelares [x, y, z] en años luz de la Base de operaciones.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub home_system_coords: Option<[f64; 3]>,
 }
 
 /// Disposiciones automáticas y orden estándar por defecto.
@@ -129,6 +135,8 @@ impl Default for ModuleSettings {
             auto_companion_voice_cues: false,
             auto_companion_sound_cues: true,
             auto_companion_predictive: true,
+            home_system: None,
+            home_system_coords: None,
         }
     }
 }

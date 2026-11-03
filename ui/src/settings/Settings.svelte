@@ -61,6 +61,8 @@
     tourism_reference_cr_ly?: number;
     engineering_rolls?: number[];
     tts?: TtsSettingsDto;
+    home_system?: string | null;
+    home_system_coords?: [number, number, number] | null;
     server?: {
       port?: number;
       lan?: boolean;
@@ -73,6 +75,8 @@
   let onlineServices = $state(true);
   let mapThreshold = $state<number | undefined>(500000);
   let plannerEfficiency = $state<number | undefined>(60);
+  let homeSystem = $state(prefs.homeSystem ?? '');
+  let homeSystemCoords = $state<[number, number, number] | null>(prefs.homeSystemCoords);
   let lanEnabled = $state(false);
   let miningInterest = $state<string[]>([...DEFAULT_MINERALS]);
   let eddnRadius = $state<number | undefined>(200);
@@ -102,6 +106,46 @@
   function resetPriorities() {
     autoPriorities = [...DEFAULT_PRIORITIES];
     prefs.autoCompanionPriorities = [...DEFAULT_PRIORITIES];
+    saveConfig();
+  }
+
+  interface LocationTopic {
+    system?: string;
+    star_pos?: [number, number, number];
+  }
+  const loc = $derived(topic<LocationTopic>('core.location'));
+  const currentSystem = $derived(loc?.system ?? null);
+
+  function setCurrentAsHomeBase() {
+    if (!loc?.system) return;
+    homeSystem = loc.system;
+    homeSystemCoords = loc.star_pos ?? (loc.system.toLowerCase() === 'sol' ? [0, 0, 0] : null);
+    prefs.homeSystem = homeSystem;
+    prefs.homeSystemCoords = homeSystemCoords;
+    saveConfig();
+  }
+
+  function clearHomeBase() {
+    homeSystem = '';
+    homeSystemCoords = null;
+    prefs.homeSystem = null;
+    prefs.homeSystemCoords = null;
+    saveConfig();
+  }
+
+  function onHomeSystemChange() {
+    const trimmed = homeSystem.trim();
+    if (!trimmed) {
+      clearHomeBase();
+      return;
+    }
+    if (loc?.system && loc.system.toLowerCase() === trimmed.toLowerCase()) {
+      homeSystemCoords = loc.star_pos ?? null;
+    } else if (trimmed.toLowerCase() === 'sol') {
+      homeSystemCoords = [0, 0, 0];
+    }
+    prefs.homeSystem = trimmed;
+    prefs.homeSystemCoords = homeSystemCoords;
     saveConfig();
   }
   let engineeringRolls = $state<(number | undefined)[]>([...DEFAULT_ROLLS]);
@@ -236,6 +280,16 @@
         onlineServices = cfg.online_services ?? true;
         mapThreshold = cfg.map_value_threshold ?? 500000;
         plannerEfficiency = cfg.default_neutron_efficiency ?? 60;
+        if (typeof cfg.home_system === 'string') {
+          homeSystem = cfg.home_system;
+        } else if (cfg.home_system === null) {
+          homeSystem = '';
+        }
+        if (Array.isArray(cfg.home_system_coords) && cfg.home_system_coords.length === 3) {
+          homeSystemCoords = [Number(cfg.home_system_coords[0]), Number(cfg.home_system_coords[1]), Number(cfg.home_system_coords[2])];
+        } else if (cfg.home_system_coords === null) {
+          homeSystemCoords = null;
+        }
         miningInterest = cfg.mining_interest ?? [...DEFAULT_MINERALS];
         miningThreshold = cfg.mining_threshold_cr ?? 1000000;
         sellRadius = cfg.sell_search_radius_ly ?? 100;
@@ -318,6 +372,8 @@
     onlineServices = fullConfig.online_services ?? true;
     mapThreshold = fullConfig.map_value_threshold ?? 500000;
     plannerEfficiency = fullConfig.default_neutron_efficiency ?? 60;
+    homeSystem = fullConfig.home_system ?? '';
+    homeSystemCoords = fullConfig.home_system_coords ?? null;
     lanEnabled = fullConfig.server?.lan ?? false;
     miningInterest = fullConfig.mining_interest ?? [...DEFAULT_MINERALS];
     miningThreshold = fullConfig.mining_threshold_cr ?? 1000000;
@@ -381,6 +437,8 @@
       online_services: onlineServices,
       map_value_threshold: mapThreshold,
       default_neutron_efficiency: plannerEfficiency,
+      home_system: homeSystem ? homeSystem.trim() : null,
+      home_system_coords: homeSystem ? homeSystemCoords : null,
       theme_mode: themeMode,
       mining_interest: [...miningInterest],
       mining_threshold_cr: miningThreshold,
@@ -559,6 +617,44 @@
             <span>{t('settings-planner-efficiency')}</span>
             <input type="number" min="0" max="100" step="1" bind:value={plannerEfficiency} onchange={saveConfig} data-testid="planner-efficiency" />
           </label>
+
+          <div class="toggle-group home-base-group" data-testid="settings-home-base-group">
+            <label class="field-row">
+              <span>{t('settings-home-base')}</span>
+              <div class="home-base-input-row">
+                <input
+                  type="text"
+                  class="font-mono home-base-input"
+                  placeholder="Sol / Shinrarta Dezhra"
+                  bind:value={homeSystem}
+                  onchange={onHomeSystemChange}
+                  data-testid="settings-home-base-input"
+                />
+                {#if homeSystem}
+                  <button
+                    type="button"
+                    class="btn-clear-base"
+                    title={t('settings-home-base-clear')}
+                    onclick={clearHomeBase}
+                    data-testid="settings-home-base-clear-btn"
+                  >✕</button>
+                {/if}
+              </div>
+            </label>
+            {#if currentSystem && currentSystem.toLowerCase() !== homeSystem.toLowerCase()}
+              <div class="home-base-actions">
+                <button
+                  type="button"
+                  class="btn-set-current"
+                  onclick={setCurrentAsHomeBase}
+                  data-testid="settings-home-base-set-current-btn"
+                >
+                  📍 {t('settings-home-base-set-current', { system: currentSystem })}
+                </button>
+              </div>
+            {/if}
+            <p class="help-text">{t('settings-home-base-desc')}</p>
+          </div>
         </fieldset>
 
         <fieldset class="settings-card auto-companion-card" data-testid="auto-companion-pro-settings">
@@ -1258,6 +1354,56 @@
   .btn-reset-priorities:hover {
     color: var(--hud-text);
     border-color: var(--hud-border);
+  }
+
+  .home-base-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    position: relative;
+  }
+
+  .home-base-input {
+    width: 180px;
+    padding-right: 1.8rem;
+  }
+
+  .btn-clear-base {
+    position: absolute;
+    right: 6px;
+    background: transparent;
+    border: none;
+    color: var(--hud-muted);
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 2px 4px;
+    line-height: 1;
+    border-radius: 2px;
+  }
+
+  .btn-clear-base:hover {
+    color: var(--hud-danger, #ef4444);
+  }
+
+  .home-base-actions {
+    display: flex;
+    margin-top: 0.25rem;
+  }
+
+  .btn-set-current {
+    background: var(--hud-surface-card);
+    border: 1px solid var(--hud-border-subtle);
+    color: var(--hud-cyan, #38bdf8);
+    border-radius: 4px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 120ms ease;
+  }
+
+  .btn-set-current:hover {
+    border-color: var(--hud-cyan, #38bdf8);
+    background: rgba(56, 189, 248, 0.1);
   }
 
   .linger-slider-group {

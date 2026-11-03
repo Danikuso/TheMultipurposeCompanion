@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { flushSync, mount, unmount, type Component } from 'svelte';
 import { disconnect, live } from '../src/lib/ws.svelte';
 import { setLocale, t } from '../src/lib/i18n';
+import { prefs } from '../src/lib/prefs.svelte';
 import CmdrPanel from '../src/modules/dashboard/CmdrPanel.svelte';
 import ShipPanel from '../src/modules/dashboard/ShipPanel.svelte';
 import LocationPanel from '../src/modules/dashboard/LocationPanel.svelte';
@@ -363,6 +364,27 @@ describe('dashboard panels', () => {
     expect(target.textContent).toContain('11.00 B hab.');
     expect(target.textContent).toContain('0.0 AL');
     expect(target.textContent).toContain('-14.2500°');
+  });
+
+  test('location panel displays home base distance and toggles home base', async () => {
+    prefs.homeSystem = 'Shinrarta Dezhra';
+    prefs.homeSystemCoords = [55.72, 17.59, 27.16];
+
+    live.topics['core.location'] = {
+      system: 'Sol',
+      star_pos: [0.0, 0.0, 0.0],
+    };
+
+    renderPanel(LocationPanel);
+    expect(target.textContent).toContain('Shinrarta Dezhra');
+    expect(target.textContent).toContain('64.4 AL');
+
+    const toggleBtn = target.querySelector('[data-testid="toggle-home-base-btn"]') as HTMLButtonElement | null;
+    expect(toggleBtn).not.toBeNull();
+    toggleBtn?.click();
+    flushSync();
+    expect(prefs.homeSystem).toBe('Sol');
+    expect(prefs.homeSystemCoords).toEqual([0.0, 0.0, 0.0]);
   });
 
   test('session panel displays average jump and profit rate when data available', () => {
