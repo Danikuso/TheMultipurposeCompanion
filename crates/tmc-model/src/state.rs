@@ -124,6 +124,8 @@ pub struct CommanderState {
     pub loan: Option<i64>,
     pub ranks: Ranks,
     pub progress: Ranks,
+    pub game_mode: Option<String>,
+    pub group: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
@@ -156,10 +158,18 @@ pub struct LocationState {
     pub star_pos: [f64; 3],
     pub body: Option<String>,
     pub body_type: Option<String>,
+    pub body_id: Option<u32>,
     pub station: Option<String>,
     pub station_type: Option<String>,
     pub market_id: Option<u64>,
     pub mode: FlightMode,
+    pub population: Option<u64>,
+    pub allegiance: Option<String>,
+    pub economy: Option<String>,
+    pub second_economy: Option<String>,
+    pub government: Option<String>,
+    pub security: Option<String>,
+    pub controlling_faction: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
@@ -310,9 +320,40 @@ impl GameState {
         ch |= set(&mut loc.star_pos, l.star_pos);
         ch |= set(&mut loc.body, l.body.clone());
         ch |= set(&mut loc.body_type, l.body_type.clone());
+        ch |= set(&mut loc.body_id, l.body_id);
         ch |= set(&mut loc.station, station);
         ch |= set(&mut loc.station_type, station_type);
         ch |= set(&mut loc.market_id, market_id);
+        ch |= set(&mut loc.population, l.population);
+        ch |= set(&mut loc.allegiance, l.system_allegiance.clone());
+        ch |= set(
+            &mut loc.economy,
+            l.system_economy_localised
+                .clone()
+                .or_else(|| l.system_economy.clone()),
+        );
+        ch |= set(
+            &mut loc.second_economy,
+            l.system_second_economy_localised
+                .clone()
+                .or_else(|| l.system_second_economy.clone()),
+        );
+        ch |= set(
+            &mut loc.government,
+            l.system_government_localised
+                .clone()
+                .or_else(|| l.system_government.clone()),
+        );
+        ch |= set(
+            &mut loc.security,
+            l.system_security_localised
+                .clone()
+                .or_else(|| l.system_security.clone()),
+        );
+        ch |= set(
+            &mut loc.controlling_faction,
+            l.system_faction.as_ref().and_then(|f| f.name.clone()),
+        );
         ch
     }
 
@@ -364,6 +405,8 @@ impl GameState {
                 }
                 cmdr.credits = credits;
                 cmdr.loan = l.loan.and_then(|c| i64::try_from(c).ok());
+                cmdr.game_mode = l.game_mode.clone();
+                cmdr.group = l.group.clone();
                 self.ship = Some(ShipState {
                     ship_type: l.ship.clone().unwrap_or_default(),
                     ship_type_localised: l.ship_localised.clone(),
@@ -481,13 +524,16 @@ impl GameState {
                 }
             }
             EventKind::ApproachBody(b) => {
-                if set(&mut self.location.body, b.body.clone()) {
+                let ch = set(&mut self.location.body, b.body.clone())
+                    | set(&mut self.location.body_id, b.body_id);
+                if ch {
                     c |= Changes::LOCATION;
                 }
             }
             EventKind::LeaveBody(_) => {
-                let ch =
-                    set(&mut self.location.body, None) | set(&mut self.location.body_type, None);
+                let ch = set(&mut self.location.body, None)
+                    | set(&mut self.location.body_type, None)
+                    | set(&mut self.location.body_id, None);
                 if ch {
                     c |= Changes::LOCATION;
                 }
@@ -946,6 +992,35 @@ mod tests {
         apply(&mut g, &LOAD.replace("\"F1\"", "\"F2\""));
         assert_eq!(g.cmdr.as_ref().unwrap().ranks.combat, None);
         assert_eq!(g.cmdr.as_ref().unwrap().fid, "F2");
+    }
+
+    #[test]
+    fn location_and_commander_rich_fields() {
+        let mut g = GameState::default();
+        let load = r#"{"timestamp":"2026-10-31T20:00:00Z","event":"LoadGame","Commander":"Danikuso","FID":"F123","GameMode":"Group","Group":"Fleetcomm","Credits":50000000,"Loan":25000}"#;
+        apply(&mut g, load);
+        let cmdr = g.cmdr.as_ref().unwrap();
+        assert_eq!(cmdr.name, "Danikuso");
+        assert_eq!(cmdr.fid, "F123");
+        assert_eq!(cmdr.game_mode.as_deref(), Some("Group"));
+        assert_eq!(cmdr.group.as_deref(), Some("Fleetcomm"));
+        assert_eq!(cmdr.credits, Some(50000000));
+        assert_eq!(cmdr.loan, Some(25000));
+
+        let loc = r#"{"timestamp":"2026-10-31T20:01:00Z","event":"Location","StarSystem":"Sol","SystemAddress":10418,"StarPos":[0.0,0.0,0.0],"Body":"Earth","BodyType":"Planet","BodyID":3,"SystemAllegiance":"Federation","SystemEconomy":"$economy_Refinery;","SystemEconomy_Localised":"Refinería","SystemSecondEconomy":"$economy_Industrial;","SystemSecondEconomy_Localised":"Industrial","SystemGovernment":"$government_Democracy;","SystemGovernment_Localised":"Democracia","SystemSecurity":"$SYSTEM_SECURITY_high;","SystemSecurity_Localised":"Alta","Population":11500000000,"SystemFaction":{"Name":"Mother Gaia"}}"#;
+        apply(&mut g, loc);
+        let l = &g.location;
+        assert_eq!(l.system, "Sol");
+        assert_eq!(l.system_address, 10418);
+        assert_eq!(l.body.as_deref(), Some("Earth"));
+        assert_eq!(l.body_id, Some(3));
+        assert_eq!(l.allegiance.as_deref(), Some("Federation"));
+        assert_eq!(l.economy.as_deref(), Some("Refinería"));
+        assert_eq!(l.second_economy.as_deref(), Some("Industrial"));
+        assert_eq!(l.government.as_deref(), Some("Democracia"));
+        assert_eq!(l.security.as_deref(), Some("Alta"));
+        assert_eq!(l.population, Some(11500000000));
+        assert_eq!(l.controlling_faction.as_deref(), Some("Mother Gaia"));
     }
 
     #[test]

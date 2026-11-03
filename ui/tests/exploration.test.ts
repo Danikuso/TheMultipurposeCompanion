@@ -167,3 +167,37 @@ test('locale changes update existing rows and number formatting',()=>{
   expect(target.textContent).toContain(t('exploration-kind-rocky-ice'));
   expect(target.textContent).toContain(credits(1500000));
 });
+
+test('system panel renders rich telemetry chips, address, distance to sol and current body pin',()=>{
+  live.topics['core.location'] = {
+    system: 'Synuefe Test',
+    system_address: 12345678,
+    star_pos: [100.0, 0.0, 0.0],
+    body_id: 1,
+    body: '1 a',
+  };
+  live.topics['exploration.system'] = {
+    ...system([body(1), body(2)], {
+      system_address: 12345678,
+      terraformable_count: 2,
+      landable_count: 5,
+      bio_signals: 3,
+      geo_signals: 8,
+      non_body_count: 4,
+    }),
+  };
+  mounted = mount(SystemBodiesPanel, { target });
+  flushSync();
+
+  expect(target.textContent).toContain('#12345678');
+  expect(target.textContent).toContain('100.0 AL');
+  expect(target.textContent).toContain(t('exploration-terraformable-count', { count: 2 }));
+  expect(target.textContent).toContain(t('exploration-landable-count', { count: 5 }));
+  expect(target.textContent).toContain(t('exploration-bio-total', { count: 3 }));
+  expect(target.textContent).toContain(t('exploration-geo-total', { count: 8 }));
+  expect(target.textContent).toContain(t('exploration-non-body-signals', { count: 4 }));
+
+  const currentPin = target.querySelector('.current-body-pin');
+  expect(currentPin).not.toBeNull();
+  expect(currentPin?.getAttribute('title')).toBe(t('exploration-current-location'));
+});

@@ -51,10 +51,16 @@ pub struct LocationInfo {
     #[serde(rename = "BodyID")]
     pub body_id: Option<u32>,
     pub system_allegiance: Option<String>,
+    #[serde(default)]
+    pub system_government: Option<String>,
     #[serde(rename = "SystemGovernment_Localised")]
     pub system_government_localised: Option<String>,
+    #[serde(default)]
+    pub system_economy: Option<String>,
     #[serde(rename = "SystemEconomy_Localised")]
     pub system_economy_localised: Option<String>,
+    #[serde(default)]
+    pub system_second_economy: Option<String>,
     #[serde(rename = "SystemSecondEconomy_Localised")]
     pub system_second_economy_localised: Option<String>,
     #[serde(default)]
@@ -241,6 +247,8 @@ pub struct LoadGame {
     pub fuel_level: Option<f64>,
     pub fuel_capacity: Option<f64>,
     pub game_mode: Option<String>,
+    #[serde(rename = "Group")]
+    pub group: Option<String>,
     pub credits: Option<u64>,
     pub loan: Option<u64>,
     #[serde(rename = "gameversion")]

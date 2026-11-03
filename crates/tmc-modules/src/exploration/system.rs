@@ -135,6 +135,13 @@ pub struct SystemTopic {
     /// Cuerpos del FSS aún sin escanear (`body_count` − escaneados).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub unidentified: Option<u32>,
+    /// Señales espaciales no-cuerpo (USS, balizas, etc.) reportadas por el FSS Discovery.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub non_body_count: Option<u32>,
+    pub bio_signals: u32,
+    pub geo_signals: u32,
+    pub terraformable_count: u32,
+    pub landable_count: u32,
     /// Filas omitidas por el tope de tamaño del tópico (las de menor valor);
     /// ausente si es 0. Los totales y el FSS cuentan siempre todos los cuerpos.
     #[serde(skip_serializing_if = "is_zero")]
@@ -177,6 +184,7 @@ pub struct SystemBodies {
     address: u64,
     discovered: Option<bool>,
     body_count: Option<u32>,
+    non_body_count: Option<u32>,
     complete: bool,
     bodies: BTreeMap<u32, Body>,
     signals: HashMap<u32, Signals>,
@@ -268,12 +276,24 @@ impl SystemBodies {
         self.known && address.is_some_and(|a| a != 0 && a != self.address)
     }
 
-    pub fn on_fss_discovery(&mut self, body_count: Option<u32>, address: Option<u64>) -> bool {
-        if self.other_system(address) || body_count.is_none() || self.body_count == body_count {
+    pub fn on_fss_discovery(
+        &mut self,
+        body_count: Option<u32>,
+        non_body_count: Option<u32>,
+        address: Option<u64>,
+    ) -> bool {
+        if self.other_system(address) {
             return false;
         }
-        self.body_count = body_count;
-        true
+        let ch1 = body_count.is_some() && self.body_count != body_count;
+        if ch1 {
+            self.body_count = body_count;
+        }
+        let ch2 = non_body_count.is_some() && self.non_body_count != non_body_count;
+        if ch2 {
+            self.non_body_count = non_body_count;
+        }
+        ch1 || ch2
     }
 
     pub fn on_all_found(&mut self, count: Option<u32>, address: Option<u64>) -> bool {
@@ -431,6 +451,10 @@ impl SystemBodies {
         let mut value_now = 0u64;
         let mut extra = 0u64;
         let mut map_targets = 0u32;
+        let mut bio_signals = 0u32;
+        let mut geo_signals = 0u32;
+        let mut terraformable_count = 0u32;
+        let mut landable_count = 0u32;
         for r in &rows {
             value_now = value_now.saturating_add(match (r.mapped_by_you, r.mapped_value) {
                 (true, Some(m)) => m,
@@ -440,6 +464,14 @@ impl SystemBodies {
                 map_targets = map_targets.saturating_add(1);
                 extra = extra
                     .saturating_add(r.mapped_value.unwrap_or(0).saturating_sub(r.scanned_value));
+            }
+            bio_signals = bio_signals.saturating_add(r.bio);
+            geo_signals = geo_signals.saturating_add(r.geo);
+            if r.terraformable {
+                terraformable_count = terraformable_count.saturating_add(1);
+            }
+            if r.landable {
+                landable_count = landable_count.saturating_add(1);
             }
         }
         let scanned = self.scanned();
@@ -499,6 +531,11 @@ impl SystemBodies {
             value_if_mapped: value_now.saturating_add(extra),
             map_targets,
             unidentified: self.body_count.map(|n| n.saturating_sub(scanned)),
+            non_body_count: self.non_body_count,
+            bio_signals,
+            geo_signals,
+            terraformable_count,
+            landable_count,
             star_classes,
             rows,
         }

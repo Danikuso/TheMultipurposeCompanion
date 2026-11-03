@@ -274,4 +274,124 @@ describe('dashboard panels', () => {
     flushSync();
     expect(durEl()).toBe('1m');
   });
+
+  test('cmdr panel displays fid, game mode, loan, rebuy and official translated rank titles', () => {
+    live.topics['core.cmdr'] = {
+      name: 'DANIKUSO',
+      fid: 'F1234567',
+      credits: 15_401_236,
+      loan: 25000,
+      game_mode: 'Group',
+      group: 'Fleetcomm',
+      ranks: {
+        combat: 2,
+        trade: 6,
+        explore: 5,
+        soldier: 0,
+        exobiologist: 0,
+        cqc: 0,
+        federation: 5,
+        empire: 0,
+      },
+      progress: {
+        combat: 67,
+        trade: 42,
+        explore: 94,
+        soldier: 40,
+        exobiologist: 0,
+        cqc: 0,
+        federation: 25,
+        empire: 100,
+      },
+    };
+    live.topics['core.ship'] = {
+      rebuy: 750000,
+    };
+
+    renderPanel(CmdrPanel);
+    expect(target.textContent).toContain('DANIKUSO');
+    expect(target.textContent).toContain('FID: F1234567');
+    expect(target.textContent).toContain('Fleetcomm');
+    expect(target.textContent).toContain('25.000 CR');
+    expect(target.textContent).toContain(t('cmdr-loan'));
+    expect(target.textContent).toContain(t('cmdr-rebuy'));
+    expect(target.textContent).toContain(t('combat-rank-2'));
+    expect(target.textContent).toContain(t('trade-rank-6'));
+  });
+
+  test('location panel displays galactic telemetry, legal state, superpower and coordinates', () => {
+    live.topics['core.location'] = {
+      system: 'Sol',
+      system_address: 10477373803,
+      star_pos: [0.0, 0.0, 0.0],
+      body: 'Earth',
+      body_type: 'Planet',
+      mode: 'NormalSpace',
+      population: 11000000000,
+      allegiance: 'Federation',
+      economy: '$economy_Refinery;',
+      government: '$government_Democracy;',
+      security: '$SYSTEM_SECURITY_high;',
+      controlling_faction: 'Mother Gaia',
+    };
+    live.topics['core.status'] = {
+      LegalState: 'Clean',
+      Latitude: -14.25,
+      Longitude: 28.5,
+      Altitude: 1250,
+      Heading: 180,
+    };
+
+    renderPanel(LocationPanel);
+    expect(target.textContent).toContain('Sol');
+    expect(target.textContent).toContain('Earth');
+    expect(target.textContent).toContain('Federation');
+    expect(target.textContent).toContain('Mother Gaia');
+    expect(target.textContent).toContain(t('legal-clean'));
+    expect(target.textContent).toContain(t('security-high'));
+    expect(target.textContent).toContain(t('mode-normal-space'));
+    expect(target.textContent).toContain('11.00 B hab.');
+    expect(target.textContent).toContain('0.0 AL');
+    expect(target.textContent).toContain('-14.2500°');
+  });
+
+  test('session panel displays average jump and profit rate when data available', () => {
+    vi.useFakeTimers();
+    const baseTime = new Date('2026-10-17T18:00:00Z');
+    vi.setSystemTime(baseTime);
+
+    live.topics['core.session'] = {
+      started_at: new Date(baseTime.getTime() - 3600_000).toISOString(),
+      jumps: 10,
+      distance_ly: 250.0,
+      credits_delta: 5_000_000,
+    };
+
+    renderPanel(SessionPanel);
+    expect(target.textContent).toContain(t('field-average-jump'));
+    expect(target.textContent).toContain('25,00 ly');
+    expect(target.textContent).toContain(t('field-profit-rate'));
+    expect(target.textContent).toContain('5.000.000 CR/h');
+  });
+
+  test('status panel displays lights, night vision, fa off, danger chips and target destination', () => {
+    live.topics['core.status'] = {
+      Flags: (1 << 5) | (1 << 8) | (1 << 22) | (1 << 28), // FA Off, Lights, In Danger, Night Vision
+      Destination: {
+        Name: 'Titan Thor',
+        Name_Localised: 'Titán Thor',
+      },
+    };
+
+    renderPanel(StatusPanel);
+    expect(target.textContent).toContain(t('flag-fa-off'));
+    expect(target.textContent).toContain(t('flag-lights'));
+    expect(target.textContent).toContain(t('flag-night-vision'));
+    expect(target.textContent).toContain(t('flag-in-danger'));
+    expect(target.textContent).toContain('Titán Thor');
+    const chipDanger = target.querySelector('.chip-danger');
+    expect(chipDanger).not.toBeNull();
+    const chipWarning = target.querySelector('.chip-warning');
+    expect(chipWarning).not.toBeNull();
+  });
 });

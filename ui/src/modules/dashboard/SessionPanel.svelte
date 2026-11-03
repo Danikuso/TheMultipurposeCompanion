@@ -40,6 +40,18 @@
     }
     return 0;
   });
+
+  const averageJump = $derived.by(() => {
+    if (!session || !session.jumps || session.jumps <= 0 || !session.distance_ly) return null;
+    return ly(session.distance_ly / session.jumps);
+  });
+
+  const profitRate = $derived.by(() => {
+    if (!elapsedMs || elapsedMs < 60_000 || earnedCredits == null || earnedCredits === 0) return null;
+    const hours = elapsedMs / 3_600_000;
+    const rate = Math.round(earnedCredits / hours);
+    return `${credits(rate)}/h`;
+  });
 </script>
 
 <Panel titleKey="panel-session">
@@ -59,10 +71,22 @@
         <span class="label">{t('field-distance')}</span>
         <span class="mono">{ly(session.distance_ly ?? 0)}</span>
       </div>
+      {#if averageJump}
+        <div class="row">
+          <span class="label">{t('field-average-jump')}</span>
+          <span class="mono">{averageJump}</span>
+        </div>
+      {/if}
       <div class="row">
         <span class="label">{t('field-credits-earned')}</span>
-        <span class="mono">{credits(earnedCredits)}</span>
+        <span class="mono" class:gold={(earnedCredits ?? 0) > 0}>{credits(earnedCredits)}</span>
       </div>
+      {#if profitRate}
+        <div class="row">
+          <span class="label">{t('field-profit-rate')}</span>
+          <span class="mono green">{profitRate}</span>
+        </div>
+      {/if}
     </div>
   {/if}
 </Panel>
@@ -91,5 +115,14 @@
 
   .mono {
     font-family: var(--font-mono);
+  }
+
+  .gold {
+    color: #fbbf24;
+  }
+
+  .green {
+    color: var(--hud-success);
+    font-weight: 600;
   }
 </style>

@@ -354,6 +354,7 @@ mod tests {
                 ("ring", FluentValue::from("A Ring")),
                 ("dist", FluentValue::from("83.1")),
                 ("version", FluentValue::from("1.0.2")),
+                ("group", FluentValue::from("Fleetcomm")),
             ] {
                 args.set(name, value);
             }

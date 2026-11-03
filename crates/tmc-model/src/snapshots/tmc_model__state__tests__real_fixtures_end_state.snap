@@ -28,7 +28,9 @@ expression: end_states
         "empire": 100,
         "federation": 25,
         "cqc": 0
-      }
+      },
+      "game_mode": "Solo",
+      "group": null
     },
     "ship": {
       "ship_type": "adder_taxi",
@@ -60,10 +62,18 @@ expression: end_states
       ],
       "body": "MacKellar Hub",
       "body_type": "Station",
+      "body_id": 1,
       "station": "MacKellar Hub",
       "station_type": "Coriolis",
       "market_id": 3228840448,
-      "mode": "Docked"
+      "mode": "Docked",
+      "population": 5781556,
+      "allegiance": "Independent",
+      "economy": "Alta tecnología",
+      "second_economy": "Extracción",
+      "government": "Feudal",
+      "security": "Seguridad media",
+      "controlling_faction": "Equestrian Naval Fleet"
     },
     "status": null,
     "route": {
@@ -106,7 +116,9 @@ expression: end_states
         "empire": 100,
         "federation": 25,
         "cqc": 0
-      }
+      },
+      "game_mode": "Solo",
+      "group": null
     },
     "ship": {
       "ship_type": "mediumtransport01",
@@ -329,10 +341,18 @@ expression: end_states
       ],
       "body": "Bernoulli Vision",
       "body_type": "Station",
+      "body_id": 0,
       "station": "Bernoulli Vision",
       "station_type": "Coriolis",
       "market_id": 3229849856,
-      "mode": "Docked"
+      "mode": "Docked",
+      "population": 11087012,
+      "allegiance": "Independent",
+      "economy": "Alta tecnología",
+      "second_economy": "Refinería",
+      "government": "Democracia",
+      "security": "Seguridad media",
+      "controlling_faction": "The SMC Clan"
     },
     "status": null,
     "route": {
@@ -363,10 +383,18 @@ expression: end_states
       ],
       "body": null,
       "body_type": null,
+      "body_id": null,
       "station": null,
       "station_type": null,
       "market_id": null,
-      "mode": "Unknown"
+      "mode": "Unknown",
+      "population": null,
+      "allegiance": null,
+      "economy": null,
+      "second_economy": null,
+      "government": null,
+      "security": null,
+      "controlling_faction": null
     },
     "status": null,
     "route": {
@@ -409,7 +437,9 @@ expression: end_states
         "empire": null,
         "federation": null,
         "cqc": null
-      }
+      },
+      "game_mode": "Solo",
+      "group": null
     },
     "ship": {
       "ship_type": "mediumtransport01",
@@ -632,10 +662,18 @@ expression: end_states
       ],
       "body": "Crucis Sector GH-V b2-6 A",
       "body_type": "Star",
+      "body_id": 1,
       "station": null,
       "station_type": null,
       "market_id": null,
-      "mode": "Supercruise"
+      "mode": "Supercruise",
+      "population": 155728,
+      "allegiance": "Alliance",
+      "economy": "Industrial",
+      "second_economy": "Ninguna",
+      "government": "Corporativo",
+      "security": "Seguridad baja",
+      "controlling_faction": "Capsule Corp Interstellar"
     },
     "status": null,
     "route": {

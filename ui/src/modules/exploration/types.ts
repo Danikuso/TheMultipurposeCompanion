@@ -21,6 +21,11 @@ export interface SystemTopic {
   value_now: number;
   value_if_mapped: number;
   map_targets?: number;
+  bio_signals?: number;
+  geo_signals?: number;
+  terraformable_count?: number;
+  landable_count?: number;
+  non_body_count?: number;
   unidentified?: number;
   truncated?: number;
   star_classes?: string[];

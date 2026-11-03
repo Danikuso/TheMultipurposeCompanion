@@ -61,7 +61,8 @@ impl Exploration {
                 changed
             }
             EventKind::FssDiscoveryScan(d) => {
-                self.system.on_fss_discovery(d.body_count, d.system_address)
+                self.system
+                    .on_fss_discovery(d.body_count, d.non_body_count, d.system_address)
             }
             EventKind::FssAllBodiesFound(a) => self.system.on_all_found(a.count, a.system_address),
             EventKind::FssBodySignals(f) => self.system.on_fss_signals(f.body_id, &f.signals),
