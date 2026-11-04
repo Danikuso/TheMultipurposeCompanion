@@ -43,6 +43,9 @@ pub(crate) const CODES: &[&str] = &[
     "ui.toast.dismissed",
     "ui.import.progress",
     "ui.fetch.result",
+    "ui.layout.load",
+    "ui.layout.save",
+    "ui.layout.merge",
     "ui.window.fault",
 ];
 
@@ -341,6 +344,9 @@ mod tests {
                 json!({"kind": "config-put", "ok": true,
                 "status": 200, "lan": false}),
             ),
+            ("ui.layout.load", json!({"status": 0, "desktop": true})),
+            ("ui.layout.save", json!({"status": 500, "claim": false})),
+            ("ui.layout.merge", json!({"invalid": true})),
             (
                 "ui.window.fault",
                 json!({"kind": "error", "line": 3, "col": 4}),

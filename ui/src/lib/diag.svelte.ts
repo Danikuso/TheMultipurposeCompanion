@@ -30,6 +30,9 @@ export type DiagCode =
   | 'ui.toast.dismissed'
   | 'ui.import.progress'
   | 'ui.fetch.result'
+  | 'ui.layout.load'
+  | 'ui.layout.save'
+  | 'ui.layout.merge'
   | 'ui.window.fault';
 
 export const MAX_QUEUE = 200;
