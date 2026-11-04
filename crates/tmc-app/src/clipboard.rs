@@ -299,6 +299,7 @@ impl ConfigHost for AppActions {
             updated.journal_dir = current.journal_dir.clone();
             updated.server.port = current.server.port;
             updated.server.lan_token = current.server.lan_token.clone();
+            updated.desktop_device_id = current.desktop_device_id.clone();
         }
 
         if updated.server.lan {
@@ -342,6 +343,26 @@ impl ConfigHost for AppActions {
 }
 
 impl ActionHost for AppActions {
+    fn desktop_device_id(&self) -> Option<String> {
+        let mut guard = self.config.lock().unwrap();
+        let before = guard.desktop_device_id.clone();
+        let id = guard.ensure_desktop_device_id();
+        if before.as_deref() != Some(id.as_str()) {
+            let saved = match &self.save_path {
+                Some(path) => guard.save_to(path),
+                None => guard.save(),
+            };
+            if saved.is_err() {
+                tmc_model::diagnostic!(
+                    tmc_model::diagnostics::DiagnosticContext::State,
+                    "config.desktop_device_id.save_failed",
+                    serde_json::json!({})
+                );
+            }
+        }
+        Some(id)
+    }
+
     fn run_action(
         &self,
         name: &str,

@@ -77,6 +77,9 @@ pub struct Config {
     /// Coordenadas estelares [x, y, z] en años luz de la Base de operaciones.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub home_system_coords: Option<[f64; 3]>,
+    /// Identificador persistente del dispositivo de escritorio (UUID) para perfiles de disposición.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub desktop_device_id: Option<String>,
 }
 
 impl Default for Config {
@@ -113,6 +116,7 @@ impl Default for Config {
             theme_mode: None,
             data_dir: None,
             ui_dir: None,
+            desktop_device_id: None,
         }
     }
 }
@@ -415,6 +419,28 @@ impl Config {
         let token = uuid::Uuid::new_v4().as_simple().to_string();
         self.server.lan_token = Some(token.clone());
         token
+    }
+
+    /// Devuelve el identificador del dispositivo de escritorio, generándolo si falta o no es un UUID.
+    pub fn ensure_desktop_device_id(&mut self) -> String {
+        if let Some(existing) = &self.desktop_device_id
+            && uuid::Uuid::parse_str(existing).is_ok()
+        {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "config.desktop_device_id.reused",
+                serde_json::json!({"reused":true})
+            );
+            return existing.clone();
+        }
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "config.desktop_device_id.generated",
+            serde_json::json!({"generated":true})
+        );
+        let id = uuid::Uuid::new_v4().to_string();
+        self.desktop_device_id = Some(id.clone());
+        id
     }
 
     /// Rota el token LAN generando un nuevo valor aleatorio y registrando el cambio (F18/F21).

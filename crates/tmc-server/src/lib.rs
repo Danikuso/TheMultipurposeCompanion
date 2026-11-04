@@ -59,6 +59,11 @@ pub trait ActionHost: Send + Sync + 'static {
         Box::pin(async { Err(ActionError::NotFound) })
     }
 
+    /// Identificador persistente del dispositivo de escritorio, si el anfitrión lo conoce.
+    fn desktop_device_id(&self) -> Option<String> {
+        None
+    }
+
     fn get_config(&self) -> Value {
         Value::Null
     }

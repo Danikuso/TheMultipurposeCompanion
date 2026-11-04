@@ -736,6 +736,60 @@ tourism_reference_cr_ly = 200000
     }
 
     #[test]
+    fn ensure_desktop_device_id_generates_once() {
+        let mut cfg = Config::default();
+        let first = cfg.ensure_desktop_device_id();
+        assert!(uuid::Uuid::parse_str(&first).is_ok());
+        assert_eq!(first, cfg.ensure_desktop_device_id());
+    }
+
+    #[test]
+    fn ensure_desktop_device_id_replaces_invalid() {
+        let mut cfg = Config {
+            desktop_device_id: Some("basura".into()),
+            ..Config::default()
+        };
+        let id = cfg.ensure_desktop_device_id();
+        assert_ne!(id, "basura");
+        assert!(uuid::Uuid::parse_str(&id).is_ok());
+        assert_eq!(cfg.desktop_device_id.as_deref(), Some(id.as_str()));
+    }
+
+    #[test]
+    fn desktop_device_id_survives_save_and_load() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        let mut cfg = Config::default();
+        let id = cfg.ensure_desktop_device_id();
+        cfg.save_to(&path).unwrap();
+        let loaded = Config::load_from_or_default(&path);
+        assert_eq!(loaded.desktop_device_id.as_deref(), Some(id.as_str()));
+    }
+
+    #[test]
+    fn desktop_device_id_is_stable_and_persisted() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        let actions = AppActions::with_config(Config::default()).with_save_path(path.clone());
+        let first = actions.desktop_device_id().expect("id");
+        assert_eq!(actions.desktop_device_id(), Some(first.clone()));
+        let loaded = Config::load_from_or_default(&path);
+        assert_eq!(loaded.desktop_device_id.as_deref(), Some(first.as_str()));
+    }
+
+    #[test]
+    fn put_config_preserves_desktop_device_id() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        let actions = AppActions::with_config(Config::default()).with_save_path(path);
+        let id = actions.desktop_device_id().expect("id");
+        let mut body = tmc_server::ConfigHost::get_config(&actions);
+        body.as_object_mut().unwrap().remove("desktop_device_id");
+        tmc_server::ConfigHost::put_config(&actions, body).unwrap();
+        assert_eq!(actions.desktop_device_id(), Some(id));
+    }
+
+    #[test]
     fn copy_next_system_action_without_route_fails() {
         let actions = AppActions::new();
         let mut snapshot = BTreeMap::new();
