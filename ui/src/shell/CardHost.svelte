@@ -153,10 +153,19 @@
     if (!t) return;
     if (drag?.id !== id || drag.x !== t.x || drag.index !== t.index) drag = { id, x: t.x, index: t.index };
   }
+  const DRAG_MIN_PX = 4;
   function dropMove(id: string, dx: number, dy: number) {
     const t = targetFor(id, dx, dy);
     drag = null;
-    if (t) applyOp(tabKey, placements.indexOf(list[list.findIndex((p) => p.id === id)]), { kind: 'place', to: t.index, x: t.x }, geometry());
+    // Soltar sin mover de verdad es una cancelación: no toca la disposición.
+    if (!t || (Math.abs(dx) < DRAG_MIN_PX && Math.abs(dy) < DRAG_MIN_PX)) return;
+    const from = placements.findIndex((p) => p.id === id);
+    if (from < 0) return;
+    // `to` se expresa sobre la lista de la pestaña sin la tarjeta (la misma que usa `applyCardOp`).
+    const others = placements.filter((p) => p.id !== id);
+    const before = list.filter((p) => p.id !== id)[t.index]; // tarjeta que quedará detrás
+    const to = before ? others.findIndex((p) => p.id === before.id) : others.length;
+    applyOp(tabKey, from, { kind: 'place', to, x: t.x }, geometry());
   }
   function vertical(item: CardPlacement, dir: -1 | 1) {
     const i = list.indexOf(item);

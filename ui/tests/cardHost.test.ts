@@ -233,6 +233,23 @@ describe('CardHost interaction', () => {
     expect(ids.indexOf('jump')).toBeLessThan(ids.indexOf('dashboard-alerts'));
   });
 
+  test('dropping without moving leaves the draft unchanged', () => {
+    editing(3);
+    const before = JSON.stringify(layoutState.draft);
+    const h = handleOf('jump');
+    h.dispatchEvent(ev('pointerdown', 10, 10));
+    h.dispatchEvent(ev('pointerup', 11, 12));
+    flushSync();
+    expect(JSON.stringify(layoutState.draft)).toBe(before);
+  });
+
+  test('left and right are disabled for a full-width card', () => {
+    editing(3);
+    click(btn('dashboard-cmdr', 'width-full'));
+    expect(btn('dashboard-cmdr', 'left').disabled).toBe(true);
+    expect(btn('dashboard-cmdr', 'right').disabled).toBe(true);
+  });
+
   test('mid-drag shows the placeholder and cancel restores everything', () => {
     editing(3);
     const before = Object.fromEntries(IDS.map((id) => [id, slot(id).style.top]));
