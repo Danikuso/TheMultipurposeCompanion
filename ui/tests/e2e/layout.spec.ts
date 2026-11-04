@@ -411,7 +411,7 @@ test('CA-12 free grid: seven cards added at once and arranged as T1 T2 T3 / T4 T
   await newCustomTab(tabName);
   // La nueva pestaña abre el catálogo en edición: se marcan las siete de una vez.
   for (const id of SEVEN) await page.locator(`[data-catalog-entry="${id}"] input`).check();
-  await expect(page.getByTestId('catalog-add')).toContainText('7');
+  await expect(page.getByTestId('catalog-add')).toHaveText('Añadir (7)');
   await page.getByTestId('catalog-add').click();
   await expect(page.getByTestId('catalog-add')).toHaveCount(0);
   T = await slotIds();
@@ -456,14 +456,19 @@ test('CA-14 resize handle sits at the bottom-right corner of its own card', asyn
     expect(fb.x + fb.width - (hb.x + hb.width), `${f.id} dx`).toBeLessThanOrEqual(4);
     expect(fb.y + fb.height - (hb.y + hb.height), `${f.id} dy`).toBeLessThanOrEqual(4);
   }
+  await page.getByTestId('layout-cancel').click();
+  await expect(page.getByTestId('edit-toolbar')).toHaveCount(0);
 });
 
 test('CA-13 resizing a card never moves the card on its left', async () => {
-  // Continúa en edición (test anterior): T1 queda a la izquierda de T2.
-  const t1 = (await settledGeometry()).frames.find((f) => f.id === T[0])!;
+  // Estado propio: abre la pestaña de CA-12 (T[] viene de ese test, la suite es serial) y entra en edición.
+  await openCustom(tabName);
+  await startEdit();
+  const before = await settledGeometry();
+  const t1 = before.frames.find((f) => f.id === T[0])!;
+  const t2 = before.frames.find((f) => f.id === T[1])!;
   for (let i = 0; i < 2; i++) await slot(T[1]).locator('[data-op="height-more"]').click();
   const g0 = await settledGeometry();
-  const t2 = g0.frames.find((f) => f.id === T[1])!;
   const hb = (await slot(T[1]).locator('[data-op="resize"]').boundingBox())!;
   const x0 = hb.x + hb.width / 2;
   const y0 = hb.y + hb.height / 2;
@@ -475,7 +480,7 @@ test('CA-13 resizing a card never moves the card on its left', async () => {
   const after = await settledGeometry();
   const t1b = after.frames.find((f) => f.id === T[0])!;
   for (const k of ['x', 'y', 'w', 'h'] as const) expect(Math.abs(t1b[k] - t1[k]), `T1 ${k}`).toBeLessThanOrEqual(1);
-  expect(after.frames.find((f) => f.id === T[1])!.h).toBeGreaterThan(t2.h - 1);
+  expect(Math.abs(after.frames.find((f) => f.id === T[1])!.h - t2.h - 80)).toBeLessThanOrEqual(2);
   expectNoOverlap(after.frames);
   await page.getByTestId('layout-cancel').click();
   await expect(page.getByTestId('edit-toolbar')).toHaveCount(0);
@@ -485,7 +490,7 @@ test('CA-15 catalog adds three checked cards with a single click', async () => {
   await newCustomTab('Tres');
   const ids = ['dashboard-cmdr', 'dashboard-status', 'jump'];
   for (const id of ids) await page.locator(`[data-catalog-entry="${id}"] input`).check();
-  await expect(page.getByTestId('catalog-add')).toContainText('3');
+  await expect(page.getByTestId('catalog-add')).toHaveText('Añadir (3)');
   await page.getByTestId('catalog-add').click();
   await expect(page.getByTestId('catalog-add')).toHaveCount(0);
   expect([...(await slotIds())].sort()).toEqual([...ids].sort());
@@ -520,19 +525,21 @@ async function longtaskMax(step: () => Promise<void>) {
 }
 
 test('CA-16 catalog and new-tab dialog open, scroll and respond without long tasks', async () => {
-  await openCustom('Tres');
-  await startEdit();
+  // Estado propio: pestaña nueva y vacía (su catálogo lista todas las tarjetas, así que desborda).
+  await newCustomTab('Fluidez');
+  await page.getByTestId('catalog-cancel').click();
   const catalogMax = await longtaskMax(async () => {
     await page.getByTestId('layout-add').click();
     const list = page.locator('.catalog-list');
     await expect(list).toBeVisible();
+    expect(await list.evaluate((el) => el.scrollHeight - el.clientHeight), 'catalog list overflows').toBeGreaterThan(0);
     await list.evaluate((el) => { el.scrollTop = el.scrollHeight; });
+    expect(await list.evaluate((el) => el.scrollTop), 'list actually scrolled').toBeGreaterThan(0);
     await page.waitForTimeout(100);
     await list.evaluate((el) => { el.scrollTop = 0; });
     const free = page.locator('[data-catalog-entry] input:not(:disabled):not(:checked)');
     for (let i = 0; i < 5; i++) await free.first().check();
   });
-  console.log(`longtask max catalog: ${catalogMax.toFixed(0)} ms`);
   expect(catalogMax).toBeLessThanOrEqual(100);
   await page.getByTestId('catalog-cancel').click();
   await page.getByTestId('layout-cancel').click();
@@ -542,6 +549,5 @@ test('CA-16 catalog and new-tab dialog open, scroll and respond without long tas
     await page.getByTestId('custom-tab-cancel').click();
     await expect(page.getByTestId('custom-tab-dialog')).toHaveCount(0);
   });
-  console.log(`longtask max tab dialog: ${dialogMax.toFixed(0)} ms`);
   expect(dialogMax).toBeLessThanOrEqual(100);
 });
