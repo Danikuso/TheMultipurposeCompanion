@@ -198,6 +198,16 @@ describe('edit mode', () => {
     expect(layoutState.editing).toBe(false);
   });
 
+  test('escape while saving does not cancel the edit', () => {
+    edit();
+    layoutState.saving = true;
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    flushSync();
+    expect(layoutState.editing).toBe(true);
+    expect(layoutState.draft).not.toBeNull();
+    layoutState.saving = false;
+  });
+
   test('escape during drag only aborts drag', () => {
     edit();
     const handle = document.createElement('div');

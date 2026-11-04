@@ -167,7 +167,7 @@
   $effect(() => {
     if (!layoutState.editing || tabKey === null) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== 'Escape' || layoutState.saving) return; // con un guardado en curso no se cancela
       const drag = activeDrag();
       if (drag?.active) drag.cancel(); // Esc durante un arrastre solo aborta el arrastre
       else cancelEditWithDiag(tabKey);
