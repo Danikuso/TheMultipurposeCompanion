@@ -5,7 +5,7 @@ import {
 } from '../lib/layoutApi';
 import { cards, factoryLayout, isFactoryCard } from './cards';
 import {
-  applyCardOp, emptyDoc, mergeWithDefaults, parseLayoutDoc, removeFromThemed,
+  addToCustom, addToThemed, applyCardOp, emptyDoc, mergeWithDefaults, parseLayoutDoc, removeFromThemed,
   type CardOp, type CustomTabDoc, type LayoutDoc, type ThemedTabDoc,
 } from './layoutModel';
 
@@ -177,6 +177,20 @@ export function applyOp(tabKey: string, index: number, op: CardOp): void {
       ? removeFromThemed(tab, target.id, isFactoryCard(tabKey, target.id))
       : { cards: applyCardOp(tab.cards, index, op), removed: tab.removed };
     return { ...d, tabs: { ...d.tabs, [tabKey]: next } };
+  });
+}
+
+/** Añade una tarjeta al final de la pestaña, con su ancho por defecto (borrador de edición). */
+export function addCard(tabKey: string, cardId: string): void {
+  if (!known(cardId)) return;
+  const w = widthOf(cardId);
+  editDoc((d) => {
+    if (tabKey.startsWith('custom:')) {
+      const id = tabKey.slice('custom:'.length);
+      return { ...d, custom: d.custom.map((c) => (c.id === id ? addToCustom(c, cardId, w) : c)) };
+    }
+    const tab = mergeWithDefaults(d.tabs[tabKey], factoryLayout(tabKey), known);
+    return { ...d, tabs: { ...d.tabs, [tabKey]: addToThemed(tab, cardId, w) } };
   });
 }
 

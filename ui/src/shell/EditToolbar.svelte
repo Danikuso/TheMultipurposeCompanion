@@ -6,8 +6,17 @@
   import { commitEdit, layoutState, resetTab } from './layoutStore.svelte';
   import { cancelEditWithDiag, editTab } from './editDiag';
   import { pushToast } from './Toasts.svelte';
+  import CardCatalog from './CardCatalog.svelte';
 
-  let { tabKey, onaddcard, extra }: { tabKey: string; onaddcard: () => void; extra?: Snippet } = $props();
+  let { tabKey, extra }: { tabKey: string; extra?: Snippet } = $props();
+
+  let catalogOpen = $state(false);
+  let addBtn = $state<HTMLButtonElement>();
+
+  function closeCatalog() {
+    catalogOpen = false;
+    addBtn?.focus();
+  }
 
   async function done() {
     const ok = await commitEdit();
@@ -27,10 +36,14 @@
 <div class="edit-toolbar" role="toolbar" aria-label={t('layout-edit-toolbar')} data-testid="edit-toolbar">
   <button type="button" class="primary" data-testid="layout-done" disabled={layoutState.saving} onclick={done}>{t('layout-edit-done')}</button>
   <button type="button" data-testid="layout-cancel" onclick={cancel}>{t('layout-edit-cancel')}</button>
-  <button type="button" data-testid="layout-add" onclick={onaddcard}>{t('layout-edit-add')}</button>
+  <button type="button" data-testid="layout-add" bind:this={addBtn} onclick={() => (catalogOpen = true)}>{t('layout-edit-add')}</button>
   <button type="button" data-testid="layout-reset" onclick={reset}>{t('layout-edit-reset')}</button>
   {@render extra?.()}
 </div>
+
+{#if catalogOpen}
+  <CardCatalog {tabKey} onclose={closeCatalog} />
+{/if}
 
 <style>
   .edit-toolbar {

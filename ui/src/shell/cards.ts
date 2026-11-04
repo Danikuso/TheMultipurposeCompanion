@@ -31,6 +31,7 @@ import ExplorationContextCard from './ExplorationContextCard.svelte';
 import { modules } from '../modules/registry';
 import { layouts } from './layouts';
 import { topic } from '../lib/ws.svelte';
+import { t } from '../lib/i18n';
 
 export type CardWidth = 1 | 2 | 3 | 'full';
 
@@ -171,4 +172,28 @@ export function factoryLayout(tabKey: string): CardPlacement[] {
 
 export function isFactoryCard(tabKey: string, cardId: string): boolean {
   return factoryLayout(tabKey).some((p) => p.id === cardId);
+}
+
+export interface CatalogEntry { card: CardDef; disabled: boolean }
+
+/**
+ * Entradas del catálogo «Añadir tarjeta». Temática: tarjetas de fábrica quitadas o ausentes, en orden de fábrica.
+ * Personalizada: todas las tarjetas por módulo y título, deshabilitadas las ya presentes.
+ */
+export function catalogFor(tabKey: string, current: CardPlacement[], removed: string[]): CatalogEntry[] {
+  const present = new Set(current.map((p) => p.id));
+  if (tabKey.startsWith('custom:')) {
+    return Object.values(cards)
+      .sort((a, b) => a.module.localeCompare(b.module) || t(a.titleKey).localeCompare(t(b.titleKey)))
+      .map((card) => ({ card, disabled: present.has(card.id) }));
+  }
+  const gone = new Set(removed);
+  const seen = new Set<string>();
+  const out: CatalogEntry[] = [];
+  for (const p of factoryLayout(tabKey)) {
+    if (seen.has(p.id) || !cards[p.id] || !(gone.has(p.id) || !present.has(p.id))) continue;
+    seen.add(p.id);
+    out.push({ card: cards[p.id], disabled: false });
+  }
+  return out;
 }

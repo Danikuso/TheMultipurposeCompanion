@@ -251,8 +251,7 @@
       {:else if tabKey !== null}
         <GridHeader titleKey={headerTitleKey} title={headerTitle} {tabKey} />
         {#if layoutState.editing}
-          <!-- onaddcard: el selector de tarjetas llega en la Tarea 10 -->
-          <EditToolbar {tabKey} onaddcard={() => {}} />
+          <EditToolbar {tabKey} />
         {/if}
         <CardHost {tabKey} ctx={layoutContext} prefix={contextControls} />
       {/if}
