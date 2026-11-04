@@ -204,7 +204,7 @@ export function parseLayoutDoc(raw: unknown, known: Known, widthOf: WidthOf = ()
       doc.custom.push({
         id: c.id,
         name,
-        icon: typeof c.icon === 'string' ? c.icon : '',
+        icon: typeof c.icon === 'string' && CUSTOM_TAB_ICONS.includes(c.icon) ? c.icon : '',
         cards: sanitizePlacements(c.cards, known, widthOf),
       });
     }
@@ -240,14 +240,13 @@ export function snapResize(
   start: { w: CardWidth; h: number | null; heightPx: number }, dx: number, dy: number,
   colWidthPx: number, gapPx: number, columns: number,
 ): { w: CardWidth; h: number | null } {
-  let w: CardWidth;
-  if (start.w === 'full' && dx === 0) {
-    w = 'full';
-  } else {
+  // El valor guardado solo cambia si cambia el ancho efectivo: ajustar el alto o un clic no lo tocan.
+  let w: CardWidth = start.w;
+  if (dx !== 0) {
     const cur = effectiveWidth(start.w, columns);
     const currentPx = cur * colWidthPx + (cur - 1) * gapPx;
     const n = clamp(Math.round((currentPx + dx) / (colWidthPx + gapPx)), 1, columns);
-    w = n === columns && columns >= 2 ? 'full' : (n as 1 | 2 | 3);
+    if (n !== cur) w = n === columns && columns >= 2 ? 'full' : (n as 1 | 2 | 3);
   }
   const h = dy === 0 ? start.h : snapHeight(start.heightPx + dy);
   return { w, h };

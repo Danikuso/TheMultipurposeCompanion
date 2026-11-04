@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import type { CardPlacement, CardWidth } from '../src/shell/cards';
 import {
-  addToCustom, addToThemed, applyCardOp, columnsForWidth, createCustomTab, deleteCustomTab, dropIndex,
+  CUSTOM_TAB_ICONS, addToCustom, addToThemed, applyCardOp, columnsForWidth, createCustomTab, deleteCustomTab, dropIndex,
   effectiveWidth, emptyDoc, mergeWithDefaults, moveCustomTab, normalizeTabName, parseLayoutDoc,
   removeFromThemed, sanitizePlacements, snapHeight, snapResize, updateCustomTab, visibleCards,
   type LayoutDoc,
@@ -156,6 +156,15 @@ describe('parseLayoutDoc', () => {
     expect(doc.custom[0].cards).toEqual([p('ok')]);
     expect(doc.customOrder).toEqual(['a']);
   });
+  test('icono de pestaña propia solo del catálogo', () => {
+    const tab = (icon: unknown) => ({ id: 'a', name: 'A', icon, cards: [] });
+    const icons = (...list: unknown[]) =>
+      parseLayoutDoc({ version: 1, custom: list.map(tab), customOrder: [] }, all)!.custom.map((c) => c.icon);
+    expect(icons(CUSTOM_TAB_ICONS[0])).toEqual([CUSTOM_TAB_ICONS[0]]);
+    expect(icons('constructor')).toEqual(['']);
+    expect(icons('toString')).toEqual(['']);
+    expect(icons(7)).toEqual(['']);
+  });
 });
 
 test('dropIndex', () => {
@@ -171,4 +180,29 @@ test('snapResize', () => {
   expect(snapResize({ ...start, w: 'full' }, 0, 0, 300, 14, 3).w).toBe('full');
   expect(snapResize(start, 0, 95, 300, 14, 3).h).toBe(480);
   expect(snapResize({ ...start, h: 320 }, 0, 0, 300, 14, 3).h).toBe(320);
+});
+
+describe('snapResize conserva el ancho si las columnas no cambian', () => {
+  const s = (w: CardWidth, h: number | null = null) => ({ w, h, heightPx: 400 });
+  test('solo alto a 2 columnas con w:2', () => {
+    expect(snapResize(s(2), 0, 120, 300, 14, 2)).toEqual({ w: 2, h: 520 });
+  });
+  test('clic sin mover no cambia nada', () => {
+    expect(snapResize(s(2), 0, 0, 300, 14, 2)).toEqual({ w: 2, h: null });
+    expect(snapResize(s(3, 320), 0, 0, 300, 14, 2)).toEqual({ w: 3, h: 320 });
+    expect(snapResize(s(1), 0, 0, 300, 14, 3)).toEqual({ w: 1, h: null });
+  });
+  test('w:3 a 2 columnas conserva 3', () => {
+    expect(snapResize(s(3), 0, 0, 300, 14, 2).w).toBe(3);
+    expect(snapResize(s(3), 5, 0, 300, 14, 2).w).toBe(3);
+  });
+  test('w:3 a 1 columna con dy conserva 3', () => {
+    expect(snapResize(s(3), 0, 80, 300, 14, 1)).toEqual({ w: 3, h: 480 });
+  });
+  test("'full' a 1 columna con dx conserva 'full'", () => {
+    expect(snapResize(s('full'), 3, 0, 300, 14, 1).w).toBe('full');
+  });
+  test("w:1 a 3 columnas arrastrando dos columnas pasa a 'full'", () => {
+    expect(snapResize(s(1), 2 * 314, 0, 300, 14, 3).w).toBe('full');
+  });
 });

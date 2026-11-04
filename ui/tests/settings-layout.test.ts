@@ -123,6 +123,20 @@ describe('LayoutSettings', () => {
     expect(JSON.parse(post.body!)).toEqual({ name: 'Escritorio' });
   });
 
+  test('copy without own profile names it with the device default, not the source', async () => {
+    Object.assign(layoutState, { profileName: null, deviceKind: 'browser' });
+    const copied = { device_id: 'A', name: 'Navegador', updated_at: 't', doc: { version: 1, tabs: {}, custom: [], customOrder: [] } };
+    handler = (c) => {
+      if (c.method === 'POST') return json(200, copied);
+      if (c.url === '/api/ui/layouts/A') return json(200, copied);
+      return json(200, PROFILES);
+    };
+    await open();
+    await click('profile-copy-B');
+    await vi.waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true));
+    expect(JSON.parse(calls.find((c) => c.method === 'POST')!.body!)).toEqual({ name: 'Navegador' });
+  });
+
   test('reset all keeps custom tabs', async () => {
     handler = (c) => (c.method === 'PUT' ? json(200, { device_id: 'A', name: 'Escritorio', updated_at: 't', doc: {} }) : json(200, PROFILES));
     await open();

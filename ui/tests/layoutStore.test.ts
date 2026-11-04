@@ -8,6 +8,8 @@ import {
 } from '../src/shell/layoutStore.svelte';
 
 const TAB = 'layout:engineering';
+const DESKTOP = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+const V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 type Call = { url: string; method: string; body?: string };
 let calls: Call[];
 let storage: Map<string, string>;
@@ -54,10 +56,42 @@ describe('layoutStore', () => {
 
   test('init uses desktop id when shell=desktop', async () => {
     stubEnv('?shell=desktop');
+    handler = (c) => (c.url === '/api/ui/device/desktop' ? json(200, { device_id: DESKTOP }) : json(404, {}));
+    await initLayouts();
+    expect(layoutState.deviceId).toBe(DESKTOP);
+    expect(layoutState.deviceKind).toBe('desktop');
+  });
+
+  test('init ignores an invalid desktop id and falls back to storage', async () => {
+    stubEnv('?shell=desktop');
     handler = (c) => (c.url === '/api/ui/device/desktop' ? json(200, { device_id: 'D' }) : json(404, {}));
     await initLayouts();
-    expect(layoutState.deviceId).toBe('D');
-    expect(layoutState.deviceKind).toBe('desktop');
+    expect(layoutState.deviceId).not.toBe('D');
+    expect(layoutState.deviceId).toBe(storage.get(DEVICE_KEY));
+    expect(layoutState.deviceKind).toBe('browser');
+    expect(layoutState.offline).toBe(false);
+  });
+
+  test('init regenerates an invalid stored device id', async () => {
+    storage.set(DEVICE_KEY, 'basura');
+    await initLayouts();
+    const id = storage.get(DEVICE_KEY);
+    expect(id).not.toBe('basura');
+    expect(id).toMatch(V4);
+    expect(layoutState.deviceId).toBe(id);
+    expect(layoutState.offline).toBe(false);
+    expect(layoutState.needsPrompt).toBe(true);
+    expect(calls.some((c) => c.url.includes('basura'))).toBe(false);
+  });
+
+  test('init works in an insecure context without crypto.randomUUID', async () => {
+    vi.stubGlobal('crypto', {
+      getRandomValues: (a: Uint8Array) => { for (let i = 0; i < a.length; i++) a[i] = (i * 17 + 3) & 0xff; return a; },
+    });
+    await initLayouts();
+    expect(layoutState.offline).toBe(false);
+    expect(layoutState.needsPrompt).toBe(true);
+    expect(layoutState.deviceId).toMatch(V4);
   });
 
   test('init falls back to factory on corrupt doc and does not write', async () => {
@@ -106,6 +140,22 @@ describe('layoutStore', () => {
     expect(layoutState.editing).toBe(false);
     expect(layoutState.saveError).toBe(false);
     expect(ids()).toEqual(moved);
+  });
+
+  test('edits are ignored while a save is in flight', async () => {
+    await initLayouts();
+    beginEdit();
+    applyOp(TAB, 0, { kind: 'move', to: 2 });
+    const snapshot = ids();
+    let release!: (r: Response) => void;
+    handler = () => new Promise<Response>((res) => { release = res; });
+    const pending = commitEdit();
+    expect(layoutState.saving).toBe(true);
+    applyOp(TAB, 0, { kind: 'move', to: 1 });
+    expect(ids()).toEqual(snapshot);
+    release(json(200, { device_id: 'x', name: 'n', updated_at: 't', doc: {} }));
+    expect(await pending).toBe(true);
+    expect(ids()).toEqual(snapshot);
   });
 
   test('commit without profile uses default device name', async () => {

@@ -150,6 +150,18 @@ describe('edit mode', () => {
     expect(ax.querySelector('.ph-pill')?.textContent).toBe('Aparece automáticamente');
   });
 
+  test('conditional cards stay hidden in layout tabs and show in module tabs', () => {
+    expect(slots()).not.toContain('eng-flow');
+    click(target.querySelector('[data-module="engineering"]'));
+    expect(slot('eng-flow')).not.toBeNull();
+    expect(slot('eng-flow').classList.contains('ghost')).toBe(false);
+    expect(slot('eng-flow').textContent).toContain('Elige un módulo para calcular');
+    edit();
+    expect(slot('eng-flow').classList.contains('ghost')).toBe(false);
+    expect(slot('eng-flow').querySelector('.ph-pill')).toBeNull();
+    expect(slot('eng-flow').textContent).toContain('Elige un módulo para calcular');
+  });
+
   test('auto-companion does not switch tabs while editing', () => {
     prefs.autoCompanion = true;
     flushSync();
@@ -162,6 +174,21 @@ describe('edit mode', () => {
     cancelEdit();
     flushSync();
     expect(target.querySelector('.grid-title')?.textContent).toBe('Combate');
+  });
+
+  test('escape in settings keeps the edit session and its draft', () => {
+    edit();
+    click(btn('engineers', 'remove'));
+    expect(slots()).not.toContain('engineers');
+    click(target.querySelector('button[title="Ajustes"]'));
+    expect(target.querySelector('[data-testid="edit-toolbar"]')).toBeNull();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    flushSync();
+    expect(layoutState.editing).toBe(true);
+    expect(layoutState.draft).not.toBeNull();
+    click(target.querySelector('.nav-btn[title="Ingeniería"]:not([data-module])'));
+    expect(target.querySelector('[data-testid="edit-toolbar"]')).not.toBeNull();
+    expect(slots()).not.toContain('engineers');
   });
 
   test('escape cancels edit', () => {

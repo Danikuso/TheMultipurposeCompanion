@@ -36,13 +36,14 @@ const docWith = (n: number): LayoutDoc => {
   return d;
 };
 
-async function boot(opts: { cfg?: object; doc?: LayoutDoc; placement?: object } = {}) {
+async function boot(opts: { cfg?: object; doc?: LayoutDoc; placement?: object; failLayouts?: boolean } = {}) {
   const doc = opts.doc ?? emptyDoc();
   localStorage.removeItem('tmc.ui.placement');
   if (opts.placement) localStorage.setItem('tmc.ui.placement', JSON.stringify(opts.placement));
   prefs.loaded = false;
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     if (url === '/api/config') return new Response(JSON.stringify(opts.cfg ?? { auto_companion: true }), { status: 200 });
+    if (opts.failLayouts) throw new TypeError('network');
     return new Response(JSON.stringify({ device_id: 'x', name: 'n', updated_at: 't', doc }), { status: 200 });
   }));
   target = document.createElement('div');
@@ -194,6 +195,25 @@ describe('custom tabs', () => {
     await createTab('Una más');
     expect(layoutState.draft?.custom).toHaveLength(MAX_CUSTOM_TABS);
     expect(target.textContent).toContain(t('layout-custom-limit'));
+  });
+
+  test('resolveNavIcon ignores inherited object keys', () => {
+    for (const k of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) expect(resolveNavIcon(k), k).toBeNull();
+  });
+
+  test('offline keeps the remembered custom view in the placement', async () => {
+    const stored = { layout: null, context: null, view: 'custom:c-0' };
+    await boot({ cfg: { auto_companion: false }, placement: stored, failLayouts: true });
+    expect(layoutState.offline).toBe(true);
+    flushSync();
+    expect(JSON.parse(localStorage.getItem('tmc.ui.placement') ?? '{}').view).toBe('custom:c-0');
+  });
+
+  test('custom tab ids come from uuidv4 and survive the placement regex', async () => {
+    await boot();
+    await createTab('Nueva');
+    const id = layoutState.draft!.custom[0].id;
+    expect(id).toMatch(/^c-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   });
 
   test('custom tab icons exist', () => {

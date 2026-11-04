@@ -76,6 +76,7 @@ describe('CardFrame', () => {
   test('auto height keeps panel without fixed-height', () => {
     const el = frame({ id: 'test-card', w: 1, h: null }, def(PanelCard), 2);
     expect(el.style.height).toBe('');
+    expect((el.querySelector('.card-content') as HTMLElement).style.height).toBe('');
     const section = el.querySelector('section') as HTMLElement;
     expect(section.classList.contains('fixed-height')).toBe(false);
     expect(section.classList.contains('in-frame')).toBe(true);
@@ -319,6 +320,27 @@ describe('CardFrame aborted drags clear their visuals', () => {
     clean(el);
     expect(emitted).toEqual([]);
     sibling.remove();
+    vi.unstubAllGlobals();
+  });
+
+  test('resize drag only vertical at 2 columns emits only a height op', () => {
+    stubRaf();
+    const emitted: unknown[] = [];
+    inst = mount(CardFrame, {
+      target,
+      props: {
+        placement: { id: 'test-card', w: 2, h: 400 }, card: def(PanelCard), index: 0, count: 1, ghost: false,
+        editing: true, columns: 2, ctx, onop: (op: unknown) => emitted.push(op),
+      },
+    });
+    flushSync();
+    const el = target.querySelector('.card-frame') as HTMLElement;
+    const handle = el.querySelector('[data-op="resize"]') as HTMLElement;
+    handle.dispatchEvent(pe('pointerdown', 0, 0));
+    handle.dispatchEvent(pe('pointermove', 0, 120));
+    handle.dispatchEvent(pe('pointerup', 0, 120));
+    flushSync();
+    expect(emitted).toEqual([{ kind: 'height', h: 520 }]);
     vi.unstubAllGlobals();
   });
 

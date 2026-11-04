@@ -72,7 +72,7 @@
 
   const showPlaceholder = $derived(editing && (ghost || emptyContent));
   const widthOptions = [1, 2, 3] as const;
-  // La barra de controles es una capa superpuesta: el alto actual se mide sobre el contenido, sin ella.
+  // El alto actual se mide sobre `.card-content` (la barra de controles va aparte, en flujo).
   const currentHeight = () => placement.h ?? Math.round(contentEl?.getBoundingClientRect().height ?? 0);
   const emit = (op: CardOp) => onop?.(op);
 

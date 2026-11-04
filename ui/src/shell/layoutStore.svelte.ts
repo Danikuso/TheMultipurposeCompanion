@@ -1,5 +1,6 @@
 import { diag } from '../lib/diag.svelte';
 import { t } from '../lib/i18n';
+import { isUuid, uuidv4 } from '../lib/uuid';
 import {
   ApiError, copyProfile, getDesktopDeviceId, getProfile, putProfile, type Profile,
 } from '../lib/layoutApi';
@@ -76,18 +77,27 @@ export async function initLayouts(): Promise<void> {
   const wantsDesktop = new URLSearchParams(globalThis.location?.search ?? '').get('shell') === 'desktop';
   if (wantsDesktop) {
     try {
-      id = await getDesktopDeviceId();
-      if (id !== null) layoutState.deviceKind = 'desktop';
+      const desktop = await getDesktopDeviceId();
+      if (isUuid(desktop)) {
+        id = desktop;
+        layoutState.deviceKind = 'desktop';
+      } else if (desktop !== null) {
+        diag('ui.layout.load', { status: 0, desktop: true, invalid: true });
+      }
     } catch (e) {
       diag('ui.layout.load', { status: errStatus(e), desktop: true });
     }
   }
   if (id === null) {
     try {
-      id = readStorage();
-      if (!id) {
-        id = crypto.randomUUID();
+      const stored = readStorage();
+      if (isUuid(stored)) {
+        id = stored;
+      } else {
+        id = uuidv4();
         localStorage.setItem(DEVICE_KEY, id);
+        // Un id guardado que no es UUID (corrupto o antiguo) se sustituye; uno ausente es el primer arranque.
+        if (stored) diag('ui.layout.load', { status: 0, regenerated: true });
       }
     } catch {
       id = null;
@@ -170,7 +180,8 @@ export async function commitEdit(): Promise<boolean> {
 }
 
 export function editDoc(fn: (d: LayoutDoc) => LayoutDoc): void {
-  if (!layoutState.editing || layoutState.draft === null) return;
+  // Durante el PUT en curso el borrador no cambia: lo que se guarda es lo que luego queda como vigente.
+  if (!layoutState.editing || layoutState.draft === null || layoutState.saving) return;
   layoutState.draft = fn(clone($state.snapshot(layoutState.draft)));
 }
 

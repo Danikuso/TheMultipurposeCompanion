@@ -16,6 +16,7 @@
   import CardHost, { isCardVisible, tabPlacements } from './shell/CardHost.svelte';
   import { beginEdit, customTab, editDoc, initLayouts, layoutState } from './shell/layoutStore.svelte';
   import { askConfirm } from './lib/confirm';
+  import { uuidv4 } from './lib/uuid';
   import CustomTabDialog from './shell/CustomTabDialog.svelte';
   import { pushToast } from './shell/Toasts.svelte';
   import { createCustomTab, deleteCustomTab, updateCustomTab } from './shell/layoutModel';
@@ -119,7 +120,7 @@
   );
   const activeCustom = $derived(tabKey?.startsWith('custom:') ? customTab(tabKey.slice('custom:'.length)) : undefined);
   const tabCards = $derived(tabKey === null ? [] : tabPlacements(tabKey));
-  const visibleSlots = $derived(tabCards.filter((p) => isCardVisible(p.id, layoutContext)));
+  const visibleSlots = $derived(tabCards.filter((p) => tabKey !== null && isCardVisible(p.id, layoutContext, tabKey)));
   const selectedContext = $derived(follow ? autoContext : contextPanel(liveModules, layoutContext.manual));
 
   $effect(() => {
@@ -156,13 +157,15 @@
     savePlacement({
       layout: pin?.startsWith('layout:') ? pin.slice(7) : heldLayout,
       context: layoutContext.manual,
-      view: view?.startsWith('custom:') ? view : null,
+      // Sin conexión no se conocen las pestañas propias: se conserva la vista recordada en vez de borrarla.
+      view: layoutState.offline ? readPlacement().view : (view?.startsWith('custom:') ? view : null),
     });
   });
 
-  // Esc aborta el arrastre en curso o, si no hay, cancela la edición; el listener solo existe mientras se edita.
+  // Esc aborta el arrastre en curso o, si no hay, cancela la edición; el listener solo existe mientras se edita
+  // sobre una rejilla de tarjetas (en Ajustes no hay barra de edición y Esc no debe descartar el borrador).
   $effect(() => {
-    if (!layoutState.editing) return;
+    if (!layoutState.editing || tabKey === null) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       const drag = activeDrag();
@@ -212,7 +215,7 @@
       return;
     }
     if (!layoutState.editing) beginEdit();
-    const id = `c-${crypto.randomUUID()}`;
+    const id = `c-${uuidv4()}`;
     let created = false;
     editDoc((d) => {
       const next = createCustomTab(d, name, icon, id);

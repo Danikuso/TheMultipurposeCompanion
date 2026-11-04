@@ -42,9 +42,9 @@
 
 <div class="edit-toolbar" role="toolbar" aria-label={t('layout-edit-toolbar')} data-testid="edit-toolbar">
   <button type="button" class="primary" data-testid="layout-done" disabled={layoutState.saving} onclick={done}>{t('layout-edit-done')}</button>
-  <button type="button" data-testid="layout-cancel" onclick={cancel}>{t('layout-edit-cancel')}</button>
-  <button type="button" data-testid="layout-add" bind:this={addBtn} onclick={() => (catalogOpen = true)}>{t('layout-edit-add')}</button>
-  <button type="button" data-testid="layout-reset" onclick={reset}>{t('layout-edit-reset')}</button>
+  <button type="button" data-testid="layout-cancel" disabled={layoutState.saving} onclick={cancel}>{t('layout-edit-cancel')}</button>
+  <button type="button" data-testid="layout-add" bind:this={addBtn} disabled={layoutState.saving} onclick={() => (catalogOpen = true)}>{t('layout-edit-add')}</button>
+  <button type="button" data-testid="layout-reset" disabled={layoutState.saving} onclick={reset}>{t('layout-edit-reset')}</button>
   {@render extra?.()}
 </div>
 

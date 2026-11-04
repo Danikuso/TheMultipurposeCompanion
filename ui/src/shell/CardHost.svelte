@@ -10,7 +10,12 @@
     return list.filter((p) => Object.hasOwn(cards, p.id));
   }
 
-  export function isCardVisible(id: string, ctx: LayoutCtx): boolean {
+  /**
+   * Las condiciones (`when`) solo rigen en las disposiciones. Las pestañas de módulo muestran todas sus
+   * tarjetas como siempre (con sus estados vacíos y textos guía), también en edición.
+   */
+  export function isCardVisible(id: string, ctx: LayoutCtx, tabKey: string): boolean {
+    if (tabKey.startsWith('module:')) return true;
     return cards[id]?.when?.(ctx) ?? true;
   }
 </script>
@@ -25,7 +30,7 @@
   let { tabKey, ctx, prefix }: { tabKey: string; ctx: LayoutCtx; prefix?: Snippet<[string]> } = $props();
 
   const placements = $derived(tabPlacements(tabKey));
-  const shown = $derived(visibleCards(placements, (id) => isCardVisible(id, ctx), layoutState.editing));
+  const shown = $derived(visibleCards(placements, (id) => isCardVisible(id, ctx, tabKey), layoutState.editing));
 </script>
 
 {#each shown as item, i (item.placement.id)}

@@ -5,7 +5,7 @@
   import { getLocale, t } from '../lib/i18n';
   import { copyProfile, deleteProfile, listProfiles, renameProfile, type ProfileSummary } from '../lib/layoutApi';
   import { deleteCustomTab, moveCustomTab, normalizeTabName, NAME_MAX } from '../shell/layoutModel';
-  import { initLayouts, layoutState, mutateAndSave } from '../shell/layoutStore.svelte';
+  import { defaultProfileName, initLayouts, layoutState, mutateAndSave } from '../shell/layoutStore.svelte';
 
   let profiles = $state<ProfileSummary[]>([]);
   let busy = $state(false);
@@ -84,7 +84,7 @@
   const copyHere = (p: ProfileSummary) => run(async () => {
     const cur = layoutState.deviceId;
     if (cur === null || !askConfirm(t('layout-settings-copy-confirm', { name: p.name }))) return;
-    await copyProfile(cur, p.device_id, layoutState.profileName ?? p.name);
+    await copyProfile(cur, p.device_id, layoutState.profileName ?? defaultProfileName());
     await initLayouts();
   });
 
