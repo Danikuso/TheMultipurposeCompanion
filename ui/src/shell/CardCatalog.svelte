@@ -3,7 +3,7 @@
   import { t } from '../lib/i18n';
   import { modules } from '../modules/registry';
   import { catalogFor } from './cards';
-  import { addCard, customTab, themedTab } from './layoutStore.svelte';
+  import { addCards, customTab, themedTab } from './layoutStore.svelte';
 
   let { tabKey, onclose }: { tabKey: string; onclose: () => void } = $props();
 
@@ -47,14 +47,27 @@
   const maxH = $derived(Math.max(MIN_H, Math.min(MAX_H, Math.floor(viewportH * 0.6))));
   const listHeight = $derived(Math.max(MIN_H, Math.min(maxH, natural)));
 
-  function add(id: string) {
-    addCard(tabKey, id);
+  // La selección no se vacía al filtrar: cuenta también las entradas ocultas.
+  let selected = $state(new Set<string>());
+  const count = $derived(selected.size);
+
+  function toggle(id: string, on: boolean) {
+    const next = new Set(selected);
+    if (on) next.add(id);
+    else next.delete(id);
+    selected = next;
+  }
+
+  function addSelected() {
+    const picked = all.filter((e) => !e.disabled && selected.has(e.card.id)).map((e) => e.card.id);
+    if (picked.length === 0) return;
+    addCards(tabKey, picked);
     onclose();
   }
 
   function trapTab(e: KeyboardEvent) {
     if (e.key !== 'Tab' || !dialogEl) return;
-    const items = Array.from(dialogEl.querySelectorAll<HTMLElement>('button:not(:disabled), input'));
+    const items = Array.from(dialogEl.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled)'));
     if (items.length === 0) return;
     const first = items[0];
     const last = items[items.length - 1];
@@ -69,7 +82,7 @@
   }
 
   onMount(() => {
-    (searchEl ?? listEl?.querySelector<HTMLElement>('[data-catalog-entry]:not(:disabled)'))?.focus();
+    (searchEl ?? listEl?.querySelector<HTMLElement>('[data-catalog-entry] input:not(:disabled)'))?.focus();
     // Captura en window: Esc cierra el catálogo y no llega al listener que cancela la edición.
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
@@ -110,15 +123,21 @@
         {#each groups as g (g.module)}
           <h4 class="catalog-group">{g.label}</h4>
           {#each g.items as e (e.card.id)}
-            <button type="button" class="catalog-entry" data-catalog-entry={e.card.id} disabled={e.disabled}
-              title={e.disabled ? t('layout-edit-catalog-present') : undefined} onclick={() => add(e.card.id)}>
+            <label class="catalog-entry" class:present={e.disabled} data-catalog-entry={e.card.id}
+              title={e.disabled ? t('layout-edit-catalog-present') : undefined}>
+              <input type="checkbox" disabled={e.disabled} checked={e.disabled || selected.has(e.card.id)}
+                onchange={(ev) => toggle(e.card.id, ev.currentTarget.checked)} />
               <span class="catalog-name" title={t(e.card.titleKey)}>{t(e.card.titleKey)}</span>
-              {#if e.disabled}<span class="catalog-tick" aria-hidden="true">✓</span>{/if}
-            </button>
+            </label>
           {/each}
         {/each}
       </div>
     {/if}
+    <footer class="catalog-foot">
+      <button type="button" class="catalog-btn" data-testid="catalog-cancel" onclick={onclose}>{t('layout-edit-catalog-cancel')}</button>
+      <button type="button" class="catalog-btn primary" data-testid="catalog-add" disabled={count === 0}
+        onclick={addSelected}>{t('layout-edit-catalog-add', { count })}</button>
+    </footer>
   </div>
 </div>
 
@@ -131,8 +150,7 @@
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    background: rgba(4, 8, 16, 0.78);
-    backdrop-filter: blur(8px);
+    background: rgba(4, 8, 16, 0.85);
   }
 
   .catalog-dialog {
@@ -149,6 +167,7 @@
     border-radius: 8px;
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
     overflow: hidden;
+    contain: layout paint;
   }
 
   .catalog-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
@@ -196,22 +215,32 @@
   .catalog-entry {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
+    gap: 0.6rem;
     box-sizing: border-box;
     width: 100%;
     height: 44px;
     padding: 0 0.6rem;
-    text-align: left;
-    background: transparent;
     color: var(--hud-text);
     border: 1px solid transparent;
     border-radius: 4px;
     cursor: pointer;
   }
 
-  .catalog-entry:hover:not(:disabled), .catalog-entry:focus-visible { border-color: var(--hud-primary); background: rgba(0, 195, 255, 0.08); }
-  .catalog-entry:disabled { opacity: 0.45; cursor: default; }
+  .catalog-entry input { flex-shrink: 0; width: 1rem; height: 1rem; margin: 0; accent-color: var(--hud-primary); cursor: inherit; }
+  .catalog-entry:hover:not(.present), .catalog-entry:focus-within { border-color: var(--hud-primary); background: rgba(0, 195, 255, 0.08); }
+  .catalog-entry.present { opacity: 0.45; cursor: default; }
   .catalog-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .catalog-tick { flex-shrink: 0; color: var(--hud-primary); }
+
+  .catalog-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; flex-shrink: 0; }
+  .catalog-btn {
+    flex: 1 1 8rem;
+    padding: 0.45rem 0.8rem;
+    background: transparent;
+    color: var(--hud-text);
+    border: 1px solid var(--hud-border);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .catalog-btn.primary { color: var(--hud-primary); border-color: var(--hud-primary); }
+  .catalog-btn:disabled { opacity: 0.45; cursor: default; }
 </style>

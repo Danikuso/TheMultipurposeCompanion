@@ -44,6 +44,8 @@ layout-edit-catalog-search = Karte suchen
 layout-edit-catalog-close = Schließen
 layout-edit-catalog-present = Bereits in diesem Tab
 layout-edit-catalog-no-results = Keine Karte entspricht der Suche
+layout-edit-catalog-add = Hinzufügen ({ $count })
+layout-edit-catalog-cancel = Abbrechen
 
 ## Pestañas personalizadas
 layout-custom-section = Eigene

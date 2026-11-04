@@ -112,8 +112,7 @@
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    background: rgba(4, 8, 16, 0.78);
-    backdrop-filter: blur(8px);
+    background: rgba(4, 8, 16, 0.85);
   }
 
   .tab-dialog {
@@ -130,6 +129,7 @@
     border-radius: 8px;
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
     overflow-y: auto;
+    contain: layout paint;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 170, 0, 0.3) transparent;
   }

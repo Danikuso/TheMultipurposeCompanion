@@ -44,6 +44,8 @@ layout-edit-catalog-search = Pesquisar cartão
 layout-edit-catalog-close = Fechar
 layout-edit-catalog-present = Já está neste separador
 layout-edit-catalog-no-results = Nenhum cartão corresponde à pesquisa
+layout-edit-catalog-add = Adicionar ({ $count })
+layout-edit-catalog-cancel = Cancelar
 
 ## Pestañas personalizadas
 layout-custom-section = Personalizadas

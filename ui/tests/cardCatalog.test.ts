@@ -21,7 +21,20 @@ const open = (tabKey: string) => {
   app = mount(CardCatalog, { target, props: { tabKey, onclose: () => { closed += 1; } } });
   flushSync();
 };
-const entries = () => Array.from(target.querySelectorAll('[data-catalog-entry]')) as HTMLButtonElement[];
+const entries = () => Array.from(target.querySelectorAll('[data-catalog-entry]')) as HTMLLabelElement[];
+const box = (id: string) =>
+  target.querySelector(`[data-catalog-entry="${id}"] input[type="checkbox"]`) as HTMLInputElement;
+const check = (id: string) => {
+  box(id).click();
+  flushSync();
+};
+const addBtn = () => target.querySelector('[data-testid="catalog-add"]') as HTMLButtonElement;
+const filter = (value: string) => {
+  const input = target.querySelector('input[type="search"]') as HTMLInputElement;
+  input.value = value;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  flushSync();
+};
 const ids = () => entries().map((e) => e.getAttribute('data-catalog-entry'));
 const customDoc = (cardIds: string[]): LayoutDoc => ({
   ...emptyDoc(),
@@ -81,7 +94,7 @@ describe('CardCatalog', () => {
     startEdit({ ...emptyDoc(), tabs: { [ENG]: { cards: factoryLayout(ENG).filter((p) => p.id !== 'sources'), removed: ['sources'] } } });
     open(ENG);
     expect(ids()).toEqual(['sources']);
-    expect(document.activeElement).toBe(entries()[0]);
+    expect(document.activeElement).toBe(entries()[0].querySelector('input'));
   });
 
   test('search filters by translated title', () => {
@@ -100,8 +113,9 @@ describe('CardCatalog', () => {
   test('adding appends at end with default width', () => {
     startEdit(customDoc(['ax']));
     open(CUSTOM);
-    expect(entries().find((e) => e.getAttribute('data-catalog-entry') === 'ax')!.disabled).toBe(true);
-    entries().find((e) => e.getAttribute('data-catalog-entry') === 'route')!.click();
+    expect(box('ax').disabled).toBe(true);
+    check('route');
+    addBtn().click();
     flushSync();
     expect(customTab('c1')!.cards.map((c) => [c.id, c.w])).toEqual([['ax', 1], ['route', 'full']]);
     expect(closed).toBe(1);
@@ -110,7 +124,8 @@ describe('CardCatalog', () => {
   test('adding to a themed tab restores the removed card', () => {
     startEdit({ ...emptyDoc(), tabs: { [ENG]: { cards: factoryLayout(ENG).filter((p) => p.id !== 'sources'), removed: ['sources'] } } });
     open(ENG);
-    entries()[0].click();
+    check('sources');
+    addBtn().click();
     flushSync();
     const tab = themedTab(ENG);
     expect(tab.removed).toEqual([]);
@@ -150,7 +165,7 @@ describe('CardCatalog', () => {
   test('Tab and Shift+Tab cycle inside the dialog', () => {
     startEdit(customDoc([]));
     open(CUSTOM);
-    const focusable = Array.from(target.querySelectorAll('button:not(:disabled), input')) as HTMLElement[];
+    const focusable = Array.from(target.querySelectorAll('button:not(:disabled), input:not(:disabled)')) as HTMLElement[];
     const first = focusable[0];
     const last = focusable.at(-1)!;
     const press = (shiftKey: boolean) => {
@@ -183,6 +198,63 @@ describe('CardCatalog', () => {
     } finally {
       window.innerHeight = prev;
     }
+  });
+});
+
+describe('CardCatalog multi-select', () => {
+  test('selecting three and adding calls addCards once with catalog order', () => {
+    startEdit(customDoc([]));
+    open(CUSTOM);
+    const order = ids() as string[];
+    const picked = [order[5], order[1], order[3]];
+    for (const id of picked) check(id);
+    addBtn().click();
+    flushSync();
+    expect(customTab('c1')!.cards.map((c) => c.id)).toEqual([order[1], order[3], order[5]]);
+    expect(closed).toBe(1);
+  });
+
+  test('add button disabled with zero and shows count', () => {
+    startEdit(customDoc([]));
+    open(CUSTOM);
+    expect(addBtn().disabled).toBe(true);
+    check('route');
+    check('cargo');
+    expect(addBtn().disabled).toBe(false);
+    expect(addBtn().textContent).toContain('(2)');
+  });
+
+  test('cancel and escape add nothing', () => {
+    startEdit(customDoc([]));
+    open(CUSTOM);
+    check('route');
+    (target.querySelector('[data-testid="catalog-cancel"]') as HTMLButtonElement).click();
+    expect(closed).toBe(1);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    expect(closed).toBe(2);
+    expect(customTab('c1')!.cards).toEqual([]);
+  });
+
+  test('selection survives filtering', () => {
+    startEdit(customDoc([]));
+    open(CUSTOM);
+    check('ax');
+    filter('materiales');
+    expect(box('ax')).toBeNull();
+    expect(addBtn().textContent).toContain('(1)');
+    filter('');
+    expect(box('ax').checked).toBe(true);
+    expect(addBtn().textContent).toContain('(1)');
+  });
+
+  test('present cards are checked and disabled', () => {
+    startEdit(customDoc(['ax']));
+    open(CUSTOM);
+    expect(box('ax').checked).toBe(true);
+    expect(box('ax').disabled).toBe(true);
+    expect(entries().find((e) => e.getAttribute('data-catalog-entry') === 'ax')!.getAttribute('title')).toBe('Ya está en esta pestaña');
+    check('ax');
+    expect(addBtn().disabled).toBe(true);
   });
 });
 

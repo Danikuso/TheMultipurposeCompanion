@@ -123,7 +123,8 @@ test('reload keeps order, size and removal', async () => {
 test('catalog re-adds sources at the end', async () => {
   await startEdit();
   await page.getByTestId('layout-add').click();
-  await page.locator('[data-catalog-entry="sources"]').click();
+  await page.locator('[data-catalog-entry="sources"] input').check();
+  await page.getByTestId('catalog-add').click();
   await finishEdit();
   const ids = await slotIds();
   expect(ids[ids.length - 1]).toBe('sources');
@@ -144,9 +145,11 @@ test('custom tab Caza AX with ax and cargo persists across reload and is not lef
   await expect(page.getByTestId('custom-tab-dialog')).toBeVisible();
   await page.getByTestId('custom-tab-name').fill('Caza AX');
   await page.getByTestId('custom-tab-submit').click();
-  await page.locator('[data-catalog-entry="ax"]').click();
+  await page.locator('[data-catalog-entry="ax"] input').check();
+  await page.getByTestId('catalog-add').click();
   await page.getByTestId('layout-add').click();
-  await page.locator('[data-catalog-entry="cargo"]').click();
+  await page.locator('[data-catalog-entry="cargo"] input').check();
+  await page.getByTestId('catalog-add').click();
   await expect(slot('ax')).toBeAttached();
   await expect(slot('cargo')).toBeAttached();
   await finishEdit();
