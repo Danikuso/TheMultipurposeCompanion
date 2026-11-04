@@ -3,6 +3,17 @@
 ## Gerät
 layout-device-default-desktop = Desktop
 layout-device-default-browser = Browser
+layout-device-title = Wie möchtest du auf diesem Gerät starten?
+layout-device-hint = Wähle einen Namen und den Ausgangspunkt deines Layouts
+layout-device-name = Gerätename
+layout-device-factory = Mit dem Werkslayout starten
+layout-device-copy = Kopieren von…
+layout-device-claim = Ich bin ein bestehendes Profil
+layout-device-accept = Übernehmen
+layout-device-dismiss = Werkslayout verwenden
+layout-device-error = Profil konnte nicht erstellt werden. Versuche es erneut.
+layout-device-offline = Nicht gespeichert
+layout-device-offline-hint = Layoutänderungen können auf diesem Gerät nicht gespeichert werden
 
 ## Edición
 layout-edit-start = Layout bearbeiten

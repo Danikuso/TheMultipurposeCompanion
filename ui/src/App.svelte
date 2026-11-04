@@ -22,6 +22,7 @@
   import { cancelEditWithDiag } from './shell/editDiag';
   import { activeDrag } from './shell/pointerDrag';
   import GridHeader from './shell/GridHeader.svelte';
+  import DevicePrompt from './shell/DevicePrompt.svelte';
   import EditToolbar from './shell/EditToolbar.svelte';
   import { modules } from './modules/registry';
   import { DEFAULT_PRIORITIES, autoLayout, contextPanel, layouts, nextPin } from './shell/layouts';
@@ -302,6 +303,7 @@
         <Settings />
       {:else if tabKey !== null}
         <GridHeader titleKey={headerTitleKey} title={headerTitle} {tabKey} />
+        {#if layoutState.needsPrompt}<DevicePrompt />{/if}
         {#if layoutState.editing}
           <EditToolbar {tabKey} extra={activeCustom ? customActions : undefined} />
         {:else if activeCustom && tabCards.length === 0}

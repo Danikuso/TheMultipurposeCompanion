@@ -3,6 +3,17 @@
 ## Device
 layout-device-default-desktop = Desktop
 layout-device-default-browser = Browser
+layout-device-title = How do you want to start on this device?
+layout-device-hint = Pick a name and where your layout starts from
+layout-device-name = Device name
+layout-device-factory = Start with the factory layout
+layout-device-copy = Copy from…
+layout-device-claim = I am an existing profile
+layout-device-accept = Accept
+layout-device-dismiss = Use the factory layout
+layout-device-error = Could not create the profile. Try again.
+layout-device-offline = Not saving
+layout-device-offline-hint = Layout changes cannot be saved on this device
 
 ## Edición
 layout-edit-start = Edit layout

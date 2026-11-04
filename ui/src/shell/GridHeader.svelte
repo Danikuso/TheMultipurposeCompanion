@@ -15,6 +15,9 @@
 
 <header class="grid-header">
   <h1 class="grid-title">{text}</h1>
+  {#if layoutState.offline}
+    <span class="offline-pill" data-testid="layout-offline" title={t('layout-device-offline-hint')}>{t('layout-device-offline')}</span>
+  {/if}
   {#if tabKey !== null && !layoutState.editing}
     <button type="button" class="edit-btn" data-testid="layout-edit" onclick={start}>{t('layout-edit-start')}</button>
   {/if}
@@ -37,6 +40,17 @@
     color: var(--hud-text);
     min-width: 0;
     overflow-wrap: anywhere;
+  }
+
+  .offline-pill {
+    flex-shrink: 0;
+    margin-right: auto;
+    padding: 0.1rem 0.55rem;
+    font-size: 0.75rem;
+    color: var(--hud-text);
+    border: 1px solid var(--hud-border);
+    border-radius: 999px;
+    background: var(--hud-surface);
   }
 
   .edit-btn {

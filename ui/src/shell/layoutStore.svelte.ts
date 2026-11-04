@@ -131,7 +131,7 @@ export function cancelEdit(): void {
   layoutState.saveError = false;
 }
 
-function defaultProfileName(): string {
+export function defaultProfileName(): string {
   return t(layoutState.deviceKind === 'desktop' ? 'layout-device-default-desktop' : 'layout-device-default-browser');
 }
 

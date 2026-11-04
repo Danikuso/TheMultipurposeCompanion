@@ -3,6 +3,17 @@
 ## Appareil
 layout-device-default-desktop = Bureau
 layout-device-default-browser = Navigateur
+layout-device-title = Comment voulez-vous commencer sur cet appareil ?
+layout-device-hint = Choisissez un nom et le point de départ de votre disposition
+layout-device-name = Nom de l'appareil
+layout-device-factory = Commencer avec la disposition d'usine
+layout-device-copy = Copier depuis…
+layout-device-claim = Je suis un profil existant
+layout-device-accept = Valider
+layout-device-dismiss = Utiliser la disposition d'usine
+layout-device-error = Impossible de créer le profil. Réessayez.
+layout-device-offline = Non enregistré
+layout-device-offline-hint = Les modifications de disposition ne peuvent pas être enregistrées sur cet appareil
 
 ## Edición
 layout-edit-start = Modifier la disposition
