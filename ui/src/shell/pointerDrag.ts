@@ -1,7 +1,7 @@
 // Controlador de arrastre con puntero (ratón y táctil) sin Svelte. Sin bucles continuos: un único
 // requestAnimationFrame pendiente como máximo y solo durante un arrastre; cero listeners en reposo.
 import type { CardWidth } from './cards';
-import { dropIndex, snapResize } from './layoutModel';
+import { snapResize } from './layoutModel';
 
 export interface DragSession { cancel(): void; readonly active: boolean }
 type Next = { w: CardWidth; h: number | null };
@@ -67,17 +67,16 @@ function begin(
 }
 
 export function startMoveDrag(
-  e: PointerEvent, handle: HTMLElement, frames: HTMLElement[], from: number,
-  onpreview: (dx: number, dy: number, target: number) => void, ondrop: (target: number) => void,
+  e: PointerEvent, handle: HTMLElement,
+  onpreview: (dx: number, dy: number) => void, ondrop: (dx: number, dy: number) => void,
   oncancel?: () => void,
 ): DragSession {
-  const rects = frames.map((f) => f.getBoundingClientRect()); // una sola vez, al empezar
   const x0 = e.clientX;
   const y0 = e.clientY;
   return begin(
     e, handle,
-    (p) => onpreview(p.x - x0, p.y - y0, dropIndex(p.x, p.y, rects, from)),
-    (p) => ondrop(dropIndex(p.x, p.y, rects, from)),
+    (p) => onpreview(p.x - x0, p.y - y0),
+    (p) => ondrop(p.x - x0, p.y - y0),
     oncancel,
   );
 }
@@ -85,12 +84,12 @@ export function startMoveDrag(
 export function startResizeDrag(
   e: PointerEvent, handle: HTMLElement,
   start: { w: CardWidth; h: number | null; heightPx: number; widthPx: number },
-  geometry: { colWidthPx: number; gapPx: number; columns: number },
+  geometry: { colWidthPx: number; gapPx: number; columns: number; maxSpan: number },
   onpreview: (next: Next) => void, ondrop: (next: Next) => void,
   oncancel?: () => void,
 ): DragSession {
   const x0 = e.clientX;
   const y0 = e.clientY;
-  const next = (p: Point) => snapResize(start, p.x - x0, p.y - y0, geometry.colWidthPx, geometry.gapPx, geometry.columns);
+  const next = (p: Point) => snapResize(start, p.x - x0, p.y - y0, geometry.colWidthPx, geometry.gapPx, geometry.columns, geometry.maxSpan);
   return begin(e, handle, (p) => onpreview(next(p)), (p) => ondrop(next(p)), oncancel);
 }

@@ -211,30 +211,80 @@ test('narrow window clamps width and restores when widened', async () => {
   await expect.poll(() => spanOf(slot('engineers'))).toBe(3);
 });
 
-test('drag with mouse and with touch pointer events', async () => {
-  await startEdit();
-  const first = (await slotIds())[0];
-  const from = (await slot(first).locator('[data-op="drag"]').boundingBox())!;
-  const to = (await slot((await slotIds())[2]).boundingBox())!;
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
-  await page.mouse.up();
-  // Con la rejilla libre el orden se normaliza por posición (Tarea 20 reescribe el arrastre): basta con que se mueva.
-  await expect.poll(async () => (await slotIds())[0]).not.toBe(first);
+/** Geometría del tablero y de cada marco (px de página) para comprobar columnas y gravedad. */
+const boardGeometry = () => page.evaluate(() => {
+  const board = document.querySelector('.card-board') as HTMLElement;
+  const gap = 0.85 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+  const w = window.innerWidth;
+  const columns = w >= 2400 ? 4 : w >= 1600 ? 3 : w >= 900 ? 2 : 1;
+  const b = board.getBoundingClientRect();
+  const colW = (board.clientWidth - gap * (columns - 1)) / columns;
+  const frames = Array.from(board.querySelectorAll<HTMLElement>(':scope > [data-layout-slot]')).map((el) => {
+    const r = el.getBoundingClientRect();
+    return { id: el.getAttribute('data-layout-slot') as string, x: r.x, y: r.y, w: r.width, h: r.height };
+  });
+  return { gap, columns, colW, left: b.x, top: b.y, frames };
+});
 
-  const moved = (await slotIds())[0];
-  const handle = slot(moved).locator('[data-op="drag"]');
-  const tb = (await handle.boundingBox())!;
-  const dest = (await slot((await slotIds())[2]).boundingBox())!;
-  const init = { pointerId: 7, pointerType: 'touch', isPrimary: true, bubbles: true, button: 0 };
-  const x = dest.x + dest.width / 2;
-  const y = dest.y + dest.height / 2;
-  await handle.dispatchEvent('pointerdown', { ...init, clientX: tb.x + 5, clientY: tb.y + 5, buttons: 1 });
-  await handle.dispatchEvent('pointermove', { ...init, clientX: x, clientY: y, buttons: 1 });
-  await page.waitForTimeout(100);
-  await handle.dispatchEvent('pointerup', { ...init, clientX: x, clientY: y, buttons: 0 });
-  await expect.poll(async () => (await slotIds())[0]).not.toBe(moved);
+/** Espera a que terminen las transiciones de posición (120 ms) leyendo dos veces seguidas lo mismo. */
+async function settledGeometry() {
+  let prev = JSON.stringify(await boardGeometry());
+  for (let i = 0; i < 20; i++) {
+    await page.waitForTimeout(150);
+    const cur = JSON.stringify(await boardGeometry());
+    if (cur === prev) break;
+    prev = cur;
+  }
+  return JSON.parse(prev) as Awaited<ReturnType<typeof boardGeometry>>;
+}
+
+async function dragToColumn(kind: 'mouse' | 'touch') {
+  const geo = await settledGeometry();
+  const step = geo.colW + geo.gap;
+  // Una tarjeta de una columna que no esté ya en la última.
+  const card = geo.frames.find((f) => f.w < geo.colW * 1.5 && Math.round((f.x - geo.left) / step) < geo.columns - 1);
+  expect(card, 'a one-column card with room on its right').toBeDefined();
+  const curCol = Math.round((card!.x - geo.left) / step);
+  const targetCol = geo.columns - 1;
+  const handle = slot(card!.id).locator('[data-op="drag"]');
+  const hb = (await handle.boundingBox())!;
+  const x0 = hb.x + hb.width / 2;
+  const y0 = hb.y + hb.height / 2;
+  const dx = (targetCol - curCol) * step;
+  if (kind === 'mouse') {
+    await page.mouse.move(x0, y0);
+    await page.mouse.down();
+    await page.mouse.move(x0 + dx, y0, { steps: 8 });
+    await page.mouse.up();
+  } else {
+    const init = { pointerId: 7, pointerType: 'touch', isPrimary: true, bubbles: true, button: 0 };
+    await handle.dispatchEvent('pointerdown', { ...init, clientX: x0, clientY: y0, buttons: 1 });
+    await handle.dispatchEvent('pointermove', { ...init, clientX: x0 + dx, clientY: y0, buttons: 1 });
+    await page.waitForTimeout(100);
+    await handle.dispatchEvent('pointerup', { ...init, clientX: x0 + dx, clientY: y0, buttons: 0 });
+  }
+  // Columna de destino (±2 px) y gravedad: queda arriba del todo o justo bajo la tarjeta de encima.
+  await expect.poll(async () => {
+    const g = await boardGeometry();
+    const me = g.frames.find((f) => f.id === card!.id)!;
+    return Math.abs(me.x - (g.left + targetCol * (g.colW + g.gap)));
+  }).toBeLessThanOrEqual(2);
+  await expect.poll(async () => {
+    const g = await boardGeometry();
+    const me = g.frames.find((f) => f.id === card!.id)!;
+    const above = g.frames.filter((f) => f.id !== card!.id && f.y < me.y && f.x < me.x + me.w - 1 && me.x < f.x + f.w - 1);
+    const expected = above.length === 0 ? g.top : Math.max(...above.map((f) => f.y + f.h + g.gap));
+    return Math.abs(me.y - expected);
+  }).toBeLessThanOrEqual(2);
+  return card!.id;
+}
+
+test('drag with mouse and with touch pointer events places the card in the target column', async () => {
+  await startEdit();
+  const moved = await dragToColumn('mouse');
+  // Segundo arrastre (táctil): otra tarjeta de una columna a la última.
+  const second = await dragToColumn('touch');
+  expect([moved, second].every(Boolean)).toBe(true);
   await finishEdit();
 });
 

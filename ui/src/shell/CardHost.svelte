@@ -25,7 +25,7 @@
   import CardFrame from './CardFrame.svelte';
   import { grid } from './gridColumns.svelte';
   import { onMount, untrack } from 'svelte';
-  import { packLayout, visibleCards } from './layoutModel';
+  import { dropTarget, packLayout, pinColumns, verticalNeighbor, visibleCards, type PackItem } from './layoutModel';
   import { applyOp, layoutState } from './layoutStore.svelte';
   import { FALLBACK_HEIGHT, boardGapPx, columnWidthPx, spanWidthPx } from './boardGeometry';
 
@@ -103,33 +103,88 @@
   });
 
   const columns = $derived(grid.columns);
-  const packed = $derived(packLayout(
-    shown.map((s) => ({
-      id: s.placement.id,
-      x: s.placement.x,
-      w: s.placement.w,
-      height: heights[s.placement.id] ?? s.placement.h ?? FALLBACK_HEIGHT,
-    })),
-    columns, gapPx,
-  ));
+  const heightOf = (id: string, h: number | null) => heights[id] ?? h ?? FALLBACK_HEIGHT;
+  const packItems = $derived<PackItem[]>(shown.map((s) => ({
+    id: s.placement.id, x: s.placement.x, w: s.placement.w, height: heightOf(s.placement.id, s.placement.h),
+  })));
+  const packed = $derived(packLayout(packItems, columns, gapPx));
+  const list = $derived(shown.map((s) => s.placement));
   const colWidth = $derived(columnWidthPx(boardWidth, columns, gapPx));
+
+  // Arrastre en curso: columna e índice previstos (en la lista sin la tarjeta) y empaquetado de vista previa.
+  let drag = $state<{ id: string; x: number; index: number } | null>(null);
+  const previewPacked = $derived.by(() => {
+    if (!drag) return null;
+    const pinned = pinColumns(list, packed.cards);
+    const byId = new Map(pinned.map((p) => [p.id, p.x]));
+    const items = packItems.map((it) => ({ ...it, x: byId.get(it.id) ?? it.x }));
+    const moving = items.find((it) => it.id === drag!.id);
+    if (!moving) return null;
+    const rest = items.filter((it) => it !== moving);
+    rest.splice(drag.index, 0, { ...moving, x: drag.x });
+    return packLayout(rest, columns, gapPx);
+  });
+  const shownPacked = $derived(previewPacked ?? packed);
+
+  const boxFrom = (c: { col: number; top: number; span: number }) =>
+    ({ left: c.col * (colWidth + gapPx), top: c.top, width: spanWidthPx(c.span, colWidth, gapPx) });
   const boxOf = (id: string) => {
     if (boardWidth <= 0) return null; // sin ancho medido (aún o jsdom): flujo normal, sin solapes
-    const c = packed.cards.find((p) => p.id === id);
-    if (!c) return null;
-    return { left: c.col * (colWidth + gapPx), top: c.top, width: spanWidthPx(c.span, colWidth, gapPx) };
+    // La tarjeta arrastrada conserva su sitio de origen: la desplaza el `transform` del marco.
+    const c = (drag?.id === id ? packed : shownPacked).cards.find((p) => p.id === id);
+    return c ? boxFrom(c) : null;
   };
+  const placeholder = $derived.by(() => {
+    if (!drag || !previewPacked || boardWidth <= 0) return null;
+    const c = previewPacked.cards.find((p) => p.id === drag!.id);
+    return c ? { ...boxFrom(c), height: c.height } : null;
+  });
+  const colOf = (id: string) => packed.cards.find((p) => p.id === id)?.col ?? 0;
   const geometry = () => ({ columns, gapPx, heights: $state.snapshot(heights) });
+
+  function targetFor(id: string, dx: number, dy: number) {
+    const own = packed.cards.find((p) => p.id === id);
+    if (!own || boardWidth <= 0) return null;
+    const box = boxFrom(own);
+    return dropTarget({ id, span: own.span, leftPx: box.left + dx, topPx: box.top + dy }, list, packed.cards, colWidth, gapPx, columns);
+  }
+  function previewMove(id: string, dx: number, dy: number) {
+    const t = targetFor(id, dx, dy);
+    if (!t) return;
+    if (drag?.id !== id || drag.x !== t.x || drag.index !== t.index) drag = { id, x: t.x, index: t.index };
+  }
+  function dropMove(id: string, dx: number, dy: number) {
+    const t = targetFor(id, dx, dy);
+    drag = null;
+    if (t) applyOp(tabKey, placements.indexOf(list[list.findIndex((p) => p.id === id)]), { kind: 'place', to: t.index, x: t.x }, geometry());
+  }
+  function vertical(item: CardPlacement, dir: -1 | 1) {
+    const i = list.indexOf(item);
+    const to = verticalNeighbor(list, packed.cards, i, dir);
+    if (to !== null) applyOp(tabKey, placements.indexOf(item), { kind: 'move', to }, geometry());
+  }
+  const hasNeighbor = (item: CardPlacement, dir: -1 | 1) => verticalNeighbor(list, packed.cards, list.indexOf(item), dir) !== null;
 </script>
 
-<div class="card-board" bind:this={boardEl} style:height={boardWidth > 0 ? `${packed.height}px` : undefined}>
-  {#each shown as item, i (item.placement.id)}
+<div class="card-board" bind:this={boardEl}
+  style:height={boardWidth > 0 ? `${Math.max(packed.height, shownPacked.height)}px` : undefined}>
+  {#each shown as item (item.placement.id)}
     {#snippet framePrefix()}{@render prefix?.(item.placement.id)}{/snippet}
-    <CardFrame placement={item.placement} card={cards[item.placement.id]} index={i} count={shown.length}
+    <CardFrame placement={item.placement} card={cards[item.placement.id]}
       ghost={item.ghost} editing={layoutState.editing} {columns} {ctx} prefix={framePrefix}
-      box={boxOf(item.placement.id)}
+      box={boxOf(item.placement.id)} col={colOf(item.placement.id)}
+      canUp={hasNeighbor(item.placement, -1)} canDown={hasNeighbor(item.placement, 1)}
+      onvertical={(dir) => vertical(item.placement, dir)}
+      onmovepreview={(dx, dy) => previewMove(item.placement.id, dx, dy)}
+      onmovedrop={(dx, dy) => dropMove(item.placement.id, dx, dy)}
+      onmovecancel={() => { drag = null; }}
       onop={(op) => applyOp(tabKey, placements.indexOf(item.placement), op, geometry())} />
   {/each}
+  {#if placeholder}
+    <div class="drop-placeholder" aria-hidden="true"
+      style:left="{placeholder.left}px" style:top="{placeholder.top}px"
+      style:width="{placeholder.width}px" style:height="{placeholder.height}px"></div>
+  {/if}
 </div>
 
 <style>
@@ -137,5 +192,15 @@
     grid-column: 1 / -1;
     position: relative;
     min-width: 0;
+  }
+
+  .drop-placeholder {
+    position: absolute;
+    box-sizing: border-box;
+    pointer-events: none;
+    border: 2px dashed var(--hud-primary);
+    border-radius: 4px;
+    background: rgba(255, 113, 0, 0.08);
+    transition: left 120ms ease, top 120ms ease;
   }
 </style>

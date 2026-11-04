@@ -32,6 +32,7 @@
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
+    scrollbar-gutter: stable;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 113, 0, 0.45) rgba(0, 0, 0, 0.15);
   }

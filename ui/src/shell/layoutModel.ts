@@ -231,24 +231,6 @@ export function parseLayoutDoc(raw: unknown, known: Known, widthOf: WidthOf = ()
   return doc;
 }
 
-export function dropIndex(
-  x: number, y: number, rects: { left: number; top: number; width: number; height: number }[], from: number,
-): number {
-  if (rects.length === 0) return 0;
-  let best = 0;
-  let bestDist = Infinity;
-  let bestCx = 0;
-  let bestCy = 0;
-  rects.forEach((r, i) => {
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    const d = (x - cx) ** 2 + (y - cy) ** 2;
-    if (d < bestDist) { best = i; bestDist = d; bestCx = cx; bestCy = cy; }
-  });
-  const idx = best < from && (x > bestCx || y > bestCy) ? best + 1 : best;
-  return clamp(idx, 0, rects.length - 1);
-}
-
 export function snapResize(
   start: { w: CardWidth; h: number | null; heightPx: number }, dx: number, dy: number,
   colWidthPx: number, gapPx: number, columns: number, maxSpan?: number,

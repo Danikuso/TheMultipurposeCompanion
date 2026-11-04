@@ -221,14 +221,9 @@ describe('edit mode', () => {
   test('escape during drag only aborts drag', () => {
     edit();
     const handle = document.createElement('div');
-    const frames = [0, 1].map((i) => {
-      const el = document.createElement('div');
-      el.getBoundingClientRect = () => ({ left: i * 200, top: 0, width: 200, height: 100 }) as DOMRect;
-      return el;
-    });
     const ondrop = vi.fn();
     const down = Object.assign(new Event('pointerdown'), { clientX: 10, clientY: 10, pointerId: 1, pointerType: 'mouse' });
-    const s = startMoveDrag(down as PointerEvent, handle, frames, 0, vi.fn(), ondrop);
+    const s = startMoveDrag(down as PointerEvent, handle, vi.fn(), ondrop);
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     flushSync();
     expect(s.active).toBe(false);

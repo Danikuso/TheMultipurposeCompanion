@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import type { CardPlacement, CardWidth } from '../src/shell/cards';
 import {
-  CUSTOM_TAB_ICONS, addToCustom, addToThemed, applyCardOp, columnsForWidth, createCustomTab, deleteCustomTab, dropIndex,
+  CUSTOM_TAB_ICONS, addToCustom, addToThemed, applyCardOp, columnsForWidth, createCustomTab, deleteCustomTab,
   effectiveWidth, emptyDoc, mergeWithDefaults, moveCustomTab, normalizeTabName, parseLayoutDoc,
   removeFromThemed, sanitizePlacements, packLayout, pinColumns, normalizeOrder, verticalNeighbor, dropTarget,
   type PackItem, snapHeight, snapResize, updateCustomTab, visibleCards,
@@ -166,12 +166,6 @@ describe('parseLayoutDoc', () => {
     expect(icons('toString')).toEqual(['']);
     expect(icons(7)).toEqual(['']);
   });
-});
-
-test('dropIndex', () => {
-  const rects = [0, 110, 220].map((left) => ({ left, top: 0, width: 100, height: 100 }));
-  expect(dropIndex(260, 50, rects, 0)).toBe(2);
-  expect(dropIndex(5, 50, rects, 0)).toBe(0);
 });
 
 test('snapResize', () => {

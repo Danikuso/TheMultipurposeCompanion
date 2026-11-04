@@ -11,8 +11,6 @@
   let {
     placement,
     card,
-    index,
-    count,
     ghost,
     editing,
     columns,
@@ -20,11 +18,16 @@
     prefix,
     ctx,
     box = null,
+    col,
+    canUp,
+    canDown,
+    onvertical,
+    onmovepreview,
+    onmovedrop,
+    onmovecancel,
   }: {
     placement: CardPlacement;
     card: CardDef;
-    index: number;
-    count: number;
     ghost: boolean;
     editing: boolean;
     columns: number;
@@ -33,6 +36,14 @@
     ctx: LayoutCtx;
     /** Posición en px dentro del tablero; `null` = flujo normal (tablero sin medir). */
     box?: { left: number; top: number; width: number } | null;
+    /** Columna de inicio calculada y vecinas en su columna (para ←/→ y ↑/↓). */
+    col: number;
+    canUp: boolean;
+    canDown: boolean;
+    onvertical?: (dir: -1 | 1) => void;
+    onmovepreview?: (dx: number, dy: number) => void;
+    onmovedrop?: (dx: number, dy: number) => void;
+    onmovecancel?: () => void;
   } = $props();
 
   setCardBox({
@@ -87,30 +98,26 @@
   const currentHeight = () => placement.h ?? Math.round(contentEl?.getBoundingClientRect().height ?? 0);
   const emit = (op: CardOp) => onop?.(op);
 
+  const span = $derived(effectiveWidth(placement.w, columns));
+  const canLeft = $derived(columns > 1 && placement.w !== 'full' && col > 0);
+  const canRight = $derived(columns > 1 && placement.w !== 'full' && col < columns - span);
+
   let session: DragSession | null = null;
-  let marked: Element | null = null;
-  const mark = (el: Element | null) => {
-    if (marked === el) return;
-    marked?.removeAttribute('data-drop-target');
-    el?.setAttribute('data-drop-target', '');
-    marked = el;
-  };
   function finish() {
+    const wasDragging = offset !== null;
     session = null;
     preview = null;
     offset = null;
-    mark(null);
+    if (wasDragging) onmovecancel?.();
   }
 
   function beginMove(e: PointerEvent) {
-    if (!frameEl || !frameEl.parentElement || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    if (!frameEl || (e.pointerType === 'mouse' && e.button !== 0)) return;
     e.preventDefault();
-    const frames = Array.from(frameEl.parentElement.children)
-      .filter((c): c is HTMLElement => c instanceof HTMLElement && c.hasAttribute('data-layout-slot'));
     const handle = e.currentTarget as HTMLElement;
-    session = startMoveDrag(e, handle, frames, index,
-      (dx, dy, target) => { offset = { dx, dy }; mark(target === index ? null : frames[target] ?? null); },
-      (target) => { finish(); if (target !== index) emit({ kind: 'move', to: target }); },
+    session = startMoveDrag(e, handle,
+      (dx, dy) => { offset = { dx, dy }; onmovepreview?.(dx, dy); },
+      (dx, dy) => { offset = null; finish(); onmovedrop?.(dx, dy); },
       finish);
   }
 
@@ -122,7 +129,7 @@
     const colWidthPx = Math.max(1, columnWidthPx(parent.clientWidth || parent.getBoundingClientRect().width, columns, gapPx));
     session = startResizeDrag(e, e.currentTarget as HTMLElement,
       { w: placement.w, h: placement.h, heightPx: currentHeight(), widthPx: Math.round(frameEl.getBoundingClientRect().width) },
-      { colWidthPx, gapPx, columns },
+      { colWidthPx, gapPx, columns, maxSpan: Math.max(1, columns - col) },
       (next) => { preview = next; },
       (next) => {
         finish();
@@ -147,9 +154,15 @@
       title={t('layout-edit-drag')} onpointerdown={beginMove}>⠿</button>
     <span class="ctl-group">
       <button type="button" data-op="up" aria-label={t('layout-edit-move-up')} title={t('layout-edit-move-up')}
-        disabled={index <= 0} onclick={() => emit({ kind: 'move', to: index - 1 })}>↑</button>
+        disabled={!canUp} onclick={() => onvertical?.(-1)}>↑</button>
       <button type="button" data-op="down" aria-label={t('layout-edit-move-down')} title={t('layout-edit-move-down')}
-        disabled={index >= count - 1} onclick={() => emit({ kind: 'move', to: index + 1 })}>↓</button>
+        disabled={!canDown} onclick={() => onvertical?.(1)}>↓</button>
+    </span>
+    <span class="ctl-group">
+      <button type="button" data-op="left" aria-label={t('layout-edit-move-left')} title={t('layout-edit-move-left')}
+        disabled={!canLeft} onclick={() => emit({ kind: 'column', x: col - 1 })}>←</button>
+      <button type="button" data-op="right" aria-label={t('layout-edit-move-right')} title={t('layout-edit-move-right')}
+        disabled={!canRight} onclick={() => emit({ kind: 'column', x: col + 1 })}>→</button>
     </span>
     <span class="ctl-group">
       {#each widthOptions as w (w)}
@@ -217,7 +230,6 @@
   }
 
   .card-frame.dragging { z-index: 20; opacity: 0.9; box-shadow: 0 6px 24px rgb(0 0 0 / 50%); }
-  .card-frame:global([data-drop-target]) { outline: 2px solid var(--hud-primary); outline-offset: 2px; }
 
   .drag-handle, .resize-handle { touch-action: none; user-select: none; }
   .drag-handle { cursor: grab; }
@@ -240,6 +252,7 @@
   .ctl-group { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; }
 
   .card-controls button {
+    flex-shrink: 0;
     min-width: 1.9rem;
     padding: 0.2rem 0.45rem;
     line-height: 1.1;

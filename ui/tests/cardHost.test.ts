@@ -4,7 +4,8 @@ import { setLocale } from '../src/lib/i18n';
 import { disconnect } from '../src/lib/ws.svelte';
 import CardHost from '../src/shell/CardHost.svelte';
 import { grid } from '../src/shell/gridColumns.svelte';
-import { layoutState } from '../src/shell/layoutStore.svelte';
+import { beginEdit, cancelEdit, layoutState } from '../src/shell/layoutStore.svelte';
+import { activeDrag } from '../src/shell/pointerDrag';
 import { emptyDoc, packLayout, type PackItem } from '../src/shell/layoutModel';
 
 vi.mock('../src/lib/ws.svelte', async (original) => ({
@@ -96,6 +97,12 @@ describe('CardHost board', () => {
       expect(px(el.style.width)).toBeCloseTo(colW, 3);
     }
     expect(px(slot('dashboard-alerts').style.top)).toBeCloseTo(200 + GAP + 160 + GAP, 3);
+    // Literales a mano (gap = 13.6): T1…T3 arriba, T4 bajo T1, T5 bajo T2, T6 bajo T4, T7 bajo T6.
+    const literal: Record<string, number> = {
+      'dashboard-cmdr': 0, 'dashboard-location': 0, 'dashboard-status': 0,
+      'dashboard-route': 213.6, 'dashboard-session': 133.6, 'dashboard-alerts': 387.2, jump: 560.8,
+    };
+    for (const [id, top] of Object.entries(literal)) expect(px(slot(id).style.top)).toBeCloseTo(top, 3);
   });
 
   test('one observer per board, covering the board and every frame, disconnected on destroy', () => {
@@ -161,5 +168,86 @@ describe('CardHost board', () => {
     measured['dashboard-route'] = 0;
     fire();
     expect(px(slot('dashboard-alerts').style.top)).toBeCloseTo(200 + GAP, 3);
+  });
+});
+
+describe('CardHost interaction', () => {
+  const handleOf = (id: string) => slot(id).querySelector('[data-op="drag"]') as HTMLElement;
+  const btn = (id: string, op: string) => slot(id).querySelector(`button[data-op="${op}"]`) as HTMLButtonElement;
+  const click = (el: Element) => { (el as HTMLElement).click(); flushSync(); };
+  const ev = (type: string, x: number, y: number) => {
+    const e = new Event(type, { bubbles: true });
+    Object.assign(e, { clientX: x, clientY: y, pointerId: 1, pointerType: 'mouse', button: 0 });
+    return e;
+  };
+  const draftCards = () => layoutState.draft!.custom[0].cards;
+  const COLSTEP = (BOARD - GAP * 2) / 3 + GAP;
+
+  function editing(columns: 1 | 2 | 3 | 4 = 3) {
+    vi.stubGlobal('ResizeObserver', FakeRO);
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => { cb(0); return 1; });
+    grid.columns = columns;
+    mountHost();
+    beginEdit();
+    flushSync();
+    fire();
+  }
+  afterEach(() => { activeDrag()?.cancel(); cancelEdit(); });
+
+  test('left and right emit column op and disable at edges', () => {
+    editing(2);
+    // Con 2 columnas: T1 está en la columna 0 (x = 0), T2 en la 1.
+    expect(btn('dashboard-cmdr', 'left').disabled).toBe(true);
+    expect(btn('dashboard-cmdr', 'right').disabled).toBe(false);
+    expect(btn('dashboard-location', 'right').disabled).toBe(true);
+    click(btn('dashboard-cmdr', 'right'));
+    expect(draftCards().find((c) => c.id === 'dashboard-cmdr')!.x).toBe(1);
+  });
+
+  test('left and right are disabled with one column or full width', () => {
+    editing(1);
+    expect(btn('dashboard-cmdr', 'left').disabled).toBe(true);
+    expect(btn('dashboard-cmdr', 'right').disabled).toBe(true);
+  });
+
+  test('up/down follow the column neighbour', () => {
+    editing(3);
+    expect(btn('dashboard-cmdr', 'down').disabled).toBe(false); // T4 está debajo de T1
+    expect(btn('dashboard-cmdr', 'up').disabled).toBe(true);
+    expect(btn('dashboard-location', 'up').disabled).toBe(true);
+    click(btn('dashboard-session', 'up')); // T5 sube por encima de T2
+    const ids = draftCards().map((c) => c.id);
+    expect(ids.indexOf('dashboard-session')).toBeLessThan(ids.indexOf('dashboard-location'));
+  });
+
+  test('drag drop emits place with dropTarget', () => {
+    editing(3);
+    const h = handleOf('jump');
+    h.dispatchEvent(ev('pointerdown', 10, 10));
+    h.dispatchEvent(ev('pointermove', 10 + 2 * COLSTEP, 10 - 400));
+    h.dispatchEvent(ev('pointerup', 10 + 2 * COLSTEP, 10 - 400));
+    flushSync();
+    const jump = draftCards().find((c) => c.id === 'jump')!;
+    expect(jump.x).toBe(2);
+    const ids = draftCards().map((c) => c.id);
+    expect(ids.indexOf('jump')).toBeLessThan(ids.indexOf('dashboard-alerts'));
+  });
+
+  test('mid-drag shows the placeholder and cancel restores everything', () => {
+    editing(3);
+    const before = Object.fromEntries(IDS.map((id) => [id, slot(id).style.top]));
+    const h = handleOf('jump');
+    h.dispatchEvent(ev('pointerdown', 10, 10));
+    h.dispatchEvent(ev('pointermove', 10 + 2 * COLSTEP, 10 - 400));
+    flushSync();
+    const ph = board().querySelector('.drop-placeholder') as HTMLElement;
+    expect(ph).not.toBeNull();
+    expect(px(ph.style.left)).toBeCloseTo(2 * COLSTEP, 3);
+    expect(slot('jump').style.transform).toContain('translate(');
+    activeDrag()!.cancel();
+    flushSync();
+    expect(board().querySelector('.drop-placeholder')).toBeNull();
+    expect(slot('jump').style.transform).toBe('');
+    for (const id of IDS) expect(slot(id).style.top).toBe(before[id]);
   });
 });

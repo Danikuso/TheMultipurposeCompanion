@@ -31,7 +31,7 @@ let inst: Record<string, unknown> | null = null;
 function frame(placement: CardPlacement, card: CardDef, columns = 2, editing = false) {
   inst = mount(CardFrame, {
     target,
-    props: { placement, card, index: 0, count: 1, ghost: false, editing, columns, ctx },
+    props: { placement, card, col: 0, canUp: false, canDown: false, ghost: false, editing, columns, ctx },
   });
   flushSync();
   return target.querySelector('.card-frame') as HTMLElement;
@@ -55,7 +55,7 @@ describe('CardFrame', () => {
     inst = mount(CardFrame, {
       target,
       props: {
-        placement: { id: 'test-card', w: 1, h: null }, card: def(PanelCard), index: 0, count: 1, ghost: false,
+        placement: { id: 'test-card', w: 1, h: null }, card: def(PanelCard), col: 0, canUp: false, canDown: false, ghost: false,
         editing: false, columns: 2, ctx, box: { left: 12, top: 34, width: 300 },
       },
     });
@@ -248,7 +248,7 @@ describe('CardFrame edit controls overlay', () => {
     inst = mount(CardFrame, {
       target,
       props: {
-        placement: { id: 'test-card', w: 1, h: null }, card: def(PanelCard), index: 0, count: 1, ghost: false,
+        placement: { id: 'test-card', w: 1, h: null }, card: def(PanelCard), col: 0, canUp: false, canDown: false, ghost: false,
         editing: true, columns: 2, ctx, onop: (op: unknown) => emitted.push(op),
       },
     });
@@ -298,7 +298,7 @@ describe('CardFrame aborted drags clear their visuals', () => {
     inst = mount(CardFrame, {
       target,
       props: {
-        placement: { id: 'test-card', w: 1, h: null }, card: def(PanelCard), index: 0, count: 2, ghost: false,
+        placement: { id: 'test-card', w: 1, h: null }, card: def(PanelCard), col: 0, canUp: false, canDown: false, ghost: false,
         editing: true, columns: 2, ctx, onop: (op: unknown) => emitted.push(op),
       },
     });
@@ -308,29 +308,22 @@ describe('CardFrame aborted drags clear their visuals', () => {
   const clean = (el: HTMLElement) => {
     expect(el.style.transform).toBe('');
     expect(el.classList.contains('dragging')).toBe(false);
-    expect(document.querySelector('[data-drop-target]')).toBeNull();
   };
 
   test.each(['cancel', 'pointercancel'])('move drag aborted by %s', async (how) => {
     stubRaf();
     const emitted: unknown[] = [];
-    const sibling = document.createElement('div');
-    sibling.setAttribute('data-layout-slot', 'other');
     const el = editFrame(emitted);
-    el.after(sibling);
     el.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect;
-    sibling.getBoundingClientRect = () => ({ left: 200, top: 0, width: 100, height: 100 }) as DOMRect;
     const handle = el.querySelector('[data-op="drag"]') as HTMLElement;
     handle.dispatchEvent(pe('pointerdown', 50, 50));
     handle.dispatchEvent(pe('pointermove', 250, 50));
     flushSync();
     expect(el.style.transform).toContain('translate');
-    expect(sibling.hasAttribute('data-drop-target')).toBe(true);
     if (how === 'cancel') activeDrag()!.cancel(); else handle.dispatchEvent(pe('pointercancel', 250, 50));
     flushSync();
     clean(el);
     expect(emitted).toEqual([]);
-    sibling.remove();
     vi.unstubAllGlobals();
   });
 
@@ -340,7 +333,7 @@ describe('CardFrame aborted drags clear their visuals', () => {
     inst = mount(CardFrame, {
       target,
       props: {
-        placement: { id: 'test-card', w: 2, h: 400 }, card: def(PanelCard), index: 0, count: 1, ghost: false,
+        placement: { id: 'test-card', w: 2, h: 400 }, card: def(PanelCard), col: 0, canUp: false, canDown: false, ghost: false,
         editing: true, columns: 2, ctx, onop: (op: unknown) => emitted.push(op),
       },
     });
