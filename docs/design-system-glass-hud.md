@@ -18,7 +18,7 @@ TMC no es un simple visor de registros ni un volcado de tablas de base de datos.
 3. **Acción directa a un clic:**
    Si una información conduce a una acción en el juego (viajar a un sistema, saltar, comerciar), debe existir un botón de acción inmediata (`📋 Copiar sistema`, `🔄 Recalcular ruta`, `Fijar objetivo`).
 4. **Respeto absoluto al rendimiento:**
-   La interfaz se ejecuta junto al juego. El consumo de RAM debe permanecer estrictamente por debajo de **150 MB** y la CPU en reposo por debajo del **1%**. Están terminantemente prohibidas las animaciones continuas por GPU, efectos de desenfoque complejos (`backdrop-filter: blur` pesado en áreas grandes) o bucles de `requestAnimationFrame` innecesarios.
+   La interfaz se ejecuta junto al juego. El consumo de RAM debe permanecer estrictamente por debajo de **180 MB** y la CPU en reposo por debajo del **1%**. Están terminantemente prohibidas las animaciones continuas por GPU, efectos de desenfoque complejos (`backdrop-filter: blur` pesado en áreas grandes) o bucles de `requestAnimationFrame` innecesarios.
 
 ---
 

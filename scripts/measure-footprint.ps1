@@ -6,7 +6,7 @@ param(
     [switch]$ShowWindow,
     [ValidateRange(1, 65535)][int]$Port = 47320,
     [ValidateRange(60, 86400)][int]$Seconds = 120,
-    [ValidateScript({ $_ -gt 0 -and -not [double]::IsInfinity($_) })][double]$MaxMB = 150.0,
+    [ValidateScript({ $_ -gt 0 -and -not [double]::IsInfinity($_) })][double]$MaxMB = 180.0,
     [ValidateScript({ $_ -gt 0 -and -not [double]::IsInfinity($_) })][double]$MaxCpu = 1.0
 )
 

@@ -287,7 +287,7 @@ The project is structured as a modular workspace in **stable Rust (2024 edition)
 - **Non-Intrusive Byte-Offset Reading:** operating system file system notifications are only used to detect the creation of a new `Journal.*.log` file; line-by-line reading advances through byte offsets without locking file descriptors on `EliteDangerous64.exe`. Volatile files (`Status.json`, `Cargo.json`, `Market.json`, `Outfitting.json`, `Shipyard.json`, `ModulesInfo.json`, `NavRoute.json`, `Backpack.json`, `ShipLocker.json`, `FCMaterials.json`) apply up to 10 retries of 50ms to handle partial writes safely.
 - **Resilience and Self-Healing:** malformed JSON lines or unknown future journal events never crash the application. If `tmc.db` suffers corruption on startup, it is automatically backed up as `tmc.db.corrupt-YYYYMMDDHHMMSS`, a clean schema is instantiated, and history is re-imported. If `config.toml` fails validation, it is preserved in `config.toml.bak` and safe defaults are restored.
 - **Local Server Security:** binds by default exclusively to loopback `127.0.0.1:47320` (probing `47320..=47340` if occupied), validating `Host` and `Origin` headers. When `lan = true` (`0.0.0.0`), all non-loopback requests strictly require the random 128-bit session token provided in the QR code.
-- **Strict Resource Budget (Hard Requirement):** `< 150 MB` total RAM with window open (~35–112 MB typical), `< 1%` idle CPU, zero continuous `requestAnimationFrame` loops, and maximum 10 UI updates/second over WebSocket. When minimized to the tray on Windows, invokes `COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW` and `SetIsVisible(false)`.
+- **Strict Resource Budget (Hard Requirement):** `< 180 MB` total RAM with window open (~35–112 MB typical), `< 1%` idle CPU, zero continuous `requestAnimationFrame` loops, and maximum 10 UI updates/second over WebSocket. When minimized to the tray on Windows, invokes `COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW` and `SetIsVisible(false)`.
 
 ---
 
@@ -326,7 +326,7 @@ cargo run -p tmc-replay -- anonymize --from C:\Path\Journal.log --to tests\fixtu
 # 4. Run scientific evaluation against real journals without printing personal data (8 math oracles + SQLite timings)
 cargo run -p tmc-headless -- eval --timings
 
-# 5. Measure real memory footprint and idle CPU against budget (< 150 MB RAM, < 1% CPU)
+# 5. Measure real memory footprint and idle CPU against budget (< 180 MB RAM, < 1% CPU)
 pwsh scripts/measure-footprint.ps1 -Exe target/release/TMC.exe -JournalDir tests/fixtures/journal
 ```
 

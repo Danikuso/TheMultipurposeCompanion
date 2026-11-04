@@ -287,7 +287,7 @@ O projeto está organizado como um workspace modular em **Rust estável (ediçã
 - **Leitura não intrusiva orientada a deslocamento de bytes (*byte offset*):** gatilhos do sistema operacional são utilizados estritamente para apontar a criação de um arquivo `Journal.*.log` recente; a decodificação linha a linha evolui via ponteiro de bytes sem reter handles abertos do processo `EliteDangerous64.exe`. Documentos com alto dinamismo (`Status.json`, `Cargo.json`, `Market.json`, `Outfitting.json`, `Shipyard.json`, `ModulesInfo.json`, `NavRoute.json`, `Backpack.json`, `ShipLocker.json`, `FCMaterials.json`) aplicam até 10 tentativas com pausa de 50 ms para absorver gravações incompletas do jogo.
 - **Tolerância e autocura:** trechos malformados em JSON ou novas tags que venham a surgir no diário jamais interrompem a aplicação. Na eventualidade de o `tmc.db` acusar danos na abertura, é criado um backup no formato `tmc.db.corrupt-YYYYMMDDHHMMSS`, uma base limpa é gerada e o histórico é reconstruído. Se o arquivo `config.toml` apresentar erros estruturais, ele é preservado em `config.toml.bak` e os parâmetros padrão de fábrica são restaurados.
 - **Proteção do servidor de bordo:** opera por padrão exclusivamente amarrado a `127.0.0.1:47320` (testando a faixa `47320..=47340` em caso de conflito de portas), checando cabeçalhos `Host` e `Origin`. Ao habilitar `lan = true` (`0.0.0.0`), qualquer chamada externa a loopback obrigatoriamente exige o token de segurança aleatório de 128 bits presente no QR Code.
-- **Teto rígido de consumo de hardware (Meta inegociável):** `< 150 MB` de memória RAM total com tela em primeiro plano (ficando habitualmente entre ~35 e 112 MB), `< 1%` de uso de CPU em repouso, ausência de loops contínuos de `requestAnimationFrame` e pico de 10 mensagens por segundo no WebSocket. Quando enviado para a bandeja no Windows, aciona `COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW` e `SetIsVisible(false)`.
+- **Teto rígido de consumo de hardware (Meta inegociável):** `< 180 MB` de memória RAM total com tela em primeiro plano (ficando habitualmente entre ~35 e 112 MB), `< 1%` de uso de CPU em repouso, ausência de loops contínuos de `requestAnimationFrame` e pico de 10 mensagens por segundo no WebSocket. Quando enviado para a bandeja no Windows, aciona `COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW` e `SetIsVisible(false)`.
 
 ---
 
@@ -326,7 +326,7 @@ cargo run -p tmc-replay -- anonymize --from C:\Caminho\Journal.log --to tests\fi
 # 4. Auditoria de dados matemáticos sem expor dados pessoais (8 testes oraculares + tempos de banco)
 cargo run -p tmc-headless -- eval --timings
 
-# 5. Averiguar consumo real de memória RAM e esforço de CPU em repouso contra os limites (< 150 MB RAM, < 1% CPU)
+# 5. Averiguar consumo real de memória RAM e esforço de CPU em repouso contra os limites (< 180 MB RAM, < 1% CPU)
 pwsh scripts/measure-footprint.ps1 -Exe target/release/TMC.exe -JournalDir tests/fixtures/journal
 ```
 

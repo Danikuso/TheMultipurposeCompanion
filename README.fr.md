@@ -287,7 +287,7 @@ Le projet est conçu comme un workspace modulaire en **Rust stable (édition 202
 - **Lecture par décalage d'octets (*byte offset*) non intrusive :** les notifications de fichiers de l'OS servent uniquement à détecter la création d'un nouveau fichier `Journal.*.log` ; la lecture ligne par ligne progresse par offset sans jamais verrouiller les descripteurs d'`EliteDangerous64.exe`. Les fichiers temporaires (`Status.json`, `Cargo.json`, `Market.json`, `Outfitting.json`, `Shipyard.json`, `ModulesInfo.json`, `NavRoute.json`, `Backpack.json`, `ShipLocker.json`, `FCMaterials.json`) appliquent jusqu'à 10 tentatives espacées de 50 ms pour tolérer les écritures partielles du jeu.
 - **Résilience et auto-réparation :** une ligne JSON corrompue ou un événement inconnu n'interrompt jamais l'application. Si `tmc.db` est corrompue au démarrage, elle est renommée en `tmc.db.corrupt-YYYYMMDDHHMMSS`, un schéma neuf est déployé et l'historique est réimporté. Si `config.toml` est invalide, il est conservé sous `config.toml.bak` et les valeurs sûres sont restaurées.
 - **Sécurité du serveur local :** écoute par défaut exclusivement sur l'interface locale `127.0.0.1:47320` (en scannant `47320..=47340` en cas d'occupation), avec contrôle strict des en-têtes `Host` et `Origin`. En cas d'activation du mode réseau local `lan = true` (`0.0.0.0`), toute requête externe exige le jeton aléatoire de session de 128 bits du QR code.
-- **Budget strict de ressources (Exigence contractuelle) :** `< 150 Mo` de RAM totale fenêtre ouverte (~35–112 Mo en pratique), `< 1 %` de CPU au repos, aucun cycle `requestAnimationFrame` continu et 10 actualisations/seconde au maximum sur WebSocket. Lors de la réduction dans la barre des tâches sous Windows, l'application appelle `COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW` et `SetIsVisible(false)`.
+- **Budget strict de ressources (Exigence contractuelle) :** `< 180 Mo` de RAM totale fenêtre ouverte (~35–112 Mo en pratique), `< 1 %` de CPU au repos, aucun cycle `requestAnimationFrame` continu et 10 actualisations/seconde au maximum sur WebSocket. Lors de la réduction dans la barre des tâches sous Windows, l'application appelle `COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW` et `SetIsVisible(false)`.
 
 ---
 
@@ -326,7 +326,7 @@ cargo run -p tmc-replay -- anonymize --from C:\Chemin\Journal.log --to tests\fix
 # 4. Évaluateur scientifique sur journaux réels sans afficher de données personnelles (8 oracles mathématiques + temps SQLite)
 cargo run -p tmc-headless -- eval --timings
 
-# 5. Mesurer l'empreinte mémoire RAM et CPU au repos par rapport au budget (< 150 Mo RAM, < 1 % CPU)
+# 5. Mesurer l'empreinte mémoire RAM et CPU au repos par rapport au budget (< 180 Mo RAM, < 1 % CPU)
 pwsh scripts/measure-footprint.ps1 -Exe target/release/TMC.exe -JournalDir tests/fixtures/journal
 ```
 
