@@ -70,6 +70,17 @@
     renamingId = null;
   });
 
+  function onRenameKey(e: KeyboardEvent): void {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (renameValid) void saveRename();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      renamingId = null;
+    }
+  }
+
   const copyHere = (p: ProfileSummary) => run(async () => {
     const cur = layoutState.deviceId;
     if (cur === null || !askConfirm(t('layout-settings-copy-confirm', { name: p.name }))) return;
@@ -124,6 +135,7 @@
               aria-label={t('layout-settings-rename')}
               maxlength={NAME_MAX}
               bind:value={renameValue}
+              onkeydown={onRenameKey}
             />
             <button type="button" data-testid="profile-rename-save" disabled={locked || !renameValid} onclick={saveRename}>{t('layout-settings-rename-save')}</button>
             <button type="button" data-testid="profile-rename-cancel" onclick={() => (renamingId = null)}>{t('layout-edit-cancel')}</button>
@@ -147,10 +159,11 @@
     {/each}
   </ul>
 
-  <h4>{t('layout-settings-tabs')}</h4>
   <div class="form-actions">
     <button type="button" data-testid="layout-reset-all" disabled={locked} onclick={resetAll}>{t('layout-settings-reset-all')}</button>
   </div>
+
+  <h4 data-testid="layout-settings-tabs-title">{t('layout-settings-tabs')}</h4>
   {#if customList.length === 0}
     <p class="hint">{t('layout-settings-tabs-empty')}</p>
   {:else}

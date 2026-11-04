@@ -3,6 +3,7 @@ import { flushSync, mount, unmount } from 'svelte';
 import { setLocale } from '../src/lib/i18n';
 import LayoutSettings from '../src/settings/LayoutSettings.svelte';
 import { emptyDoc, type LayoutDoc } from '../src/shell/layoutModel';
+import { askConfirm } from '../src/lib/confirm';
 import { layoutState } from '../src/shell/layoutStore.svelte';
 
 vi.mock('../src/lib/confirm', () => ({ askConfirm: vi.fn(() => true) }));
@@ -175,6 +176,52 @@ describe('LayoutSettings', () => {
     await click('profile-delete-B');
     await vi.waitFor(() => expect(q('layout-settings-error')).not.toBeNull());
     expect(q('profile-row-B')).not.toBeNull();
+  });
+  test('reset button precedes the custom tabs heading', async () => {
+    await open();
+    const reset = q('layout-reset-all')!;
+    const heading = q('layout-settings-tabs-title')!;
+    expect(reset.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  async function startRenameB() {
+    await click('profile-rename-B');
+    const input = q('profile-rename-input') as HTMLInputElement;
+    input.value = 'Nuevo';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    flushSync();
+    return input;
+  }
+
+  test('rename input submits on Enter', async () => {
+    handler = (c) => (c.method === 'PATCH' ? json(200, { device_id: 'B', name: 'Nuevo', updated_at: 't', doc: {} }) : json(200, PROFILES));
+    await open();
+    const input = await startRenameB();
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await vi.waitFor(() => expect(calls.some((c) => c.method === 'PATCH' && c.url === '/api/ui/layouts/B')).toBe(true));
+  });
+
+  test('rename input cancels on Escape without request and stops propagation', async () => {
+    await open();
+    const input = await startRenameB();
+    const outer = vi.fn();
+    document.addEventListener('keydown', outer);
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    flushSync();
+    document.removeEventListener('keydown', outer);
+    expect(outer).not.toHaveBeenCalled();
+    expect(q('profile-rename-input')).toBeNull();
+    expect(calls.some((c) => c.method === 'PATCH')).toBe(false);
+  });
+
+  test('declining confirmation sends no request', async () => {
+    await open();
+    vi.mocked(askConfirm).mockReturnValueOnce(false);
+    await click('profile-delete-B');
+    vi.mocked(askConfirm).mockReturnValueOnce(false);
+    await click('layout-reset-all');
+    await new Promise((r) => setTimeout(r, 10));
+    expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 });
 
