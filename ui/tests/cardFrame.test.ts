@@ -8,6 +8,7 @@ import CardFrame from '../src/shell/CardFrame.svelte';
 import Panel from '../src/shell/Panel.svelte';
 import App from '../src/App.svelte';
 import { layoutState } from '../src/shell/layoutStore.svelte';
+import { activeDrag } from '../src/shell/pointerDrag';
 import { emptyDoc } from '../src/shell/layoutModel';
 import PanelCard from './fixtures/PanelCard.svelte';
 import EmptyCard from './fixtures/EmptyCard.svelte';
@@ -63,7 +64,7 @@ describe('CardFrame', () => {
 
   test('fixed height sets cardBox and panel class', () => {
     const el = frame({ id: 'test-card', w: 1, h: 640 }, def(PanelCard), 2);
-    expect(el.style.height).toBe('640px');
+    expect((el.querySelector('.card-content') as HTMLElement).style.height).toBe('640px');
     const section = el.querySelector('section') as HTMLElement;
     expect(section.classList.contains('fixed-height')).toBe(true);
     expect(section.classList.contains('in-frame')).toBe(true);
@@ -82,7 +83,7 @@ describe('CardFrame', () => {
 
   test('one column caps fixed height to the viewport', () => {
     const el = frame({ id: 'test-card', w: 2, h: 640 }, def(PanelCard), 1);
-    expect(el.style.height).toBe('min(640px, max(240px, 70vh))');
+    expect((el.querySelector('.card-content') as HTMLElement).style.height).toBe('min(640px, max(240px, 70vh))');
     expect(el.style.gridColumn).toContain('span 1');
   });
 
@@ -230,7 +231,7 @@ describe('App renders tabs from the layout store', () => {
 });
 
 describe('CardFrame edit controls overlay', () => {
-  test('bar is an overlay: not measured, frame flow excludes it', () => {
+  test('bar stays in flow above content and is not measured', () => {
     const emitted: unknown[] = [];
     inst = mount(CardFrame, {
       target,
@@ -251,12 +252,6 @@ describe('CardFrame edit controls overlay', () => {
     });
     (el.querySelector('button[data-op="height-more"]') as HTMLButtonElement).click();
     expect(emitted).toEqual([{ kind: 'height', h: 200 }]);
-    // En CSS la barra es absoluta: no ocupa flujo del marco.
-    const rule = /(^|\n)\s*\.card-controls\s*\{([^}]*)\}/.exec(frameSrc)?.[2] ?? '';
-    expect(rule).toMatch(/position:\s*absolute/);
-    expect(rule).toMatch(/z-index:\s*\d+/);
-    expect(rule).toMatch(/flex-wrap:\s*wrap/);
-    expect(/(^|\n)\s*\.card-frame\s*\{([^}]*)\}/.exec(frameSrc)?.[2]).toMatch(/position:\s*relative/);
     vi.restoreAllMocks();
   });
 
@@ -264,5 +259,82 @@ describe('CardFrame edit controls overlay', () => {
     const el = frame({ id: 'test-card', w: 1, h: null }, def(PanelCard), 2, true);
     expect(el.querySelector('[data-op="drag"]')).not.toBeNull();
     expect(el.querySelector('[data-op="resize"]')).not.toBeNull();
+  });
+});
+
+describe('CardFrame height on content', () => {
+  test('fixed height lands on card-content, not on the frame, in and out of edit mode', () => {
+    for (const editing of [false, true]) {
+      const el = frame({ id: 'test-card', w: 1, h: 640 }, def(PanelCard), 2, editing);
+      const content = el.querySelector('.card-content') as HTMLElement;
+      expect(el.style.height).toBe('');
+      expect(content.style.height).toBe('640px');
+      unmount(inst!);
+      inst = null;
+    }
+  });
+});
+
+describe('CardFrame aborted drags clear their visuals', () => {
+  const pe = (type: string, x: number, y: number) =>
+    Object.assign(new Event(type, { bubbles: true }), { clientX: x, clientY: y, pointerId: 1, pointerType: 'mouse', button: 0 });
+  const stubRaf = () => {
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => { cb(0); return 1; });
+    vi.stubGlobal('cancelAnimationFrame', () => {});
+  };
+  function editFrame(emitted: unknown[]) {
+    inst = mount(CardFrame, {
+      target,
+      props: {
+        placement: { id: 'test-card', w: 1, h: null }, card: def(PanelCard), index: 0, count: 2, ghost: false,
+        editing: true, columns: 2, ctx, onop: (op: unknown) => emitted.push(op),
+      },
+    });
+    flushSync();
+    return target.querySelector('.card-frame') as HTMLElement;
+  }
+  const clean = (el: HTMLElement) => {
+    expect(el.style.transform).toBe('');
+    expect(el.classList.contains('dragging')).toBe(false);
+    expect(document.querySelector('[data-drop-target]')).toBeNull();
+  };
+
+  test.each(['cancel', 'pointercancel'])('move drag aborted by %s', async (how) => {
+    stubRaf();
+    const emitted: unknown[] = [];
+    const sibling = document.createElement('div');
+    sibling.setAttribute('data-layout-slot', 'other');
+    const el = editFrame(emitted);
+    el.after(sibling);
+    el.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect;
+    sibling.getBoundingClientRect = () => ({ left: 200, top: 0, width: 100, height: 100 }) as DOMRect;
+    const handle = el.querySelector('[data-op="drag"]') as HTMLElement;
+    handle.dispatchEvent(pe('pointerdown', 50, 50));
+    handle.dispatchEvent(pe('pointermove', 250, 50));
+    flushSync();
+    expect(el.style.transform).toContain('translate');
+    expect(sibling.hasAttribute('data-drop-target')).toBe(true);
+    if (how === 'cancel') activeDrag()!.cancel(); else handle.dispatchEvent(pe('pointercancel', 250, 50));
+    flushSync();
+    clean(el);
+    expect(emitted).toEqual([]);
+    sibling.remove();
+    vi.unstubAllGlobals();
+  });
+
+  test('resize drag aborted clears the preview size', () => {
+    stubRaf();
+    const emitted: unknown[] = [];
+    const el = editFrame(emitted);
+    const handle = el.querySelector('[data-op="resize"]') as HTMLElement;
+    handle.dispatchEvent(pe('pointerdown', 0, 0));
+    handle.dispatchEvent(pe('pointermove', 100, 200));
+    flushSync();
+    expect((el.querySelector('.card-content') as HTMLElement).style.height).not.toBe('');
+    activeDrag()!.cancel();
+    flushSync();
+    expect((el.querySelector('.card-content') as HTMLElement).style.height).toBe('');
+    expect(emitted).toEqual([]);
+    vi.unstubAllGlobals();
   });
 });

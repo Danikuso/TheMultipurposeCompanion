@@ -22,10 +22,10 @@ beforeEach(() => {
   handle = document.createElement('div');
   (handle as unknown as { setPointerCapture: () => void }).setPointerCapture = vi.fn();
   (handle as unknown as { releasePointerCapture: () => void }).releasePointerCapture = vi.fn();
-  // Tres marcos en fila: 0..200, 200..400, 400..600 de ancho, 100 de alto.
+  // Tres marcos de 100 de ancho en x = 0, 110 y 220.
   frames = [0, 1, 2].map((i) => {
     const el = document.createElement('div');
-    el.getBoundingClientRect = vi.fn(() => rect(i * 200, 0, 200, 100));
+    el.getBoundingClientRect = vi.fn(() => rect(i * 110, 0, 100, 100));
     return el;
   });
   rafs = [];
@@ -46,7 +46,7 @@ describe.each(['mouse', 'touch'])('move drag (%s)', (kind) => {
     expect(activeDrag()).toBe(s);
     handle.dispatchEvent(ev('pointermove', 260, 50, kind));
     handle.dispatchEvent(ev('pointerup', 260, 50, kind));
-    expect(ondrop).toHaveBeenCalledWith(1);
+    expect(ondrop).toHaveBeenCalledWith(2);
     expect(s.active).toBe(false);
     expect(activeDrag()).toBeNull();
   });
@@ -60,6 +60,30 @@ describe.each(['mouse', 'touch'])('move drag (%s)', (kind) => {
 });
 
 describe('pointerDrag', () => {
+  test('captures the pointer at start and releases it at end', () => {
+    const s = startMoveDrag(down(50, 50), handle, frames, 0, vi.fn(), vi.fn());
+    expect(handle.setPointerCapture).toHaveBeenCalledWith(1);
+    expect(handle.releasePointerCapture).not.toHaveBeenCalled();
+    s.cancel();
+    expect(handle.releasePointerCapture).toHaveBeenCalledWith(1);
+  });
+
+  test('oncancel fires once when the session ends without a drop, never after a drop', () => {
+    const oncancel = vi.fn();
+    const s = startMoveDrag(down(50, 50), handle, frames, 0, vi.fn(), vi.fn(), oncancel);
+    s.cancel();
+    s.cancel();
+    expect(oncancel).toHaveBeenCalledTimes(1);
+    const oncancel2 = vi.fn();
+    startResizeDrag(down(0, 0), handle, START, GEO, vi.fn(), vi.fn(), oncancel2);
+    handle.dispatchEvent(ev('pointercancel', 0, 0));
+    expect(oncancel2).toHaveBeenCalledTimes(1);
+    const oncancel3 = vi.fn();
+    startMoveDrag(down(50, 50), handle, frames, 0, vi.fn(), vi.fn(), oncancel3);
+    handle.dispatchEvent(ev('pointerup', 50, 50));
+    expect(oncancel3).not.toHaveBeenCalled();
+  });
+
   test('move coalesces to one frame', () => {
     const onpreview = vi.fn();
     startMoveDrag(down(50, 50), handle, frames, 0, onpreview, vi.fn());
@@ -67,7 +91,7 @@ describe('pointerDrag', () => {
     expect(rafs).toHaveLength(1);
     flushFrame();
     expect(onpreview).toHaveBeenCalledTimes(1);
-    expect(onpreview).toHaveBeenCalledWith(200, 0, 1);
+    expect(onpreview).toHaveBeenCalledWith(200, 0, 2);
   });
 
   test('rects are read once at start', () => {

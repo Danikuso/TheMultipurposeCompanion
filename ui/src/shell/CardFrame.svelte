@@ -99,7 +99,8 @@
     const handle = e.currentTarget as HTMLElement;
     session = startMoveDrag(e, handle, frames, index,
       (dx, dy, target) => { offset = { dx, dy }; mark(target === index ? null : frames[target] ?? null); },
-      (target) => { finish(); if (target !== index) emit({ kind: 'move', to: target }); });
+      (target) => { finish(); if (target !== index) emit({ kind: 'move', to: target }); },
+      finish);
   }
 
   function beginResize(e: PointerEvent) {
@@ -118,7 +119,8 @@
         finish();
         if (next.w !== placement.w) emit({ kind: 'width', w: next.w });
         if (next.h !== placement.h) emit({ kind: 'height', h: next.h });
-      });
+      },
+      finish);
   }
 
   // Si se sale de la edición (o se destruye el marco) a mitad de arrastre, se aborta sin cambios.
@@ -126,8 +128,8 @@
   $effect(() => { if (!editing) { session?.cancel(); finish(); } });
 </script>
 
-<div class="card-frame" class:fixed={placement.h !== null} class:ghost class:editing class:dragging={offset !== null}
-  style:grid-column={gridColumn} style:height={height} style:transform={transform}
+<div class="card-frame" class:fixed={shownH !== null} class:ghost class:editing class:dragging={offset !== null}
+  style:grid-column={gridColumn} style:transform={transform}
   data-layout-slot={placement.id} bind:this={frameEl}
 >{#if editing}<div class="card-controls" role="toolbar" aria-label={t(card.titleKey)}>
     <button type="button" class="drag-handle" data-op="drag" aria-label={t('layout-edit-drag')}
@@ -160,7 +162,7 @@
     <button type="button" class="remove" data-op="remove" aria-label={t('layout-edit-remove')}
       title={t('layout-edit-remove')} onclick={() => emit({ kind: 'remove' })}>⊖</button>
   </div><button type="button" class="resize-handle" data-op="resize" aria-label={t('layout-edit-resize')}
-    title={t('layout-edit-resize')} onpointerdown={beginResize}>◢</button>{/if}<div class="card-content" class:dimmed={editing} inert={editing} bind:this={contentEl}
+    title={t('layout-edit-resize')} onpointerdown={beginResize}>◢</button>{/if}<div class="card-content" class:dimmed={editing} inert={editing} style:height={height} bind:this={contentEl}
   >{@render prefix?.()}{#if !ghost}<Card {ctx} />{/if}</div>{#if showPlaceholder}<div class="card-placeholder">
     <span class="ph-title">{t(card.titleKey)}</span>
     <span class="ph-pill" title={t('layout-card-auto-hint')}>{t('layout-card-auto')}</span>
@@ -183,15 +185,13 @@
     min-width: 0;
   }
 
+  /* Alto fijo: lo impone el contenido (igual dentro y fuera de edición); la barra queda aparte, en flujo. */
+  .fixed > .card-content { flex: 0 0 auto; }
   .editing > .card-content:empty { flex: 0 0 auto; }
   .card-content.dimmed { opacity: 0.55; pointer-events: none; }
 
   .card-controls {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 5;
+    flex-shrink: 0;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -199,6 +199,7 @@
     padding: 0.3rem 0.4rem;
     background: var(--hud-surface);
     border: 1px solid var(--hud-border);
+    margin-bottom: 0.3rem;
     border-radius: 4px;
   }
 
@@ -246,8 +247,8 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    min-height: 5.5rem;
-    padding: 3rem 0.75rem 0.75rem;
+    min-height: 3.5rem;
+    padding: 0.75rem;
     border: 1px dashed var(--hud-border);
     border-radius: 4px;
     opacity: 0.6;

@@ -17,7 +17,7 @@ interface Point { x: number; y: number }
 /** Núcleo común: captura el puntero, coalesce los movimientos a un frame y limpia todo al terminar. */
 function begin(
   e: PointerEvent, handle: HTMLElement,
-  preview: (p: Point) => void, drop: (p: Point) => void,
+  preview: (p: Point) => void, drop: (p: Point) => void, oncancel?: () => void,
 ): DragSession {
   current?.cancel();
   let active = true;
@@ -35,12 +35,13 @@ function begin(
   };
   const onUp = (ev: PointerEvent) => {
     const p = { x: ev.clientX, y: ev.clientY };
-    end();
+    end(true);
     drop(p);
   };
   const onCancel = () => end();
+  const cancel = () => end();
 
-  function end() {
+  function end(dropped = false) {
     if (!active) return;
     active = false;
     if (frame !== null) cancelAnimationFrame(frame);
@@ -50,10 +51,11 @@ function begin(
     handle.removeEventListener('pointercancel', onCancel);
     try { handle.releasePointerCapture?.(pointerId); } catch { /* el puntero ya no existe */ }
     if (current === session) current = null;
+    if (!dropped) oncancel?.(); // aborto: quien pintó la vista previa debe limpiarla
   }
 
   const session: DragSession = {
-    cancel: end,
+    cancel,
     get active() { return active; },
   };
   try { handle.setPointerCapture?.(pointerId); } catch { /* puntero sintético o ya liberado */ }
@@ -67,6 +69,7 @@ function begin(
 export function startMoveDrag(
   e: PointerEvent, handle: HTMLElement, frames: HTMLElement[], from: number,
   onpreview: (dx: number, dy: number, target: number) => void, ondrop: (target: number) => void,
+  oncancel?: () => void,
 ): DragSession {
   const rects = frames.map((f) => f.getBoundingClientRect()); // una sola vez, al empezar
   const x0 = e.clientX;
@@ -75,6 +78,7 @@ export function startMoveDrag(
     e, handle,
     (p) => onpreview(p.x - x0, p.y - y0, dropIndex(p.x, p.y, rects, from)),
     (p) => ondrop(dropIndex(p.x, p.y, rects, from)),
+    oncancel,
   );
 }
 
@@ -83,9 +87,10 @@ export function startResizeDrag(
   start: { w: CardWidth; h: number | null; heightPx: number; widthPx: number },
   geometry: { colWidthPx: number; gapPx: number; columns: number },
   onpreview: (next: Next) => void, ondrop: (next: Next) => void,
+  oncancel?: () => void,
 ): DragSession {
   const x0 = e.clientX;
   const y0 = e.clientY;
   const next = (p: Point) => snapResize(start, p.x - x0, p.y - y0, geometry.colWidthPx, geometry.gapPx, geometry.columns);
-  return begin(e, handle, (p) => onpreview(next(p)), (p) => ondrop(next(p)));
+  return begin(e, handle, (p) => onpreview(next(p)), (p) => ondrop(next(p)), oncancel);
 }

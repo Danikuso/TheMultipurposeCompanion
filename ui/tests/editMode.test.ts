@@ -81,10 +81,10 @@ describe('edit mode', () => {
     click(btn('materials', 'height-more'));
     expect(card('materials')).toMatchObject({ w: 2, h: 200 });
     expect(slot('materials').style.gridColumn).toContain('span');
-    expect(slot('materials').style.height).toContain('200px');
+    expect((slot('materials').querySelector('.card-content') as HTMLElement).style.height).toContain('200px');
     click(btn('materials', 'height-auto'));
     expect(card('materials').h).toBeNull();
-    expect(slot('materials').style.height).toBe('');
+    expect((slot('materials').querySelector('.card-content') as HTMLElement).style.height).toBe('');
   });
 
   test('width 3 is disabled when columns < 3', () => {
