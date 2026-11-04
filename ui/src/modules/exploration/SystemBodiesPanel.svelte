@@ -5,6 +5,7 @@
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
   import VirtualList from '../../shell/VirtualList.svelte';
+  import { getCardBox } from '../../shell/cardBox';
   import { pushToast } from '../../shell/Toasts.svelte';
   import type { BodyRow, SystemTopic, UnsoldTopic } from './types';
 
@@ -39,7 +40,12 @@
   let copied = $state(false);
 
   const rowCount = $derived(system?.rows?.length ?? 0);
-  const listHeight = $derived(Math.max(30, Math.min(420, rowCount * 30)));
+  // Con alto fijo de tarjeta la lista aprovecha la altura extra (sin pasar de sus filas: cero scroll fantasma).
+  const CARD_HEADER_PX = 40;
+  const cardBox = getCardBox();
+  const baseListHeight = $derived(Math.max(30, Math.min(420, rowCount * 30)));
+  const listHeight = $derived(cardBox?.height == null ? baseListHeight
+    : Math.max(baseListHeight, Math.min(rowCount * 30, cardBox.height - CARD_HEADER_PX)));
 
   const distSol = $derived.by(() => {
     if (!loc?.star_pos || loc.star_pos.length < 3) return null;

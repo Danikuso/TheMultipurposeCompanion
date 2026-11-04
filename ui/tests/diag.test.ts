@@ -17,6 +17,7 @@ import rust from '../../crates/tmc-server/src/diag_ui.rs?raw';
 import ts from '../src/lib/diag.svelte.ts?raw';
 import redaction from '../../crates/tmc-model/src/diagnostics.rs?raw';
 import layoutsSrc from '../src/shell/layouts.ts?raw';
+import { cards } from '../src/shell/cards';
 const svelteSources = import.meta.glob('../src/**/*.svelte', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
 function rustList(name: string): string[] {
@@ -324,8 +325,8 @@ describe('ui diagnostics', () => {
       for (const m of src.matchAll(/titleKey="([a-z0-9-]+)"/g)) titleKeys.add(m[1]);
     }
     expect([...titleKeys].sort()).toEqual(rustList('UI_PANELS'));
-    const slots = [...new Set([...layoutsSrc.matchAll(/\{ card: '([a-z-]+)', width:/g)].map((m) => m[1]))].sort();
-    expect(slots).toEqual(rustList('UI_SLOTS'));
+    // App informa de las tarjetas de cualquier pestaña (disposición, módulo o personalizada).
+    expect(Object.keys(cards).sort()).toEqual(rustList('UI_SLOTS'));
     const layoutIds = [...layoutsSrc.matchAll(/^\s{2}id: '([a-z-]+)',/gm)].map((m) => m[1]);
     expect(rustList('UI_LAYOUTS')).toEqual(['none', ...layoutIds].sort());
   });

@@ -4,7 +4,6 @@
   import { diag, diagOn } from './lib/diag.svelte';
   import { t } from './lib/i18n';
   import { loadPrefs, prefs, prefsFallback, readPlacement, savePlacement, toggleTacticalLock } from './lib/prefs.svelte';
-  import { modules } from './modules/registry';
   import Settings from './settings/Settings.svelte';
   import Grid from './shell/Grid.svelte';
   import ImportProgress from './shell/ImportProgress.svelte';
@@ -13,7 +12,9 @@
   import TopBar from './shell/TopBar.svelte';
   import UpdateModal from './shell/UpdateModal.svelte';
   import { fetchUpdateStatus } from './lib/updater.svelte';
-  import { cards } from './shell/cards';
+  import { tabKeyFor } from './shell/cards';
+  import CardHost, { isCardVisible, tabPlacements } from './shell/CardHost.svelte';
+  import { initLayouts } from './shell/layoutStore.svelte';
   import { DEFAULT_PRIORITIES, autoLayout, contextPanel, layouts, nextPin } from './shell/layouts';
 
   let pin = $state<string | null>(null);
@@ -99,12 +100,10 @@
     manual: follow ? autoManual : (manual ?? heldContext),
   });
   const autoContext = $derived(contextPanel(liveModules, autoManual));
-  const visibleSlots = $derived(activeLayout?.slots.filter((slot) => {
-    const when = cards[slot.card]?.when;
-    return !when || when(layoutContext);
-  }) ?? []);
+  const tabKey = $derived(tabKeyFor(activeTab));
+  const tabCards = $derived(tabKey === null ? [] : tabPlacements(tabKey));
+  const visibleSlots = $derived(tabCards.filter((p) => isCardVisible(p.id, layoutContext)));
   const selectedContext = $derived(follow ? autoContext : contextPanel(liveModules, layoutContext.manual));
-  const activeModule = $derived(modules.find((m) => m.id === activeTab) ?? modules[0]);
 
   $effect(() => {
     if (follow && isStable) {
@@ -143,8 +142,8 @@
       layout: activeLayout?.id ?? 'none',
       pinned: pin !== null,
       auto_companion: prefs.autoCompanion,
-      slot: visibleSlots.map((s) => s.card),
-      defined_slots: activeLayout?.slots.length ?? 0,
+      slot: visibleSlots.map((s) => s.id),
+      defined_slots: tabCards.length,
       module: liveModules.map((m) => m.id),
       relevance: liveModules.map((m) => String(m.relevance).toLowerCase()),
       context: selectedContext,
@@ -177,6 +176,7 @@
 
   onMount(() => {
     connect();
+    void initLayouts();
     fetch('/api/config').then((res) => (res.ok ? res.json() : null)).then((cfg) => {
       if (!cfg) return prefsFallback();
       if (cfg.auto_companion === false) {
@@ -208,6 +208,14 @@
   });
 </script>
 
+{#snippet contextControls(cardId: string)}{#if cardId === 'exploration-context'}<div
+  class="context-controls" role="group" aria-label={t('layout-context')}>
+  <button type="button" data-testid="context-bodies" aria-pressed={selectedContext === 'exploration'}
+    onclick={() => selectContext('exploration')}>{t('layout-context-bodies')}</button>
+  <button type="button" data-testid="context-exobiology" aria-pressed={selectedContext === 'exobiology'}
+    onclick={() => selectContext('exobiology')}>{t('layout-context-exobiology')}</button>
+</div>{/if}{/snippet}
+
 <div class="app-shell">
   <TopBar />
   <ImportProgress />
@@ -216,27 +224,8 @@
     <Grid {activeTab}>
       {#if activeTab === 'settings'}
         <Settings />
-      {:else if activeLayout}
-        {#each visibleSlots as slot (slot.card)}
-          {@const Card = cards[slot.card].component}
-          <div class="layout-slot" class:full={slot.width === 'full'}
-            style:--slot-span={slot.width === 'full' ? 1 : slot.width} data-layout-slot={slot.card}>
-            {#if slot.card === 'exploration-context'}
-              <div class="context-controls" role="group" aria-label={t('layout-context')}>
-                <button type="button" data-testid="context-bodies" aria-pressed={selectedContext === 'exploration'}
-                  onclick={() => selectContext('exploration')}>{t('layout-context-bodies')}</button>
-                <button type="button" data-testid="context-exobiology" aria-pressed={selectedContext === 'exobiology'}
-                  onclick={() => selectContext('exobiology')}>{t('layout-context-exobiology')}</button>
-              </div>
-            {/if}
-            <Card ctx={layoutContext} />
-          </div>
-        {/each}
-      {:else if activeModule}
-        {#each activeModule.cards as cardId (`${activeModule.id}-${cardId}`)}
-          {@const Card = cards[cardId].component}
-          <Card />
-        {/each}
+      {:else if tabKey !== null}
+        <CardHost {tabKey} ctx={layoutContext} prefix={contextControls} />
       {/if}
     </Grid>
   </div>
@@ -260,11 +249,7 @@
     overflow: hidden;
   }
 
-  .layout-slot { min-width: 0; grid-column: 1 / -1; }
   .context-controls { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
   .context-controls button { background: var(--hud-surface); color: var(--hud-text); border: 1px solid var(--hud-border); padding: 0.4rem 0.6rem; }
   .context-controls button[aria-pressed='true'] { color: var(--hud-primary); border-color: var(--hud-primary); }
-  @media (min-width: 900px) {
-    .layout-slot:not(.full) { grid-column: span var(--slot-span); }
-  }
 </style>

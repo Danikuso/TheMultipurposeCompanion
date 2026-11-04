@@ -1,8 +1,12 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { onMount } from 'svelte';
+  import { startGridColumns } from './gridColumns.svelte';
 
   let { children, activeTab }: { children?: Snippet; activeTab?: string } = $props();
   let gridEl: HTMLElement | null = $state(null);
+
+  onMount(() => startGridColumns());
 
   $effect(() => {
     // Al conmutar de pestaña o disposición, resetear siempre el desplazamiento vertical arriba del todo
@@ -20,6 +24,7 @@
   .hud-grid {
     display: grid;
     grid-template-columns: 1fr;
+    grid-auto-flow: row dense;
     gap: 0.85rem;
     padding: 0.85rem;
     align-content: start;

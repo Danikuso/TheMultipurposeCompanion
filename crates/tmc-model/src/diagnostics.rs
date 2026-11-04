@@ -854,7 +854,7 @@ const UI_LAYOUTS: &[&str] = &[
     "ship",
     "trade",
 ];
-/// Ranuras de las disposiciones (`ui/src/shell/layouts.ts`).
+/// Ids de tarjeta del catálogo (`ui/src/shell/cards.ts`); un test de la UI los mantiene sincronizados.
 const UI_SLOTS: &[&str] = &[
     "bgs-system",
     "carrier-finances",
@@ -898,6 +898,16 @@ const UI_SLOTS: &[&str] = &[
     "tourism",
     "rewards",
     "community-goals",
+    "exploration-system-bodies",
+    "exobiology-exobiology",
+    "dashboard-cmdr",
+    "dashboard-location",
+    "dashboard-status",
+    "dashboard-route",
+    "dashboard-session",
+    "dashboard-alerts",
+    "accounts-accounts",
+    "crime-crime",
 ];
 /// Claves de título de los paneles (`titleKey` en `ui/src`); un test de la UI las mantiene sincronizadas.
 const UI_PANELS: &[&str] = &[

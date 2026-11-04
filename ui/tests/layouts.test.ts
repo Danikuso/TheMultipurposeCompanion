@@ -104,8 +104,9 @@ describe('default exploration layout', () => {
       const button = target.querySelector(`[data-module="${id}"]`) as HTMLButtonElement;
       expect(button).not.toBeNull();
       button.click(); flushSync();
-      expect(target.querySelector('[data-layout-slot]')).toBeNull();
-      expect(target.querySelector('main section')).not.toBeNull();
+      // Las pestañas de módulo también se pintan con marcos de tarjeta, pero sin la tarjeta de contexto.
+      expect(target.querySelector('[data-layout-slot="exploration-context"]')).toBeNull();
+      expect(target.querySelector('[data-layout-slot] section')).not.toBeNull();
     }
   });
 
