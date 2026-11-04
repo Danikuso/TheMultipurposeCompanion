@@ -1,5 +1,27 @@
 import { getLocale, t } from './i18n';
 
+// Construir un `Intl.NumberFormat` cuesta ~40 µs (≈40 veces un `format`): se reutiliza por idioma y opciones.
+const numberFormats = new Map<string, Intl.NumberFormat>();
+
+function nf(opts: Intl.NumberFormatOptions): Intl.NumberFormat {
+  const locale = getLocale();
+  const key = `${locale}|${JSON.stringify(opts)}`;
+  let fmt = numberFormats.get(key);
+  if (!fmt) numberFormats.set(key, (fmt = new Intl.NumberFormat(locale, opts)));
+  return fmt;
+}
+
+const relativeFormats = new Map<string, Intl.RelativeTimeFormat>();
+
+function rtfFor(locale: string): Intl.RelativeTimeFormat {
+  let fmt = relativeFormats.get(locale);
+  if (!fmt) {
+    fmt = new Intl.RelativeTimeFormat(locale, { numeric: 'always', style: 'narrow' });
+    relativeFormats.set(locale, fmt);
+  }
+  return fmt;
+}
+
 export function credits(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
   return `${integer(n)} CR`;
@@ -9,23 +31,18 @@ export function credits(n: number | null | undefined): string {
 export function integer(n: number): string {
   // `'always'` es válido en runtime pero aún falta en los tipos de lib.
   const opts = { maximumFractionDigits: 0, useGrouping: 'always' } as unknown as Intl.NumberFormatOptions;
-  return new Intl.NumberFormat(getLocale(), opts).format(n);
+  return nf(opts).format(n);
 }
 
 export function ly(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
-  const fmt = new Intl.NumberFormat(getLocale(), {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return `${fmt.format(n)} ly`;
+  return `${nf({ minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)} ly`;
 }
 
 export function pct(x: number | null | undefined): string {
   if (x == null || Number.isNaN(x)) return '—';
   const normalized = x <= 1.0 && x >= 0.0 ? Math.round(x * 100) : Math.round(x);
-  const fmt = new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 0 });
-  return `${fmt.format(normalized)} %`;
+  return `${nf({ maximumFractionDigits: 0 }).format(normalized)} %`;
 }
 
 export function duration(ms: number | null | undefined): string {
@@ -40,12 +57,7 @@ export function duration(ms: number | null | undefined): string {
 }
 
 function unitFmt(unit: 'second' | 'minute' | 'hour' | 'day', n: number): string {
-  return new Intl.NumberFormat(getLocale(), {
-    style: 'unit',
-    unit,
-    unitDisplay: 'narrow',
-    maximumFractionDigits: 0,
-  }).format(n);
+  return nf({ style: 'unit', unit, unitDisplay: 'narrow', maximumFractionDigits: 0 }).format(n);
 }
 
 export function ageShort(seconds: number | null | undefined): string {
@@ -73,28 +85,28 @@ export function isScoopable(cls: string | null | undefined): boolean {
 
 export function meters(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
-  return `${new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 0 }).format(n)} m`;
+  return `${nf({ maximumFractionDigits: 0 }).format(n)} m`;
 }
 
 export function gravity(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
-  return `${new Intl.NumberFormat(getLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)} g`;
+  return `${nf({ minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)} g`;
 }
 
 export function kelvin(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
-  return `${new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 0 }).format(n)} K`;
+  return `${nf({ maximumFractionDigits: 0 }).format(n)} K`;
 }
 
 export function num1(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
-  return new Intl.NumberFormat(getLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
+  return nf({ minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
 }
 
 /** Número con hasta `max` decimales (sin ceros sobrantes), según el idioma. */
 export function decimal(n: number | null | undefined, max = 1): string {
   if (n == null || Number.isNaN(n)) return '—';
-  return new Intl.NumberFormat(getLocale(), { minimumFractionDigits: 0, maximumFractionDigits: max }).format(n);
+  return nf({ minimumFractionDigits: 0, maximumFractionDigits: max }).format(n);
 }
 
 /** Anchura CSS en porcentaje (siempre con punto decimal), acotada a 0-100. */
@@ -119,7 +131,7 @@ export function relativeAge(iso: string | null | undefined, nowMs: number | null
   if (Number.isNaN(ts) || nowMs == null || ts < Date.UTC(2000, 0, 1)) return '—';
   const secs = Math.max(0, Math.round((nowMs - ts) / 1000));
   if (secs < 60) return t('mining-age-now');
-  const rtf = new Intl.RelativeTimeFormat(getLocale(), { numeric: 'always', style: 'narrow' });
+  const rtf = rtfFor(getLocale());
   if (secs < 3600) return rtf.format(-Math.floor(secs / 60), 'minute');
   if (secs < 86400) return rtf.format(-Math.floor(secs / 3600), 'hour');
   return rtf.format(-Math.floor(secs / 86400), 'day');

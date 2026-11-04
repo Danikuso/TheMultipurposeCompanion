@@ -1,8 +1,12 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { onMount } from 'svelte';
+  import { startGridColumns } from './gridColumns.svelte';
 
   let { children, activeTab }: { children?: Snippet; activeTab?: string } = $props();
   let gridEl: HTMLElement | null = $state(null);
+
+  onMount(() => startGridColumns(gridEl));
 
   $effect(() => {
     // Al conmutar de pestaña o disposición, resetear siempre el desplazamiento vertical arriba del todo
@@ -28,6 +32,7 @@
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
+    scrollbar-gutter: stable;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 113, 0, 0.45) rgba(0, 0, 0, 0.15);
   }

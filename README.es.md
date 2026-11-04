@@ -287,7 +287,7 @@ El proyecto está organizado como un workspace modular en **Rust estable (edici�
 - **Lectura no intrusiva por desplazamiento de bytes (*byte offset*):** las notificaciones del sistema operativo solo se emplean para detectar la rotación a un archivo `Journal.*.log` nuevo; la lectura línea a línea avanza por offset sin bloquear descriptores de archivo de `EliteDangerous64.exe`. Los archivos volátiles (`Status.json`, `Cargo.json`, `Market.json`, `Outfitting.json`, `Shipyard.json`, `ModulesInfo.json`, `NavRoute.json`, `Backpack.json`, `ShipLocker.json`, `FCMaterials.json`) aplican hasta 10 reintentos de 50 ms ante escrituras truncadas.
 - **Resiliencia y autocuración:** líneas JSON malformadas o eventos futuros desconocidos nunca detienen el actor. Si `tmc.db` presenta corrupción al iniciar, se respalda como `tmc.db.corrupt-YYYYMMDDHHMMSS`, se recrea el esquema limpio y se reimporta el historial de diarios. Si `config.toml` es inválido, se preserva en `config.toml.bak` y se restauran valores seguros.
 - **Seguridad del servidor local:** escucha por defecto exclusivamente en `127.0.0.1:47320` (buscando puerto libre en `47320..=47340` si está ocupado), validando cabeceras `Host` y `Origin`. Al activar `lan = true` (`0.0.0.0`), toda petición externa a loopback exige el token aleatorio de sesión de 128 bits entregado en el código QR.
-- **Presupuesto estricto de recursos (requisito verificable):** `< 150 MB` de RAM total con ventana abierta (habitualmente ~35–112 MB), `< 1 %` de CPU en reposo, cero bucles `requestAnimationFrame` continuos y máximo 10 actualizaciones/s por WebSocket. Al cerrar a la bandeja en Windows, invoca `COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW` y `SetIsVisible(false)`.
+- **Presupuesto estricto de recursos (requisito verificable):** `< 180 MB` de RAM total con ventana abierta (habitualmente ~35–112 MB), `< 1 %` de CPU en reposo, cero bucles `requestAnimationFrame` continuos y máximo 10 actualizaciones/s por WebSocket. Al cerrar a la bandeja en Windows, invoca `COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW` y `SetIsVisible(false)`.
 
 ---
 
@@ -326,7 +326,7 @@ cargo run -p tmc-replay -- anonymize --from C:\Ruta\Journal.log --to tests\fixtu
 # 4. Evaluador científico sobre diarios reales sin imprimir ningún dato personal (8 oráculos matemáticos + tiempos SQLite)
 cargo run -p tmc-headless -- eval --timings
 
-# 5. Medir huella real de memoria RAM y CPU en reposo frente al presupuesto (< 150 MB RAM, < 1 % CPU)
+# 5. Medir huella real de memoria RAM y CPU en reposo frente al presupuesto (< 180 MB RAM, < 1 % CPU)
 pwsh scripts/measure-footprint.ps1 -Exe target/release/TMC.exe -JournalDir tests/fixtures/journal
 ```
 

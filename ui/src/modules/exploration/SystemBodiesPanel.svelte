@@ -5,6 +5,7 @@
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
   import VirtualList from '../../shell/VirtualList.svelte';
+  import { getCardBox, listSpace } from '../../shell/cardBox';
   import { pushToast } from '../../shell/Toasts.svelte';
   import type { BodyRow, SystemTopic, UnsoldTopic } from './types';
 
@@ -39,7 +40,36 @@
   let copied = $state(false);
 
   const rowCount = $derived(system?.rows?.length ?? 0);
-  const listHeight = $derived(Math.max(30, Math.min(420, rowCount * 30)));
+  // Con alto fijo de tarjeta la lista ocupa el espacio medido que queda libre en el cuerpo del panel
+  // (sin pasar de sus filas): ni scroll fantasma ni dos scrolls compitiendo.
+  const cardBox = getCardBox();
+  let listSpacePx = $state<number | null>(null);
+  const baseListHeight = $derived(Math.max(30, Math.min(420, rowCount * 30)));
+  const listHeight = $derived(cardBox?.height == null || listSpacePx === null ? baseListHeight
+    : Math.max(baseListHeight, Math.min(rowCount * 30, listSpacePx)));
+
+  $effect(() => {
+    // rowCount como dependencia: se vuelve a medir cuando cambian las filas (y la lista ya existe).
+    void rowCount;
+    if (cardBox?.height == null || !tableEl) {
+      listSpacePx = null;
+      return;
+    }
+    const body = tableEl.closest('.hud-panel-body') as HTMLElement | null;
+    const list = tableEl.querySelector('[data-testid="virtual-list"]') as HTMLElement | null;
+    if (!body || !list) return;
+    const measure = () => {
+      const space = listSpace(list, body);
+      if (space !== null) listSpacePx = space;
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    for (const el of [body, list, body.querySelector('.hud-panel-basic'), tableEl.closest('.table-container')]) {
+      if (el) ro.observe(el);
+    }
+    return () => ro.disconnect();
+  });
 
   const distSol = $derived.by(() => {
     if (!loc?.star_pos || loc.star_pos.length < 3) return null;

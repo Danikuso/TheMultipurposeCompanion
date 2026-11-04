@@ -18,11 +18,9 @@ pub fn create_or_focus_main_window(app: &AppHandle, local_url: &Url) -> tauri::R
         return Ok(());
     }
 
-    let window = WebviewWindowBuilder::new(
-        app,
-        MAIN_WINDOW_LABEL,
-        WebviewUrl::External(local_url.clone()),
-    )
+    let mut window_url = local_url.clone();
+    window_url.set_query(Some("shell=desktop"));
+    let window = WebviewWindowBuilder::new(app, MAIN_WINDOW_LABEL, WebviewUrl::External(window_url))
     .title(MAIN_WINDOW_TITLE)
     .inner_size(1600.0, 900.0)
     .additional_browser_args(

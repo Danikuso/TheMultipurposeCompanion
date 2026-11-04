@@ -1,117 +1,109 @@
-import type { Component } from 'svelte';
-import { dashboardPanels, ShipPanel, OutfittingSearchPanel } from './dashboard';
-import { navigationPanels } from './navigation';
-import { explorationPanels } from './exploration';
-import { exobiologyPanels } from './exobiology';
-import { combatPanels } from './combat';
-import { miningPanels } from './mining';
-import { tradePanels } from './trade';
-import { missionsPanels } from './missions';
-import { engineeringPanels } from './engineering';
-import { carrierPanels } from './carrier';
-import { colonisationPanels } from './colonisation';
-import { powerplayPanels } from './powerplay';
-import { bgsPanels } from './bgs';
-import { accountsPanels } from './accounts';
-import { crimePanels } from './crime';
 
 export interface UiModuleDef {
   id: string;
   icon: string;
   titleKey: string;
-  panels: Component[];
+  cards: string[];
 }
 
 export const modules: UiModuleDef[] = [
-  { id: 'engineering', icon: 'wrench', titleKey: 'nav-engineering', panels: engineeringPanels },
+  {
+    id: 'engineering',
+    icon: 'wrench',
+    titleKey: 'nav-engineering',
+    cards: ['materials', 'engineers', 'eng-ship', 'eng-flow', 'shopping', 'trades', 'sources', 'eng-alerts'],
+  },
   {
     id: 'dashboard',
     icon: 'gauge',
     titleKey: 'nav-dashboard',
-    panels: dashboardPanels,
+    cards: [
+      'dashboard-cmdr', 'ship-detail', 'dashboard-location', 'dashboard-status',
+      'dashboard-route', 'dashboard-session', 'dashboard-alerts',
+    ],
   },
   {
     id: 'ship',
     icon: 'rocket',
     titleKey: 'nav-ship',
-    panels: [ShipPanel, OutfittingSearchPanel],
+    cards: ['ship-detail', 'ship-outfitting-search'],
   },
   {
     id: 'navigation',
     icon: 'route',
     titleKey: 'nav-navigation',
-    panels: navigationPanels,
+    cards: ['route', 'jump', 'planner'],
   },
   {
     id: 'exploration',
     icon: 'orbit',
     titleKey: 'nav-exploration',
-    panels: explorationPanels,
+    cards: ['exploration-system-bodies'],
   },
   {
     id: 'exobiology',
     icon: 'leaf',
     titleKey: 'nav-exobiology',
-    panels: exobiologyPanels,
+    cards: ['exobiology-exobiology'],
   },
   {
     id: 'combat',
     icon: 'crosshair',
     titleKey: 'nav-combat',
-    panels: combatPanels,
+    cards: ['target', 'ship', 'hunting', 'cz', 'ax'],
   },
   {
     id: 'mining',
     icon: 'pickaxe',
     titleKey: 'nav-mining',
-    panels: miningPanels,
+    cards: ['mining-targets', 'prospector', 'mining-session', 'sell'],
   },
   {
     id: 'trade',
     icon: 'coins',
     titleKey: 'nav-trade',
-    panels: tradePanels,
+    cards: ['market', 'cargo', 'trade-route', 'trade-session', 'search'],
   },
   {
     id: 'missions',
     icon: 'clipboard-list',
     titleKey: 'nav-missions',
-    panels: missionsPanels,
+    cards: ['missions', 'massacre', 'mission-alerts', 'passengers', 'tourism', 'rewards', 'community-goals'],
   },
   {
     id: 'carrier',
     icon: 'anchor',
     titleKey: 'nav-carrier',
-    panels: carrierPanels,
+    cards: ['carrier-overview', 'carrier-jump', 'carrier-finances'],
   },
   {
     id: 'colonisation',
     icon: 'hammer',
     titleKey: 'nav-colonisation',
-    panels: colonisationPanels,
+    cards: ['colonisation-progress', 'colonisation-supply'],
   },
   {
     id: 'powerplay',
     icon: 'crown',
     titleKey: 'nav-powerplay',
-    panels: powerplayPanels,
+    cards: ['powerplay-status'],
   },
   {
     id: 'bgs',
     icon: 'network',
     titleKey: 'nav-bgs',
-    panels: bgsPanels,
+    cards: ['bgs-system'],
   },
   {
     id: 'accounts',
     icon: 'globe',
     titleKey: 'nav-accounts',
-    panels: accountsPanels,
+    cards: ['accounts-accounts'],
   },
   {
     id: 'crime',
     icon: 'scale',
     titleKey: 'nav-crime',
-    panels: crimePanels,
+    cards: ['crime-crime'],
   },
 ];

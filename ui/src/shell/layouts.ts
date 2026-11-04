@@ -1,39 +1,10 @@
-import type { Component } from 'svelte';
-import { RouteStrip, PlannerPanel, JumpPanel } from '../modules/navigation';
-import SystemBodiesPanel from '../modules/exploration/SystemBodiesPanel.svelte';
-import ExobiologyPanel from '../modules/exobiology/ExobiologyPanel.svelte';
-import { TargetPanel, ShipPanel, HuntingPanel, ConflictZonePanel, AxPanel } from '../modules/combat';
-import { ProspectorPanel, MiningSessionPanel, SellPanel, MiningTargetsPanel } from '../modules/mining';
-import {
-  MarketPanel, CargoPanel, RoutePanel as TradeRoutePanel, TradeSessionPanel, SearchPanel,
-} from '../modules/trade';
-import {
-  MissionsPanel, MassacrePanel, MissionAlerts, PassengersPanel, TourismPanel, RewardsPanel, CommunityGoalsPanel,
-} from '../modules/missions';
-import type {
-  MassacreTopic, PassengersTopic, TourismTopic, CommunityGoalsTopic,
-} from '../modules/missions/types';
-import {
-  MaterialsPanel, EngineersPanel, ShipPanel as EngineeringShipPanel, EngineerFlow,
-  ShoppingPanel, TradesPanel, SourcesPanel, EngineeringAlerts,
-} from '../modules/engineering';
-import { CarrierOverviewPanel, CarrierJumpPanel, CarrierFinancesPanel } from '../modules/carrier';
-import { ColonisationProgressPanel, ColonisationSupplyPanel } from '../modules/colonisation';
-import { PowerplayPanel } from '../modules/powerplay';
-import { BgsPanel } from '../modules/bgs';
-import { ShipPanel as DashboardShipPanel, OutfittingSearchPanel } from '../modules/dashboard';
-import { topic } from '../lib/ws.svelte';
+import type { CardWidth, LayoutCtx } from './cards';
 
-export interface LayoutCtx {
-  modules: { id: string; relevance: string }[];
-  manual: string | null;
-}
+export type { LayoutCtx };
 
 export interface LayoutSlot {
-  id: string;
-  panel: Component;
-  span: 'full' | 1 | 2;
-  when?: (ctx: LayoutCtx) => boolean;
+  card: string;
+  width: CardWidth;
 }
 
 export interface LayoutDef {
@@ -56,18 +27,6 @@ export function contextPanel(
 const isActive = (r?: string) => r === 'active' || r === 'urgent';
 const rel = (mods: { id: string; relevance: string }[], id: string) =>
   mods.find((m) => m.id === id)?.relevance?.toLowerCase();
-const axVisible = () => {
-  const ax = topic<{ active?: boolean; presence?: boolean } | null>('combat.ax');
-  return ax?.active === true || ax?.presence === true;
-};
-const massacreVisible = () => (topic<MassacreTopic>('missions.massacre')?.piles?.length ?? 0) > 0;
-const passengersVisible = () => {
-  const p = topic<PassengersTopic>('missions.passengers');
-  return (p?.cabins?.seats_total ?? 0) > 0 || (p?.groups?.length ?? 0) > 0;
-};
-const tourismVisible = () => (topic<TourismTopic>('missions.tourism')?.trips?.length ?? 0) > 0;
-const cgVisible = () => (topic<CommunityGoalsTopic>('missions.community_goals')?.goals?.length ?? 0) > 0;
-const czVisible = () => (topic<unknown>('combat.conflict_zone') ?? null) !== null;
 
 type AutoLayout =
   | 'exploration'
@@ -142,107 +101,103 @@ export const layouts: LayoutDef[] = [{
   titleKey: 'layout-exploration',
   icon: 'compass',
   slots: [
-    { id: 'route', panel: RouteStrip, span: 'full' },
-    { id: 'context-bodies', panel: SystemBodiesPanel, span: 2,
-      when: (ctx) => contextPanel(ctx.modules, ctx.manual) === 'exploration' },
-    { id: 'context-exobiology', panel: ExobiologyPanel, span: 2,
-      when: (ctx) => contextPanel(ctx.modules, ctx.manual) === 'exobiology' },
-    { id: 'planner', panel: PlannerPanel, span: 1 },
-    { id: 'jump', panel: JumpPanel, span: 1 },
+    { card: 'route', width: 'full' },
+    { card: 'exploration-context', width: 2 },
+    { card: 'planner', width: 1 },
+    { card: 'jump', width: 1 },
   ],
 }, {
   id: 'ship',
   titleKey: 'layout-ship',
   icon: 'ship',
   slots: [
-    { id: 'ship-detail', panel: DashboardShipPanel, span: 2 },
-    { id: 'ship-jump', panel: JumpPanel, span: 1 },
-    { id: 'ship-cargo', panel: CargoPanel, span: 1 },
-    { id: 'ship-outfitting-search', panel: OutfittingSearchPanel, span: 2 },
+    { card: 'ship-detail', width: 2 },
+    { card: 'jump', width: 1 },
+    { card: 'cargo', width: 1 },
+    { card: 'ship-outfitting-search', width: 2 },
   ],
 }, {
   id: 'combat',
   titleKey: 'layout-combat',
   icon: 'crosshair',
   slots: [
-    { id: 'target', panel: TargetPanel, span: 2 },
-    { id: 'hunting', panel: HuntingPanel, span: 1 },
-    { id: 'ship', panel: ShipPanel, span: 1 },
-    { id: 'ax', panel: AxPanel, span: 2, when: axVisible },
-    { id: 'cz', panel: ConflictZonePanel, span: 2, when: czVisible },
+    { card: 'target', width: 2 },
+    { card: 'hunting', width: 1 },
+    { card: 'ship', width: 1 },
+    { card: 'ax', width: 2 },
+    { card: 'cz', width: 2 },
   ],
 }, {
   id: 'mining',
   titleKey: 'layout-mining',
   icon: 'pickaxe',
   slots: [
-    { id: 'mining-targets', panel: MiningTargetsPanel, span: 2 },
-    { id: 'prospector', panel: ProspectorPanel, span: 2 },
-    { id: 'mining-session', panel: MiningSessionPanel, span: 1 },
-    { id: 'sell', panel: SellPanel, span: 1 },
+    { card: 'mining-targets', width: 2 },
+    { card: 'prospector', width: 2 },
+    { card: 'mining-session', width: 1 },
+    { card: 'sell', width: 1 },
   ],
 }, {
   id: 'trade',
   titleKey: 'layout-trade',
   icon: 'scale',
   slots: [
-    { id: 'market', panel: MarketPanel, span: 2 },
-    { id: 'cargo', panel: CargoPanel, span: 1 },
-    { id: 'trade-session', panel: TradeSessionPanel, span: 1 },
-    { id: 'trade-route', panel: TradeRoutePanel, span: 'full' },
-    { id: 'search', panel: SearchPanel, span: 2 },
+    { card: 'market', width: 2 },
+    { card: 'cargo', width: 1 },
+    { card: 'trade-session', width: 1 },
+    { card: 'trade-route', width: 'full' },
+    { card: 'search', width: 2 },
   ],
 }, {
   id: 'missions',
   titleKey: 'layout-missions',
   icon: 'clipboard',
   slots: [
-    { id: 'missions', panel: MissionsPanel, span: 2 },
-    { id: 'mission-alerts', panel: MissionAlerts, span: 1 },
-    { id: 'massacre', panel: MassacrePanel, span: 1, when: massacreVisible },
-    { id: 'passengers', panel: PassengersPanel, span: 1, when: passengersVisible },
-    { id: 'tourism', panel: TourismPanel, span: 2, when: tourismVisible },
-    { id: 'rewards', panel: RewardsPanel, span: 1 },
-    { id: 'community-goals', panel: CommunityGoalsPanel, span: 1, when: cgVisible },
+    { card: 'missions', width: 2 },
+    { card: 'mission-alerts', width: 1 },
+    { card: 'massacre', width: 1 },
+    { card: 'passengers', width: 1 },
+    { card: 'tourism', width: 2 },
+    { card: 'rewards', width: 1 },
+    { card: 'community-goals', width: 1 },
   ],
 }, {
   id: 'engineering',
   titleKey: 'layout-engineering',
   icon: 'wrench',
   slots: [
-    { id: 'materials', panel: MaterialsPanel, span: 2 },
-    { id: 'engineers', panel: EngineersPanel, span: 1 },
-    { id: 'eng-alerts', panel: EngineeringAlerts, span: 1 },
-    { id: 'eng-ship', panel: EngineeringShipPanel, span: 1 },
-    { id: 'eng-flow', panel: EngineerFlow, span: 2,
-      when: () => topic<{ slot?: string | null }>('engineering.flow')?.slot != null },
-    { id: 'shopping', panel: ShoppingPanel, span: 2 },
-    { id: 'trades', panel: TradesPanel, span: 1 },
-    { id: 'sources', panel: SourcesPanel, span: 1 },
+    { card: 'materials', width: 2 },
+    { card: 'engineers', width: 1 },
+    { card: 'eng-alerts', width: 1 },
+    { card: 'eng-ship', width: 1 },
+    { card: 'eng-flow', width: 2 },
+    { card: 'shopping', width: 2 },
+    { card: 'trades', width: 1 },
+    { card: 'sources', width: 1 },
   ],
 }, {
   id: 'carrier',
   titleKey: 'layout-carrier',
   icon: 'anchor',
   slots: [
-    { id: 'carrier-overview', panel: CarrierOverviewPanel, span: 2 },
-    { id: 'carrier-jump', panel: CarrierJumpPanel, span: 1 },
-    { id: 'carrier-finances', panel: CarrierFinancesPanel, span: 1 },
+    { card: 'carrier-overview', width: 2 },
+    { card: 'carrier-jump', width: 1 },
+    { card: 'carrier-finances', width: 1 },
   ],
 }, {
   id: 'colonisation',
   titleKey: 'layout-colonisation',
   icon: 'hammer',
   slots: [
-    { id: 'colonisation-progress', panel: ColonisationProgressPanel, span: 2 },
-    { id: 'colonisation-supply', panel: ColonisationSupplyPanel, span: 1 },
+    { card: 'colonisation-progress', width: 2 },
+    { card: 'colonisation-supply', width: 1 },
   ],
 }, {
   id: 'powerplay',
   titleKey: 'layout-powerplay',
   icon: 'crown',
   slots: [
-    { id: 'powerplay-status', panel: PowerplayPanel, span: 2 },
-    { id: 'bgs-system', panel: BgsPanel, span: 2 },
+    { card: 'powerplay-status', width: 2 },
+    { card: 'bgs-system', width: 2 },
   ],
 }];

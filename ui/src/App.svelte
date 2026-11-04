@@ -4,7 +4,6 @@
   import { diag, diagOn } from './lib/diag.svelte';
   import { t } from './lib/i18n';
   import { loadPrefs, prefs, prefsFallback, readPlacement, savePlacement, toggleTacticalLock } from './lib/prefs.svelte';
-  import { modules } from './modules/registry';
   import Settings from './settings/Settings.svelte';
   import Grid from './shell/Grid.svelte';
   import ImportProgress from './shell/ImportProgress.svelte';
@@ -13,6 +12,20 @@
   import TopBar from './shell/TopBar.svelte';
   import UpdateModal from './shell/UpdateModal.svelte';
   import { fetchUpdateStatus } from './lib/updater.svelte';
+  import { tabKeyFor } from './shell/cards';
+  import CardHost, { isCardVisible, tabPlacements } from './shell/CardHost.svelte';
+  import { beginEdit, customTab, editDoc, initLayouts, layoutState } from './shell/layoutStore.svelte';
+  import { askConfirm } from './lib/confirm';
+  import { uuidv4 } from './lib/uuid';
+  import CustomTabDialog from './shell/CustomTabDialog.svelte';
+  import { pushToast } from './shell/Toasts.svelte';
+  import { createCustomTab, deleteCustomTab, updateCustomTab } from './shell/layoutModel';
+  import { cancelEditWithDiag } from './shell/editDiag';
+  import { activeDrag } from './shell/pointerDrag';
+  import GridHeader from './shell/GridHeader.svelte';
+  import DevicePrompt from './shell/DevicePrompt.svelte';
+  import EditToolbar from './shell/EditToolbar.svelte';
+  import { modules } from './modules/registry';
   import { DEFAULT_PRIORITIES, autoLayout, contextPanel, layouts, nextPin } from './shell/layouts';
 
   let pin = $state<string | null>(null);
@@ -89,7 +102,9 @@
   let heldLayout = $state('exploration');
   let heldContext = $state('exploration');
   const follow = $derived(prefs.loaded && prefs.autoCompanion);
-  const shownLayout = $derived(follow && isStable ? (auto ?? 'exploration') : heldLayout);
+  // Mientras se edita la disposición, Auto-companion queda en suspenso: la pestaña no cambia bajo el cursor.
+  const following = $derived(follow && isStable && !layoutState.editing);
+  const shownLayout = $derived(following ? (auto ?? 'exploration') : heldLayout);
   const activeTab = $derived(view ?? pin ?? `layout:${shownLayout}`);
   const activeLayout = $derived(layouts.find((layout) => activeTab === `layout:${layout.id}`));
   const autoManual = $derived(manualBody === bodyIdentity ? manual : null);
@@ -98,19 +113,30 @@
     manual: follow ? autoManual : (manual ?? heldContext),
   });
   const autoContext = $derived(contextPanel(liveModules, autoManual));
-  const visibleSlots = $derived(activeLayout?.slots.filter((slot) => !slot.when || slot.when(layoutContext)) ?? []);
+  const tabKey = $derived(tabKeyFor(activeTab));
+  const headerTitleKey = $derived(activeLayout?.titleKey ?? modules.find((m) => m.id === activeTab)?.titleKey);
+  const headerTitle = $derived(
+    tabKey?.startsWith('custom:') ? customTab(tabKey.slice('custom:'.length))?.name : undefined,
+  );
+  const activeCustom = $derived(tabKey?.startsWith('custom:') ? customTab(tabKey.slice('custom:'.length)) : undefined);
+  const tabCards = $derived(tabKey === null ? [] : tabPlacements(tabKey));
+  const visibleSlots = $derived(tabCards.filter((p) => tabKey !== null && isCardVisible(p.id, layoutContext, tabKey)));
   const selectedContext = $derived(follow ? autoContext : contextPanel(liveModules, layoutContext.manual));
-  const activeModule = $derived(modules.find((m) => m.id === activeTab) ?? modules[0]);
 
   $effect(() => {
-    if (follow && isStable) {
+    if (following) {
       heldLayout = auto ?? 'exploration';
       heldContext = autoContext;
     }
   });
 
+  // Una pestaña propia que ya no existe (borrada, cancelada o restaurada de un guardado viejo) devuelve a la automática.
   $effect(() => {
-    if (!follow || !isStable) {
+    if (view?.startsWith('custom:') && layoutState.ready && !customTab(view.slice('custom:'.length))) view = null;
+  });
+
+  $effect(() => {
+    if (!following) {
       if (!follow) lastAuto = OFF_MARK; // al reactivar, la disposición automática se aplica enseguida
       return;
     }
@@ -128,7 +154,26 @@
   // Con Auto-companion apagado se recuerda dónde lo dejó el usuario para el próximo arranque.
   $effect(() => {
     if (!prefs.loaded || prefs.autoCompanion) return;
-    savePlacement({ layout: pin?.startsWith('layout:') ? pin.slice(7) : heldLayout, context: layoutContext.manual });
+    savePlacement({
+      layout: pin?.startsWith('layout:') ? pin.slice(7) : heldLayout,
+      context: layoutContext.manual,
+      // Sin conexión no se conocen las pestañas propias: se conserva la vista recordada en vez de borrarla.
+      view: layoutState.offline ? readPlacement().view : (view?.startsWith('custom:') ? view : null),
+    });
+  });
+
+  // Esc aborta el arrastre en curso o, si no hay, cancela la edición; el listener solo existe mientras se edita
+  // sobre una rejilla de tarjetas (en Ajustes no hay barra de edición y Esc no debe descartar el borrador).
+  $effect(() => {
+    if (!layoutState.editing || tabKey === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || layoutState.saving) return; // con un guardado en curso no se cancela
+      const drag = activeDrag();
+      if (drag?.active) drag.cancel(); // Esc durante un arrastre solo aborta el arrastre
+      else cancelEditWithDiag(tabKey);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   });
 
   $effect(() => {
@@ -140,7 +185,7 @@
       pinned: pin !== null,
       auto_companion: prefs.autoCompanion,
       slot: visibleSlots.map((s) => s.id),
-      defined_slots: activeLayout?.slots.length ?? 0,
+      defined_slots: tabCards.length,
       module: liveModules.map((m) => m.id),
       relevance: liveModules.map((m) => String(m.relevance).toLowerCase()),
       context: selectedContext,
@@ -159,6 +204,38 @@
     if (id.startsWith('layout:')) { pin = id; view = null; } else view = id;
   }
 
+  let tabDialog = $state<'create' | 'edit' | null>(null);
+
+  function submitTab(name: string, icon: string) {
+    const mode = tabDialog;
+    tabDialog = null;
+    if (mode === 'edit' && activeCustom) {
+      const id = activeCustom.id;
+      editDoc((d) => updateCustomTab(d, id, { name, icon }));
+      return;
+    }
+    if (!layoutState.editing) beginEdit();
+    const id = `c-${uuidv4()}`;
+    let created = false;
+    editDoc((d) => {
+      const next = createCustomTab(d, name, icon, id);
+      created = next !== null;
+      return next ?? d;
+    });
+    if (!created) {
+      pushToast(t('layout-custom-limit'), 'Warning', 'layout-custom-limit');
+      return;
+    }
+    selectTab(`custom:${id}`);
+    layoutState.catalogRequested = true;
+  }
+
+  function deleteActiveTab() {
+    const id = activeCustom?.id;
+    if (!id || !askConfirm(t('layout-custom-delete-confirm'))) return;
+    editDoc((d) => deleteCustomTab(d, id));
+  }
+
   $effect(() => {
     if (follow && manualBody !== bodyIdentity) {
       manual = null;
@@ -173,12 +250,14 @@
 
   onMount(() => {
     connect();
+    void initLayouts();
     fetch('/api/config').then((res) => (res.ok ? res.json() : null)).then((cfg) => {
       if (!cfg) return prefsFallback();
       if (cfg.auto_companion === false) {
         const saved = readPlacement();
         if (saved.layout && layouts.some((l) => l.id === saved.layout)) heldLayout = saved.layout;
         if (saved.context === 'exploration' || saved.context === 'exobiology') heldContext = saved.context;
+        if (saved.view) view = saved.view;
       }
       loadPrefs(cfg);
     }).catch(prefsFallback);
@@ -204,38 +283,49 @@
   });
 </script>
 
+{#snippet contextControls(cardId: string)}{#if cardId === 'exploration-context'}<div
+  class="context-controls" role="group" aria-label={t('layout-context')}>
+  <button type="button" data-testid="context-bodies" aria-pressed={selectedContext === 'exploration'}
+    onclick={() => selectContext('exploration')}>{t('layout-context-bodies')}</button>
+  <button type="button" data-testid="context-exobiology" aria-pressed={selectedContext === 'exobiology'}
+    onclick={() => selectContext('exobiology')}>{t('layout-context-exobiology')}</button>
+</div>{/if}{/snippet}
+
+{#snippet customActions()}
+  <button type="button" data-testid="custom-tab-rename" onclick={() => (tabDialog = 'edit')}>{t('layout-custom-rename')}</button>
+  <button type="button" data-testid="custom-tab-delete" onclick={deleteActiveTab}>{t('layout-custom-delete')}</button>
+{/snippet}
+
 <div class="app-shell">
   <TopBar />
   <ImportProgress />
   <div class="app-body">
-    <Sidebar {activeTab} onSelect={selectTab} />
+    <Sidebar {activeTab} onSelect={selectTab} onNewTab={() => (tabDialog = 'create')} />
     <Grid {activeTab}>
       {#if activeTab === 'settings'}
         <Settings />
-      {:else if activeLayout}
-        {#each visibleSlots as slot (slot.id)}
-          <div class="layout-slot" class:full={slot.span === 'full'}
-            style:--slot-span={slot.span === 'full' ? 1 : slot.span} data-layout-slot={slot.id}>
-            {#if activeLayout.id === 'exploration' && slot.span === 2}
-              <div class="context-controls" role="group" aria-label={t('layout-context')}>
-                <button type="button" data-testid="context-bodies" aria-pressed={selectedContext === 'exploration'}
-                  onclick={() => selectContext('exploration')}>{t('layout-context-bodies')}</button>
-                <button type="button" data-testid="context-exobiology" aria-pressed={selectedContext === 'exobiology'}
-                  onclick={() => selectContext('exobiology')}>{t('layout-context-exobiology')}</button>
-              </div>
-            {/if}
-            <slot.panel />
+      {:else if tabKey !== null}
+        <GridHeader titleKey={headerTitleKey} title={headerTitle} {tabKey} />
+        {#if layoutState.needsPrompt}<DevicePrompt />{/if}
+        {#if layoutState.editing}
+          <EditToolbar {tabKey} extra={activeCustom ? customActions : undefined} />
+        {:else if activeCustom && tabCards.length === 0}
+          <div class="custom-empty" data-testid="custom-empty">
+            <p>{t('layout-custom-empty')}</p>
+            <button type="button" data-testid="custom-empty-edit" onclick={() => beginEdit()}>{t('layout-edit-start')}</button>
           </div>
-        {/each}
-      {:else if activeModule}
-        {#each activeModule.panels as PanelComp, idx (`${activeModule.id}-${idx}`)}
-          <PanelComp />
-        {/each}
+        {/if}
+        <CardHost {tabKey} ctx={layoutContext} prefix={contextControls} />
       {/if}
     </Grid>
   </div>
   <Toasts />
   <UpdateModal />
+  {#if tabDialog}
+    <CustomTabDialog mode={tabDialog}
+      initial={tabDialog === 'edit' && activeCustom ? { name: activeCustom.name, icon: activeCustom.icon } : undefined}
+      onsubmit={submitTab} onclose={() => (tabDialog = null)} />
+  {/if}
 </div>
 
 <style>
@@ -254,11 +344,19 @@
     overflow: hidden;
   }
 
-  .layout-slot { min-width: 0; grid-column: 1 / -1; }
-  .context-controls { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .custom-empty {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 1rem;
+    color: var(--hud-muted);
+  }
+  .custom-empty p { margin: 0; }
+  .custom-empty button { background: var(--hud-surface); color: var(--hud-primary); border: 1px solid var(--hud-primary); padding: 0.4rem 0.8rem; }
+
+  .context-controls { display: flex; flex-shrink: 0; gap: 0.5rem; margin-bottom: 0.5rem; }
   .context-controls button { background: var(--hud-surface); color: var(--hud-text); border: 1px solid var(--hud-border); padding: 0.4rem 0.6rem; }
   .context-controls button[aria-pressed='true'] { color: var(--hud-primary); border-color: var(--hud-primary); }
-  @media (min-width: 900px) {
-    .layout-slot:not(.full) { grid-column: span var(--slot-span); }
-  }
 </style>

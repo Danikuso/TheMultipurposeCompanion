@@ -267,5 +267,5 @@ export const NAV_ICONS: Record<string, string> = {
 };
 
 export function resolveNavIcon(id: string): string | null {
-  return NAV_ICONS[id] ?? null;
+  return Object.hasOwn(NAV_ICONS, id) ? NAV_ICONS[id] : null;
 }

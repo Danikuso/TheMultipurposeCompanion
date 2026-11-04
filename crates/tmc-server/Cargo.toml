@@ -21,6 +21,7 @@ chrono.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 qrcode.workspace = true
+uuid.workspace = true
 rust-embed = { workspace = true, optional = true }
 
 [dev-dependencies]

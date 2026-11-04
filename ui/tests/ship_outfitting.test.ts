@@ -4,6 +4,7 @@ import { flushSync, mount, unmount } from 'svelte';
 import { disconnect, live } from '../src/lib/ws.svelte';
 import { setLocale } from '../src/lib/i18n';
 import { modules } from '../src/modules/registry';
+import { cards } from '../src/shell/cards';
 import { layouts } from '../src/shell/layouts';
 import OutfittingSearchPanel from '../src/modules/dashboard/OutfittingSearchPanel.svelte';
 import type {
@@ -104,13 +105,14 @@ describe('OutfittingSearchPanel', () => {
   test('is registered in both Nave module and Nave layout', () => {
     const shipMod = modules.find((m) => m.id === 'ship');
     expect(shipMod).toBeDefined();
-    expect(shipMod?.panels).toContain(OutfittingSearchPanel);
+    expect(shipMod?.cards).toContain('ship-outfitting-search');
+    expect(cards['ship-outfitting-search'].component).toBe(OutfittingSearchPanel);
 
     const shipLayout = layouts.find((l) => l.id === 'ship');
     expect(shipLayout).toBeDefined();
     expect(
       shipLayout?.slots.some(
-        (s) => s.id === 'ship-outfitting-search' && s.panel === OutfittingSearchPanel && s.span === 2,
+        (s) => s.card === 'ship-outfitting-search' && s.width === 2,
       ),
     ).toBe(true);
   });

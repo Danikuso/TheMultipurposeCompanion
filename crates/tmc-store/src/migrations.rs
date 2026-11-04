@@ -62,6 +62,15 @@ CREATE TABLE IF NOT EXISTS accounts_credential (
 );
 ";
 
+pub(crate) const UI_LAYOUT_SCHEMA: &str = "
+CREATE TABLE IF NOT EXISTS ui_layout_profile (
+  device_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  doc TEXT NOT NULL
+);
+";
+
 pub struct Migration {
     pub id: &'static str,
     pub sql: &'static str,

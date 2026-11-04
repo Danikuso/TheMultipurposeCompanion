@@ -77,6 +77,12 @@ pub struct Config {
     /// Coordenadas estelares [x, y, z] en años luz de la Base de operaciones.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub home_system_coords: Option<[f64; 3]>,
+    /// Identificador persistente del dispositivo de escritorio (UUID) para perfiles de disposición.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub desktop_device_id: Option<String>,
+    /// Archivo de configuración indicado con `--config` (no se serializa).
+    #[serde(skip)]
+    pub config_file: Option<PathBuf>,
 }
 
 impl Default for Config {
@@ -113,6 +119,8 @@ impl Default for Config {
             theme_mode: None,
             data_dir: None,
             ui_dir: None,
+            desktop_device_id: None,
+            config_file: None,
         }
     }
 }
@@ -151,6 +159,17 @@ pub(crate) fn emit_bootstrap_report() {
 impl Config {
     pub fn load_or_default() -> Self {
         Self::load_from_or_default(&config_path())
+    }
+
+    /// Lee el archivo sin tocarlo: si falta devuelve los valores por defecto y si
+    /// existe pero no se puede leer o interpretar devuelve error (nunca lo renombra
+    /// ni lo sobrescribe).
+    pub(crate) fn load_strict(path: &Path) -> anyhow::Result<Self> {
+        if !path.exists() {
+            return Ok(Self::default());
+        }
+        let text = std::fs::read_to_string(path)?;
+        Ok(toml::from_str::<Self>(&text)?)
     }
 
     pub fn load_from_or_default(path: &Path) -> Self {
@@ -415,6 +434,29 @@ impl Config {
         let token = uuid::Uuid::new_v4().as_simple().to_string();
         self.server.lan_token = Some(token.clone());
         token
+    }
+
+    /// Devuelve el identificador del dispositivo de escritorio, generándolo si falta o no es un UUID canónico (minúsculas con guiones, como exige el servidor).
+    pub fn ensure_desktop_device_id(&mut self) -> String {
+        if let Some(existing) = &self.desktop_device_id
+            && uuid::Uuid::parse_str(existing)
+                .is_ok_and(|u| u.hyphenated().to_string() == *existing)
+        {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "config.desktop_device_id.reused",
+                serde_json::json!({"reused":true})
+            );
+            return existing.clone();
+        }
+        tmc_model::diagnostic!(
+            tmc_model::diagnostics::DiagnosticContext::State,
+            "config.desktop_device_id.generated",
+            serde_json::json!({"generated":true})
+        );
+        let id = uuid::Uuid::new_v4().to_string();
+        self.desktop_device_id = Some(id.clone());
+        id
     }
 
     /// Rota el token LAN generando un nuevo valor aleatorio y registrando el cambio (F18/F21).

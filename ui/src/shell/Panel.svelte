@@ -3,6 +3,8 @@
   import { untrack } from 'svelte';
   import { t } from '../lib/i18n';
   import { diag, diagOn } from '../lib/diag.svelte';
+  import { getCardBox } from './cardBox';
+  import type { CardWidth } from './cards';
 
   let {
     titleKey,
@@ -15,7 +17,7 @@
     children,
   }: {
     titleKey: string;
-    span?: 'full' | 1 | 2;
+    span?: CardWidth;
     size?: 'normal' | 'large';
     collapsible?: boolean;
     defaultExpanded?: boolean;
@@ -39,12 +41,19 @@
     return () => diag('ui.panel.unmounted', { panel: shape.panel });
   });
 
+  // Dentro de un CardFrame el marco impone ancho y alto; el span propio se ignora.
+  const box = getCardBox();
+  const inFrame = box !== undefined;
+  const fixedHeight = $derived(box?.height != null);
+
   const gridColumn = $derived(
-    span === 'full' ? '1 / -1' : span === 1 || span === 2 ? `span ${span}` : undefined,
+    inFrame ? undefined
+      : span === 'full' ? '1 / -1' : span === 1 || span === 2 || span === 3 ? `span ${span}` : undefined,
   );
 </script>
 
-<section class="hud-panel {className}" class:large={size === 'large'} style:grid-column={gridColumn}>
+<section class="hud-panel {className}" class:large={size === 'large'} class:in-frame={inFrame}
+  class:fixed-height={fixedHeight} style:grid-column={gridColumn}>
   <header class="hud-panel-header">
     <h2>{t(titleKey)}</h2>
     {#if details || collapsible}
@@ -235,6 +244,30 @@
     padding-right: 0.35rem;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 113, 0, 0.45) rgba(0, 0, 0, 0.15);
+  }
+
+  .hud-panel.in-frame {
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  /* Alto fijo impuesto por el marco: el cuerpo ocupa el espacio y solo hace scroll si desborda. */
+  .hud-panel.fixed-height {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .hud-panel.fixed-height .hud-panel-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    /* Más contraste: en un marco de alto fijo la barra es la señal de que hay más contenido. */
+    scrollbar-color: rgba(255, 113, 0, 0.8) rgba(255, 255, 255, 0.08);
+  }
+
+  .hud-panel.fixed-height .details-content {
+    max-height: none;
   }
 
   .details-content::-webkit-scrollbar {

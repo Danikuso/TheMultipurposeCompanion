@@ -287,7 +287,7 @@ Das Projekt ist als modularer Workspace in **stabilem Rust (Edition 2024)** stru
 - **Nicht-intrusives Einlesen per Byte-Offset:** Benachrichtigungen des Betriebssystems dienen ausschließlich dazu, das Anlegen einer neuen `Journal.*.log`-Datei zu erkennen; das zeilenweise Lesen schreitet per Byte-Offset voran, ohne jemals Dateideskriptoren von `EliteDangerous64.exe` zu sperren. Flüchtige Dateien (`Status.json`, `Cargo.json`, `Market.json`, `Outfitting.json`, `Shipyard.json`, `ModulesInfo.json`, `NavRoute.json`, `Backpack.json`, `ShipLocker.json`, `FCMaterials.json`) tolerieren über bis zu 10 Wiederholungsversuche à 50 ms unvollständige Schreibzugriffe des Spiels.
 - **Widerstandsfähigkeit und Selbstreparatur:** Beschädigte JSON-Zeilen oder unbekannte künftige Journal-Events bringen die Anwendung niemals zum Absturz. Ist `tmc.db` beim Start fehlerhaft, wird sie als `tmc.db.corrupt-YYYYMMDDHHMMSS` gesichert, ein sauberes Schema aufgesetzt und der Verlauf neu importiert. Eine ungültige `config.toml` wird in `config.toml.bak` gesichert und auf sichere Standardwerte zurückgesetzt.
 - **Lokale Serversicherheit:** Bindet standardmäßig ausschließlich an Loopback `127.0.0.1:47320` (mit Portsuche in `47320..=47340` bei Belegung) und validiert `Host`- sowie `Origin`-Header. Bei aktiviertem LAN-Modus `lan = true` (`0.0.0.0`) erfordert jede externe Anfrage das im QR-Code übertragene zufällige 128-Bit-Sitzungstoken.
-- **Striktes Ressourcenbudget (Harte Anforderung):** `< 150 MB` Gesamtarbeitsspeicher bei geöffnetem Fenster (~35–112 MB in der Praxis), `< 1 %` CPU im Leerlauf, keine kontinuierlichen `requestAnimationFrame`-Schleifen und maximal 10 UI-Aktualisierungen pro Sekunde über WebSocket. Beim Minimieren in den Infobereich unter Windows ruft TMC `COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW` und `SetIsVisible(false)` auf.
+- **Striktes Ressourcenbudget (Harte Anforderung):** `< 180 MB` Gesamtarbeitsspeicher bei geöffnetem Fenster (~35–112 MB in der Praxis), `< 1 %` CPU im Leerlauf, keine kontinuierlichen `requestAnimationFrame`-Schleifen und maximal 10 UI-Aktualisierungen pro Sekunde über WebSocket. Beim Minimieren in den Infobereich unter Windows ruft TMC `COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW` und `SetIsVisible(false)` auf.
 
 ---
 
@@ -326,7 +326,7 @@ cargo run -p tmc-replay -- anonymize --from C:\Pfad\Journal.log --to tests\fixtu
 # 4. Wissenschaftlicher Evaluator auf realen Journalen ohne Ausgabe personenbezogener Daten (8 Mathe-Orakel + SQLite-Zeiten)
 cargo run -p tmc-headless -- eval --timings
 
-# 5. Tatsächlichen RAM- und Leerlauf-CPU-Verbrauch gegen das Budget messen (< 150 MB RAM, < 1 % CPU)
+# 5. Tatsächlichen RAM- und Leerlauf-CPU-Verbrauch gegen das Budget messen (< 180 MB RAM, < 1 % CPU)
 pwsh scripts/measure-footprint.ps1 -Exe target/release/TMC.exe -JournalDir tests/fixtures/journal
 ```
 

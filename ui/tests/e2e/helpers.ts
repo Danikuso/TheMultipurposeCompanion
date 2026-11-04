@@ -5,7 +5,10 @@ import { type Page } from '@playwright/test';
 /** Abre la disposición por su nombre visible (botón de la barra lateral). */
 export async function openLayout(page: Page, name: string) {
   await page.goto('/');
-  await page.locator('button.nav-btn:not([data-module])').filter({ hasText: new RegExp(`^${name}$`) }).click();
+  // El texto del botón incluye el SVG del icono (con <style>): se compara solo la etiqueta.
+  await page
+    .locator('button.nav-btn:not([data-module])', { has: page.locator('.nav-label', { hasText: new RegExp(`^${name}$`) }) })
+    .click();
 }
 
 /** Anexa una línea al diario en curso a través del servidor falso (solo escenarios con él). */

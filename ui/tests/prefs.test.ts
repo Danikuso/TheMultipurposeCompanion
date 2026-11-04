@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
-import { loadPrefs, prefs, setAutoCompanion } from '../src/lib/prefs.svelte';
+import { loadPrefs, prefs, readPlacement, savePlacement, setAutoCompanion } from '../src/lib/prefs.svelte';
 import { setLocale } from '../src/lib/i18n';
 import { disconnect, live } from '../src/lib/ws.svelte';
 import TopBar from '../src/shell/TopBar.svelte';
@@ -69,5 +69,27 @@ describe('auto-companion toggle', () => {
     const put = fetchMock.mock.calls.find((c) => c[1]?.method === 'PUT')!;
     expect(JSON.parse(put[1].body).auto_companion).toBe(false);
     unmount(inst);
+  });
+});
+
+describe('placement view', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+  const withStored = (v: unknown) => {
+    vi.stubGlobal('localStorage', { getItem: () => JSON.stringify(v), setItem: vi.fn() });
+    return readPlacement();
+  };
+  test('readPlacement accepts custom:c-... and rejects anything else', () => {
+    expect(withStored({ layout: 'combat', context: null, view: 'custom:c-0a1b-2c' }).view).toBe('custom:c-0a1b-2c');
+    expect(withStored({ view: 'custom:../x' }).view).toBeNull();
+    expect(withStored({ view: 'custom:c-ZZ' }).view).toBeNull();
+    expect(withStored({ view: 'settings' }).view).toBeNull();
+    expect(withStored({ view: 'custom:c-' + 'a'.repeat(41) }).view).toBeNull();
+    expect(withStored({ layout: 'combat' }).view).toBeNull();
+  });
+  test('savePlacement persists view', () => {
+    const setItem = vi.fn();
+    vi.stubGlobal('localStorage', { getItem: () => null, setItem });
+    savePlacement({ layout: null, context: null, view: 'custom:c-1' });
+    expect(JSON.parse(setItem.mock.calls[0][1]).view).toBe('custom:c-1');
   });
 });

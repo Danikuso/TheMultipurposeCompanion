@@ -8,6 +8,7 @@ mod diag_ui;
 pub mod pairing;
 pub mod rest;
 pub mod security;
+mod ui_layout;
 pub mod ws;
 
 use axum::Router;
@@ -57,6 +58,11 @@ pub trait ActionHost: Send + Sync + 'static {
     /// Sugerencias de sistemas: `{ "items": [...] }` o un array. El servidor pagina.
     fn autocomplete(&self, _q: String, _snapshot: &BTreeMap<String, Value>) -> ActionFut {
         Box::pin(async { Err(ActionError::NotFound) })
+    }
+
+    /// Identificador persistente del dispositivo de escritorio, si el anfitrión lo conoce.
+    fn desktop_device_id(&self) -> Option<String> {
+        None
     }
 
     fn get_config(&self) -> Value {
@@ -245,6 +251,24 @@ pub fn build_router(
             axum::routing::post(rest::post_update_install),
         )
         .route("/api/pairing", axum::routing::get(pairing::get_pairing))
+        .route("/api/ui/layouts", axum::routing::get(ui_layout::list))
+        .route(
+            "/api/ui/layouts/{device_id}",
+            axum::routing::get(ui_layout::get)
+                .delete(ui_layout::delete)
+                .put(ui_layout::put)
+                .patch(ui_layout::patch)
+                .layer(axum::extract::DefaultBodyLimit::max(262_144)),
+        )
+        .route(
+            "/api/ui/layouts/{device_id}/copy-from/{source_id}",
+            axum::routing::post(ui_layout::copy_from)
+                .layer(axum::extract::DefaultBodyLimit::max(262_144)),
+        )
+        .route(
+            "/api/ui/device/desktop",
+            axum::routing::get(ui_layout::desktop_device),
+        )
         .fallback(axum::routing::get(assets::serve_asset))
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
