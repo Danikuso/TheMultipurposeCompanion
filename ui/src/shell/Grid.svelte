@@ -6,7 +6,7 @@
   let { children, activeTab }: { children?: Snippet; activeTab?: string } = $props();
   let gridEl: HTMLElement | null = $state(null);
 
-  onMount(() => startGridColumns());
+  onMount(() => startGridColumns(gridEl));
 
   $effect(() => {
     // Al conmutar de pestaña o disposición, resetear siempre el desplazamiento vertical arriba del todo

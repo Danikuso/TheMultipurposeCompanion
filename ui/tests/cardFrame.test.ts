@@ -134,24 +134,35 @@ describe('CardFrame', () => {
       system: 'Testia', system_address: 1, discovered: false,
       fss: { progress: 1, body_count: 60, scanned: 60, complete: true }, rows,
     };
-    // Maqueta de layout: cuerpo del panel de 1160 px, 520 px de contenido encima de la lista y 60 px debajo.
+    // Maqueta de layout realista: cuerpo del panel de 1160 px (flex en columna con overflow-y: auto), 520 px
+    // de contenido encima de la lista y 20 px debajo (barra horizontal fija). .hud-panel-details es flex: 1
+    // y se estira hasta el fondo del cuerpo (holgura), y scrollHeight está acotado a >= clientHeight,
+    // como en un navegador real.
     const BODY = 1160;
     const ABOVE = 520;
-    const BELOW = 60;
+    const BELOW = 20;
     const listOf = () => target.querySelector('[data-testid="virtual-list"]') as HTMLElement;
     const listPx = () => parseFloat(listOf().style.height) || 0;
     const isBody = (el: Element) => el.classList.contains('hud-panel-body');
-    const rect = (top: number, height: number) =>
-      ({ top, height, bottom: top + height, left: 0, right: 0, width: 0, x: 0, y: top, toJSON: () => ({}) }) as DOMRect;
+    const rect = (top: number, bottom: number) =>
+      ({ top, height: bottom - top, bottom, left: 0, right: 0, width: 0, x: 0, y: top, toJSON: () => ({}) }) as DOMRect;
     vi.spyOn(Element.prototype, 'clientHeight', 'get').mockImplementation(function (this: Element) {
       return isBody(this) ? BODY : 0;
     });
     vi.spyOn(Element.prototype, 'scrollHeight', 'get').mockImplementation(function (this: Element) {
-      return isBody(this) ? ABOVE + listPx() + BELOW : 0;
+      return isBody(this) ? Math.max(BODY, ABOVE + listPx() + BELOW) : 0;
     });
     vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
-      if (isBody(this)) return rect(40, BODY);
-      if (this.getAttribute('data-testid') === 'virtual-list') return rect(40 + ABOVE, listPx());
+      const list = listOf();
+      const listTop = 40 + ABOVE;
+      const listBottom = listTop + listPx();
+      if (isBody(this)) return rect(40, 40 + BODY);
+      if (this === list) return rect(listTop, listBottom);
+      if (this.classList.contains('hud-panel-details')) return rect(listTop - 100, 40 + BODY);
+      if (list && this.contains(list)) {
+        const extra = this.classList.contains('table-container') || this.querySelector('.table-container') ? BELOW : 0;
+        return rect(listTop - 40, listBottom + extra);
+      }
       return rect(0, 0);
     });
     try {
@@ -162,8 +173,16 @@ describe('CardFrame', () => {
       inst = null;
       frame({ id: bodies.id, w: 'full', h: 1200 }, bodies, 2);
       flushSync();
+      // Crece hasta la holgura real y cabe sin desbordar el cuerpo.
       expect(listPx()).toBeGreaterThan(auto);
+      expect(listPx()).toBe(BODY - ABOVE - BELOW);
       expect(ABOVE + listPx() + BELOW).toBeLessThanOrEqual(BODY);
+      // Una nueva medición con la lista ya crecida da el mismo resultado (sin quedarse pegada).
+      live.topics['exploration.system'] = {
+        ...(live.topics['exploration.system'] as object), rows: [...rows, { ...rows[0], body_id: 999 }],
+      };
+      flushSync();
+      expect(listPx()).toBe(BODY - ABOVE - BELOW);
     } finally {
       vi.restoreAllMocks();
     }

@@ -49,6 +49,8 @@
     : Math.max(baseListHeight, Math.min(rowCount * 30, listSpacePx)));
 
   $effect(() => {
+    // rowCount como dependencia: se vuelve a medir cuando cambian las filas (y la lista ya existe).
+    void rowCount;
     if (cardBox?.height == null || !tableEl) {
       listSpacePx = null;
       return;
