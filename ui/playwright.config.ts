@@ -9,7 +9,7 @@ const combatPort = port + 1;
 const miningOnPort = port + 2;
 const miningOffPort = port + 3;
 const ardentPort = port + 4;
-// F3: +5 comercio (Ardent/Spansh falsos en +11), +6 EDDN activo (+12, relay +14),
+// F15: +18 disposición. F3: +5 comercio (Ardent/Spansh falsos en +11), +6 EDDN activo (+12, relay +14),
 // +7 EDDN con servicios desactivados (relay +15), +8 misiones, +9 masacre, +10 turismo (+13).
 const tradePort = port + 5;
 const eddnOnPort = port + 6;
@@ -43,8 +43,10 @@ export default defineConfig({
     { name: 'massacre', testMatch: 'massacre.spec.ts', use: { baseURL: `http://127.0.0.1:${massacrePort}`, channel } },
     { name: 'tourism', testMatch: 'tourism.spec.ts', use: { baseURL: `http://127.0.0.1:${tourismPort}`, channel } },
     { name: 'engineering', testMatch: 'engineering.spec.ts', use: { baseURL: `http://127.0.0.1:${port + 16}`, channel }, workers: 1 },
+    { name: 'layout', testMatch: 'layout.spec.ts', use: { baseURL: `http://127.0.0.1:${port + 18}`, channel }, workers: 1 },
   ],
   webServer: [
+    server(port + 18, { TMC_E2E_FIXTURE: 'engineering_session.log', TMC_E2E_SHIFT: 'true' }),
     server(port + 16, {
       TMC_E2E_FIXTURE: 'engineering_session.log', TMC_E2E_SHIFT: 'true',
       TMC_E2E_ONLINE: 'true', TMC_E2E_ARDENT_PORT: String(port + 17),
