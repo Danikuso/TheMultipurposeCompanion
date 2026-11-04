@@ -14,17 +14,30 @@ pub const INARA_SERVICE_KEY: &str = "inara";
 pub struct InaraService {
     client: InaraClient,
     store: Store,
+    app_key: Option<String>,
 }
 
 impl InaraService {
     pub fn new(store: Store, transport: Arc<dyn Transport>) -> Self {
+        let app_key = crate::env::env_var_or_file("INARA_DEV_API_KEY");
+        Self::with_app_key(store, transport, app_key)
+    }
+
+    pub fn with_app_key(
+        store: Store,
+        transport: Arc<dyn Transport>,
+        app_key: Option<String>,
+    ) -> Self {
         Self {
             client: InaraClient::new(transport),
             store,
+            app_key: app_key
+                .map(|k| k.trim().to_string())
+                .filter(|k| !k.is_empty()),
         }
     }
 
-    /// Obtiene la clave API guardada en SQLite si existe.
+    /// Obtiene la clave API personal guardada en SQLite si existe.
     pub fn get_saved_key(&self) -> Option<String> {
         self.store
             .get_account_credential(INARA_SERVICE_KEY)
@@ -32,6 +45,27 @@ impl InaraService {
             .flatten()
             .and_then(|r| r.api_key)
             .filter(|k| !k.trim().is_empty())
+    }
+
+    /// Clave API de desarrollador/aplicación oficial configurada en el entorno o `.env`.
+    pub fn app_key(&self) -> Option<&str> {
+        self.app_key.as_deref()
+    }
+
+    /// Clave efectiva a utilizar: prioridad a la clave personal en SQLite,
+    /// con fallback a la clave de desarrollador/aplicación (`INARA_DEV_API_KEY`).
+    pub fn get_effective_key(&self) -> Option<String> {
+        self.get_saved_key().or_else(|| self.app_key.clone())
+    }
+
+    /// Comprueba si existe alguna clave disponible para consultar o sincronizar con Inara.
+    pub fn has_any_key(&self) -> bool {
+        self.get_effective_key().is_some()
+    }
+
+    /// Comprueba si hay una clave personal de comandante guardada en SQLite.
+    pub fn has_saved_key(&self) -> bool {
+        self.get_saved_key().is_some()
     }
 
     /// Guarda o actualiza la clave API de Inara en SQLite.
@@ -67,11 +101,12 @@ impl InaraService {
         api_key: Option<&str>,
         commander_name: Option<&str>,
     ) -> Result<Value, String> {
-        let key = match api_key.filter(|k| !k.trim().is_empty()) {
+        let explicit_key = api_key.filter(|k| !k.trim().is_empty());
+        let key = match explicit_key {
             Some(k) => k.trim().to_string(),
-            None => self
-                .get_saved_key()
-                .ok_or_else(|| "Falta la clave API personal de Inara".to_string())?,
+            None => self.get_effective_key().ok_or_else(|| {
+                "Falta la clave API de Inara (personal o de aplicación)".to_string()
+            })?,
         };
 
         let cmdr = commander_name.unwrap_or("").trim();
@@ -89,7 +124,7 @@ impl InaraService {
         };
 
         // Si se proporcionó una clave explícita y la llamada tuvo éxito, persistirla
-        if let Some(new_k) = api_key {
+        if let Some(new_k) = explicit_key {
             let _ = self.save_key(new_k, commander_name);
         }
 
@@ -121,8 +156,8 @@ impl InaraService {
         events: Vec<InaraEvent<Value>>,
     ) -> Result<usize, String> {
         let key = self
-            .get_saved_key()
-            .ok_or_else(|| "Falta la clave API personal de Inara".to_string())?;
+            .get_effective_key()
+            .ok_or_else(|| "Falta la clave API de Inara (personal o de aplicación)".to_string())?;
 
         self.client
             .send_batch(&key, commander_name, events, Galaxy::Live, true, true)
@@ -229,5 +264,64 @@ mod tests {
         assert_eq!(res["user_name"], "Danikuso");
         assert_eq!(res["inara_url"], "https://inara.cz/elite/cmdr/99999/");
         assert_eq!(service.get_saved_key().as_deref(), Some("new_key_123"));
+    }
+
+    #[tokio::test]
+    async fn app_key_fallback_and_personal_key_override() {
+        let store = Store::open_in_memory().unwrap();
+        let reply_body = json!({
+            "header": { "eventStatus": 200, "eventStatusText": "OK" },
+            "events": [
+                {
+                    "eventStatus": 200,
+                    "eventData": {
+                        "userName": "Danikuso",
+                        "inaraURL": "https://inara.cz/elite/cmdr/11111/"
+                    }
+                }
+            ]
+        });
+
+        let transport = Arc::new(MockTransport::new(vec![Ok(HttpReply {
+            status: 200,
+            body: reply_body.to_string(),
+        })]));
+        let service =
+            InaraService::with_app_key(store, transport, Some("app_dev_inara_key".to_string()));
+
+        assert_eq!(service.get_saved_key(), None);
+        assert_eq!(service.app_key(), Some("app_dev_inara_key"));
+        assert_eq!(
+            service.get_effective_key().as_deref(),
+            Some("app_dev_inara_key")
+        );
+        assert!(service.has_any_key());
+        assert!(!service.has_saved_key());
+
+        // Probar conexión sin pasar clave explícita: usa app_key y NO guarda en SQLite
+        let res = service
+            .test_connection(None, Some("Danikuso"))
+            .await
+            .unwrap();
+        assert_eq!(res["ok"], true);
+        assert_eq!(service.get_saved_key(), None);
+
+        // Guardar clave personal: debe tener prioridad sobre app_key
+        service
+            .save_key("personal_cmd_key", Some("Danikuso"))
+            .unwrap();
+        assert_eq!(
+            service.get_effective_key().as_deref(),
+            Some("personal_cmd_key")
+        );
+        assert!(service.has_saved_key());
+
+        // Borrar clave personal: vuelve a la app_key
+        service.clear_key().unwrap();
+        assert_eq!(
+            service.get_effective_key().as_deref(),
+            Some("app_dev_inara_key")
+        );
+        assert!(!service.has_saved_key());
     }
 }

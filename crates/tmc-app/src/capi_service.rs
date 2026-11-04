@@ -25,7 +25,7 @@ pub struct CapiService {
 impl CapiService {
     pub fn new(store: Store, transport: Arc<dyn Transport>, client_id: Option<String>) -> Self {
         let client_id = client_id
-            .or_else(|| std::env::var("TMC_CAPI_CLIENT_ID").ok())
+            .or_else(|| crate::env::env_var_or_file("TMC_CAPI_CLIENT_ID"))
             .unwrap_or_else(|| DEFAULT_CLIENT_ID.to_string());
         Self {
             client: CapiClient::new(transport),

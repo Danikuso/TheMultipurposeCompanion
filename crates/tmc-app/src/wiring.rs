@@ -443,8 +443,8 @@ async fn start_inner(
             .await;
     }
 
-    // Si hay una clave API de Inara guardada en SQLite, activar el estado en el módulo accounts
-    if let Some(_key) = inara_service.get_saved_key() {
+    // Si hay una clave API de Inara (personal o de aplicación oficial), activar el estado en el módulo accounts
+    if inara_service.has_any_key() {
         let _ = core
             .events
             .send(SourceEvent::Action {

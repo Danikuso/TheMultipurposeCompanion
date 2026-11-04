@@ -713,11 +713,12 @@ impl ActionHost for AppActions {
             "inara.clear_key" => {
                 let inara = self.inara_service.as_ref().ok_or(ActionError::NotFound)?;
                 inara.clear_key().map_err(ActionError::Failed)?;
+                let has_key = inara.has_any_key();
                 if let Some(runtime) = &self.runtime {
                     let _ = runtime.events.try_send(SourceEvent::Action {
                         name: "accounts.set_settings".to_string(),
                         args: json!({
-                            "inara_has_key": false,
+                            "inara_has_key": has_key,
                             "inara_verified": false,
                         }),
                     });
