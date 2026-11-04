@@ -33,3 +33,19 @@ layout-edit-catalog-search = Buscar tarjeta
 layout-edit-catalog-close = Cerrar
 layout-edit-catalog-present = Ya está en esta pestaña
 layout-edit-catalog-no-results = Ninguna tarjeta coincide con la búsqueda
+
+## Pestañas personalizadas
+layout-custom-section = Personalizadas
+layout-custom-new = Nueva pestaña
+layout-custom-new-title = Nueva pestaña
+layout-custom-rename-title = Renombrar pestaña
+layout-custom-name = Nombre
+layout-custom-icon = Icono
+layout-custom-create = Crear
+layout-custom-save = Guardar
+layout-custom-close = Cerrar
+layout-custom-rename = Renombrar
+layout-custom-delete = Borrar pestaña
+layout-custom-delete-confirm = ¿Borrar esta pestaña y sus tarjetas?
+layout-custom-empty = Esta pestaña está vacía. Edita la disposición para añadir tarjetas.
+layout-custom-limit = Has alcanzado el máximo de 12 pestañas personalizadas

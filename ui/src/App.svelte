@@ -14,7 +14,11 @@
   import { fetchUpdateStatus } from './lib/updater.svelte';
   import { tabKeyFor } from './shell/cards';
   import CardHost, { isCardVisible, tabPlacements } from './shell/CardHost.svelte';
-  import { customTab, initLayouts, layoutState } from './shell/layoutStore.svelte';
+  import { beginEdit, customTab, editDoc, initLayouts, layoutState } from './shell/layoutStore.svelte';
+  import { askConfirm } from './lib/confirm';
+  import CustomTabDialog from './shell/CustomTabDialog.svelte';
+  import { pushToast } from './shell/Toasts.svelte';
+  import { createCustomTab, deleteCustomTab, updateCustomTab } from './shell/layoutModel';
   import { cancelEditWithDiag } from './shell/editDiag';
   import { activeDrag } from './shell/pointerDrag';
   import GridHeader from './shell/GridHeader.svelte';
@@ -112,6 +116,7 @@
   const headerTitle = $derived(
     tabKey?.startsWith('custom:') ? customTab(tabKey.slice('custom:'.length))?.name : undefined,
   );
+  const activeCustom = $derived(tabKey?.startsWith('custom:') ? customTab(tabKey.slice('custom:'.length)) : undefined);
   const tabCards = $derived(tabKey === null ? [] : tabPlacements(tabKey));
   const visibleSlots = $derived(tabCards.filter((p) => isCardVisible(p.id, layoutContext)));
   const selectedContext = $derived(follow ? autoContext : contextPanel(liveModules, layoutContext.manual));
@@ -121,6 +126,11 @@
       heldLayout = auto ?? 'exploration';
       heldContext = autoContext;
     }
+  });
+
+  // Una pestaña propia que ya no existe (borrada, cancelada o restaurada de un guardado viejo) devuelve a la automática.
+  $effect(() => {
+    if (view?.startsWith('custom:') && layoutState.ready && !customTab(view.slice('custom:'.length))) view = null;
   });
 
   $effect(() => {
@@ -142,7 +152,11 @@
   // Con Auto-companion apagado se recuerda dónde lo dejó el usuario para el próximo arranque.
   $effect(() => {
     if (!prefs.loaded || prefs.autoCompanion) return;
-    savePlacement({ layout: pin?.startsWith('layout:') ? pin.slice(7) : heldLayout, context: layoutContext.manual });
+    savePlacement({
+      layout: pin?.startsWith('layout:') ? pin.slice(7) : heldLayout,
+      context: layoutContext.manual,
+      view: view?.startsWith('custom:') ? view : null,
+    });
   });
 
   // Esc aborta el arrastre en curso o, si no hay, cancela la edición; el listener solo existe mientras se edita.
@@ -186,6 +200,38 @@
     if (id.startsWith('layout:')) { pin = id; view = null; } else view = id;
   }
 
+  let tabDialog = $state<'create' | 'edit' | null>(null);
+
+  function submitTab(name: string, icon: string) {
+    const mode = tabDialog;
+    tabDialog = null;
+    if (mode === 'edit' && activeCustom) {
+      const id = activeCustom.id;
+      editDoc((d) => updateCustomTab(d, id, { name, icon }));
+      return;
+    }
+    if (!layoutState.editing) beginEdit();
+    const id = `c-${crypto.randomUUID()}`;
+    let created = false;
+    editDoc((d) => {
+      const next = createCustomTab(d, name, icon, id);
+      created = next !== null;
+      return next ?? d;
+    });
+    if (!created) {
+      pushToast(t('layout-custom-limit'), 'Warning', 'layout-custom-limit');
+      return;
+    }
+    selectTab(`custom:${id}`);
+    layoutState.catalogRequested = true;
+  }
+
+  function deleteActiveTab() {
+    const id = activeCustom?.id;
+    if (!id || !askConfirm(t('layout-custom-delete-confirm'))) return;
+    editDoc((d) => deleteCustomTab(d, id));
+  }
+
   $effect(() => {
     if (follow && manualBody !== bodyIdentity) {
       manual = null;
@@ -207,6 +253,7 @@
         const saved = readPlacement();
         if (saved.layout && layouts.some((l) => l.id === saved.layout)) heldLayout = saved.layout;
         if (saved.context === 'exploration' || saved.context === 'exobiology') heldContext = saved.context;
+        if (saved.view) view = saved.view;
       }
       loadPrefs(cfg);
     }).catch(prefsFallback);
@@ -240,18 +287,28 @@
     onclick={() => selectContext('exobiology')}>{t('layout-context-exobiology')}</button>
 </div>{/if}{/snippet}
 
+{#snippet customActions()}
+  <button type="button" data-testid="custom-tab-rename" onclick={() => (tabDialog = 'edit')}>{t('layout-custom-rename')}</button>
+  <button type="button" data-testid="custom-tab-delete" onclick={deleteActiveTab}>{t('layout-custom-delete')}</button>
+{/snippet}
+
 <div class="app-shell">
   <TopBar />
   <ImportProgress />
   <div class="app-body">
-    <Sidebar {activeTab} onSelect={selectTab} />
+    <Sidebar {activeTab} onSelect={selectTab} onNewTab={() => (tabDialog = 'create')} />
     <Grid {activeTab}>
       {#if activeTab === 'settings'}
         <Settings />
       {:else if tabKey !== null}
         <GridHeader titleKey={headerTitleKey} title={headerTitle} {tabKey} />
         {#if layoutState.editing}
-          <EditToolbar {tabKey} />
+          <EditToolbar {tabKey} extra={activeCustom ? customActions : undefined} />
+        {:else if activeCustom && tabCards.length === 0}
+          <div class="custom-empty" data-testid="custom-empty">
+            <p>{t('layout-custom-empty')}</p>
+            <button type="button" data-testid="custom-empty-edit" onclick={() => beginEdit()}>{t('layout-edit-start')}</button>
+          </div>
         {/if}
         <CardHost {tabKey} ctx={layoutContext} prefix={contextControls} />
       {/if}
@@ -259,6 +316,11 @@
   </div>
   <Toasts />
   <UpdateModal />
+  {#if tabDialog}
+    <CustomTabDialog mode={tabDialog}
+      initial={tabDialog === 'edit' && activeCustom ? { name: activeCustom.name, icon: activeCustom.icon } : undefined}
+      onsubmit={submitTab} onclose={() => (tabDialog = null)} />
+  {/if}
 </div>
 
 <style>
@@ -276,6 +338,18 @@
     min-height: 0;
     overflow: hidden;
   }
+
+  .custom-empty {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 1rem;
+    color: var(--hud-muted);
+  }
+  .custom-empty p { margin: 0; }
+  .custom-empty button { background: var(--hud-surface); color: var(--hud-primary); border: 1px solid var(--hud-primary); padding: 0.4rem 0.8rem; }
 
   .context-controls { display: flex; flex-shrink: 0; gap: 0.5rem; margin-bottom: 0.5rem; }
   .context-controls button { background: var(--hud-surface); color: var(--hud-text); border: 1px solid var(--hud-border); padding: 0.4rem 0.6rem; }

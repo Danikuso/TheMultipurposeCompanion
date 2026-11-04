@@ -77,16 +77,20 @@ export function prefsFallback(): void {
 
 const STORE_KEY = 'tmc.ui.placement';
 
-export interface Placement { layout: string | null; context: string | null }
+export interface Placement { layout: string | null; context: string | null; view: string | null }
+
+/** Solo se restaura una pestaña propia, con un id de forma conocida (nunca rutas arbitrarias). */
+const CUSTOM_VIEW = /^custom:c-[0-9a-f-]{1,40}$/;
 
 /** Última disposición/contexto elegidos en este cliente (opcional: sin localStorage no pasa nada). */
 export function readPlacement(): Placement {
   try {
     const raw = JSON.parse(localStorage.getItem(STORE_KEY) ?? 'null') as Partial<Placement> | null;
     const ok = (v: unknown) => (typeof v === 'string' && v.length < 40 ? v : null);
-    return { layout: ok(raw?.layout), context: ok(raw?.context) };
+    const view = typeof raw?.view === 'string' && CUSTOM_VIEW.test(raw.view) ? raw.view : null;
+    return { layout: ok(raw?.layout), context: ok(raw?.context), view };
   } catch {
-    return { layout: null, context: null };
+    return { layout: null, context: null, view: null };
   }
 }
 

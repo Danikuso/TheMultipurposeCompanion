@@ -28,6 +28,8 @@ export const layoutState = $state({
   draft: null as LayoutDoc | null,
   saving: false,
   saveError: false,
+  /** Petición puntual para que la barra de edición abra el catálogo de tarjetas (la barra la consume). */
+  catalogRequested: false,
 });
 
 const known = (id: string) => Object.hasOwn(cards, id);
@@ -68,6 +70,7 @@ export async function initLayouts(): Promise<void> {
   Object.assign(layoutState, {
     ready: false, deviceId: null, deviceKind: 'browser', profileName: null, needsPrompt: false,
     offline: false, doc: emptyDoc(), editing: false, draft: null, saving: false, saveError: false,
+    catalogRequested: false,
   });
   let id: string | null = null;
   const wantsDesktop = new URLSearchParams(globalThis.location?.search ?? '').get('shell') === 'desktop';
@@ -109,6 +112,12 @@ export function customTab(id: string): CustomTabDoc | undefined {
   return activeDoc().custom.find((c) => c.id === id);
 }
 
+/** Pestañas propias en su orden de usuario (borrador si se está editando). */
+export function customTabs(): CustomTabDoc[] {
+  const doc = activeDoc();
+  return doc.customOrder.flatMap((id) => doc.custom.find((c) => c.id === id) ?? []);
+}
+
 export function beginEdit(): void {
   layoutState.draft = clone($state.snapshot(layoutState.doc));
   layoutState.editing = true;
@@ -116,6 +125,7 @@ export function beginEdit(): void {
 }
 
 export function cancelEdit(): void {
+  layoutState.catalogRequested = false;
   layoutState.draft = null;
   layoutState.editing = false;
   layoutState.saveError = false;

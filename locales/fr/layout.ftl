@@ -33,3 +33,19 @@ layout-edit-catalog-search = Rechercher une carte
 layout-edit-catalog-close = Fermer
 layout-edit-catalog-present = Déjà dans cet onglet
 layout-edit-catalog-no-results = Aucune carte ne correspond à la recherche
+
+## Pestañas personalizadas
+layout-custom-section = Personnalisés
+layout-custom-new = Nouvel onglet
+layout-custom-new-title = Nouvel onglet
+layout-custom-rename-title = Renommer l'onglet
+layout-custom-name = Nom
+layout-custom-icon = Icône
+layout-custom-create = Créer
+layout-custom-save = Enregistrer
+layout-custom-close = Fermer
+layout-custom-rename = Renommer
+layout-custom-delete = Supprimer l'onglet
+layout-custom-delete-confirm = Supprimer cet onglet et ses cartes ?
+layout-custom-empty = Cet onglet est vide. Modifiez la disposition pour ajouter des cartes.
+layout-custom-limit = Limite de 12 onglets personnalisés atteinte

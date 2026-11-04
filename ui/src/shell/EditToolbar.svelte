@@ -18,6 +18,13 @@
     addBtn?.focus();
   }
 
+  // Petición de abrir el catálogo (p. ej. tras crear una pestaña): se consume al verla.
+  $effect(() => {
+    if (!layoutState.catalogRequested) return;
+    layoutState.catalogRequested = false;
+    catalogOpen = true;
+  });
+
   async function done() {
     const ok = await commitEdit();
     diag('ui.layout.edit', { commit: true, ok, ...editTab(tabKey) });
@@ -57,7 +64,7 @@
     border-radius: 4px;
   }
 
-  .edit-toolbar button {
+  .edit-toolbar :global(button) {
     padding: 0.35rem 0.75rem;
     background: transparent;
     color: var(--hud-text);
@@ -65,6 +72,6 @@
     border-radius: 4px;
   }
 
-  .edit-toolbar button.primary { color: var(--hud-primary); border-color: var(--hud-primary); }
-  .edit-toolbar button:disabled { opacity: 0.5; }
+  .edit-toolbar :global(button.primary) { color: var(--hud-primary); border-color: var(--hud-primary); }
+  .edit-toolbar :global(button:disabled) { opacity: 0.5; }
 </style>

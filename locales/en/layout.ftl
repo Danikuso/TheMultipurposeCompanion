@@ -33,3 +33,19 @@ layout-edit-catalog-search = Search card
 layout-edit-catalog-close = Close
 layout-edit-catalog-present = Already in this tab
 layout-edit-catalog-no-results = No cards match your search
+
+## Pestañas personalizadas
+layout-custom-section = Custom
+layout-custom-new = New tab
+layout-custom-new-title = New tab
+layout-custom-rename-title = Rename tab
+layout-custom-name = Name
+layout-custom-icon = Icon
+layout-custom-create = Create
+layout-custom-save = Save
+layout-custom-close = Close
+layout-custom-rename = Rename
+layout-custom-delete = Delete tab
+layout-custom-delete-confirm = Delete this tab and its cards?
+layout-custom-empty = This tab is empty. Edit the layout to add cards.
+layout-custom-limit = You have reached the limit of 12 custom tabs

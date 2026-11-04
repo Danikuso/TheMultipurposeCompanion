@@ -6,6 +6,11 @@ export const H_MIN = 160;
 export const H_MAX = 2000;
 export const MAX_CUSTOM_TABS = 12;
 export const NAME_MAX = 32;
+/** Iconos de navegación (existen en `lib/icons`) que se pueden elegir para una pestaña propia. */
+export const CUSTOM_TAB_ICONS: readonly string[] = [
+  'exploration', 'combat', 'mining', 'trade', 'missions',
+  'engineering', 'ship', 'dashboard', 'navigation', 'exobiology',
+];
 export const DOC_VERSION = 1;
 
 export interface ThemedTabDoc { cards: CardPlacement[]; removed: string[] }

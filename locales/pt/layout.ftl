@@ -33,3 +33,19 @@ layout-edit-catalog-search = Pesquisar cartão
 layout-edit-catalog-close = Fechar
 layout-edit-catalog-present = Já está neste separador
 layout-edit-catalog-no-results = Nenhum cartão corresponde à pesquisa
+
+## Pestañas personalizadas
+layout-custom-section = Personalizadas
+layout-custom-new = Novo separador
+layout-custom-new-title = Novo separador
+layout-custom-rename-title = Renomear separador
+layout-custom-name = Nome
+layout-custom-icon = Ícone
+layout-custom-create = Criar
+layout-custom-save = Guardar
+layout-custom-close = Fechar
+layout-custom-rename = Renomear
+layout-custom-delete = Eliminar separador
+layout-custom-delete-confirm = Eliminar este separador e os seus cartões?
+layout-custom-empty = Este separador está vazio. Edite a disposição para adicionar cartões.
+layout-custom-limit = Limite de 12 separadores personalizados atingido

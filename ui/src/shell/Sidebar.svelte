@@ -3,6 +3,7 @@
   import { topic } from '../lib/ws.svelte';
   import { modules } from '../modules/registry';
   import { layouts } from './layouts';
+  import { customTabs } from './layoutStore.svelte';
   import { resolveNavIcon } from '../lib/icons';
 
   interface LiveModuleState {
@@ -14,10 +15,14 @@
   let {
     activeTab = 'layout:exploration',
     onSelect,
+    onNewTab,
   }: {
     activeTab?: string;
     onSelect?: (id: string) => void;
+    onNewTab?: () => void;
   } = $props();
+
+  const custom = $derived(customTabs());
 
   const liveModules = $derived(topic<LiveModuleState[]>('core.modules'));
 
@@ -83,6 +88,27 @@
         </span>
       </button>
     {/each}
+    <h2>{t('layout-custom-section')}</h2>
+    {#each custom as tab (tab.id)}
+      <button type="button" class="nav-btn" class:active={activeTab === `custom:${tab.id}`}
+        title={tab.name} data-custom={tab.id} onclick={() => onSelect?.(`custom:${tab.id}`)}>
+        <span class="nav-content">
+          {#if resolveNavIcon(tab.icon)}
+            <span class="nav-icon hud-svg-icon" aria-hidden="true">{@html resolveNavIcon(tab.icon)}</span>
+          {:else}
+            <span class="nav-icon" aria-hidden="true">◈</span>
+          {/if}
+          <span class="nav-label">{tab.name}</span>
+        </span>
+      </button>
+    {/each}
+    <button type="button" class="nav-btn nav-new" data-testid="custom-tab-new" title={t('layout-custom-new')}
+      onclick={() => onNewTab?.()}>
+      <span class="nav-content">
+        <span class="nav-icon" aria-hidden="true">+</span>
+        <span class="nav-label">{t('layout-custom-new')}</span>
+      </span>
+    </button>
     <h2>{t('nav-modules')}</h2>
     {#each displayModules as mod (mod.id)}
         <button
@@ -200,6 +226,10 @@
     border-radius: 4px;
     transition: all 150ms ease;
   }
+
+  .nav-btn { flex-shrink: 0; }
+
+  .nav-new { color: var(--hud-muted); border-style: dashed; border-color: var(--hud-border-subtle); }
 
   .nav-btn:hover {
     background: var(--hud-surface-card);

@@ -33,3 +33,19 @@ layout-edit-catalog-search = Karte suchen
 layout-edit-catalog-close = Schließen
 layout-edit-catalog-present = Bereits in diesem Tab
 layout-edit-catalog-no-results = Keine Karte entspricht der Suche
+
+## Pestañas personalizadas
+layout-custom-section = Eigene
+layout-custom-new = Neuer Tab
+layout-custom-new-title = Neuer Tab
+layout-custom-rename-title = Tab umbenennen
+layout-custom-name = Name
+layout-custom-icon = Symbol
+layout-custom-create = Erstellen
+layout-custom-save = Speichern
+layout-custom-close = Schließen
+layout-custom-rename = Umbenennen
+layout-custom-delete = Tab löschen
+layout-custom-delete-confirm = Diesen Tab und seine Karten löschen?
+layout-custom-empty = Dieser Tab ist leer. Bearbeite das Layout, um Karten hinzuzufügen.
+layout-custom-limit = Limit von 12 eigenen Tabs erreicht
