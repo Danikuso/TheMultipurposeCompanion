@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { setLocale } from '../src/lib/i18n';
 import { factoryLayout } from '../src/shell/cards';
-import { emptyDoc } from '../src/shell/layoutModel';
+import { emptyDoc, type CustomTabDoc } from '../src/shell/layoutModel';
 import {
-  DEVICE_KEY, applyOp, beginEdit, cancelEdit, commitEdit, createProfile, editDoc, initLayouts,
+  DEVICE_KEY, addCard, addCards, applyOp, beginEdit, cancelEdit, commitEdit, createProfile, editDoc, initLayouts,
   layoutState, mutateAndSave, resetTab, themedTab,
 } from '../src/shell/layoutStore.svelte';
 
@@ -225,5 +225,88 @@ describe('layoutStore', () => {
     expect(await mutateAndSave((d) => d)).toBe(false);
     expect(await createProfile('X', { kind: 'factory' })).toBe(false);
     expect(calls.some((c) => c.method === 'PUT')).toBe(false);
+  });
+
+  describe('geometry and addCards', () => {
+    const CT = 'custom:c1';
+    const place = (id: string, w: 1 | 2 | 3 | 'full' = 1, x?: number) =>
+      ({ id, w, h: null, ...(x === undefined ? {} : { x }) });
+    async function withCustom(cardsList: ReturnType<typeof place>[]) {
+      await initLayouts();
+      const tab: CustomTabDoc = { id: 'c1', name: 'X', icon: 'ship', cards: cardsList };
+      layoutState.doc = { ...emptyDoc(), custom: [tab], customOrder: ['c1'] };
+      beginEdit();
+    }
+    const custom = () => layoutState.draft!.custom[0].cards;
+
+    test('applyOp pins automatic columns of the whole tab', async () => {
+      await withCustom([place('route'), place('jump'), place('target')]);
+      applyOp(CT, 2, { kind: 'height', h: 200 }, {
+        columns: 2, gapPx: 10, heights: { route: 300, jump: 100, target: 100 },
+      });
+      expect(custom().map((c) => c.x)).toEqual([0, 1, 1]);
+    });
+
+    test('applyOp place reorders by top then column', async () => {
+      const ids7 = ['target', 'ship', 'jump', 'sell', 'search', 'rewards'];
+      await withCustom(ids7.map((i) => place(i)).concat(place('trade-session')));
+      const heights = Object.fromEntries(custom().map((c) => [c.id, 100]));
+      applyOp(CT, 6, { kind: 'place', to: 3, x: 2 }, { columns: 3, gapPx: 10, heights });
+      const list = custom();
+      const moved = list.find((c) => c.id === 'trade-session')!;
+      expect(moved.x).toBe(2);
+      const geoPacked = list.map((c) => ({ id: c.id, x: c.x }));
+      expect(geoPacked.every((c) => Number.isInteger(c.x))).toBe(true);
+      expect(list.map((c) => c.id)).toEqual(['target', 'ship', 'jump', 'sell', 'search', 'trade-session', 'rewards']);
+    });
+
+    test('applyOp keeps clamped explicit x', async () => {
+      await withCustom([place('planner', 2, 2), place('jump')]);
+      applyOp(CT, 1, { kind: 'height', h: 200 }, { columns: 3, gapPx: 10, heights: {} });
+      expect(custom().find((c) => c.id === 'planner')!.x).toBe(2);
+    });
+
+    test('applyOp without geometry neither pins nor sorts', async () => {
+      await withCustom([place('route'), place('jump')]);
+      applyOp(CT, 1, { kind: 'width', w: 2 });
+      expect(custom().every((c) => !('x' in c))).toBe(true);
+    });
+
+    test('addCards adds several in one draft change', async () => {
+      await withCustom([place('jump')]);
+      let changes = 0;
+      const before = layoutState.draft;
+      addCards(CT, ['ax', 'cargo', 'nope', 'jump', 'ax']);
+      if (layoutState.draft !== before) changes++;
+      expect(changes).toBe(1);
+      expect(custom().map((c) => c.id)).toEqual(['jump', 'ax', 'cargo']);
+      expect(custom().every((c) => !('x' in c))).toBe(true);
+    });
+
+    test('addCard wraps addCards', async () => {
+      await withCustom([place('jump')]);
+      addCard(CT, 'ax');
+      expect(custom().map((c) => c.id)).toEqual(['jump', 'ax']);
+    });
+
+    test('addCards in themed tab clears removed', async () => {
+      await initLayouts();
+      beginEdit();
+      applyOp(TAB, 0, { kind: 'remove' });
+      const gone = factoryLayout(TAB)[0].id;
+      expect(layoutState.draft!.tabs[TAB].removed).toContain(gone);
+      addCards(TAB, [gone]);
+      expect(layoutState.draft!.tabs[TAB].removed).not.toContain(gone);
+      expect(ids()).toContain(gone);
+    });
+
+    test('old profile without x renders and pins on first edit', async () => {
+      await initLayouts();
+      expect(themedTab(TAB).cards.every((c) => !('x' in c))).toBe(true);
+      beginEdit();
+      const heights = Object.fromEntries(themedTab(TAB).cards.map((c) => [c.id, 120]));
+      applyOp(TAB, 0, { kind: 'width', w: 1 }, { columns: 3, gapPx: 10, heights });
+      expect(themedTab(TAB).cards.every((c) => Number.isInteger(c.x))).toBe(true);
+    });
   });
 });

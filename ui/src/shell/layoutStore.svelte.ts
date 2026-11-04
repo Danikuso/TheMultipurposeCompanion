@@ -4,10 +4,10 @@ import { isUuid, uuidv4 } from '../lib/uuid';
 import {
   ApiError, copyProfile, getDesktopDeviceId, getProfile, putProfile, type Profile,
 } from '../lib/layoutApi';
-import { cards, factoryLayout, isFactoryCard } from './cards';
+import { cards, factoryLayout, isFactoryCard, type CardPlacement } from './cards';
 import {
-  addToCustom, addToThemed, applyCardOp, emptyDoc, mergeWithDefaults, parseLayoutDoc, removeFromThemed,
-  type CardOp, type CustomTabDoc, type LayoutDoc, type ThemedTabDoc,
+  applyCardOp, emptyDoc, mergeWithDefaults, normalizeOrder, packLayout, parseLayoutDoc, pinColumns, removeFromThemed,
+  snapHeight, type CardOp, type CustomTabDoc, type LayoutDoc, type PackItem, type ThemedTabDoc,
 } from './layoutModel';
 
 export const DEVICE_KEY = 'tmc.ui.device';
@@ -185,34 +185,88 @@ export function editDoc(fn: (d: LayoutDoc) => LayoutDoc): void {
   layoutState.draft = fn(clone($state.snapshot(layoutState.draft)));
 }
 
-export function applyOp(tabKey: string, index: number, op: CardOp): void {
+export interface LayoutGeometry { columns: number; gapPx: number; heights: Record<string, number> }
+
+const FALLBACK_HEIGHT = 160;
+
+function pack(list: CardPlacement[], geo: LayoutGeometry, override?: { id: string; height: number }) {
+  const items: PackItem[] = list.map((c) => ({
+    id: c.id,
+    x: c.x,
+    w: c.w,
+    height: override && override.id === c.id ? override.height : (geo.heights[c.id] ?? c.h ?? FALLBACK_HEIGHT),
+  }));
+  return packLayout(items, geo.columns, geo.gapPx).cards;
+}
+
+/** Aplica la operación a una lista; con geometría fija las columnas antes y ordena según lo que se ve después. */
+function opOnList(
+  list: CardPlacement[], index: number, op: CardOp, geo: LayoutGeometry | undefined,
+  remove: (id: string) => CardPlacement[],
+): CardPlacement[] {
+  const target = list[index];
+  if (!target) return list;
+  const base = geo ? pinColumns(list, pack(list, geo)) : list;
+  const next = op.kind === 'remove' ? remove(target.id) : applyCardOp(base, index, op);
+  if (!geo) return next;
+  // `remove` conserva `x` ya fijadas solo si se hizo sobre `base`.
+  const source = op.kind === 'remove' ? next.map((c) => base.find((b) => b.id === c.id) ?? c) : next;
+  let override: { id: string; height: number } | undefined;
+  if (op.kind === 'height') {
+    override = { id: target.id, height: op.h === null ? (geo.heights[target.id] ?? FALLBACK_HEIGHT) : snapHeight(op.h) };
+  }
+  return normalizeOrder(source, pack(source, geo, override));
+}
+
+export function applyOp(tabKey: string, index: number, op: CardOp, geo?: LayoutGeometry): void {
   editDoc((d) => {
     if (tabKey.startsWith('custom:')) {
       const id = tabKey.slice('custom:'.length);
-      return { ...d, custom: d.custom.map((c) => (c.id === id ? { ...c, cards: applyCardOp(c.cards, index, op) } : c)) };
+      return {
+        ...d,
+        custom: d.custom.map((c) => (c.id === id
+          ? { ...c, cards: opOnList(c.cards, index, op, geo, (rid) => c.cards.filter((x) => x.id !== rid)) }
+          : c)),
+      };
     }
     const tab = mergeWithDefaults(d.tabs[tabKey], factoryLayout(tabKey), known);
     const target = tab.cards[index];
     if (!target) return d;
-    const next: ThemedTabDoc = op.kind === 'remove'
-      ? removeFromThemed(tab, target.id, isFactoryCard(tabKey, target.id))
-      : { cards: applyCardOp(tab.cards, index, op), removed: tab.removed };
-    return { ...d, tabs: { ...d.tabs, [tabKey]: next } };
+    let removed = tab.removed;
+    const cardsNext = opOnList(tab.cards, index, op, geo, (rid) => {
+      const r = removeFromThemed(tab, rid, isFactoryCard(tabKey, rid));
+      removed = r.removed;
+      return r.cards;
+    });
+    return { ...d, tabs: { ...d.tabs, [tabKey]: { cards: cardsNext, removed } } };
+  });
+}
+
+/** Añade varias tarjetas al final de la pestaña en una sola modificación del borrador. */
+export function addCards(tabKey: string, cardIds: string[], geo?: LayoutGeometry): void {
+  editDoc((d) => {
+    const custom = tabKey.startsWith('custom:');
+    const customId = tabKey.slice('custom:'.length);
+    const tab: ThemedTabDoc = custom
+      ? { cards: d.custom.find((c) => c.id === customId)?.cards ?? [], removed: [] }
+      : mergeWithDefaults(d.tabs[tabKey], factoryLayout(tabKey), known);
+    if (custom && !d.custom.some((c) => c.id === customId)) return d;
+    let cur = geo ? pinColumns(tab.cards, pack(tab.cards, geo)) : tab.cards;
+    let removed = tab.removed;
+    for (const id of cardIds) {
+      if (!known(id)) continue;
+      removed = removed.filter((r) => r !== id);
+      if (cur.some((c) => c.id === id)) continue;
+      cur = [...cur, { id, w: widthOf(id), h: null }];
+    }
+    if (custom) return { ...d, custom: d.custom.map((c) => (c.id === customId ? { ...c, cards: cur } : c)) };
+    return { ...d, tabs: { ...d.tabs, [tabKey]: { cards: cur, removed } } };
   });
 }
 
 /** Añade una tarjeta al final de la pestaña, con su ancho por defecto (borrador de edición). */
-export function addCard(tabKey: string, cardId: string): void {
-  if (!known(cardId)) return;
-  const w = widthOf(cardId);
-  editDoc((d) => {
-    if (tabKey.startsWith('custom:')) {
-      const id = tabKey.slice('custom:'.length);
-      return { ...d, custom: d.custom.map((c) => (c.id === id ? addToCustom(c, cardId, w) : c)) };
-    }
-    const tab = mergeWithDefaults(d.tabs[tabKey], factoryLayout(tabKey), known);
-    return { ...d, tabs: { ...d.tabs, [tabKey]: addToThemed(tab, cardId, w) } };
-  });
+export function addCard(tabKey: string, cardId: string, geo?: LayoutGeometry): void {
+  addCards(tabKey, [cardId], geo);
 }
 
 export function resetTab(tabKey: string): void {
