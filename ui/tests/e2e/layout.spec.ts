@@ -8,14 +8,45 @@ let page: Page;
 let baseURL: string;
 let autoHeight = 0;
 let savedHeight = 0;
+const unexpectedDialogs: string[] = [];
 
 test.beforeAll(async ({ browser }, info) => {
   baseURL = String(info.project.use.baseURL);
   context = await browser.newContext({ baseURL });
   page = await context.newPage();
-  // Las confirmaciones (quitar tarjeta, restablecer) se aceptan siempre.
-  page.on('dialog', (d) => void d.accept());
+  // Cualquier diálogo no esperado se descarta y se registra; cada test comprueba que no hubo ninguno.
+  page.on('dialog', (d) => {
+    unexpectedDialogs.push(`${d.type()}: ${d.message()}`);
+    void d.dismiss();
+  });
 });
+
+test.afterEach(() => {
+  expect(unexpectedDialogs).toEqual([]);
+});
+
+/** Atiende una única confirmación esperada durante `action`: comprueba tipo y texto, y la acepta. */
+async function withConfirm(message: string, action: () => Promise<void>) {
+  const seen: string[] = [];
+  const handler = (d: import('@playwright/test').Dialog) => {
+    seen.push(`${d.type()}: ${d.message()}`);
+    expect(d.type()).toBe('confirm');
+    expect(d.message()).toBe(message);
+    void d.accept();
+  };
+  page.removeAllListeners('dialog');
+  page.once('dialog', handler);
+  try {
+    await action();
+    await expect.poll(() => seen.length).toBe(1);
+  } finally {
+    page.removeAllListeners('dialog');
+    page.on('dialog', (d) => {
+      unexpectedDialogs.push(`${d.type()}: ${d.message()}`);
+      void d.dismiss();
+    });
+  }
+}
 
 test.afterAll(async () => {
   await context.close();
@@ -51,8 +82,8 @@ test('first run shows device prompt and creates PC profile', async () => {
   await page.getByTestId('device-name').fill('PC');
   await page.getByTestId('device-accept').click();
   await expect(page.getByTestId('device-prompt')).toHaveCount(0);
-  const profiles = await (await page.request.get('/api/ui/layouts')).json();
-  expect(JSON.stringify(profiles)).toContain('"PC"');
+  const profiles = (await (await page.request.get('/api/ui/layouts')).json()) as { name: string }[];
+  expect(profiles.map((p) => p.name)).toEqual(['PC']);
   await expect(slot('engineers')).toBeAttached();
 });
 
@@ -123,6 +154,11 @@ test('custom tab Caza AX with ax and cargo persists across reload and is not lef
   await expect(tab).toHaveClass(/active/);
   // El auto-compañero no abandona una pestaña elegida a mano.
   await expect(page.getByTestId('auto-companion')).toBeChecked();
+  // El servidor de este proyecto no tiene control de reproducción (sin puerto falso), así que no hay
+  // disparador determinista de un cambio de disposición automática: se deja pasar un margen fijo.
+  // Sirve de control que el destino automático (Ingeniería, por el diario) es otra pestaña distinta.
+  const autoTarget = page.locator('button.nav-btn:not([data-module])', { has: page.locator('.nav-label', { hasText: /^Ingeniería$/ }) });
+  await expect(autoTarget).not.toHaveClass(/active/);
   await page.waitForTimeout(2000);
   await expect(tab).toHaveClass(/active/);
   await expect(slot('cargo')).toBeAttached();
@@ -141,7 +177,8 @@ test('custom tab Caza AX with ax and cargo persists across reload and is not lef
 test('reset engineering restores factory layout', async () => {
   await openEngineering();
   await startEdit();
-  await page.getByTestId('layout-reset').click();
+  await withConfirm('¿Restablecer esta pestaña a la disposición de fábrica?', () =>
+    page.getByTestId('layout-reset').click());
   await finishEdit();
   // `eng-flow` solo aparece con un flujo de ingeniería activo, así que no figura entre los marcos visibles.
   expect(await slotIds()).toEqual(['materials', 'engineers', 'eng-alerts', 'eng-ship', 'shopping', 'trades', 'sources']);
