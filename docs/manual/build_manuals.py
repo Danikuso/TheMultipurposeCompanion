@@ -29,7 +29,7 @@ OUTPUTS = {
     "pt": "Manual_TMC_Comandante_PT.pdf",
 }
 SCREENS = [
-    ["nav-settings"], ["nav-layouts", "nav-modules"], ["nav-settings"],
+    ["nav-settings"], ["nav-layouts", "nav-modules"], ["nav-settings", "layout-settings-title"], ["nav-settings"],
     ["nav-dashboard", "nav-ship"], ["nav-ship"], ["nav-navigation"],
     ["nav-exploration"], ["nav-exobiology"], ["nav-engineering"],
     ["nav-combat"], ["nav-missions"], ["nav-mining"], ["nav-trade"],
@@ -110,7 +110,7 @@ def build(language: str, data: dict, output: Path, version: str) -> dict:
     number_style = ParagraphStyle("Number", parent=step_style, fontName="TMC-Bold", textColor=ORANGE)
     cover_title = ParagraphStyle("Cover", parent=heading, fontSize=31, leading=36, spaceAfter=23)
     chapters = data["sections"]
-    assert len(chapters) == 20
+    assert len(chapters) == 21
     page_total = len(chapters) + 2
 
     def page_chrome(canvas, doc):
@@ -142,7 +142,7 @@ def build(language: str, data: dict, output: Path, version: str) -> dict:
     story = [Spacer(1, 50), para("TMC", ParagraphStyle("Brand", parent=heading, fontSize=56, leading=62)),
              para("THE MULTIPURPOSE COMPANION", small), Spacer(1, 22),
              para(data["title"], cover_title), para(data["subtitle"], body),
-             Spacer(1, 15), para(f"v{version}  /  {data['language']}  /  2026-11-01", sub),
+             Spacer(1, 15), para(f"v{version}  /  {data['language']}  /  2026-11-04", sub),
              Spacer(1, 12), Workflow(data["workflow"], inner), Spacer(1, 18),
              para(data["scope"], body), Spacer(1, 12), para(data["intro"], body),
              Spacer(1, 20), para(data["legal"], small), PageBreak(),

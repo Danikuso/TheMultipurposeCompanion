@@ -1,71 +1,71 @@
 {
-  "version": "1.0.3",
-  "date": "2026-11-01",
+  "version": "1.2.0",
+  "date": "2026-11-04",
   "checks": [
     {
       "language": "es",
-      "pages": 22,
-      "outline": 21,
+      "pages": 23,
+      "outline": 22,
       "content": "PASS",
       "bounds": "PASS",
-      "rendered": 22,
-      "pdf_bytes": 101182,
-      "toc_links": 20,
+      "rendered": 23,
+      "pdf_bytes": 104896,
+      "toc_links": 21,
       "outline_destinations": "PASS",
       "visual_review": "PASS",
-      "sha256": "34a41134a7f46689fb98da641bb994b0f0b4a81858753cab7dbf2ed2a2d728d9"
+      "sha256": "65b0bdf95ac2cef9023b9a8b9449eded4823ab5b4c1d456ea41b7ddf249c8d49"
     },
     {
       "language": "en",
-      "pages": 22,
-      "outline": 21,
+      "pages": 23,
+      "outline": 22,
       "content": "PASS",
       "bounds": "PASS",
-      "rendered": 22,
-      "pdf_bytes": 98122,
-      "toc_links": 20,
+      "rendered": 23,
+      "pdf_bytes": 101533,
+      "toc_links": 21,
       "outline_destinations": "PASS",
       "visual_review": "PASS",
-      "sha256": "8d3640f6892d65d4dae30b4a21a783b2d393ea449c0e090eec9d03fababea5f1"
+      "sha256": "7f1daaabf87d7b1dcd0f722a6c67fe2d4097011741b1f9e5ad8514731e092ddd"
     },
     {
       "language": "fr",
-      "pages": 22,
-      "outline": 21,
+      "pages": 23,
+      "outline": 22,
       "content": "PASS",
       "bounds": "PASS",
-      "rendered": 22,
-      "pdf_bytes": 101873,
-      "toc_links": 20,
+      "rendered": 23,
+      "pdf_bytes": 105721,
+      "toc_links": 21,
       "outline_destinations": "PASS",
       "visual_review": "PASS",
-      "sha256": "355f5677f9d738079801a91547f08076e000f92051dd558aa97aedb21f013b61"
+      "sha256": "ee7c7181a7631fe4489b93bd291578c7711f48fd4ccf44871629591e80d395fc"
     },
     {
       "language": "de",
-      "pages": 22,
-      "outline": 21,
+      "pages": 23,
+      "outline": 22,
       "content": "PASS",
       "bounds": "PASS",
-      "rendered": 22,
-      "pdf_bytes": 101328,
-      "toc_links": 20,
+      "rendered": 23,
+      "pdf_bytes": 105150,
+      "toc_links": 21,
       "outline_destinations": "PASS",
       "visual_review": "PASS",
-      "sha256": "24b7a279692f84045c8f244cd71ba07535cc7752f136e11c03e13f08153ee708"
+      "sha256": "342449f69f77a95514cef8991c5b6586a8668085c8c2c607ce616a9a3f137e41"
     },
     {
       "language": "pt",
-      "pages": 22,
-      "outline": 21,
+      "pages": 23,
+      "outline": 22,
       "content": "PASS",
       "bounds": "PASS",
-      "rendered": 22,
-      "pdf_bytes": 101086,
-      "toc_links": 20,
+      "rendered": 23,
+      "pdf_bytes": 104836,
+      "toc_links": 21,
       "outline_destinations": "PASS",
       "visual_review": "PASS",
-      "sha256": "f078ee35a9de06733a3ec247368122887aab5c91983a8ccc0ec220294822c28f"
+      "sha256": "b4a018238ad589f3ac923bf3df9b37d5e5399b0a9076014d676d8a2c07e4bb1e"
     }
   ]
 }
