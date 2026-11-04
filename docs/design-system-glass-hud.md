@@ -151,6 +151,19 @@ Estructura obligatoria cuando se requiere desbloquear prerrequisitos antes de ac
 3. **Filtrado Estricto de Elementos Irrelevantes:**
    - Cualquier elemento que no sea aplicable a la vista o sobre el que no se pueda actuar (por ejemplo, módulos que no admiten ingeniería en el panel de naves) debe ser **completamente excluido** del renderizado para evitar ruido y optimizar el rendimiento.
 
+### 4.9 Marco de tarjeta en modo edición (`.card-frame`, `.card-controls`, `.card-content`)
+Patrón de la disposición personalizable de tarjetas (F15). Toda tarjeta del `Grid` se renderiza dentro de un `CardFrame`; en modo edición el marco añade controles sin alterar lo que el piloto ve fuera de él:
+1. **Barra de controles en el flujo normal:** `.card-controls` (asa de arrastre ⠿, subir/bajar, anchos `1|2|3|▭`, altura `− auto +`, quitar ⊖) va **encima** de `.card-content` dentro del flujo, **nunca como superposición** sobre el título de la tarjeta. Así no tapa ni recorta nada y el título sigue legible mientras se edita.
+2. **Altura fija sobre `.card-content`:** la altura elegida (`h`, múltiplos de 40 px entre 160 y 2000) se aplica a `.card-content`, no al marco. El contenido mide lo mismo dentro y fuera de edición (WYSIWYG) y la barra de controles no altera el resultado final. Con `h = null` la altura es automática.
+3. **Contenido atenuado e inerte:** mientras se edita, `.card-content` se atenúa (`opacity: 0.55`, `pointer-events: none`) y lleva `inert`, de modo que ningún botón, enlace o campo interno responde ni recibe foco; solo actúan los controles del marco.
+4. **`touch-action: none` solo en las asas:** el asa de arrastre y el asa de redimensionado (◢) declaran `touch-action: none` (y `user-select: none`) para que el gesto táctil no desplace la página; el resto del marco conserva el desplazamiento táctil normal.
+5. **Anchos limitados por las columnas disponibles:** los botones de ancho `1|2|3|▭` se deshabilitan (`disabled`) cuando su valor supera las columnas visibles de la rejilla; el activo se marca con `aria-pressed`. Subir/bajar se deshabilitan en los extremos de la lista.
+6. **Fantasma y destino de soltado:** una tarjeta cuya condición de visibilidad no se cumple se muestra como marco fantasma con marcador «auto» (`.card-placeholder`, `.ph-pill`) para poder reubicarla o quitarla. Durante el arrastre, el marco que recibirá la tarjeta se resalta con un contorno de 2 px (`[data-drop-target]`, `outline` con `--hud-primary`) y la tarjeta arrastrada se eleva (`.dragging`, `z-index` alto y sombra).
+7. **Diálogos modales (catálogo de tarjetas y pestaña propia):** `role="dialog"` con `aria-modal="true"`; **Esc se gestiona en fase de captura** (`keydown` en `window` con `capture` y `stopPropagation`) para cerrar solo el diálogo **sin cancelar la edición** en curso; **atrapan el foco** con Tab/Mayús+Tab dentro del diálogo; se cierran con `pointerdown` sobre el propio fondo (no con `click`, para que soltar una selección encima no lo cierre).
+8. **`DevicePrompt` no bloqueante:** la petición de registrar el dispositivo es un **banner** dentro del flujo (con botón de descartar ×), nunca un modal; el piloto puede seguir usando la app sin responder. Los errores se muestran con `role="alert"`.
+9. **Píldora «sin conexión» corta con `title`:** `GridHeader` muestra una píldora `.offline-pill` de texto mínimo; la explicación completa va en el `title` (regla de longitud controlada de §4.3).
+10. **Rendimiento:** sin `requestAnimationFrame` persistente ni listeners en reposo. Durante un arrastre o redimensionado se programa **como máximo un fotograma por `pointermove`**, y solo mientras dura el gesto; al soltar o cancelar (Esc, `oncancel`) se limpian la vista previa y los listeners.
+
 ---
 
 ## 5. Requisitos Técnicos y Preservación de Contratos
