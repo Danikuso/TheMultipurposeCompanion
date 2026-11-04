@@ -5,6 +5,7 @@
   import { H_STEP, effectiveWidth, snapHeight } from './layoutModel';
   import { startMoveDrag, startResizeDrag, type DragSession } from './pointerDrag';
   import { setCardBox } from './cardBox';
+  import { boardGapPx, columnWidthPx } from './boardGeometry';
   import { t } from '../lib/i18n';
 
   let {
@@ -18,6 +19,7 @@
     onop,
     prefix,
     ctx,
+    box = null,
   }: {
     placement: CardPlacement;
     card: CardDef;
@@ -29,6 +31,8 @@
     onop?: (op: CardOp) => void;
     prefix?: Snippet;
     ctx: LayoutCtx;
+    /** Posición en px dentro del tablero; `null` = flujo normal (tablero sin medir). */
+    box?: { left: number; top: number; width: number } | null;
   } = $props();
 
   setCardBox({
@@ -42,9 +46,16 @@
   const shownW = $derived(preview?.w ?? placement.w);
   const shownH = $derived(preview ? preview.h : placement.h);
 
-  const gridColumn = $derived(
-    shownW === 'full' ? '1 / -1' : `span ${effectiveWidth(shownW, columns)}`,
-  );
+  // Durante el redimensionado el ancho se previsualiza sobre el de la caja actual.
+  const width = $derived.by(() => {
+    if (!box) return undefined;
+    if (!preview) return box.width;
+    const gap = boardGapPx();
+    const from = effectiveWidth(placement.w, columns);
+    const col = columnWidthPx(box.width, from, gap);
+    const to = effectiveWidth(shownW, columns);
+    return to * col + (to - 1) * gap;
+  });
   const height = $derived.by(() => {
     if (shownH === null) return undefined;
     return columns === 1 ? `min(${shownH}px, max(240px, 70vh))` : `${shownH}px`;
@@ -107,10 +118,8 @@
     const parent = frameEl?.parentElement;
     if (!frameEl || !parent || (e.pointerType === 'mouse' && e.button !== 0)) return;
     e.preventDefault();
-    const cs = getComputedStyle(parent);
-    const gapPx = parseFloat(cs.columnGap) || 0;
-    const inner = parent.getBoundingClientRect().width - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
-    const colWidthPx = Math.max(1, (inner - gapPx * (columns - 1)) / columns);
+    const gapPx = boardGapPx();
+    const colWidthPx = Math.max(1, columnWidthPx(parent.clientWidth || parent.getBoundingClientRect().width, columns, gapPx));
     session = startResizeDrag(e, e.currentTarget as HTMLElement,
       { w: placement.w, h: placement.h, heightPx: currentHeight(), widthPx: Math.round(frameEl.getBoundingClientRect().width) },
       { colWidthPx, gapPx, columns },
@@ -129,7 +138,9 @@
 </script>
 
 <div class="card-frame" class:fixed={shownH !== null} class:ghost class:editing class:dragging={offset !== null}
-  style:grid-column={gridColumn} style:transform={transform}
+  class:placed={box !== null}
+  style:top={box ? `${box.top}px` : undefined} style:left={box ? `${box.left}px` : undefined}
+  style:width={width !== undefined ? `${width}px` : undefined} style:transform={transform}
   data-layout-slot={placement.id} bind:this={frameEl}
 >{#if editing}<div class="card-controls" role="toolbar" aria-label={t(card.titleKey)}>
     <button type="button" class="drag-handle" data-op="drag" aria-label={t('layout-edit-drag')}
@@ -169,7 +180,7 @@
   </div>{/if}</div>
 
 <style>
-  /* El contenido rellena el marco (alto de la fila o alto fijo) para que las filas queden alineadas. */
+  /* El marco mide lo que mide su tarjeta (nunca se estira); el tablero lo coloca en posición absoluta. */
   .card-frame {
     position: relative;
     min-width: 0;
@@ -177,17 +188,19 @@
     flex-direction: column;
   }
 
+  .card-frame.placed { position: absolute; }
+  .card-frame.placed.editing { transition: top 120ms ease, left 120ms ease; }
+  .card-frame.placed.dragging { transition: none; }
+
   .card-content {
-    flex: 1;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     min-height: 0;
     min-width: 0;
   }
 
-  /* Alto fijo: lo impone el contenido (igual dentro y fuera de edición); la barra queda aparte, en flujo. */
-  .fixed > .card-content { flex: 0 0 auto; }
-  .editing > .card-content:empty { flex: 0 0 auto; }
+  /* Alto fijo: lo impone `height` en línea; la barra de edición queda aparte, en flujo. */
   .card-content.dimmed { opacity: 0.55; pointer-events: none; }
 
   .card-controls {

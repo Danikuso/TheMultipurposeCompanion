@@ -73,14 +73,24 @@ describe('edit mode', () => {
   });
 
   test('width and height buttons emit ops', () => {
+    vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) {
+      return this.classList.contains('card-board') ? 900 : 0;
+    });
     edit();
+    flushSync();
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(
       { top: 0, left: 0, right: 0, bottom: 160, width: 100, height: 160, x: 0, y: 0, toJSON: () => ({}) } as DOMRect,
     );
     click(btn('materials', 'width-2'));
     click(btn('materials', 'height-more'));
     expect(card('materials')).toMatchObject({ w: 2, h: 200 });
-    expect(slot('materials').style.gridColumn).toContain('span');
+    // El ancho se pinta con posición calculada (en jsdom el tablero solo tiene ancho si se simula).
+    expect(slot('materials').style.gridColumn).toBe('');
+    const span = Math.min(2, grid.columns);
+    const gap = 0.85 * 16;
+    const colW = (900 - gap * (grid.columns - 1)) / grid.columns;
+    expect(parseFloat(slot('materials').style.left)).toBe(0);
+    expect(parseFloat(slot('materials').style.width)).toBeCloseTo(span * colW + (span - 1) * gap, 3);
     expect((slot('materials').querySelector('.card-content') as HTMLElement).style.height).toContain('200px');
     click(btn('materials', 'height-auto'));
     expect(card('materials').h).toBeNull();

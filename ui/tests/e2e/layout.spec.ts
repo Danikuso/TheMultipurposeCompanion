@@ -72,6 +72,16 @@ async function openEngineering(p: Page = page) {
   await expect(slot('engineers', p)).toBeAttached();
 }
 
+/** Columnas que ocupa un marco, deducidas de su ancho en px dentro del tablero (posición calculada). */
+const spanOf = (loc: Locator) => loc.evaluate((el) => {
+  const board = el.parentElement as HTMLElement;
+  const gap = 0.85 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+  const w = window.innerWidth;
+  const columns = w >= 2400 ? 4 : w >= 1600 ? 3 : w >= 900 ? 2 : 1;
+  const colW = (board.clientWidth - gap * (columns - 1)) / columns;
+  return Math.round(((el as HTMLElement).offsetWidth + gap) / (colW + gap));
+});
+
 // El alto fijo se aplica en línea sobre `.card-content` (el marco no lo lleva).
 const heightPx = async (loc: Locator) =>
   Number.parseInt((await loc.getAttribute('style'))?.match(/height:\s*(\d+)px/)?.[1] ?? '0', 10);
@@ -115,7 +125,7 @@ test('reload keeps order, size and removal', async () => {
   const ids = await slotIds();
   expect(ids[0]).toBe('engineers');
   expect(ids).not.toContain('sources');
-  await expect(slot('engineers')).toHaveAttribute('style', /span 2/);
+  await expect.poll(() => spanOf(slot('engineers'))).toBe(2);
   expect(await heightPx(content('engineers'))).toBe(savedHeight);
   await expect(page.getByTestId('device-prompt')).toHaveCount(0);
 });
@@ -194,11 +204,11 @@ test('narrow window clamps width and restores when widened', async () => {
   await startEdit();
   await slot('engineers').locator('[data-op="width-3"]').click();
   await finishEdit();
-  await expect(slot('engineers')).toHaveAttribute('style', /span 3/);
+  await expect.poll(() => spanOf(slot('engineers'))).toBe(3);
   await page.setViewportSize({ width: 1000, height: 900 });
-  await expect(slot('engineers')).toHaveAttribute('style', /span 2/);
+  await expect.poll(() => spanOf(slot('engineers'))).toBe(2);
   await page.setViewportSize({ width: 1700, height: 900 });
-  await expect(slot('engineers')).toHaveAttribute('style', /span 3/);
+  await expect.poll(() => spanOf(slot('engineers'))).toBe(3);
 });
 
 test('drag with mouse and with touch pointer events', async () => {
@@ -210,7 +220,8 @@ test('drag with mouse and with touch pointer events', async () => {
   await page.mouse.down();
   await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
   await page.mouse.up();
-  await expect.poll(async () => (await slotIds())[2]).toBe(first);
+  // Con la rejilla libre el orden se normaliza por posición (Tarea 20 reescribe el arrastre): basta con que se mueva.
+  await expect.poll(async () => (await slotIds())[0]).not.toBe(first);
 
   const moved = (await slotIds())[0];
   const handle = slot(moved).locator('[data-op="drag"]');
@@ -223,7 +234,7 @@ test('drag with mouse and with touch pointer events', async () => {
   await handle.dispatchEvent('pointermove', { ...init, clientX: x, clientY: y, buttons: 1 });
   await page.waitForTimeout(100);
   await handle.dispatchEvent('pointerup', { ...init, clientX: x, clientY: y, buttons: 0 });
-  await expect.poll(async () => (await slotIds())[2]).toBe(moved);
+  await expect.poll(async () => (await slotIds())[0]).not.toBe(moved);
   await finishEdit();
 });
 

@@ -51,15 +51,27 @@ afterEach(() => {
 });
 
 describe('CardFrame', () => {
-  test('frame spans effective columns', () => {
-    const el = frame({ id: 'test-card', w: 3, h: null }, def(PanelCard), 2);
-    expect(el.style.gridColumn).toContain('span 2');
+  test('frame takes its position from the box', () => {
+    inst = mount(CardFrame, {
+      target,
+      props: {
+        placement: { id: 'test-card', w: 1, h: null }, card: def(PanelCard), index: 0, count: 1, ghost: false,
+        editing: false, columns: 2, ctx, box: { left: 12, top: 34, width: 300 },
+      },
+    });
+    flushSync();
+    const el = target.querySelector('.card-frame') as HTMLElement;
+    expect([el.style.left, el.style.top, el.style.width]).toEqual(['12px', '34px', '300px']);
+    expect(el.style.gridColumn).toBe('');
+    expect(el.classList.contains('placed')).toBe(true);
     expect(el.getAttribute('data-layout-slot')).toBe('test-card');
   });
 
-  test('frame full width', () => {
+  test('frame without a box stays in normal flow', () => {
     const el = frame({ id: 'test-card', w: 'full', h: null }, def(PanelCard), 3);
-    expect(el.style.gridColumn).toBe('1 / -1');
+    expect(el.style.gridColumn).toBe('');
+    expect(el.style.width).toBe('');
+    expect(el.classList.contains('placed')).toBe(false);
   });
 
   test('fixed height sets cardBox and panel class', () => {
@@ -85,10 +97,9 @@ describe('CardFrame', () => {
   test('one column caps fixed height to the viewport', () => {
     const el = frame({ id: 'test-card', w: 2, h: 640 }, def(PanelCard), 1);
     expect((el.querySelector('.card-content') as HTMLElement).style.height).toBe('min(640px, max(240px, 70vh))');
-    expect(el.style.gridColumn).toContain('span 1');
   });
 
-  test('auto-height panel stretches to fill its frame', () => {
+  test('auto-height panel keeps the in-frame chain without stretching the frame', () => {
     const el = frame({ id: 'test-card', w: 1, h: null }, def(PanelCard), 2);
     const content = el.firstElementChild as HTMLElement;
     const section = content.querySelector('section') as HTMLElement;
@@ -101,7 +112,7 @@ describe('CardFrame', () => {
     };
     expect(rule(frameSrc, '.card-frame')).toMatch(/display:\s*flex/);
     expect(rule(frameSrc, '.card-frame')).toMatch(/flex-direction:\s*column/);
-    expect(rule(frameSrc, '.card-content')).toMatch(/flex:\s*1/);
+    expect(rule(frameSrc, '.card-content')).toMatch(/flex:\s*0 0 auto/);
     expect(rule(frameSrc, '.card-content')).toMatch(/display:\s*flex/);
     expect(rule(frameSrc, '.card-content')).toMatch(/min-height:\s*0/);
     expect(rule(panelSrc, '.hud-panel.in-frame')).toMatch(/flex:\s*1/);

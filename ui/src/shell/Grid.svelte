@@ -24,7 +24,6 @@
   .hud-grid {
     display: grid;
     grid-template-columns: 1fr;
-    grid-auto-flow: row dense;
     gap: 0.85rem;
     padding: 0.85rem;
     align-content: start;
