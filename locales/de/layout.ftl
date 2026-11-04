@@ -60,3 +60,23 @@ layout-custom-delete = Tab löschen
 layout-custom-delete-confirm = Diesen Tab und seine Karten löschen?
 layout-custom-empty = Dieser Tab ist leer. Bearbeite das Layout, um Karten hinzuzufügen.
 layout-custom-limit = Limit von 12 eigenen Tabs erreicht
+
+## Ajustes de disposición
+layout-settings-title = Layout
+layout-device-this = Dieses Gerät
+layout-settings-profiles = Layout-Profile
+layout-settings-rename = Umbenennen
+layout-settings-rename-save = Namen speichern
+layout-settings-copy = Auf dieses Gerät kopieren
+layout-settings-copy-confirm = Das Layout von „{ $name }“ auf dieses Gerät kopieren? Das aktuelle wird ersetzt.
+layout-settings-delete = Löschen
+layout-settings-delete-confirm = Profil „{ $name }“ löschen?
+layout-settings-delete-current = Das Profil dieses Geräts kann nicht gelöscht werden
+layout-settings-reset-all = Alle Tabs zurücksetzen
+layout-settings-reset-all-confirm = Alle Tabs auf das Werkslayout zurücksetzen? Eigene Tabs bleiben erhalten.
+layout-settings-tabs = Eigene Tabs
+layout-settings-tabs-empty = Keine eigenen Tabs vorhanden
+layout-settings-move-up = Tab nach oben
+layout-settings-move-down = Tab nach unten
+layout-settings-editing-hint = Beende oder brich die Layout-Bearbeitung ab, bevor du Profile verwaltest
+layout-settings-error = Die Aktion konnte nicht abgeschlossen werden. Versuche es erneut.

@@ -60,3 +60,23 @@ layout-custom-delete = Delete tab
 layout-custom-delete-confirm = Delete this tab and its cards?
 layout-custom-empty = This tab is empty. Edit the layout to add cards.
 layout-custom-limit = You have reached the limit of 12 custom tabs
+
+## Ajustes de disposición
+layout-settings-title = Layout
+layout-device-this = This device
+layout-settings-profiles = Layout profiles
+layout-settings-rename = Rename
+layout-settings-rename-save = Save name
+layout-settings-copy = Copy to this device
+layout-settings-copy-confirm = Copy the layout of "{ $name }" to this device? The current one will be replaced.
+layout-settings-delete = Delete
+layout-settings-delete-confirm = Delete the profile "{ $name }"?
+layout-settings-delete-current = The profile of this device cannot be deleted
+layout-settings-reset-all = Reset all tabs
+layout-settings-reset-all-confirm = Reset all tabs to the factory layout? Custom tabs are kept.
+layout-settings-tabs = Custom tabs
+layout-settings-tabs-empty = There are no custom tabs
+layout-settings-move-up = Move tab up
+layout-settings-move-down = Move tab down
+layout-settings-editing-hint = Finish or cancel the layout edit before managing profiles
+layout-settings-error = The action could not be completed. Try again.

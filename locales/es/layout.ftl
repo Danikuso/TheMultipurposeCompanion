@@ -60,3 +60,23 @@ layout-custom-delete = Borrar pestaña
 layout-custom-delete-confirm = ¿Borrar esta pestaña y sus tarjetas?
 layout-custom-empty = Esta pestaña está vacía. Edita la disposición para añadir tarjetas.
 layout-custom-limit = Has alcanzado el máximo de 12 pestañas personalizadas
+
+## Ajustes de disposición
+layout-settings-title = Disposición
+layout-device-this = Este dispositivo
+layout-settings-profiles = Perfiles de disposición
+layout-settings-rename = Renombrar
+layout-settings-rename-save = Guardar nombre
+layout-settings-copy = Copiar a este dispositivo
+layout-settings-copy-confirm = ¿Copiar la disposición de «{ $name }» a este dispositivo? Se sustituirá la actual.
+layout-settings-delete = Borrar
+layout-settings-delete-confirm = ¿Borrar el perfil «{ $name }»?
+layout-settings-delete-current = No se puede borrar el perfil de este dispositivo
+layout-settings-reset-all = Restablecer todas las pestañas
+layout-settings-reset-all-confirm = ¿Restablecer todas las pestañas a la disposición de fábrica? Se conservan las personalizadas.
+layout-settings-tabs = Pestañas personalizadas
+layout-settings-tabs-empty = No hay pestañas personalizadas
+layout-settings-move-up = Subir pestaña
+layout-settings-move-down = Bajar pestaña
+layout-settings-editing-hint = Termina o cancela la edición de la disposición antes de gestionar los perfiles
+layout-settings-error = No se pudo completar la acción. Inténtalo de nuevo.

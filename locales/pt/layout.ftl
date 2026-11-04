@@ -60,3 +60,23 @@ layout-custom-delete = Eliminar separador
 layout-custom-delete-confirm = Eliminar este separador e os seus cartões?
 layout-custom-empty = Este separador está vazio. Edite a disposição para adicionar cartões.
 layout-custom-limit = Limite de 12 separadores personalizados atingido
+
+## Ajustes de disposición
+layout-settings-title = Disposição
+layout-device-this = Este dispositivo
+layout-settings-profiles = Perfis de disposição
+layout-settings-rename = Renomear
+layout-settings-rename-save = Guardar nome
+layout-settings-copy = Copiar para este dispositivo
+layout-settings-copy-confirm = Copiar a disposição de «{ $name }» para este dispositivo? A atual será substituída.
+layout-settings-delete = Apagar
+layout-settings-delete-confirm = Apagar o perfil «{ $name }»?
+layout-settings-delete-current = Não é possível apagar o perfil deste dispositivo
+layout-settings-reset-all = Repor todos os separadores
+layout-settings-reset-all-confirm = Repor todos os separadores para a disposição de fábrica? Os personalizados são mantidos.
+layout-settings-tabs = Separadores personalizados
+layout-settings-tabs-empty = Não há separadores personalizados
+layout-settings-move-up = Subir separador
+layout-settings-move-down = Descer separador
+layout-settings-editing-hint = Termina ou cancela a edição da disposição antes de gerir os perfis
+layout-settings-error = Não foi possível concluir a ação. Tenta novamente.

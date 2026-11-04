@@ -8,6 +8,7 @@
   import Panel from '../shell/Panel.svelte';
   import { diag } from '../lib/diag.svelte';
   import Pairing from './Pairing.svelte';
+  import LayoutSettings from './LayoutSettings.svelte';
   import { integer } from '../lib/format';
   import { voiceAssistant } from '../lib/voiceAssistant.svelte';
   import AccountsSection from '../modules/accounts/AccountsSection.svelte';
@@ -1147,6 +1148,12 @@
               ⚠️ {updater.status.error}
             </div>
           {/if}
+        </fieldset>
+
+        <!-- Disposición de tarjetas: perfiles y pestañas personalizadas -->
+        <fieldset class="settings-card" data-testid="settings-layout-card">
+          <legend>🧩 {t('layout-settings-title')}</legend>
+          <LayoutSettings />
         </fieldset>
 
         <!-- Soporte, Feedback y Comunidad -->

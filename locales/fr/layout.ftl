@@ -60,3 +60,23 @@ layout-custom-delete = Supprimer l'onglet
 layout-custom-delete-confirm = Supprimer cet onglet et ses cartes ?
 layout-custom-empty = Cet onglet est vide. Modifiez la disposition pour ajouter des cartes.
 layout-custom-limit = Limite de 12 onglets personnalisés atteinte
+
+## Ajustes de disposición
+layout-settings-title = Disposition
+layout-device-this = Cet appareil
+layout-settings-profiles = Profils de disposition
+layout-settings-rename = Renommer
+layout-settings-rename-save = Enregistrer le nom
+layout-settings-copy = Copier vers cet appareil
+layout-settings-copy-confirm = Copier la disposition de « { $name } » vers cet appareil ? L'actuelle sera remplacée.
+layout-settings-delete = Supprimer
+layout-settings-delete-confirm = Supprimer le profil « { $name } » ?
+layout-settings-delete-current = Le profil de cet appareil ne peut pas être supprimé
+layout-settings-reset-all = Réinitialiser tous les onglets
+layout-settings-reset-all-confirm = Réinitialiser tous les onglets à la disposition d'usine ? Les onglets personnalisés sont conservés.
+layout-settings-tabs = Onglets personnalisés
+layout-settings-tabs-empty = Aucun onglet personnalisé
+layout-settings-move-up = Monter l'onglet
+layout-settings-move-down = Descendre l'onglet
+layout-settings-editing-hint = Terminez ou annulez la modification de la disposition avant de gérer les profils
+layout-settings-error = L'action n'a pas pu être effectuée. Réessayez.
