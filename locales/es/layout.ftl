@@ -23,5 +23,7 @@ layout-edit-height-less = Menos alto
 layout-edit-height-auto = Alto automático
 layout-edit-height-more = Más alto
 layout-edit-remove = Quitar tarjeta
+layout-edit-drag = Arrastrar tarjeta
+layout-edit-resize = Redimensionar tarjeta
 layout-card-auto = Aparece automáticamente
 layout-card-auto-hint = Esta tarjeta aparece sola cuando hay datos

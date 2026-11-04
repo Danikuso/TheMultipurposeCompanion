@@ -14,7 +14,9 @@
   import { fetchUpdateStatus } from './lib/updater.svelte';
   import { tabKeyFor } from './shell/cards';
   import CardHost, { isCardVisible, tabPlacements } from './shell/CardHost.svelte';
-  import { cancelEdit, customTab, initLayouts, layoutState } from './shell/layoutStore.svelte';
+  import { customTab, initLayouts, layoutState } from './shell/layoutStore.svelte';
+  import { cancelEditWithDiag } from './shell/editDiag';
+  import { activeDrag } from './shell/pointerDrag';
   import GridHeader from './shell/GridHeader.svelte';
   import EditToolbar from './shell/EditToolbar.svelte';
   import { modules } from './modules/registry';
@@ -143,11 +145,14 @@
     savePlacement({ layout: pin?.startsWith('layout:') ? pin.slice(7) : heldLayout, context: layoutContext.manual });
   });
 
-  // Esc cancela la edición; el listener solo existe mientras se edita.
+  // Esc aborta el arrastre en curso o, si no hay, cancela la edición; el listener solo existe mientras se edita.
   $effect(() => {
     if (!layoutState.editing) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') cancelEdit();
+      if (e.key !== 'Escape') return;
+      const drag = activeDrag();
+      if (drag?.active) drag.cancel(); // Esc durante un arrastre solo aborta el arrastre
+      else cancelEditWithDiag(tabKey);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

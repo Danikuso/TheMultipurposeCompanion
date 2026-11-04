@@ -228,3 +228,41 @@ describe('App renders tabs from the layout store', () => {
     expect(shown[0]).toBe('materials');
   });
 });
+
+describe('CardFrame edit controls overlay', () => {
+  test('bar is an overlay: not measured, frame flow excludes it', () => {
+    const emitted: unknown[] = [];
+    inst = mount(CardFrame, {
+      target,
+      props: {
+        placement: { id: 'test-card', w: 1, h: null }, card: def(PanelCard), index: 0, count: 1, ghost: false,
+        editing: true, columns: 2, ctx, onop: (op: unknown) => emitted.push(op),
+      },
+    });
+    flushSync();
+    const el = target.querySelector('.card-frame') as HTMLElement;
+    const content = el.querySelector('.card-content') as HTMLElement;
+    const bar = el.querySelector('.card-controls') as HTMLElement;
+    const rectOf = (h: number) => ({ top: 0, left: 0, right: 0, bottom: h, width: 100, height: h, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      if (this === content) return rectOf(160);
+      if (this === bar) return rectOf(60);
+      return rectOf(160 + 60 + 40); // el marco medido entero incluiria barra y relleno
+    });
+    (el.querySelector('button[data-op="height-more"]') as HTMLButtonElement).click();
+    expect(emitted).toEqual([{ kind: 'height', h: 200 }]);
+    // En CSS la barra es absoluta: no ocupa flujo del marco.
+    const rule = /(^|\n)\s*\.card-controls\s*\{([^}]*)\}/.exec(frameSrc)?.[2] ?? '';
+    expect(rule).toMatch(/position:\s*absolute/);
+    expect(rule).toMatch(/z-index:\s*\d+/);
+    expect(rule).toMatch(/flex-wrap:\s*wrap/);
+    expect(/(^|\n)\s*\.card-frame\s*\{([^}]*)\}/.exec(frameSrc)?.[2]).toMatch(/position:\s*relative/);
+    vi.restoreAllMocks();
+  });
+
+  test('drag and resize handles exist while editing', () => {
+    const el = frame({ id: 'test-card', w: 1, h: null }, def(PanelCard), 2, true);
+    expect(el.querySelector('[data-op="drag"]')).not.toBeNull();
+    expect(el.querySelector('[data-op="resize"]')).not.toBeNull();
+  });
+});

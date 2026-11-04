@@ -3,8 +3,8 @@
   import { diag } from '../lib/diag.svelte';
   import { askConfirm } from '../lib/confirm';
   import { t } from '../lib/i18n';
-  import { cancelEdit, commitEdit, layoutState, resetTab } from './layoutStore.svelte';
-  import { editTab } from './editDiag';
+  import { commitEdit, layoutState, resetTab } from './layoutStore.svelte';
+  import { cancelEditWithDiag, editTab } from './editDiag';
   import { pushToast } from './Toasts.svelte';
 
   let { tabKey, onaddcard, extra }: { tabKey: string; onaddcard: () => void; extra?: Snippet } = $props();
@@ -16,8 +16,7 @@
   }
 
   function cancel() {
-    cancelEdit();
-    diag('ui.layout.edit', { cancel: true, ...editTab(tabKey) });
+    cancelEditWithDiag(tabKey);
   }
 
   function reset() {

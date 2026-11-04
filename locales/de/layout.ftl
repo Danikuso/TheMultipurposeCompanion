@@ -23,5 +23,7 @@ layout-edit-height-less = Niedriger
 layout-edit-height-auto = Automatische Höhe
 layout-edit-height-more = Höher
 layout-edit-remove = Karte entfernen
+layout-edit-drag = Karte ziehen
+layout-edit-resize = Kartengröße ändern
 layout-card-auto = Erscheint automatisch
 layout-card-auto-hint = Diese Karte erscheint von selbst, wenn Daten vorliegen

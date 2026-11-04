@@ -7,6 +7,7 @@ import App from '../src/App.svelte';
 import { cancelEdit, layoutState, themedTab } from '../src/shell/layoutStore.svelte';
 import { emptyDoc } from '../src/shell/layoutModel';
 import { grid } from '../src/shell/gridColumns.svelte';
+import { startMoveDrag } from '../src/shell/pointerDrag';
 
 vi.mock('../src/lib/ws.svelte', async (original) => ({
   ...(await original<typeof import('../src/lib/ws.svelte')>()),
@@ -168,5 +169,35 @@ describe('edit mode', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     flushSync();
     expect(layoutState.editing).toBe(false);
+  });
+
+  test('escape during drag only aborts drag', () => {
+    edit();
+    const handle = document.createElement('div');
+    const frames = [0, 1].map((i) => {
+      const el = document.createElement('div');
+      el.getBoundingClientRect = () => ({ left: i * 200, top: 0, width: 200, height: 100 }) as DOMRect;
+      return el;
+    });
+    const ondrop = vi.fn();
+    const down = Object.assign(new Event('pointerdown'), { clientX: 10, clientY: 10, pointerId: 1, pointerType: 'mouse' });
+    const s = startMoveDrag(down as PointerEvent, handle, frames, 0, vi.fn(), ondrop);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    flushSync();
+    expect(s.active).toBe(false);
+    expect(ondrop).not.toHaveBeenCalled();
+    expect(layoutState.editing).toBe(true);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    flushSync();
+    expect(layoutState.editing).toBe(false);
+  });
+
+  test('escape cancel emits cancel diag like the button', async () => {
+    const diagMod = await import('../src/lib/diag.svelte');
+    const spy = vi.spyOn(diagMod, 'diag');
+    edit();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    flushSync();
+    expect(spy).toHaveBeenCalledWith('ui.layout.edit', expect.objectContaining({ cancel: true }));
   });
 });

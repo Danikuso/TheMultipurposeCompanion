@@ -23,5 +23,7 @@ layout-edit-height-less = Shorter
 layout-edit-height-auto = Automatic height
 layout-edit-height-more = Taller
 layout-edit-remove = Remove card
+layout-edit-drag = Drag card
+layout-edit-resize = Resize card
 layout-card-auto = Appears automatically
 layout-card-auto-hint = This card appears on its own when there is data
