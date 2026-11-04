@@ -152,4 +152,28 @@ describe('layoutStore', () => {
     expect(layoutState.profileName).toBe('Viejo');
     expect(layoutState.needsPrompt).toBe(false);
   });
+
+  test('claim against missing profile leaves device untouched', async () => {
+    await initLayouts();
+    const before = layoutState.deviceId;
+    const stored = storage.get(DEVICE_KEY);
+    expect(await createProfile('', { kind: 'claim', id: 'GONE' })).toBe(false);
+    expect(layoutState.deviceId).toBe(before);
+    expect(storage.get(DEVICE_KEY)).toBe(stored);
+    expect(layoutState.saveError).toBe(true);
+  });
+
+  test('load failure never overwrites saved profile', async () => {
+    handler = () => json(500, { error: 'boom' });
+    await initLayouts();
+    expect(layoutState.offline).toBe(true);
+    beginEdit();
+    applyOp(TAB, 0, { kind: 'move', to: 2 });
+    expect(await commitEdit()).toBe(false);
+    expect(layoutState.editing).toBe(true);
+    expect(layoutState.saveError).toBe(true);
+    expect(await mutateAndSave((d) => d)).toBe(false);
+    expect(await createProfile('X', { kind: 'factory' })).toBe(false);
+    expect(calls.some((c) => c.method === 'PUT')).toBe(false);
+  });
 });

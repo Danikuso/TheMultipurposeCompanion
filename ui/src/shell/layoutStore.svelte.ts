@@ -127,7 +127,8 @@ function defaultProfileName(): string {
 
 async function save(doc: LayoutDoc): Promise<boolean> {
   const id = layoutState.deviceId;
-  if (id === null) {
+  // Sin carga fiable del perfil guardado no se escribe: se destruiría la disposición real.
+  if (id === null || layoutState.offline) {
     layoutState.saveError = true;
     return false;
   }
@@ -198,15 +199,24 @@ export async function createProfile(name: string, mode: ProfileMode): Promise<bo
   const id = layoutState.deviceId;
   try {
     if (mode.kind === 'claim') {
-      try { localStorage.setItem(DEVICE_KEY, mode.id); } catch { layoutState.offline = true; }
+      const p = await getProfile(mode.id);
+      if (p === null) {
+        layoutState.saveError = true;
+        return false;
+      }
+      let stored = true;
+      try { localStorage.setItem(DEVICE_KEY, mode.id); } catch { stored = false; }
       layoutState.deviceId = mode.id;
       layoutState.deviceKind = 'browser';
-      const p = await getProfile(mode.id);
-      if (p === null) return false;
+      layoutState.offline = !stored;
+      layoutState.saveError = false;
       applyProfile(p);
       return true;
     }
-    if (id === null) return false;
+    if (id === null || layoutState.offline) {
+      layoutState.saveError = true;
+      return false;
+    }
     if (mode.kind === 'factory') {
       await putProfile(id, name, emptyDoc());
       layoutState.doc = emptyDoc();
@@ -218,6 +228,7 @@ export async function createProfile(name: string, mode: ProfileMode): Promise<bo
     return true;
   } catch (e) {
     diag('ui.layout.save', { status: errStatus(e), claim: mode.kind === 'claim' });
+    layoutState.saveError = true;
     return false;
   }
 }
