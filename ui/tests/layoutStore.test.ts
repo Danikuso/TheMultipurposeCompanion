@@ -274,13 +274,21 @@ describe('layoutStore', () => {
 
     test('addCards adds several in one draft change', async () => {
       await withCustom([place('jump')]);
-      let changes = 0;
-      const before = layoutState.draft;
+      // Every editDoc clones the draft with exactly one JSON.stringify, so this counts draft changes.
+      const spy = vi.spyOn(JSON, 'stringify');
       addCards(CT, ['ax', 'cargo', 'nope', 'jump', 'ax']);
-      if (layoutState.draft !== before) changes++;
+      const changes = spy.mock.calls.length;
+      spy.mockRestore();
       expect(changes).toBe(1);
       expect(custom().map((c) => c.id)).toEqual(['jump', 'ax', 'cargo']);
       expect(custom().every((c) => !('x' in c))).toBe(true);
+    });
+
+    test('addCards with geometry pins existing automatic columns', async () => {
+      await withCustom([place('route'), place('jump')]);
+      addCards(CT, ['ax'], { columns: 2, gapPx: 10, heights: { route: 300, jump: 100 } });
+      expect(custom().map((c) => c.x)).toEqual([0, 1, undefined]);
+      expect(custom().map((c) => c.id)).toEqual(['route', 'jump', 'ax']);
     });
 
     test('addCard wraps addCards', async () => {
