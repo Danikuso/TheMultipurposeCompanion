@@ -13,6 +13,7 @@
   import TopBar from './shell/TopBar.svelte';
   import UpdateModal from './shell/UpdateModal.svelte';
   import { fetchUpdateStatus } from './lib/updater.svelte';
+  import { cards } from './shell/cards';
   import { DEFAULT_PRIORITIES, autoLayout, contextPanel, layouts, nextPin } from './shell/layouts';
 
   let pin = $state<string | null>(null);
@@ -98,7 +99,10 @@
     manual: follow ? autoManual : (manual ?? heldContext),
   });
   const autoContext = $derived(contextPanel(liveModules, autoManual));
-  const visibleSlots = $derived(activeLayout?.slots.filter((slot) => !slot.when || slot.when(layoutContext)) ?? []);
+  const visibleSlots = $derived(activeLayout?.slots.filter((slot) => {
+    const when = cards[slot.card]?.when;
+    return !when || when(layoutContext);
+  }) ?? []);
   const selectedContext = $derived(follow ? autoContext : contextPanel(liveModules, layoutContext.manual));
   const activeModule = $derived(modules.find((m) => m.id === activeTab) ?? modules[0]);
 
@@ -139,7 +143,7 @@
       layout: activeLayout?.id ?? 'none',
       pinned: pin !== null,
       auto_companion: prefs.autoCompanion,
-      slot: visibleSlots.map((s) => s.id),
+      slot: visibleSlots.map((s) => s.card),
       defined_slots: activeLayout?.slots.length ?? 0,
       module: liveModules.map((m) => m.id),
       relevance: liveModules.map((m) => String(m.relevance).toLowerCase()),
@@ -213,10 +217,11 @@
       {#if activeTab === 'settings'}
         <Settings />
       {:else if activeLayout}
-        {#each visibleSlots as slot (slot.id)}
-          <div class="layout-slot" class:full={slot.span === 'full'}
-            style:--slot-span={slot.span === 'full' ? 1 : slot.span} data-layout-slot={slot.id}>
-            {#if activeLayout.id === 'exploration' && slot.span === 2}
+        {#each visibleSlots as slot (slot.card)}
+          {@const Card = cards[slot.card].component}
+          <div class="layout-slot" class:full={slot.width === 'full'}
+            style:--slot-span={slot.width === 'full' ? 1 : slot.width} data-layout-slot={slot.card}>
+            {#if slot.card === 'exploration-context'}
               <div class="context-controls" role="group" aria-label={t('layout-context')}>
                 <button type="button" data-testid="context-bodies" aria-pressed={selectedContext === 'exploration'}
                   onclick={() => selectContext('exploration')}>{t('layout-context-bodies')}</button>
@@ -224,12 +229,13 @@
                   onclick={() => selectContext('exobiology')}>{t('layout-context-exobiology')}</button>
               </div>
             {/if}
-            <slot.panel />
+            <Card ctx={layoutContext} />
           </div>
         {/each}
       {:else if activeModule}
-        {#each activeModule.panels as PanelComp, idx (`${activeModule.id}-${idx}`)}
-          <PanelComp />
+        {#each activeModule.cards as cardId (`${activeModule.id}-${cardId}`)}
+          {@const Card = cards[cardId].component}
+          <Card />
         {/each}
       {/if}
     </Grid>

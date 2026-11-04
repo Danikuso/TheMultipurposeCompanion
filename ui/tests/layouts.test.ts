@@ -1,15 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { autoLayout, contextPanel, layouts, nextPin } from '../src/shell/layouts';
+import { cards } from '../src/shell/cards';
 import { ageShort, starClassLabel } from '../src/lib/format';
 import { setLocale } from '../src/lib/i18n';
 import Panel from '../src/shell/Panel.svelte';
 import App from '../src/App.svelte';
 import { disconnect, live } from '../src/lib/ws.svelte';
 import { loadPrefs, prefs, toggleTacticalLock } from '../src/lib/prefs.svelte';
-import { RouteStrip, PlannerPanel, JumpPanel } from '../src/modules/navigation';
-import SystemBodiesPanel from '../src/modules/exploration/SystemBodiesPanel.svelte';
-import ExobiologyPanel from '../src/modules/exobiology/ExobiologyPanel.svelte';
+import { t } from '../src/lib/i18n';
 
 vi.mock('../src/lib/ws.svelte', async (original) => ({
   ...(await original<typeof import('../src/lib/ws.svelte')>()),
@@ -22,25 +21,24 @@ describe('layouts', () => {
     expect(layout).toBeDefined();
     expect(layout?.titleKey).toBe('layout-exploration');
     expect(layout?.icon).toBe('compass');
-    expect(layout?.slots[0]).toMatchObject({ panel: RouteStrip, span: 'full' });
+    expect(layout?.slots[0]).toMatchObject({ card: 'route', width: 'full' });
     expect(layout?.slots).toEqual(expect.arrayContaining([
-      expect.objectContaining({ panel: PlannerPanel, span: 1 }),
-      expect.objectContaining({ panel: JumpPanel, span: 1 }),
+      expect.objectContaining({ card: 'planner', width: 1 }),
+      expect.objectContaining({ card: 'jump', width: 1 }),
     ]));
   });
 
-  test('context slot switches to exobiology when it becomes active', () => {
+  test('context card is a single slot whose content follows contextPanel', () => {
     const layout = layouts.find((layout) => layout.id === 'exploration');
     expect(layout).toBeDefined();
-    const visible = (relevance: string, manual: string | null = null) => layout!.slots
-      .filter((slot) => !slot.when || slot.when({ modules: [{ id: 'exobiology', relevance }], manual }))
-      .map((slot) => slot.panel);
-    expect(visible('normal')).toContain(SystemBodiesPanel);
-    expect(visible('normal')).not.toContain(ExobiologyPanel);
-    expect(visible('active')).toContain(ExobiologyPanel);
-    expect(visible('active')).not.toContain(SystemBodiesPanel);
-    expect(visible('urgent', 'exploration')).toContain(SystemBodiesPanel);
-    expect(visible('normal', 'exobiology')).toContain(ExobiologyPanel);
+    expect(layout!.slots.filter((slot) => slot.card === 'exploration-context')).toHaveLength(1);
+    expect(cards['exploration-context'].when).toBeUndefined();
+    const shown = (relevance: string, manual: string | null = null) =>
+      contextPanel([{ id: 'exobiology', relevance }], manual);
+    expect(shown('normal')).toBe('exploration');
+    expect(shown('active')).toBe('exobiology');
+    expect(shown('urgent', 'exploration')).toBe('exploration');
+    expect(shown('normal', 'exobiology')).toBe('exobiology');
   });
   test('contextPanel prefers manual, then active exobiology, else exploration', () => {
     const mods = [
@@ -77,6 +75,10 @@ describe('layouts', () => {
 describe('default exploration layout', () => {
   let target: HTMLElement;
   let instance: Record<string, unknown>;
+  const ctxShows = (which: 'exploration' | 'exobiology') => {
+    const text = target.querySelector('[data-layout-slot="exploration-context"] section')?.textContent ?? '';
+    return text.includes(t(which === 'exobiology' ? 'panel-exobiology' : 'panel-system-bodies'));
+  };
   beforeEach(() => {
     disconnect();
     setLocale('es');
@@ -95,7 +97,7 @@ describe('default exploration layout', () => {
 
   test('defaults to exploration and keeps all four modules manually accessible', () => {
     expect(target.querySelector('[data-layout-slot="route"]')).not.toBeNull();
-    expect(target.querySelector('[data-layout-slot="context-bodies"]')).not.toBeNull();
+    expect(ctxShows('exploration')).toBe(true);
     const buttons = Array.from(target.querySelectorAll('aside button')) as HTMLButtonElement[];
     expect(buttons[0].textContent).toContain('Exploración');
     for (const id of ['dashboard', 'navigation', 'exploration', 'exobiology']) {
@@ -109,16 +111,16 @@ describe('default exploration layout', () => {
 
   test('manual context remains through status updates and resets on the next body change', () => {
     live.topics['core.modules'] = [{ id: 'exobiology', relevance: 'active' }]; flushSync();
-    expect(target.querySelector('[data-layout-slot="context-exobiology"]')).not.toBeNull();
+    expect(ctxShows('exobiology')).toBe(true);
     (target.querySelector('[data-testid="context-bodies"]') as HTMLButtonElement).click(); flushSync();
-    expect(target.querySelector('[data-layout-slot="context-bodies"]')).not.toBeNull();
+    expect(ctxShows('exploration')).toBe(true);
     live.topics['core.status'] = { flags: 0, fuel: 2 }; flushSync();
     live.topics['core.location'] = { system: 'Testia', system_address: 1, body: 'Testia 1', mode: 'Landed' }; flushSync();
-    expect(target.querySelector('[data-layout-slot="context-bodies"]')).not.toBeNull();
+    expect(ctxShows('exploration')).toBe(true);
     live.topics['core.location'] = { system: 'Testia', system_address: 1, body: 'Testia 2' }; flushSync();
-    expect(target.querySelector('[data-layout-slot="context-exobiology"]')).not.toBeNull();
+    expect(ctxShows('exobiology')).toBe(true);
     live.topics['core.location'] = { system: 'Testia', system_address: 1, body: 'Testia 1' }; flushSync();
-    expect(target.querySelector('[data-layout-slot="context-exobiology"]')).not.toBeNull();
+    expect(ctxShows('exobiology')).toBe(true);
   });
 
   test.each([null, 'Testia 1'])('body id resets manual context when core body is %s', (bodyName) => {
@@ -129,9 +131,9 @@ describe('default exploration layout', () => {
     live.topics['core.modules'] = [{ id: 'exobiology', relevance: 'active' }]; flushSync();
     (target.querySelector('[data-testid="context-bodies"]') as HTMLButtonElement).click(); flushSync();
     live.topics['exobiology.body'] = { ...body(1), bio_signals: 2 }; flushSync();
-    expect(target.querySelector('[data-layout-slot="context-bodies"]')).not.toBeNull();
+    expect(ctxShows('exploration')).toBe(true);
     live.topics['exobiology.body'] = body(2); flushSync();
-    expect(target.querySelector('[data-layout-slot="context-exobiology"]')).not.toBeNull();
+    expect(ctxShows('exobiology')).toBe(true);
   });
 
   test('late core body name does not reset manual selection already made for that body id', () => {
@@ -141,10 +143,10 @@ describe('default exploration layout', () => {
     live.topics['core.modules'] = [{ id: 'exobiology', relevance: 'active' }]; flushSync();
     (target.querySelector('[data-testid="context-bodies"]') as HTMLButtonElement).click(); flushSync();
     live.topics['exobiology.body'] = body(2); flushSync();
-    expect(target.querySelector('[data-layout-slot="context-exobiology"]')).not.toBeNull();
+    expect(ctxShows('exobiology')).toBe(true);
     (target.querySelector('[data-testid="context-bodies"]') as HTMLButtonElement).click(); flushSync();
     live.topics['core.location'] = { system: 'Testia', system_address: 1, body: 'Testia 2' }; flushSync();
-    expect(target.querySelector('[data-layout-slot="context-bodies"]')).not.toBeNull();
+    expect(ctxShows('exploration')).toBe(true);
   });
 });
 
@@ -183,7 +185,7 @@ describe('combat and mining layouts', () => {
   beforeEach(() => { disconnect(); });
   afterEach(() => { disconnect(); });
   const visible = (id: string) => layouts.find((l) => l.id === id)!.slots
-    .filter((slot) => !slot.when || slot.when({ modules: [], manual: null }));
+    .filter((slot) => !cards[slot.card].when || cards[slot.card].when!({ modules: [], manual: null }));
 
   test('combat active switches to combat layout', () => {
     expect(autoLayout([{ id: 'combat', relevance: 'active' }], null)).toBe('combat');
@@ -261,7 +263,7 @@ describe('trade and missions layouts', () => {
   afterEach(() => { disconnect(); });
   const m = (id: string, relevance: string) => ({ id, relevance });
   const slotIds = (id: string) => layouts.find((l) => l.id === id)!.slots
-    .filter((s) => !s.when || s.when({ modules: [], manual: null })).map((s) => s.id);
+    .filter((s) => !cards[s.card].when || cards[s.card].when!({ modules: [], manual: null })).map((s) => s.card);
 
   test('missions beats trade', () => {
     expect(autoLayout([m('missions', 'active'), m('trade', 'active')], null)).toBe('missions');
@@ -323,6 +325,10 @@ describe('trade and missions layouts', () => {
 describe('auto-companion OFF', () => {
   let target: HTMLElement;
   let instance: Record<string, unknown>;
+  const ctxShows = (which: 'exploration' | 'exobiology') => {
+    const text = target.querySelector('[data-layout-slot="exploration-context"] section')?.textContent ?? '';
+    return text.includes(t(which === 'exobiology' ? 'panel-exobiology' : 'panel-system-bodies'));
+  };
   const slot = (id: string) => target.querySelector(`[data-layout-slot="${id}"]`);
   beforeEach(() => {
     disconnect(); setLocale('es'); prefs.autoCompanion = true;
@@ -365,12 +371,11 @@ describe('auto-companion OFF', () => {
   test('OFF keeps the context panel when exobiology becomes active, even across body changes', () => {
     prefs.autoCompanion = false; flushSync();
     live.topics['core.modules'] = [{ id: 'exobiology', relevance: 'active' }]; flushSync();
-    expect(slot('context-bodies')).not.toBeNull();
-    expect(slot('context-exobiology')).toBeNull();
+    expect(ctxShows('exploration')).toBe(true);
     (target.querySelector('[data-testid="context-exobiology"]') as HTMLButtonElement).click(); flushSync();
     live.topics['core.location'] = { system: 'Testia', system_address: 1, body: 'Testia 2' };
     live.topics['core.modules'] = [{ id: 'exobiology', relevance: 'normal' }]; flushSync();
-    expect(slot('context-exobiology')).not.toBeNull();
+    expect(ctxShows('exobiology')).toBe(true);
   });
 
   test('OFF with a manual pin keeps it and OFF->ON engages the auto layout immediately', () => {
@@ -415,11 +420,11 @@ describe('engineering layout', () => {
   test('engineering slots and flow visibility follow selected slot, including idle drafts', () => {
     const layout = layouts.find((l) => l.id === 'engineering')!;
     expect(layout).toMatchObject({ titleKey: 'layout-engineering', icon: 'wrench' });
-    expect(layout.slots.map(({ id, span }) => [id, span])).toEqual([
+    expect(layout.slots.map(({ card, width }) => [card, width])).toEqual([
       ['materials', 2], ['engineers', 1], ['eng-alerts', 1], ['eng-ship', 1],
       ['eng-flow', 2], ['shopping', 2], ['trades', 1], ['sources', 1],
     ]);
-    const flow = layout.slots.find((s) => s.id === 'eng-flow')!;
+    const flow = cards['eng-flow'];
     const ctx = { modules: [], manual: null };
     expect(flow.when!(ctx)).toBe(false);
     live.topics['engineering.flow'] = { status: 'idle', slot: null };

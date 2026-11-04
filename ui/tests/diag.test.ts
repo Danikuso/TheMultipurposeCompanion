@@ -324,7 +324,7 @@ describe('ui diagnostics', () => {
       for (const m of src.matchAll(/titleKey="([a-z0-9-]+)"/g)) titleKeys.add(m[1]);
     }
     expect([...titleKeys].sort()).toEqual(rustList('UI_PANELS'));
-    const slots = [...layoutsSrc.matchAll(/\{ id: '([a-z-]+)', panel:/g)].map((m) => m[1]).sort();
+    const slots = [...new Set([...layoutsSrc.matchAll(/\{ card: '([a-z-]+)', width:/g)].map((m) => m[1]))].sort();
     expect(slots).toEqual(rustList('UI_SLOTS'));
     const layoutIds = [...layoutsSrc.matchAll(/^\s{2}id: '([a-z-]+)',/gm)].map((m) => m[1]);
     expect(rustList('UI_LAYOUTS')).toEqual(['none', ...layoutIds].sort());

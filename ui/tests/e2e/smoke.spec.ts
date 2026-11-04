@@ -19,7 +19,7 @@ test('default exploration layout shows route and bodies from real replay without
     timeout: 15_000,
   });
   const route = page.locator('[data-layout-slot="route"]');
-  const bodies = page.locator('[data-layout-slot="context-bodies"]');
+  const bodies = page.locator('[data-layout-slot="exploration-context"]');
   await expect(route).toBeVisible();
   await expect(bodies).toBeVisible();
   await expect(bodies.getByRole('table')).toBeVisible();

@@ -4,6 +4,7 @@ import { flushSync, mount, unmount } from 'svelte';
 import { disconnect, live } from '../src/lib/ws.svelte';
 import { setLocale } from '../src/lib/i18n';
 import { modules } from '../src/modules/registry';
+import { cards } from '../src/shell/cards';
 import { layouts } from '../src/shell/layouts';
 import MiningTargetsPanel from '../src/modules/mining/MiningTargetsPanel.svelte';
 import type {
@@ -144,13 +145,14 @@ describe('MiningTargetsPanel', () => {
   test('is registered in both Minería module and Minería layout', () => {
     const miningMod = modules.find((m) => m.id === 'mining');
     expect(miningMod).toBeDefined();
-    expect(miningMod?.panels).toContain(MiningTargetsPanel);
+    expect(miningMod?.cards).toContain('mining-targets');
+    expect(cards['mining-targets'].component).toBe(MiningTargetsPanel);
 
     const miningLayout = layouts.find((l) => l.id === 'mining');
     expect(miningLayout).toBeDefined();
     expect(
       miningLayout?.slots.some(
-        (s) => s.id === 'mining-targets' && s.panel === MiningTargetsPanel && s.span === 2,
+        (s) => s.card === 'mining-targets' && s.width === 2,
       ),
     ).toBe(true);
   });
