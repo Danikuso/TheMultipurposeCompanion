@@ -46,19 +46,23 @@
 ><div class="card-content">{@render prefix?.()}{#if !ghost}<Card {ctx} />{/if}</div></div>
 
 <style>
+  /* El contenido rellena el marco (alto de la fila o alto fijo) para que las filas queden alineadas. */
   .card-frame {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
     min-width: 0;
   }
 
   /* Componentes que se ocultan solos: fuera de edición el marco no ocupa sitio ni gap. */
   .card-frame:not(.editing):has(> .card-content:empty) {
     display: none;
-  }
-
-  .card-frame.fixed > .card-content {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
   }
 </style>

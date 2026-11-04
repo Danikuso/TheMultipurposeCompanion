@@ -249,7 +249,7 @@
     overflow: hidden;
   }
 
-  .context-controls { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .context-controls { display: flex; flex-shrink: 0; gap: 0.5rem; margin-bottom: 0.5rem; }
   .context-controls button { background: var(--hud-surface); color: var(--hud-text); border: 1px solid var(--hud-border); padding: 0.4rem 0.6rem; }
   .context-controls button[aria-pressed='true'] { color: var(--hud-primary); border-color: var(--hud-primary); }
 </style>

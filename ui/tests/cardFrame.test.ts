@@ -11,6 +11,8 @@ import { layoutState } from '../src/shell/layoutStore.svelte';
 import { emptyDoc } from '../src/shell/layoutModel';
 import PanelCard from './fixtures/PanelCard.svelte';
 import EmptyCard from './fixtures/EmptyCard.svelte';
+import frameSrc from '../src/shell/CardFrame.svelte?raw';
+import panelSrc from '../src/shell/Panel.svelte?raw';
 
 vi.mock('../src/lib/ws.svelte', async (original) => ({
   ...(await original<typeof import('../src/lib/ws.svelte')>()),
@@ -84,6 +86,25 @@ describe('CardFrame', () => {
     expect(el.style.gridColumn).toContain('span 1');
   });
 
+  test('auto-height panel stretches to fill its frame', () => {
+    const el = frame({ id: 'test-card', w: 1, h: null }, def(PanelCard), 2);
+    const content = el.firstElementChild as HTMLElement;
+    const section = content.querySelector('section') as HTMLElement;
+    expect(section.classList.contains('in-frame')).toBe(true);
+    expect(section.classList.contains('fixed-height')).toBe(false);
+    // jsdom no aplica CSS: se verifica la cadena de estiramiento en las reglas de los componentes.
+    const rule = (src: string, selector: string) => {
+      const esc = selector.replaceAll('.', '\\.');
+      return new RegExp(String.raw`(^|\n)\s*${esc}\s*\{([^}]*)\}`).exec(src)?.[2] ?? '';
+    };
+    expect(rule(frameSrc, '.card-frame')).toMatch(/display:\s*flex/);
+    expect(rule(frameSrc, '.card-frame')).toMatch(/flex-direction:\s*column/);
+    expect(rule(frameSrc, '.card-content')).toMatch(/flex:\s*1/);
+    expect(rule(frameSrc, '.card-content')).toMatch(/display:\s*flex/);
+    expect(rule(frameSrc, '.card-content')).toMatch(/min-height:\s*0/);
+    expect(rule(panelSrc, '.hud-panel.in-frame')).toMatch(/flex:\s*1/);
+  });
+
   test('panel outside frame keeps span', () => {
     inst = mount(Panel, { target, props: { titleKey: 'panel-route', span: 2 } });
     flushSync();
@@ -105,7 +126,7 @@ describe('CardFrame', () => {
     expect(significant).toHaveLength(0);
   });
 
-  test('virtual list grows with fixed card height', () => {
+  test('virtual list grows with fixed card height, fitting the measured space without body overflow', () => {
     const rows = Array.from({ length: 60 }, (_, i) => ({
       body_id: i, short_name: `${i} a`, kind_key: 'rocky-ice', distance_ls: 10, scanned_value: 1, mapped_value: 2,
     }));
@@ -113,16 +134,39 @@ describe('CardFrame', () => {
       system: 'Testia', system_address: 1, discovered: false,
       fss: { progress: 1, body_count: 60, scanned: 60, complete: true }, rows,
     };
-    const bodies = cards['exploration-system-bodies'];
-    const listPx = () => parseFloat(
-      (target.querySelector('[data-testid="virtual-list"]') as HTMLElement).style.height,
-    );
-    frame({ id: bodies.id, w: 'full', h: null }, bodies, 2);
-    const auto = listPx();
-    unmount(inst!);
-    inst = null;
-    frame({ id: bodies.id, w: 'full', h: 1200 }, bodies, 2);
-    expect(listPx()).toBeGreaterThan(auto);
+    // Maqueta de layout: cuerpo del panel de 1160 px, 520 px de contenido encima de la lista y 60 px debajo.
+    const BODY = 1160;
+    const ABOVE = 520;
+    const BELOW = 60;
+    const listOf = () => target.querySelector('[data-testid="virtual-list"]') as HTMLElement;
+    const listPx = () => parseFloat(listOf().style.height) || 0;
+    const isBody = (el: Element) => el.classList.contains('hud-panel-body');
+    const rect = (top: number, height: number) =>
+      ({ top, height, bottom: top + height, left: 0, right: 0, width: 0, x: 0, y: top, toJSON: () => ({}) }) as DOMRect;
+    vi.spyOn(Element.prototype, 'clientHeight', 'get').mockImplementation(function (this: Element) {
+      return isBody(this) ? BODY : 0;
+    });
+    vi.spyOn(Element.prototype, 'scrollHeight', 'get').mockImplementation(function (this: Element) {
+      return isBody(this) ? ABOVE + listPx() + BELOW : 0;
+    });
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      if (isBody(this)) return rect(40, BODY);
+      if (this.getAttribute('data-testid') === 'virtual-list') return rect(40 + ABOVE, listPx());
+      return rect(0, 0);
+    });
+    try {
+      const bodies = cards['exploration-system-bodies'];
+      frame({ id: bodies.id, w: 'full', h: null }, bodies, 2);
+      const auto = listPx();
+      unmount(inst!);
+      inst = null;
+      frame({ id: bodies.id, w: 'full', h: 1200 }, bodies, 2);
+      flushSync();
+      expect(listPx()).toBeGreaterThan(auto);
+      expect(ABOVE + listPx() + BELOW).toBeLessThanOrEqual(BODY);
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 });
 

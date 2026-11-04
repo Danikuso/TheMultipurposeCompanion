@@ -249,12 +249,12 @@
   .hud-panel.in-frame {
     width: 100%;
     min-width: 0;
+    flex: 1 1 auto;
   }
 
   /* Alto fijo impuesto por el marco: el cuerpo ocupa el espacio y solo hace scroll si desborda. */
   .hud-panel.fixed-height {
     height: 100%;
-    flex: 1 1 auto;
     min-height: 0;
   }
 
