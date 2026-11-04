@@ -262,6 +262,8 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    /* Más contraste: en un marco de alto fijo la barra es la señal de que hay más contenido. */
+    scrollbar-color: rgba(255, 113, 0, 0.8) rgba(255, 255, 255, 0.08);
   }
 
   .hud-panel.fixed-height .details-content {

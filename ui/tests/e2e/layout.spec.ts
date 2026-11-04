@@ -212,6 +212,9 @@ test('narrow window clamps width and restores when widened', async () => {
   await page.setViewportSize({ width: 1700, height: 900 });
   await expect(slot('engineers')).toBeAttached();
   await startEdit();
+  // Los anchos que no caben desde la columna de inicio están deshabilitados: primero a la columna 0.
+  const left = slot('engineers').locator('[data-op="left"]');
+  for (let i = 0; i < 3 && (await left.isEnabled()); i++) await left.click();
   await slot('engineers').locator('[data-op="width-3"]').click();
   await finishEdit();
   await expect.poll(() => spanOf(slot('engineers'))).toBe(3);
@@ -550,4 +553,28 @@ test('CA-16 catalog and new-tab dialog open, scroll and respond without long tas
     await expect(page.getByTestId('custom-tab-dialog')).toHaveCount(0);
   });
   expect(dialogMax).toBeLessThanOrEqual(100);
+});
+
+test('M1 fixed-height cards scroll their body when the content overflows and show no bar when it fits', async () => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await openCustom(tabName); // T[] son las siete tarjetas de CA-12, todas de alto fijo 160
+  await expect(slot(T[0])).toBeAttached();
+  const bodies = await page.evaluate((ids) => ids.map((id) => {
+    const b = document.querySelector(`[data-layout-slot="${id}"] .hud-panel-body`) as HTMLElement | null;
+    return b ? { id, sh: b.scrollHeight, ch: b.clientHeight, oy: getComputedStyle(b).overflowY } : null;
+  }), T);
+  const found = bodies.filter((b) => b !== null);
+  expect(found.length).toBeGreaterThan(0);
+  const overflowing = found.filter((b) => b.sh > b.ch);
+  const fitting = found.filter((b) => b.sh <= b.ch);
+  expect(overflowing.length, 'at least one 160 px card overflows').toBeGreaterThan(0);
+  expect(fitting.length, 'at least one 160 px card fits').toBeGreaterThan(0);
+  for (const b of found) expect(b.oy, `${b.id} overflow-y`).toBe('auto');
+  const target = overflowing[0];
+  const body = slot(target.id).locator('.hud-panel-body');
+  await body.hover();
+  await page.mouse.wheel(0, 300);
+  await expect.poll(() => body.evaluate((el) => el.scrollTop), `${target.id} scrolls`).toBeGreaterThan(0);
+  // El marco mantiene su alto fijo: el desbordamiento se desplaza dentro, no estira la tarjeta.
+  expect(await heightPx(content(target.id))).toBe(160);
 });
