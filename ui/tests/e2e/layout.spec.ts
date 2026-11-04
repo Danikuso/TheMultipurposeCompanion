@@ -14,6 +14,16 @@ test.beforeAll(async ({ browser }, info) => {
   baseURL = String(info.project.use.baseURL);
   context = await browser.newContext({ baseURL });
   page = await context.newPage();
+  // Observador de tareas largas instalado antes de cualquier navegación y con referencia global
+  // (si no, el recolector lo descarta y la tarea de arranque de la página daría un falso fallo).
+  await page.addInitScript(() => {
+    const entries: { start: number; dur: number }[] = [];
+    const obs = new PerformanceObserver((list) => {
+      for (const e of list.getEntries()) entries.push({ start: e.startTime, dur: e.duration });
+    });
+    obs.observe({ type: 'longtask', buffered: true });
+    (window as unknown as { __lt: unknown }).__lt = { obs, entries };
+  });
   // Cualquier diálogo no esperado se descarta y se registra; cada test comprueba que no hubo ninguno.
   page.on('dialog', (d) => {
     unexpectedDialogs.push(`${d.type()}: ${d.message()}`);
@@ -330,4 +340,208 @@ test('enlarging engineers card shows more engineer rows', async () => {
   const large = await visibleRows();
   expect(large).toBeGreaterThan(small);
   await page.getByTestId('layout-cancel').click();
+});
+
+// ---------------------------------------------------------------------------------------------
+// Enmienda A (rejilla libre, catálogo múltiple y fluidez): CA-12 … CA-16.
+// ---------------------------------------------------------------------------------------------
+
+type Geo = Awaited<ReturnType<typeof boardGeometry>>;
+type Frame = Geo['frames'][number];
+
+/** Ningún par de marcos visibles se cruza (con 1 px de tolerancia). */
+function expectNoOverlap(frames: Frame[]) {
+  const vis = frames.filter((f) => f.w > 0 && f.h > 0);
+  for (let i = 0; i < vis.length; i++) {
+    for (let j = i + 1; j < vis.length; j++) {
+      const a = vis[i];
+      const b = vis[j];
+      const crossX = a.x < b.x + b.w - 1 && b.x < a.x + a.w - 1;
+      const crossY = a.y < b.y + b.h - 1 && b.y < a.y + a.h - 1;
+      expect(crossX && crossY, `${a.id} overlaps ${b.id}`).toBe(false);
+    }
+  }
+}
+
+const box = async (id: string) => (await slot(id).boundingBox())!;
+
+/** Columna (0-based) que ocupa un marco según la geometría ya asentada. */
+async function columnOf(id: string) {
+  const g = await settledGeometry();
+  const f = g.frames.find((x) => x.id === id)!;
+  return Math.round((f.x - g.left) / (g.colW + g.gap));
+}
+
+/** Pulsa ← / → hasta dejar la tarjeta en la columna pedida. */
+async function moveToColumn(id: string, target: number) {
+  for (let i = 0; i < 6; i++) {
+    const col = await columnOf(id);
+    if (col === target) return;
+    await slot(id).locator(col < target ? '[data-op="right"]' : '[data-op="left"]').click();
+  }
+  expect(await columnOf(id), `${id} column`).toBe(target);
+}
+
+/** Alto fijo mínimo (160 px) para que la geometría no dependa de los datos. */
+async function fixHeight(id: string) {
+  const less = slot(id).locator('[data-op="height-less"]');
+  for (let i = 0; i < 60 && (await heightPx(content(id))) !== 160; i++) await less.click();
+  expect(await heightPx(content(id))).toBe(160);
+}
+
+const SEVEN = ['dashboard-cmdr', 'dashboard-location', 'dashboard-status', 'dashboard-route', 'dashboard-session', 'dashboard-alerts', 'jump'];
+let tabName = '';
+let T: string[] = [];
+
+async function newCustomTab(name: string) {
+  await page.getByTestId('custom-tab-new').click();
+  await expect(page.getByTestId('custom-tab-dialog')).toBeVisible();
+  await page.getByTestId('custom-tab-name').fill(name);
+  await page.getByTestId('custom-tab-submit').click();
+  await expect(page.getByTestId('custom-tab-dialog')).toHaveCount(0);
+}
+
+const openCustom = async (name: string) => {
+  await page.locator('button.nav-btn[data-custom]').filter({ hasText: name }).click();
+};
+
+test('CA-12 free grid: seven cards added at once and arranged as T1 T2 T3 / T4 T5 / T6 / T7, kept after reload', async () => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  tabName = 'Rejilla';
+  await newCustomTab(tabName);
+  // La nueva pestaña abre el catálogo en edición: se marcan las siete de una vez.
+  for (const id of SEVEN) await page.locator(`[data-catalog-entry="${id}"] input`).check();
+  await expect(page.getByTestId('catalog-add')).toContainText('7');
+  await page.getByTestId('catalog-add').click();
+  await expect(page.getByTestId('catalog-add')).toHaveCount(0);
+  T = await slotIds();
+  expect([...T].sort()).toEqual([...SEVEN].sort());
+  for (const id of T) {
+    await slot(id).locator('[data-op="width-1"]').click();
+    await fixHeight(id);
+  }
+  const cols = [0, 1, 2, 0, 1, 0, 0];
+  for (let i = 0; i < T.length; i++) await moveToColumn(T[i], cols[i]);
+  await finishEdit();
+  await page.reload();
+  await openCustom(tabName);
+  await expect(slot(T[0])).toBeAttached();
+  const g = await settledGeometry();
+  expect(g.columns).toBe(3);
+  expectNoOverlap(g.frames);
+  const b = Object.fromEntries(await Promise.all(T.map(async (id, i) => [`T${i + 1}`, await box(id)])));
+  const below = (lo: string, hi: string) => {
+    expect(Math.abs(b[lo].x - b[hi].x), `${lo}/${hi} x`).toBeLessThanOrEqual(2);
+    expect(b[lo].y, `${lo} below ${hi}`).toBeGreaterThanOrEqual(b[hi].y + b[hi].height - 1);
+  };
+  below('T4', 'T1');
+  below('T5', 'T2');
+  below('T6', 'T4');
+  below('T7', 'T6');
+  expect(b.T3.x).toBeGreaterThan(b.T2.x + b.T2.width - 1);
+  expect(Math.abs(b.T3.y - b.T1.y)).toBeLessThanOrEqual(2);
+});
+
+test('CA-14 resize handle sits at the bottom-right corner of its own card', async () => {
+  await startEdit();
+  const g = await settledGeometry();
+  expect(g.frames.length).toBeGreaterThanOrEqual(7);
+  for (const f of g.frames) {
+    const fb = await box(f.id);
+    const hb = (await slot(f.id).locator('[data-op="resize"]').boundingBox())!;
+    expect(hb.x, `${f.id} left`).toBeGreaterThanOrEqual(fb.x - 1);
+    expect(hb.y, `${f.id} top`).toBeGreaterThanOrEqual(fb.y - 1);
+    expect(hb.x + hb.width, `${f.id} right`).toBeLessThanOrEqual(fb.x + fb.width + 1);
+    expect(hb.y + hb.height, `${f.id} bottom`).toBeLessThanOrEqual(fb.y + fb.height + 1);
+    expect(fb.x + fb.width - (hb.x + hb.width), `${f.id} dx`).toBeLessThanOrEqual(4);
+    expect(fb.y + fb.height - (hb.y + hb.height), `${f.id} dy`).toBeLessThanOrEqual(4);
+  }
+});
+
+test('CA-13 resizing a card never moves the card on its left', async () => {
+  // Continúa en edición (test anterior): T1 queda a la izquierda de T2.
+  const t1 = (await settledGeometry()).frames.find((f) => f.id === T[0])!;
+  for (let i = 0; i < 2; i++) await slot(T[1]).locator('[data-op="height-more"]').click();
+  const g0 = await settledGeometry();
+  const t2 = g0.frames.find((f) => f.id === T[1])!;
+  const hb = (await slot(T[1]).locator('[data-op="resize"]').boundingBox())!;
+  const x0 = hb.x + hb.width / 2;
+  const y0 = hb.y + hb.height / 2;
+  await page.mouse.move(x0, y0);
+  await page.mouse.down();
+  await page.mouse.move(x0 + g0.colW + g0.gap, y0, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(() => spanOf(slot(T[1]))).toBe(2);
+  const after = await settledGeometry();
+  const t1b = after.frames.find((f) => f.id === T[0])!;
+  for (const k of ['x', 'y', 'w', 'h'] as const) expect(Math.abs(t1b[k] - t1[k]), `T1 ${k}`).toBeLessThanOrEqual(1);
+  expect(after.frames.find((f) => f.id === T[1])!.h).toBeGreaterThan(t2.h - 1);
+  expectNoOverlap(after.frames);
+  await page.getByTestId('layout-cancel').click();
+  await expect(page.getByTestId('edit-toolbar')).toHaveCount(0);
+});
+
+test('CA-15 catalog adds three checked cards with a single click', async () => {
+  await newCustomTab('Tres');
+  const ids = ['dashboard-cmdr', 'dashboard-status', 'jump'];
+  for (const id of ids) await page.locator(`[data-catalog-entry="${id}"] input`).check();
+  await expect(page.getByTestId('catalog-add')).toContainText('3');
+  await page.getByTestId('catalog-add').click();
+  await expect(page.getByTestId('catalog-add')).toHaveCount(0);
+  expect([...(await slotIds())].sort()).toEqual([...ids].sort());
+  await finishEdit();
+});
+
+test('Focus 1 and 2: engineering with replay data has no overlapping frames outside edit', async () => {
+  await openEngineering();
+  await expect(content('engineers')).toBeVisible();
+  const g = await settledGeometry();
+  expect(g.frames.length).toBeGreaterThanOrEqual(5);
+  expectNoOverlap(g.frames);
+  // Desplegar los detalles hace crecer el contenido fuera de edición: se reempaqueta sin solapes.
+  const toggle = slot('engineers').locator('.panel-header-toggle').first();
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+  expectNoOverlap((await settledGeometry()).frames);
+});
+
+/** Máximo de tareas largas cuyo inicio cae entre dos marcas de `performance.now()`. */
+async function longtaskMax(step: () => Promise<void>) {
+  expect(await page.evaluate(() => typeof (window as unknown as { __lt?: unknown }).__lt)).toBe('object');
+  const t0 = await page.evaluate(() => performance.now());
+  await step();
+  await page.waitForTimeout(300);
+  const t1 = await page.evaluate(() => performance.now());
+  const durs = await page.evaluate(
+    ([a, b]) => (window as unknown as { __lt: { entries: { start: number; dur: number }[] } }).__lt.entries
+      .filter((e) => e.start >= a && e.start <= b).map((e) => e.dur),
+    [t0, t1],
+  );
+  return Math.max(0, ...durs);
+}
+
+test('CA-16 catalog and new-tab dialog open, scroll and respond without long tasks', async () => {
+  await openCustom('Tres');
+  await startEdit();
+  const catalogMax = await longtaskMax(async () => {
+    await page.getByTestId('layout-add').click();
+    const list = page.locator('.catalog-list');
+    await expect(list).toBeVisible();
+    await list.evaluate((el) => { el.scrollTop = el.scrollHeight; });
+    await page.waitForTimeout(100);
+    await list.evaluate((el) => { el.scrollTop = 0; });
+    const free = page.locator('[data-catalog-entry] input:not(:disabled):not(:checked)');
+    for (let i = 0; i < 5; i++) await free.first().check();
+  });
+  console.log(`longtask max catalog: ${catalogMax.toFixed(0)} ms`);
+  expect(catalogMax).toBeLessThanOrEqual(100);
+  await page.getByTestId('catalog-cancel').click();
+  await page.getByTestId('layout-cancel').click();
+  const dialogMax = await longtaskMax(async () => {
+    await page.getByTestId('custom-tab-new').click();
+    await expect(page.getByTestId('custom-tab-dialog')).toBeVisible();
+    await page.getByTestId('custom-tab-cancel').click();
+    await expect(page.getByTestId('custom-tab-dialog')).toHaveCount(0);
+  });
+  console.log(`longtask max tab dialog: ${dialogMax.toFixed(0)} ms`);
+  expect(dialogMax).toBeLessThanOrEqual(100);
 });
