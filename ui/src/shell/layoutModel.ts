@@ -23,6 +23,8 @@ export interface LayoutDoc {
 }
 export type CardOp =
   | { kind: 'move'; to: number }
+  | { kind: 'place'; to: number; x: number }
+  | { kind: 'column'; x: number }
   | { kind: 'width'; w: CardWidth }
   | { kind: 'height'; h: number | null }
   | { kind: 'remove' };
@@ -53,7 +55,9 @@ export function sanitizePlacements(list: unknown, known: Known, widthOf: WidthOf
     seen.add(id);
     const w = isWidth(item.w) ? item.w : widthOf(id);
     const h = typeof item.h === 'number' && Number.isFinite(item.h) && item.h >= H_MIN ? snapHeight(item.h) : null;
-    out.push({ id, w, h });
+    const placement: CardPlacement = { id, w, h };
+    if (typeof item.x === 'number' && Number.isInteger(item.x) && item.x >= 0 && item.x <= 3) placement.x = item.x;
+    out.push(placement);
   }
   return out;
 }
@@ -86,6 +90,15 @@ export function applyCardOp(list: CardPlacement[], index: number, op: CardOp): C
       next.splice(clamp(op.to, 0, next.length), 0, item);
       return next;
     }
+    case 'place': {
+      const [item] = next.splice(index, 1);
+      item.x = op.x;
+      next.splice(clamp(op.to, 0, next.length), 0, item);
+      return next;
+    }
+    case 'column':
+      next[index].x = op.x;
+      return next;
     case 'width':
       next[index].w = op.w;
       return next;
@@ -238,16 +251,107 @@ export function dropIndex(
 
 export function snapResize(
   start: { w: CardWidth; h: number | null; heightPx: number }, dx: number, dy: number,
-  colWidthPx: number, gapPx: number, columns: number,
+  colWidthPx: number, gapPx: number, columns: number, maxSpan?: number,
 ): { w: CardWidth; h: number | null } {
   // El valor guardado solo cambia si cambia el ancho efectivo: ajustar el alto o un clic no lo tocan.
   let w: CardWidth = start.w;
   if (dx !== 0) {
     const cur = effectiveWidth(start.w, columns);
     const currentPx = cur * colWidthPx + (cur - 1) * gapPx;
-    const n = clamp(Math.round((currentPx + dx) / (colWidthPx + gapPx)), 1, columns);
+    const n = clamp(Math.round((currentPx + dx) / (colWidthPx + gapPx)), 1, Math.max(1, maxSpan ?? columns));
     if (n !== cur) w = n === columns && columns >= 2 ? 'full' : (n as 1 | 2 | 3);
   }
   const h = dy === 0 ? start.h : snapHeight(start.heightPx + dy);
   return { w, h };
+}
+
+export interface PackItem { id: string; x?: number | null; w: CardWidth; height: number }
+export interface PackedCard { id: string; col: number; span: number; top: number; height: number }
+
+const hasX = (x: unknown): x is number => typeof x === 'number' && Number.isInteger(x);
+
+/** Empaquetado con gravedad vertical: cada tarjeta conserva su columna de inicio y sube hasta tocar a otra. */
+export function packLayout(
+  items: PackItem[], columns: number, gapPx: number,
+): { cards: PackedCard[]; height: number } {
+  const bottoms: number[] = new Array(Math.max(1, columns)).fill(0);
+  const cards: PackedCard[] = [];
+  let height = 0;
+  const topAt = (col: number, span: number) => {
+    let top = 0;
+    for (let c = col; c < col + span; c++) top = Math.max(top, bottoms[c]);
+    return top;
+  };
+  for (const it of items) {
+    const span = effectiveWidth(it.w, columns);
+    let col = 0;
+    if (it.w !== 'full') {
+      if (hasX(it.x)) col = clamp(it.x, 0, columns - span);
+      else {
+        let best = Infinity;
+        for (let c = 0; c + span <= columns; c++) {
+          const t = topAt(c, span);
+          if (t < best) { best = t; col = c; }
+        }
+      }
+    }
+    const top = topAt(col, span);
+    cards.push({ id: it.id, col, span, top, height: it.height });
+    if (it.height > 0) {
+      for (let c = col; c < col + span; c++) bottoms[c] = top + it.height + gapPx;
+      height = Math.max(height, top + it.height);
+    }
+  }
+  return { cards, height };
+}
+
+/** Fija la columna calculada de las tarjetas automáticas; las que ya tienen `x` la conservan (aunque esté recortada). */
+export function pinColumns(list: CardPlacement[], packed: PackedCard[]): CardPlacement[] {
+  const byId = new Map(packed.map((c) => [c.id, c]));
+  return list.map((c) => {
+    const p = byId.get(c.id);
+    return hasX(c.x) || !p ? { ...c } : { ...c, x: p.col };
+  });
+}
+
+/** Ordena de forma estable por (top, col) del empaquetado; las que no están empaquetadas van al final. */
+export function normalizeOrder(list: CardPlacement[], packed: PackedCard[]): CardPlacement[] {
+  const byId = new Map(packed.map((c) => [c.id, c]));
+  const known = list.filter((c) => byId.has(c.id));
+  const rest = list.filter((c) => !byId.has(c.id));
+  known.sort((a, b) => {
+    const pa = byId.get(a.id)!;
+    const pb = byId.get(b.id)!;
+    return pa.top - pb.top || pa.col - pb.col;
+  });
+  return [...known, ...rest].map((c) => ({ ...c }));
+}
+
+/** Índice de la tarjeta anterior (-1) o siguiente (+1) de la lista que comparte columna; null si no hay. */
+export function verticalNeighbor(
+  list: CardPlacement[], packed: PackedCard[], index: number, dir: -1 | 1,
+): number | null {
+  const byId = new Map(packed.map((c) => [c.id, c]));
+  const me = list[index] && byId.get(list[index].id);
+  if (!me) return null;
+  for (let i = index + dir; i >= 0 && i < list.length; i += dir) {
+    const o = byId.get(list[i].id);
+    if (o && o.col < me.col + me.span && me.col < o.col + o.span) return i;
+  }
+  return null;
+}
+
+/** Columna de inicio más cercana al borde izquierdo arrastrado e índice de inserción en la lista sin la tarjeta. */
+export function dropTarget(
+  dragged: { id: string; span: number; leftPx: number; topPx: number },
+  list: CardPlacement[], packed: PackedCard[], colWidthPx: number, gapPx: number, columns: number,
+): { x: number; index: number } {
+  const x = clamp(Math.round(dragged.leftPx / (colWidthPx + gapPx)), 0, Math.max(0, columns - dragged.span));
+  const byId = new Map(packed.map((c) => [c.id, c]));
+  const others = list.filter((c) => c.id !== dragged.id);
+  const found = others.findIndex((c) => {
+    const p = byId.get(c.id);
+    return p !== undefined && p.top >= dragged.topPx;
+  });
+  return { x, index: found === -1 ? others.length : found };
 }

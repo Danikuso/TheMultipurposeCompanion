@@ -50,7 +50,7 @@ export interface CardDef {
   when?: (ctx: LayoutCtx) => boolean;
 }
 
-export interface CardPlacement { id: string; w: CardWidth; h: number | null }
+export interface CardPlacement { id: string; x?: number | null; w: CardWidth; h: number | null }
 
 const axVisible = () => {
   const ax = topic<{ active?: boolean; presence?: boolean } | null>('combat.ax');

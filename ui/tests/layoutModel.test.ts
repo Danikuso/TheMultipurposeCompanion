@@ -3,7 +3,8 @@ import type { CardPlacement, CardWidth } from '../src/shell/cards';
 import {
   CUSTOM_TAB_ICONS, addToCustom, addToThemed, applyCardOp, columnsForWidth, createCustomTab, deleteCustomTab, dropIndex,
   effectiveWidth, emptyDoc, mergeWithDefaults, moveCustomTab, normalizeTabName, parseLayoutDoc,
-  removeFromThemed, sanitizePlacements, snapHeight, snapResize, updateCustomTab, visibleCards,
+  removeFromThemed, sanitizePlacements, packLayout, pinColumns, normalizeOrder, verticalNeighbor, dropTarget,
+  type PackItem, snapHeight, snapResize, updateCustomTab, visibleCards,
   type LayoutDoc,
 } from '../src/shell/layoutModel';
 
@@ -204,5 +205,117 @@ describe('snapResize conserva el ancho si las columnas no cambian', () => {
   });
   test("w:1 a 3 columnas arrastrando dos columnas pasa a 'full'", () => {
     expect(snapResize(s(1), 2 * 314, 0, 300, 14, 3).w).toBe('full');
+  });
+});
+
+describe('rejilla libre', () => {
+  const xs = [0, 1, 2, 0, 1, 0, 0];
+  const hs = [200, 120, 300, 160, 200, 160, 160];
+  const items = (over: Partial<PackItem>[] = []): PackItem[] =>
+    xs.map((x, i) => ({ id: `T${i + 1}`, x, w: 1, height: hs[i], ...(over[i] ?? {}) }));
+  const tops = (r: { cards: { top: number }[] }) => r.cards.map((c) => c.top);
+
+  test('packLayout owner example', () => {
+    const r = packLayout(items(), 3, 0);
+    expect(tops(r)).toEqual([0, 0, 0, 200, 120, 360, 520]);
+    expect(r.cards.map((c) => c.col)).toEqual(xs);
+    expect(r.height).toBe(680);
+  });
+  test('packLayout taller T2 only moves T5', () => {
+    const r = packLayout(items([{}, { height: 240 }]), 3, 0);
+    expect(tops(r)).toEqual([0, 0, 0, 200, 240, 360, 520]);
+  });
+  test('packLayout wider T2 pushes T3 and T5 but never T1', () => {
+    const r = packLayout(items([{}, { w: 2 }]), 3, 0);
+    expect(r.cards[1]).toMatchObject({ col: 1, span: 2, top: 0 });
+    expect(r.cards[2]).toMatchObject({ col: 2, top: 120 });
+    expect(r.cards[4]).toMatchObject({ col: 1, top: 120 });
+    expect(r.cards[0]).toMatchObject({ col: 0, top: 0 });
+  });
+  test('packLayout masonry for automatic x', () => {
+    const r = packLayout([300, 100, 100].map((height, i) => ({ id: `a${i}`, w: 1 as const, height })), 2, 0);
+    expect(r.cards.map((c) => [c.col, c.top])).toEqual([[0, 0], [1, 0], [1, 100]]);
+  });
+  test('packLayout clamps x without touching it', () => {
+    const input: PackItem = { id: 'a', x: 2, w: 2, height: 100 };
+    const r = packLayout([input], 3, 0);
+    expect(r.cards[0].col).toBe(1);
+    expect(input.x).toBe(2);
+  });
+  test('packLayout full width starts at 0', () => {
+    const r = packLayout([{ id: 'a', x: 2, w: 'full', height: 100 }], 3, 0);
+    expect(r.cards[0]).toMatchObject({ col: 0, span: 3 });
+  });
+  test('packLayout zero height takes no space nor gap', () => {
+    const r = packLayout([
+      { id: 'A', x: 0, w: 1, height: 100 }, { id: 'B', x: 0, w: 1, height: 0 }, { id: 'C', x: 0, w: 1, height: 50 },
+    ], 3, 10);
+    expect(r.cards[2].top).toBe(110);
+    expect(r.height).toBe(160);
+    expect(packLayout([{ id: 'A', w: 1, height: 0 }], 2, 0).height).toBe(0);
+  });
+  test('packLayout one column stacks in list order', () => {
+    const r = packLayout(items(), 1, 0);
+    expect(tops(r)).toEqual([0, 200, 320, 620, 780, 980, 1140]);
+  });
+  test('normalizeOrder keeps the layout', () => {
+    const base = packLayout(items(), 3, 0);
+    const byId = (id: string) => items().find((i) => i.id === id)!;
+    const shuffled = ['T1', 'T4', 'T6', 'T7', 'T2', 'T5', 'T3'];
+    const re = packLayout(shuffled.map(byId), 3, 0);
+    const ordered = normalizeOrder(shuffled.map((id) => p(id)), re.cards);
+    const again = packLayout(ordered.map((c) => byId(c.id)), 3, 0);
+    for (const c of base.cards) {
+      const o = again.cards.find((a) => a.id === c.id)!;
+      expect([o.col, o.top]).toEqual([c.col, c.top]);
+    }
+    const keys = again.cards.map((c) => [c.top, c.col]);
+    expect(keys).toEqual([...keys].sort((a, b) => a[0] - b[0] || a[1] - b[1]));
+  });
+  test('normalizeOrder puts unpacked cards last', () => {
+    const packed = [{ id: 'b', col: 0, span: 1, top: 0, height: 1 }, { id: 'a', col: 0, span: 1, top: 5, height: 1 }];
+    expect(normalizeOrder([p('z'), p('a'), p('b')], packed).map((c) => c.id)).toEqual(['b', 'a', 'z']);
+  });
+  test('pinColumns fills only automatic x', () => {
+    const packed = [
+      { id: 'a', col: 1, span: 1, top: 0, height: 1 }, { id: 'b', col: 2, span: 1, top: 0, height: 1 },
+    ];
+    const out = pinColumns([p('a'), { ...p('b'), x: 3 }, p('c')], packed);
+    expect(out).toEqual([{ ...p('a'), x: 1 }, { ...p('b'), x: 3 }, p('c')]);
+    expect('x' in out[2]).toBe(false);
+  });
+  test('verticalNeighbor finds the card above in shared columns', () => {
+    const r = packLayout(items(), 3, 0);
+    const list = items().map((i) => p(i.id));
+    expect(verticalNeighbor(list, r.cards, 5, -1)).toBe(3);
+    expect(verticalNeighbor(list, r.cards, 3, -1)).toBe(0);
+    expect(verticalNeighbor(list, r.cards, 0, -1)).toBeNull();
+    expect(verticalNeighbor(list, r.cards, 3, 1)).toBe(5);
+    expect(verticalNeighbor(list, r.cards, 6, 1)).toBeNull();
+    expect(verticalNeighbor(list, r.cards, 2, 1)).toBeNull();
+  });
+  test('dropTarget picks nearest column and insertion index', () => {
+    const r = packLayout(items(), 3, 0);
+    const list = items().map((i) => p(i.id));
+    const d = { id: 'T7', span: 1, leftPx: 480, topPx: 150 };
+    expect(dropTarget(d, list, r.cards, 300, 0, 3)).toEqual({ x: 2, index: 3 });
+    expect(dropTarget({ ...d, leftPx: 5000, topPx: 9999 }, list, r.cards, 300, 0, 3)).toEqual({ x: 2, index: 6 });
+  });
+  test('sanitizePlacements keeps integer x 0..3 only', () => {
+    const raw = [2, 4, -1, 1.5, '1', null].map((x, i) => ({ id: `c${i}`, x, w: 1, h: null }));
+    const out = sanitizePlacements(raw, all);
+    expect(out[0]).toEqual({ id: 'c0', x: 2, w: 1, h: null });
+    for (const c of out.slice(1)) expect('x' in c).toBe(false);
+  });
+  test('applyCardOp place and column', () => {
+    const list = [p('a'), p('b'), p('c')];
+    expect(applyCardOp(list, 0, { kind: 'place', to: 1, x: 2 })).toEqual([p('b'), { ...p('a'), x: 2 }, p('c')]);
+    expect(applyCardOp(list, 1, { kind: 'column', x: 1 })[1]).toEqual({ ...p('b'), x: 1 });
+  });
+  test('snapResize respects maxSpan', () => {
+    const start = { w: 1 as const, h: null, heightPx: 200 };
+    expect(snapResize(start, 2 * 314, 0, 300, 14, 3, 1).w).toBe(1);
+    expect(snapResize(start, 314, 0, 300, 14, 3, 2).w).toBe(2);
+    expect(snapResize(start, 2 * 314, 0, 300, 14, 3, 2).w).toBe(2);
   });
 });
