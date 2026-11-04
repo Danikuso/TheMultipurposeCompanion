@@ -117,7 +117,7 @@ describe('CardFrame', () => {
     const el = frame({ id: 'test-card', w: 1, h: null }, def(EmptyCard), 2);
     const content = el.firstElementChild as HTMLElement;
     expect(content.classList.contains('card-content')).toBe(true);
-    expect(el.childNodes).toHaveLength(1);
+    expect(el.children).toHaveLength(1);
     // :empty de los navegadores ignora comentarios y nodos de texto de longitud 0 (anclas de Svelte),
     // pero no elementos ni texto con contenido, aunque sea un espacio. (matches(':empty') de jsdom no se
     // usa: su motor de selectores choca con los globales de runas de Svelte.)

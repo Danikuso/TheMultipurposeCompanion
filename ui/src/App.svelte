@@ -14,7 +14,10 @@
   import { fetchUpdateStatus } from './lib/updater.svelte';
   import { tabKeyFor } from './shell/cards';
   import CardHost, { isCardVisible, tabPlacements } from './shell/CardHost.svelte';
-  import { initLayouts } from './shell/layoutStore.svelte';
+  import { cancelEdit, customTab, initLayouts, layoutState } from './shell/layoutStore.svelte';
+  import GridHeader from './shell/GridHeader.svelte';
+  import EditToolbar from './shell/EditToolbar.svelte';
+  import { modules } from './modules/registry';
   import { DEFAULT_PRIORITIES, autoLayout, contextPanel, layouts, nextPin } from './shell/layouts';
 
   let pin = $state<string | null>(null);
@@ -91,7 +94,9 @@
   let heldLayout = $state('exploration');
   let heldContext = $state('exploration');
   const follow = $derived(prefs.loaded && prefs.autoCompanion);
-  const shownLayout = $derived(follow && isStable ? (auto ?? 'exploration') : heldLayout);
+  // Mientras se edita la disposición, Auto-companion queda en suspenso: la pestaña no cambia bajo el cursor.
+  const following = $derived(follow && isStable && !layoutState.editing);
+  const shownLayout = $derived(following ? (auto ?? 'exploration') : heldLayout);
   const activeTab = $derived(view ?? pin ?? `layout:${shownLayout}`);
   const activeLayout = $derived(layouts.find((layout) => activeTab === `layout:${layout.id}`));
   const autoManual = $derived(manualBody === bodyIdentity ? manual : null);
@@ -101,19 +106,23 @@
   });
   const autoContext = $derived(contextPanel(liveModules, autoManual));
   const tabKey = $derived(tabKeyFor(activeTab));
+  const headerTitleKey = $derived(activeLayout?.titleKey ?? modules.find((m) => m.id === activeTab)?.titleKey);
+  const headerTitle = $derived(
+    tabKey?.startsWith('custom:') ? customTab(tabKey.slice('custom:'.length))?.name : undefined,
+  );
   const tabCards = $derived(tabKey === null ? [] : tabPlacements(tabKey));
   const visibleSlots = $derived(tabCards.filter((p) => isCardVisible(p.id, layoutContext)));
   const selectedContext = $derived(follow ? autoContext : contextPanel(liveModules, layoutContext.manual));
 
   $effect(() => {
-    if (follow && isStable) {
+    if (following) {
       heldLayout = auto ?? 'exploration';
       heldContext = autoContext;
     }
   });
 
   $effect(() => {
-    if (!follow || !isStable) {
+    if (!following) {
       if (!follow) lastAuto = OFF_MARK; // al reactivar, la disposición automática se aplica enseguida
       return;
     }
@@ -132,6 +141,16 @@
   $effect(() => {
     if (!prefs.loaded || prefs.autoCompanion) return;
     savePlacement({ layout: pin?.startsWith('layout:') ? pin.slice(7) : heldLayout, context: layoutContext.manual });
+  });
+
+  // Esc cancela la edición; el listener solo existe mientras se edita.
+  $effect(() => {
+    if (!layoutState.editing) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') cancelEdit();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   });
 
   $effect(() => {
@@ -225,6 +244,11 @@
       {#if activeTab === 'settings'}
         <Settings />
       {:else if tabKey !== null}
+        <GridHeader titleKey={headerTitleKey} title={headerTitle} {tabKey} />
+        {#if layoutState.editing}
+          <!-- onaddcard: el selector de tarjetas llega en la Tarea 10 -->
+          <EditToolbar {tabKey} onaddcard={() => {}} />
+        {/if}
         <CardHost {tabKey} ctx={layoutContext} prefix={contextControls} />
       {/if}
     </Grid>

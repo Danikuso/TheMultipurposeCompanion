@@ -46,6 +46,7 @@ pub(crate) const CODES: &[&str] = &[
     "ui.layout.load",
     "ui.layout.save",
     "ui.layout.merge",
+    "ui.layout.edit",
     "ui.window.fault",
 ];
 
@@ -347,6 +348,10 @@ mod tests {
             ("ui.layout.load", json!({"status": 0, "desktop": true})),
             ("ui.layout.save", json!({"status": 500, "claim": false})),
             ("ui.layout.merge", json!({"invalid": true})),
+            (
+                "ui.layout.edit",
+                json!({"commit": true, "ok": true, "tab": "layout:combat"}),
+            ),
             (
                 "ui.window.fault",
                 json!({"kind": "error", "line": 3, "col": 4}),

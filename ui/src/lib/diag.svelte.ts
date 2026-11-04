@@ -33,6 +33,7 @@ export type DiagCode =
   | 'ui.layout.load'
   | 'ui.layout.save'
   | 'ui.layout.merge'
+  | 'ui.layout.edit'
   | 'ui.window.fault';
 
 export const MAX_QUEUE = 200;
@@ -42,7 +43,7 @@ export const MAX_PAYLOAD_BYTES = 1024;
 export const MIN_INTERVAL_MS = 1000;
 export const MAX_BACKOFF_MS = 8000;
 /** Estado reflejado, no eventos: solo interesa el último valor por vaciado y sin repetidos. */
-const COALESCED: ReadonlySet<DiagCode> = new Set<DiagCode>(['ui.list.render', 'ui.topbar.state', 'ui.app.layout']);
+const COALESCED: ReadonlySet<DiagCode> = new Set<DiagCode>(['ui.list.render', 'ui.topbar.state', 'ui.app.layout', 'ui.layout.edit']);
 const ENDPOINT = '/api/actions/app.diagnostics';
 const MAX_DEPTH = 4;
 const MAX_ARRAY = 32;
