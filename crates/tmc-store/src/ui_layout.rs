@@ -37,7 +37,7 @@ impl Store {
         Ok(rows.collect::<Result<Vec<_>, _>>()?)
     }
 
-    /// Obtiene un perfil; error si su documento almacenado está corrupto.
+    /// Obtiene un perfil; si su documento almacenado está corrupto devuelve `doc` nulo.
     pub fn ui_layout_get(&self, device_id: &str) -> Result<Option<UiLayoutProfile>, StoreError> {
         let row = {
             let conn = self.connection.lock().map_err(|_| StoreError::Poisoned)?;
@@ -64,8 +64,15 @@ impl Store {
         let Some((device_id, name, updated_at, doc)) = row else {
             return Ok(None);
         };
-        let doc = serde_json::from_str(&doc)
-            .map_err(|_| StoreError::Unsupported("corrupt ui layout document".into()))?;
+        // Documento ilegible: se devuelve `null` para que la UI use la distribución de fábrica y pueda guardar.
+        let doc = serde_json::from_str(&doc).unwrap_or_else(|_| {
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::Sql,
+                "store.ui_layout.corrupt",
+                serde_json::json!({"doc_bytes":doc.len()})
+            );
+            serde_json::Value::Null
+        });
         Ok(Some(UiLayoutProfile {
             device_id,
             name,
@@ -210,7 +217,7 @@ mod tests {
     }
 
     #[test]
-    fn ui_layout_get_with_corrupt_doc_errors_without_panic() {
+    fn ui_layout_get_with_corrupt_doc_returns_null_doc() {
         let store = Store::open_in_memory().unwrap();
         store
             .connection
@@ -221,6 +228,8 @@ mod tests {
                 [ID_A],
             )
             .unwrap();
-        assert!(store.ui_layout_get(ID_A).is_err());
+        let p = store.ui_layout_get(ID_A).unwrap().expect("perfil presente");
+        assert_eq!(p.name, "PC");
+        assert!(p.doc.is_null());
     }
 }
