@@ -167,12 +167,14 @@
     const to = before ? others.findIndex((p) => p.id === before.id) : others.length;
     applyOp(tabKey, from, { kind: 'place', to, x: t.x }, geometry());
   }
-  function vertical(item: CardPlacement, dir: -1 | 1) {
-    const i = list.indexOf(item);
-    const to = verticalNeighbor(list, packed.cards, i, dir);
-    if (to !== null) applyOp(tabKey, placements.indexOf(item), { kind: 'move', to }, geometry());
+  // Los índices se resuelven por id al aplicar cada operación: tras la primera, el borrador se clona y
+  // los objetos del `{#each}` dejan de ser los de `placements` hasta el siguiente flush.
+  const indexById = (id: string) => placements.findIndex((p) => p.id === id);
+  function vertical(id: string, dir: -1 | 1) {
+    const to = verticalNeighbor(list, packed.cards, list.findIndex((p) => p.id === id), dir);
+    if (to !== null) applyOp(tabKey, indexById(id), { kind: 'move', to }, geometry());
   }
-  const hasNeighbor = (item: CardPlacement, dir: -1 | 1) => verticalNeighbor(list, packed.cards, list.indexOf(item), dir) !== null;
+  const hasNeighbor = (id: string, dir: -1 | 1) => verticalNeighbor(list, packed.cards, list.findIndex((p) => p.id === id), dir) !== null;
 </script>
 
 <div class="card-board" bind:this={boardEl}
@@ -182,12 +184,12 @@
     <CardFrame placement={item.placement} card={cards[item.placement.id]}
       ghost={item.ghost} editing={layoutState.editing} {columns} {ctx} prefix={framePrefix}
       box={boxOf(item.placement.id)} col={colOf(item.placement.id)}
-      canUp={hasNeighbor(item.placement, -1)} canDown={hasNeighbor(item.placement, 1)}
-      onvertical={(dir) => vertical(item.placement, dir)}
+      canUp={hasNeighbor(item.placement.id, -1)} canDown={hasNeighbor(item.placement.id, 1)}
+      onvertical={(dir) => vertical(item.placement.id, dir)}
       onmovepreview={(dx, dy) => previewMove(item.placement.id, dx, dy)}
       onmovedrop={(dx, dy) => dropMove(item.placement.id, dx, dy)}
       onmovecancel={() => { drag = null; }}
-      onop={(op) => applyOp(tabKey, placements.indexOf(item.placement), op, geometry())} />
+      onop={(op) => applyOp(tabKey, indexById(item.placement.id), op, geometry())} />
   {/each}
   {#if placeholder}
     <div class="drop-placeholder" aria-hidden="true"

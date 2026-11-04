@@ -47,7 +47,7 @@ function items(): PackItem[] {
   return IDS.map((id, i) => ({ id, x: XS[i], w: 1, height: measured[id] ?? HS[i] }));
 }
 
-function mountHost(boardWidth = BOARD) {
+function mountHost(boardWidth = BOARD, fixedH: number | null = null) {
   vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) {
     return this.classList.contains('card-board') ? boardWidth : 0;
   });
@@ -56,7 +56,7 @@ function mountHost(boardWidth = BOARD) {
   });
   layoutState.doc = {
     ...emptyDoc(),
-    custom: [{ id: 'c1', name: 'Mi', icon: '', cards: IDS.map((id, i) => ({ id, w: 1, h: null, x: XS[i] })) }],
+    custom: [{ id: 'c1', name: 'Mi', icon: '', cards: IDS.map((id, i) => ({ id, w: 1, h: fixedH, x: XS[i] })) }],
     customOrder: ['c1'],
   };
   inst = mount(CardHost, { target, props: { tabKey: 'custom:c1', ctx: { modules: [], manual: null } } });
@@ -183,11 +183,11 @@ describe('CardHost interaction', () => {
   const draftCards = () => layoutState.draft!.custom[0].cards;
   const COLSTEP = (BOARD - GAP * 2) / 3 + GAP;
 
-  function editing(columns: 1 | 2 | 3 | 4 = 3) {
+  function editing(columns: 1 | 2 | 3 | 4 = 3, fixedH: number | null = null) {
     vi.stubGlobal('ResizeObserver', FakeRO);
     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => { cb(0); return 1; });
     grid.columns = columns;
-    mountHost();
+    mountHost(BOARD, fixedH);
     beginEdit();
     flushSync();
     fire();
@@ -266,5 +266,38 @@ describe('CardHost interaction', () => {
     expect(board().querySelector('.drop-placeholder')).toBeNull();
     expect(slot('jump').style.transform).toBe('');
     for (const id of IDS) expect(slot(id).style.top).toBe(before[id]);
+  });
+
+  test('a diagonal resize saves both width and height', () => {
+    editing(3, 200);
+    const h = slot('dashboard-cmdr').querySelector('[data-op="resize"]') as HTMLElement;
+    h.dispatchEvent(ev('pointerdown', 0, 0));
+    h.dispatchEvent(ev('pointermove', COLSTEP, 80));
+    h.dispatchEvent(ev('pointerup', COLSTEP, 80));
+    flushSync();
+    const c = draftCards().find((x) => x.id === 'dashboard-cmdr')!;
+    expect(c.w).toBe(2);
+    expect(c.h).toBe(280);
+  });
+
+  test('up/down still work after a previous op in the same edit session', () => {
+    editing(3);
+    click(btn('dashboard-session', 'height-more')); // clona el borrador
+    click(btn('dashboard-session', 'up'));
+    const ids = draftCards().map((c) => c.id);
+    expect(ids.indexOf('dashboard-session')).toBeLessThan(ids.indexOf('dashboard-location'));
+  });
+
+  test('width buttons respect the columns left from the start column', () => {
+    editing(3);
+    // T3 (dashboard-status) empieza en la columna 2: solo cabe 1 columna.
+    expect(btn('dashboard-status', 'width-1').disabled).toBe(false);
+    expect(btn('dashboard-status', 'width-2').disabled).toBe(true);
+    expect(btn('dashboard-status', 'width-3').disabled).toBe(true);
+    expect(btn('dashboard-status', 'width-full').disabled).toBe(false);
+    // T1 empieza en la columna 0: todo habilitado.
+    for (const op of ['width-1', 'width-2', 'width-3', 'width-full']) {
+      expect(btn('dashboard-cmdr', op).disabled).toBe(false);
+    }
   });
 });

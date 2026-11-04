@@ -168,7 +168,7 @@
       {#each widthOptions as w (w)}
         <button type="button" data-op="width-{w}" aria-label={t(`layout-edit-width-${w}`)}
           title={t(`layout-edit-width-${w}`)} aria-pressed={placement.w === w}
-          disabled={w > columns} onclick={() => emit({ kind: 'width', w })}>{w}</button>
+          disabled={w > columns - col} onclick={() => emit({ kind: 'width', w })}>{w}</button>
       {/each}
       <button type="button" data-op="width-full" aria-label={t('layout-edit-width-full')}
         title={t('layout-edit-width-full')} aria-pressed={placement.w === 'full'}
