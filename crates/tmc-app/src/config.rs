@@ -80,6 +80,9 @@ pub struct Config {
     /// Identificador persistente del dispositivo de escritorio (UUID) para perfiles de disposición.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub desktop_device_id: Option<String>,
+    /// Archivo de configuración indicado con `--config` (no se serializa).
+    #[serde(skip)]
+    pub config_file: Option<PathBuf>,
 }
 
 impl Default for Config {
@@ -117,6 +120,7 @@ impl Default for Config {
             data_dir: None,
             ui_dir: None,
             desktop_device_id: None,
+            config_file: None,
         }
     }
 }
@@ -155,6 +159,17 @@ pub(crate) fn emit_bootstrap_report() {
 impl Config {
     pub fn load_or_default() -> Self {
         Self::load_from_or_default(&config_path())
+    }
+
+    /// Lee el archivo sin tocarlo: si falta devuelve los valores por defecto y si
+    /// existe pero no se puede leer o interpretar devuelve error (nunca lo renombra
+    /// ni lo sobrescribe).
+    pub(crate) fn load_strict(path: &Path) -> anyhow::Result<Self> {
+        if !path.exists() {
+            return Ok(Self::default());
+        }
+        let text = std::fs::read_to_string(path)?;
+        Ok(toml::from_str::<Self>(&text)?)
     }
 
     pub fn load_from_or_default(path: &Path) -> Self {

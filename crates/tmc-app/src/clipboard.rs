@@ -157,9 +157,9 @@ impl AppActions {
     pub fn with_config(cfg: Config) -> Self {
         Self {
             clipboard: Arc::new(Clipboard::new()),
+            save_path: cfg.config_file.clone(),
             config: Mutex::new(cfg),
             runtime: None,
-            save_path: None,
             settings_watch: None,
             capi_service: None,
             edsm_service: None,
@@ -348,10 +348,16 @@ impl ActionHost for AppActions {
         let before = guard.desktop_device_id.clone();
         let id = guard.ensure_desktop_device_id();
         if before.as_deref() != Some(id.as_str()) {
-            let saved = match &self.save_path {
-                Some(path) => guard.save_to(path),
-                None => guard.save(),
-            };
+            // Solo se persiste el id sobre la copia del disco: la configuración en
+            // memoria incluye sustituciones de la línea de órdenes que no se guardan.
+            let path = self
+                .save_path
+                .clone()
+                .unwrap_or_else(crate::config::config_path);
+            let saved = Config::load_strict(&path).and_then(|mut on_disk| {
+                on_disk.desktop_device_id = Some(id.clone());
+                on_disk.save_to(&path)
+            });
             if saved.is_err() {
                 tmc_model::diagnostic!(
                     tmc_model::diagnostics::DiagnosticContext::State,

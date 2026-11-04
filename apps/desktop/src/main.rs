@@ -33,6 +33,8 @@ fn main() -> anyhow::Result<()> {
         Some(path) => Config::load_from_or_default(path),
         None => Config::load_or_default(),
     };
+    // Los guardados automáticos van al archivo indicado con --config.
+    config.config_file = config_file;
     if journal_dir.is_some() {
         config.journal_dir = journal_dir;
     }
