@@ -16,6 +16,8 @@
   let query = $state('');
   let searchEl = $state<HTMLInputElement>();
   let listEl = $state<HTMLElement>();
+  let dialogEl = $state<HTMLElement>();
+  let viewportH = $state(window.innerHeight);
 
   const moduleLabel = (id: string) => {
     const mod = modules.find((m) => m.id === id);
@@ -41,11 +43,29 @@
     return out;
   });
   const natural = $derived(shown.length * ROW + groups.length * HEAD);
-  const listHeight = $derived(Math.max(MIN_H, Math.min(MAX_H, natural)));
+  // Única fuente del tope: el menor entre MAX_H y el 60 % del alto de ventana.
+  const maxH = $derived(Math.max(MIN_H, Math.min(MAX_H, Math.floor(viewportH * 0.6))));
+  const listHeight = $derived(Math.max(MIN_H, Math.min(maxH, natural)));
 
   function add(id: string) {
     addCard(tabKey, id);
     onclose();
+  }
+
+  function trapTab(e: KeyboardEvent) {
+    if (e.key !== 'Tab' || !dialogEl) return;
+    const items = Array.from(dialogEl.querySelectorAll<HTMLElement>('button:not(:disabled), input'));
+    if (items.length === 0) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey && (active === first || !dialogEl.contains(active))) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && (active === last || !dialogEl.contains(active))) {
+      e.preventDefault();
+      first.focus();
+    }
   }
 
   onMount(() => {
@@ -57,15 +77,21 @@
       e.preventDefault();
       onclose();
     };
+    const onResize = () => (viewportH = window.innerHeight);
     window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('resize', onResize);
+    };
   });
 </script>
 
-<div class="catalog-backdrop" role="presentation" data-testid="catalog-backdrop" onclick={onclose}>
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- Cierra con pointerdown sobre el propio fondo: soltar una selección encima no debe cerrarlo. -->
+<div class="catalog-backdrop" role="presentation" data-testid="catalog-backdrop"
+  onpointerdown={(e) => { if (e.target === e.currentTarget) onclose(); }}>
   <div class="catalog-dialog" role="dialog" aria-modal="true" aria-label={t('layout-edit-catalog-title')}
-    tabindex="-1" onclick={(e) => e.stopPropagation()}>
+    tabindex="-1" bind:this={dialogEl} onkeydown={trapTab}>
     <header class="catalog-head">
       <h3>{t('layout-edit-catalog-title')}</h3>
       <button type="button" class="catalog-close" aria-label={t('layout-edit-catalog-close')} onclick={onclose}>✕</button>
@@ -76,15 +102,17 @@
     {/if}
     {#if all.length === 0}
       <p class="catalog-empty" data-testid="catalog-empty">{t('layout-edit-catalog-empty')}</p>
+    {:else if shown.length === 0}
+      <p class="catalog-empty" data-testid="catalog-no-results">{t('layout-edit-catalog-no-results')}</p>
     {:else}
       <div class="catalog-list" bind:this={listEl}
-        style="height: {listHeight}px; overflow-y: {natural > MAX_H ? 'auto' : 'hidden'};">
+        style="height: {listHeight}px; overflow-y: {natural > maxH ? 'auto' : 'hidden'};">
         {#each groups as g (g.module)}
           <h4 class="catalog-group">{g.label}</h4>
           {#each g.items as e (e.card.id)}
             <button type="button" class="catalog-entry" data-catalog-entry={e.card.id} disabled={e.disabled}
               title={e.disabled ? t('layout-edit-catalog-present') : undefined} onclick={() => add(e.card.id)}>
-              <span class="catalog-name">{t(e.card.titleKey)}</span>
+              <span class="catalog-name" title={t(e.card.titleKey)}>{t(e.card.titleKey)}</span>
               {#if e.disabled}<span class="catalog-tick" aria-hidden="true">✓</span>{/if}
             </button>
           {/each}
@@ -150,7 +178,6 @@
 
   .catalog-list {
     min-height: 0;
-    max-height: 60vh;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 170, 0, 0.3) transparent;
   }

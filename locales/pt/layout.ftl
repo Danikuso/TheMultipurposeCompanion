@@ -32,3 +32,4 @@ layout-edit-catalog-empty = Todos os cartões deste separador já estão visíve
 layout-edit-catalog-search = Pesquisar cartão
 layout-edit-catalog-close = Fechar
 layout-edit-catalog-present = Já está neste separador
+layout-edit-catalog-no-results = Nenhum cartão corresponde à pesquisa

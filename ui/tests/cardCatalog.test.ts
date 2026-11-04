@@ -51,6 +51,16 @@ describe('catalogFor', () => {
     expect(list[0].disabled).toBe(false);
   });
 
+  test('themed card missing from current but not removed appears', () => {
+    const current = factoryLayout(ENG).filter((p) => p.id !== 'trades');
+    expect(catalogFor(ENG, current, []).map((e) => e.card.id)).toEqual(['trades']);
+  });
+
+  test('themed card both removed and missing appears once', () => {
+    const current = factoryLayout(ENG).filter((p) => p.id !== 'sources');
+    expect(catalogFor(ENG, current, ['sources', 'sources']).map((e) => e.card.id)).toEqual(['sources']);
+  });
+
   test('custom catalog lists all cards and disables present', () => {
     const list = catalogFor(CUSTOM, [{ id: 'ax', w: 1, h: null }], []);
     expect(list).toHaveLength(Object.keys(cards).length);
@@ -107,11 +117,72 @@ describe('CardCatalog', () => {
     expect(tab.cards.at(-1)).toEqual({ id: 'sources', w: 1, h: null });
   });
 
-  test('backdrop click closes', () => {
+  test('backdrop pointerdown closes, pointerdown inside dialog does not', () => {
     startEdit(customDoc([]));
     open(CUSTOM);
-    (target.querySelector('[data-testid="catalog-backdrop"]') as HTMLElement).click();
+    const down = (el: Element) => el.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    down(target.querySelector('[role="dialog"]')!);
+    down(target.querySelector('input[type="search"]')!);
+    expect(closed).toBe(0);
+    down(target.querySelector('[data-testid="catalog-backdrop"]')!);
     expect(closed).toBe(1);
+  });
+
+  test('search without matches shows a no-results message', () => {
+    startEdit(customDoc([]));
+    open(CUSTOM);
+    const input = target.querySelector('input[type="search"]') as HTMLInputElement;
+    input.value = 'zzzzqq';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    flushSync();
+    expect(entries()).toHaveLength(0);
+    expect(target.querySelector('[data-testid="catalog-no-results"]')).not.toBeNull();
+    expect(target.querySelector('[data-testid="catalog-empty"]')).toBeNull();
+  });
+
+  test('entry names carry a title for truncation', () => {
+    startEdit(customDoc([]));
+    open(CUSTOM);
+    const name = entries()[0].querySelector('.catalog-name') as HTMLElement;
+    expect(name.getAttribute('title')).toBe(name.textContent);
+  });
+
+  test('Tab and Shift+Tab cycle inside the dialog', () => {
+    startEdit(customDoc([]));
+    open(CUSTOM);
+    const focusable = Array.from(target.querySelectorAll('button:not(:disabled), input')) as HTMLElement[];
+    const first = focusable[0];
+    const last = focusable.at(-1)!;
+    const press = (shiftKey: boolean) => {
+      const ev = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true });
+      document.activeElement!.dispatchEvent(ev);
+      return ev.defaultPrevented;
+    };
+    last.focus();
+    expect(press(false)).toBe(true);
+    expect(document.activeElement).toBe(first);
+    expect(press(true)).toBe(true);
+    expect(document.activeElement).toBe(last);
+  });
+
+  test('list height is capped by the viewport and scrolls only when needed', () => {
+    const prev = window.innerHeight;
+    window.innerHeight = 375;
+    try {
+      startEdit(customDoc([]));
+      open(CUSTOM);
+      const list = target.querySelector('.catalog-list') as HTMLElement;
+      expect(list.style.height).toBe('225px');
+      expect(list.style.overflowY).toBe('auto');
+      const input = target.querySelector('input[type="search"]') as HTMLInputElement;
+      input.value = 'materiales';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      flushSync();
+      expect(list.style.overflowY).toBe('hidden');
+      expect(parseInt(list.style.height)).toBeLessThanOrEqual(225);
+    } finally {
+      window.innerHeight = prev;
+    }
   });
 });
 

@@ -32,3 +32,4 @@ layout-edit-catalog-empty = All cards for this tab are already visible
 layout-edit-catalog-search = Search card
 layout-edit-catalog-close = Close
 layout-edit-catalog-present = Already in this tab
+layout-edit-catalog-no-results = No cards match your search

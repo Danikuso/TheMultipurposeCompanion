@@ -32,3 +32,4 @@ layout-edit-catalog-empty = Todas las tarjetas de esta pestaña ya están visibl
 layout-edit-catalog-search = Buscar tarjeta
 layout-edit-catalog-close = Cerrar
 layout-edit-catalog-present = Ya está en esta pestaña
+layout-edit-catalog-no-results = Ninguna tarjeta coincide con la búsqueda

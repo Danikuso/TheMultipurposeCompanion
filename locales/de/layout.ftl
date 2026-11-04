@@ -32,3 +32,4 @@ layout-edit-catalog-empty = Alle Karten dieses Tabs sind bereits sichtbar
 layout-edit-catalog-search = Karte suchen
 layout-edit-catalog-close = Schließen
 layout-edit-catalog-present = Bereits in diesem Tab
+layout-edit-catalog-no-results = Keine Karte entspricht der Suche

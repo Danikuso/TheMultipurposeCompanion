@@ -32,3 +32,4 @@ layout-edit-catalog-empty = Toutes les cartes de cet onglet sont déjà visibles
 layout-edit-catalog-search = Rechercher une carte
 layout-edit-catalog-close = Fermer
 layout-edit-catalog-present = Déjà dans cet onglet
+layout-edit-catalog-no-results = Aucune carte ne correspond à la recherche
