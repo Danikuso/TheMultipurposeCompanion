@@ -756,6 +756,18 @@ tourism_reference_cr_ly = 200000
     }
 
     #[test]
+    fn ensure_desktop_device_id_replaces_non_canonical_uuid() {
+        let upper = uuid::Uuid::new_v4().to_string().to_uppercase();
+        let mut cfg = Config {
+            desktop_device_id: Some(upper.clone()),
+            ..Config::default()
+        };
+        let id = cfg.ensure_desktop_device_id();
+        assert_ne!(id, upper);
+        assert_eq!(id, id.to_lowercase());
+    }
+
+    #[test]
     fn desktop_device_id_survives_save_and_load() {
         let dir = tempdir().unwrap();
         let path = dir.path().join("config.toml");

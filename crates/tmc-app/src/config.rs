@@ -421,10 +421,11 @@ impl Config {
         token
     }
 
-    /// Devuelve el identificador del dispositivo de escritorio, generándolo si falta o no es un UUID.
+    /// Devuelve el identificador del dispositivo de escritorio, generándolo si falta o no es un UUID canónico (minúsculas con guiones, como exige el servidor).
     pub fn ensure_desktop_device_id(&mut self) -> String {
         if let Some(existing) = &self.desktop_device_id
-            && uuid::Uuid::parse_str(existing).is_ok()
+            && uuid::Uuid::parse_str(existing)
+                .is_ok_and(|u| u.hyphenated().to_string() == *existing)
         {
             tmc_model::diagnostic!(
                 tmc_model::diagnostics::DiagnosticContext::State,

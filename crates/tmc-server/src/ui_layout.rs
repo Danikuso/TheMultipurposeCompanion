@@ -14,8 +14,9 @@ use tmc_core::StoreError;
 const NAME_MAX: usize = 32;
 const DOC_VERSION: u64 = 1;
 
+/// Solo la forma canónica (minúsculas con guiones): evita perfiles duplicados por variantes del mismo UUID.
 pub(crate) fn valid_device_id(s: &str) -> bool {
-    uuid::Uuid::parse_str(s).is_ok()
+    uuid::Uuid::parse_str(s).is_ok_and(|u| u.hyphenated().to_string() == s)
 }
 
 pub(crate) fn normalize_name(s: &str) -> Option<String> {
@@ -282,6 +283,12 @@ mod tests {
     fn validators() {
         assert!(!valid_device_id("not-a-uuid"));
         assert!(valid_device_id(A));
+        let h = "abcdefab-cdef-4bcd-8bcd-abcdefabcdef";
+        assert!(valid_device_id(h));
+        assert!(!valid_device_id(&h.to_uppercase()));
+        assert!(!valid_device_id(&h.replace('-', "")));
+        assert!(!valid_device_id(&format!("urn:uuid:{h}")));
+        assert!(!valid_device_id(&format!("{{{h}}}")));
         assert_eq!(normalize_name("  PC  "), Some("PC".into()));
         assert_eq!(normalize_name(""), None);
         assert_eq!(normalize_name(&"x".repeat(33)), None);
