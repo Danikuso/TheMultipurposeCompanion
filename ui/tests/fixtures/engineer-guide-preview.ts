@@ -18,7 +18,7 @@ selected.rank = selected.status === 'Unlocked' ? Number(query.get('rank') ?? 3) 
 selected.rank_progress = selected.status === 'Unlocked' ? Number(query.get('progress') ?? 42) : null;
 live.connected = true;
 live.topics['core.cmdr'] = { name: 'Synthetic', credits: 500000 };
-live.topics['core.ship'] = { cargo: [{ Name: 'metaalloys', Count: Number(query.get('stock') ?? 3) }] };
+live.topics['core.ship'] = { cargo_count: Number(query.get('stock') ?? 3), cargo: [{ Name: 'metaalloys', Count: Number(query.get('stock') ?? 3) }] };
 live.topics['engineering.inventory'] = fixture['engineering.inventory'];
 live.topics['engineering.engineers'] = { revision: 21, total: 38, selected_id: id, next_step: null };
 window.fetch = async (input, init) => {

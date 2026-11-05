@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { buildGuideSteps, guideAvailability, guideRank } from '../src/modules/engineering/engineerGuide';
+import { buildGuideSteps, guideAvailability, guideCargoStock, guideRank } from '../src/modules/engineering/engineerGuide';
 import type { EngineerUnlockRow } from '../src/modules/engineering/types';
 
 const rows: EngineerUnlockRow[] = [
@@ -50,4 +50,21 @@ test('rank and progress are separate, bounded and honest when absent', () => {
   expect(guideRank(3, -1).progress).toBe(0);
   expect(guideRank(3, Number.NaN).progress).toBeNull();
   expect(guideRank(0, 50).rank).toBeNull();
+});
+test('cargo from live journal trade inventory takes precedence over an unpopulated companion list', () => {
+  expect(guideCargoStock('metaalloys', { cargo_count: 3, cargo: [] }, {
+    used: 3, lines: [{ commodity: 'metaalloys', tons: 3, kind: 'Trade' }],
+  })).toBe(3);
+});
+test('an unconfirmed empty inventory is unknown, but an authoritative zero count is zero', () => {
+  expect(guideCargoStock('metaalloys', { cargo_count: null, cargo: [] }, { used: 0, lines: [] })).toBeNull();
+  expect(guideCargoStock('metaalloys', { cargo_count: 0, cargo: [] }, undefined)).toBe(0);
+  expect(guideCargoStock('metaalloys', { cargo_count: 5, cargo: [] }, { used: 3, lines: [{ commodity: 'metaalloys', tons: 3, kind: 'Trade' }] })).toBeNull();
+});
+test('a complete companion inventory is a fallback and split cargo lines count physical stock exactly once', () => {
+  expect(guideCargoStock('metaalloys', { cargo_count: 3, cargo: [{ Name: 'metaalloys', Count: 3 }] }, undefined)).toBe(3);
+  expect(guideCargoStock('gold', { cargo_count: 9, cargo: [] }, { used: 9, lines: [
+    { commodity: 'gold', tons: 3, kind: 'Trade' }, { commodity: 'gold', tons: 2, kind: 'Stolen' }, { commodity: 'gold', tons: 4, kind: 'Mission' },
+  ] })).toBe(9);
+  expect(guideCargoStock('gold', { cargo_count: 9, cargo: [{ Name: 'gold', Count: 5, Stolen: 2 }, { Name: 'gold', Count: 4, MissionID: 1 }] }, undefined)).toBe(9);
 });

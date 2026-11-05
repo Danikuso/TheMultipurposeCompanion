@@ -17,7 +17,7 @@ beforeEach(() => {
   disconnect(); setLocale('es'); live.connected = true;
   for (const [k, v] of Object.entries(structuredClone(fixture))) if (k !== 'engineering.pages') live.topics[k] = v;
   live.topics['core.cmdr'] = { name: 'Synthetic', credits: null };
-  live.topics['core.ship'] = { cargo: [{ Name: 'metaalloys', Count: 3 }] };
+  live.topics['core.ship'] = { cargo_count: 3, cargo: [{ Name: 'metaalloys', Count: 3 }] };
   live.topics['engineering.engineers'] = { revision: 21, selected_id: null, next_step: null, total: 38 };
   engineerRows = structuredClone(fixture['engineering.pages'].engineers_engineers.items) as EngineerRow[];
   unlockRows = structuredClone(fixture['engineering.pages'].engineers_unlock.items) as EngineerUnlockRow[];

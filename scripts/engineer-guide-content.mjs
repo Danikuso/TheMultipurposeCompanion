@@ -171,13 +171,24 @@ export function guideContent(entries) {
     const content={};
     for(let i=0;i<langs.length;i++) {
       const lines={ [`unlock-discovery-${slug}`]:d[i], [e.unlock.requirement_key]:meeting[e.id][i], [e.unlock.invite_key]:u[i], [`unlock-reputation-${slug}`]:r[i] };
-      for(const p of prerequisites) lines[p.description_key]=e.id===400013?referralText(...referrals[p.engineer_id])[i]+` (${byId.get(p.engineer_id).name})`:d[i];
+      for(const p of prerequisites) {
+        if(e.id!==400013) { lines[p.description_key]=d[i]; continue; }
+        const parent=byId.get(p.engineer_id).name;
+        const [n,item]=referrals[p.engineer_id];
+        lines[p.description_key]=[
+          `Desbloquea a ${parent} y entrégale ${n} ${item} para que te presente a Yi Shen.`,
+          `Unlock ${parent} and give them ${n} ${item} for the referral to Yi Shen.`,
+          `Débloquez ${parent} et remettez-lui ${n} ${item} pour obtenir la recommandation vers Yi Shen.`,
+          `Schalte ${parent} frei und übergib dort ${n} ${item} für die Empfehlung zu Yi Shen.`,
+          `Desbloqueia ${parent} e entrega-lhe ${n} ${item} para obter a referência a Yi Shen.`,
+        ][i];
+      }
       content[langs[i]]=lines;
     }
     const contribution=donations[e.id];
     return {id:e.id,unlock:{...e.unlock,contribution:contribution?{item:contribution[0],kind:contribution[1],amount:contribution[2]}:null,
       discovery_key:`unlock-discovery-${slug}`,reputation_key:`unlock-reputation-${slug}`,prerequisites,
-      guide_sources:[source, ...(e.on_foot?[update]:[])],guide_verified:true},content};
+      guide_sources:[source, ...(e.on_foot?[update]:[]), ...(e.id===300010?['https://inara.cz/elite/engineer/19/']:[])],guide_verified:true},content};
   });
 }
 export function enrichEngineerGuides(engineers) {

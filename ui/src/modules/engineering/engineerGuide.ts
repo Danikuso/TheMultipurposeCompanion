@@ -9,6 +9,33 @@ export interface GuideAvailability {
   missing: number | null;
   percent: number | null;
 }
+export interface GuideShipCargo {
+  cargo_count?: number | null;
+  cargo?: { Name: string; Count: number; Stolen?: number; MissionID?: number | null }[];
+}
+export interface GuideTradeCargo {
+  used: number;
+  lines: { commodity: string; tons: number; kind: string }[];
+}
+
+/** Journal Cargo updates trade inventory before Cargo.json populates the companion list. */
+export function guideCargoStock(item: string, ship: GuideShipCargo | undefined, trade: GuideTradeCargo | undefined): number | null {
+  const valid = (n: unknown): n is number => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0;
+  const count = valid(ship?.cargo_count) ? ship.cargo_count : null;
+  if (count === 0) return 0;
+  const key = item.toLowerCase();
+  if (trade && valid(trade.used) && trade.used > 0 && Array.isArray(trade.lines)
+    && trade.lines.every(line => valid(line.tons))
+    && trade.lines.reduce((sum, line) => sum + line.tons, 0) === trade.used
+    && (count === null || count === trade.used)) {
+    return trade.lines.reduce((sum, line) => line.commodity.toLowerCase() === key ? sum + line.tons : sum, 0);
+  }
+  if (count !== null && ship?.cargo && ship.cargo.every(line => valid(line.Count))
+    && ship.cargo.reduce((sum, line) => sum + line.Count, 0) === count) {
+    return ship.cargo.reduce((sum, line) => line.Name.toLowerCase() === key ? sum + line.Count : sum, 0);
+  }
+  return null;
+}
 
 /** Only milestones confirmed by the journal, never the order of its enum. */
 export function buildGuideSteps(status: string, rows: readonly EngineerUnlockRow[]): GuideStep[] {

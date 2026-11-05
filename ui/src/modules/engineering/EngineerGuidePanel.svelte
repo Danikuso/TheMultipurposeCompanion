@@ -5,14 +5,15 @@
   import Panel from '../../shell/Panel.svelte';
   import { engineerStatusLabel } from './labels';
   import { createSectionsReader } from './sections.svelte';
-  import { buildGuideSteps, guideAvailability, guideRank } from './engineerGuide';
+  import { buildGuideSteps, guideAvailability, guideCargoStock, guideRank, type GuideShipCargo, type GuideTradeCargo } from './engineerGuide';
   import type { EngineerRows, EngineersTopic, InventoryTopic } from './types';
 
   const data = $derived(topic<EngineersTopic>('engineering.engineers'));
   const selectedId = $derived(data?.selected_id ?? null);
   const commander = $derived(topic<{ name?: string; credits?: number | null }>('core.cmdr'));
   const inventory = $derived(topic<InventoryTopic>('engineering.inventory'));
-  const ship = $derived(topic<{ cargo?: { Name: string; Count: number }[] }>('core.ship'));
+  const ship = $derived(topic<GuideShipCargo>('core.ship'));
+  const tradeCargo = $derived(topic<GuideTradeCargo>('trade.cargo'));
   let retry = $state(0);
   let failedSelection = $state(false);
   let selecting = $state(false);
@@ -40,7 +41,7 @@
     if (!contribution || !selected || selected.on_foot) return null;
     if (contribution.kind === 'credits') return commander?.credits ?? null;
     if (contribution.kind === 'commodity') {
-      return ship?.cargo?.reduce((count, item) => item.Name.toLowerCase() === contribution.item.toLowerCase() ? count + item.Count : count, 0) ?? null;
+      return guideCargoStock(contribution.item, ship, tradeCargo);
     }
     if (contribution.kind === 'material' && inventory?.snapshot) {
       for (const grades of Object.values(inventory.by_category)) for (const materials of Object.values(grades ?? {})) {

@@ -593,7 +593,8 @@
           }
         ],
         "guide_sources": [
-          "https://github.com/EDDiscovery/EliteDangerousCore/blob/7d30920e6822d4836e0d6dd5c91026ec7e2ab4c7/EliteDangerous/FrontierData/Items/Engineers.cs"
+          "https://github.com/EDDiscovery/EliteDangerousCore/blob/7d30920e6822d4836e0d6dd5c91026ec7e2ab4c7/EliteDangerous/FrontierData/Items/Engineers.cs",
+          "https://inara.cz/elite/engineer/19/"
         ],
         "guide_verified": true
       },
