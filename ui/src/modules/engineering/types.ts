@@ -29,7 +29,12 @@ export type EngineerNextStep =
 /** Resumen del topic: filas, capacidades y requisitos se leen por REST paginado. */
 export interface EngineersTopic { revision: number; total: number; selected_id: number | null; next_step: EngineerNextStep | null }
 export interface EngineerCapability { engineer_id: number; module_type: string; blueprint: string; grade: number }
-export type EngineerRows = { engineers: EngineerRow; capabilities: EngineerCapability };
+export type EngineerUnlockRow =
+  | { engineer_id: number; field: 'requirement' | 'invite'; key: string }
+  | { engineer_id: number; field: 'contribution'; item: string; kind: string; amount: number }
+  | { engineer_id: number; field: 'guide'; discovery_key: string | null; reputation_key: string | null; verified: boolean }
+  | { engineer_id: number; field: 'prerequisite'; prerequisite_id: number; description_key: string };
+export type EngineerRows = { engineers: EngineerRow; capabilities: EngineerCapability; unlock: EngineerUnlockRow };
 
 export interface CurrentEngineering { blueprint: string; level: number; quality: number; experimental: string | null }
 export interface ShipModule { slot: string; item: string; module_type: string | null; current: CurrentEngineering | null; engineerable: boolean }
