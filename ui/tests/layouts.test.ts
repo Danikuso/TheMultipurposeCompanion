@@ -422,7 +422,7 @@ describe('engineering layout', () => {
     const layout = layouts.find((l) => l.id === 'engineering')!;
     expect(layout).toMatchObject({ titleKey: 'layout-engineering', icon: 'wrench' });
     expect(layout.slots.map(({ card, width }) => [card, width])).toEqual([
-      ['materials', 2], ['engineers', 1], ['eng-alerts', 1], ['eng-ship', 1],
+      ['materials', 2], ['engineers', 1], ['engineer-guide', 2], ['eng-alerts', 1], ['eng-ship', 1],
       ['eng-flow', 2], ['shopping', 2], ['trades', 1], ['sources', 1],
     ]);
     const flow = cards['eng-flow'];

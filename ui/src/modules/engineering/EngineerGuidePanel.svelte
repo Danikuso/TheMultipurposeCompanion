@@ -65,6 +65,8 @@
     return t(state === 'failed' ? 'engineering-page-failed' : state === 'stale' ? 'engineering-data-stale' : state === 'loading' ? 'engineering-page-loading' : 'engineering-no-data');
   }
   async function selectEngineer(id: number | null) {
+    // The shared action toggles a repeated id; a select control expresses a target instead.
+    if (id === selectedId) return;
     const generation = ++selectionGeneration;
     failedSelection = false; selecting = true;
     try { await action('engineering.select_engineer', { id }); }
@@ -201,6 +203,7 @@
   :global(.engineer-guide-panel .panel-header-toggle) { max-width: 100%; }
   :global(.engineer-guide-panel .panel-header-toggle:hover) { background: var(--hud-primary); color: var(--hud-bg); }
   .guide, .guide-details { display: flex; flex-direction: column; gap: .65rem; min-width: 0; line-height: 1.45; overflow-wrap: anywhere; }
+  .guide { container-type: inline-size; }
   .guide p, .guide-details p { margin: 0; }
   .selector-label { display: flex; flex-direction: column; gap: .3rem; color: var(--hud-muted); font-size: .8rem; min-width: 0; }
   .glass-select { width: 100%; min-width: 0; max-width: 100%; padding: .5rem; color: var(--hud-text); background: var(--hud-surface-alt); border: 1px solid var(--hud-border); border-radius: 4px; }
@@ -239,4 +242,7 @@
   .requirements strong { font-size: .8rem; color: var(--hud-cyan); }
   .contacts { display: flex; flex-direction: column; gap: .6rem; padding: 0; margin: 0; list-style: none; }
   .contacts li { display: flex; flex-direction: column; align-items: flex-start; gap: .4rem; border: 1px solid var(--hud-border-subtle); padding: .6rem; border-radius: 5px; min-width: 0; }
+  @container (max-width: 180px) {
+    .stage { flex-direction: column; align-items: flex-start; }
+  }
 </style>

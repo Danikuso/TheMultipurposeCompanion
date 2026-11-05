@@ -168,6 +168,7 @@ export const layouts: LayoutDef[] = [{
   slots: [
     { card: 'materials', width: 2 },
     { card: 'engineers', width: 1 },
+    { card: 'engineer-guide', width: 2 },
     { card: 'eng-alerts', width: 1 },
     { card: 'eng-ship', width: 1 },
     { card: 'eng-flow', width: 2 },

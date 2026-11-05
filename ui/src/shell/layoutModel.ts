@@ -69,6 +69,7 @@ function sanitizeRemoved(removed: unknown, known: Known): string[] {
 
 export function mergeWithDefaults(
   saved: ThemedTabDoc | undefined, factory: CardPlacement[], known: Known,
+  shouldAdd: (id: string) => boolean = () => true,
 ): ThemedTabDoc {
   if (!saved) return { cards: factory.map((c) => ({ ...c })), removed: [] };
   const factoryWidth = new Map(factory.map((c) => [c.id, c.w]));
@@ -76,7 +77,7 @@ export function mergeWithDefaults(
   const cards = sanitizePlacements(saved.cards, known, (id) => factoryWidth.get(id) ?? 1);
   const present = new Set(cards.map((c) => c.id));
   for (const f of factory) {
-    if (!present.has(f.id) && !removed.includes(f.id)) cards.push({ ...f });
+    if (shouldAdd(f.id) && !present.has(f.id) && !removed.includes(f.id)) cards.push({ ...f });
   }
   return { cards, removed };
 }

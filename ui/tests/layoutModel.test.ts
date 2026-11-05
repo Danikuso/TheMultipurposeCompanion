@@ -26,6 +26,15 @@ describe('mergeWithDefaults', () => {
     const out = mergeWithDefaults(saved, [...factory, p('d', 3)], all);
     expect(out.cards.map((c) => c.id)).toEqual(['c', 'a', 'b', 'd']);
   });
+  test('una tarjeta de consulta opcional no altera una disposición guardada y se conserva si ya se añadió', () => {
+    const saved = { cards: [{ ...p('a', 2, 320), x: 1 }, p('b', 1)], removed: ['c'] };
+    const updatedFactory = [...factory, p('guide', 2)];
+    const optional = (id: string) => id !== 'guide';
+    expect(mergeWithDefaults(saved, updatedFactory, all, optional)).toEqual(saved);
+    expect(mergeWithDefaults(undefined, updatedFactory, all, optional).cards).toEqual(updatedFactory);
+    const added = { ...saved, cards: [...saved.cards, p('guide', 2)] };
+    expect(mergeWithDefaults(added, updatedFactory, all, optional)).toEqual(added);
+  });
   test('w inválido usa el ancho de fábrica', () => {
     const saved = { cards: [{ id: 'b', w: 9 as unknown as CardWidth, h: null }], removed: [] };
     expect(mergeWithDefaults(saved, factory, all).cards[0]).toEqual(p('b', 2));

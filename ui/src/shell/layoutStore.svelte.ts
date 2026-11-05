@@ -34,6 +34,7 @@ export const layoutState = $state({
 });
 
 const known = (id: string) => Object.hasOwn(cards, id);
+const shouldAdd = (id: string) => cards[id]?.addToSaved !== false;
 const widthOf = (id: string) => cards[id]?.defaultWidth ?? 1;
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 // Solo el estado HTTP (0 = sin red): las cadenas libres se redactan en el servidor.
@@ -115,7 +116,7 @@ function activeDoc(): LayoutDoc {
 }
 
 export function themedTab(tabKey: string): ThemedTabDoc {
-  return mergeWithDefaults(activeDoc().tabs[tabKey], factoryLayout(tabKey), known);
+  return mergeWithDefaults(activeDoc().tabs[tabKey], factoryLayout(tabKey), known, shouldAdd);
 }
 
 export function customTab(id: string): CustomTabDoc | undefined {
@@ -229,7 +230,7 @@ export function applyOp(tabKey: string, index: number, op: CardOp, geo?: LayoutG
           : c)),
       };
     }
-    const tab = mergeWithDefaults(d.tabs[tabKey], factoryLayout(tabKey), known);
+    const tab = mergeWithDefaults(d.tabs[tabKey], factoryLayout(tabKey), known, shouldAdd);
     const target = tab.cards[index];
     if (!target) return d;
     let removed = tab.removed;
@@ -249,7 +250,7 @@ export function addCards(tabKey: string, cardIds: string[], geo?: LayoutGeometry
     const customId = tabKey.slice('custom:'.length);
     const tab: ThemedTabDoc = custom
       ? { cards: d.custom.find((c) => c.id === customId)?.cards ?? [], removed: [] }
-      : mergeWithDefaults(d.tabs[tabKey], factoryLayout(tabKey), known);
+      : mergeWithDefaults(d.tabs[tabKey], factoryLayout(tabKey), known, shouldAdd);
     if (custom && !d.custom.some((c) => c.id === customId)) return d;
     let cur = geo ? pinColumns(tab.cards, pack(tab.cards, geo)) : tab.cards;
     let removed = tab.removed;

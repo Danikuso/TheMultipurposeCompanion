@@ -62,6 +62,13 @@ test('selection posts the existing action and waits for confirmation from the to
   await select(300100);
   expect(target.querySelector('[data-testid="guide-next"]')?.textContent).toContain('Scout');
 });
+test('reselecting the current engineer does not toggle off the shared selection', async () => {
+  await show(); await select(300100);
+  const input = target.querySelector('[data-testid="guide-select"]') as HTMLSelectElement;
+  input.value = '300100'; input.dispatchEvent(new Event('change', { bubbles: true })); await settle();
+  expect(vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0);
+  expect(panel().querySelector('[data-testid="guide-next"]')?.textContent).toContain('Scout');
+});
 test('shared selection from the other card updates the guide too', async () => {
   await show();
   const second = document.createElement('div'); target.append(second);

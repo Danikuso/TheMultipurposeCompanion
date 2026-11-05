@@ -865,6 +865,7 @@ const UI_SLOTS: &[&str] = &[
     "powerplay-status",
     "materials",
     "engineers",
+    "engineer-guide",
     "eng-alerts",
     "eng-ship",
     "eng-flow",
