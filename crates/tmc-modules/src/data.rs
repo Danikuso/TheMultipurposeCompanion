@@ -1471,6 +1471,22 @@ pub struct UnlockSteps {
     pub invite_key: Option<String>,
     #[serde(default)]
     pub contribution: Option<Contribution>,
+    #[serde(default)]
+    pub discovery_key: Option<String>,
+    #[serde(default)]
+    pub reputation_key: Option<String>,
+    #[serde(default)]
+    pub prerequisites: Vec<EngineerPrerequisite>,
+    #[serde(default)]
+    pub guide_sources: Vec<String>,
+    #[serde(default)]
+    pub guide_verified: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EngineerPrerequisite {
+    pub engineer_id: u64,
+    pub description_key: String,
 }
 
 /// Engineer facts (journal `EngineerID`), with provenance.
@@ -1508,7 +1524,32 @@ pub(crate) fn parse_engineers(json: &str) -> Vec<EngineerDef> {
         return Vec::new();
     };
     let mut out: Vec<EngineerDef> = Vec::new();
-    for (index, value) in entries.into_iter().enumerate() {
+    for (index, mut value) in entries.into_iter().enumerate() {
+        // A damaged optional guide must not remove the engineer's core definition.
+        if let Some(unlock) = value
+            .get_mut("unlock")
+            .and_then(serde_json::Value::as_object_mut)
+            && serde_json::from_value::<UnlockSteps>(serde_json::Value::Object(unlock.clone()))
+                .is_err()
+        {
+            let mut removed_guide = false;
+            for field in [
+                "discovery_key",
+                "reputation_key",
+                "prerequisites",
+                "guide_sources",
+                "guide_verified",
+            ] {
+                removed_guide |= unlock.remove(field).is_some();
+            }
+            if removed_guide {
+                tracing::warn!(
+                    file = "engineers.json",
+                    index,
+                    "invalid optional engineer guide; ignoring guide"
+                );
+            }
+        }
         match serde_json::from_value::<EngineerDef>(value) {
             Ok(mut e) if engineer_is_valid(&e) && !out.iter().any(|o| o.id == e.id) => {
                 // An invalid contribution only drops that step; the engineer row stays.
@@ -2184,6 +2225,47 @@ mod tests {
                 .iter()
                 .any(|b| b.blueprint == "fsd_longrange")
         );
+    }
+
+    #[test]
+    fn engineer_guide_fields_are_optional_and_damage_does_not_remove_engineer() {
+        let mut row: serde_json::Value =
+            serde_json::from_str(include_str!("../data/engineers.json")).unwrap();
+        let mut entry = row["entries"]
+            .as_array_mut()
+            .unwrap()
+            .iter()
+            .find(|e| e["id"] == 300100)
+            .unwrap()
+            .clone();
+        entry["unlock"]["discovery_key"] = serde_json::json!({"broken": true});
+        entry["unlock"]["guide_verified"] = true.into();
+        let parsed = parse_engineers(&serde_json::json!({"entries": [entry]}).to_string());
+        assert_eq!(parsed.len(), 1);
+        assert_eq!(parsed[0].id, 300100);
+        assert!(!parsed[0].unlock.guide_verified);
+        let old: UnlockSteps =
+            serde_json::from_str(r#"{"requirement_key":"unlock-test"}"#).unwrap();
+        assert!(old.discovery_key.is_none() && old.prerequisites.is_empty());
+    }
+
+    #[test]
+    fn engineer_guides_cover_every_engineer_and_preserve_compound_requirements() {
+        assert_eq!(engineers().len(), 38);
+        for e in engineers() {
+            assert!(e.unlock.guide_verified, "{}", e.name);
+            assert!(e.unlock.discovery_key.is_some() && e.unlock.reputation_key.is_some());
+            assert!(!e.unlock.guide_sources.is_empty());
+            for p in &e.unlock.prerequisites {
+                assert!(engineer(p.engineer_id).is_some());
+                assert_ne!(p.engineer_id, e.id);
+                assert!(!p.description_key.is_empty());
+            }
+        }
+        assert_eq!(engineer(400013).unwrap().unlock.prerequisites.len(), 3);
+        for id in [300140, 300150, 300210, 300250, 300260, 300280, 400003] {
+            assert!(engineer(id).unwrap().unlock.contribution.is_none());
+        }
     }
 
     #[test]

@@ -612,9 +612,18 @@ mod tests {
     #[test]
     fn unlock_steps_never_invent_a_donation() {
         for d in &staging() {
-            // Los requisitos compuestos ("X o Y") no se reducen a una contribución. La única
-            // donación activa es la de Elvira Martuuk, que la fuente dice literalmente
-            // («Provide 3 units of Soontill Relics») y el override documenta.
+            // F16: solo entregas simples documentadas. Bonos, extracción minera y referencias
+            // Odyssey conservan instrucciones completas sin inventar una contribución de saldo.
+            let simple = [
+                300000, 300010, 300030, 300040, 300050, 300080, 300090, 300100, 300110, 300120,
+                300130, 300160, 300180, 300200, 300220, 300230, 300270, 300290, 300300,
+            ];
+            assert_eq!(
+                d.unlock.contribution.is_some(),
+                simple.contains(&d.id),
+                "{}",
+                d.name
+            );
             match (d.name.as_str(), &d.unlock.contribution) {
                 ("Elvira Martuuk", Some(c)) => {
                     assert_eq!(
@@ -622,7 +631,8 @@ mod tests {
                         ("soontillrelics", "commodity", 3)
                     );
                 }
-                (name, contribution) => assert!(contribution.is_none(), "{name}"),
+                (_, Some(c)) => assert!(c.is_valid()),
+                (_, None) => {}
             }
             let entry = tmc_model::events::EngineerEntry {
                 engineer: d.name.clone(),

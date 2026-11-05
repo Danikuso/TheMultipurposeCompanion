@@ -3044,6 +3044,13 @@
           "key": "unlock-invite-didi-vatermann"
         },
         {
+          "amount": 50,
+          "engineer_id": 300000,
+          "field": "contribution",
+          "item": "lavianbrandy",
+          "kind": "commodity"
+        },
+        {
           "engineer_id": 300010,
           "field": "requirement",
           "key": "unlock-bill-turner"
@@ -3052,6 +3059,13 @@
           "engineer_id": 300010,
           "field": "invite",
           "key": "unlock-invite-bill-turner"
+        },
+        {
+          "amount": 50,
+          "engineer_id": 300010,
+          "field": "contribution",
+          "item": "bromellite",
+          "kind": "commodity"
         },
         {
           "engineer_id": 300030,
@@ -3064,6 +3078,13 @@
           "key": "unlock-invite-broo-tarquin"
         },
         {
+          "amount": 50,
+          "engineer_id": 300030,
+          "field": "contribution",
+          "item": "fujintea",
+          "kind": "commodity"
+        },
+        {
           "engineer_id": 300040,
           "field": "requirement",
           "key": "unlock-the-sarge"
@@ -3072,6 +3093,13 @@
           "engineer_id": 300040,
           "field": "invite",
           "key": "unlock-invite-the-sarge"
+        },
+        {
+          "amount": 50,
+          "engineer_id": 300040,
+          "field": "contribution",
+          "item": "shieldpatternanalysis",
+          "kind": "material"
         },
         {
           "engineer_id": 300050,
@@ -3084,6 +3112,13 @@
           "key": "unlock-invite-zacariah-nemo"
         },
         {
+          "amount": 25,
+          "engineer_id": 300050,
+          "field": "contribution",
+          "item": "xihecompanions",
+          "kind": "commodity"
+        },
+        {
           "engineer_id": 300080,
           "field": "requirement",
           "key": "unlock-liz-ryder"
@@ -3092,6 +3127,13 @@
           "engineer_id": 300080,
           "field": "invite",
           "key": "unlock-invite-liz-ryder"
+        },
+        {
+          "amount": 200,
+          "engineer_id": 300080,
+          "field": "contribution",
+          "item": "landmines",
+          "kind": "commodity"
         },
         {
           "engineer_id": 300090,
@@ -3104,6 +3146,13 @@
           "key": "unlock-invite-hera-tani"
         },
         {
+          "amount": 50,
+          "engineer_id": 300090,
+          "field": "contribution",
+          "item": "kamitracigars",
+          "kind": "commodity"
+        },
+        {
           "engineer_id": 300100,
           "field": "requirement",
           "key": "unlock-felicity-farseer"
@@ -3112,6 +3161,13 @@
           "engineer_id": 300100,
           "field": "invite",
           "key": "unlock-invite-felicity-farseer"
+        },
+        {
+          "amount": 1,
+          "engineer_id": 300100,
+          "field": "contribution",
+          "item": "metaalloys",
+          "kind": "commodity"
         },
         {
           "engineer_id": 300110,
@@ -3124,6 +3180,13 @@
           "key": "unlock-invite-ram-tah"
         },
         {
+          "amount": 50,
+          "engineer_id": 300110,
+          "field": "contribution",
+          "item": "scandatabanks",
+          "kind": "material"
+        },
+        {
           "engineer_id": 300120,
           "field": "requirement",
           "key": "unlock-lei-cheung"
@@ -3134,6 +3197,13 @@
           "key": "unlock-invite-lei-cheung"
         },
         {
+          "amount": 200,
+          "engineer_id": 300120,
+          "field": "contribution",
+          "item": "gold",
+          "kind": "commodity"
+        },
+        {
           "engineer_id": 300130,
           "field": "requirement",
           "key": "unlock-petra-olmanova"
@@ -3142,6 +3212,13 @@
           "engineer_id": 300130,
           "field": "invite",
           "key": "unlock-invite-petra-olmanova"
+        },
+        {
+          "amount": 200,
+          "engineer_id": 300130,
+          "field": "contribution",
+          "item": "progenitorcells",
+          "kind": "commodity"
         },
         {
           "engineer_id": 300140,
@@ -3191,6 +3268,13 @@
           "key": "unlock-invite-the-dweller"
         },
         {
+          "amount": 500000,
+          "engineer_id": 300180,
+          "field": "contribution",
+          "item": "credits",
+          "kind": "credits"
+        },
+        {
           "engineer_id": 300200,
           "field": "requirement",
           "key": "unlock-marco-qwent"
@@ -3199,6 +3283,13 @@
           "engineer_id": 300200,
           "field": "invite",
           "key": "unlock-invite-marco-qwent"
+        },
+        {
+          "amount": 25,
+          "engineer_id": 300200,
+          "field": "contribution",
+          "item": "modularterminals",
+          "kind": "commodity"
         },
         {
           "engineer_id": 300210,
@@ -3221,6 +3312,13 @@
           "key": "unlock-invite-professor-palin"
         },
         {
+          "amount": 25,
+          "engineer_id": 300220,
+          "field": "contribution",
+          "item": "unknownenergysource",
+          "kind": "material"
+        },
+        {
           "engineer_id": 300230,
           "field": "requirement",
           "key": "unlock-lori-jameson"
@@ -3229,6 +3327,13 @@
           "engineer_id": 300230,
           "field": "invite",
           "key": "unlock-invite-lori-jameson"
+        },
+        {
+          "amount": 25,
+          "engineer_id": 300230,
+          "field": "contribution",
+          "item": "konggaale",
+          "kind": "commodity"
         },
         {
           "engineer_id": 300250,
@@ -3261,6 +3366,13 @@
           "key": "unlock-invite-tiana-fortune"
         },
         {
+          "amount": 50,
+          "engineer_id": 300270,
+          "field": "contribution",
+          "item": "decodedemissiondata",
+          "kind": "material"
+        },
+        {
           "engineer_id": 300280,
           "field": "requirement",
           "key": "unlock-mel-brandon"
@@ -3281,6 +3393,13 @@
           "key": "unlock-invite-etienne-dorn"
         },
         {
+          "amount": 25,
+          "engineer_id": 300290,
+          "field": "contribution",
+          "item": "occupiedcryopod",
+          "kind": "commodity"
+        },
+        {
           "engineer_id": 300300,
           "field": "requirement",
           "key": "unlock-chloe-sedesi"
@@ -3289,6 +3408,13 @@
           "engineer_id": 300300,
           "field": "invite",
           "key": "unlock-invite-chloe-sedesi"
+        },
+        {
+          "amount": 25,
+          "engineer_id": 300300,
+          "field": "contribution",
+          "item": "unknownenergysource",
+          "kind": "material"
         },
         {
           "engineer_id": 400001,
@@ -3424,7 +3550,7 @@
       "next_cursor": null,
       "revision": 21,
       "section": "unlock",
-      "total": 77
+      "total": 95
     },
     "flow_blueprints": {
       "cursor": 0,

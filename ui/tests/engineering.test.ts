@@ -262,9 +262,9 @@ test('engineer pages are cancelled on unmount and when the document is hidden', 
 });
 test('all next step variants are rendered without raw Fluent keys', async () => {
  selectEngineer({ Requirement: { key: 'unlock-felicity-farseer' } }); await showEngineers();
- expect(target.textContent).toContain('Cumple el requisito');
+ expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('Scout');
  selectEngineer({ Invite: { key: 'unlock-invite-felicity-farseer' } }); flushSync();
- expect(target.textContent).toContain('Consigue la invitación');
+ expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('1 Meta-Alloys');
  selectEngineer('Done'); flushSync();
  expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('Desbloqueado');
 });
@@ -748,7 +748,7 @@ test('a revision bump neither refetches nor blanks the capabilities', async () =
  expect(target.querySelector('[data-testid="engineer-blueprints"]')?.textContent).toContain('G1, G2, G3'); expect(target.querySelector('[data-testid="engineer-details"]')?.textContent).not.toContain('Cargando');
  await settle(); expect(capCalls()).toHaveLength(before);
  live.topics['engineering.engineers'] = { ...fixture['engineering.engineers'], selected_id: 300100, next_step: { Requirement: { key: 'unlock-felicity-farseer' } }, revision: 23 }; flushSync(); await settle();
- expect(capCalls()).toHaveLength(before); expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('Cumple el requisito');
+ expect(capCalls()).toHaveLength(before); expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('Scout');
 });
 test('changing the selected engineer fetches that engineer once and a changed catalogue invalidates the cache', async () => {
  selectEngineer(); await showEngineers();
