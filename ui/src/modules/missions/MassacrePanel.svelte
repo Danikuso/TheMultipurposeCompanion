@@ -19,7 +19,7 @@
     {#if piles.length > 1}
       <div class="massacre-controls">
         <label class="compact-selector-label" for="massacre-faction-select">
-          <span class="label-text">Objetivo ({piles.length}):</span>
+          <span class="label-text">{t('ui-count-heading', { label: t('combat-target'), count: piles.length })}</span>
           <select
             id="massacre-faction-select"
             class="glass-select"
@@ -28,7 +28,7 @@
           >
             {#each piles as p, pi}
               <option value={pi}>
-                {p.target_faction} · {p.kills_remaining} bajas restantes
+                {p.target_faction} · {t('missions-massacre-remaining', { kills: p.kills_remaining })}
               </option>
             {/each}
           </select>

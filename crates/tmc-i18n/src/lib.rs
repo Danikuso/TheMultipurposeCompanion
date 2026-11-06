@@ -300,6 +300,12 @@ mod tests {
                 ("price", FluentValue::from("5200 CR")),
                 ("rate", FluentValue::from("120 t/h")),
                 ("tons", FluentValue::from(12)),
+                ("trips", FluentValue::from(2)),
+                ("number", FluentValue::from(3)),
+                ("size", FluentValue::from(6)),
+                ("mount", FluentValue::from("Fixed")),
+                ("label", FluentValue::from("Ship")),
+                ("role", FluentValue::from("Exploration")),
                 ("fee", FluentValue::from("25 %")),
                 ("faction", FluentValue::from("Sol Workers")),
                 ("ship", FluentValue::from("Vulture")),
@@ -442,26 +448,19 @@ mod tests {
     }
 
     #[test]
-    fn trade_rank_names_are_english_in_all_languages() {
-        let names = [
-            "Penniless",
-            "Mostly Penniless",
-            "Peddler",
-            "Dealer",
-            "Merchant",
-            "Broker",
-            "Entrepreneur",
-            "Tycoon",
-            "Elite",
-        ];
-        for lang in LANGUAGES {
+    fn trade_rank_names_are_localized_in_all_languages() {
+        for (lang, expected) in [
+            ("es", "Sin dinero"),
+            ("en", "Penniless"),
+            ("fr", "sans-le-sou"),
+            ("de", "bettelarm"),
+            ("pt", "Pobre"),
+        ] {
             let i18n = I18n::new(lang);
-            for (rank, expected) in names.iter().enumerate() {
-                assert_eq!(
-                    i18n.t(&format!("trade-rank-{rank}"), &[]),
-                    *expected,
-                    "{lang}"
-                );
+            assert_eq!(i18n.t("trade-rank-0", &[]), expected, "{lang}");
+            for rank in 0..=8 {
+                let key = format!("trade-rank-{rank}");
+                assert_ne!(i18n.t(&key, &[]), key, "{lang}");
             }
         }
     }

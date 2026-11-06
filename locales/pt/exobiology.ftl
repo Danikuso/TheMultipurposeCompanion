@@ -1,7 +1,8 @@
 panel-exobiology = Exobiologia
 nav-exobiology = Exobiologia
 exobiology-signals = { $count ->
-    [one] 1 sinal biológico
+    [0] { $count } sinais biológicos
+    [one] { $count } sinal biológico
    *[other] { $count } sinais biológicos
 }
 exobiology-first-logged-estimated = NÃO REGISTRADO · ×5 (estimado)

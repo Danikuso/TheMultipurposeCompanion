@@ -34,6 +34,14 @@ test('reused formatters follow the active locale', () => {
   expect(integer(1234)).toBe('1.234');
 });
 
+test('light-year units follow the same locale as their numbers', () => {
+  for (const [lang, expected] of [['es', '3,00 al'], ['en', '3.00 ly'], ['fr', '3,00 al'], ['de', '3,00 Lj'], ['pt', '3,00 al']]) {
+    setLocale(lang);
+    expect(ly(3)).toBe(expected);
+    expect(ly(null)).toBe('—');
+  }
+});
+
 test('relative time formatter is reused per locale', () => {
   setLocale('es');
   const base = Date.parse('2030-01-10T00:00:00Z');

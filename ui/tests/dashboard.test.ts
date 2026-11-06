@@ -362,7 +362,7 @@ describe('dashboard panels', () => {
     expect(target.textContent).toContain(t('security-high'));
     expect(target.textContent).toContain(t('mode-normal-space'));
     expect(target.textContent).toContain('11.00 B hab.');
-    expect(target.textContent).toContain('0.0 AL');
+    expect(target.textContent).toContain('0.0 al');
     expect(target.textContent).toContain('-14.2500°');
   });
 
@@ -377,7 +377,7 @@ describe('dashboard panels', () => {
 
     renderPanel(LocationPanel);
     expect(target.textContent).toContain('Shinrarta Dezhra');
-    expect(target.textContent).toContain('64.4 AL');
+    expect(target.textContent).toContain('64.4 al');
 
     const toggleBtn = target.querySelector('[data-testid="toggle-home-base-btn"]') as HTMLButtonElement | null;
     expect(toggleBtn).not.toBeNull();
@@ -401,7 +401,7 @@ describe('dashboard panels', () => {
 
     renderPanel(SessionPanel);
     expect(target.textContent).toContain(t('field-average-jump'));
-    expect(target.textContent).toContain('25,00 ly');
+    expect(target.textContent).toContain('25,00 al');
     expect(target.textContent).toContain(t('field-profit-rate'));
     expect(target.textContent).toContain('5.000.000 CR/h');
   });

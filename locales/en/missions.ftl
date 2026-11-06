@@ -93,3 +93,5 @@ missions-cg-complete = COMPLETE
 missions-tourism-reference-default = Reference: { $crly } cr/ly
 missions-rewards-reputation-short = Rep.
 missions-rewards-influence-short = Inf.
+missions-passenger-groups-count = Groups ({ $count })
+missions-count-short = missions

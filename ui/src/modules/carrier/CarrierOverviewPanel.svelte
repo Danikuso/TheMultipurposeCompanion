@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
-  import { decimal, integer } from '../../lib/format';
+  import { decimal, integer, ly } from '../../lib/format';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
   import StationIcon from '../../lib/icons/StationIcon.svelte';
@@ -30,7 +30,7 @@
         </div>
       </div>
       {#if overview.is_aboard}
-        <span class="badge badge-green" data-testid="carrier-aboard">A BORDO</span>
+        <span class="badge badge-green" data-testid="carrier-aboard">{t('carrier-aboard')}</span>
       {/if}
     </div>
 
@@ -46,7 +46,7 @@
       <div class="metric-card">
         <span class="metric-label">{t('carrier-jumps-possible')}</span>
         <span class="metric-val cyan" data-testid="carrier-jumps">{overview.max_jumps_possible}</span>
-        <span class="sub">500 al / salto</span>
+        <span class="sub">{t('carrier-max-jump', { distance: ly(500) })}</span>
       </div>
 
       <div class="metric-card">
@@ -67,7 +67,7 @@
 
         <div class="meter-group">
           <div class="meter-labels">
-            <span class="sub">{t('carrier-fuel-depot')}: <b>{integer(overview.fuel_depot)} / 1.000 t</b></span>
+            <span class="sub">{t('carrier-fuel-depot')}: <b>{integer(overview.fuel_depot)} / {integer(1000)} t</b></span>
             <span class="sub">{t('carrier-fuel-cargo')}: <b>{integer(overview.fuel_cargo)} t</b></span>
           </div>
           <div class="hud-meter-track" role="progressbar" aria-valuenow={overview.fuel_depot} aria-valuemin={0} aria-valuemax={1000}>

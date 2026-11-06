@@ -98,8 +98,8 @@
                       type="button"
                       class="btn-copy"
                       onclick={() => copySystem(o.system_name)}
-                      title="Copiar sistema"
-                      aria-label="Copiar {o.system_name}"
+                      title={t('action-copy-system')}
+                      aria-label={t('ui-copy-value', { value: o.system_name })}
                     >{copiedSystem === o.system_name ? '✓' : '⎘'}</button>
                   </span>
                 </td>

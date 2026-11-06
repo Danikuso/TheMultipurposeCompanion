@@ -1,5 +1,6 @@
 <!-- ui/src/lib/icons/PowerIcon.svelte -->
 <script lang="ts">
+  import { t } from '../i18n';
   import { POWERS } from './index';
 
   interface Props {
@@ -35,7 +36,7 @@
     style:width="{size}px"
     style:height="{size}px"
     onclick={toggle}
-    title={meta.portrait ? 'Haz clic para alternar entre Emblema Vectorial y Retrato Oficial' : meta.name}
+    title={meta.portrait ? t('power-icon-toggle') : meta.name}
     aria-label={meta.name}
   >
     {#if showPortrait && meta.portrait}

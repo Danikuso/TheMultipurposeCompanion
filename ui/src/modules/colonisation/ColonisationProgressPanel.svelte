@@ -27,7 +27,7 @@
         {/if}
       </div>
       {#if depot.is_docked}
-        <span class="badge badge-green" data-testid="depot-docked">ATRACADO</span>
+        <span class="badge badge-green" data-testid="depot-docked">{t('mode-docked')}</span>
       {/if}
     </div>
 

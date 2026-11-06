@@ -673,7 +673,7 @@
                     class="btn-arrow"
                     data-testid="priority-up-{role}"
                     disabled={i === 0}
-                    aria-label="Subir {t(`layout-${role}`)}"
+                    aria-label={t('settings-role-up', { role: t(`layout-${role}`) })}
                     onclick={() => movePriority(i, 'up')}
                   >▲</button>
                   <button
@@ -681,7 +681,7 @@
                     class="btn-arrow"
                     data-testid="priority-down-{role}"
                     disabled={i === autoPriorities.length - 1}
-                    aria-label="Bajar {t(`layout-${role}`)}"
+                    aria-label={t('settings-role-down', { role: t(`layout-${role}`) })}
                     onclick={() => movePriority(i, 'down')}
                   >▼</button>
                 </div>
@@ -838,7 +838,7 @@
                 bind:value={ttsVoice}
                 onchange={saveConfig}
               >
-                <option value="">(Predeterminada)</option>
+                <option value="">({t('settings-default-option')})</option>
                 {#each ttsVoicesList as v (v.id)}
                   <option value={v.id}>{v.name} ({v.lang})</option>
                 {/each}
@@ -976,7 +976,7 @@
             {#if voiceAssistant.sttEngine === 'whisper'}
               <div class="whisper-status-card">
                 <div class="whisper-status-header">
-                  <span class="whisper-title">🧠 Whisper AI Local</span>
+                  <span class="whisper-title">🧠 {t('settings-whisper-local')}</span>
                   <span
                     class="badge"
                     class:badge-success={voiceAssistant.whisperStatus === 'ready'}
@@ -989,7 +989,7 @@
                     {:else if voiceAssistant.whisperStatus === 'loading'}
                       {t('voice-assistant-whisper-loading', { pct: voiceAssistant.whisperProgress })}
                     {:else}
-                      Offline (~39MB)
+                      {t('settings-whisper-offline-size')}
                     {/if}
                   </span>
                 </div>

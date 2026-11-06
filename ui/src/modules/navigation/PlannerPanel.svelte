@@ -208,7 +208,7 @@
         data-testid="plan-to"
         type="text"
         autocomplete="off"
-        placeholder={plan?.active?.destination ? `Destino (o ruta activa: ${plan.active.destination})` : ''}
+        placeholder={plan?.active?.destination ? t('nav-plan-active-destination-placeholder', { destination: plan.active.destination }) : ''}
         {disabled}
         bind:value={to.text}
         role="combobox"

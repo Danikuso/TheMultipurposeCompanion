@@ -36,7 +36,7 @@
           <button
             type="button"
             class="btn-close"
-            aria-label="Cerrar"
+            aria-label={t('ui-close')}
             onclick={close}
           >✕</button>
         {/if}

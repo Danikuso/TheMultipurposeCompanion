@@ -13,3 +13,4 @@ powerplay-merits-rate = Taux mérites/heure
 powerplay-cycle-ends = Fin du cycle hebdomadaire
 powerplay-cycle-thursday = Jeudi 07:00 UTC
 powerplay-no-pledge = Non affilié à une puissance
+powerplay-next-rank-progress = { $pct } vers le rang { $rank }

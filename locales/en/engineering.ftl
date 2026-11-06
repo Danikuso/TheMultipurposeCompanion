@@ -192,3 +192,7 @@ engineering-guide-all-requirements = Complete access route
 engineering-guide-contacts = Required previous contacts
 engineering-guide-open-contact = View { $name }
 engineering-guide-after-unlock = After unlocking
+engineering-reputation-friendly = Friendly
+engineering-reputation-allied = Allied
+engineering-reputation-cordial = Cordial
+engineering-reputation-unfriendly = Unfriendly

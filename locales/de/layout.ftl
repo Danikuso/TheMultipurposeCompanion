@@ -84,3 +84,4 @@ layout-settings-move-up = Tab nach oben
 layout-settings-move-down = Tab nach unten
 layout-settings-editing-hint = Beende oder brich die Layout-Bearbeitung ab, bevor du Profile verwaltest
 layout-settings-error = Die Aktion konnte nicht abgeschlossen werden. Versuche es erneut.
+layout-edit-height-auto-short = auto

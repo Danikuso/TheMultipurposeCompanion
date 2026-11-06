@@ -1,5 +1,6 @@
 <!-- ui/src/lib/icons/StationIcon.svelte -->
 <script lang="ts">
+  import { t } from '../i18n';
   import { resolveStation } from './index';
 
   interface Props {
@@ -15,6 +16,7 @@
   }: Props = $props();
 
   const meta = $derived(resolveStation(stationType));
+  const name = $derived(meta.key === 'outpost' ? t('station-type-outpost') : meta.key === 'mega-ship' ? t('station-type-megaship') : meta.name);
 </script>
 
 {#if meta}
@@ -22,8 +24,8 @@
     class="station-icon {className}"
     style:width="{size}px"
     style:height="{size}px"
-    title={meta.name}
-    aria-label={meta.name}
+    title={name}
+    aria-label={name}
   >
     {@html meta.svg}
   </span>

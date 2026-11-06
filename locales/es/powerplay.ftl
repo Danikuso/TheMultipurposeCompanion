@@ -1,7 +1,7 @@
 nav-powerplay = Powerplay 2.0
 panel-powerplay-status = Estado de Powerplay
 panel-powerplay-session = Méritos de sesión
-powerplay-pledged-to = Jurado a
+powerplay-pledged-to = Afiliado a
 powerplay-rank = Rango
 powerplay-merits = Méritos acumulados
 powerplay-next-rank = Próximo rango
@@ -13,3 +13,4 @@ powerplay-merits-rate = Tasa de méritos/hora
 powerplay-cycle-ends = Fin del ciclo semanal
 powerplay-cycle-thursday = Jueves 07:00 UTC
 powerplay-no-pledge = No alineado con ninguna potencia
+powerplay-next-rank-progress = { $pct } al rango { $rank }

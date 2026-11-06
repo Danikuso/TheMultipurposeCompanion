@@ -27,7 +27,7 @@
           data-testid="toggle-cargo-list"
           onclick={() => (showCargoTable = !showCargoTable)}
         >
-          {showCargoTable ? '▲ Ocultar lista' : `▼ Ver desglose (${lines.length})`}
+          {showCargoTable ? t('ui-hide-list') : t('ui-show-list', { count: lines.length })}
         </button>
       {/if}
     </div>

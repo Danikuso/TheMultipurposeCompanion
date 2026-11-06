@@ -119,7 +119,7 @@ test('TopBar renders microphone pill and responds to clicks and states', async (
   const micBtn = target.querySelector('[data-testid="topbar-voice-mic"]') as HTMLButtonElement;
   expect(micBtn).not.toBeNull();
   expect(micBtn.classList.contains('active')).toBe(false);
-  expect(micBtn.textContent).toContain('VOZ OFF');
+  expect(micBtn.textContent).toContain('Voz des.');
 
   // Clic en la píldora activa la asistencia de voz
   micBtn.click();

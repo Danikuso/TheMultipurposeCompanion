@@ -1,7 +1,7 @@
 panel-exobiology = Exobiologie
 nav-exobiology = Exobiologie
 exobiology-signals = { $count ->
-    [one] 1 signal biologique
+    [one] { $count } signal biologique
    *[other] { $count } signaux biologiques
 }
 exobiology-first-logged-estimated = NON ENREGISTRÉ · ×5 (estimé)
@@ -22,7 +22,7 @@ exobiology-source-canonn = Canonn
 exobiology-species-unknown = { $genus } (espèce indéterminée)
 exobiology-no-candidates = Aucune candidate avec les données actuelles.
 exobiology-genera-confirmed = Genres confirmés par les sondes : { $genera }
-exobiology-genera-unconfirmed = Genres non confirmés (scan de surface manquant)
+exobiology-genera-unconfirmed = Genres non confirmés (analyse de surface manquante)
 exobiology-completed = { $completed } sur { $signals } terminés
 exobiology-sampling = Échantillonnage en cours
 exobiology-samples = { $n } échantillons sur 3

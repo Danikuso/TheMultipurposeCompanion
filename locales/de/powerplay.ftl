@@ -13,3 +13,4 @@ powerplay-merits-rate = Verdienste/Stunde-Rate
 powerplay-cycle-ends = Ende des wöchentlichen Zyklus
 powerplay-cycle-thursday = Donnerstags 07:00 UTC
 powerplay-no-pledge = Keiner Macht angeschlossen
+powerplay-next-rank-progress = { $pct } bis Rang { $rank }

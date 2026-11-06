@@ -182,10 +182,10 @@
           {#if isCurrentSystemHome}
             <span class="sub-pill home-pill">🏠 {t('field-home-base')}</span>
           {:else if distBase != null && prefs.homeSystem}
-            <span class="sub-pill home-dist-pill">{distBase} AL {t('field-distance-base', { system: prefs.homeSystem })}</span>
+            <span class="sub-pill home-dist-pill">{distBase} {t('unit-light-year')} {t('field-distance-base', { system: prefs.homeSystem })}</span>
           {/if}
           {#if distSol && (!prefs.homeSystem || prefs.homeSystem.toLowerCase() !== 'sol')}
-            <span class="sub-pill">{t('exploration-distance-sol')}: <span class="mono">{distSol} AL</span></span>
+            <span class="sub-pill">{t('exploration-distance-sol')}: <span class="mono">{distSol} {t('unit-light-year')}</span></span>
           {/if}
         </div>
       </div>
@@ -210,27 +210,27 @@
 
       <div class="telemetry-chips">
         {#if terraformableCount > 0}
-          <span class="telemetry-chip terraformable" title="{terraformableCount} mundos terraformables">
+          <span class="telemetry-chip terraformable" title={t('exploration-terraformable-count', { count: terraformableCount })}>
             🌍 {t('exploration-terraformable-count', { count: terraformableCount })}
           </span>
         {/if}
         {#if landableCount > 0}
-          <span class="telemetry-chip landable" title="{landableCount} cuerpos aterrizables">
+          <span class="telemetry-chip landable" title={t('exploration-landable-count', { count: landableCount })}>
             🛬 {t('exploration-landable-count', { count: landableCount })}
           </span>
         {/if}
         {#if bioCount > 0}
-          <span class="telemetry-chip bio" title="{bioCount} señales biológicas">
+          <span class="telemetry-chip bio" title={t('exploration-bio-total', { count: bioCount })}>
             🌿 {t('exploration-bio-total', { count: bioCount })}
           </span>
         {/if}
         {#if geoCount > 0}
-          <span class="telemetry-chip geo" title="{geoCount} señales geológicas">
+          <span class="telemetry-chip geo" title={t('exploration-geo-total', { count: geoCount })}>
             🌋 {t('exploration-geo-total', { count: geoCount })}
           </span>
         {/if}
         {#if (system.non_body_count ?? 0) > 0}
-          <span class="telemetry-chip signals" title="{(system.non_body_count ?? 0)} señales espaciales">
+          <span class="telemetry-chip signals" title={t('exploration-non-body-signals', { count: system.non_body_count ?? 0 })}>
             📡 {t('exploration-non-body-signals', { count: system.non_body_count ?? 0 })}
           </span>
         {/if}

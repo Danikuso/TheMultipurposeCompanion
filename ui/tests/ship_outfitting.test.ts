@@ -289,7 +289,7 @@ describe('OutfittingSearchPanel', () => {
     expect(q('outfitting-results-list')?.textContent).toContain('−15 % LYR');
     expect(q('outfitting-results-list')?.textContent).toContain('Recompra OK');
     expect(q('outfitting-results-list')?.textContent).toContain('Stronghold');
-    expect(q('outfitting-results-list')?.textContent).toContain('Ajusta recompra');
+    expect(q('outfitting-results-list')?.textContent).toContain('Recompra en riesgo');
     expect(q('outfitting-hidden-permits')?.textContent).toContain('1');
 
     // Desplegar desglose de precios de la primera estación
@@ -370,6 +370,6 @@ describe('OutfittingSearchPanel', () => {
     expect(fallbackBox.textContent).toContain('Caspian Explorer');
     expect(fallbackBox.textContent).toContain('Medupe City');
     expect(fallbackBox.textContent).toContain('6A Prismatic Shield Generator');
-    expect(fallbackBox.textContent).toContain('Sin stock conocido');
+    expect(fallbackBox.textContent).toContain('Sin existencias conocidas');
   });
 });

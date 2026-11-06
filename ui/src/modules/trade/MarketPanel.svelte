@@ -40,7 +40,7 @@
 
     <div class="market-controls">
       <label class="compact-selector-label" for="market-commodity-select">
-        <span class="label-text">Mercancía ({rows.length}):</span>
+        <span class="label-text">{t('ui-count-heading', { label: t('trade-col-commodity'), count: rows.length })}</span>
         <select
           id="market-commodity-select"
           class="glass-select"
@@ -61,7 +61,7 @@
         data-testid="toggle-market-list"
         onclick={() => (showFullCatalog = !showFullCatalog)}
       >
-        {showFullCatalog ? '▲ Ocultar catálogo' : `▼ Ver catálogo (${rows.length})`}
+        {showFullCatalog ? t('ui-hide-list') : t('ui-show-list', { count: rows.length })}
       </button>
     </div>
 
@@ -74,7 +74,7 @@
         </div>
         {#if best}
           <div class="best-dest-sub sub">
-            <span>Venta: <b>{best.station_name}</b> ({best.system_name})</span>
+            <span>{t('trade-sell-destination')} <b>{best.station_name}</b> ({best.system_name})</span>
             {#if activeRow.profit_per_ton != null}
               <span class="mono gold bold">+{credits(activeRow.profit_per_ton)}/t</span>
             {/if}

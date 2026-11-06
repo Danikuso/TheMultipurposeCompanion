@@ -30,7 +30,7 @@
     {#if groups.length > 1}
       <div class="missions-controls">
         <label class="compact-selector-label" for="mission-dest-select">
-          <span class="label-text">Destino ({groups.length}):</span>
+          <span class="label-text">{t('ui-count-heading', { label: t('missions-col-destination'), count: groups.length })}</span>
           <select
             id="mission-dest-select"
             class="glass-select"
@@ -39,7 +39,7 @@
           >
             {#each groups as g, gi}
               <option value={gi}>
-                {g.system ?? t('missions-no-destination')}{g.station ? ` (${g.station})` : ''} · {g.missions.length} mis.{g.next ? ' ★' : ''}
+                {g.system ?? t('missions-no-destination')}{g.station ? ` (${g.station})` : ''} · {g.missions.length} {t('missions-count-short')}{g.next ? ' ★' : ''}
               </option>
             {/each}
           </select>

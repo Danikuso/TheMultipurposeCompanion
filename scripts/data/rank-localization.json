@@ -1,0 +1,734 @@
+{
+  "source": "EDCD/EDDI",
+  "revision": "d3b964ea7c8bb959ad6537f55b308f293a326905",
+  "license": "Apache-2.0",
+  "sources": [
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/CombatRatings.resx",
+      "sha256": "2a52942d25776a77b6dad378303f39b161ec663080495bbf245f1467cbd748a5"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/CombatRatings.es.resx",
+      "sha256": "9a135542cb0b8abaa5bd851228f4349ea8265d7a77dc36f550ee6717e69a7f3c"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/CombatRatings.fr.resx",
+      "sha256": "eea59c7a1736f48438c1df02aeb49ec6a2d904bd7daa76854329b96a27fe55dc"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/CombatRatings.de.resx",
+      "sha256": "a3af2f0be24f3604ad50577ee71e780b063e008aa1f0ec7e5fcd124a7c684a10"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/CombatRatings.pt-BR.resx",
+      "sha256": "f9cd680b513279d8f81fdf02ac9588af6010e8c887cae71ce3cbef3225b0bfd4"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/TradeRatings.resx",
+      "sha256": "d1c71d0cd51e666f7e99068a501c74ededb0f7403406b5e569c9dc761e79b46b"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/TradeRatings.es.resx",
+      "sha256": "959f08bbcea7e7541e80cddc13cd2e58453faf839e127aae5c8fcc749b486e64"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/TradeRatings.fr.resx",
+      "sha256": "8e3af123e8b1f0ee57166ba4bba771bb74fecea4abbeb74d08e9c5b7e1baa570"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/TradeRatings.de.resx",
+      "sha256": "c66776f7de2fbfb4b9a3e38d945fc9c3701bf0db6a5cc9843b4c64d330a43bc2"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/TradeRatings.pt-BR.resx",
+      "sha256": "80ca3c3629ac1a459fa0abd7839ba6e0ef550ae878654997b0face970483c1a1"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/ExplorationRatings.resx",
+      "sha256": "455e1527dffe870d79ac8bf6668fa2a02954ddb86b1024c5a1426f43855ae37d"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/ExplorationRatings.es.resx",
+      "sha256": "b564769df203f67de97232c46e9a4e6ef4c91cf8528265e599226b7ab66fd169"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/ExplorationRatings.fr.resx",
+      "sha256": "771c5759e93cfacc9dc4f8a7eaaff6c41b76ca12be2cbba929963c64ca00f3fa"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/ExplorationRatings.de.resx",
+      "sha256": "6e7c57ad74cd05332f99acb9b5b1c7a96a6b63c69183d79e9fc8158ecb5e1742"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/ExplorationRatings.pt-BR.resx",
+      "sha256": "c3f19f98d2f129cb0f03fc3b663ffe3d0196e5cc63943aa15ca50a333cf6097a"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/MercenaryRatings.resx",
+      "sha256": "b346c4b9c06f7e71462523dd7283dd78186c30546756312ee14f2044cdbe9207"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/MercenaryRatings.es.resx",
+      "sha256": "7e1be9ae2644adc60275ba249bba37e090db7c720ff47cff778781e7aad8b5cd"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/MercenaryRatings.fr.resx",
+      "sha256": "c0ad6cf0e18c5530e7a87a7c6fb134a2a4dbacff43b3bf0d20dbc44eb34141ea"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/MercenaryRatings.de.resx",
+      "sha256": "bff0c5165f3238b8909fa37139ffce6a25dab4e1ecc2a8a40431443fcd1754b7"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/MercenaryRatings.pt-BR.resx",
+      "sha256": "a96f569976b5117b1fd1494763e7268793b5ce8ba4e18a7c63d5217727c088c2"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/ExobiologistRatings.resx",
+      "sha256": "694516f8de89043ad9d33646561bf137260ee0008e5fa58e97a392bd24e6f068"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/ExobiologistRatings.es.resx",
+      "sha256": "d76268d73f8808207352f54a169f9286d085d31d90c4d2ab2d1bab072c7d12d8"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/ExobiologistRatings.fr.resx",
+      "sha256": "2260ff9972dba610b9e432cd3a8c16e40cda23449252b6d475ba0824fc3a4a65"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/ExobiologistRatings.de.resx",
+      "sha256": "d849723335333e10d510473a64ea9d15a78e6c8cdd7c8945aae676999c34df3c"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/ExobiologistRatings.pt-BR.resx",
+      "sha256": "1a90e2621f8a0b4682af105c83bd1113acbe02c409d10a463f645c7017403134"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/CQCRatings.resx",
+      "sha256": "fec835d4a4c03efe21a59c71f8d06f2c76468a1f23ea224ac62190b867ebb0b7"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/CQCRatings.es.resx",
+      "sha256": "0b57f902c83872676042457d36d0979215ab2f0ed3da984b883c47d85dc0ab97"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/CQCRatings.fr.resx",
+      "sha256": "ebea9bc1a1df775cb9809dcb8db23645784b2ffa6ffc5fa11a476a7069732692"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/CQCRatings.de.resx",
+      "sha256": "92f1bd5bcf90829bbf5b762a894a2ae8333fc746e91e12d696240a106037181f"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/CQCRatings.pt-BR.resx",
+      "sha256": "2f41b288b6ba5db48b7034ffdcc0c480b6811e00e05973a03015226d1c1d9b15"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/FederationRatings.resx",
+      "sha256": "8dfe99e6364b7efb7c2d4f8eef37fefcd96368dce870108eb864aa170f5f0cf7"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/FederationRatings.es.resx",
+      "sha256": "6f9c89d8ece7beab0367c2011fc779644c4ec258214b2e6f7acc0232abf43b7a"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/FederationRatings.fr.resx",
+      "sha256": "b39232a189dcd7adec92cd9cca1d68b3b8a7001fe8349c55a7f06553608c74c9"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/FederationRatings.de.resx",
+      "sha256": "b9ff730c2738e83b2140156405cfea9be04b4f10d67caeaf27d3c2c844823ee9"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/FederationRatings.pt-BR.resx",
+      "sha256": "b9e32fada12dc3d5375b185976d4ed5a06d042c51bfc961ca523f00088663976"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/EmpireRatingsMale.resx",
+      "sha256": "e6467d9ba70e5c726fa44427229bdd0dde0a9a941eefc5ce91ee217f0462afc0"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/EmpireRatingsMale.es.resx",
+      "sha256": "d4b07c2c79372f77901c0e91ae276f9ccb21603eb6e36c283719031b12dd376c"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/EmpireRatingsMale.fr.resx",
+      "sha256": "3f3dc932f9d054f702fdc8abe923734c3b0f23e4879794040cf09ef5088c7991"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/EmpireRatingsMale.de.resx",
+      "sha256": "f0817f7de0ac1a76a8608eea5463cbbac10955ceaaeedc7038162058d4bd85a3"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/EDCD/EDDI/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties/EmpireRatingsMale.pt-BR.resx",
+      "sha256": "3d348a798baf6f30e4e5bde3830ff4c2efaf751b59a0b907db1d541c0defcfcd"
+    }
+  ],
+  "families": {
+    "combat": {
+      "en": [
+        "Harmless",
+        "Mostly Harmless",
+        "Novice",
+        "Competent",
+        "Expert",
+        "Master",
+        "Dangerous",
+        "Deadly",
+        "Elite"
+      ],
+      "es": [
+        "Inofensivo",
+        "Casi Inofensivo",
+        "Novato",
+        "Competente",
+        "Experto",
+        "Maestro",
+        "Peligroso",
+        "Letal",
+        "Élite"
+      ],
+      "fr": [
+        "Inoffensif",
+        "Bleu",
+        "Novice",
+        "Compétent",
+        "Expert",
+        "Maître",
+        "Vétéran",
+        "Létal",
+        "Élite"
+      ],
+      "de": [
+        "Harmlos",
+        "Meistens harmlos",
+        "Neuling",
+        "Kompetent",
+        "Experte",
+        "Meister",
+        "Gefährlich",
+        "Tödlich",
+        "Elite"
+      ],
+      "pt": [
+        "Inofensivo",
+        "Quase Inofensivo",
+        "Novato",
+        "Competente",
+        "Experiente",
+        "Mestre",
+        "Perigoso",
+        "Letal",
+        "Elite"
+      ]
+    },
+    "trade": {
+      "en": [
+        "Penniless",
+        "Mostly Penniless",
+        "Peddler",
+        "Dealer",
+        "Merchant",
+        "Broker",
+        "Entrepreneur",
+        "Tycoon",
+        "Elite"
+      ],
+      "es": [
+        "Sin dinero",
+        "Casi sin dinero",
+        "Vendedor ambulante",
+        "Distribuidor",
+        "Comerciante",
+        "Agente comercial",
+        "Empresario",
+        "Magnate",
+        "Élite"
+      ],
+      "fr": [
+        "sans-le-sou",
+        "Mendiant",
+        "Boutiquier",
+        "Revendeur",
+        "Marchand",
+        "Courtier",
+        "Entrepreneur",
+        "Magnat",
+        "Élite"
+      ],
+      "de": [
+        "bettelarm",
+        "ziemlich arm",
+        "Krämer",
+        "Kleinhändler",
+        "Kaufmann",
+        "Großhändler",
+        "Entrepreneur",
+        "Tycoon",
+        "Elite"
+      ],
+      "pt": [
+        "Pobre",
+        "Quase Pobre",
+        "Camelô",
+        "Negociante",
+        "Mercador",
+        "Corretor",
+        "Empresário",
+        "Magnata",
+        "Elite"
+      ]
+    },
+    "explore": {
+      "en": [
+        "Aimless",
+        "Mostly Aimless",
+        "Scout",
+        "Surveyor",
+        "Trailblazer",
+        "Pathfinder",
+        "Ranger",
+        "Pioneer",
+        "Elite"
+      ],
+      "es": [
+        "Sin rumbo",
+        "Casi sin rumbo",
+        "Explorador",
+        "Topógrafo",
+        "Rastreador",
+        "Guía",
+        "Descubridor",
+        "Pionero",
+        "Élite"
+      ],
+      "fr": [
+        "Vagabond",
+        "Touriste",
+        "Voyageur",
+        "Éclaireur",
+        "Prospecteur",
+        "Découvreur",
+        "Navigateur",
+        "Pionnier",
+        "Élite"
+      ],
+      "de": [
+        "Total planlos",
+        "Fast planlos",
+        "Späher",
+        "Landkundiger",
+        "Wegebener",
+        "Pfadfinder",
+        "Ranger",
+        "Pionier",
+        "Elite"
+      ],
+      "pt": [
+        "Perdido",
+        "Quase Perdido",
+        "Explorador",
+        "Cartógrafo",
+        "Desbravador",
+        "Descobridor",
+        "Patrulheiro",
+        "Pioneiro",
+        "Elite"
+      ]
+    },
+    "soldier": {
+      "en": [
+        "Defenceless",
+        "Mostly Defenceless",
+        "Rookie",
+        "Mercenary",
+        "Gunslinger",
+        "Warrior",
+        "Gladiator",
+        "Deadeye",
+        "Elite"
+      ],
+      "es": [
+        "Indefenso",
+        "Casi indefenso",
+        "Novato",
+        "Mercenario",
+        "Pistolero",
+        "Guerrero",
+        "Gladiador",
+        "Ojo de halcón",
+        "Élite"
+      ],
+      "fr": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        "Élite"
+      ],
+      "de": [
+        "Wehrlos",
+        "Meist wehrlos",
+        "Anfänger",
+        "Söldner",
+        "Revolverheld",
+        "Krieger",
+        "Gladiator",
+        "Scharfschütze",
+        "Elite"
+      ],
+      "pt": [
+        "Indefeso",
+        "Quase Indefeso",
+        "Novato",
+        "Mercenário",
+        "Pistoleiro",
+        "Guerreiro",
+        "Gladiador",
+        "Atirador",
+        "Elite"
+      ]
+    },
+    "exobiologist": {
+      "en": [
+        "Directionless",
+        "Mostly Directionless",
+        "Compiler",
+        "Collector",
+        "Cataloguer",
+        "Taxonomist",
+        "Ecologist",
+        "Geneticist",
+        "Elite"
+      ],
+      "es": [
+        "Sin rumbo",
+        "Principalmente sin rumbo",
+        "Compilador",
+        "Coleccionista",
+        "Catalogador",
+        "Taxonomista",
+        "Ecologista",
+        "Genetista",
+        "Élite"
+      ],
+      "fr": [
+        null,
+        null,
+        "Compilateur",
+        "Collectionneur",
+        "Catalogueur",
+        "Taxonomiste",
+        "Écologiste",
+        "Généticien",
+        "Élite"
+      ],
+      "de": [
+        "Ziellos",
+        "Meist ziellos",
+        "Compiler",
+        "Sammler",
+        "Verwalter",
+        "Shuttle-Betreiber",
+        "Ökologe",
+        "Genetiker",
+        "Elite"
+      ],
+      "pt": [
+        "Perdido",
+        "Quase Perdido",
+        "Compilador",
+        "Coletor",
+        "Catalogador",
+        "Taxonomista",
+        "Ecologista",
+        "Geneticista",
+        "Elite"
+      ]
+    },
+    "cqc": {
+      "en": [
+        "Helpless",
+        "Mostly Helpless",
+        "Amateur",
+        "Semi-professional",
+        "Professional",
+        "Champion",
+        "Hero",
+        "Legend",
+        "Elite"
+      ],
+      "es": [
+        "Indefenso",
+        "Casi indefenso",
+        "Aficionado",
+        "Semiprofesional",
+        "Profesional",
+        "Campeón",
+        "Héroe",
+        "Leyenda",
+        "Élite"
+      ],
+      "fr": [
+        "Inoffensif",
+        "Bleu",
+        "Amateur",
+        "Semi-professionnel",
+        "Professionnel",
+        "Champion",
+        "Héros",
+        "Légende",
+        "Élite"
+      ],
+      "de": [
+        "Hilflos",
+        "Meistens hilflos",
+        "Amateur",
+        "Halb-Profi",
+        "Profi",
+        "Champion",
+        "Held",
+        "Legende",
+        "Elite"
+      ],
+      "pt": [
+        "Indefeso",
+        "Quase Indefeso",
+        "Amador",
+        "Semiprofissional",
+        "Profissional",
+        "Campeão",
+        "Herói",
+        "Lenda",
+        "Elite"
+      ]
+    },
+    "federation": {
+      "en": [
+        "None",
+        "Recruit",
+        "Cadet",
+        "Midshipman",
+        "Petty Officer",
+        "Chief Petty Officer",
+        "Warrant Officer",
+        "Ensign",
+        "Lieutenant",
+        "Lieutenant Commander",
+        "Post Commander",
+        "Post Captain",
+        "Rear Admiral",
+        "Vice Admiral",
+        "Admiral"
+      ],
+      "es": [
+        "Ninguno",
+        "Recluta",
+        "Cadete",
+        "Guardiamarina",
+        "Sargento",
+        "Sargento Primero",
+        "Subteniente",
+        "Alférez de Fragata",
+        "Teniente de Navío",
+        "Capitán de Corbeta",
+        "Capitán de Fragata",
+        "Capitán de Navío",
+        "Contraalmirante",
+        "Vicealmirante",
+        "Almirante"
+      ],
+      "fr": [
+        "Aucune",
+        "Recrue",
+        "Mousse",
+        "Matelot",
+        "Second maitre",
+        "Premier maître",
+        "Major",
+        "Enseigne",
+        "Lieutenant",
+        "Capitaine de corvette",
+        "Capitaine de frégatte",
+        "Capitaine de vaisseau",
+        "Contre amiral",
+        "Vice amiral",
+        "Amiral"
+      ],
+      "de": [
+        "Keiner",
+        "Rekrut",
+        "Kadett",
+        "Fähnrich",
+        "Maat",
+        "Obermaat",
+        "Oberfähnrich",
+        "Leutnant",
+        "Kapitänleutnant",
+        "Korvettenleutnant",
+        "Fregattenkapitän",
+        "Kapitän",
+        "Konteradmiral",
+        "Vizeadmiral",
+        "Admiral"
+      ],
+      "pt": [
+        "Nenhum",
+        "Recruta",
+        "Cadete",
+        "Cabo",
+        "Terceiro-Sargento",
+        "Segundo-Sargento",
+        "Primeiro-Sargento",
+        "Suboficial",
+        "Tenente",
+        "Capitão-Tenente",
+        "Capitão de Corveta",
+        "Capitão de Fragata",
+        "Contra-Almirante",
+        "Vice-Almirante",
+        "Almirante"
+      ]
+    },
+    "empire": {
+      "en": [
+        "None",
+        "Outsider",
+        "Serf",
+        "Master",
+        "Squire",
+        "Knight",
+        "Lord",
+        "Baron",
+        "Viscount",
+        "Count",
+        "Earl",
+        "Marquis",
+        "Duke",
+        "Prince",
+        "King"
+      ],
+      "es": [
+        "Ninguno",
+        "Forastero",
+        "Siervo",
+        "Maestro",
+        "Escudero",
+        "Caballero",
+        "Señor",
+        "Barón",
+        "Vizconde",
+        "Conde",
+        "Conde Palatino",
+        "Marqués",
+        "Duque",
+        "Príncipe",
+        "Rey"
+      ],
+      "fr": [
+        "Aucun",
+        "Étranger",
+        "Serf",
+        "Vilain",
+        "Écuyer",
+        "Chevalier",
+        "Banneret",
+        "Baron",
+        "Vicomte",
+        "Comte",
+        "Marquis",
+        "Duc",
+        "Archiduc",
+        "Prince",
+        "Roi"
+      ],
+      "de": [
+        "Keiner",
+        "Fremder",
+        "Leibeigner",
+        "Meister",
+        "Knappe",
+        "Ritter",
+        "Fürst",
+        "Baron",
+        "Vizegraf",
+        "Graf",
+        "Earl",
+        "Marquis",
+        "Herzog",
+        "Prinz",
+        "König"
+      ],
+      "pt": [
+        "Nenhum",
+        "Forasteiro",
+        "Servo",
+        "Mestre",
+        "Escudeiro",
+        "Cavaleiro",
+        "Lorde",
+        "Barão",
+        "Visconde",
+        "Conde",
+        "Marquês",
+        "Duque",
+        "Arquiduque",
+        "Príncipe",
+        "Rei"
+      ]
+    }
+  },
+  "editorialOverrides": {
+    "fr": {
+      "soldier": {
+        "0": "Sans défense",
+        "1": "Presque sans défense",
+        "2": "Recrue",
+        "3": "Mercenaire",
+        "4": "As de la gâchette",
+        "5": "Guerrier",
+        "6": "Gladiateur",
+        "7": "Tireur d’élite"
+      },
+      "exobiologist": {
+        "0": "Sans repères",
+        "1": "Presque sans repères"
+      },
+      "federation": {
+        "0": "Aucun rang"
+      },
+      "empire": {
+        "0": "Aucun rang"
+      }
+    },
+    "es": {
+      "federation": {
+        "0": "Sin rango"
+      },
+      "empire": {
+        "0": "Sin rango"
+      }
+    },
+    "de": {
+      "federation": {
+        "0": "Kein Rang"
+      },
+      "empire": {
+        "0": "Kein Rang"
+      }
+    },
+    "pt": {
+      "federation": {
+        "0": "Sem patente"
+      },
+      "empire": {
+        "0": "Sem patente"
+      }
+    }
+  },
+  "editorialNote": "TMC editorial completions for ten missing French rank names, plus a consistent no-rank label in each target language. These are distinguished from the EDDI extraction and are not claimed to be official Frontier translations."
+}

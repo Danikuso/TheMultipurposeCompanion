@@ -48,3 +48,6 @@ voice-intent-crime-status = Legal status & fines
 voice-intent-bio-signals = Biological signals in system
 voice-intent-materials-summary = Pinned materials summary
 voice-intent-fuel-status = Fuel level
+voice-assistant-off-short = Voice off
+voice-assistant-on-short = Voice on
+voice-assistant-loading-short = AI { $pct } %

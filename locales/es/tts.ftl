@@ -11,7 +11,7 @@ tts-combat-shields-up = Escudos restaurados.
 tts-combat-heat-warning = Advertencia: temperatura al { $pct } por ciento.
 tts-combat-hull-warning = ¡Alerta de casco! Integridad estructural al { $pct } por ciento.
 tts-mining-valuable-find = Asteroide con { $pct } por ciento de { $material }.
-tts-carrier-jump-imminent = Salto de Fleet Carrier en un minuto.
+tts-carrier-jump-imminent = Salto de portanaves en un minuto.
 tts-test-phrase = Copiloto de TMC activo y listo para la navegación.
 
 ## Configuración y UI
@@ -29,6 +29,6 @@ settings-tts-channel-combat = Combate y alertas críticas
 settings-tts-channel-navigation = Navegación y repostaje estelar
 settings-tts-channel-exploration = Exploración y exobiología
 settings-tts-channel-mining = Minería y prospección
-settings-tts-channel-carrier = Fleet Carrier
+settings-tts-channel-carrier = Portanaves
 settings-tts-test-button = 🔊 Probar voz de copiloto
 settings-tts-test-playing = Reproduciendo locución de prueba...

@@ -60,14 +60,14 @@ test('selection posts the existing action and waits for confirmation from the to
   expect(fetch).toHaveBeenCalledWith('/api/actions/engineering.select_engineer', expect.objectContaining({ body: JSON.stringify({ id: 300100 }), method: 'POST' }));
   expect(target.querySelector('[data-testid="guide-next"]')).toBeNull();
   await select(300100);
-  expect(target.querySelector('[data-testid="guide-next"]')?.textContent).toContain('Scout');
+  expect(target.querySelector('[data-testid="guide-next"]')?.textContent).toContain('Explorador');
 });
 test('reselecting the current engineer does not toggle off the shared selection', async () => {
   await show(); await select(300100);
   const input = target.querySelector('[data-testid="guide-select"]') as HTMLSelectElement;
   input.value = '300100'; input.dispatchEvent(new Event('change', { bubbles: true })); await settle();
   expect(vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0);
-  expect(panel().querySelector('[data-testid="guide-next"]')?.textContent).toContain('Scout');
+  expect(panel().querySelector('[data-testid="guide-next"]')?.textContent).toContain('Explorador');
 });
 test('shared selection from the other card updates the guide too', async () => {
   await show();
@@ -79,7 +79,7 @@ test('shared selection from the other card updates the guide too', async () => {
   expect(second.textContent).toContain('Felicity Farseer');
   await select(300160);
   expect(panel().textContent).toContain('Elvira Martuuk');
-  expect(panel().querySelector('[data-testid="guide-next"]')?.textContent).toContain('300 AL');
+  expect(panel().querySelector('[data-testid="guide-next"]')?.textContent).toContain('300 al');
 });
 test('complete stock is shown as availability and never confirms the unlock', async () => {
   await show(); await select(300100, 'Invited');
@@ -121,7 +121,7 @@ test('rank 3 and 42 percent, maximum rank, and Odyssey use distinct summaries', 
 });
 test('prerequisite can be selected and requirements stay accessible in folded details', async () => {
   await show(); await select(300000);
-  expect(panel().querySelector('[data-testid="guide-next"]')?.textContent).toContain('Merchant');
+  expect(panel().querySelector('[data-testid="guide-next"]')?.textContent).toContain('Comerciante');
   expect(target.querySelector('.hud-panel-details')?.classList.contains('collapsed')).toBe(true);
   details();
   (target.querySelector('[data-prerequisite-id="300210"]') as HTMLButtonElement).click(); await settle();
@@ -141,7 +141,7 @@ test('failed selection does not show another engineer requirements', async () =>
   const input = target.querySelector('[data-testid="guide-select"]') as HTMLSelectElement;
   input.value = '300160'; input.dispatchEvent(new Event('change', { bubbles: true })); await settle();
   expect(panel().textContent).toContain('No se pudo seleccionar');
-  expect(panel().querySelector('[data-testid="guide-next"]')?.textContent).toContain('Scout');
+  expect(panel().querySelector('[data-testid="guide-next"]')?.textContent).toContain('Explorador');
   expect(input.value).toBe('300100');
 });
 test('failed guide requests retry only on an explicit click', async () => {
@@ -150,7 +150,7 @@ test('failed guide requests retry only on an explicit click', async () => {
   const calls = vi.mocked(fetch).mock.calls.length; await settle(); expect(fetch).toHaveBeenCalledTimes(calls);
   failUnlock = false;
   (target.querySelector('[data-testid="guide-retry"]') as HTMLButtonElement).click(); await settle();
-  expect(panel().querySelector('[data-testid="guide-next"]')?.textContent).toContain('Scout');
+  expect(panel().querySelector('[data-testid="guide-next"]')?.textContent).toContain('Explorador');
 });
 test('disconnect and commander changes immediately discard the visible instructions', async () => {
   await show(); await select(300100);
@@ -173,11 +173,11 @@ test('late response for a previous engineer cannot replace the current guide', a
   await select(300100);
   expect(panel().querySelector('[data-testid="guide-next"]')).toBeNull();
   await select(300160);
-  expect(panel().querySelector('[data-testid="guide-next"]')?.textContent).toContain('300 AL');
+  expect(panel().querySelector('[data-testid="guide-next"]')?.textContent).toContain('300 al');
   const items = unlockRows.filter(row => row.engineer_id === 300100);
   finish(new Response(JSON.stringify({ revision: 22, section: 'unlock', cursor: 0, total: items.length, next_cursor: null, items })));
   await settle();
-  expect(panel().querySelector('[data-testid="guide-next"]')?.textContent).toContain('300 AL');
+  expect(panel().querySelector('[data-testid="guide-next"]')?.textContent).toContain('300 al');
   expect(panel().querySelector('[data-testid="guide-select"]')).toHaveProperty('value', '300160');
 });
 test('missing commander balance is unknown for a credit donation', async () => {

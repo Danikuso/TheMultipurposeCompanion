@@ -17,7 +17,7 @@ crime-notoriety-level = Stufe { $level } / 10
 crime-notoriety-clean = Sauber (0)
 crime-notoriety-decay-active = Abbau läuft (~{ $hours } Std. { $minutes } Min. verbleibend)
 crime-notoriety-decay-paused = Abbau pausiert (an Station angedockt)
-crime-notoriety-decay-note = Erfordert aktiven Flug im Hyperraum/Normalraum (1 Stufe pro 2 Stunden)
+crime-notoriety-decay-note = Erfordert aktiven Flug im Supercruise/Normalraum (1 Stufe pro 2 Stunden)
 
 ## Der Begleiter-Leitfaden zur Straffreiheit
 crime-card-guide = Begleiter-Leitfaden zur Straffreiheit

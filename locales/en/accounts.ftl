@@ -63,3 +63,7 @@ accounts-capi-manual-help = If your browser shows a security warning or fails to
 accounts-capi-btn-complete = Complete
 accounts-capi-manual-success = Linking completed successfully!
 accounts-capi-manual-failed = Failed to exchange authorization code. Check the URL or try again.
+accounts-copy-uploader-id = Copy uploader ID
+accounts-inara-rate-label = max. 2 requests / 60 s
+accounts-capi-code-placeholder = OAuth callback URL or authorization code
+accounts-select-ship-hint = Click to select

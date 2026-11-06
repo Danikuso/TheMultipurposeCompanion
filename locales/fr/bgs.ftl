@@ -17,3 +17,4 @@ bgs-tick-status = État du tick
 bgs-tick-fresh = Récent
 bgs-tick-stale = Obsolète (> 28 h)
 bgs-no-data = Aucune donnée de factions dans le système
+bgs-controlling-badge = Dominante

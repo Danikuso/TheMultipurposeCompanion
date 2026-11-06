@@ -17,6 +17,13 @@
   };
 
   const tgt = $derived(topic<TargetTopic | null>('combat.target'));
+  const rankName = $derived.by(() => {
+    const raw = tgt?.rank;
+    if (!raw) return null;
+    const ranks = ['harmless', 'mostlyharmless', 'novice', 'competent', 'expert', 'master', 'dangerous', 'deadly', 'elite'];
+    const index = ranks.indexOf(raw.replace(/[\s_-]/g, '').toLowerCase());
+    return index < 0 ? raw : t(`combat-rank-${index}`);
+  });
   const lostAt = $derived(tgt?.lost_at ?? null);
   let expiredFor = $state<string | null>(null);
 
@@ -53,7 +60,7 @@
           <strong class="ship">{formatShipName(tgt.ship_key, tgt.ship_name)}</strong>
           <ManufacturerIcon shipType={tgt.ship_name ?? tgt.ship_key} size={16} />
         </div>
-        {#if tgt.pilot}<div class="dim">{tgt.pilot}{tgt.rank ? ` · ${tgt.rank}` : ''}</div>{/if}
+        {#if tgt.pilot}<div class="dim">{tgt.pilot}{rankName ? ` · ${rankName}` : ''}</div>{/if}
         {#if tgt.faction}<div class="dim">{t('combat-target-faction', { faction: tgt.faction })}</div>{/if}
       </div>
       <div aria-live="polite">

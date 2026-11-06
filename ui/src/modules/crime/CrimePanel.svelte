@@ -210,7 +210,7 @@
               <div class="facility-card" data-testid="nearest-factor-card">
                 <div class="facility-head">
                   <span class="facility-type">{t('crime-nearest-factor')}</span>
-                  <span class="badge badge-cyan">{status.nearest_interstellar_factor.pad_size} PAD</span>
+                  <span class="badge badge-cyan">{status.nearest_interstellar_factor.pad_size} {t('mining-col-pad')}</span>
                 </div>
                 <div class="facility-body">
                   <div class="facility-info">
@@ -278,7 +278,7 @@
             <div class="facility-card" data-testid="nearest-market-card">
               <div class="facility-head">
                 <span class="facility-type">{t('crime-nearest-black-market')}</span>
-                <span class="badge badge-orange">{status.nearest_black_market.pad_size} PAD</span>
+                <span class="badge badge-orange">{status.nearest_black_market.pad_size} {t('mining-col-pad')}</span>
               </div>
               <div class="facility-body">
                 <div class="facility-info">

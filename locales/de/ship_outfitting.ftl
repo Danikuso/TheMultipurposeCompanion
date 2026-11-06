@@ -57,7 +57,7 @@ outfitting-hidden-permits-notice = { $count } Stationen in genehmigungspflichtig
 outfitting-col-station = Station / System
 outfitting-col-distance = Entfernung
 outfitting-col-arrival = Supercruise
-outfitting-col-pad = Pad
+outfitting-col-pad = Landeplatz
 outfitting-col-total = Gesamtkosten
 outfitting-col-updated = Daten
 outfitting-col-actions = Aktionen
@@ -76,10 +76,10 @@ outfitting-badge-planetary = Planetar
 outfitting-badge-planetary-tooltip = Oberflächenhafen oder Siedlung auf einem Planeten
 outfitting-badge-permit = Genehm.
 
-outfitting-afford-ok = Rebuy OK
+outfitting-afford-ok = Rückkauf gesichert
 outfitting-afford-ok-tooltip = Ihr Guthaben deckt den gesamten Einkauf inklusive der Versicherungssumme Ihres aktuellen Schiffs.
-outfitting-afford-tight = Rebuy knapp
-outfitting-afford-tight-tooltip = Das Guthaben reicht für den Kauf, fällt danach aber unter Ihre aktuelle Versicherungssumme. Fliegen Sie nie ohne Rebuy!
+outfitting-afford-tight = Rückkauf knapp
+outfitting-afford-tight-tooltip = Das Guthaben reicht für den Kauf, fällt danach aber unter Ihre aktuelle Versicherungssumme. Fliegen Sie nie ohne Rückkaufreserve!
 outfitting-afford-insufficient = Zu wenig Cr
 outfitting-afford-insufficient-tooltip = Die geschätzten Gesamtkosten übersteigen Ihr aktuelles Credit-Guthaben.
 

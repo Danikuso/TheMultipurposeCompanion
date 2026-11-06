@@ -31,3 +31,5 @@ carrier-health-warning = Aviso
 carrier-health-critical = Crítico
 carrier-next-upkeep = Próxima Dedução Semanal
 carrier-no-carrier = Nenhum Fleet Carrier registrado para o comandante
+carrier-aboard = A bordo
+carrier-max-jump = { $distance } / salto

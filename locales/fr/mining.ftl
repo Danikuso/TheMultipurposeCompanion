@@ -1,6 +1,6 @@
 panel-mining = Minage
 nav-mining = Minage
-mining-scanning = scan en cours…
+mining-scanning = analyse en cours…
 mining-asteroid = Astéroïde
 mining-content = Contenu
 mining-content-low = faible
@@ -13,10 +13,10 @@ mining-verdict-not-worth = ✘ pas rentable
 mining-refinery = Raffinerie
 mining-refinery-tons = Raffiné : { $tons } t
 mining-rate = Rythme : { $rate }
-mining-limpets = Limpets
+mining-limpets = Drones
 mining-limpets-left = { $count ->
-    [one] il reste { $count } limpet
-   *[other] il reste { $count } limpets
+    [one] il reste { $count } drone
+   *[other] il reste { $count } drones
 }
 mining-where-to-sell = Où vendre
 mining-sell-at = { $station } : { $price }/t · { $distance }
@@ -67,14 +67,14 @@ mining-col-station = Station
 mining-col-distance = Dist.
 mining-col-price = Prix
 mining-col-demand = Demande
-mining-col-pad = Pad
+mining-col-pad = Aire
 mining-col-age = Données
 mining-distance = { $distance } al
 mining-demand = { $demand } t
 mining-pad-small = S
 mining-pad-medium = M
 mining-pad-large = L
-mining-pad-unknown = taille de pad non confirmée
+mining-pad-unknown = taille de l’aire non confirmée
 mining-source = Données de marché : { $source }
 mining-source-remote = Ardent
 mining-source-local-sell = votre dernière vente

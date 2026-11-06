@@ -5,6 +5,23 @@ import { fileURLToPath } from 'node:url';
 
 const langs = ['es', 'en', 'fr', 'de', 'pt'];
 const words = text => text.split('|');
+// Reuse the same Fluent labels as the commander's ranks and the engineering glossary.
+const glossary = {
+  Merchant: 'trade-rank-4', Dealer: 'trade-rank-3', Competent: 'combat-rank-3',
+  Expert: 'combat-rank-4', Dangerous: 'combat-rank-6', Elite: 'combat-rank-8',
+  Scout: 'explore-rank-2', Surveyor: 'explore-rank-3', Midshipman: 'federation-rank-3',
+  Outsider: 'empire-rank-1', Friendly: 'engineering-reputation-friendly',
+  Allied: 'engineering-reputation-allied', Cordial: 'engineering-reputation-cordial',
+  Unfriendly: 'engineering-reputation-unfriendly',
+};
+function localizeGuide(text, lang) {
+  const quote = { es: ['«', '»'], en: ['', ''], fr: ['« ', ' »'], de: ['„', '“'], pt: ['«', '»'] }[lang];
+  let result = text.replace(/\b(Merchant|Dealer|Competent|Expert|Dangerous|Elite|Scout|Surveyor|Midshipman|Outsider|Friendly|Allied|Cordial|Unfriendly)\b/g,
+    name => `${quote[0]}{ ${glossary[name]} }${quote[1]}`);
+  if (lang === 'es' || lang === 'fr') result = result.replace(/\bAL\b/g, 'al');
+  if (lang === 'fr') result = result.replace('Il doit provenir de votre extraction', 'La marchandise doit provenir de votre extraction');
+  return result;
+}
 const source = 'https://github.com/EDDiscovery/EliteDangerousCore/blob/7d30920e6822d4836e0d6dd5c91026ec7e2ab4c7/EliteDangerous/FrontierData/Items/Engineers.cs';
 const update = 'https://store.steampowered.com/news/posts/?appids=359320&enddate=1726826562&feed=steam_community_announcements';
 const parents = {
@@ -183,7 +200,7 @@ export function guideContent(entries) {
           `Desbloqueia ${parent} e entrega-lhe ${n} ${item} para obter a referência a Yi Shen.`,
         ][i];
       }
-      content[langs[i]]=lines;
+      content[langs[i]]=Object.fromEntries(Object.entries(lines).map(([key, text]) => [key, localizeGuide(text, langs[i])]));
     }
     const contribution=donations[e.id];
     return {id:e.id,unlock:{...e.unlock,contribution:contribution?{item:contribution[0],kind:contribution[1],amount:contribution[2]}:null,

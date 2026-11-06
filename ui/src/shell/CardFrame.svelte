@@ -179,7 +179,7 @@
         title={t('layout-edit-height-less')} onclick={() => emit({ kind: 'height', h: snapHeight(currentHeight() - H_STEP) })}>−</button>
       <button type="button" data-op="height-auto" aria-label={t('layout-edit-height-auto')}
         title={t('layout-edit-height-auto')} aria-pressed={placement.h === null}
-        onclick={() => emit({ kind: 'height', h: null })}>auto</button>
+        onclick={() => emit({ kind: 'height', h: null })}>{t('layout-edit-height-auto-short')}</button>
       <button type="button" data-op="height-more" aria-label={t('layout-edit-height-more')}
         title={t('layout-edit-height-more')} onclick={() => emit({ kind: 'height', h: snapHeight(currentHeight() + H_STEP) })}>+</button>
     </span>

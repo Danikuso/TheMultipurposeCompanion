@@ -70,7 +70,8 @@ missions-kind-other = Outra
 missions-details-missing = Detalhes não disponíveis
 missions-redirected = NOVO DESTINO
 missions-massacre-missing = { $kills ->
-    [one] falta 1 abate
+    [0] faltam { $kills } abates
+    [one] falta { $kills } abate
    *[other] faltam { $kills } abates
 }
 missions-massacre-target = Alvo: { $faction }
@@ -93,3 +94,5 @@ missions-cg-complete = CONCLUÍDO
 missions-tourism-reference-default = Referência: { $crly } cr/al
 missions-rewards-reputation-short = Rep.
 missions-rewards-influence-short = Inf.
+missions-passenger-groups-count = Grupos ({ $count })
+missions-count-short = missões

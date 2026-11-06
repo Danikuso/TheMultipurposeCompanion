@@ -450,3 +450,12 @@ No se incorporan al ejecutable de TMC. Se utilizan únicamente al generar la doc
 
 
 
+
+### Etiquetas de rangos localizadas (revisión i18n, 2026-11-06)
+
+- Fuente: [EDCD/EDDI](https://github.com/EDCD/EDDI/tree/d3b964ea7c8bb959ad6537f55b308f293a326905/DataDefinitions/Properties), misma revisión Apache-2.0 ya utilizada por el proyecto (`d3b964ea7c8bb959ad6537f55b308f293a326905`). Copyright 2017 by the EDCD organization EDDI development team. Se mantienen las copias de LICENSE.md y LicenseFile.txt en el snapshot de ingeniería existente.
+- Datos usados: 40 archivos RESX de CombatRatings, TradeRatings, ExplorationRatings, MercenaryRatings, ExobiologistRatings, CQCRatings, FederationRatings y EmpireRatingsMale, en inglés, español, francés, alemán y portugués brasileño. No se incorpora código C# ni dependencias nuevas.
+- `scripts/data/rank-localization.json` conserva solo las etiquetas utilizadas, URL exacta y SHA-256 de cada fuente. `scripts/sync-rank-locales.mjs --check` verifica la proyección Fluent. Las diez etiquetas francesas ausentes en EDDI y las etiquetas coherentes de ausencia de rango se completan con redacción editorial TMC en `editorialOverrides`, diferenciadas de la extracción; no se presentan como traducciones oficiales de Frontier.
+- Los IDs numéricos de los rangos se conservan. Se corrigen las etiquetas inglesas antiguas de CQC y exobiología conforme al orden de las clases CQCRating.cs y ExobiologistRating.cs de esa misma revisión. La guía reutiliza las claves Fluent de rango, sin duplicar sus traducciones. Los nombres de productos sin localización confirmada y los atributos `.pending` del catálogo de ingeniería se conservan.
+
+Revisión editorial TMC (2026-11-06): se corrigen acentos y errores de transcripción en nombres de efectos franceses/portugueses importados de EDEngineer, el tipo genérico portugués de refuerzo de casco y dos etiquetas inglesas de bancos de células de escudo. Se conservan los snapshots fijados y los aliases de compatibilidad. Las modificaciones son editoriales TMC; no implican que Frontier haya validado esas etiquetas ni convierten nombres `.pending` en confirmados.

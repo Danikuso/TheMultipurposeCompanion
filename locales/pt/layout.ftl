@@ -84,3 +84,4 @@ layout-settings-move-up = Subir separador
 layout-settings-move-down = Descer separador
 layout-settings-editing-hint = Termina ou cancela a edição da disposição antes de gerir os perfis
 layout-settings-error = Não foi possível concluir a ação. Tenta novamente.
+layout-edit-height-auto-short = auto

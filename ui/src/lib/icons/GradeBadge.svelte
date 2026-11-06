@@ -1,5 +1,6 @@
 <!-- ui/src/lib/icons/GradeBadge.svelte -->
 <script lang="ts">
+  import { t } from '../i18n';
   import { GRADES } from './index';
 
   interface Props {
@@ -22,8 +23,8 @@
     class="grade-badge-icon {className}"
     style:width="{size}px"
     style:height="{size}px"
-    title="Grado {grade}"
-    aria-label="Grado {grade}"
+    title={t('item-grade-label', { grade: grade ?? 0 })}
+    aria-label={t('item-grade-label', { grade: grade ?? 0 })}
   >
     {@html svg}
   </span>
