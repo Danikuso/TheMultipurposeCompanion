@@ -3,7 +3,7 @@
   "title": "Manual do comandante",
   "subtitle": "Guia prático de instalação, voo e utilização de todas as ferramentas do TMC para Elite Dangerous.",
   "workflow": ["Diário local", "Painéis de bordo", "Suas decisões"],
-  "scope": "Edição para o TMC 1.2.0 no Windows de 64 bits. O suporte oficial a Linux e Steam Deck ainda está em desenvolvimento; esta versão não inclui um instalador para Linux.",
+  "scope": "Edição para o TMC 1.3.0 no Windows de 64 bits. O suporte oficial a Linux e Steam Deck ainda está em desenvolvimento; esta versão não inclui um instalador para Linux.",
   "intro": "O TMC é um copiloto de informação. Ele lê os arquivos produzidos pelo jogo, reúne seus dados e sugere ações. Você continua pilotando, comprando, vendendo, escaneando e melhorando equipamentos dentro de Elite Dangerous.",
   "legal": "Elite Dangerous é uma marca da Frontier Developments. O TMC é um projeto independente. Este manual não contém recursos gráficos oficiais do jogo.",
   "contents": "Índice de operações",
