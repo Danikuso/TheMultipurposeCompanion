@@ -40,4 +40,15 @@ Estado al cerrar la revisión: Node datos/importador 17 PASS, importador --check
 
 Revisión visual sintética: 20 vistas de siete paneles reales, cinco idiomas y anchuras 375/1280/1920; 21 vistas de la guía. Sin controles fuera del marco ni desbordamiento horizontal. Capturas de nave española estrecha, objetivo francés, cuentas alemanas y minería portuguesa inspeccionadas; se corrigieron además los decimales de nave y el plural portugués de cero. Una comprobación adicional con tarjeta de comandante de 300 px dentro de ventana de 1280 detectó insignias fuera de su casilla. Corregido con flex-wrap y ajuste de línea, sin alterar posiciones guardadas. Cinco vistas adicionales confirman el arreglo y comprueban el marco interno de cada rango. Scripts reproducibles: ui/scripts/verify-locale-panels.mjs y verify-engineer-guide.mjs, con Vite en 47680. Evidencias en la carpeta i18n-review de las visualizaciones de esta conversación.
 
-Cierre de QA: corpus final de 2078 mensajes por idioma, 585 mensajes existentes corregidos y 97 claves nuevas en cada idioma (textos antes fijados en el código). Se conserva la separación entre nombres pendientes y confirmados. Servidores de QA cerrados; salidas temporales de Playwright eliminadas; limpieza del perfil dev de Cargo antes del release. Ejecutable de entrega y hash: se registrarán tras compilar, sin iniciar la GUI en una sesión de fondo.
+Cierre de QA: corpus final de 2078 mensajes por idioma, 585 mensajes existentes corregidos y 97 claves nuevas en cada idioma (textos antes fijados en el código). Se conserva la separación entre nombres pendientes y confirmados. Servidores de QA cerrados; salidas temporales de Playwright eliminadas; limpieza del perfil dev de Cargo antes del release. Código guardado en b9a6d7b. Build release PASS; no se inició la GUI desde el agente.
+
+## Entrega del ejecutable
+
+- Código: b9a6d7b (fix(i18n)).
+- Comando: cargo build -p tmc-desktop --release, PASS (aviso preexistente de variable found en tmc-store/src/ui_layout.rs en configuración release, fuera del alcance de esta revisión).
+- Archivo: D:\Proyectos\EDPyCompanion\target\release\TMC.exe.
+- Tamaño: 63.129.600 bytes. SHA-256: 65a4b1b1db92b13cbed70b83234a91776bd925ad8b023fc8065ec22773456834.
+- Assets finales index-BD0ehUBF.js e index-CkEXMZbc.css embebidos: verificación positiva de ambos nombres en el binario.
+- cargo clean --profile dev liberó 14,1 GiB; target quedó por debajo de 5 GiB.
+- El propietario tenía abierta la entrega anterior: se conservó el archivo en uso con nombre de reserva, verificando ruta y hash, para generar el nuevo sin interrumpir su sesión. Tras comunicar el propietario que lo había cerrado, se comprobó el fin del proceso y se eliminó únicamente esa reserva. La nueva entrega permanece intacta y su hash volvió a verificarse.
+- Sin push, fusión, cambio de versión ni publicación. La medición interactiva de RAM/CPU pendiente de F16/T6 sigue registrada en status.md; esta revisión no cierra esa fase.
