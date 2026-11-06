@@ -55,11 +55,11 @@ impl Store {
                 None => None,
             }
         };
-        let found = row.is_some();
+        let _found = row.is_some();
         tmc_model::diagnostic!(
             tmc_model::diagnostics::DiagnosticContext::Sql,
             "store.ui_layout.get",
-            serde_json::json!({"found":found})
+            serde_json::json!({"found": _found})
         );
         let Some((device_id, name, updated_at, doc)) = row else {
             return Ok(None);
