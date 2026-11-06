@@ -113,7 +113,7 @@ describe('navigation panels', () => {
     const names = [...target.querySelectorAll('[data-testid="small-card"] .name')].map((e) => e.textContent);
     expect(names).toEqual(['Followa', 'Followb', 'Followc']);
     expect(big.textContent).toContain('9');
-    expect(big.textContent).toContain('321,50 ly');
+    expect(big.textContent).toContain('321,50 al');
   });
 
   test('remote missing shows no-data without hiding local fields', () => {
@@ -192,8 +192,8 @@ describe('navigation panels', () => {
     };
     render(JumpPanel);
     const txt = target.textContent ?? '';
-    expect(txt).toContain('24,6 ly');
-    expect(txt).toContain('31,2 ly');
+    expect(txt).toContain('24,6 al');
+    expect(txt).toContain('31,2 al');
     expect(txt).toContain('12,5 / 32,0 t');
     expect(txt).toContain('5,2 t');
     expect(txt).toContain('×4');
@@ -549,11 +549,11 @@ describe('navigation panels', () => {
       const rows = [...target.querySelectorAll('[data-testid="hop"]')];
       expect(rows.length).toBe(2);
       expect(rows[0].textContent).toContain('Alpha');
-      expect(rows[0].textContent).toContain('50,25 ly');
+      expect(rows[0].textContent).toContain('50,25 al');
       expect(rows[0].textContent).toContain(t('strip-neutron'));
       expect(rows[0].textContent).toContain('—');
       expect(rows[1].textContent).toContain(t('nav-plan-refuel-yes'));
-      expect(target.querySelector('[data-testid="plan-total"]')?.textContent).toContain('1234,50 ly');
+      expect(target.querySelector('[data-testid="plan-total"]')?.textContent).toContain('1234,50 al');
       expect(target.querySelector('[data-testid="plan-more"]')?.textContent).toContain(
         t('nav-plan-more', { count: 58 }),
       );

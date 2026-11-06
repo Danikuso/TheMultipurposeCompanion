@@ -499,6 +499,7 @@
 
   .rank-header-row {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
     gap: 0.35rem;
@@ -520,12 +521,16 @@
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid var(--hud-border-subtle);
     color: var(--hud-text);
-    white-space: nowrap;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    flex-shrink: 0;
     line-height: 1.2;
   }
 
   .rank-values-row {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: baseline;
     font-family: var(--font-mono);
@@ -535,9 +540,11 @@
 
   .rank-quant-val {
     display: inline-flex;
+    flex-wrap: wrap;
+    max-width: 100%;
     align-items: baseline;
     gap: 0.15rem;
-    white-space: nowrap;
+    white-space: normal;
   }
 
   .val-curr {

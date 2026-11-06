@@ -84,3 +84,4 @@ layout-settings-move-up = Subir pestaña
 layout-settings-move-down = Bajar pestaña
 layout-settings-editing-hint = Termina o cancela la edición de la disposición antes de gestionar los perfiles
 layout-settings-error = No se pudo completar la acción. Inténtalo de nuevo.
+layout-edit-height-auto-short = auto

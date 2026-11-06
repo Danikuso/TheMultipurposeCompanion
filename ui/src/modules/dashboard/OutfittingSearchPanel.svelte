@@ -849,7 +849,7 @@
                 <div class="fallback-station-info">
                   <span class="station-name">{st.station_name}</span>
                   <span class="system-name">{st.system_name}</span>
-                  <span class="fallback-dist">{decimal(st.distance_ly, 1)} ly</span>
+                  <span class="fallback-dist">{decimal(st.distance_ly, 1)} {t('unit-light-year')}</span>
                   {#if st.total_price_cr != null}
                     <span class="fallback-price">{credits(st.total_price_cr)}</span>
                   {/if}

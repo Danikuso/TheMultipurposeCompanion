@@ -28,8 +28,8 @@
     <p class="muted" data-testid="supply-no-data">{t('colonisation-no-depot')}</p>
   {:else if pendingResources.length === 0}
     <div class="complete-card" data-testid="supply-all-complete">
-      <span class="badge badge-green">✔ COMPLETO</span>
-      <p class="complete-msg">Todos los recursos del depósito han sido entregados.</p>
+      <span class="badge badge-green">✔ {t('colonisation-supply-complete')}</span>
+      <p class="complete-msg">{t('colonisation-supply-delivered')}</p>
     </div>
   {:else}
     <div class="supply-list" data-testid="supply-list">
@@ -40,7 +40,7 @@
               {r.name_localised ?? r.name}
             </span>
             <span class="supply-detail sub">
-              Faltan <b class="gold mono">{integer(r.remaining)} t</b> (~{r.trips_remaining} viajes)
+              <b class="gold mono">{t('colonisation-resource-missing', { tons: integer(r.remaining), trips: r.trips_remaining })}</b>
             </span>
           </div>
 
@@ -52,7 +52,7 @@
           >
             {copiedItem === (r.name_localised ?? r.name)
               ? t('colonisation-copied')
-              : 'Copiar'}
+              : t('ui-copy')}
           </button>
         </div>
       {/each}

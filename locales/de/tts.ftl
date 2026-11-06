@@ -1,8 +1,8 @@
 ### TMC · Sprach-Copilot und taktische Cockpit-Warnungen
 
 ## Cockpit-Sprachausgabe
-tts-nav-jump-scoopable = Sprung nach { $system } abgeschlossen. Stern schöpfbar.
-tts-nav-jump-unscoopable = Sprung nach { $system } abgeschlossen. Warnung: Stern nicht schöpfbar.
+tts-nav-jump-scoopable = Sprung nach { $system } abgeschlossen. Treibstoffsammeln an diesem Stern möglich.
+tts-nav-jump-unscoopable = Sprung nach { $system } abgeschlossen. Warnung: Treibstoffsammeln an diesem Stern nicht möglich.
 tts-nav-bio-signals = Biologische Signale auf { $count } Himmelskörpern entdeckt.
 tts-exo-sample-progress = Biologische Probe { $current } von { $total } erfasst.
 tts-exo-sample-complete = Spezies-Analyse abgeschlossen.

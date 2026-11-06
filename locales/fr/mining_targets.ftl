@@ -7,7 +7,7 @@ mining-tab-missions = Missions et Déblocages
 
 mining-filter-res-combo = Combo RES (+fragments)
 mining-filter-populated-only = Systèmes peuplés uniquement
-mining-min-hotspots = Hotspots minimum : { $count }
+mining-min-hotspots = Points chauds minimum : { $count }
 mining-commodity = Minerai
 mining-ref-system = Système de référence
 
@@ -36,8 +36,8 @@ mining-offline-catalog = Catalogue hors-ligne vérifié (TMC)
 mining-online-updated = Synchronisé avec Spansh
 mining-cargo-sell-btn = Vendre le lot de soute
 mining-hotspots-count = { $count ->
-    [one] 1 hotspot
-   *[other] { $count } hotspots
+    [one] { $count } point chaud
+   *[other] { $count } points chauds
 }
 mining-res-hazard = Haz-RES (+100 % de fragments)
 mining-res-high = High-RES (+75 % de fragments)
@@ -46,3 +46,18 @@ mining-res-low = Low-RES (+25 % de fragments)
 mining-select-ring = Sélectionner
 mining-selected = Sélectionné
 mining-arrival-ls = { $dist } sl
+mining-col-ring-type = Type d’anneau
+mining-col-hotspots = Points chauds
+mining-col-yield-res = Rendement / RES
+mining-col-notes = Notes / Chevauchement
+mining-col-action = Action
+mining-col-total-revenue = Recettes totales
+mining-plan-route = Tracer un itinéraire
+mining-method-laser = Laser de surface
+mining-method-subsurface = Laser / Sous-surface
+mining-method-core = Charge sismique (noyau)
+mining-method-bill-turner = Ingénieur Bill Turner (50 t)
+mining-method-missions = Missions de faction et de colonisation
+mining-hotspot-overlap = 2+ (chevauchement)
+mining-hotspot-triple = 3+ (triple)
+mining-cargo-label = Soute de minage :

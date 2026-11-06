@@ -118,7 +118,7 @@
         <h3>{t('strip-col-jump')}</h3>
         <div class="name-row">
           <strong class="name">{card.name}</strong>
-          <button type="button" class="btn-copy" title="Copiar sistema" onclick={() => copySystem(card.name)}>📋</button>
+          <button type="button" class="btn-copy" title={t('action-copy-system')} onclick={() => copySystem(card.name)}>📋</button>
         </div>
         <div><span class="label">{t('strip-jump-ly')}</span> <span class="mono">{jumpLy}</span></div>
         {#if remainingJumps != null}

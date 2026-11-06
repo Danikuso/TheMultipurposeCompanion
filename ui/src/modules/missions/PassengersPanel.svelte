@@ -31,14 +31,14 @@
     </div>
     {#if p.groups.length > 0}
       <div class="pax-header-row">
-        <span class="sub bold">Grupos ({p.groups.length})</span>
+        <span class="sub bold">{t('missions-passenger-groups-count', { count: p.groups.length })}</span>
         <button
           type="button"
           class="glass-btn-secondary list-toggle-btn"
           data-testid="toggle-pax-table"
           onclick={() => (showPaxTable = !showPaxTable)}
         >
-          {showPaxTable ? '▲ Ocultar lista' : `▼ Ver lista (${p.groups.length})`}
+          {showPaxTable ? t('ui-hide-list') : t('ui-show-list', { count: p.groups.length })}
         </button>
       </div>
       <div class="table-wrap" class:is-collapsed={!showPaxTable}>

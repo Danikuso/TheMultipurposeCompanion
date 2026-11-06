@@ -90,3 +90,4 @@ nav-plan-efficiency-hint = From your settings
 nav-plan-efficiency-invalid = Efficiency must be an integer between 0 and 100.
 nav-plan-pick-destination = In Galaxy mode, pick the origin and destination from the suggestions.
 strip-next-jump = Next jump
+nav-plan-active-destination-placeholder = Destination (or active route: { $destination })

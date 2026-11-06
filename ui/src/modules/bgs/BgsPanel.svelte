@@ -65,7 +65,7 @@
         data-testid="toggle-factions-table"
         onclick={() => (showFactions = !showFactions)}
       >
-        {showFactions ? '▲ Ocultar lista' : `▼ Ver todas (${system.factions.length})`}
+        {showFactions ? t('ui-hide-list') : t('ui-show-list', { count: system.factions.length })}
       </button>
     </div>
     <div class="table-wrap" class:is-collapsed={!showFactions}>
@@ -85,7 +85,7 @@
               <td class="bold">
                 {f.name}
                 {#if f.is_controlling}
-                  <span class="badge badge-green mini" data-testid="controlling-badge">CONTROLADORA</span>
+                  <span class="badge badge-green mini" data-testid="controlling-badge">{t('bgs-controlling-badge')}</span>
                 {/if}
               </td>
               <td class="influence-col">

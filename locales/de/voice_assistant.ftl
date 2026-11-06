@@ -48,3 +48,6 @@ voice-intent-crime-status = Rechtsstatus und Geldstrafen
 voice-intent-bio-signals = Biologische Signale im System
 voice-intent-materials-summary = Übersicht angehefteter Materialien
 voice-intent-fuel-status = Treibstoffstand
+voice-assistant-off-short = Stimme aus
+voice-assistant-on-short = Stimme an
+voice-assistant-loading-short = KI { $pct } %

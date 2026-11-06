@@ -166,9 +166,9 @@ export const POWERS: Record<string, PowerMeta> = {
 };
 
 export const SUPERPOWERS: Record<string, { name: string; color: string; svg: string }> = {
-  Empire: { name: 'Imperio', color: '#38bdf8', svg: empireSvg },
-  Federation: { name: 'Federación', color: '#ff7700', svg: federationSvg },
-  Alliance: { name: 'Alianza', color: '#00e676', svg: allianceSvg },
+  Empire: { name: 'Empire', color: '#38bdf8', svg: empireSvg },
+  Federation: { name: 'Federation', color: '#ff7700', svg: federationSvg },
+  Alliance: { name: 'Alliance', color: '#00e676', svg: allianceSvg },
 };
 
 export const MANUFACTURERS: Record<string, { name: string; svg: string }> = {

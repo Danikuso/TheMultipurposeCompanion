@@ -11,7 +11,7 @@ export const modules: UiModuleDef[] = [
     id: 'engineering',
     icon: 'wrench',
     titleKey: 'nav-engineering',
-    cards: ['materials', 'engineers', 'eng-ship', 'eng-flow', 'shopping', 'trades', 'sources', 'eng-alerts'],
+    cards: ['materials', 'engineers', 'engineer-guide', 'eng-ship', 'eng-flow', 'shopping', 'trades', 'sources', 'eng-alerts'],
   },
   {
     id: 'dashboard',

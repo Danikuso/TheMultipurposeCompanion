@@ -17,6 +17,7 @@
 // Auditoría de ingredientes: --materials <materials.json> (por omisión `materials.json` junto a los datos activos); falla si falta alguno.
 
 import { createHash } from 'node:crypto';
+import { enrichEngineerGuides } from './engineer-guide-content.mjs';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -965,7 +966,7 @@ export function renderOutputs(result) {
     },
     active: {
       'blueprints.json': json(result.blueprints),
-      'engineers.json': json(result.engineers),
+      'engineers.json': json(enrichEngineerGuides(result.engineers)),
     },
   };
 }

@@ -45,6 +45,36 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('layoutStore', () => {
+  test('engineer guide can be added and persisted without changing pre-existing customized card positions', async () => {
+    await initLayouts();
+    const saved = factoryLayout(TAB).filter(card => card.id !== 'engineer-guide').map((card, index) => ({ ...card, x: index % 2, h: 320 }));
+    const doc = emptyDoc(); doc.tabs[TAB] = { cards: saved, removed: [] };
+    layoutState.doc = doc;
+    expect(themedTab(TAB).cards).toEqual(saved);
+    beginEdit(); addCard(TAB, 'engineer-guide');
+    expect(themedTab(TAB).cards.slice(0, saved.length)).toEqual(saved);
+    expect(themedTab(TAB).cards.at(-1)).toEqual({ id: 'engineer-guide', w: 2, h: null });
+    handler = echo;
+    expect(await commitEdit()).toBe(true);
+    const write = calls.filter(call => call.method === 'PUT').at(-1)!;
+    const persisted = JSON.parse(write.body!).doc;
+    handler = () => json(200, { device_id: 'x', name: 'Synthetic', updated_at: 't', doc: persisted });
+    await initLayouts();
+    expect(themedTab(TAB).cards.slice(0, saved.length)).toEqual(saved);
+    expect(ids().filter(id => id === 'engineer-guide')).toHaveLength(1);
+  });
+  test('engineer guide is available in a custom tab as well', async () => {
+    await initLayouts();
+    const doc = emptyDoc();
+    doc.custom = [{ id: 'guide-tab', name: 'Synthetic', icon: 'wrench', cards: [] }];
+    doc.customOrder = ['guide-tab'];
+    layoutState.doc = doc;
+    beginEdit(); addCards('custom:guide-tab', ['engineer-guide']);
+    expect(layoutState.draft?.custom[0].cards).toEqual([{ id: 'engineer-guide', w: 2, h: null }]);
+    handler = echo;
+    expect(await commitEdit()).toBe(true);
+    expect(layoutState.doc.custom[0].cards).toEqual([{ id: 'engineer-guide', w: 2, h: null }]);
+  });
   test('init generates and stores device id when missing', async () => {
     await initLayouts();
     const id = storage.get(DEVICE_KEY);

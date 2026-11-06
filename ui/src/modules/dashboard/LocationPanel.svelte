@@ -172,15 +172,15 @@
             {/if}
           </div>
           {#if coords}
-            <div class="coords-row font-mono" title="{t('field-coordinates')}: [{coords[0].toFixed(1)}, {coords[1].toFixed(1)}, {coords[2].toFixed(1)}] AL">
-              <span class="coords-val">[{coords[0].toFixed(1)}, {coords[1].toFixed(1)}, {coords[2].toFixed(1)}] AL</span>
+            <div class="coords-row font-mono" title="{t('field-coordinates')}: [{coords[0].toFixed(1)}, {coords[1].toFixed(1)}, {coords[2].toFixed(1)}] {t('unit-light-year')}">
+              <span class="coords-val">[{coords[0].toFixed(1)}, {coords[1].toFixed(1)}, {coords[2].toFixed(1)}] {t('unit-light-year')}</span>
               {#if isCurrentSystemHome}
                 <span class="dist-base base-current">· 🏠 {t('field-home-base')}</span>
               {:else if distBase != null && prefs.homeSystem}
-                <span class="dist-base" data-testid="dist-base">· {distBase} AL {t('field-distance-base', { system: prefs.homeSystem })}</span>
+                <span class="dist-base" data-testid="dist-base">· {distBase} {t('unit-light-year')} {t('field-distance-base', { system: prefs.homeSystem })}</span>
               {/if}
               {#if distSol && (!prefs.homeSystem || prefs.homeSystem.toLowerCase() !== 'sol')}
-                <span class="dist-sol">· {distSol} AL {t('field-distance-sol')}</span>
+                <span class="dist-sol">· {distSol} {t('unit-light-year')} {t('field-distance-sol')}</span>
               {/if}
             </div>
           {/if}
@@ -272,7 +272,7 @@
                 <span>Alt: {Math.round(alt)} m</span>
               {/if}
               {#if heading != null}
-                <span>Rumbo: {heading}°</span>
+                <span>{t('field-heading')}: {heading}°</span>
               {/if}
             </div>
           </div>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { credits, ly, pct, integer, formatShipName } from '../../lib/format';
+  import { credits, ly, pct, integer, decimal, formatShipName } from '../../lib/format';
   import { t } from '../../lib/i18n';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
@@ -255,7 +255,7 @@
             <div class="gauge-meta">
               <span class="gauge-label">{t('field-fuel')}</span>
               <span class="gauge-val mono">
-                {ship.fuel_main?.toFixed(1) ?? '—'} / {ship.fuel_capacity_main?.toFixed(1) ?? '—'} t
+                {ship.fuel_main == null ? '—' : decimal(ship.fuel_main, 1)} / {ship.fuel_capacity_main == null ? '—' : decimal(ship.fuel_capacity_main, 1)} t
               </span>
             </div>
             <div class="meter-track">
@@ -266,7 +266,7 @@
               ></div>
             </div>
             {#if ship.fuel_reservoir != null}
-              <div class="meter-track reserve-track" title="Reserva de combustible">
+              <div class="meter-track reserve-track" title={t('ship-fuel-reserve-label')}>
                 <div class="meter-fill reserve-fill" style="width: {fuelResPct}%"></div>
               </div>
             {/if}
@@ -319,7 +319,7 @@
             <div class="stat-columns">
               <div class="stat-col">
                 <div class="metric-card">
-                  <span class="metric-label">{t('field-jump-range')} (Max)</span>
+                  <span class="metric-label">{t('field-jump-range')} ({t('cmdr-rank-max')})</span>
                   <strong class="metric-val mono cyan">{ly(ship.max_jump_range)}</strong>
                 </div>
                 <div class="metric-card">
@@ -327,7 +327,7 @@
                   <span class="metric-val mono">{ship.unladen_mass ? `${integer(ship.unladen_mass)} t` : '—'}</span>
                 </div>
                 <div class="metric-card">
-                  <span class="metric-label">{t('field-fuel')} Total</span>
+                  <span class="metric-label">{t('field-fuel')} {t('ui-total')}</span>
                   <span class="metric-val mono">{ship.fuel_capacity_main ?? 0} t</span>
                 </div>
               </div>
@@ -388,7 +388,7 @@
                 </div>
                 {#if combatShip?.pips}
                   <div class="metric-card">
-                    <span class="metric-label">SYS / ENG / WPN</span>
+                    <span class="metric-label">{t('combat-pips-sys')} / {t('combat-pips-eng')} / {t('combat-pips-wep')}</span>
                     <span class="metric-val mono cyan">
                       {combatShip.pips[0]} / {combatShip.pips[1]} / {combatShip.pips[2]}
                     </span>
@@ -433,7 +433,7 @@
             <div class="stat-columns">
               <div class="stat-col">
                 <div class="metric-card">
-                  <span class="metric-label">{t('field-cargo')} Total</span>
+                  <span class="metric-label">{t('field-cargo')} {t('ui-total')}</span>
                   <strong class="metric-val mono gold">{ship.cargo_count ?? 0} / {ship.cargo_capacity ?? 0} t</strong>
                 </div>
                 <div class="metric-card">
@@ -571,7 +571,7 @@
 
                   <div class="mod-status-row">
                     <!-- Salud con barra visual -->
-                    <div class="mod-health" title="Salud del módulo">
+                    <div class="mod-health" title={t('ship-module-health-label')}>
                       <div class="health-track">
                         <div
                           class="health-fill"
@@ -587,7 +587,7 @@
                     <span class="pwr-pill mono" class:pwr-on={mod.on} class:pwr-off={!mod.on}>
                       {mod.on ? 'ON' : 'OFF'}
                     </span>
-                    <span class="pwr-prio mono" title="Prioridad de energía">P{mod.priority}</span>
+                    <span class="pwr-prio mono" title={t('ship-power-priority-label')}>P{mod.priority}</span>
 
                     <!-- Indicador de Ingeniería -->
                     {#if mod.engineering}
@@ -609,12 +609,12 @@
                 {#if expandedModuleSlot === mod.slot && mod.engineering}
                   <div class="eng-details">
                     <div class="eng-meta-row">
-                      <span class="cyan"><strong>{mod.engineering.blueprint}</strong> (Grado {mod.engineering.level})</span>
+                      <span class="cyan"><strong>{mod.engineering.blueprint}</strong> ({t('item-grade-label', { grade: mod.engineering.level })})</span>
                       {#if mod.engineering.experimental}
-                        <span class="gold">Efecto: <em>{mod.engineering.experimental}</em></span>
+                        <span class="gold">{t('ship-experimental-label')} <em>{mod.engineering.experimental}</em></span>
                       {/if}
                       {#if mod.engineering.engineer}
-                        <span class="sub">Por: {mod.engineering.engineer}</span>
+                        <span class="sub">{t('ship-engineered-by', { name: mod.engineering.engineer })}</span>
                       {/if}
                     </div>
 
@@ -624,9 +624,9 @@
                           <div class="modifier-row">
                             <span class="sub">{m.label}</span>
                             <span class="mono" class:cyan={!m.lessIsGood && (m.value ?? 0) >= (m.original ?? 0)}>
-                              {m.value != null ? m.value.toFixed(2) : '—'}
+                              {m.value != null ? decimal(m.value, 2) : '—'}
                               {#if m.original != null}
-                                <span class="sub-orig">({m.original.toFixed(2)})</span>
+                                <span class="sub-orig">({decimal(m.original, 2)})</span>
                               {/if}
                             </span>
                           </div>

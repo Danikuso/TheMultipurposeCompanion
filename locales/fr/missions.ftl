@@ -27,7 +27,7 @@ missions-alert-expiring = La mission { $name } expire dans moins d'une heure
 missions-alert-redirected = Mission redirigée vers { $destination }
 missions-alert-failed = Mission échouée : { $name }
 missions-alert-cargo-missing = Il manque { $tons } t de cargaison de mission à livrer
-missions-alert-wanted-passenger = Passager recherché à bord : risque lors des scans en zone de sécurité
+missions-alert-wanted-passenger = Passager recherché à bord : risque lors des contrôles en zone de sécurité
 missions-rewards-credits = Crédits : { $credits }
 missions-rewards-completed = Terminées : { $completed }
 missions-rewards-failed = Échouées : { $count }
@@ -70,7 +70,7 @@ missions-kind-other = Autre
 missions-details-missing = Détails non disponibles
 missions-redirected = NOUVELLE DESTINATION
 missions-massacre-missing = { $kills ->
-    [one] encore 1 victoire à obtenir
+    [one] encore { $kills } victoire à obtenir
    *[other] encore { $kills } victoires à obtenir
 }
 missions-massacre-target = Cible : { $faction }
@@ -93,3 +93,5 @@ missions-cg-complete = TERMINÉ
 missions-tourism-reference-default = Référence : { $crly } cr/al
 missions-rewards-reputation-short = Rép.
 missions-rewards-influence-short = Inf.
+missions-passenger-groups-count = Groupes ({ $count })
+missions-count-short = missions

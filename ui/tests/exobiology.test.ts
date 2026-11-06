@@ -100,7 +100,7 @@ test('discarded species is shown in the sampling block',()=>{
 
 test('without sampling the block waits for ScanOrganic',()=>{
   render(bodyTopic());
-  expect(target.querySelector('[data-testid="sampling"]')?.textContent).toContain('Esperando ScanOrganic…');
+  expect(target.querySelector('[data-testid="sampling"]')?.textContent).toContain('Esperando una muestra biológica…');
 });
 
 test('missing body topic shows the empty state',()=>{

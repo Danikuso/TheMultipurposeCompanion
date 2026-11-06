@@ -12,7 +12,7 @@ import type {
   MassacreTopic, PassengersTopic, TourismTopic, CommunityGoalsTopic,
 } from '../modules/missions/types';
 import {
-  MaterialsPanel, EngineersPanel, ShipPanel as EngineeringShipPanel, EngineerFlow,
+  MaterialsPanel, EngineersPanel, EngineerGuidePanel, ShipPanel as EngineeringShipPanel, EngineerFlow,
   ShoppingPanel, TradesPanel, SourcesPanel, EngineeringAlerts,
 } from '../modules/engineering';
 import { CarrierOverviewPanel, CarrierJumpPanel, CarrierFinancesPanel } from '../modules/carrier';
@@ -47,6 +47,8 @@ export interface CardDef {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   component: Component<any>;
   defaultWidth: CardWidth;
+  /** False for optional new cards that must not be appended to saved tab layouts. */
+  addToSaved?: boolean;
   when?: (ctx: LayoutCtx) => boolean;
 }
 
@@ -122,6 +124,7 @@ const defs: CardDef[] = [
   // Ingeniería
   { id: 'materials', titleKey: 'panel-engineering-materials', module: 'engineering', component: MaterialsPanel, defaultWidth: 2 },
   { id: 'engineers', titleKey: 'panel-engineering-engineers', module: 'engineering', component: EngineersPanel, defaultWidth: 1 },
+  { id: 'engineer-guide', titleKey: 'panel-engineering-guide', module: 'engineering', component: EngineerGuidePanel, defaultWidth: 2, addToSaved: false },
   { id: 'eng-ship', titleKey: 'panel-engineering-ship', module: 'engineering',
     component: EngineeringShipPanel, defaultWidth: 2 },
   { id: 'eng-flow', titleKey: 'panel-engineering-flow', module: 'engineering',

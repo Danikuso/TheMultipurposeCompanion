@@ -66,7 +66,7 @@
         <div class="hud-meter-fill fill-cyan" style:width="{Math.min(100, Math.max(0, status.rank_progress_percent))}%"></div>
       </div>
       <div class="rank-foot">
-        <span class="sub mono">{pct(status.rank_progress_percent)} al rango {Math.min(100, status.rank + 1)}</span>
+        <span class="sub mono">{t('powerplay-next-rank-progress', { pct: pct(status.rank_progress_percent), rank: Math.min(100, status.rank + 1) })}</span>
       </div>
     </div>
 

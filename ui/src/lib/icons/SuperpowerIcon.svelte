@@ -1,5 +1,6 @@
 <!-- ui/src/lib/icons/SuperpowerIcon.svelte -->
 <script lang="ts">
+  import { t } from '../i18n';
   import { SUPERPOWERS } from './index';
 
   interface Props {
@@ -23,8 +24,8 @@
     style:width="{size}px"
     style:height="{size}px"
     style:color={meta.color}
-    title={meta.name}
-    aria-label={meta.name}
+    title={t(`superpower-${superpower?.toLowerCase()}`)}
+    aria-label={t(`superpower-${superpower?.toLowerCase()}`)}
   >
     {@html meta.svg}
   </span>

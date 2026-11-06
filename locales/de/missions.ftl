@@ -93,3 +93,5 @@ missions-cg-complete = ABGESCHLOSSEN
 missions-tourism-reference-default = Referenz: { $crly } Cr/Lj
 missions-rewards-reputation-short = Ruf
 missions-rewards-influence-short = Einfl.
+missions-passenger-groups-count = Gruppen ({ $count })
+missions-count-short = Miss.

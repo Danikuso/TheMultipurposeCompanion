@@ -1,6 +1,6 @@
 {
-  "version": "1.2.0",
-  "date": "2026-11-04",
+  "version": "1.3.0",
+  "date": "2026-11-06",
   "checks": [
     {
       "language": "es",
@@ -9,11 +9,11 @@
       "content": "PASS",
       "bounds": "PASS",
       "rendered": 23,
-      "pdf_bytes": 104896,
+      "pdf_bytes": 104912,
       "toc_links": 21,
       "outline_destinations": "PASS",
       "visual_review": "PASS",
-      "sha256": "65b0bdf95ac2cef9023b9a8b9449eded4823ab5b4c1d456ea41b7ddf249c8d49"
+      "sha256": "a84cd3f35572acc6e8c5d0ae9adda15a5ab37d875a0ee04813bc40bfa41204ed"
     },
     {
       "language": "en",
@@ -22,11 +22,11 @@
       "content": "PASS",
       "bounds": "PASS",
       "rendered": 23,
-      "pdf_bytes": 101533,
+      "pdf_bytes": 101538,
       "toc_links": 21,
       "outline_destinations": "PASS",
       "visual_review": "PASS",
-      "sha256": "7f1daaabf87d7b1dcd0f722a6c67fe2d4097011741b1f9e5ad8514731e092ddd"
+      "sha256": "d91c7c7b29d7a84166230d0f62a4976414bc0289dbdd0395de57681d99163d9f"
     },
     {
       "language": "fr",
@@ -35,11 +35,11 @@
       "content": "PASS",
       "bounds": "PASS",
       "rendered": 23,
-      "pdf_bytes": 105721,
+      "pdf_bytes": 105734,
       "toc_links": 21,
       "outline_destinations": "PASS",
       "visual_review": "PASS",
-      "sha256": "ee7c7181a7631fe4489b93bd291578c7711f48fd4ccf44871629591e80d395fc"
+      "sha256": "f4c0f3dbeddcba435e706882ab7b04c59628c5c168c9dbb7408001c3e14dbcf2"
     },
     {
       "language": "de",
@@ -48,11 +48,11 @@
       "content": "PASS",
       "bounds": "PASS",
       "rendered": 23,
-      "pdf_bytes": 105150,
+      "pdf_bytes": 105167,
       "toc_links": 21,
       "outline_destinations": "PASS",
       "visual_review": "PASS",
-      "sha256": "342449f69f77a95514cef8991c5b6586a8668085c8c2c607ce616a9a3f137e41"
+      "sha256": "dc3b3fecd6d11c1f0ace9adba72f6ef6f26d28a8d048e98d6ab0d91560c760e7"
     },
     {
       "language": "pt",
@@ -61,11 +61,11 @@
       "content": "PASS",
       "bounds": "PASS",
       "rendered": 23,
-      "pdf_bytes": 104836,
+      "pdf_bytes": 104849,
       "toc_links": 21,
       "outline_destinations": "PASS",
       "visual_review": "PASS",
-      "sha256": "b4a018238ad589f3ac923bf3df9b37d5e5399b0a9076014d676d8a2c07e4bb1e"
+      "sha256": "0e1339299819f9052938b5f09c81f035097f34e2caed07e2f58b791719526db4"
     }
   ]
 }

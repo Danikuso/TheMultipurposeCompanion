@@ -48,7 +48,7 @@
     <div class="ship-controls">
       <div class="module-dropdown-wrapper">
         <label class="compact-selector-label" for="ship-module-select">
-          <span class="label-text">Módulo ({engineerableModules.length}):</span>
+          <span class="label-text">{t('ui-count-heading', { label: t('engineering-col-module'), count: engineerableModules.length })}</span>
           <select
             id="ship-module-select"
             class="glass-select"
@@ -74,7 +74,7 @@
         data-testid="toggle-module-list"
         onclick={() => (showList = !showList)}
       >
-        {showList ? '▲ Ocultar lista' : `▼ Ver lista (${engineerableModules.length})`}
+        {showList ? t('ui-hide-list') : t('ui-show-list', { count: engineerableModules.length })}
       </button>
     </div>
 

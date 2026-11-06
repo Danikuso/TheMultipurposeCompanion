@@ -14,3 +14,6 @@ colonisation-nearby-suppliers = Mercados Próximos com Estoque
 colonisation-no-depot = Nenhum depósito de colonização ativo
 colonisation-copy-station = Copiar Mercado
 colonisation-copied = Copiado!
+colonisation-supply-complete = Concluído
+colonisation-supply-delivered = Todos os recursos do depósito foram entregues.
+colonisation-resource-missing = Faltam { $tons } t (~{ $trips } viagens)

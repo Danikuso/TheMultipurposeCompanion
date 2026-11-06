@@ -190,7 +190,7 @@ test('system panel renders rich telemetry chips, address, distance to sol and cu
   flushSync();
 
   expect(target.textContent).toContain('#12345678');
-  expect(target.textContent).toContain('100.0 AL');
+  expect(target.textContent).toContain('100.0 al');
   expect(target.textContent).toContain(t('exploration-terraformable-count', { count: 2 }));
   expect(target.textContent).toContain(t('exploration-landable-count', { count: 5 }));
   expect(target.textContent).toContain(t('exploration-bio-total', { count: 3 }));

@@ -3,7 +3,7 @@
   "title": "Kommandantenhandbuch",
   "subtitle": "Praktische Anleitung zur Installation, zum Flug und zu allen TMC-Werkzeugen für Elite Dangerous.",
   "workflow": ["Lokales Journal", "Cockpit-Anzeigen", "Deine Entscheidungen"],
-  "scope": "Ausgabe für TMC 1.2.0 unter Windows mit 64 Bit. Offizielle Unterstützung für Linux und Steam Deck ist noch in Entwicklung. Diese Version enthält kein Linux-Installationspaket.",
+  "scope": "Ausgabe für TMC 1.3.0 unter Windows mit 64 Bit. Offizielle Unterstützung für Linux und Steam Deck ist noch in Entwicklung. Diese Version enthält kein Linux-Installationspaket.",
   "intro": "TMC ist ein Informationscopilot. Die Anwendung liest vom Spiel erzeugte Dateien, bündelt deine Daten und schlägt Schritte vor. Fliegen, Kaufen, Verkaufen, Scannen und Verbessern führst du weiterhin selbst in Elite Dangerous aus.",
   "legal": "Elite Dangerous ist eine Marke von Frontier Developments. TMC ist ein unabhängiges Projekt. Dieses Handbuch enthält keine offiziellen Spielgrafiken.",
   "contents": "Einsatzübersicht",

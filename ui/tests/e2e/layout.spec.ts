@@ -204,7 +204,7 @@ test('reset engineering restores factory layout', async () => {
     page.getByTestId('layout-reset').click());
   await finishEdit();
   // `eng-flow` solo aparece con un flujo de ingeniería activo, así que no figura entre los marcos visibles.
-  expect(await slotIds()).toEqual(['materials', 'engineers', 'eng-alerts', 'eng-ship', 'shopping', 'trades', 'sources']);
+  expect(await slotIds()).toEqual(['materials', 'engineers', 'engineer-guide', 'eng-alerts', 'eng-ship', 'shopping', 'trades', 'sources']);
   await expect(content('engineers')).not.toHaveAttribute('style', /height:\s*\d+px/);
 });
 
@@ -252,10 +252,19 @@ async function settledGeometry() {
 }
 
 async function dragToColumn(kind: 'mouse' | 'touch') {
-  const geo = await settledGeometry();
-  const step = geo.colW + geo.gap;
+  let geo = await settledGeometry();
+  let step = geo.colW + geo.gap;
   // Una tarjeta de una columna que no esté ya en la última.
-  const card = geo.frames.find((f) => f.w < geo.colW * 1.5 && Math.round((f.x - geo.left) / step) < geo.columns - 1);
+  let card = geo.frames.find((f) => f.w < geo.colW * 1.5 && Math.round((f.x - geo.left) / step) < geo.columns - 1);
+  // With a new two-column factory card, all narrow cards may initially be on the right.
+  // Establish the drag's starting condition using the normal column controls.
+  if (!card) {
+    const narrow = geo.frames.find((f) => f.w > 0 && f.w < geo.colW * 1.5);
+    expect(narrow, 'a one-column card to prepare for dragging').toBeDefined();
+    await moveToColumn(narrow!.id, 0);
+    geo = await settledGeometry(); step = geo.colW + geo.gap;
+    card = geo.frames.find((f) => f.id === narrow!.id);
+  }
   expect(card, 'a one-column card with room on its right').toBeDefined();
   const curCol = Math.round((card!.x - geo.left) / step);
   const targetCol = geo.columns - 1;

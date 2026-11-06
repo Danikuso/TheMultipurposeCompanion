@@ -16,7 +16,7 @@ combat-subsystem-lifesupport = Suporte de vida
 combat-subsystem-distributor = Distribuidor de energia
 combat-subsystem-sensors = Sensores
 combat-subsystem-weapons = Armas
-combat-subsystem-cargohatch = Compartimento de carga
+combat-subsystem-cargohatch = Escotilha de carga
 combat-subsystem-other = Outro subsistema
 combat-heat = Calor
 combat-heat-normal = normal
@@ -27,6 +27,7 @@ combat-pips-sys = SIS
 combat-pips-eng = MOT
 combat-pips-wep = ARM
 combat-bounties-unclaimed = { $count ->
+    [0] { $count } recompensas por cobrar · { $credits }
     [one] { $count } recompensa por cobrar · { $credits }
    *[other] { $count } recompensas por cobrar · { $credits }
 }
@@ -37,6 +38,7 @@ combat-zone-conflict = zona de conflito
 combat-zone-ax = AX
 combat-thargoid-presence = presença thargoide
 combat-kills = { $count ->
+    [0] { $count } abates
     [one] { $count } abate
    *[other] { $count } abates
 }
@@ -77,14 +79,14 @@ combat-reset-failed = Não foi possível reiniciar a sessão
 combat-zone-side = Lado: { $side }
 combat-ax-target = Alvo: { $target }
 combat-ax-bonds = Bônus AX: { $credits }
-combat-rank-0 = Harmless
-combat-rank-1 = Mostly Harmless
-combat-rank-2 = Novice
-combat-rank-3 = Competent
-combat-rank-4 = Expert
-combat-rank-5 = Master
-combat-rank-6 = Dangerous
-combat-rank-7 = Deadly
+combat-rank-0 = Inofensivo
+combat-rank-1 = Quase Inofensivo
+combat-rank-2 = Novato
+combat-rank-3 = Competente
+combat-rank-4 = Experiente
+combat-rank-5 = Mestre
+combat-rank-6 = Perigoso
+combat-rank-7 = Letal
 combat-rank-8 = Elite
 combat-ax-type-scout = Batedor
 combat-ax-type-scout_hq = Batedor (QG)

@@ -42,7 +42,7 @@
       };
     }
     return {
-      type: 'Nave desconocida',
+      type: t('ship-unknown-name'),
       customName: null,
     };
   }
@@ -276,7 +276,7 @@
             <span class="mono uploader-text" data-testid="eddn-uploader-id">
               {status?.eddn?.uploader_id || 'TMC-Anon'}
             </span>
-            <button class="chip-copy-btn" onclick={copyUploaderId} data-testid="eddn-copy-btn" title="Copiar Uploader ID">
+            <button class="chip-copy-btn" onclick={copyUploaderId} data-testid="eddn-copy-btn" title={t('accounts-copy-uploader-id')}>
               {eddnCopied ? '✓' : '📋'}
             </button>
           </div>
@@ -437,7 +437,7 @@
         <div class="rate-limit-card" data-testid="inara-rate-meter">
           <div class="rate-head">
             <span class="sub bold">{t('accounts-inara-rate-limit-title')}</span>
-            <span class="sub mono gold">máx 2 req / 60s</span>
+            <span class="sub mono gold">{t('accounts-inara-rate-label')}</span>
           </div>
           <div class="hud-meter-track" role="progressbar" aria-valuenow={1} aria-valuemin={0} aria-valuemax={2}>
             <div class="hud-meter-fill fill-cyan" style:width="50%"></div>
@@ -508,7 +508,7 @@
                     <input
                       class="glass-input mono"
                       type="text"
-                      placeholder="https://.../oauth/callback.html?code=... o código directo"
+                      placeholder={t('accounts-capi-code-placeholder')}
                       bind:value={manualCapiInput}
                       data-testid="capi-manual-input"
                     />
@@ -558,7 +558,7 @@
                 <!-- Columna izquierda: Nave seleccionada -->
                 <div class="fleet-detail-col">
                   <label class="compact-selector-label" for="remote-fleet-select">
-                    <span class="label-text">Nave ({remoteShips.length}):</span>
+                    <span class="label-text">{t('ui-count-heading', { label: t('field-ship'), count: remoteShips.length })}</span>
                     <select
                       id="remote-fleet-select"
                       class="glass-select"
@@ -607,7 +607,7 @@
                 <div class="fleet-grid-col">
                   <div class="fleet-grid-head">
                     <span class="sub bold">{t('accounts-capi-remote-fleet-title')} ({remoteShips.length})</span>
-                    <span class="sub mono cyan">Haz clic para seleccionar</span>
+                    <span class="sub mono cyan">{t('accounts-select-ship-hint')}</span>
                   </div>
                   <div class="fleet-cards-grid">
                     {#each remoteShips as ship (ship.id)}

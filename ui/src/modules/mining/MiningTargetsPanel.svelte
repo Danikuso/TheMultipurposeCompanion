@@ -185,7 +185,7 @@
           class="preset-chip"
           class:active={selectedPresetId === preset.id}
           onclick={() => selectPreset(preset)}
-          title="{preset.methodLabel} · {ringTypeLabel(preset.ringType)}"
+          title="{t(preset.methodKey)} · {ringTypeLabel(preset.ringType)}"
         >
           <span class="preset-name">{preset.commodity}</span>
           <span class="preset-ring-tag">{ringTypeLabel(preset.ringType)}</span>
@@ -211,8 +211,8 @@
         <label for="mining-hotspots-select">{t('mining-min-hotspots', { count: minHotspots })}</label>
         <select id="mining-hotspots-select" class="hud-select" bind:value={minHotspots} onchange={() => search()}>
           <option value={1}>1+</option>
-          <option value={2}>2+ (Solapado)</option>
-          <option value={3}>3+ (Triple)</option>
+          <option value={2}>{t('mining-hotspot-overlap')}</option>
+          <option value={3}>{t('mining-hotspot-triple')}</option>
         </select>
       </div>
 
@@ -262,7 +262,7 @@
             <span class="step-label">2. {t('mining-ring-target', { body: loopPlan.ring_target.body_name, ring: loopPlan.ring_target.ring_name })}</span>
             <div class="step-content">
               <span class="step-sys">{loopPlan.ring_target.system_name}</span>
-              <span class="step-badge badge-dist">{loopPlan.ring_target.distance_ly} al</span>
+              <span class="step-badge badge-dist">{loopPlan.ring_target.distance_ly} {t('unit-light-year')}</span>
               {#if loopPlan.ring_target.res_intensity}
                 <span class="badge {resBadgeClass(loopPlan.ring_target.res_intensity)}">
                   {resLabel(loopPlan.ring_target.res_intensity)}
@@ -280,7 +280,7 @@
                 type="button"
                 class="btn-icon"
                 onclick={() => planRoute(loopPlan.ring_target.system_name)}
-                title="Trazar ruta"
+                title={t('mining-plan-route')}
               >
                 🚀
               </button>
@@ -295,7 +295,7 @@
             <div class="step-content">
               <span class="step-station">{loopPlan.sell_station.station_name}</span>
               <span class="step-price">{credits(loopPlan.sell_station.price_cr)}/t</span>
-              <span class="step-badge badge-dist">+{loopPlan.sell_station.distance_from_ring_ly} al</span>
+              <span class="step-badge badge-dist">+{loopPlan.sell_station.distance_from_ring_ly} {t('unit-light-year')}</span>
 
               <!-- SEMÁFORO DE DEMANDA -->
               {#if loopPlan.sell_station.demand_tax_risk}
@@ -336,7 +336,7 @@
     <!-- ACCESO RÁPIDO A VENTA MÚLTIPLE DE BODEGA -->
     {#if cargoSellTopic && cargoSellTopic.commodities_in_cargo.length > 0}
       <div class="cargo-sell-strip">
-        <span class="cargo-strip-title">📦 Bodega de minería:</span>
+        <span class="cargo-strip-title">📦 {t('mining-cargo-label')}</span>
         {#each cargoSellTopic.commodities_in_cargo as item (item.name)}
           <span class="badge badge-neutral">{item.name}: {item.count} t</span>
         {/each}
@@ -364,11 +364,11 @@
               <tr>
                 <th>{t('field-system')}</th>
                 <th>{t('field-body')}</th>
-                <th>Tipo Anillo</th>
-                <th>Hotspots</th>
-                <th>Rendimiento / RES</th>
-                <th>Notas / Solapamiento</th>
-                <th>Acción</th>
+                <th>{t('mining-col-ring-type')}</th>
+                <th>{t('mining-col-hotspots')}</th>
+                <th>{t('mining-col-yield-res')}</th>
+                <th>{t('mining-col-notes')}</th>
+                <th>{t('mining-col-action')}</th>
               </tr>
             </thead>
             <tbody>
@@ -376,7 +376,7 @@
                 <tr class:selected-row={selectedRing?.system_name === target.system_name && selectedRing?.ring_name === target.ring_name}>
                   <td class="cell-system">
                     <span class="sys-name">{target.system_name}</span>
-                    <span class="sys-dist">{target.distance_ly} al</span>
+                    <span class="sys-dist">{target.distance_ly} {t('unit-light-year')}</span>
                     <button
                       type="button"
                       class="btn-icon"
@@ -450,8 +450,8 @@
                   <th>{t('field-system')}</th>
                   <th>{t('mining-col-pad')}</th>
                   <th>{t('mining-col-distance')}</th>
-                  <th>Ingresos Totales</th>
-                  <th>Acción</th>
+                  <th>{t('mining-col-total-revenue')}</th>
+                  <th>{t('mining-col-action')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -460,7 +460,7 @@
                     <td class="bold">{st.station_name}</td>
                     <td>{st.system_name}</td>
                     <td><span class="badge">{st.pad}</span></td>
-                    <td>{st.distance_ly} al</td>
+                    <td>{st.distance_ly} {t('unit-light-year')}</td>
                     <td class="price-val">{credits(st.total_revenue_cr)}</td>
                     <td>
                       <button

@@ -1,5 +1,5 @@
-nav-carrier = Fleet Carrier
-panel-carrier-overview = Estado del Fleet Carrier
+nav-carrier = Portanaves
+panel-carrier-overview = Estado del portanaves
 panel-carrier-jump = Secuencia de salto
 panel-carrier-finances = Finanzas y mantenimiento
 carrier-callsign = Identificador
@@ -30,4 +30,6 @@ carrier-health-safe = Saludable
 carrier-health-warning = Advertencia
 carrier-health-critical = Crítico
 carrier-next-upkeep = Próximo cobro semanal
-carrier-no-carrier = Ningún Fleet Carrier asignado al comandante
+carrier-no-carrier = Ningún portanaves asignado al comandante
+carrier-aboard = A bordo
+carrier-max-jump = { $distance } / salto

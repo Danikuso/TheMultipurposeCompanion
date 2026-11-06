@@ -3044,6 +3044,26 @@
           "key": "unlock-invite-didi-vatermann"
         },
         {
+          "amount": 50,
+          "engineer_id": 300000,
+          "field": "contribution",
+          "item": "lavianbrandy",
+          "kind": "commodity"
+        },
+        {
+          "discovery_key": "unlock-discovery-didi-vatermann",
+          "engineer_id": 300000,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-didi-vatermann",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-didi-vatermann-300210",
+          "engineer_id": 300000,
+          "field": "prerequisite",
+          "prerequisite_id": 300210
+        },
+        {
           "engineer_id": 300010,
           "field": "requirement",
           "key": "unlock-bill-turner"
@@ -3052,6 +3072,26 @@
           "engineer_id": 300010,
           "field": "invite",
           "key": "unlock-invite-bill-turner"
+        },
+        {
+          "amount": 50,
+          "engineer_id": 300010,
+          "field": "contribution",
+          "item": "bromellite",
+          "kind": "commodity"
+        },
+        {
+          "discovery_key": "unlock-discovery-bill-turner",
+          "engineer_id": 300010,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-bill-turner",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-bill-turner-300210",
+          "engineer_id": 300010,
+          "field": "prerequisite",
+          "prerequisite_id": 300210
         },
         {
           "engineer_id": 300030,
@@ -3064,6 +3104,26 @@
           "key": "unlock-invite-broo-tarquin"
         },
         {
+          "amount": 50,
+          "engineer_id": 300030,
+          "field": "contribution",
+          "item": "fujintea",
+          "kind": "commodity"
+        },
+        {
+          "discovery_key": "unlock-discovery-broo-tarquin",
+          "engineer_id": 300030,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-broo-tarquin",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-broo-tarquin-300090",
+          "engineer_id": 300030,
+          "field": "prerequisite",
+          "prerequisite_id": 300090
+        },
+        {
           "engineer_id": 300040,
           "field": "requirement",
           "key": "unlock-the-sarge"
@@ -3072,6 +3132,26 @@
           "engineer_id": 300040,
           "field": "invite",
           "key": "unlock-invite-the-sarge"
+        },
+        {
+          "amount": 50,
+          "engineer_id": 300040,
+          "field": "contribution",
+          "item": "shieldpatternanalysis",
+          "kind": "material"
+        },
+        {
+          "discovery_key": "unlock-discovery-the-sarge",
+          "engineer_id": 300040,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-the-sarge",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-the-sarge-300250",
+          "engineer_id": 300040,
+          "field": "prerequisite",
+          "prerequisite_id": 300250
         },
         {
           "engineer_id": 300050,
@@ -3084,6 +3164,26 @@
           "key": "unlock-invite-zacariah-nemo"
         },
         {
+          "amount": 25,
+          "engineer_id": 300050,
+          "field": "contribution",
+          "item": "xihecompanions",
+          "kind": "commodity"
+        },
+        {
+          "discovery_key": "unlock-discovery-zacariah-nemo",
+          "engineer_id": 300050,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-zacariah-nemo",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-zacariah-nemo-300160",
+          "engineer_id": 300050,
+          "field": "prerequisite",
+          "prerequisite_id": 300160
+        },
+        {
           "engineer_id": 300080,
           "field": "requirement",
           "key": "unlock-liz-ryder"
@@ -3092,6 +3192,20 @@
           "engineer_id": 300080,
           "field": "invite",
           "key": "unlock-invite-liz-ryder"
+        },
+        {
+          "amount": 200,
+          "engineer_id": 300080,
+          "field": "contribution",
+          "item": "landmines",
+          "kind": "commodity"
+        },
+        {
+          "discovery_key": "unlock-discovery-liz-ryder",
+          "engineer_id": 300080,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-liz-ryder",
+          "verified": true
         },
         {
           "engineer_id": 300090,
@@ -3104,6 +3218,26 @@
           "key": "unlock-invite-hera-tani"
         },
         {
+          "amount": 50,
+          "engineer_id": 300090,
+          "field": "contribution",
+          "item": "kamitracigars",
+          "kind": "commodity"
+        },
+        {
+          "discovery_key": "unlock-discovery-hera-tani",
+          "engineer_id": 300090,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-hera-tani",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-hera-tani-300080",
+          "engineer_id": 300090,
+          "field": "prerequisite",
+          "prerequisite_id": 300080
+        },
+        {
           "engineer_id": 300100,
           "field": "requirement",
           "key": "unlock-felicity-farseer"
@@ -3112,6 +3246,20 @@
           "engineer_id": 300100,
           "field": "invite",
           "key": "unlock-invite-felicity-farseer"
+        },
+        {
+          "amount": 1,
+          "engineer_id": 300100,
+          "field": "contribution",
+          "item": "metaalloys",
+          "kind": "commodity"
+        },
+        {
+          "discovery_key": "unlock-discovery-felicity-farseer",
+          "engineer_id": 300100,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-felicity-farseer",
+          "verified": true
         },
         {
           "engineer_id": 300110,
@@ -3124,6 +3272,26 @@
           "key": "unlock-invite-ram-tah"
         },
         {
+          "amount": 50,
+          "engineer_id": 300110,
+          "field": "contribution",
+          "item": "scandatabanks",
+          "kind": "material"
+        },
+        {
+          "discovery_key": "unlock-discovery-ram-tah",
+          "engineer_id": 300110,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-ram-tah",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-ram-tah-300120",
+          "engineer_id": 300110,
+          "field": "prerequisite",
+          "prerequisite_id": 300120
+        },
+        {
           "engineer_id": 300120,
           "field": "requirement",
           "key": "unlock-lei-cheung"
@@ -3132,6 +3300,26 @@
           "engineer_id": 300120,
           "field": "invite",
           "key": "unlock-invite-lei-cheung"
+        },
+        {
+          "amount": 200,
+          "engineer_id": 300120,
+          "field": "contribution",
+          "item": "gold",
+          "kind": "commodity"
+        },
+        {
+          "discovery_key": "unlock-discovery-lei-cheung",
+          "engineer_id": 300120,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-lei-cheung",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-lei-cheung-300180",
+          "engineer_id": 300120,
+          "field": "prerequisite",
+          "prerequisite_id": 300180
         },
         {
           "engineer_id": 300130,
@@ -3144,6 +3332,26 @@
           "key": "unlock-invite-petra-olmanova"
         },
         {
+          "amount": 200,
+          "engineer_id": 300130,
+          "field": "contribution",
+          "item": "progenitorcells",
+          "kind": "commodity"
+        },
+        {
+          "discovery_key": "unlock-discovery-petra-olmanova",
+          "engineer_id": 300130,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-petra-olmanova",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-petra-olmanova-300260",
+          "engineer_id": 300130,
+          "field": "prerequisite",
+          "prerequisite_id": 300260
+        },
+        {
           "engineer_id": 300140,
           "field": "requirement",
           "key": "unlock-colonel-bris-dekker"
@@ -3154,6 +3362,19 @@
           "key": "unlock-invite-colonel-bris-dekker"
         },
         {
+          "discovery_key": "unlock-discovery-colonel-bris-dekker",
+          "engineer_id": 300140,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-colonel-bris-dekker",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-colonel-bris-dekker-300250",
+          "engineer_id": 300140,
+          "field": "prerequisite",
+          "prerequisite_id": 300250
+        },
+        {
           "engineer_id": 300150,
           "field": "requirement",
           "key": "unlock-marsha-hicks"
@@ -3162,6 +3383,19 @@
           "engineer_id": 300150,
           "field": "invite",
           "key": "unlock-invite-marsha-hicks"
+        },
+        {
+          "discovery_key": "unlock-discovery-marsha-hicks",
+          "engineer_id": 300150,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-marsha-hicks",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-marsha-hicks-300180",
+          "engineer_id": 300150,
+          "field": "prerequisite",
+          "prerequisite_id": 300180
         },
         {
           "engineer_id": 300160,
@@ -3181,6 +3415,13 @@
           "kind": "commodity"
         },
         {
+          "discovery_key": "unlock-discovery-elvira-martuuk",
+          "engineer_id": 300160,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-elvira-martuuk",
+          "verified": true
+        },
+        {
           "engineer_id": 300180,
           "field": "requirement",
           "key": "unlock-the-dweller"
@@ -3189,6 +3430,20 @@
           "engineer_id": 300180,
           "field": "invite",
           "key": "unlock-invite-the-dweller"
+        },
+        {
+          "amount": 500000,
+          "engineer_id": 300180,
+          "field": "contribution",
+          "item": "credits",
+          "kind": "credits"
+        },
+        {
+          "discovery_key": "unlock-discovery-the-dweller",
+          "engineer_id": 300180,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-the-dweller",
+          "verified": true
         },
         {
           "engineer_id": 300200,
@@ -3201,6 +3456,26 @@
           "key": "unlock-invite-marco-qwent"
         },
         {
+          "amount": 25,
+          "engineer_id": 300200,
+          "field": "contribution",
+          "item": "modularterminals",
+          "kind": "commodity"
+        },
+        {
+          "discovery_key": "unlock-discovery-marco-qwent",
+          "engineer_id": 300200,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-marco-qwent",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-marco-qwent-300160",
+          "engineer_id": 300200,
+          "field": "prerequisite",
+          "prerequisite_id": 300160
+        },
+        {
           "engineer_id": 300210,
           "field": "requirement",
           "key": "unlock-selene-jean"
@@ -3209,6 +3484,19 @@
           "engineer_id": 300210,
           "field": "invite",
           "key": "unlock-invite-selene-jean"
+        },
+        {
+          "discovery_key": "unlock-discovery-selene-jean",
+          "engineer_id": 300210,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-selene-jean",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-selene-jean-300260",
+          "engineer_id": 300210,
+          "field": "prerequisite",
+          "prerequisite_id": 300260
         },
         {
           "engineer_id": 300220,
@@ -3221,6 +3509,26 @@
           "key": "unlock-invite-professor-palin"
         },
         {
+          "amount": 25,
+          "engineer_id": 300220,
+          "field": "contribution",
+          "item": "unknownenergysource",
+          "kind": "material"
+        },
+        {
+          "discovery_key": "unlock-discovery-professor-palin",
+          "engineer_id": 300220,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-professor-palin",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-professor-palin-300200",
+          "engineer_id": 300220,
+          "field": "prerequisite",
+          "prerequisite_id": 300200
+        },
+        {
           "engineer_id": 300230,
           "field": "requirement",
           "key": "unlock-lori-jameson"
@@ -3229,6 +3537,26 @@
           "engineer_id": 300230,
           "field": "invite",
           "key": "unlock-invite-lori-jameson"
+        },
+        {
+          "amount": 25,
+          "engineer_id": 300230,
+          "field": "contribution",
+          "item": "konggaale",
+          "kind": "commodity"
+        },
+        {
+          "discovery_key": "unlock-discovery-lori-jameson",
+          "engineer_id": 300230,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-lori-jameson",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-lori-jameson-300200",
+          "engineer_id": 300230,
+          "field": "prerequisite",
+          "prerequisite_id": 300200
         },
         {
           "engineer_id": 300250,
@@ -3241,6 +3569,19 @@
           "key": "unlock-invite-juri-ishmaak"
         },
         {
+          "discovery_key": "unlock-discovery-juri-ishmaak",
+          "engineer_id": 300250,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-juri-ishmaak",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-juri-ishmaak-300100",
+          "engineer_id": 300250,
+          "field": "prerequisite",
+          "prerequisite_id": 300100
+        },
+        {
           "engineer_id": 300260,
           "field": "requirement",
           "key": "unlock-tod-the-blaster-mcquinn"
@@ -3249,6 +3590,13 @@
           "engineer_id": 300260,
           "field": "invite",
           "key": "unlock-invite-tod-the-blaster-mcquinn"
+        },
+        {
+          "discovery_key": "unlock-discovery-tod-the-blaster-mcquinn",
+          "engineer_id": 300260,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-tod-the-blaster-mcquinn",
+          "verified": true
         },
         {
           "engineer_id": 300270,
@@ -3261,6 +3609,26 @@
           "key": "unlock-invite-tiana-fortune"
         },
         {
+          "amount": 50,
+          "engineer_id": 300270,
+          "field": "contribution",
+          "item": "decodedemissiondata",
+          "kind": "material"
+        },
+        {
+          "discovery_key": "unlock-discovery-tiana-fortune",
+          "engineer_id": 300270,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-tiana-fortune",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-tiana-fortune-300090",
+          "engineer_id": 300270,
+          "field": "prerequisite",
+          "prerequisite_id": 300090
+        },
+        {
           "engineer_id": 300280,
           "field": "requirement",
           "key": "unlock-mel-brandon"
@@ -3269,6 +3637,19 @@
           "engineer_id": 300280,
           "field": "invite",
           "key": "unlock-invite-mel-brandon"
+        },
+        {
+          "discovery_key": "unlock-discovery-mel-brandon",
+          "engineer_id": 300280,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-mel-brandon",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-mel-brandon-300160",
+          "engineer_id": 300280,
+          "field": "prerequisite",
+          "prerequisite_id": 300160
         },
         {
           "engineer_id": 300290,
@@ -3281,6 +3662,26 @@
           "key": "unlock-invite-etienne-dorn"
         },
         {
+          "amount": 25,
+          "engineer_id": 300290,
+          "field": "contribution",
+          "item": "occupiedcryopod",
+          "kind": "commodity"
+        },
+        {
+          "discovery_key": "unlock-discovery-etienne-dorn",
+          "engineer_id": 300290,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-etienne-dorn",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-etienne-dorn-300080",
+          "engineer_id": 300290,
+          "field": "prerequisite",
+          "prerequisite_id": 300080
+        },
+        {
           "engineer_id": 300300,
           "field": "requirement",
           "key": "unlock-chloe-sedesi"
@@ -3289,6 +3690,26 @@
           "engineer_id": 300300,
           "field": "invite",
           "key": "unlock-invite-chloe-sedesi"
+        },
+        {
+          "amount": 25,
+          "engineer_id": 300300,
+          "field": "contribution",
+          "item": "unknownenergysource",
+          "kind": "material"
+        },
+        {
+          "discovery_key": "unlock-discovery-chloe-sedesi",
+          "engineer_id": 300300,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-chloe-sedesi",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-chloe-sedesi-300200",
+          "engineer_id": 300300,
+          "field": "prerequisite",
+          "prerequisite_id": 300200
         },
         {
           "engineer_id": 400001,
@@ -3301,6 +3722,13 @@
           "key": "unlock-invite-jude-navarro"
         },
         {
+          "discovery_key": "unlock-discovery-jude-navarro",
+          "engineer_id": 400001,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-jude-navarro",
+          "verified": true
+        },
+        {
           "engineer_id": 400002,
           "field": "requirement",
           "key": "unlock-domino-green"
@@ -3309,6 +3737,13 @@
           "engineer_id": 400002,
           "field": "invite",
           "key": "unlock-invite-domino-green"
+        },
+        {
+          "discovery_key": "unlock-discovery-domino-green",
+          "engineer_id": 400002,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-domino-green",
+          "verified": true
         },
         {
           "engineer_id": 400003,
@@ -3321,6 +3756,13 @@
           "key": "unlock-invite-hero-ferrari"
         },
         {
+          "discovery_key": "unlock-discovery-hero-ferrari",
+          "engineer_id": 400003,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-hero-ferrari",
+          "verified": true
+        },
+        {
           "engineer_id": 400004,
           "field": "requirement",
           "key": "unlock-kit-fowler"
@@ -3329,6 +3771,19 @@
           "engineer_id": 400004,
           "field": "invite",
           "key": "unlock-invite-kit-fowler"
+        },
+        {
+          "discovery_key": "unlock-discovery-kit-fowler",
+          "engineer_id": 400004,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-kit-fowler",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-kit-fowler-400002",
+          "engineer_id": 400004,
+          "field": "prerequisite",
+          "prerequisite_id": 400002
         },
         {
           "engineer_id": 400005,
@@ -3341,6 +3796,19 @@
           "key": "unlock-invite-wellington-beck"
         },
         {
+          "discovery_key": "unlock-discovery-wellington-beck",
+          "engineer_id": 400005,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-wellington-beck",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-wellington-beck-400003",
+          "engineer_id": 400005,
+          "field": "prerequisite",
+          "prerequisite_id": 400003
+        },
+        {
           "engineer_id": 400006,
           "field": "requirement",
           "key": "unlock-terra-velasquez"
@@ -3349,6 +3817,19 @@
           "engineer_id": 400006,
           "field": "invite",
           "key": "unlock-invite-terra-velasquez"
+        },
+        {
+          "discovery_key": "unlock-discovery-terra-velasquez",
+          "engineer_id": 400006,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-terra-velasquez",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-terra-velasquez-400001",
+          "engineer_id": 400006,
+          "field": "prerequisite",
+          "prerequisite_id": 400001
         },
         {
           "engineer_id": 400007,
@@ -3361,6 +3842,19 @@
           "key": "unlock-invite-uma-laszlo"
         },
         {
+          "discovery_key": "unlock-discovery-uma-laszlo",
+          "engineer_id": 400007,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-uma-laszlo",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-uma-laszlo-400005",
+          "engineer_id": 400007,
+          "field": "prerequisite",
+          "prerequisite_id": 400005
+        },
+        {
           "engineer_id": 400008,
           "field": "requirement",
           "key": "unlock-oden-geiger"
@@ -3369,6 +3863,19 @@
           "engineer_id": 400008,
           "field": "invite",
           "key": "unlock-invite-oden-geiger"
+        },
+        {
+          "discovery_key": "unlock-discovery-oden-geiger",
+          "engineer_id": 400008,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-oden-geiger",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-oden-geiger-400006",
+          "engineer_id": 400008,
+          "field": "prerequisite",
+          "prerequisite_id": 400006
         },
         {
           "engineer_id": 400009,
@@ -3381,6 +3888,19 @@
           "key": "unlock-invite-yarden-bond"
         },
         {
+          "discovery_key": "unlock-discovery-yarden-bond",
+          "engineer_id": 400009,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-yarden-bond",
+          "verified": true
+        },
+        {
+          "description_key": "unlock-prerequisite-yarden-bond-400004",
+          "engineer_id": 400009,
+          "field": "prerequisite",
+          "prerequisite_id": 400004
+        },
+        {
           "engineer_id": 400010,
           "field": "requirement",
           "key": "unlock-baltanos"
@@ -3389,6 +3909,13 @@
           "engineer_id": 400010,
           "field": "invite",
           "key": "unlock-invite-baltanos"
+        },
+        {
+          "discovery_key": "unlock-discovery-baltanos",
+          "engineer_id": 400010,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-baltanos",
+          "verified": true
         },
         {
           "engineer_id": 400011,
@@ -3401,30 +3928,22 @@
           "key": "unlock-invite-eleanor-bresa"
         },
         {
+          "discovery_key": "unlock-discovery-eleanor-bresa",
+          "engineer_id": 400011,
+          "field": "guide",
+          "reputation_key": "unlock-reputation-eleanor-bresa",
+          "verified": true
+        },
+        {
           "engineer_id": 400012,
           "field": "requirement",
           "key": "unlock-rosa-dayette"
-        },
-        {
-          "engineer_id": 400012,
-          "field": "invite",
-          "key": "unlock-invite-rosa-dayette"
-        },
-        {
-          "engineer_id": 400013,
-          "field": "requirement",
-          "key": "unlock-yi-shen"
-        },
-        {
-          "engineer_id": 400013,
-          "field": "invite",
-          "key": "unlock-invite-yi-shen"
         }
       ],
-      "next_cursor": null,
+      "next_cursor": 154,
       "revision": 21,
       "section": "unlock",
-      "total": 77
+      "total": 162
     },
     "flow_blueprints": {
       "cursor": 0,

@@ -7,7 +7,7 @@ mining-tab-missions = Misiones y Desbloqueos
 
 mining-filter-res-combo = Combo RES (+fragmentos)
 mining-filter-populated-only = Solo sistemas habitados
-mining-min-hotspots = Hotspots mínimos: { $count }
+mining-min-hotspots = Zonas de concentración mínimas: { $count }
 mining-commodity = Mineral
 mining-ref-system = Sistema de referencia
 
@@ -32,12 +32,12 @@ mining-copy-station = Copiar estación
 mining-search-btn = Buscar yacimientos
 mining-clear-btn = Limpiar
 mining-no-targets = No se encontraron yacimientos con los filtros seleccionados
-mining-offline-catalog = Catálogo offline curado (TMC)
+mining-offline-catalog = Catálogo local revisado (TMC)
 mining-online-updated = Sincronizado con Spansh
 mining-cargo-sell-btn = Vender lote de bodega
 mining-hotspots-count = { $count ->
-    [one] 1 hotspot
-   *[other] { $count } hotspots
+    [one] 1 zona de concentración
+   *[other] { $count } zonas de concentración
 }
 mining-res-hazard = Haz-RES (+100 % fragmentos)
 mining-res-high = High-RES (+75 % fragmentos)
@@ -46,3 +46,18 @@ mining-res-low = Low-RES (+25 % fragmentos)
 mining-select-ring = Seleccionar
 mining-selected = Seleccionado
 mining-arrival-ls = { $dist } sl
+mining-col-ring-type = Tipo de anillo
+mining-col-hotspots = Zonas de concentración
+mining-col-yield-res = Rendimiento / RES
+mining-col-notes = Notas / Solapamiento
+mining-col-action = Acción
+mining-col-total-revenue = Ingresos totales
+mining-plan-route = Trazar ruta
+mining-method-laser = Láser de superficie
+mining-method-subsurface = Láser / Subsuperficie
+mining-method-core = Carga sísmica (núcleo)
+mining-method-bill-turner = Ingeniero Bill Turner (50 t)
+mining-method-missions = Misiones de facción y colonización
+mining-hotspot-overlap = 2+ (solapado)
+mining-hotspot-triple = 3+ (triple)
+mining-cargo-label = Bodega de minería:

@@ -7,7 +7,7 @@ mining-tab-missions = Missões e Desbloqueios
 
 mining-filter-res-combo = Combo RES (+fragmentos)
 mining-filter-populated-only = Apenas sistemas habitados
-mining-min-hotspots = Hotspots mínimos: { $count }
+mining-min-hotspots = Pontos de concentração mínimos: { $count }
 mining-commodity = Mineral
 mining-ref-system = Sistema de referência
 
@@ -36,8 +36,9 @@ mining-offline-catalog = Catálogo offline verificado (TMC)
 mining-online-updated = Sincronizado com Spansh
 mining-cargo-sell-btn = Vender lote de carga
 mining-hotspots-count = { $count ->
-    [one] 1 hotspot
-   *[other] { $count } hotspots
+    [0] { $count } pontos de concentração
+    [one] { $count } ponto de concentração
+   *[other] { $count } pontos de concentração
 }
 mining-res-hazard = Haz-RES (+100% fragmentos)
 mining-res-high = High-RES (+75% fragmentos)
@@ -46,3 +47,18 @@ mining-res-low = Low-RES (+25% fragmentos)
 mining-select-ring = Selecionar
 mining-selected = Selecionado
 mining-arrival-ls = { $dist } sl
+mining-col-ring-type = Tipo de anel
+mining-col-hotspots = Pontos de concentração
+mining-col-yield-res = Rendimento / RES
+mining-col-notes = Notas / Sobreposição
+mining-col-action = Ação
+mining-col-total-revenue = Receita total
+mining-plan-route = Traçar rota
+mining-method-laser = Laser de superfície
+mining-method-subsurface = Laser / Subsuperfície
+mining-method-core = Carga sísmica (núcleo)
+mining-method-bill-turner = Engenheiro Bill Turner (50 t)
+mining-method-missions = Missões de facção e colonização
+mining-hotspot-overlap = 2+ (sobreposição)
+mining-hotspot-triple = 3+ (triplo)
+mining-cargo-label = Carga de mineração:

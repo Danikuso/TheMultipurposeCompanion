@@ -1,3 +1,5 @@
+import { t } from './i18n';
+
 /**
  * Gestor reactivo de actualizaciones de TMC («TMC Glass HUD»).
  * Consulta el estado con el backend y coordina la descarga e instalación del instalador oficial.
@@ -72,7 +74,7 @@ export async function checkForUpdates(): Promise<UpdateStatus | null> {
     if (!res.ok) {
       updater.status.is_checking = false;
       const text = await res.text();
-      updater.status.error = text || 'Error al comprobar actualizaciones';
+      updater.status.error = text || t('update-check-failed');
       return null;
     }
     const data = (await res.json()) as UpdateStatus;
@@ -83,7 +85,7 @@ export async function checkForUpdates(): Promise<UpdateStatus | null> {
     return data;
   } catch (e) {
     updater.status.is_checking = false;
-    updater.status.error = e instanceof Error ? e.message : 'Error al conectar con el servidor';
+    updater.status.error = e instanceof Error ? e.message : t('update-connect-failed');
     return null;
   }
 }
@@ -92,7 +94,7 @@ export async function installUpdate(): Promise<boolean> {
   try {
     updater.status.is_downloading = true;
     updater.status.download_progress = 0.0;
-    updater.status.status_message = 'Iniciando descarga del instalador...';
+    updater.status.status_message = t('update-download-starting');
     updater.status.error = null;
 
     // Iniciar sondeo periódico de progreso mientras descarga
@@ -131,13 +133,13 @@ export async function installUpdate(): Promise<boolean> {
     if (!res.ok) {
       updater.status.is_downloading = false;
       const text = await res.text();
-      updater.status.error = text || 'Error al ejecutar la instalación';
+      updater.status.error = text || t('update-install-failed');
       return false;
     }
 
     updater.status.is_downloading = false;
     updater.status.download_progress = 1.0;
-    updater.status.status_message = 'Instalador iniciado. TMC se cerrará en breves instantes.';
+    updater.status.status_message = t('update-installer-started');
     return true;
   } catch (e) {
     if (pollTimer) {
@@ -145,7 +147,7 @@ export async function installUpdate(): Promise<boolean> {
       pollTimer = null;
     }
     updater.status.is_downloading = false;
-    updater.status.error = e instanceof Error ? e.message : 'Error durante la actualización';
+    updater.status.error = e instanceof Error ? e.message : t('update-failed');
     return false;
   }
 }

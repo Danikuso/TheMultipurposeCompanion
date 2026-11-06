@@ -91,22 +91,22 @@ export interface MiningPreset {
   tab: MiningTab;
   commodity: string;
   ringType: string;
-  methodLabel: string;
+  methodKey: string;
   defaultResCombo?: boolean;
 }
 
 export const MINING_PRESETS: MiningPreset[] = [
   // Láser (Créditos)
-  { id: 'plat-laser', tab: 'laser', commodity: 'Platinum', ringType: 'Metallic', methodLabel: 'Láser de Superficie', defaultResCombo: true },
-  { id: 'painite-laser', tab: 'laser', commodity: 'Painite', ringType: 'Metallic', methodLabel: 'Láser de Superficie', defaultResCombo: false },
-  { id: 'ltd-laser', tab: 'laser', commodity: 'Low Temperature Diamonds', ringType: 'Icy', methodLabel: 'Láser / Sub-superficie', defaultResCombo: false },
+  { id: 'plat-laser', tab: 'laser', commodity: 'Platinum', ringType: 'Metallic', methodKey: 'mining-method-laser', defaultResCombo: true },
+  { id: 'painite-laser', tab: 'laser', commodity: 'Painite', ringType: 'Metallic', methodKey: 'mining-method-laser', defaultResCombo: false },
+  { id: 'ltd-laser', tab: 'laser', commodity: 'Low Temperature Diamonds', ringType: 'Icy', methodKey: 'mining-method-subsurface', defaultResCombo: false },
   // Núcleo Profundo
-  { id: 'musgravite-core', tab: 'core', commodity: 'Musgravite', ringType: 'Rocky', methodLabel: 'Carga Sísmica (Núcleo)' },
-  { id: 'monazite-core', tab: 'core', commodity: 'Monazite', ringType: 'Rocky', methodLabel: 'Carga Sísmica (Núcleo)' },
-  { id: 'alexandrite-core', tab: 'core', commodity: 'Alexandrite', ringType: 'Metal-Rich', methodLabel: 'Carga Sísmica (Núcleo)' },
-  { id: 'void-opal-core', tab: 'core', commodity: 'Void Opal', ringType: 'Icy', methodLabel: 'Carga Sísmica (Núcleo)' },
-  { id: 'grandidierite-core', tab: 'core', commodity: 'Grandidierite', ringType: 'Metal-Rich', methodLabel: 'Carga Sísmica (Núcleo)' },
+  { id: 'musgravite-core', tab: 'core', commodity: 'Musgravite', ringType: 'Rocky', methodKey: 'mining-method-core' },
+  { id: 'monazite-core', tab: 'core', commodity: 'Monazite', ringType: 'Rocky', methodKey: 'mining-method-core' },
+  { id: 'alexandrite-core', tab: 'core', commodity: 'Alexandrite', ringType: 'Metal-Rich', methodKey: 'mining-method-core' },
+  { id: 'void-opal-core', tab: 'core', commodity: 'Void Opal', ringType: 'Icy', methodKey: 'mining-method-core' },
+  { id: 'grandidierite-core', tab: 'core', commodity: 'Grandidierite', ringType: 'Metal-Rich', methodKey: 'mining-method-core' },
   // Misiones y Desbloqueos
-  { id: 'bromellite-unlock', tab: 'missions', commodity: 'Bromellite', ringType: 'Icy', methodLabel: 'Ingeniero Bill Turner (50 t)' },
-  { id: 'osmium-missions', tab: 'missions', commodity: 'Osmium', ringType: 'Metallic', methodLabel: 'Misiones de Facción y Colonización' },
+  { id: 'bromellite-unlock', tab: 'missions', commodity: 'Bromellite', ringType: 'Icy', methodKey: 'mining-method-bill-turner' },
+  { id: 'osmium-missions', tab: 'missions', commodity: 'Osmium', ringType: 'Metallic', methodKey: 'mining-method-missions' },
 ];

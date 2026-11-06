@@ -1,8 +1,8 @@
 ### TMC · Copiloto de voz e alertas táticos de cabine
 
 ## Linhas de voz de cabine
-tts-nav-jump-scoopable = Salto completado para { $system }. Estrela coletável.
-tts-nav-jump-unscoopable = Salto completado para { $system }. Aviso: estrela não coletável.
+tts-nav-jump-scoopable = Salto concluído para { $system }. É possível coletar combustível desta estrela.
+tts-nav-jump-unscoopable = Salto concluído para { $system }. Aviso: não é possível coletar combustível desta estrela.
 tts-nav-bio-signals = Sinais biológicos detectados em { $count } corpos.
 tts-exo-sample-progress = Amostra biológica { $current } de { $total } registada.
 tts-exo-sample-complete = Análise de espécie completada.

@@ -93,7 +93,7 @@
       <strong class="metric-chip-val" data-testid="topbar-system">{systemText}</strong>
     </div>
     <div class="metric-chip">
-      <span class="metric-chip-label">MODO</span>
+      <span class="metric-chip-label">{t('field-mode')}</span>
       <span class="metric-chip-val">{t(modeKey)}</span>
     </div>
     <div class="metric-chip bar-chip">
@@ -155,9 +155,9 @@
       <span class="mic-icon" aria-hidden="true">🎙️</span>
       <span class="mic-label">
         {#if !voiceAssistant.enabled}
-          VOZ OFF
+          {t('voice-assistant-off-short')}
         {:else if voiceAssistant.whisperStatus === 'loading'}
-          IA {voiceAssistant.whisperProgress}%
+          {t('voice-assistant-loading-short', { pct: voiceAssistant.whisperProgress })}
         {:else if voiceAssistant.state === 'listening'}
           {t('voice-assistant-status-listening')}
         {:else if voiceAssistant.state === 'processing'}
@@ -167,7 +167,7 @@
         {:else if voiceAssistant.sttEngine === 'whisper'}
           {t('voice-assistant-click-to-speak')}
         {:else}
-          VOZ ON
+          {t('voice-assistant-on-short')}
         {/if}
       </span>
       {#if voiceAssistant.enabled && voiceAssistant.state !== 'inactive'}

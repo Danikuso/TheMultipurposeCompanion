@@ -14,3 +14,6 @@ colonisation-nearby-suppliers = Nearby Markets with Stock
 colonisation-no-depot = No active colonisation depot
 colonisation-copy-station = Copy Market
 colonisation-copied = Copied!
+colonisation-supply-complete = Complete
+colonisation-supply-delivered = All depot resources have been delivered.
+colonisation-resource-missing = Missing { $tons } t (~{ $trips } trips)

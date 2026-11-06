@@ -36,7 +36,7 @@ export function integer(n: number): string {
 
 export function ly(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
-  return `${nf({ minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)} ly`;
+  return `${nf({ minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)} ${t('unit-light-year')}`;
 }
 
 export function pct(x: number | null | undefined): string {

@@ -12,7 +12,7 @@ outfitting-cat-optional = Opcionales
 outfitting-cat-hardpoint = Anclajes
 outfitting-cat-utility = Utilidades
 outfitting-cat-armour = Blindajes
-outfitting-module-search-placeholder = Filtrar componente (p. ej. Frame Shift Drive, Multi-Cannon)...
+outfitting-module-search-placeholder = Filtrar componente (p. ej., motor de distorsión, multicañón)…
 outfitting-module-select-placeholder = Seleccionar componente...
 outfitting-class-label = Clase
 outfitting-class-any = Cualq.
@@ -28,7 +28,7 @@ outfitting-armour-ship-any = Cualquier nave
 outfitting-add-btn = + Añadir
 
 outfitting-basket-label = Cesta de parada única ({ $count })
-outfitting-basket-empty = Selecciona una nave o añade al menos un componente para buscar las estaciones más cercanas con stock.
+outfitting-basket-empty = Selecciona una nave o añade al menos un componente para buscar las estaciones más cercanas con existencias.
 outfitting-basket-ship-tag = Nave
 outfitting-remove-item = Quitar { $name }
 
@@ -43,8 +43,8 @@ outfitting-filter-stronghold-tooltip = Incluir los Stronghold Carriers orbitales
 outfitting-filter-stronghold-unpledged-tooltip = Requiere estar afiliado a una potencia de Powerplay 2.0 en el juego para habilitar sus Stronghold Carriers.
 outfitting-filter-exclude-permits = Excluir permisos
 outfitting-filter-exclude-permits-tooltip = Ocultar sistemas que requieren permiso especial (Shinrarta Dezhra, Sol, Achenar, Sirius, Alioth, etc.).
-outfitting-filter-carriers = Portaaviones privados
-outfitting-filter-carriers-tooltip = Incluir Fleet Carriers de jugadores (pueden tener acceso restringido o aranceles adicionales).
+outfitting-filter-carriers = Portanaves privados
+outfitting-filter-carriers-tooltip = Incluir portanaves de jugadores (pueden tener acceso restringido o aranceles adicionales).
 outfitting-filter-planetary = Bases planetarias
 outfitting-filter-planetary-tooltip = Incluir puertos y asentamientos en superficie planetaria.
 
@@ -52,12 +52,12 @@ outfitting-search-btn = Buscar estaciones
 outfitting-searching-btn = Buscando...
 outfitting-clear-btn = Limpiar
 
-outfitting-results-count = { $count } estaciones cercanas con stock completo
+outfitting-results-count = { $count } estaciones cercanas con todos los artículos disponibles
 outfitting-hidden-permits-notice = Se ocultaron { $count } estaciones en sistemas con permiso.
 outfitting-col-station = Estación / Sistema
 outfitting-col-distance = Distancia
 outfitting-col-arrival = Supercrucero
-outfitting-col-pad = Pad
+outfitting-col-pad = Plataforma
 outfitting-col-total = Coste cesta
 outfitting-col-updated = Datos
 outfitting-col-actions = Acciones
@@ -71,14 +71,14 @@ outfitting-badge-brestla-tooltip = Recargo del 20 % sobre el precio estándar en
 outfitting-badge-stronghold = Stronghold
 outfitting-badge-stronghold-tooltip = Stronghold Carrier de tu potencia ({ $faction })
 outfitting-badge-carrier = Carrier
-outfitting-badge-carrier-tooltip = Fleet Carrier privado de jugador (verifica permisos de atraque y aranceles)
+outfitting-badge-carrier-tooltip = Portanaves privado de jugador (verifica permisos de atraque y aranceles)
 outfitting-badge-planetary = Planetaria
 outfitting-badge-planetary-tooltip = Puerto o asentamiento en superficie planetaria
 outfitting-badge-permit = Permiso
 
 outfitting-afford-ok = Recompra OK
 outfitting-afford-ok-tooltip = Tus créditos cubren la compra completa manteniendo el seguro de recompra de tu nave actual.
-outfitting-afford-tight = Ajusta recompra
+outfitting-afford-tight = Recompra en riesgo
 outfitting-afford-tight-tooltip = Tienes créditos para la compra, pero quedarías por debajo del seguro de recompra actual. ¡Nunca vueles sin seguro!
 outfitting-afford-insufficient = Saldo insuf.
 outfitting-afford-insufficient-tooltip = El coste estimado de la cesta supera tu saldo actual de créditos.
@@ -102,8 +102,8 @@ permit-independent = Requiere permiso corporativo independiente (p. ej. Sirius C
 permit-cqc = Requiere permiso de prestigio CQC
 
 outfitting-fallback-title = Ninguna estación cercana reúne toda la cesta simultáneamente
-outfitting-fallback-desc = El ayudante ha localizado cada artículo por separado desde tu sistema de partida para completar la compra en paradas cercanas o detectar qué pieza carece de stock conocido:
-outfitting-fallback-no-stock = Sin stock conocido con los filtros actuales
+outfitting-fallback-desc = El ayudante ha localizado cada artículo por separado desde tu sistema de partida para completar la compra en paradas cercanas o detectar qué pieza carece de existencias conocidas:
+outfitting-fallback-no-stock = Sin existencias conocidas con los filtros actuales
 
 outfitting-status-loading = Consultando astilleros y talleres cercanos...
 outfitting-status-no-data = No se encontraron estaciones cercanas con disponibilidad para los filtros actuales. Prueba a desactivar −15 % Li Yong-Rui o ampliar los filtros.

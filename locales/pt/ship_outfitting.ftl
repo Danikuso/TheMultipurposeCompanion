@@ -57,7 +57,7 @@ outfitting-hidden-permits-notice = Foram ocultadas { $count } estações em sist
 outfitting-col-station = Estação / Sistema
 outfitting-col-distance = Distância
 outfitting-col-arrival = Supercruzeiro
-outfitting-col-pad = Pad
+outfitting-col-pad = Plataforma
 outfitting-col-total = Custo cesto
 outfitting-col-updated = Dados
 outfitting-col-actions = Ações
@@ -78,7 +78,7 @@ outfitting-badge-permit = Licença
 
 outfitting-afford-ok = Recompra OK
 outfitting-afford-ok-tooltip = Os seus créditos cobrem a compra completa mantendo o seguro de recompra da sua nave atual.
-outfitting-afford-tight = Recompra justa
+outfitting-afford-tight = Recompra no limite
 outfitting-afford-tight-tooltip = Tem créditos para a compra, mas ficaria abaixo do seguro de recompra atual. Nunca voe sem seguro!
 outfitting-afford-insufficient = Saldo insuf.
 outfitting-afford-insufficient-tooltip = O custo estimado do cesto excede o seu saldo atual de créditos.

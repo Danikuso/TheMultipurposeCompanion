@@ -17,3 +17,4 @@ bgs-tick-status = Tick-Status
 bgs-tick-fresh = Aktuell
 bgs-tick-stale = Veraltet (> 28 h)
 bgs-no-data = Keine Fraktionsdaten im System
+bgs-controlling-badge = Kontrollierend

@@ -77,3 +77,4 @@ trade-search-label = Commodity
 trade-route-per-ton = { $profit }/t
 trade-reset-failed = Could not reset the session
 trade-route-copied = Next system copied: { $system }
+trade-sell-destination = Sell at:

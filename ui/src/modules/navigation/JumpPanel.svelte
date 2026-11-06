@@ -15,14 +15,14 @@
   {:else}
     <div class="row">
       <span class="label">{t('strip-range')}</span>
-      <strong class="mono big" data-testid="jump-range">{num1(jump.range_ly)} ly</strong>
+      <strong class="mono big" data-testid="jump-range">{num1(jump.range_ly)} {t('unit-light-year')}</strong>
       {#if jump.supercharged}
         <span class="badge" data-testid="supercharged">{t('strip-supercharged')} ×{jump.supercharged}</span>
       {/if}
     </div>
     <div class="row">
       <span class="label">{t('strip-range-full')}</span>
-      <span class="mono">{num1(jump.range_full_ly)} ly</span>
+      <span class="mono">{num1(jump.range_full_ly)} {t('unit-light-year')}</span>
     </div>
     <div class="row">
       <span class="label">{t('jump-fuel')}</span>

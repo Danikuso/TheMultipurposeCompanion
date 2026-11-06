@@ -168,6 +168,19 @@ pub(super) fn engineer_static_rows(defs: &[EngineerDef]) -> Pages {
                 "item": c.item, "kind": c.kind, "amount": c.amount,
             }));
         }
+        unlock.push(json!({
+            "engineer_id": e.id, "field": "guide",
+            "discovery_key": e.unlock.discovery_key,
+            "reputation_key": e.unlock.reputation_key,
+            "verified": e.unlock.guide_verified,
+        }));
+        for prerequisite in &e.unlock.prerequisites {
+            unlock.push(json!({
+                "engineer_id": e.id, "field": "prerequisite",
+                "prerequisite_id": prerequisite.engineer_id,
+                "description_key": prerequisite.description_key,
+            }));
+        }
     }
     Pages::from([
         ("capabilities".to_owned(), capabilities),

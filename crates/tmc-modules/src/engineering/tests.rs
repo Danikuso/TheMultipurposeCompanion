@@ -2332,6 +2332,47 @@ fn engineer_pages_flatten_capabilities_and_unlock_steps() {
 }
 
 #[test]
+fn engineer_guide_pages_preserve_metadata_contacts_and_filters() {
+    let mut h = H::new();
+    h.fixture();
+    let rows = h.pages("engineers", "unlock");
+    assert_eq!(rows.iter().filter(|r| r["field"] == "guide").count(), 38);
+    let yi: Vec<_> = rows
+        .iter()
+        .filter(|r| r["engineer_id"] == 400013 && r["field"] == "prerequisite")
+        .collect();
+    assert_eq!(yi.len(), 3);
+    assert_eq!(
+        yi.iter()
+            .map(|r| r["prerequisite_id"].as_u64().unwrap())
+            .collect::<Vec<_>>(),
+        [400010, 400011, 400012]
+    );
+    let page =
+        h.m.query(
+            "engineers",
+            &ModulePageQuery {
+                revision: h.m.revision,
+                cursor: 0,
+                section: Some("unlock".into()),
+                engineer_id: Some(300100),
+            },
+        )
+        .unwrap();
+    let selected = page["items"].as_array().unwrap();
+    assert_eq!(selected.len(), 4);
+    assert!(selected.iter().all(|r| r["engineer_id"] == 300100));
+    let guide = selected.iter().find(|r| r["field"] == "guide").unwrap();
+    assert_eq!(guide["discovery_key"], "unlock-discovery-felicity-farseer");
+    assert_eq!(
+        guide["reputation_key"],
+        "unlock-reputation-felicity-farseer"
+    );
+    assert_eq!(guide["verified"], true);
+    assert!(guide.get("guide_sources").is_none());
+}
+
+#[test]
 fn flow_pages_expose_options_grades_costs_and_lines() {
     let mut h = H::new();
     h.fixture();

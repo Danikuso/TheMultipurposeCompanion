@@ -1,4 +1,4 @@
-# Manuales del comandante - TMC 1.2.0
+# Manuales del comandante - TMC 1.3.0
 
 Cinco ediciones completas y equivalentes, con 21 capítulos, portada e índice interactivo: **23 páginas por idioma**. Describen la aplicación publicada para Windows y señalan que el soporte oficial de Linux sigue en desarrollo.
 
@@ -10,7 +10,7 @@ Cinco ediciones completas y equivalentes, con 21 capítulos, portada e índice i
 | Deutsch | [Kommandantenhandbuch](TMC_Kommandantenhandbuch_DE.pdf) |
 | Português | [Manual do comandante](Manual_TMC_Comandante_PT.pdf) |
 
-También están disponibles en los archivos de la [release v1.2.0](https://github.com/Danikuso/TheMultipurposeCompanion/releases/tag/v1.2.0).
+También están disponibles en los archivos de la [release v1.3.0](https://github.com/Danikuso/TheMultipurposeCompanion/releases/tag/v1.3.0).
 
 ## Contenido y mantenimiento
 

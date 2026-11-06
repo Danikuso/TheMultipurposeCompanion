@@ -84,3 +84,4 @@ layout-settings-move-up = Monter l'onglet
 layout-settings-move-down = Descendre l'onglet
 layout-settings-editing-hint = Terminez ou annulez la modification de la disposition avant de gérer les profils
 layout-settings-error = L'action n'a pas pu être effectuée. Réessayez.
+layout-edit-height-auto-short = auto

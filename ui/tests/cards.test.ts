@@ -34,6 +34,7 @@ describe('factory layouts', () => {
     expect(factoryLayout('layout:engineering')).toEqual([
       { id: 'materials', w: 2, h: null },
       { id: 'engineers', w: 1, h: null },
+      { id: 'engineer-guide', w: 2, h: null },
       { id: 'eng-alerts', w: 1, h: null },
       { id: 'eng-ship', w: 1, h: null },
       { id: 'eng-flow', w: 2, h: null },

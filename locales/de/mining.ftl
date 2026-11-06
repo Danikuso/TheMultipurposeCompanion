@@ -13,10 +13,10 @@ mining-verdict-not-worth = ✘ lohnt sich nicht
 mining-refinery = Raffinerie
 mining-refinery-tons = Raffiniert: { $tons } t
 mining-rate = Rate: { $rate }
-mining-limpets = Limpets
+mining-limpets = Drohnen
 mining-limpets-left = { $count ->
-    [one] noch 1 Limpet
-   *[other] noch { $count } Limpets
+    [one] noch { $count } Drohne
+   *[other] noch { $count } Drohnen
 }
 mining-where-to-sell = Wo verkaufen
 mining-sell-at = { $station }: { $price }/t · { $distance }
@@ -67,7 +67,7 @@ mining-col-station = Station
 mining-col-distance = Entf.
 mining-col-price = Preis
 mining-col-demand = Nachfrage
-mining-col-pad = Pad
+mining-col-pad = Landeplatz
 mining-col-age = Daten
 mining-distance = { $distance } Lj
 mining-demand = { $demand } t

@@ -176,9 +176,9 @@ function session(extra: Record<string, unknown> = {}) {
   };
 }
 
-test('session shows english trade rank', () => {
+test('session shows localized trade rank', () => {
   mountWith(TradeSessionPanel, { 'trade.session': session() });
-  expect(q('session-rank')!.textContent).toContain('Elite');
+  expect(q('session-rank')!.textContent).toContain('Élite');
   expect(q('session-rank')!.textContent).toContain('42');
   expect(q('rank-bar')!.getAttribute('aria-valuenow')).toBe('42');
 });
@@ -302,7 +302,7 @@ test('session without rank or progress hides the rank bar', () => {
   expect(q('rank-bar')).toBeNull();
   unmount(mounted!); mounted = undefined; target.innerHTML = '';
   mountWith(TradeSessionPanel, { 'trade.session': session({ rank: 4, progress: null }) });
-  expect(q('session-rank')!.textContent).toContain('Merchant');
+  expect(q('session-rank')!.textContent).toContain('Comerciante');
   expect(q('rank-bar')).toBeNull();
 });
 

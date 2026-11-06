@@ -1,8 +1,8 @@
 ### TMC · Copilote vocal et alertes tactiques de cockpit
 
 ## Lignes vocales de cockpit
-tts-nav-jump-scoopable = Saut terminé vers { $system }. Étoile récupérable.
-tts-nav-jump-unscoopable = Saut terminé vers { $system }. Attention: étoile non récupérable.
+tts-nav-jump-scoopable = Saut terminé vers { $system }. Ravitaillement stellaire possible.
+tts-nav-jump-unscoopable = Saut terminé vers { $system }. Attention : ravitaillement stellaire impossible.
 tts-nav-bio-signals = Signaux biologiques détectés sur { $count } corps.
 tts-exo-sample-progress = Échantillon biologique { $current } sur { $total } enregistré.
 tts-exo-sample-complete = Analyse de l'espèce terminée.
