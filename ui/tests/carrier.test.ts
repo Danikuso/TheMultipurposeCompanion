@@ -125,7 +125,7 @@ test('CarrierFinancesPanel renders health badge, weeks covered and upkeep', () =
     },
   });
 
-  expect(q('carrier-health-badge')?.textContent).toContain('Saludable');
+  expect(q('carrier-health-badge')?.textContent).toContain('Estable');
   expect(q('weeks-covered-val')?.textContent?.trim()).toBe('60');
   expect(q('carrier-balance')?.textContent).toContain('1.500.000.000');
   expect(q('carrier-upkeep')?.textContent).toContain('25.000.000');

@@ -26,8 +26,8 @@ async function settle() { await new Promise(resolve => setTimeout(resolve, 0)); 
 test('materials grouped by grade with count over max', () => { show(); expect(target.textContent).toContain('G1'); expect(target.querySelector('[data-key="iron"]')?.textContent).toContain('117 / 300'); expect(fetch).not.toHaveBeenCalled(); });
 test('at max warning visible', () => { show(); expect(target.textContent).toContain('Al máximo'); });
 test('unknown material shows journal name and no data', () => { const inventory = structuredClone(fixture['engineering.inventory']); Object.assign(inventory.by_category.Encoded['0'][0], { name_localised: 'Nuevo material' }); live.topics['engineering.inventory'] = inventory; show(); click('tab-Encoded'); expect(target.textContent).toContain('Nuevo material'); expect(target.textContent).toContain('Sin datos'); });
-test('material name falls back to name_en', () => { const inventory = structuredClone(fixture['engineering.inventory']); Object.assign(inventory.by_category.Raw['1'][1], { name_localised: null, name_en: 'Iron' }); live.topics['engineering.inventory'] = inventory; show(); expect(target.textContent).toContain('Iron'); });
-test('locker tab lists components', async () => { show(); click('tab-locker'); await settle(); expect(target.textContent).toContain('Graphene'); expect(target.querySelector('[data-key="graphene"]')?.textContent).toContain('8'); expect(fetch).toHaveBeenCalledWith('/api/engineering/locker?revision=21&cursor=0&section=components', expect.objectContaining({ cache: 'no-store', signal: expect.any(AbortSignal) })); });
+test('known material follows app locale when journal translation is missing', () => { const inventory = structuredClone(fixture['engineering.inventory']); Object.assign(inventory.by_category.Raw['1'][1], { name_localised: null, name_en: 'Iron' }); live.topics['engineering.inventory'] = inventory; show(); expect(target.textContent).toContain('Hierro'); });
+test('locker tab lists components', async () => { show(); click('tab-locker'); await settle(); expect(target.textContent).toContain('Grafeno'); expect(target.querySelector('[data-key="graphene"]')?.textContent).toContain('8'); expect(fetch).toHaveBeenCalledWith('/api/engineering/locker?revision=21&cursor=0&section=components', expect.objectContaining({ cache: 'no-store', signal: expect.any(AbortSignal) })); });
 test('session totals by origin', () => { show(); expect(target.querySelector('[data-origin="Scan"]')?.textContent).toContain('+2'); expect(target.querySelector('[data-origin="Trade"]')?.textContent).toContain('+1 / −6'); });
 test('search bar filters materials by name', () => {
   show();
@@ -73,15 +73,15 @@ test('two readers have independent cursors and rows', async () => {
  readerA.clear(); expect(readerA.items).toEqual([]); expect(readerB.items[0].key).toBe('graphene'); readerB.clear();
 });
 test('section, revision and commander changes clear previous rows', async () => {
- show(); click('tab-locker'); await settle(); expect(target.textContent).toContain('Graphene');
+ show(); click('tab-locker'); await settle(); expect(target.textContent).toContain('Grafeno');
  vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
- const select = target.querySelector('select')!; select.value = 'data'; select.dispatchEvent(new Event('change', { bubbles: true })); flushSync(); expect(target.textContent).not.toContain('Graphene'); expect(fetch).toHaveBeenCalledTimes(1);
- live.topics['engineering.locker'] = { ...fixture['engineering.locker'], revision: 22 }; flushSync(); expect(target.textContent).not.toContain('Graphene'); expect(fetch).toHaveBeenCalledTimes(2);
- live.topics['core.cmdr'] = { name: 'Other' }; flushSync(); expect(target.textContent).not.toContain('Graphene'); expect(fetch).toHaveBeenCalledTimes(3);
+ const select = target.querySelector('select')!; select.value = 'data'; select.dispatchEvent(new Event('change', { bubbles: true })); flushSync(); expect(target.textContent).not.toContain('Grafeno'); expect(fetch).toHaveBeenCalledTimes(1);
+ live.topics['engineering.locker'] = { ...fixture['engineering.locker'], revision: 22 }; flushSync(); expect(target.textContent).not.toContain('Grafeno'); expect(fetch).toHaveBeenCalledTimes(2);
+ live.topics['core.cmdr'] = { name: 'Other' }; flushSync(); expect(target.textContent).not.toContain('Grafeno'); expect(fetch).toHaveBeenCalledTimes(3);
 });
 test('as_of-only WS updates do not restart REST', async () => {
  show(); click('tab-locker'); await settle(); vi.mocked(fetch).mockClear();
- live.topics['engineering.locker'] = { ...fixture['engineering.locker'], as_of: '2030-01-01T00:00:00Z' }; flushSync(); await settle(); expect(fetch).not.toHaveBeenCalled(); expect(target.textContent).toContain('Graphene');
+ live.topics['engineering.locker'] = { ...fixture['engineering.locker'], as_of: '2030-01-01T00:00:00Z' }; flushSync(); await settle(); expect(fetch).not.toHaveBeenCalled(); expect(target.textContent).toContain('Grafeno');
 });
 test('leaving locker and unmount abort pending request', async () => {
  vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {}))); show(); click('tab-locker');
@@ -94,8 +94,8 @@ test('hidden document cancels REST and visible document reloads', async () => {
  hidden.mockReturnValue(false); document.dispatchEvent(new Event('visibilitychange')); flushSync(); expect(fetch).toHaveBeenCalledTimes(2); hidden.mockRestore();
 });
 test('disconnect clears rows and reconnect reloads same revision', async () => {
- show(); click('tab-locker'); await settle(); expect(target.textContent).toContain('Graphene');
- live.connected = false; flushSync(); expect(target.textContent).not.toContain('Graphene'); live.connected = true; flushSync(); await settle(); expect(target.textContent).toContain('Graphene'); expect(fetch).toHaveBeenCalledTimes(2);
+ show(); click('tab-locker'); await settle(); expect(target.textContent).toContain('Grafeno');
+ live.connected = false; flushSync(); expect(target.textContent).not.toContain('Grafeno'); live.connected = true; flushSync(); await settle(); expect(target.textContent).toContain('Grafeno'); expect(fetch).toHaveBeenCalledTimes(2);
 });
 test('REST failure is localized and does not retry', async () => {
  vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 500 }))); show(); click('tab-locker'); await settle(); expect(target.textContent).toContain('No se pudieron cargar los datos'); expect(fetch).toHaveBeenCalledTimes(1);
@@ -109,7 +109,7 @@ test('two mounted panels keep independent locker readers', async () => {
  const secondTarget = document.createElement('div'); document.body.append(secondTarget);
  const second = mount(MaterialsPanel, { target: secondTarget }); flushSync();
  (secondTarget.querySelector('[data-testid="tab-locker"]') as HTMLButtonElement).click(); flushSync(); await settle();
- try { expect(fetch).toHaveBeenCalledTimes(2); expect(secondTarget.textContent).toContain('Graphene'); click('tab-Raw'); expect(target.textContent).not.toContain('Graphene'); expect(secondTarget.textContent).toContain('Graphene'); }
+ try { expect(fetch).toHaveBeenCalledTimes(2); expect(secondTarget.textContent).toContain('Grafeno'); click('tab-Raw'); expect(target.textContent).not.toContain('Grafeno'); expect(secondTarget.textContent).toContain('Grafeno'); }
  finally { await unmount(second); secondTarget.remove(); }
 });
 test('late JSON parsing cannot publish rows after another commander starts', async () => {
@@ -264,7 +264,7 @@ test('all next step variants are rendered without raw Fluent keys', async () => 
  selectEngineer({ Requirement: { key: 'unlock-felicity-farseer' } }); await showEngineers();
  expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('Explorador');
  selectEngineer({ Invite: { key: 'unlock-invite-felicity-farseer' } }); flushSync();
- expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('1 Meta-Alloys');
+ expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('1 × Metaaleaciones');
  selectEngineer('Done'); flushSync();
  expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('Desbloqueado');
 });
@@ -314,30 +314,30 @@ test('obsolete engineer selection failure cannot overwrite a newer successful se
  await settle(); rejectFirst(new Error('Unavailable')); await settle();
  expect(target.textContent).not.toContain('No se pudo seleccionar el ingeniero');
 });
-test('zero commodity contribution has readable catalog name and pending translation', async () => {
+test('zero commodity contribution has a completed readable catalog name', async () => {
  selectEngineer({ Contribute: { item: 'soontillrelics', kind: 'commodity', have: 0, need: 3 } });
  await showEngineers();
  const step = target.querySelector('[data-testid="engineer-next-step"]')!;
- expect(step.textContent).toContain('Soontill Relics');
+ expect(step.textContent).toContain('Reliquias de Soontill');
  expect(step.textContent).toContain('0 / 3');
- expect(step.textContent).toContain('Traducción pendiente');
+ expect(step.textContent).not.toContain('Traducción pendiente');
  expect(step.textContent).not.toContain('soontillrelics');
 });
-test('commodity contribution uses core cargo journal name and updates reactively', async () => {
+test('commodity contribution overrides foreign journal language and updates with app locale', async () => {
  selectEngineer({ Contribute: { item: 'soontillrelics', kind: 'commodity', have: 2, need: 3 } });
  live.topics['core.ship'] = { cargo: [{ Name: 'soontillrelics', Name_Localised: 'Nombre del diario', Count: 2 }] };
  await showEngineers();
  const step = target.querySelector('[data-testid="engineer-next-step"]')!;
- expect(step.textContent).toContain('Nombre del diario'); expect(step.textContent).toContain('2 / 3');
+ expect(step.textContent).toContain('Reliquias de Soontill'); expect(step.textContent).toContain('2 / 3');
  expect(step.textContent).not.toContain('Traducción pendiente');
  live.topics['core.ship'] = { cargo: [] }; setLocale('en'); flushSync();
  expect(step.textContent).toContain('Soontill Relics'); expect(step.textContent).not.toContain('Translation pending');
 });
-test('commodity contribution uses trade cargo localized name when available', async () => {
+test('commodity contribution overrides foreign trade cargo names for known items', async () => {
  selectEngineer({ Contribute: { item: 'soontillrelics', kind: 'commodity', have: 2, need: 3 } });
  live.topics['trade.cargo'] = { lines: [{ commodity: 'soontillrelics', name_localised: 'Mercancía del diario', tons: 2 }] };
  await showEngineers();
- expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('Mercancía del diario');
+ expect(target.querySelector('[data-testid="engineer-next-step"]')?.textContent).toContain('Reliquias de Soontill');
 });
 test('credit contribution uses localized credits and backend counts', async () => {
  selectEngineer({ Contribute: { item: 'credits', kind: 'credits', have: 4, need: 10 } });
@@ -401,8 +401,8 @@ test('flow renders material statuses per grade experimental totals readiness and
  expect(target.querySelector('[data-testid="flow-next-step"]')?.textContent).not.toContain('unlock-professor-palin');
 });
 test('ready percent states that it refers to materials', async () => {
- await showFlow(); expect(target.querySelector('[data-testid="materials-percent"]')?.textContent).toBe('Materiales: 30 % listo');
- setLocale('en'); flushSync(); expect(target.querySelector('[data-testid="materials-percent"]')?.textContent).toBe('Materials: 30 % ready');
+ await showFlow(); expect(target.querySelector('[data-testid="materials-percent"]')?.textContent).toBe('Materiales disponibles: 30 %');
+ setLocale('en'); flushSync(); expect(target.querySelector('[data-testid="materials-percent"]')?.textContent).toBe('Materials available: 30 %');
 });
 test('flow defaults from config and resets only on slot changes', async () => {
  live.topics['engineering.flow'] = { ...flowTopic(), request: null, status: 'idle' };
@@ -447,9 +447,9 @@ test('materials ready with unknown Merc Coins balance is not completable and sho
  live.topics['engineering.flow'] = { ...flowTopic(), materials_ready: true, percent: 100, merc_coins: { need: 30, have: null, missing: null } };
  const grades = (restPages.flow_grades.items as { grade: number }[]).map(row => row.grade === 5 ? { ...row, merc_coins: 30 } : row);
  await showFlow({ override: (resource, section) => resource === 'flow' && section === 'grades' ? json(page('grades', grades)) : undefined });
- expect(target.querySelector('[data-testid="merc-coins"]')?.textContent).toContain('Merc Coins necesarias: 30'); expect(target.querySelector('[data-testid="merc-coins"]')?.textContent).toContain('saldo sin datos');
+ expect(target.querySelector('[data-testid="merc-coins"]')?.textContent).toContain('Monedas de mercenario necesarias: 30'); expect(target.querySelector('[data-testid="merc-coins"]')?.textContent).toContain('saldo sin datos');
  expect(target.querySelector('[data-testid="merc-not-confirmed"]')?.textContent).toContain('no se puede marcar como completable');
- expect(target.querySelector('[data-testid="cost-grade-5"]')?.textContent).toContain('Merc Coins: 30');
+ expect(target.querySelector('[data-testid="cost-grade-5"]')?.textContent).toContain('Monedas de mercenario: 30');
  expect(target.textContent).not.toContain('Ya puedes completarlo'); expect(target.textContent).not.toContain('saldo: 0');
 });
 test('known Merc Coins balance is shown and no warning is raised', async () => {
@@ -459,7 +459,7 @@ test('known Merc Coins balance is shown and no warning is raised', async () => {
 test('experimental Merc Coins cost is listed apart from material costs', async () => {
  const costs = [...restPages.flow_costs.items, { grade: null, kind: 'merc_coins', count: 12 }];
  await showFlow({ override: (resource, section) => resource === 'flow' && section === 'costs' ? json(page('costs', costs)) : undefined });
- expect(target.querySelector('[data-testid="cost-experimental"]')?.textContent).toContain('Merc Coins: 12');
+ expect(target.querySelector('[data-testid="cost-experimental"]')?.textContent).toContain('Monedas de mercenario: 12');
 });
 test('base-only recipes do not offer grades below their first grade', async () => {
  live.topics['engineering.flow'] = { ...flowTopic(), request: null };
@@ -636,7 +636,7 @@ test('move and remove goals post exact json and localized errors', async () => {
  click('goal-remove-0'); await settle(); expect(fetch).toHaveBeenCalledWith('/api/actions/engineering.unpin_goal', expect.objectContaining({ body: JSON.stringify({ id: fixture['engineering.pages'].goals.items[0].id }) }));
 });
 test('trade shows give receive names and nearby typed trader', async () => {
- goalFetch(); panel(TradesPanel); await settle(); expect(target.textContent).toContain('6'); expect(target.textContent).toContain('1'); expect(target.textContent).toContain('Eccentric Hyperspace Trajectories'); expect(target.textContent).toContain('Fake Port'); expect(target.textContent).toContain('Codificados');
+ goalFetch(); panel(TradesPanel); await settle(); expect(target.textContent).toContain('6'); expect(target.textContent).toContain('1'); expect(target.textContent).toContain('Trayectorias de hiperespacio excéntricas'); expect(target.textContent).toContain('Fake Port'); expect(target.textContent).toContain('Codificados');
 });
 test('sources show distance pad hints and applicable broker', () => {
  panel(SourcesPanel); expect(target.textContent).toContain('8,2 al'); expect(target.textContent).toContain('Fake Port'); expect(target.textContent).toContain('Synthetic Neighbour'); expect(target.textContent).toContain('L'); expect(target.textContent).toContain('Escaneo de datos'); expect(target.textContent).toContain('Buscando'); expect(fetch).not.toHaveBeenCalled();
@@ -670,7 +670,7 @@ test('shopping cancels hidden disconnected and unmounted consumers', async () =>
 
 test('missing known materials use approved catalog names and unknown keys show no data', async () => {
  live.topics['engineering.inventory']={by_category:{},caps:{},at_max:[],snapshot:true};
- goalFetch(); panel(ShoppingPanel); await settle(); expect(target.textContent).toContain('Datamined Wake Exceptions'); expect(target.textContent).toContain('Iron');
+ goalFetch(); panel(ShoppingPanel); await settle(); expect(target.textContent).toContain('Excepciones en análisis de estelas'); expect(target.textContent).toContain('Hierro');
  live.topics['engineering.sources']={traders:{},brokers:{},hints:{new_material:[{kind:'data_scan',detail_key:null}]}};
  await unmount(mounted!); mounted=undefined; panel(SourcesPanel); expect(target.textContent).toContain('new_material'); expect(target.textContent).toContain('Sin datos');
 });
@@ -723,8 +723,8 @@ test('goal with materials ready but unknown Merc Coins balance is not completabl
   return json({ revision: Number(query.get('revision')), section, cursor: 0, next_cursor: null, total: items.length, items });
  }));
  panel(ShoppingPanel); await settle();
- expect(target.querySelector('[data-testid="merc-coins"]')?.textContent).toContain('Merc Coins necesarias: 40'); expect(target.querySelector('[data-testid="merc-coins"]')?.textContent).toContain('saldo sin datos');
- expect(target.querySelector('[data-testid="goal-merc-not-confirmed"]')).not.toBeNull(); expect(target.textContent).not.toContain('Ya puedes completarlo'); expect(target.textContent).toContain('Materiales: 100 % listo');
+ expect(target.querySelector('[data-testid="merc-coins"]')?.textContent).toContain('Monedas de mercenario necesarias: 40'); expect(target.querySelector('[data-testid="merc-coins"]')?.textContent).toContain('saldo sin datos');
+ expect(target.querySelector('[data-testid="goal-merc-not-confirmed"]')).not.toBeNull(); expect(target.textContent).not.toContain('Ya puedes completarlo'); expect(target.textContent).toContain('Materiales disponibles: 100 %');
 });
 test('goal with calculation blockers lists the localized reasons', async () => {
  const goal = fixture['engineering.pages'].goals.items[0];

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { gameLabel } from '../../lib/gameLabels';
+
   import { onMount } from 'svelte';
   import { t } from '../../lib/i18n';
   import { integer, decimal } from '../../lib/format';
@@ -110,7 +112,7 @@
     for (const grades of Object.values(inventory?.by_category ?? {})) {
       for (const rows of Object.values(grades)) { const row = rows.find(row => row.key === key); if (row) return materialName(row); }
     }
-    return lineRows.find(row => row.key === key)?.name_en ?? key;
+    return gameLabel('material', key, lineRows.find(row => row.key === key)?.name_en);
   }
   function requirement(key: string): string { const text = t(key); return text === key ? t('engineering-no-data') : text; }
   async function copyText(text: string) {

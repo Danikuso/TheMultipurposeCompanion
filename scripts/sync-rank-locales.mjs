@@ -2,6 +2,7 @@
 // No descarga datos ni cambia los IDs numéricos del diario.
 import { readFileSync, writeFileSync } from 'node:fs';
 
+import { editorial } from './sync-game-locales.mjs';
 const snapshot = JSON.parse(readFileSync(new URL('./data/rank-localization.json', import.meta.url), 'utf8'));
 const check = process.argv.includes('--check');
 let changed = 0;
@@ -12,7 +13,7 @@ for (const lang of ['es', 'en', 'fr', 'de', 'pt']) {
     const text = original.replace(/^(\w+)-rank-(\d+) = [^\r\n]*/gm, (line, family, index) => {
       const value = snapshot.editorialOverrides?.[lang]?.[family]?.[index] ?? snapshot.families[family]?.[lang]?.[Number(index)];
       if (!value) throw new Error(`Missing ${lang}:${family}:${index}`);
-      return `${family}-rank-${index} = ${value}`;
+      return `${family}-rank-${index} = ${editorial('ui', lang)[`${family}-rank-${index}`] ?? value}`;
     });
     if (text !== original) {
       changed++;

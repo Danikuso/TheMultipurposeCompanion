@@ -1,3 +1,5 @@
+import { gameLabel } from './gameLabels';
+import { t } from './i18n';
 /**
  * Canonical ship names and formatting for Elite Dangerous.
  * Maps internal journal / CAPI identifiers to proper display names.
@@ -247,6 +249,10 @@ export function fallbackShipFormat(raw: string): string {
  * Handles missing/null values, raw journal identifiers, CAPI strings, and unlocalized $ tokens.
  */
 export function formatShipName(raw?: string | null, localised?: string | null): string {
+  const identity = normalizeShipKey(raw ?? '');
+  if (identity === 'fleetcarrier') return gameLabel('station', 'FleetCarrier');
+  const guardian = { gdnhybridv1: 'Trident', gdnhybridv2: 'Javelin', gdnhybridv3: 'Lance' }[identity];
+  if (guardian) return t('ship-guardian-fighter', { model: guardian });
   // If localised is a valid human-readable string (not a raw token like $ADDER_NAME;)
   if (localised && localised.trim().length > 0 && !localised.startsWith('$') && !localised.endsWith(';')) {
     const locTrim = localised.trim();

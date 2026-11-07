@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { gameLabel } from '../../lib/gameLabels';
+
   import { t } from '../../lib/i18n';
   import { decimal, integer, pct } from '../../lib/format';
   import { topic } from '../../lib/ws.svelte';
@@ -84,7 +86,7 @@
         data-testid="toggle-resources-table"
         onclick={() => (showResources = !showResources)}
       >
-        {showResources ? '▲ Ocultar desglose' : `▼ Ver desglose (${depot.resources.length})`}
+        {showResources ? t('ui-hide-list') : t('ui-show-list', { count: depot.resources.length })}
       </button>
     </div>
     <div class="table-wrap" class:is-collapsed={!showResources}>
@@ -102,7 +104,7 @@
           {#each depot.resources as r (r.name)}
             <tr data-testid="resource-row">
               <td class="bold">
-                {r.name_localised ?? r.name}
+                {gameLabel('commodity', r.name, r.name_localised)}
               </td>
               <td class="meter-col">
                 <div class="mini-meter">

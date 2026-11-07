@@ -1,6 +1,6 @@
 accounts-title = Accounts & External Sync
 accounts-desc = Universal companion to share discoveries, flight logs, and fleet telemetry while safeguarding your privacy.
-accounts-companion-privacy-notice = Non-negotiable privacy: TMC never transmits data in Legacy galaxy, never shares private chats or credit balances without authorization, and pseudonymizes your identity on EDDN via local cryptographic salt.
+accounts-companion-privacy-notice = Privacy first: TMC never transmits data from the Legacy galaxy, never shares private chats or credit balances without authorization, and pseudonymizes your identity on EDDN using a local cryptographic salt.
 
 accounts-eddn-title = Elite Dangerous Data Network (EDDN)
 accounts-eddn-desc = Share public market data, outfitting, shipyards, and jump logs with the galactic community.
@@ -8,7 +8,7 @@ accounts-eddn-switch = EDDN transmission active
 accounts-eddn-uploader-id = Uploader ID (Pseudonymized)
 accounts-eddn-messages-sent = Messages transmitted this session:
 accounts-eddn-last-upload = Last upload:
-accounts-eddn-connected = Connected to Gateway
+accounts-eddn-connected = Connected to gateway
 accounts-eddn-disconnected = Disconnected
 
 accounts-edsm-title = Elite Dangerous Star Map (EDSM)
@@ -56,7 +56,7 @@ accounts-capi-btn-link = Link with Frontier Store
 accounts-capi-btn-opening = Opening browser...
 accounts-capi-btn-unlink = Unlink account
 accounts-capi-btn-refresh-fleet = Refresh fleet
-accounts-capi-auth-notice = Authorization is completed securely in your official Frontier web browser.
+accounts-capi-auth-notice = Authorization is completed securely on Frontier’s official website in your web browser.
 accounts-capi-manual-toggle = Redirection issue? Paste URL
 accounts-capi-manual-toggle-hide = Hide manual link
 accounts-capi-manual-help = If your browser shows a security warning or fails to load upon returning from Frontier, copy the full address bar URL and paste it here:

@@ -18,3 +18,5 @@ bgs-tick-fresh = Recente
 bgs-tick-stale = Desatualizado (> 28 h)
 bgs-no-data = Sem dados de facções no sistema
 bgs-controlling-badge = Controladora
+
+bgs-tick-hours-ago = Há { $hours } h

@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { t } from '../../lib/i18n';
+  import { gameLabel } from '../../lib/gameLabels';
+  import { decimal } from '../../lib/format';
+  import { t, getLocale } from '../../lib/i18n';
   import { prefs, setHomeBase } from '../../lib/prefs.svelte';
   import { topic } from '../../lib/ws.svelte';
   import Panel from '../../shell/Panel.svelte';
@@ -59,7 +61,7 @@
 
   const coords = $derived(loc?.star_pos ?? null);
   const distSol = $derived(
-    coords ? Math.hypot(coords[0], coords[1], coords[2]).toFixed(1) : null
+    coords ? decimal(Math.hypot(coords[0], coords[1], coords[2]), 1) : null
   );
 
   const isCurrentSystemHome = $derived(
@@ -74,7 +76,7 @@
     if (!coords || !prefs.homeSystemCoords || prefs.homeSystemCoords.length < 3) return null;
     const [x1, y1, z1] = coords;
     const [x2, y2, z2] = prefs.homeSystemCoords;
-    return Math.hypot(x1 - x2, y1 - y2, z1 - z2).toFixed(1);
+    return decimal(Math.hypot(x1 - x2, y1 - y2, z1 - z2), 1);
   });
 
   function toggleHomeBase() {
@@ -109,10 +111,7 @@
   function formatPopulation(pop?: number | null): string {
     if (pop == null) return '—';
     if (pop === 0) return t('population-unpopulated');
-    if (pop >= 1_000_000_000) return `${(pop / 1_000_000_000).toFixed(2)} B hab.`;
-    if (pop >= 1_000_000) return `${(pop / 1_000_000).toFixed(1)} M hab.`;
-    if (pop >= 1_000) return `${(pop / 1_000).toFixed(1)} k hab.`;
-    return `${pop} hab.`;
+    return new Intl.NumberFormat(getLocale(), { notation: 'compact', maximumFractionDigits: 1 }).format(pop);
   }
 
   function cleanVal(v?: string | null): string | null {
@@ -172,8 +171,8 @@
             {/if}
           </div>
           {#if coords}
-            <div class="coords-row font-mono" title="{t('field-coordinates')}: [{coords[0].toFixed(1)}, {coords[1].toFixed(1)}, {coords[2].toFixed(1)}] {t('unit-light-year')}">
-              <span class="coords-val">[{coords[0].toFixed(1)}, {coords[1].toFixed(1)}, {coords[2].toFixed(1)}] {t('unit-light-year')}</span>
+            <div class="coords-row font-mono" title="{t('field-coordinates')}: [{decimal(coords[0], 1)}, {decimal(coords[1], 1)}, {decimal(coords[2], 1)}] {t('unit-light-year')}">
+              <span class="coords-val">[{decimal(coords[0], 1)}, {decimal(coords[1], 1)}, {decimal(coords[2], 1)}] {t('unit-light-year')}</span>
               {#if isCurrentSystemHome}
                 <span class="dist-base base-current">· 🏠 {t('field-home-base')}</span>
               {:else if distBase != null && prefs.homeSystem}
@@ -210,7 +209,7 @@
                 <span class="security-pill">{formatSecurity(loc.security)}</span>
               {/if}
               {#if loc.allegiance}
-                <span class="allegiance-pill">{cleanVal(loc.allegiance)}</span>
+                <span class="allegiance-pill">{gameLabel('superpower', loc.allegiance)}</span>
               {/if}
             </div>
           </div>
@@ -220,9 +219,9 @@
           <div class="detail-row">
             <span class="detail-label">{t('field-government')} / {t('field-economy')}</span>
             <span class="detail-val">
-              {cleanVal(loc.government) || '—'} · {cleanVal(loc.economy) || '—'}
-              {#if loc.second_economy && cleanVal(loc.second_economy) !== 'None' && cleanVal(loc.second_economy) !== 'Ninguna'}
-                / {cleanVal(loc.second_economy)}
+              {gameLabel('government', loc.government) || '—'} · {gameLabel('economy', loc.economy) || '—'}
+              {#if loc.second_economy && loc.second_economy.toLowerCase().replace(/[$;_]/g, '') !== 'economynone' && loc.second_economy.toLowerCase() !== 'none'}
+                / {gameLabel('economy', loc.second_economy)}
               {/if}
             </span>
           </div>
@@ -256,7 +255,7 @@
             <span class="detail-val font-mono">
               {loc.station}
               {#if loc.station_type}
-                <span class="dim">({loc.station_type})</span>
+                <span class="dim">({gameLabel('station', loc.station_type)})</span>
               {/if}
             </span>
           </div>
@@ -266,10 +265,10 @@
           <div class="surface-card">
             <span class="surface-title">{t('field-surface-coords')}</span>
             <div class="surface-coords font-mono">
-              <span>Lat: {lat.toFixed(4)}°</span>
-              <span>Lon: {lon.toFixed(4)}°</span>
+              <span>{t('field-latitude')}: {decimal(lat, 4)}°</span>
+              <span>{t('field-longitude')}: {decimal(lon, 4)}°</span>
               {#if alt != null}
-                <span>Alt: {Math.round(alt)} m</span>
+                <span>{t('field-altitude')}: {decimal(alt, 0)} m</span>
               {/if}
               {#if heading != null}
                 <span>{t('field-heading')}: {heading}°</span>

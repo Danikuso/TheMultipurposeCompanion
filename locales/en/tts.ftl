@@ -1,7 +1,7 @@
 ### TMC · Voice copilot and cabin tactical alerts
 
 ## Cabin voice lines
-tts-nav-jump-scoopable = Jump completed to { $system }. Fuel scoopable star.
+tts-nav-jump-scoopable = Jump completed to { $system }. Scoopable star.
 tts-nav-jump-unscoopable = Jump completed to { $system }. Warning: non-scoopable star.
 tts-nav-bio-signals = Biological signals detected on { $count } bodies.
 tts-exo-sample-progress = Biological sample { $current } of { $total } logged.

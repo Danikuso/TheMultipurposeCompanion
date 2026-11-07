@@ -176,7 +176,7 @@ describe('MiningTargetsPanel', () => {
     expect(loopCard?.textContent).toContain('Delkar');
     expect(loopCard?.textContent).toContain('Matthews Dock');
     expect(loopCard?.textContent).toMatch(/97[.,]3 al/);
-    expect(loopCard?.textContent).toContain('penalización demanda');
+    expect(loopCard?.textContent).toContain('penalización por demanda');
 
     // Tabla de objetivos
     const table = target.querySelector('[data-testid="mining-targets-table"]');
@@ -184,8 +184,8 @@ describe('MiningTargetsPanel', () => {
     expect(table?.textContent).toContain('Delkar');
     expect(table?.textContent).toContain('Paesia');
     expect(table?.textContent).toMatch(/83[.,]1 al/);
-    expect(table?.textContent).toContain('High-RES');
-    expect(table?.textContent).toContain('Haz-RES');
+    expect(table?.textContent).toContain('RES de intensidad alta');
+    expect(table?.textContent).toContain('RES peligroso');
   });
 
   test('switches tabs between Laser, Core and Missions', async () => {
@@ -205,9 +205,9 @@ describe('MiningTargetsPanel', () => {
 
     // Ahora deben verse los chips de núcleo (Musgravite, Monazite, etc.)
     const chips = Array.from(target.querySelectorAll('.preset-name')).map((c) => c.textContent);
-    expect(chips).toContain('Musgravite');
-    expect(chips).toContain('Monazite');
-    expect(chips).toContain('Alexandrite');
+    expect(chips).toContain('Musgravita');
+    expect(chips).toContain('Monacita');
+    expect(chips).toContain('Alejandrita');
   });
 
   test('renders cargo minerals strip and multi-sell section', () => {
@@ -219,8 +219,8 @@ describe('MiningTargetsPanel', () => {
 
     const strip = target.querySelector('.cargo-sell-strip');
     expect(strip).not.toBeNull();
-    expect(strip?.textContent).toContain('Platinum: 64 t');
-    expect(strip?.textContent).toContain('Osmium: 16 t');
+    expect(strip?.textContent).toContain('Platino: 64 t');
+    expect(strip?.textContent).toContain('Osmio: 16 t');
 
     const multiSell = target.querySelector('.multi-sell-section');
     expect(multiSell).not.toBeNull();

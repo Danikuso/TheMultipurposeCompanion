@@ -22,7 +22,7 @@ crime-notoriety-decay-note = Requires active flight in supercruise or normal spa
 ## The Companion's Name Clearing Guide
 crime-card-guide = Companion Name Clearing Guide
 crime-guide-blocked-title = Interstellar Factors Blocked
-crime-guide-blocked-desc = The Pilots Federation prohibits paying fines or clearing bounties while your notoriety is above 0. You must fly in space to dissipate it.
+crime-guide-blocked-desc = The Pilots’ Federation prohibits paying fines or clearing bounties while your notoriety is above 0. You must fly in space until it subsides.
 crime-guide-ready-title = Interstellar Factors Available
 crime-guide-ready-desc = Notoriety at 0. You can visit an Interstellar Factor to settle all fines and bounties without prison detention.
 crime-guide-all-clean = Clean Record
@@ -42,8 +42,8 @@ crime-stolen-none = No stolen cargo detected in hold
 crime-nearest-black-market = Nearest Black Market
 crime-stealth-advice-title = Stealth Approach Advice
 crime-stealth-advice-step1 = Avoid the direct patrol path and align with the mail slot from the front.
-crime-stealth-advice-step2 = Engage Silent Running or drop a Heatsink within 4 km of the station.
-crime-stealth-advice-step3 = Maintain speed above 200 m/s to prevent police scans from completing lock.
+crime-stealth-advice-step2 = Engage Silent Running or launch a heat sink within 4 km of the station.
+crime-stealth-advice-step3 = Maintain a speed above 200 m/s to prevent police scans from completing.
 
 ## Factions and Fines / Bounties
 crime-card-factions = Factions & Fines Breakdown
@@ -67,7 +67,7 @@ crime-police-response-none = No police presence or response to hostilities
 ## Tactical Cockpit Voice Cues (TTS)
 tts-crime-notoriety-gain = Warning! Notoriety level increased due to major crime.
 tts-crime-notoriety-cleared = Notoriety cleared. Interstellar Factor services are now accessible.
-tts-crime-illegal-cargo = Warning: illicit cargo detected on board in secured system.
+tts-crime-illegal-cargo = Warning: illicit cargo detected on board in a system with security.
 tts-crime-police-interdiction = Interdiction alert! Security forces intercepting ship.
 tts-crime-wanted = Warning! Wanted status active in local jurisdiction.
 tts-crime-fine-incurred = Fine of { $amount } credits issued by authorities.

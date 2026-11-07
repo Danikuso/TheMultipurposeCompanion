@@ -18,3 +18,5 @@ bgs-tick-fresh = Fresh
 bgs-tick-stale = Stale (> 28 h)
 bgs-no-data = No faction data in system
 bgs-controlling-badge = Controlling
+
+bgs-tick-hours-ago = { $hours } h ago

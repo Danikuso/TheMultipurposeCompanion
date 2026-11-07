@@ -11,6 +11,11 @@ import ShipPanel from '../../src/modules/dashboard/ShipPanel.svelte';
 import AccountsPanel from '../../src/modules/accounts/AccountsPanel.svelte';
 import MiningTargetsPanel from '../../src/modules/mining/MiningTargetsPanel.svelte';
 
+import LocationPanel from '../../src/modules/dashboard/LocationPanel.svelte';
+import BgsPanel from '../../src/modules/bgs/BgsPanel.svelte';
+import MaterialsPanel from '../../src/modules/engineering/MaterialsPanel.svelte';
+import engineeringFixture from './engineering-topics.json';
+
 setLocale(new URLSearchParams(location.search).get('lang') ?? 'es');
 live.connected = true;
 live.topics['core.cmdr'] = {
@@ -44,13 +49,18 @@ live.topics['mining.session'] = {
   started_at: null, as_of: new Date().toISOString(), refined: {}, est_credits: 0,
   refinery_bins: [], limpets_left: 0, limpets_launched: {}, cargo: 0, capacity: 100,
 };
+for (const [key, value] of Object.entries(engineeringFixture)) if (key !== 'engineering.pages') live.topics[key] = value;
+live.topics['core.location'] = { system: 'Synthetic', mode: 'Docked', allegiance: 'Federation', government: '$government_Democracy;', economy: '$economy_Industrial;', security: '$SYSTEM_SECURITY_high;', population: 11000000000, station: 'Synthetic Station', station_type: 'FleetCarrier', star_pos: [1, 2, 3] };
+live.topics['core.status'] = { Latitude: -14.25, Longitude: 28.5, Altitude: 1250 };
+live.topics['bgs.system'] = { star_system: 'Synthetic', factions: [{ name: 'Synthetic Faction', influence_percent: 70, state: 'CivilWar', allegiance: 'Federation', government: 'Democracy', is_controlling: true }], controlling_faction: 'Synthetic Faction', controlling_faction_state: 'CivilWar' };
+live.topics['bgs.tick'] = { hours_since_tick: 2.5, is_stale: false };
 window.fetch = async () => new Response('{}');
 const style = document.createElement('style');
 style.textContent = `body { height: auto; overflow: auto; padding: 12px; }
   #preview { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 12px; }
   .qa-panel { min-width: 0; }`;
 document.head.append(style);
-for (const component of [CmdrPanel, TargetPanel, ExobiologyPanel, MiningSessionPanel, ShipPanel, AccountsPanel, MiningTargetsPanel]) {
+for (const component of [CmdrPanel, TargetPanel, ExobiologyPanel, MiningSessionPanel, ShipPanel, AccountsPanel, MiningTargetsPanel, LocationPanel, BgsPanel, MaterialsPanel]) {
   const target = document.createElement('section'); target.className = 'qa-panel';
   document.getElementById('preview')!.append(target); mount(component, { target });
 }

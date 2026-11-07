@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t } from '../lib/i18n';
-  import { updater, installUpdate, formatBytes } from '../lib/updater.svelte';
+  import { updater, installUpdate, formatBytes, updateMessage } from '../lib/updater.svelte';
 
   function close() {
     if (!updater.status.is_downloading) {
@@ -62,7 +62,7 @@
         {#if updater.status.is_downloading || updater.status.download_progress > 0}
           <div class="progress-section">
             <div class="progress-label-row">
-              <span class="progress-status">{updater.status.status_message || t('update-modal-downloading')}</span>
+              <span class="progress-status">{updateMessage(updater.status.status_message, 'update-modal-downloading')}</span>
               <span class="progress-pct font-mono">{Math.round(updater.status.download_progress * 100)}%</span>
             </div>
             <div class="hud-meter-track">
@@ -78,7 +78,7 @@
         {#if updater.status.error}
           <div class="update-error-card">
             <span class="error-icon" aria-hidden="true">⚠️</span>
-            <span class="error-text">{updater.status.error}</span>
+            <span class="error-text">{updateMessage(updater.status.error, 'update-failed')}</span>
           </div>
         {/if}
       </div>
@@ -101,7 +101,7 @@
           </button>
         {:else}
           <button type="button" class="btn btn-secondary" disabled>
-            {updater.status.status_message || t('update-modal-downloading')}
+            {updateMessage(updater.status.status_message, 'update-modal-downloading')}
           </button>
         {/if}
       </footer>

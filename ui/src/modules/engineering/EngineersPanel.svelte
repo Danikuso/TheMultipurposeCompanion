@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { gameLabel } from '../../lib/gameLabels';
   import { t } from '../../lib/i18n';
   import { decimal, integer } from '../../lib/format';
   import { action, topic } from '../../lib/ws.svelte';
@@ -92,7 +93,7 @@
         if (row) return { name: materialName(row), pending: false };
       }
     }
-    return { name: key, pending: false };
+    return { name: gameLabel('material', key, gameLabel('microresource', key)), pending: false };
   }
 
   function matchesFilter(row: EngineerRow): boolean {

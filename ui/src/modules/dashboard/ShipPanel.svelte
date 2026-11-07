@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { gameLabel } from '../../lib/gameLabels';
   import { credits, ly, pct, integer, decimal, formatShipName } from '../../lib/format';
   import { t } from '../../lib/i18n';
   import { topic } from '../../lib/ws.svelte';
@@ -467,7 +468,7 @@
                   <div class="cargo-items-list">
                     {#each ship.cargo as cItem (cItem.Name)}
                       <div class="cargo-item-row">
-                        <span>{cItem.Name_Localised || cItem.Name}</span>
+                        <span>{gameLabel('commodity', cItem.Name, cItem.Name_Localised)}</span>
                         <strong class="mono gold">{cItem.Count} t</strong>
                       </div>
                     {/each}

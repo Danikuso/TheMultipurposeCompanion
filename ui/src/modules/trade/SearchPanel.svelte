@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolveGameLabel } from '../../lib/gameLabels';
   import { t } from '../../lib/i18n';
   import { credits, decimal, relativeAge } from '../../lib/format';
   import { journalSkew } from '../../lib/clock.svelte';
@@ -31,8 +32,8 @@
   /** Clave de la mercancía escrita: por nombre localizado, por clave o tal cual. */
   function keyFor(raw: string): string {
     const v = raw.trim().toLowerCase();
-    const hit = items.find(([k, n]) => (n ?? '').toLowerCase() === v || k.toLowerCase() === v);
-    return hit ? hit[0] : v;
+    const hit = items.find(([k, n]) => commodityName(k, n).toLowerCase() === v || (n ?? '').toLowerCase() === v || k.toLowerCase() === v);
+    return hit ? hit[0] : (resolveGameLabel('commodity', raw)?.id.toLowerCase() ?? v);
   }
 
   async function search(e?: Event) {

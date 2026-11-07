@@ -1,3 +1,4 @@
+import { gameLabel } from '../../lib/gameLabels';
 // Contratos de los topics `trade.*` (crates/tmc-modules/src/trade). Ninguno lleva campos
 // dependientes del reloj: antigüedades y créditos/hora se calculan en la UI.
 
@@ -143,6 +144,5 @@ export interface CommoditiesTopic extends Stamped {
 }
 
 export function commodityName(key: string, localised: string | null | undefined): string {
-  if (localised) return localised;
-  return key ? key.charAt(0).toUpperCase() + key.slice(1) : key;
+  return gameLabel('commodity', key, localised ?? (key ? key.charAt(0).toUpperCase() + key.slice(1) : key));
 }

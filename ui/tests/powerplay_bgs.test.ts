@@ -123,8 +123,9 @@ test('BgsPanel renders star system, tick card and factions ordered by influence'
   expect(rows[0].textContent).toContain('Barnard\'s Star Alliance');
   expect(rows[0].textContent).toContain('55');
   expect(rows[0].querySelector('[data-testid="controlling-badge"]')).toBeTruthy();
+  expect(rows[0].querySelector('.superpower-icon')).not.toBeNull();
 
   expect(rows[1].textContent).toContain('Barnard Pirates');
   expect(rows[1].textContent).toContain('20');
-  expect(rows[1].textContent).toContain('War');
+  expect(rows[1].textContent).toContain('Guerra');
 });

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { gameLabel } from '../../lib/gameLabels';
+
   import { t } from '../../lib/i18n';
   import { credits, ly } from '../../lib/format';
   import { topic } from '../../lib/ws.svelte';
@@ -262,7 +264,7 @@
             <ul class="stolen-list" data-testid="stolen-items-list">
               {#each status!.stolen_items as item}
                 <li class="stolen-item">
-                  <span class="item-name bold">{item.name_localised ?? item.name}</span>
+                  <span class="item-name bold">{gameLabel('commodity', item.name, item.name_localised)}</span>
                   <span class="badge badge-orange">{t('crime-stolen-units', { count: item.stolen })}</span>
                 </li>
               {/each}

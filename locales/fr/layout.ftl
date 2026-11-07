@@ -8,7 +8,7 @@ layout-device-hint = Choisissez un nom et le point de départ de votre dispositi
 layout-device-name = Nom de l'appareil
 layout-device-factory = Commencer avec la disposition d'usine
 layout-device-copy = Copier depuis…
-layout-device-claim = Je suis un profil existant
+layout-device-claim = Utiliser un profil existant
 layout-device-accept = Valider
 layout-device-dismiss = Utiliser la disposition d'usine
 layout-device-error = Impossible de créer le profil. Réessayez.
@@ -50,7 +50,7 @@ layout-edit-catalog-add = Ajouter ({ $count })
 layout-edit-catalog-cancel = Annuler
 
 ## Pestañas personalizadas
-layout-custom-section = Personnalisés
+layout-custom-section = Onglets personnalisés
 layout-custom-new = Nouvel onglet
 layout-custom-new-title = Nouvel onglet
 layout-custom-rename-title = Renommer l'onglet

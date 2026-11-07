@@ -223,6 +223,22 @@ test('search autocompletes known commodities', () => {
   expect(target.querySelectorAll('datalist option').length).toBe(3);
 });
 
+test('a translated datalist label keeps the exact catalogue ID even when global aliases are ambiguous', () => {
+  setLocale('fr');
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+  vi.stubGlobal('fetch', fetchMock);
+  mountWith(SearchPanel, {
+    'trade.commodities': { items: [['sanumameat', 'Sanuma Decorative Meat']] },
+    'trade.search': { commodity: null, status: 'idle', rows: [] },
+  });
+  const input = q('search-input') as HTMLInputElement;
+  input.value = (target.querySelector('datalist option') as HTMLOptionElement).value;
+  expect(input.value).toBe('Viande ornementale de Sanuma');
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  (q('search-go') as HTMLButtonElement).click();
+  expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ commodity: 'sanumameat' });
+});
+
 test('search posts the commodity key and shows results', () => {
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
   vi.stubGlobal('fetch', fetchMock);

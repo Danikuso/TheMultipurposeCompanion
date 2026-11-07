@@ -39,7 +39,7 @@
           data-testid="toggle-massacre-view"
           onclick={() => (showAllPiles = !showAllPiles)}
         >
-          {showAllPiles ? '▲ Vista compacta' : `▼ Ver todos (${piles.length})`}
+          {showAllPiles ? t('ui-hide-list') : t('ui-show-list', { count: piles.length })}
         </button>
       </div>
     {/if}

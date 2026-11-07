@@ -50,7 +50,7 @@
           data-testid="toggle-missions-view"
           onclick={() => (showAllGroups = !showAllGroups)}
         >
-          {showAllGroups ? '▲ Vista compacta' : `▼ Ver todos (${groups.length})`}
+          {showAllGroups ? t('ui-hide-list') : t('ui-show-list', { count: groups.length })}
         </button>
       </div>
     {/if}

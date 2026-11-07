@@ -52,7 +52,7 @@ fn main() -> anyhow::Result<()> {
         Err(err) => {
             tracing::error!("error al iniciar TMC: {err:?}");
             #[cfg(windows)]
-            show_startup_error(&err);
+            show_startup_error(&err, &language);
             return Err(err);
         }
     };
@@ -99,17 +99,17 @@ fn main() -> anyhow::Result<()> {
 }
 
 #[cfg(windows)]
-fn show_startup_error(err: &anyhow::Error) {
+fn show_startup_error(err: &anyhow::Error, language: &str) {
     use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
 
-    let message = format!(
-        "No se pudo iniciar TMC — The Multipurpose Companion:\n\n{err}\n\n\
-        Si juegas en otro equipo y accedes a los registros por red compartida,\n\
-        comprueba que la carpeta esté accesible y que 'journal_dir' en config.toml sea correcto."
+    let i18n = tmc_i18n::I18n::new(language);
+    let message = i18n.t(
+        "startup-error-message",
+        &[("error", err.to_string().into())],
     );
 
-    let wide_title: Vec<u16> = OsStr::new("TMC — Error al iniciar")
+    let wide_title: Vec<u16> = OsStr::new(&i18n.t("startup-error-title", &[]))
         .encode_wide()
         .chain(std::iter::once(0))
         .collect();

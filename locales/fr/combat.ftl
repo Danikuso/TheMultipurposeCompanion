@@ -40,13 +40,13 @@ combat-kills = { $count ->
     [one] { $count } destruction
    *[other] { $count } destructions
 }
-combat-session-credits = Gagné durant la session : { $credits }
+combat-session-credits = Gains de la session : { $credits }
 combat-no-data = pas de données
 combat-no-target = Aucune cible verrouillée
 combat-alert-hull-low = Coque à { $pct } %
 combat-alert-shields-down = Boucliers tombés
 combat-alert-overheating = Surchauffe
-combat-alert-under-attack = Sous attaque
+combat-alert-under-attack = Attaque en cours
 combat-alert-interdiction = Interdiction en cours
 
 panel-combat-ship = Mon vaisseau

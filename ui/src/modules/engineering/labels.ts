@@ -1,8 +1,9 @@
+import { gameLabel } from '../../lib/gameLabels';
 import materialCatalog from '../../../../crates/tmc-modules/data/materials.json';
 import { decimal } from '../../lib/format';
 import { t, translationPending } from '../../lib/i18n';
 import type { MaterialRow } from './types';
-export function materialName(row: MaterialRow): string { return row.name_localised ?? row.name_en ?? row.key; }
+export function materialName(row: MaterialRow): string { return gameLabel('material', row.key, row.name_localised ?? row.name_en); }
 const origins: Record<string, string> = { Mission: 'mission', Scan: 'scan', Mining: 'mining', Collected: 'collected', Trade: 'trade', Synthesis: 'synthesis', Engineering: 'engineering', Discarded: 'discarded' };
 export function originLabel(origin: string): string { return origins[origin] ? t(`engineering-origin-${origins[origin]}`) : t('engineering-no-data'); }
 
@@ -31,7 +32,8 @@ export function engineeringDataLabel(prefix: 'exp' | 'modtype', key: string): { 
 }
 
 export function contributionCommodityLabel(key: string, journalName?: string | null): { name: string; pending: boolean } {
-  if (journalName) return { name: journalName, pending: false };
+  const known = gameLabel('commodity', key, journalName);
+  if (known !== key) return { name: known, pending: false };
   const fluentKey = `engineering-commodity-${key}`;
   const name = t(fluentKey);
   return {
@@ -46,7 +48,7 @@ export function inventoryMaterial(key: string, inventory: import('./types').Inve
   const row = rows.find(row => row.key === key);
   if (row) return materialName(row);
  }
- return english ?? materialEnglishNames.get(key) ?? t('engineering-unknown-material',{name:key});
+ return gameLabel('material', key, english ?? materialEnglishNames.get(key) ?? t('engineering-unknown-material',{name:key}));
 }
 export function categoryLabel(category: string): string {
  const keys: Record<string,string> = {Raw:'raw',Manufactured:'manufactured',Encoded:'encoded'};

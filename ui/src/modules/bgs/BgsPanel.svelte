@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { gameLabel } from '../../lib/gameLabels';
   import { t } from '../../lib/i18n';
   import { decimal, pct } from '../../lib/format';
   import { topic } from '../../lib/ws.svelte';
@@ -31,7 +32,7 @@
           <span class="bold" data-testid="bgs-controlling">{system.controlling_faction}</span>
           {#if system.controlling_faction_state}
             <span class="badge {isConflictState(system.controlling_faction_state) ? 'badge-orange' : 'badge-neutral'}">
-              {system.controlling_faction_state}
+              {gameLabel('state', system.controlling_faction_state)}
             </span>
           {/if}
         </div>
@@ -43,7 +44,7 @@
       <div class="tick-info">
         <span class="metric-label">{t('bgs-tick')}</span>
         <span class="tick-hours mono bold" data-testid="bgs-tick-hours">
-          {tick?.hours_since_tick != null ? `Hace ${decimal(tick.hours_since_tick, 1)} h` : '—'}
+          {tick?.hours_since_tick != null ? t('bgs-tick-hours-ago', { hours: decimal(tick.hours_since_tick, 1) }) : '—'}
         </span>
       </div>
       {#if tick}
@@ -109,20 +110,20 @@
               </td>
               <td>
                 <span class="badge {isConflictState(f.state) ? 'badge-danger' : ''}">
-                  {f.state ?? 'None'}
+                  {gameLabel('state', f.state ?? 'None')}
                 </span>
               </td>
               <td class="sub allegiance-cell">
                 {#if f.allegiance}
                   <span class="allegiance-group">
                     <SuperpowerIcon superpower={f.allegiance} size={13} />
-                    <span>{f.allegiance}</span>
+                    <span>{gameLabel('superpower', f.allegiance)}</span>
                   </span>
                 {:else}
                   —
                 {/if}
               </td>
-              <td class="sub">{f.government ?? '—'}</td>
+              <td class="sub">{gameLabel('government', f.government)}</td>
             </tr>
           {/each}
         </tbody>

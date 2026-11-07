@@ -21,18 +21,18 @@ crime-notoriety-decay-note = Erfordert aktiven Flug im Supercruise/Normalraum (1
 
 ## Der Begleiter-Leitfaden zur Straffreiheit
 crime-card-guide = Begleiter-Leitfaden zur Straffreiheit
-crime-guide-blocked-title = Interstellar Factors blockiert
-crime-guide-blocked-desc = Die Pilotenvereinigung untersagt das Zahlen von Bußgeldern oder Kautionsauslösen bei Notorietät über 0. Verbringen Sie Flugzeit im Raum, um sie abzubauen.
-crime-guide-ready-title = Interstellar Factors verfügbar
-crime-guide-ready-desc = Notorietät auf 0. Sie können einen Interstellar Factor aufsuchen, um alle Strafen ohne Gefängnisaufenthalt zu begleichen.
+crime-guide-blocked-title = Interstellarer Vertreter gesperrt
+crime-guide-blocked-desc = Die Pilotenvereinigung untersagt das Begleichen von Bußgeldern und Kopfgeldern bei Notorietät über 0. Verbringen Sie Flugzeit im Raum, um sie abzubauen.
+crime-guide-ready-title = Interstellarer Vertreter verfügbar
+crime-guide-ready-desc = Notorietät auf 0. Sie können einen interstellaren Vertreter aufsuchen, um alle Strafen ohne Gefängnisaufenthalt zu begleichen.
 crime-guide-all-clean = Saubere Akte
 crime-guide-all-clean-desc = Keine offenen Bußgelder oder Kopfgelder verzeichnet. Sichere legale Navigation.
-crime-nearest-factor = Nächster Interstellar Factor
+crime-nearest-factor = Nächster interstellarer Vertreter
 crime-facility-distance = in { $distance } Lj
 crime-facility-station = Station
 crime-copy-system = System kopieren
 crime-system-copied = Kopiert!
-crime-no-facility = Keine nahegelegenen Einrichtungen in Datenbank gefunden
+crime-no-facility = Keine nahegelegenen Einrichtungen in der Datenbank gefunden
 
 ## Schmuggel und Schwarzmärkte
 crime-card-contraband = Schmuggel & Schwarzmärkte
@@ -66,7 +66,7 @@ crime-police-response-none = Keine Polizeipräsenz oder Reaktion auf Übergriffe
 
 ## Taktische Cockpit-Sprachwarnungen (TTS)
 tts-crime-notoriety-gain = Warnung! Notorietät durch schweres Vergehen gestiegen.
-tts-crime-notoriety-cleared = Notorietät abgebaut. Interstellar Factors sind jetzt zugänglich.
+tts-crime-notoriety-cleared = Notorietät abgebaut. Interstellare Vertreter sind jetzt zugänglich.
 tts-crime-illegal-cargo = Achtung: Illegale Fracht an Bord in gesichertem Sektor erkannt.
 tts-crime-police-interdiction = Abfangalarm! Sicherheitskräfte fangen Schiff ab.
 tts-crime-wanted = Achtung! Gesucht-Status in lokaler Gerichtsbarkeit aktiv.

@@ -3,6 +3,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import { editorial, localizeGameResources } from './sync-game-locales.mjs';
 const langs = ['es', 'en', 'fr', 'de', 'pt'];
 const words = text => text.split('|');
 // Reuse the same Fluent labels as the commander's ranks and the engineering glossary.
@@ -200,7 +201,7 @@ export function guideContent(entries) {
           `Desbloqueia ${parent} e entrega-lhe ${n} ${item} para obter a referência a Yi Shen.`,
         ][i];
       }
-      content[langs[i]]=Object.fromEntries(Object.entries(lines).map(([key, text]) => [key, localizeGuide(text, langs[i])]));
+      content[langs[i]]=Object.fromEntries(Object.entries(lines).map(([key, text]) => [key, localizeGameResources(localizeGuide(editorial('ui', langs[i])[key] ?? editorial('engineering', langs[i])[key] ?? text, langs[i]))]));
     }
     const contribution=donations[e.id];
     return {id:e.id,unlock:{...e.unlock,contribution:contribution?{item:contribution[0],kind:contribution[1],amount:contribution[2]}:null,

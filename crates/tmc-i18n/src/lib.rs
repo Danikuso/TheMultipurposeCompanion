@@ -272,6 +272,10 @@ mod tests {
             }
             let mut args = FluentArgs::new();
             for (name, value) in [
+                ("error", FluentValue::from("HTTP 503")),
+                ("downloaded", FluentValue::from(2)),
+                ("percent", FluentValue::from(25)),
+                ("model", FluentValue::from("Trident")),
                 ("pct", FluentValue::from(25)),
                 ("progress", FluentValue::from("50 %")),
                 ("module", FluentValue::from("dashboard")),
@@ -452,7 +456,7 @@ mod tests {
         for (lang, expected) in [
             ("es", "Sin dinero"),
             ("en", "Penniless"),
-            ("fr", "sans-le-sou"),
+            ("fr", "Sans-le-sou"),
             ("de", "bettelarm"),
             ("pt", "Pobre"),
         ] {
@@ -628,13 +632,9 @@ other = 3
     }
 
     #[test]
-    fn pending_names_are_marked_and_english() {
+    fn shipped_names_are_complete_and_pending_metadata_is_recognized() {
         for lang in LANGUAGES {
-            let i18n = I18n::new(lang);
-            let english = I18n::new("en");
-            for key in pending_keys(lang) {
-                assert_eq!(i18n.t(&key, &[]), english.t(&key, &[]), "{lang}: {key}");
-            }
+            assert!(pending_keys(lang).is_empty(), "{lang}: incomplete names");
         }
         let resource = FluentResource::try_new(
             "a = A

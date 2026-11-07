@@ -15,24 +15,24 @@ crime-state-hostile = Hostil
 crime-notoriety = Notoriedade
 crime-notoriety-level = Nível { $level } / 10
 crime-notoriety-clean = Limpa (0)
-crime-notoriety-decay-active = Dissipação em curso (~{ $hours }h { $minutes }m restantes)
-crime-notoriety-decay-paused = Dissipação pausada (acoplado em estação)
+crime-notoriety-decay-active = Redução em andamento (~{ $hours } h { $minutes } min restantes)
+crime-notoriety-decay-paused = Redução pausada (atracado em estação)
 crime-notoriety-decay-note = Requer voo ativo em supercruzeiro ou espaço normal (1 nível a cada 2 horas)
 
 ## Guia de Limpeza de Nome do Ajudante
 crime-card-guide = Guia de Limpeza de Nome do Ajudante
-crime-guide-blocked-title = Interstellar Factors Bloqueados
-crime-guide-blocked-desc = A Federação de Pilotos proíbe pagar multas ou retirar recompensas enquanto a notoriedade for superior a 0. Voe no espaço para dissipá-la.
-crime-guide-ready-title = Interstellar Factors Disponíveis
-crime-guide-ready-desc = Notoriedade em 0. Você pode recorrer a um Interstellar Factor para liquidar multas e recompensas sem prisão.
+crime-guide-blocked-title = Agentes interestelares bloqueados
+crime-guide-blocked-desc = A Federação de Pilotos proíbe quitar multas ou recompensas enquanto a notoriedade for superior a 0. Voe no espaço para reduzi-la.
+crime-guide-ready-title = Agentes interestelares disponíveis
+crime-guide-ready-desc = Notoriedade em 0. Você pode recorrer a um agente interestelar para quitar multas e recompensas sem prisão.
 crime-guide-all-clean = Ficha Limpa
 crime-guide-all-clean-desc = Nenhuma multa pendente nem recompensas ativas registradas. Navegação legal segura.
-crime-nearest-factor = Interstellar Factor mais próximo
+crime-nearest-factor = Agente interestelar mais próximo
 crime-facility-distance = a { $distance } al
 crime-facility-station = Estação
 crime-copy-system = Copiar sistema
 crime-system-copied = Copiado!
-crime-no-facility = Nenhuma instalação próxima encontrada na base de dados
+crime-no-facility = Nenhuma instalação próxima encontrada no banco de dados
 
 ## Contrabando e Mercados Negros
 crime-card-contraband = Contrabando e Mercados Negros
@@ -42,8 +42,8 @@ crime-stolen-none = Nenhuma mercadoria roubada detectada no compartimento
 crime-nearest-black-market = Mercado Negro mais próximo
 crime-stealth-advice-title = Dicas de Aproximação Furtiva
 crime-stealth-advice-step1 = Evite a rota direta de patrulha e alinhe-se com a entrada de frente.
-crime-stealth-advice-step2 = Ative a Navegação Silenciosa (Silent Running) ou lance um dissipador térmico a menos de 4 km.
-crime-stealth-advice-step3 = Mantenha a velocidade acima de 200 m/s para impedir que os sensores policiais concluam o travamento.
+crime-stealth-advice-step2 = Ative a navegação silenciosa ou lance um dissipador térmico a menos de 4 km.
+crime-stealth-advice-step3 = Mantenha a velocidade acima de 200 m/s para interromper a varredura da polícia.
 
 ## Facções e Multas / Recompensas
 crime-card-factions = Detalhamento de Facções e Multas
@@ -66,7 +66,7 @@ crime-police-response-none = Sem presença policial ou resposta a hostilidades
 
 ## Avisos de Cabine e Copiloto Tático (TTS)
 tts-crime-notoriety-gain = Alerta! Nível de notoriedade aumentado por crime grave.
-tts-crime-notoriety-cleared = Notoriedade dissipada. Os serviços de Interstellar Factor estão agora acessíveis.
+tts-crime-notoriety-cleared = Notoriedade reduzida a zero. Os serviços dos agentes interestelares estão acessíveis.
 tts-crime-illegal-cargo = Aviso: carga ilícita detectada a bordo em setor monitorado.
 tts-crime-police-interdiction = Alerta de interdição! Forças de segurança interceptando a nave.
 tts-crime-wanted = Alerta! Status de procurado ativo na jurisdição local.

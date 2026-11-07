@@ -5,6 +5,15 @@ use tmc_model::state::GameState;
 use tmc_model::status::Flags;
 use tmc_model::voice_intent::{VoiceCommandResponse, VoiceIntent};
 
+fn speech_decimal(value: f64, locale: &str) -> String {
+    let number = format!("{value:.1}");
+    if locale == "en" {
+        number
+    } else {
+        number.replace('.', ",")
+    }
+}
+
 /// Contexto auxiliar de resolución proveniente de módulos de la sesión.
 #[derive(Debug, Clone, Default)]
 pub struct VoiceResolverContext {
@@ -52,13 +61,19 @@ pub fn parse_intent(query: &str) -> VoiceIntent {
             || q.contains("next")
             || q.contains("jump")
             || q.contains("sprung")
-            || q.contains("saut"))
+            || q.contains("saut")
+            || q.contains("prochain")
+            || q.contains("systeme"))
     {
         return VoiceIntent::CopyNextSystem;
     }
 
     // 2. Interstellar Factor
-    if q.contains("factor")
+    if q.contains("facteur")
+        || q.contains("interstellaire")
+        || q.contains("interestelar")
+        || q.contains("interstellarer vertreter")
+        || q.contains("factor")
         || q.contains("interstellar")
         || q.contains("fator")
         || (q.contains("limpiar") && (q.contains("multa") || q.contains("recompensa")))
@@ -88,6 +103,7 @@ pub fn parse_intent(query: &str) -> VoiceIntent {
         || q.contains("notoriety")
         || q.contains("buscado")
         || q.contains("wanted")
+        || q.contains("notoriete")
         || q.contains("fine")
         || q.contains("bount")
         || q.contains("gesucht")
@@ -125,7 +141,8 @@ pub fn parse_intent(query: &str) -> VoiceIntent {
     }
 
     // 7. Combustible
-    if q.contains("combustible")
+    if q.contains("combustivel")
+        || q.contains("combustible")
         || q.contains("fuel")
         || q.contains("carburant")
         || q.contains("treibstoff")
@@ -149,6 +166,8 @@ pub fn parse_intent(query: &str) -> VoiceIntent {
         || q.contains("casco")
         || q.contains("hull")
         || q.contains("escudo")
+        || q.contains("bouclier")
+        || q.contains("schilde")
         || q.contains("shield")
         || q.contains("danos")
         || q.contains("health")
@@ -347,24 +366,34 @@ impl VoiceIntentResolver {
         if let Some(ref facility) = ctx.nearest_interstellar_factor {
             let spoken_text = match locale {
                 "en" => format!(
-                    "Nearest Interstellar Factor: {} in system {} at {:.1} light years. System copied to clipboard.",
-                    facility.station_name, facility.system_name, facility.distance_ly
+                    "Nearest Interstellar Factor: {} in system {} at {} light years. System copied to clipboard.",
+                    facility.station_name,
+                    facility.system_name,
+                    speech_decimal(facility.distance_ly, locale)
                 ),
                 "fr" => format!(
-                    "Interstellar Factor le plus proche : {} dans le système {} à {:.1} années-lumière. Système copié.",
-                    facility.station_name, facility.system_name, facility.distance_ly
+                    "Interstellar Factor le plus proche : {} dans le système {} à {} années-lumière. Système copié.",
+                    facility.station_name,
+                    facility.system_name,
+                    speech_decimal(facility.distance_ly, locale)
                 ),
                 "de" => format!(
-                    "Nächster Interstellar Factor: {} im System {} in {:.1} Lichtjahren. System kopiert.",
-                    facility.station_name, facility.system_name, facility.distance_ly
+                    "Nächster interstellarer Vertreter: {} im System {} in {} Lichtjahren. System kopiert.",
+                    facility.station_name,
+                    facility.system_name,
+                    speech_decimal(facility.distance_ly, locale)
                 ),
                 "pt" => format!(
-                    "Interstellar Factor mais próximo: {} no sistema {} a {:.1} anos-luz. Sistema copiado.",
-                    facility.station_name, facility.system_name, facility.distance_ly
+                    "Agente interestelar mais próximo: {} no sistema {} a {} anos-luz. Sistema copiado.",
+                    facility.station_name,
+                    facility.system_name,
+                    speech_decimal(facility.distance_ly, locale)
                 ),
                 _ => format!(
-                    "Factor interestelar más cercano: {} en sistema {} a {:.1} años luz. Sistema copiado al portapapeles.",
-                    facility.station_name, facility.system_name, facility.distance_ly
+                    "Factor interestelar más cercano: {} en sistema {} a {} años luz. Sistema copiado al portapapeles.",
+                    facility.station_name,
+                    facility.system_name,
+                    speech_decimal(facility.distance_ly, locale)
                 ),
             };
 
@@ -383,8 +412,8 @@ impl VoiceIntentResolver {
             let spoken_text = match locale {
                 "en" => "No Interstellar Factor facilities found in nearby systems.".into(),
                 "fr" => "Aucun Interstellar Factor détecté dans les systèmes voisins.".into(),
-                "de" => "Kein Interstellar Factor in nahegelegenen Systemen gefunden.".into(),
-                "pt" => "Nenhum Interstellar Factor encontrado em sistemas próximos.".into(),
+                "de" => "Kein interstellarer Vertreter in nahegelegenen Systemen gefunden.".into(),
+                "pt" => "Nenhum agente interestelar encontrado em sistemas próximos.".into(),
                 _ => {
                     "No se han detectado instalaciones de factor interestelar en sistemas cercanos."
                         .into()
@@ -405,24 +434,34 @@ impl VoiceIntentResolver {
         if let Some(ref facility) = ctx.nearest_black_market {
             let spoken_text = match locale {
                 "en" => format!(
-                    "Nearest Black Market: {} in system {} at {:.1} light years. System copied to clipboard.",
-                    facility.station_name, facility.system_name, facility.distance_ly
+                    "Nearest Black Market: {} in system {} at {} light years. System copied to clipboard.",
+                    facility.station_name,
+                    facility.system_name,
+                    speech_decimal(facility.distance_ly, locale)
                 ),
                 "fr" => format!(
-                    "Marché Noir le plus proche : {} dans le système {} à {:.1} années-lumière. Système copié.",
-                    facility.station_name, facility.system_name, facility.distance_ly
+                    "Marché Noir le plus proche : {} dans le système {} à {} années-lumière. Système copié.",
+                    facility.station_name,
+                    facility.system_name,
+                    speech_decimal(facility.distance_ly, locale)
                 ),
                 "de" => format!(
-                    "Nächster Schwarzmarkt: {} im System {} in {:.1} Lichtjahren. System kopiert.",
-                    facility.station_name, facility.system_name, facility.distance_ly
+                    "Nächster Schwarzmarkt: {} im System {} in {} Lichtjahren. System kopiert.",
+                    facility.station_name,
+                    facility.system_name,
+                    speech_decimal(facility.distance_ly, locale)
                 ),
                 "pt" => format!(
-                    "Mercado Negro mais próximo: {} no sistema {} a {:.1} anos-luz. Sistema copiado.",
-                    facility.station_name, facility.system_name, facility.distance_ly
+                    "Mercado Negro mais próximo: {} no sistema {} a {} anos-luz. Sistema copiado.",
+                    facility.station_name,
+                    facility.system_name,
+                    speech_decimal(facility.distance_ly, locale)
                 ),
                 _ => format!(
-                    "Mercado negro más cercano: {} en sistema {} a {:.1} años luz. Sistema copiado al portapapeles.",
-                    facility.station_name, facility.system_name, facility.distance_ly
+                    "Mercado negro más cercano: {} en sistema {} a {} años luz. Sistema copiado al portapapeles.",
+                    facility.station_name,
+                    facility.system_name,
+                    speech_decimal(facility.distance_ly, locale)
                 ),
             };
 
@@ -502,11 +541,11 @@ impl VoiceIntentResolver {
                     ctx.total_fines + ctx.total_bounties
                 ),
                 "de" => format!(
-                    "Aktive Strafen in Höhe von {} Credits verzeichnet. Besuchen Sie einen Interstellar Factor.",
+                    "Aktive Strafen in Höhe von {} Credits verzeichnet. Besuchen Sie einen interstellaren Vertreter.",
                     ctx.total_fines + ctx.total_bounties
                 ),
                 "pt" => format!(
-                    "Multas e recompensas ativas totalizando {} créditos. Visite um Interstellar Factor.",
+                    "Multas e recompensas ativas totalizando {} créditos. Visite um agente interestelar.",
                     ctx.total_fines + ctx.total_bounties
                 ),
                 _ => format!(
@@ -597,24 +636,29 @@ impl VoiceIntentResolver {
 
         let spoken_text = match locale {
             "en" => format!(
-                "Fuel at {} percent, {:.1} tons available in main tank.",
-                pct, cur
+                "Fuel at {} percent, {} tonnes available in main tank.",
+                pct,
+                speech_decimal(cur, locale)
             ),
             "fr" => format!(
-                "Carburant à {} pour cent, {:.1} tonnes disponibles dans le réservoir.",
-                pct, cur
+                "Carburant à {} pour cent, {} tonnes disponibles dans le réservoir.",
+                pct,
+                speech_decimal(cur, locale)
             ),
             "de" => format!(
-                "Treibstoff bei {} Prozent, {:.1} Tonnen im Haupttank verfügbar.",
-                pct, cur
+                "Treibstoff bei {} Prozent, {} Tonnen im Haupttank verfügbar.",
+                pct,
+                speech_decimal(cur, locale)
             ),
             "pt" => format!(
-                "Combustível em {} por cento, {:.1} toneladas disponíveis no tanque.",
-                pct, cur
+                "Combustível em {} por cento, {} toneladas disponíveis no tanque.",
+                pct,
+                speech_decimal(cur, locale)
             ),
             _ => format!(
-                "Combustible al {} por ciento, {:.1} toneladas disponibles en el tanque principal.",
-                pct, cur
+                "Combustible al {} por ciento, {} toneladas disponibles en el tanque principal.",
+                pct,
+                speech_decimal(cur, locale)
             ),
         };
 
@@ -634,14 +678,14 @@ impl VoiceIntentResolver {
     fn resolve_materials(locale: &str) -> VoiceCommandResponse {
         let spoken_text = match locale {
             "en" => {
-                "Engineering materials database and inventory synchronized in companion.".into()
+                "Consult the engineering materials database and recorded inventory in the companion.".into()
             }
             "fr" => {
-                "Base de données des matériaux d'ingénierie synchronisée dans le compagnon.".into()
+                "Consultez la base de données des matériaux et l’inventaire enregistré dans le compagnon.".into()
             }
-            "de" => "Materialdatenbank und Inventar im Begleiter synchronisiert.".into(),
-            "pt" => "Banco de dados e inventário de materiais sincronizados no assistente.".into(),
-            _ => "Base de datos e inventario de materiales de ingeniería sincronizados.".into(),
+            "de" => "Prüfen Sie die Materialdatenbank und das erfasste Inventar im Begleiter.".into(),
+            "pt" => "Consulte o banco de dados e o inventário registrado de materiais no assistente.".into(),
+            _ => "Consulta la base de datos y el inventario registrado de materiales de ingeniería.".into(),
         };
 
         VoiceCommandResponse {
@@ -714,6 +758,30 @@ mod tests {
     }
 
     #[test]
+    fn localized_queries_match_the_same_intent() {
+        for query in [
+            "facteur interstellaire",
+            "agente interestelar",
+            "interstellarer Vertreter",
+        ] {
+            assert_eq!(
+                parse_intent(query),
+                VoiceIntent::NearestInterstellarFactor,
+                "{query}"
+            );
+        }
+        assert_eq!(parse_intent("combustível"), VoiceIntent::FuelStatus);
+        assert_eq!(
+            parse_intent("copier le prochain système"),
+            VoiceIntent::CopyNextSystem
+        );
+        for query in ["boucliers", "Schilde"] {
+            assert_eq!(parse_intent(query), VoiceIntent::ShipStatus, "{query}");
+        }
+        assert_eq!(parse_intent("notoriété"), VoiceIntent::CrimeStatus);
+    }
+
+    #[test]
     fn parse_intent_recognizes_queries_in_english_and_other_languages() {
         assert_eq!(parse_intent("ship status report"), VoiceIntent::ShipStatus);
         assert_eq!(parse_intent("next jump please"), VoiceIntent::NextJump);
@@ -770,7 +838,7 @@ mod tests {
 
         let res_fuel = VoiceIntentResolver::resolve("combustible", &state, &ctx);
         assert_eq!(res_fuel.intent, VoiceIntent::FuelStatus);
-        assert!(res_fuel.spoken_text.contains("24.0 toneladas"));
+        assert!(res_fuel.spoken_text.contains("24,0 toneladas"));
     }
 
     #[test]

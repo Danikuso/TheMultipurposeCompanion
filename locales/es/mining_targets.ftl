@@ -5,20 +5,20 @@ mining-tab-laser = Láser (Créditos)
 mining-tab-core = Núcleo Profundo
 mining-tab-missions = Misiones y Desbloqueos
 
-mining-filter-res-combo = Combo RES (+fragmentos)
+mining-filter-res-combo = Zona de concentración con RES (+fragmentos)
 mining-filter-populated-only = Solo sistemas habitados
 mining-min-hotspots = Zonas de concentración mínimas: { $count }
 mining-commodity = Mineral
 mining-ref-system = Sistema de referencia
 
-mining-shortest-loop = Bucle Triangular Más Corto
+mining-shortest-loop = Circuito triangular más corto
 mining-origin = Origen ({ $system })
 mining-ring-target = Yacimiento ({ $body } · { $ring })
 mining-sell-target = Venta ({ $station } en { $system })
 mining-total-dist = Total: { $dist } al
 
 mining-demand-safe = Demanda holgada
-mining-demand-tax-warning = ¡Riesgo penalización demanda! Tu carga supera el 25 % de la demanda ({ $demand } t)
+mining-demand-tax-warning = ¡Riesgo de penalización por demanda! Tu carga supera el 25 % de la demanda ({ $demand } t)
 mining-multi-sell = Venta Múltiple de Bodega
 mining-multi-sell-desc = Estaciones cercanas que compran todos los minerales de tu bodega en una sola parada
 
@@ -39,10 +39,10 @@ mining-hotspots-count = { $count ->
     [one] 1 zona de concentración
    *[other] { $count } zonas de concentración
 }
-mining-res-hazard = Haz-RES (+100 % fragmentos)
-mining-res-high = High-RES (+75 % fragmentos)
+mining-res-hazard = RES peligroso (+100 % fragmentos)
+mining-res-high = RES de intensidad alta (+75 % fragmentos)
 mining-res-normal = RES normal (+50 % fragmentos)
-mining-res-low = Low-RES (+25 % fragmentos)
+mining-res-low = RES de intensidad baja (+25 % fragmentos)
 mining-select-ring = Seleccionar
 mining-selected = Seleccionado
 mining-arrival-ls = { $dist } sl
@@ -54,7 +54,7 @@ mining-col-action = Acción
 mining-col-total-revenue = Ingresos totales
 mining-plan-route = Trazar ruta
 mining-method-laser = Láser de superficie
-mining-method-subsurface = Láser / Subsuperficie
+mining-method-subsurface = Láser / Subsuperficial
 mining-method-core = Carga sísmica (núcleo)
 mining-method-bill-turner = Ingeniero Bill Turner (50 t)
 mining-method-missions = Misiones de facción y colonización

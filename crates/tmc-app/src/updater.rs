@@ -107,7 +107,7 @@ pub async fn check_for_updates(state: Arc<RwLock<UpdateStatus>>) -> Result<Updat
         Err(e) => {
             let mut w = state.write().await;
             w.is_checking = false;
-            let err = format!("Error al crear cliente HTTP: {e}");
+            let err = format!("update-connect-failed\t{e}");
             w.error = Some(err.clone());
             return Err(err);
         }
@@ -118,7 +118,7 @@ pub async fn check_for_updates(state: Arc<RwLock<UpdateStatus>>) -> Result<Updat
         Err(e) => {
             let mut w = state.write().await;
             w.is_checking = false;
-            let err = format!("No se pudo conectar con GitHub Releases: {e}");
+            let err = format!("update-connect-failed\t{e}");
             w.error = Some(err.clone());
             return Err(err);
         }
@@ -127,7 +127,7 @@ pub async fn check_for_updates(state: Arc<RwLock<UpdateStatus>>) -> Result<Updat
     if !resp.status().is_success() {
         let mut w = state.write().await;
         w.is_checking = false;
-        let err = format!("GitHub Releases respondió con HTTP {}", resp.status());
+        let err = format!("update-check-failed\tHTTP {}", resp.status());
         w.error = Some(err.clone());
         return Err(err);
     }
@@ -137,7 +137,7 @@ pub async fn check_for_updates(state: Arc<RwLock<UpdateStatus>>) -> Result<Updat
         Err(e) => {
             let mut w = state.write().await;
             w.is_checking = false;
-            let err = format!("Error al leer respuesta de GitHub: {e}");
+            let err = format!("update-check-failed\t{e}");
             w.error = Some(err.clone());
             return Err(err);
         }
@@ -148,7 +148,7 @@ pub async fn check_for_updates(state: Arc<RwLock<UpdateStatus>>) -> Result<Updat
         Err(e) => {
             let mut w = state.write().await;
             w.is_checking = false;
-            let err = format!("Error al decodificar respuesta de GitHub: {e}");
+            let err = format!("update-check-failed\t{e}");
             w.error = Some(err.clone());
             return Err(err);
         }
@@ -197,7 +197,7 @@ pub async fn download_and_install_update(
     let (download_url, asset_name) = {
         let r = state.read().await;
         let Some(url) = r.download_url.clone() else {
-            return Err("No hay URL de descarga disponible para la actualización".to_string());
+            return Err("update-no-download".to_string());
         };
         (
             url,
@@ -211,7 +211,7 @@ pub async fn download_and_install_update(
         let mut w = state.write().await;
         w.is_downloading = true;
         w.download_progress = 0.0;
-        w.status_message = Some("Iniciando descarga de la actualización...".to_string());
+        w.status_message = Some("update-download-starting".to_string());
         w.error = None;
     }
 
@@ -225,7 +225,7 @@ pub async fn download_and_install_update(
         .get(&download_url)
         .send()
         .await
-        .map_err(|e| format!("Error en descarga: {e}"))?;
+        .map_err(|e| format!("update-failed\t{e}"))?;
     if !resp.status().is_success() {
         let mut w = state.write().await;
         w.is_downloading = false;
@@ -240,7 +240,7 @@ pub async fn download_and_install_update(
 
     let mut file = tokio::fs::File::create(&target_file)
         .await
-        .map_err(|e| format!("No se pudo crear archivo temporal: {e}"))?;
+        .map_err(|e| format!("update-failed\t{e}"))?;
 
     use tokio::io::AsyncWriteExt;
     let mut downloaded = 0u64;
@@ -249,11 +249,11 @@ pub async fn download_and_install_update(
     while let Some(chunk) = resp
         .chunk()
         .await
-        .map_err(|e| format!("Error al recibir datos: {e}"))?
+        .map_err(|e| format!("update-failed\t{e}"))?
     {
         file.write_all(&chunk)
             .await
-            .map_err(|e| format!("Error al escribir archivo: {e}"))?;
+            .map_err(|e| format!("update-failed\t{e}"))?;
         downloaded += chunk.len() as u64;
         if total_size > 0 && last_update_time.elapsed() >= std::time::Duration::from_millis(100) {
             last_update_time = std::time::Instant::now();
@@ -261,7 +261,7 @@ pub async fn download_and_install_update(
             let mut w = state.write().await;
             w.download_progress = progress;
             w.status_message = Some(format!(
-                "Descargando: {:.1} MB / {:.1} MB ({:.0}%)",
+                "update-download-progress\t{:.1}\t{:.1}\t{:.0}",
                 downloaded as f64 / 1_048_576.0,
                 total_size as f64 / 1_048_576.0,
                 progress * 100.0
@@ -271,14 +271,14 @@ pub async fn download_and_install_update(
 
     file.flush()
         .await
-        .map_err(|e| format!("Error al finalizar archivo: {e}"))?;
+        .map_err(|e| format!("update-failed\t{e}"))?;
     drop(file);
 
     {
         let mut w = state.write().await;
         w.download_progress = 1.0;
         w.is_downloading = false;
-        w.status_message = Some("Descarga completada. Ejecutando instalador...".to_string());
+        w.status_message = Some("update-installer-started".to_string());
     }
 
     // Ejecutar el instalador de forma desacoplada
@@ -291,7 +291,7 @@ pub async fn download_and_install_update(
             .spawn();
 
         if let Err(e) = spawn_res {
-            let err = format!("No se pudo ejecutar el instalador: {e}");
+            let err = format!("update-install-failed\t{e}");
             let mut w = state.write().await;
             w.error = Some(err.clone());
             return Err(err);
@@ -302,7 +302,7 @@ pub async fn download_and_install_update(
     {
         let spawn_res = std::process::Command::new(&target_file).spawn();
         if let Err(e) = spawn_res {
-            let err = format!("No se pudo ejecutar el archivo: {e}");
+            let err = format!("update-install-failed\t{e}");
             let mut w = state.write().await;
             w.error = Some(err.clone());
             return Err(err);
@@ -315,10 +315,7 @@ pub async fn download_and_install_update(
         std::process::exit(0);
     });
 
-    Ok(
-        "Instalador ejecutado con éxito. TMC se cerrará para completar la actualización."
-            .to_string(),
-    )
+    Ok("update-installer-started".to_string())
 }
 
 #[cfg(test)]

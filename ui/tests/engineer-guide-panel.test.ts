@@ -192,5 +192,5 @@ test('barred and acquainted states do not invent confirmed milestones', async ()
   expect(panel().querySelectorAll('[data-state="confirmed"]')).toHaveLength(0);
   await select(300100, 'Acquainted');
   expect(panel().querySelectorAll('[data-state="confirmed"]')).toHaveLength(0);
-  expect(panel().querySelector('[data-testid="guide-next"]')?.textContent).toContain('Meta-Alloys');
+  expect(panel().querySelector('[data-testid="guide-next"]')?.textContent).toContain('Metaaleaciones');
 });

@@ -1,6 +1,6 @@
 accounts-title = Comptes et synchronisation externe
 accounts-desc = Copilote universel pour partager découvertes, journaux de vol et télémétrie de flotte tout en préservant votre vie privée.
-accounts-companion-privacy-notice = Confidentialité absolue : TMC ne transmet jamais de données dans la galaxie Legacy, ne partage aucun chat privé ni solde de crédits sans autorisation, et pseudonymise votre identité sur EDDN avec un sel cryptographique local.
+accounts-companion-privacy-notice = Confidentialité absolue : TMC ne transmet jamais de données dans la galaxie Legacy, ne partage aucune conversation privée ni solde de crédits sans autorisation, et pseudonymise votre identité sur EDDN avec un sel cryptographique local.
 
 accounts-eddn-title = Elite Dangerous Data Network (EDDN)
 accounts-eddn-desc = Partagez les données publiques des marchés, équipements, chantiers et sauts avec la communauté galactique.
@@ -40,7 +40,7 @@ accounts-inara-test-success = Connexion réussie avec Inara
 accounts-inara-test-failed = Échec de la connexion à Inara
 accounts-inara-profile-link = Voir le profil Inara
 accounts-inara-whitelist-badge = Autorisation officielle
-accounts-inara-whitelist-tooltip = The Multipurpose Companion (TMC) officiellement approuvée sur Inara InAPI v1
+accounts-inara-whitelist-tooltip = The Multipurpose Companion (TMC) : application officiellement approuvée sur Inara InAPI v1
 accounts-inara-btn-send = Transmettre le lot maintenant
 
 accounts-capi-title = Frontier Companion API (CAPI)
@@ -56,7 +56,7 @@ accounts-capi-btn-link = Lier avec Frontier Store
 accounts-capi-btn-opening = Ouverture du navigateur...
 accounts-capi-btn-unlink = Dissocier le compte
 accounts-capi-btn-refresh-fleet = Actualiser la flotte
-accounts-capi-auth-notice = L'autorisation est effectuée de manière sécurisée dans votre navigateur web Frontier officiel.
+accounts-capi-auth-notice = L’autorisation s’effectue de manière sécurisée sur le site officiel de Frontier, dans votre navigateur.
 accounts-capi-manual-toggle = Problème de redirection ? Coller l'URL
 accounts-capi-manual-toggle-hide = Masquer la liaison manuelle
 accounts-capi-manual-help = Si votre navigateur affiche un avertissement de sécurité ou ne charge pas au retour de Frontier, copiez l'URL complète du navigateur et collez-la ici :

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { gameLabel } from '../../lib/gameLabels';
+
   import { t } from '../../lib/i18n';
   import { integer } from '../../lib/format';
   import { topic } from '../../lib/ws.svelte';
@@ -37,7 +39,7 @@
         <div class="supply-card" data-testid="supply-card">
           <div class="supply-info">
             <span class="supply-name bold" data-testid="supply-name">
-              {r.name_localised ?? r.name}
+              {gameLabel('commodity', r.name, r.name_localised)}
             </span>
             <span class="supply-detail sub">
               <b class="gold mono">{t('colonisation-resource-missing', { tons: integer(r.remaining), trips: r.trips_remaining })}</b>
@@ -48,9 +50,9 @@
             type="button"
             class="copy-btn"
             data-testid="copy-resource-btn"
-            onclick={() => copyResource(r.name_localised ?? r.name)}
+            onclick={() => copyResource(gameLabel('commodity', r.name, r.name_localised))}
           >
-            {copiedItem === (r.name_localised ?? r.name)
+            {copiedItem === (gameLabel('commodity', r.name, r.name_localised))
               ? t('colonisation-copied')
               : t('ui-copy')}
           </button>

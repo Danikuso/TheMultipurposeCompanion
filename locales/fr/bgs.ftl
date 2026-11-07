@@ -1,6 +1,6 @@
 nav-bgs = BGS
 panel-bgs-system = Factions du système
-panel-bgs-tick = Tick galactique
+panel-bgs-tick = Mise à jour galactique
 bgs-star-system = Système stellaire
 bgs-controlling-faction = Faction dominante
 bgs-controlling-state = État
@@ -11,10 +11,12 @@ bgs-col-state = État
 bgs-col-allegiance = Allégeance
 bgs-col-government = Gouvernement
 bgs-col-happiness = Bonheur
-bgs-latest-tick = Dernier tick galactique
+bgs-latest-tick = Dernière mise à jour galactique
 bgs-hours-since-tick = Temps écoulé
-bgs-tick-status = État du tick
+bgs-tick-status = État de la mise à jour
 bgs-tick-fresh = Récent
 bgs-tick-stale = Obsolète (> 28 h)
 bgs-no-data = Aucune donnée de factions dans le système
 bgs-controlling-badge = Dominante
+
+bgs-tick-hours-ago = Il y a { $hours } h

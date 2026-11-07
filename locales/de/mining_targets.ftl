@@ -39,10 +39,10 @@ mining-hotspots-count = { $count ->
     [one] 1 Hotspot
    *[other] { $count } Hotspots
 }
-mining-res-hazard = Haz-RES (+100 % Fragmente)
-mining-res-high = High-RES (+75 % Fragmente)
+mining-res-hazard = Gefährliche RES (+100 % Fragmente)
+mining-res-high = Intensive RES (+75 % Fragmente)
 mining-res-normal = Normales RES (+50 % Fragmente)
-mining-res-low = Low-RES (+25 % Fragmente)
+mining-res-low = Schwache RES (+25 % Fragmente)
 mining-select-ring = Auswählen
 mining-selected = Ausgewählt
 mining-arrival-ls = { $dist } Ls

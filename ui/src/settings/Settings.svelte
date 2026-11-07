@@ -12,7 +12,7 @@
   import { integer } from '../lib/format';
   import { voiceAssistant } from '../lib/voiceAssistant.svelte';
   import AccountsSection from '../modules/accounts/AccountsSection.svelte';
-  import { updater, checkForUpdates } from '../lib/updater.svelte';
+  import { updater, checkForUpdates, updateMessage } from '../lib/updater.svelte';
 
   const DEFAULT_MINERALS = ['platinum', 'painite', 'lowtemperaturediamond', 'opal', 'alexandrite',
     'grandidierite', 'monazite', 'musgravite', 'rhodplumsite', 'serendibite', 'benitoite'];
@@ -519,25 +519,25 @@
   }
 
   function openGitHubFeedback() {
-    const tmcVersion = '1.0.0';
+    const tmcVersion = updater.status.current_version || '—';
     const osInfo = typeof navigator !== 'undefined' ? navigator.userAgent : 'Windows';
     const lang = fullConfig.language || 'es';
-    const issueTitle = encodeURIComponent('[Feedback / Reporte] ');
+    const issueTitle = encodeURIComponent(t('feedback-issue-title') + ' ');
     const issueBody = encodeURIComponent(
-`### Descripción de la incidencia o propuesta:
-<!-- Escribe aquí detalladamente lo que has observado o tu sugerencia -->
+`### ${t('feedback-description')}:
+<!-- ${t('feedback-description-hint')} -->
 
 ---
-### Pasos para reproducir (si aplica):
+### ${t('feedback-steps')}:
 1. 
 2. 
 3. 
 
 ---
-### Diagnóstico de entorno:
-- **Versión de TMC:** ${tmcVersion}
-- **Idioma activo:** ${lang}
-- **Plataforma / Agente:** ${osInfo}
+### ${t('feedback-environment')}:
+- **${t('feedback-version')}:** ${tmcVersion}
+- **${t('feedback-language')}:** ${lang}
+- **${t('feedback-platform')}:** ${osInfo}
 `
     );
     const url = `https://github.com/Danikuso/TheMultipurposeCompanion/issues/new?title=${issueTitle}&body=${issueBody}`;
@@ -1145,7 +1145,7 @@
 
           {#if updater.status.error}
             <div class="update-error-text">
-              ⚠️ {updater.status.error}
+              ⚠️ {updateMessage(updater.status.error, 'update-failed')}
             </div>
           {/if}
         </fieldset>

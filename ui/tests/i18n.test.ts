@@ -1,8 +1,28 @@
 import { describe, expect, test } from 'vitest';
 import { FluentBundle, FluentResource } from '@fluent/bundle';
-import { localeKeys, setLocale, t } from '../src/lib/i18n';
+import { localeKeys, setLocale, t, translationPending } from '../src/lib/i18n';
+import sharedLabels from '../../scripts/data/i18n-shared-labels-reviewed.json';
 
 describe('i18n', () => {
+  test('all exact matches with English belong to the explicitly reviewed shared labels', () => {
+    const files = import.meta.glob<string>('../../locales/*/*.ftl', { query: '?raw', eager: true, import: 'default' });
+    const messages = (lang: string) => Object.fromEntries(Object.entries(files)
+      .filter(([path]) => path.includes(`/locales/${lang}/`))
+      .flatMap(([, text]) => [...text.matchAll(/^([a-z][\w-]*) = ([^\n]*(?:\n[ \t]+[^\n]*)*)/gm)].map(match => [match[1], match[2]])));
+    const english = messages('en');
+    for (const lang of ['es', 'fr', 'de', 'pt'] as const) {
+      const shared = Object.fromEntries(Object.entries(messages(lang)).filter(([key, value]) => value === english[key]).sort(([a], [b]) => a.localeCompare(b)));
+      expect(shared, `${lang}: unreviewed English text or stale exception`).toEqual(sharedLabels.locales[lang]);
+    }
+  });
+  test('every shipped translation is complete, including engineering names', () => {
+    try {
+      for (const lang of ['es', 'en', 'fr', 'de', 'pt']) {
+        setLocale(lang);
+        for (const key of localeKeys()[lang]) expect(translationPending(key), `${lang}:${key}`).toBe(false);
+      }
+    } finally { setLocale('es'); }
+  });
   test('t falls back to es and formats args', () => {
     setLocale('xx');
     const msg = t('alert-hull-damage', { pct: 25 });

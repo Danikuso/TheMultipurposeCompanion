@@ -77,7 +77,7 @@
           data-testid="toggle-sell-options"
           onclick={() => (showAllSellOptions = !showAllSellOptions)}
         >
-          {showAllSellOptions ? '▲ Ocultar opciones' : `▼ Ver opciones (${opts.length})`}
+          {showAllSellOptions ? t('ui-hide-list') : t('ui-show-list', { count: opts.length })}
         </button>
       </div>
       <div class="table-container" class:is-collapsed={!showAllSellOptions}>

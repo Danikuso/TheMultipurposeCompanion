@@ -65,9 +65,9 @@ test('journal updates move from invited to rank progression without treating sto
 
 test('Yi Shen preserves all three referral conditions and navigates to the right previous contact', async ({ page }) => {
   await openLayout(page, 'Ingeniería'); await choose(page, '400013');
-  await expect(page.getByTestId('guide-next')).toContainText('10 Faction Associates');
-  await expect(page.getByTestId('guide-next')).toContainText('10 Digital Designs');
-  await expect(page.getByTestId('guide-next')).toContainText('10 Manufacturing Instructions');
+  await expect(page.getByTestId('guide-next')).toContainText('10 × Socios de Facción');
+  await expect(page.getByTestId('guide-next')).toContainText('10 × Diseños digitales');
+  await expect(page.getByTestId('guide-next')).toContainText('10 × Instrucciones de Fabricación');
   await expect(page.getByTestId('guide-stock')).toHaveCount(0);
   await slot(page).locator('.panel-header-toggle').click();
   await expect(slot(page).locator('[data-prerequisite-id]')).toHaveCount(3);

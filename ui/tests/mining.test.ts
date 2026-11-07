@@ -237,13 +237,13 @@ test('relativeAge: now, minutes and days', () => {
   expect(skewFrom(undefined)).toBeNull();
 });
 
-test('names: backend first, then prospector, then capitalized key', () => {
+test('known names use app locale; unknown future names retain backend fallback', () => {
   const p = { current: asteroid(), history: [] } as never;
   const names = namesFrom(p, { platinum: 'Platino (diario)', gold: 'Oro' });
-  expect(materialName('platinum', names)).toBe('Platino (diario)');
+  expect(materialName('platinum', names)).toBe('Platino');
   expect(materialName('palladium', names)).toBe('Paladio');
   expect(materialName('gold', names)).toBe('Oro');
-  expect(materialName('bauxite', names)).toBe('Bauxite');
+  expect(materialName('bauxite', names)).toBe('Bauxita');
 });
 
 test('session uses backend names and full bin labels', () => {

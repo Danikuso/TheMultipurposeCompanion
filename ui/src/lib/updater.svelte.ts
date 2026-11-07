@@ -1,4 +1,16 @@
 import { t } from './i18n';
+import { decimal } from './format';
+
+/** Backend emits stable Fluent keys; diagnostics remain available after the localized summary. */
+export function updateMessage(value: string | null | undefined, fallback: string): string {
+  if (!value) return t(fallback);
+  const [key, ...details] = value.split('\t');
+  if (key === 'update-download-progress') {
+    return t(key, { downloaded: decimal(Number(details[0]), 1), total: decimal(Number(details[1]), 1), percent: decimal(Number(details[2]), 0) });
+  }
+  const translated = t(key);
+  return translated !== key ? `${translated}${details.length ? ` · ${details.join(' ')}` : ''}` : `${t(fallback)} · ${value}`;
+}
 
 /**
  * Gestor reactivo de actualizaciones de TMC («TMC Glass HUD»).
@@ -74,7 +86,7 @@ export async function checkForUpdates(): Promise<UpdateStatus | null> {
     if (!res.ok) {
       updater.status.is_checking = false;
       const text = await res.text();
-      updater.status.error = text || t('update-check-failed');
+      updater.status.error = text || 'update-check-failed';
       return null;
     }
     const data = (await res.json()) as UpdateStatus;
@@ -85,7 +97,7 @@ export async function checkForUpdates(): Promise<UpdateStatus | null> {
     return data;
   } catch (e) {
     updater.status.is_checking = false;
-    updater.status.error = e instanceof Error ? e.message : t('update-connect-failed');
+    updater.status.error = `update-connect-failed${e instanceof Error ? `\t${e.message}` : ''}`;
     return null;
   }
 }
@@ -94,7 +106,7 @@ export async function installUpdate(): Promise<boolean> {
   try {
     updater.status.is_downloading = true;
     updater.status.download_progress = 0.0;
-    updater.status.status_message = t('update-download-starting');
+    updater.status.status_message = 'update-download-starting';
     updater.status.error = null;
 
     // Iniciar sondeo periódico de progreso mientras descarga
@@ -133,13 +145,13 @@ export async function installUpdate(): Promise<boolean> {
     if (!res.ok) {
       updater.status.is_downloading = false;
       const text = await res.text();
-      updater.status.error = text || t('update-install-failed');
+      updater.status.error = text || 'update-install-failed';
       return false;
     }
 
     updater.status.is_downloading = false;
     updater.status.download_progress = 1.0;
-    updater.status.status_message = t('update-installer-started');
+    updater.status.status_message = 'update-installer-started';
     return true;
   } catch (e) {
     if (pollTimer) {
@@ -147,7 +159,7 @@ export async function installUpdate(): Promise<boolean> {
       pollTimer = null;
     }
     updater.status.is_downloading = false;
-    updater.status.error = e instanceof Error ? e.message : t('update-failed');
+    updater.status.error = `update-failed${e instanceof Error ? `\t${e.message}` : ''}`;
     return false;
   }
 }
@@ -155,5 +167,5 @@ export async function installUpdate(): Promise<boolean> {
 export function formatBytes(bytes?: number | null): string {
   if (!bytes || bytes <= 0) return '—';
   const mb = bytes / (1024 * 1024);
-  return `${mb.toFixed(1)} MB`;
+  return `${decimal(mb, 1)} MB`;
 }

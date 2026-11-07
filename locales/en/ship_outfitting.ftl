@@ -21,14 +21,14 @@ outfitting-rating-any = Any
 outfitting-mount-label = Mount
 outfitting-mount-any = Any
 outfitting-mount-fixed = Fixed
-outfitting-mount-gimbal = Gimbal
+outfitting-mount-gimbal = Gimballed
 outfitting-mount-turret = Turret
 outfitting-armour-ship-label = Hull
 outfitting-armour-ship-any = Any ship
 outfitting-add-btn = + Add
 
 outfitting-basket-label = Single-stop basket ({ $count })
-outfitting-basket-empty = Select a ship or add at least one component to find the nearest stations in stock.
+outfitting-basket-empty = Select a ship or add at least one component to find the nearest stations stocking your selection.
 outfitting-basket-ship-tag = Ship
 outfitting-remove-item = Remove { $name }
 
@@ -53,7 +53,7 @@ outfitting-searching-btn = Searching...
 outfitting-clear-btn = Clear
 
 outfitting-results-count = { $count } nearby stations stocking all items
-outfitting-hidden-permits-notice = Hid { $count } stations in permit-locked systems.
+outfitting-hidden-permits-notice = Hidden: { $count } stations in permit-locked systems.
 outfitting-col-station = Station / System
 outfitting-col-distance = Distance
 outfitting-col-arrival = Supercruise
@@ -63,9 +63,9 @@ outfitting-col-updated = Data
 outfitting-col-actions = Actions
 
 outfitting-badge-lyr = −15% LYR
-outfitting-badge-lyr-tooltip = Li Yong-Rui 15% discount on ships and outfitting
+outfitting-badge-lyr-tooltip = Li Yong-Rui’s 15% discount on ships and outfitting
 outfitting-badge-elite = −10% ELITE
-outfitting-badge-elite-tooltip = Founders World 10% discount (requires Elite rank)
+outfitting-badge-elite-tooltip = Founders World’s 10% discount (requires Elite rank)
 outfitting-badge-brestla = +20%
 outfitting-badge-brestla-tooltip = 20% surcharge over standard prices at I Sola Prospect
 outfitting-badge-stronghold = Stronghold

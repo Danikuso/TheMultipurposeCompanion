@@ -4,7 +4,7 @@
 layout-device-default-desktop = Desktop
 layout-device-default-browser = Browser
 layout-device-title = How do you want to start on this device?
-layout-device-hint = Pick a name and where your layout starts from
+layout-device-hint = Choose a name and a starting layout
 layout-device-name = Device name
 layout-device-factory = Start with the factory layout
 layout-device-copy = Copy from…
@@ -42,7 +42,7 @@ layout-card-auto = Appears automatically
 layout-card-auto-hint = This card appears on its own when there is data
 layout-edit-catalog-title = Add card
 layout-edit-catalog-empty = All cards for this tab are already visible
-layout-edit-catalog-search = Search card
+layout-edit-catalog-search = Search cards
 layout-edit-catalog-close = Close
 layout-edit-catalog-present = Already in this tab
 layout-edit-catalog-no-results = No cards match your search

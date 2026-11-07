@@ -327,7 +327,7 @@ describe('dashboard panels', () => {
 
     const combatNum = target.querySelector('[data-rank-key="combat"] .rank-num');
     expect(combatNum?.getAttribute('title')).toContain(t('combat-rank-3'));
-    expect(combatNum?.getAttribute('title')).toContain('falta: 30 pts');
+    expect(combatNum?.getAttribute('title')).toContain('Falta: 30 pts');
   });
 
   test('location panel displays galactic telemetry, legal state, superpower and coordinates', () => {
@@ -356,14 +356,14 @@ describe('dashboard panels', () => {
     renderPanel(LocationPanel);
     expect(target.textContent).toContain('Sol');
     expect(target.textContent).toContain('Earth');
-    expect(target.textContent).toContain('Federation');
+    expect(target.textContent).toContain('Federación');
     expect(target.textContent).toContain('Mother Gaia');
     expect(target.textContent).toContain(t('legal-clean'));
     expect(target.textContent).toContain(t('security-high'));
     expect(target.textContent).toContain(t('mode-normal-space'));
-    expect(target.textContent).toContain('11.00 B hab.');
-    expect(target.textContent).toContain('0.0 al');
-    expect(target.textContent).toContain('-14.2500°');
+    expect(target.textContent).toContain(new Intl.NumberFormat('es', { notation: 'compact', maximumFractionDigits: 1 }).format(11000000000));
+    expect(target.textContent).toContain('[0, 0, 0] al');
+    expect(target.textContent).toContain('-14,25°');
   });
 
   test('location panel displays home base distance and toggles home base', async () => {
@@ -377,7 +377,7 @@ describe('dashboard panels', () => {
 
     renderPanel(LocationPanel);
     expect(target.textContent).toContain('Shinrarta Dezhra');
-    expect(target.textContent).toContain('64.4 al');
+    expect(target.textContent).toContain('64,4 al');
 
     const toggleBtn = target.querySelector('[data-testid="toggle-home-base-btn"]') as HTMLButtonElement | null;
     expect(toggleBtn).not.toBeNull();

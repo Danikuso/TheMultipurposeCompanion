@@ -9,7 +9,7 @@ crime-subtitle = Monitor táctico de seguridad, decaimiento de notoriedad y guí
 crime-card-status = Estado Legal y Notoriedad
 crime-legal-state = Estado Legal
 crime-state-clean = Limpio
-crime-state-wanted = En Búsqueda
+crime-state-wanted = Se busca
 crime-state-illegal-cargo = Carga Ilícita
 crime-state-hostile = Hostil
 crime-notoriety = Notoriedad
@@ -20,14 +20,14 @@ crime-notoriety-decay-paused = Decaimiento pausado (atracado en estación)
 crime-notoriety-decay-note = Requiere vuelo activo en supercrucero o espacio normal (1 punto cada 2 horas)
 
 ## Guía de Limpieza de Nombre del Ayudante
-crime-card-guide = Guía de Limpieza de Nombre del Ayudante
+crime-card-guide = Guía para limpiar tu historial
 crime-guide-blocked-title = Factores interestelares bloqueados
 crime-guide-blocked-desc = La Federación de Pilotos prohíbe pagar multas o retirar recompensas mientras tu notoriedad sea superior a 0. Debes volar en el espacio hasta disiparla.
 crime-guide-ready-title = Factores interestelares disponibles
 crime-guide-ready-desc = Notoriedad en 0. Puedes acudir a un factor interestelar para pagar todas tus multas y recompensas sin ingresar en prisión.
 crime-guide-all-clean = Historial Limpio
 crime-guide-all-clean-desc = No tienes multas pendientes ni recompensas por tu captura. Navegación legal segura.
-crime-nearest-factor = factor interestelar más cercano
+crime-nearest-factor = Factor interestelar más cercano
 crime-facility-distance = a { $distance } al
 crime-facility-station = Estación
 crime-copy-system = Copiar sistema
@@ -43,7 +43,7 @@ crime-nearest-black-market = Mercado Negro más cercano
 crime-stealth-advice-title = Consejos de Aproximación Sigilosa
 crime-stealth-advice-step1 = Aléjate de la ruta directa de patrulla y acércate a la boca de entrada desde el frente.
 crime-stealth-advice-step2 = Activa la navegación silenciosa o lanza un disipador térmico a menos de 4 km de la estación.
-crime-stealth-advice-step3 = Mantén una velocidad superior a 200 m/s para evitar que los escáneres policiales completen el bloqueo.
+crime-stealth-advice-step3 = Mantén una velocidad superior a 200 m/s para evitar que la policía complete el escaneo.
 
 ## Facciones y Multas / Recompensas
 crime-card-factions = Desglose de Facciones y Multas
@@ -66,7 +66,7 @@ crime-police-response-none = Sin presencia policial ni respuesta ante hostilidad
 
 ## Avisos de Cabina y Copiloto Táctico (TTS)
 tts-crime-notoriety-gain = ¡Alerta! Nivel de notoriedad incrementado por crimen grave.
-tts-crime-notoriety-cleared = Notoriedad disipada. Los servicios de factor interestelar están ahora disponibles.
+tts-crime-notoriety-cleared = Notoriedad disipada. Los servicios de factores interestelares están ahora disponibles.
 tts-crime-illegal-cargo = Advertencia: carga ilícita detectada a bordo en sector con seguridad.
 tts-crime-police-interdiction = ¡Alerta de interdicción! Fuerzas de seguridad interceptando la nave.
 tts-crime-wanted = ¡Alerta! Estado de búsqueda y captura activo en la jurisdicción local.

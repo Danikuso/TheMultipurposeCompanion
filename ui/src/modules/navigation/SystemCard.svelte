@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { gameLabel } from '../../lib/gameLabels';
   import { t } from '../../lib/i18n';
   import { diag, diagOn } from '../../lib/diag.svelte';
   import { ageShort, ly, pct, starClassLabel } from '../../lib/format';
@@ -27,7 +28,7 @@
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(name);
-        pushToast(`Copiado: ${name}`, 'Info');
+        pushToast(t('action-copied'), 'Info');
       }
     } catch { /* Ignorado */ }
   }
@@ -104,7 +105,7 @@
     {#if danger}
       <span class="warn" role="img" aria-label={t('strip-state-danger')}>⚠</span>
     {/if}
-    <span class="state" class:danger data-testid="faction-state">{pol.faction_state}</span>
+    <span class="state" class:danger data-testid="faction-state">{gameLabel('state', pol.faction_state)}</span>
   {/if}
 {/snippet}
 
@@ -170,10 +171,10 @@
               {#if pol.allegiance}
                 <SuperpowerIcon superpower={pol.allegiance} size={13} />
               {/if}
-              <span>{pol.allegiance ?? '—'}</span>
+              <span>{gameLabel('superpower', pol.allegiance)}</span>
             </span>
           </div>
-          <div><span class="label">{t('strip-politics-government')}</span> <span>{pol.government ?? '—'}</span></div>
+          <div><span class="label">{t('strip-politics-government')}</span> <span>{gameLabel('government', pol.government)}</span></div>
           <div><span class="label">{t('strip-politics-faction')}</span> <span>{pol.controlling_faction ?? '—'}</span></div>
           <div>{@render stateTag()}</div>
         {:else}
@@ -186,9 +187,9 @@
         {#if pol}
           <div>
             <span class="label">{t('strip-politics-economy')}</span>
-            <span>{pol.economy ?? '—'}{pol.second_economy ? ` / ${pol.second_economy}` : ''}</span>
+            <span>{gameLabel('economy', pol.economy)}{pol.second_economy ? ` / ${gameLabel('economy', pol.second_economy)}` : ''}</span>
           </div>
-          <div><span class="label">{t('strip-politics-security')}</span> <span>{pol.security ?? '—'}</span></div>
+          <div><span class="label">{t('strip-politics-security')}</span> <span>{gameLabel('security', pol.security)}</span></div>
           <div><span class="label">{t('strip-politics-population')}</span> <span class="mono">{population ?? '—'}</span></div>
           {#if pol.powers && pol.powers.length > 0}
             <div>
@@ -223,7 +224,7 @@
     <div><span class="label">{t('strip-jump-ly')}</span> <span class="mono">{jumpLy}</span></div>
     <div><span class="label">{t('strip-discovered')}</span> <span>{discovered}</span></div>
     {#if pol}
-      <div>{pol.allegiance ?? '—'} · {pol.government ?? '—'}</div>
+      <div>{gameLabel('superpower', pol.allegiance)} · {gameLabel('government', pol.government)}</div>
       <div>{@render stateTag()}</div>
     {:else}
       <span class="muted">{noData}</span>

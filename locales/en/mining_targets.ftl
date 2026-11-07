@@ -1,4 +1,4 @@
-panel-mining-targets = Mining Targets & Optimal Sell
+panel-mining-targets = Mining targets & selling
 nav-mining-targets = Mining Targets
 
 mining-tab-laser = Laser (Credits)
@@ -14,12 +14,12 @@ mining-ref-system = Reference system
 mining-shortest-loop = Shortest Triangular Loop
 mining-origin = Origin ({ $system })
 mining-ring-target = Ring Target ({ $body } · { $ring })
-mining-sell-target = Best Sell ({ $station } in { $system })
+mining-sell-target = Sell at { $station } in { $system }
 mining-total-dist = Total: { $dist } ly
 
 mining-demand-safe = Safe demand
 mining-demand-tax-warning = Demand tax risk! Your cargo exceeds 25% of demand ({ $demand } t)
-mining-multi-sell = Multi-Cargo Sell
+mining-multi-sell = Sell the whole cargo hold
 mining-multi-sell-desc = Nearby stations buying all minerals in your cargo hold in a single stop
 
 mining-ring-metallic = Metallic

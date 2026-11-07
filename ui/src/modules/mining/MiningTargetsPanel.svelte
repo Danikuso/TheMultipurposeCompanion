@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { gameLabel } from '../../lib/gameLabels';
   import { t } from '../../lib/i18n';
   import { credits, decimal } from '../../lib/format';
   import { topic, action } from '../../lib/ws.svelte';
@@ -187,7 +188,7 @@
           onclick={() => selectPreset(preset)}
           title="{t(preset.methodKey)} · {ringTypeLabel(preset.ringType)}"
         >
-          <span class="preset-name">{preset.commodity}</span>
+          <span class="preset-name">{gameLabel('commodity', preset.commodity)}</span>
           <span class="preset-ring-tag">{ringTypeLabel(preset.ringType)}</span>
         </button>
       {/each}
@@ -338,7 +339,7 @@
       <div class="cargo-sell-strip">
         <span class="cargo-strip-title">📦 {t('mining-cargo-label')}</span>
         {#each cargoSellTopic.commodities_in_cargo as item (item.name)}
-          <span class="badge badge-neutral">{item.name}: {item.count} t</span>
+          <span class="badge badge-neutral">{gameLabel('commodity', item.name)}: {item.count} t</span>
         {/each}
         <button type="button" class="btn-secondary" onclick={searchMultiSell}>
           {t('mining-cargo-sell-btn')}

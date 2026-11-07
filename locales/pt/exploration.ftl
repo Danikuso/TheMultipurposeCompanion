@@ -1,7 +1,7 @@
 panel-system-bodies = Corpos do sistema
 exploration-kind-earthlike = Mundo semelhante à Terra
 exploration-kind-water-world = Mundo aquático
-exploration-kind-ammonia-world = Mundo de amoníaco
+exploration-kind-ammonia-world = Mundo de amônia
 exploration-kind-gas-giant-1 = Gigante gasoso classe I
 exploration-kind-gas-giant-2 = Gigante gasoso classe II
 exploration-kind-gas-giant-3 = Gigante gasoso classe III

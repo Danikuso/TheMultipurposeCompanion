@@ -1,8 +1,10 @@
+import { setLocale } from '../src/lib/i18n';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { updater, fetchUpdateStatus, checkForUpdates, installUpdate, formatBytes } from '../src/lib/updater.svelte';
+import { updater, fetchUpdateStatus, checkForUpdates, installUpdate, formatBytes, updateMessage } from '../src/lib/updater.svelte';
 
 describe('updater store and methods', () => {
   beforeEach(() => {
+    setLocale('es');
     updater.status = {
       current_version: '1.0.1',
       latest_version: '1.0.1',
@@ -28,8 +30,18 @@ describe('updater store and methods', () => {
   it('formatBytes formats file sizes correctly', () => {
     expect(formatBytes(null)).toBe('—');
     expect(formatBytes(0)).toBe('—');
-    expect(formatBytes(13_958_210)).toBe('13.3 MB');
-    expect(formatBytes(64_800_000)).toBe('61.8 MB');
+    expect(formatBytes(13_958_210)).toBe('13,3 MB');
+    expect(formatBytes(64_800_000)).toBe('61,8 MB');
+  });
+
+  it('backend message codes react to locale changes and keep technical diagnostics', () => {
+    setLocale('en');
+    expect(updateMessage('update-connect-failed\tHTTP 503', 'update-failed')).toContain('HTTP 503');
+    const english = updateMessage('update-download-starting', 'update-failed');
+    setLocale('de');
+    expect(updateMessage('update-download-starting', 'update-failed')).not.toBe(english);
+    setLocale('es');
+    expect(updateMessage('update-download-progress\t6.6\t13.3\t50', 'update-failed')).toBe('Descargando: 6,6 / 13,3 MB (50 %)');
   });
 
   it('fetchUpdateStatus reads status and opens modal on first prompt if update exists', async () => {

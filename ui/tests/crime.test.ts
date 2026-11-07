@@ -76,7 +76,7 @@ test('CrimePanel renders blocked guide when notoriety > 0 and shows decay timer'
     'core.location': { mode: 'Supercruise' },
   });
 
-  expect(q('legal-state-badge')?.textContent?.trim()).toBe('En Búsqueda');
+  expect(q('legal-state-badge')?.textContent?.trim()).toBe('Se busca');
   expect(q('notoriety-level')?.textContent).toContain('Nivel 3 / 10');
   expect(q('guide-blocked')).toBeTruthy();
   expect(q('guide-ready')).toBeNull();

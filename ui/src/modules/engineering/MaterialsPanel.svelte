@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { gameLabel } from '../../lib/gameLabels';
+
   import { onMount } from 'svelte';
   import { t } from '../../lib/i18n';
   import { integer } from '../../lib/format';
@@ -147,7 +149,7 @@
         data-testid="toggle-session-section"
         onclick={() => (showSession = !showSession)}
       >
-        {showSession ? '▲ Ocultar' : `▼ Ver (${Object.keys(session?.totals ?? {}).length})`}
+        {showSession ? t('ui-hide-list') : t('ui-show-list', { count: Object.keys(session?.totals ?? {}).length })}
       </button>
     </div>
     <ul class="session-list" class:is-collapsed={!showSession}>
@@ -169,7 +171,7 @@
         <ul class="material-list">
           {#each reader.items as row (row.key)}
             <li data-key={row.key} class="material-item">
-              <span class="material-name">{row.name_localised ?? row.key}</span>
+              <span class="material-name">{gameLabel('microresource', row.key, row.name_localised)}</span>
               <span class="mono count-badge">{integer(row.count)}</span>
             </li>
           {/each}

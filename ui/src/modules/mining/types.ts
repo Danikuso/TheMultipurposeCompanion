@@ -1,3 +1,4 @@
+import { gameLabel } from '../../lib/gameLabels';
 export type Content = 'low' | 'medium' | 'high' | 'unknown';
 
 export interface MaterialRow {
@@ -85,9 +86,7 @@ export type SellTopic =
 
 /** Nombre legible de una materia: localizado si se conoce; si no, la clave capitalizada. */
 export function materialName(key: string, names: Map<string, string>): string {
-  const known = names.get(key);
-  if (known) return known;
-  return key ? key.charAt(0).toUpperCase() + key.slice(1) : key;
+  return gameLabel('commodity', key, names.get(key) ?? (key ? key.charAt(0).toUpperCase() + key.slice(1) : key));
 }
 
 /** Nombres localizados: los del backend (`names`) y, tras ellos, los de los asteroides. */

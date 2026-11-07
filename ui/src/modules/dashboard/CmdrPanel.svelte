@@ -115,7 +115,7 @@
       if (val > 8) {
         const prestige = val - 8;
         const romans = ['', 'I', 'II', 'III', 'IV', 'V'];
-        return `Elite ${romans[prestige] ?? prestige}`;
+        return `${t(`${key}-rank-8`)} ${romans[prestige] ?? prestige}`;
       }
     }
     const keyName = `${key}-rank-${val}`;
@@ -311,10 +311,10 @@
               {@const nextTitle = getNextRankTitle(key, rankVal)}
               {@const process = getRankProcess(key, rankVal, progVal)}
               {@const tooltip = process.isPromoReady
-                ? `${t(`rank-${key}`)}: ${currentTitle} (Nv. ${rankVal}) · ${t('cmdr-rank-promo-ready')} · 100 %`
+                ? `${t(`rank-${key}`)}: ${currentTitle} (${t('cmdr-rank-level', { level: rankVal })}) · ${t('cmdr-rank-promo-ready')} · 100 %`
                 : process.isMax
-                  ? `${t(`rank-${key}`)}: ${currentTitle} (Nv. ${rankVal} · ${t('cmdr-rank-max')}) · 100 %`
-                  : `${t(`rank-${key}`)}: ${currentTitle} (Nv. ${rankVal}) → ${nextTitle} (Nv. ${rankVal + 1}) · ${process.currentFmt} / ${process.targetFmt} ${process.unit} (falta: ${process.remainingFmt} ${process.unit}) · ${progVal} %`}
+                  ? `${t(`rank-${key}`)}: ${currentTitle} (${t('cmdr-rank-level', { level: rankVal })} · ${t('cmdr-rank-max')}) · 100 %`
+                  : `${t(`rank-${key}`)}: ${currentTitle} (${t('cmdr-rank-level', { level: rankVal })}) → ${nextTitle} (${t('cmdr-rank-level', { level: rankVal + 1 })}) · ${process.currentFmt} / ${process.targetFmt} ${process.unit} (${t('cmdr-rank-missing', { amount: `${process.remainingFmt} ${process.unit}` })}) · ${progVal} %`}
               <div class="rank-card" data-rank-key={key}>
                 <div class="rank-header-row">
                   <span class="rank-name">{t(`rank-${key}`)}</span>

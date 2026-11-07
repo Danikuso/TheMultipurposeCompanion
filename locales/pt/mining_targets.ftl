@@ -5,7 +5,7 @@ mining-tab-laser = Laser (Créditos)
 mining-tab-core = Núcleo Profundo
 mining-tab-missions = Missões e Desbloqueios
 
-mining-filter-res-combo = Combo RES (+fragmentos)
+mining-filter-res-combo = Combinação com RES (+fragmentos)
 mining-filter-populated-only = Apenas sistemas habitados
 mining-min-hotspots = Pontos de concentração mínimos: { $count }
 mining-commodity = Mineral
@@ -32,7 +32,7 @@ mining-copy-station = Copiar estação
 mining-search-btn = Buscar alvos
 mining-clear-btn = Limpar
 mining-no-targets = Nenhum alvo de mineração encontrado com os filtros selecionados
-mining-offline-catalog = Catálogo offline verificado (TMC)
+mining-offline-catalog = Catálogo local verificado (TMC)
 mining-online-updated = Sincronizado com Spansh
 mining-cargo-sell-btn = Vender lote de carga
 mining-hotspots-count = { $count ->
@@ -40,10 +40,10 @@ mining-hotspots-count = { $count ->
     [one] { $count } ponto de concentração
    *[other] { $count } pontos de concentração
 }
-mining-res-hazard = Haz-RES (+100% fragmentos)
-mining-res-high = High-RES (+75% fragmentos)
-mining-res-normal = RES normal (+50% fragmentos)
-mining-res-low = Low-RES (+25% fragmentos)
+mining-res-hazard = RES perigoso (+100 % fragmentos)
+mining-res-high = RES intenso (+75 % fragmentos)
+mining-res-normal = RES normal (+50 % fragmentos)
+mining-res-low = RES fraco (+25 % fragmentos)
 mining-select-ring = Selecionar
 mining-selected = Selecionado
 mining-arrival-ls = { $dist } sl

@@ -3,15 +3,15 @@
 ## Gerät
 layout-device-default-desktop = Desktop
 layout-device-default-browser = Browser
-layout-device-title = Wie möchtest du auf diesem Gerät starten?
-layout-device-hint = Wähle einen Namen und den Ausgangspunkt deines Layouts
+layout-device-title = Wie möchten Sie auf diesem Gerät starten?
+layout-device-hint = Wählen Sie einen Namen und die Ausgangsanordnung Ihrer Karten
 layout-device-name = Gerätename
 layout-device-factory = Mit dem Werkslayout starten
 layout-device-copy = Kopieren von…
 layout-device-claim = Ich bin ein bestehendes Profil
 layout-device-accept = Übernehmen
 layout-device-dismiss = Werkslayout verwenden
-layout-device-error = Profil konnte nicht erstellt werden. Versuche es erneut.
+layout-device-error = Profil konnte nicht erstellt werden. Versuchen Sie es erneut.
 layout-device-offline = Nicht gespeichert
 layout-device-offline-hint = Layoutänderungen können auf diesem Gerät nicht gespeichert werden
 
@@ -62,7 +62,7 @@ layout-custom-close = Schließen
 layout-custom-rename = Umbenennen
 layout-custom-delete = Tab löschen
 layout-custom-delete-confirm = Diesen Tab und seine Karten löschen?
-layout-custom-empty = Dieser Tab ist leer. Bearbeite das Layout, um Karten hinzuzufügen.
+layout-custom-empty = Dieser Tab ist leer. Bearbeiten Sie das Layout, um Karten hinzuzufügen.
 layout-custom-limit = Limit von 12 eigenen Tabs erreicht
 
 ## Ajustes de disposición
@@ -82,6 +82,6 @@ layout-settings-tabs = Eigene Tabs
 layout-settings-tabs-empty = Keine eigenen Tabs vorhanden
 layout-settings-move-up = Tab nach oben
 layout-settings-move-down = Tab nach unten
-layout-settings-editing-hint = Beende oder brich die Layout-Bearbeitung ab, bevor du Profile verwaltest
-layout-settings-error = Die Aktion konnte nicht abgeschlossen werden. Versuche es erneut.
+layout-settings-editing-hint = Beenden Sie die Layout-Bearbeitung oder brechen Sie sie ab, bevor Sie Profile verwalten
+layout-settings-error = Die Aktion konnte nicht abgeschlossen werden. Versuchen Sie es erneut.
 layout-edit-height-auto-short = auto

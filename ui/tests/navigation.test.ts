@@ -99,7 +99,7 @@ describe('navigation panels', () => {
     expect(small[1]).toContain('Followb');
     expect(small[1]).toContain(t('strip-neutron'));
     expect(target.textContent).toContain('12,34');
-    expect(target.textContent).toContain('Federation');
+    expect(target.textContent).toContain('Federación');
     expect(target.querySelector('section')?.style.gridColumn).toBe('1 / -1');
   });
 
@@ -142,10 +142,10 @@ describe('navigation panels', () => {
       danger: e.classList.contains('danger'),
     }));
     expect(danger).toEqual([
-      { text: 'War', danger: true },
-      { text: 'Outbreak', danger: true },
-      { text: 'CivilUnrest', danger: true },
-      { text: 'Boom', danger: false },
+      { text: 'Guerra', danger: true },
+      { text: 'Epidemia', danger: true },
+      { text: 'Desórdenes públicos', danger: true },
+      { text: 'Auge', danger: false },
     ]);
   });
 
@@ -227,10 +227,10 @@ describe('navigation panels', () => {
     });
     render(RouteStrip);
     const next = target.querySelector('[data-testid="next-card"]')!;
-    expect(next.textContent).toContain('Empire');
-    expect(next.textContent).toContain('Patronage');
+    expect(next.textContent).toContain('Imperio');
+    expect(next.textContent).toContain('Patronazgo');
     const st = next.querySelector('[data-testid="faction-state"]')!;
-    expect(st.textContent?.trim()).toBe('CivilWar');
+    expect(st.textContent?.trim()).toBe('Guerra civil');
     expect(st.classList.contains('danger')).toBe(true);
     expect(next.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe(t('strip-state-danger'));
     // exploración remota no disponible
