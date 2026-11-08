@@ -18,7 +18,10 @@ pub use accounts::AccountCredentialRecord;
 pub use import::{ImportOptions, ImportReport, import_history};
 pub use migrations::Migration;
 pub use query::{EventQuery, EventRow};
-pub use sync_outbox::{CursorAdvance, EnqueueOutcome, NewOutboxRow};
+pub use sync_outbox::{
+    CursorAdvance, EnqueueOutcome, NewOutboxRow, OutboxRow, SYNC_PENDING_CAP, SYNC_RETENTION_DAYS,
+    SyncCounts,
+};
 pub use ui_layout::{UiLayoutProfile, UiLayoutSummary};
 pub use writer::{EventWriter, StoredEvent};
 
