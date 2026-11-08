@@ -102,6 +102,8 @@ fn output_journal_name(src_file: &Path, first_ts: Option<DateTime<Utc>>, index: 
 
 pub async fn play(opts: PlayOptions) -> anyhow::Result<()> {
     std::fs::create_dir_all(&opts.to)?;
+    // Antes de escribir ninguna línea: TMC no sincroniza nada desde una carpeta de replay (PD-9).
+    std::fs::write(opts.to.join(tmc_model::sync::REPLAY_MARKER), b"")?;
     let (src_dir, files) = collect_source_files(&opts.from)?;
     let status_snapshots = opts
         .status_dir
@@ -159,6 +161,50 @@ pub async fn play(opts: PlayOptions) -> anyhow::Result<()> {
 mod tests {
     use super::*;
     use tmc_model::companion::CompanionKind;
+
+    #[tokio::test]
+    async fn play_creates_marker_before_first_line() {
+        let src = tempfile::tempdir().unwrap();
+        let dst = tempfile::tempdir().unwrap();
+        let name = "Journal.2026-03-09T090001.01.log";
+        let src_file = src.path().join(name);
+        std::fs::write(
+            &src_file,
+            "{ \"timestamp\":\"2026-03-09T09:00:01Z\", \"event\":\"Fileheader\", \"part\":1, \"gameversion\":\"4.1.0.0\" }
+",
+        )
+        .unwrap();
+        // Un directorio con el nombre del diario impide crearlo: el marcador debe existir ya.
+        std::fs::create_dir(dst.path().join(name)).unwrap();
+        let result = play(PlayOptions {
+            from: src_file.clone(),
+            to: dst.path().to_path_buf(),
+            speed: 1000.0,
+            status_dir: None,
+        })
+        .await;
+        assert!(result.is_err());
+        assert!(dst.path().join(tmc_model::sync::REPLAY_MARKER).is_file());
+
+        // Reproducción normal: marcador presente y diario escrito.
+        let dst2 = tempfile::tempdir().unwrap();
+        play(PlayOptions {
+            from: src_file,
+            to: dst2.path().to_path_buf(),
+            speed: 1000.0,
+            status_dir: None,
+        })
+        .await
+        .unwrap();
+        assert!(dst2.path().join(".tmc-replay").is_file());
+        assert_eq!(
+            std::fs::read_to_string(dst2.path().join(name))
+                .unwrap()
+                .lines()
+                .count(),
+            1
+        );
+    }
 
     #[test]
     fn replay_maps_ship_locker_to_the_file_the_watcher_reads() {

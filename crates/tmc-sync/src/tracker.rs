@@ -47,16 +47,16 @@ impl TransientTracker {
                 }
             }
             EventKind::Commander(c) => {
-                if c.fid.is_some() {
-                    self.state.cmdr_fid = c.fid.clone();
+                if let Some(fid) = &c.fid {
+                    self.switch_cmdr(fid);
                 }
                 if c.name.is_some() {
                     self.state.cmdr_name = c.name.clone();
                 }
             }
             EventKind::LoadGame(l) => {
-                if l.fid.is_some() {
-                    self.state.cmdr_fid = l.fid.clone();
+                if let Some(fid) = &l.fid {
+                    self.switch_cmdr(fid);
                 }
                 if l.commander.is_some() {
                     self.state.cmdr_name = l.commander.clone();
@@ -103,6 +103,18 @@ impl TransientTracker {
     /// Descarta todo el estado al empezar a leer otro archivo de diario.
     pub fn reset_for_new_file(&mut self) {
         self.state = TransientSnapshot::default();
+    }
+
+    /// Fija el comandante; si es otro, olvida la ubicación del anterior.
+    fn switch_cmdr(&mut self, fid: &str) {
+        if self.state.cmdr_fid.as_deref() != Some(fid) {
+            self.state.system_name = None;
+            self.state.system_address = None;
+            self.state.star_pos = None;
+            self.state.market_id = None;
+            self.state.station_name = None;
+            self.state.cmdr_fid = Some(fid.to_string());
+        }
     }
 
     fn set_version(&mut self, gameversion: Option<&str>, build: Option<&str>) {
@@ -198,9 +210,49 @@ mod tests {
     fn reset_for_new_file_clears_everything() {
         let mut t = TransientTracker::new();
         t.apply(&ev(r#"{"timestamp":"2026-03-09T09:00:12Z","event":"LoadGame","FID":"F0000001","Commander":"C","gameversion":"4.0.0.1","build":"b"}"#));
+        t.apply(&ev(r#"{"timestamp":"2026-03-09T09:06:00Z","event":"Docked","StationName":"Dawes Hub","MarketID":128000001,"StarSystem":"Achenar","SystemAddress":2}"#));
+        assert_eq!(t.snapshot().market_id, Some(128000001));
         t.reset_for_new_file();
         let s = t.snapshot();
+        assert_eq!(s, TransientSnapshot::default());
         assert_eq!(s.cmdr_fid, None);
+        assert_eq!(s.market_id, None);
+        assert_eq!(s.system_name, None);
         assert_eq!(s.galaxy, Galaxy::Unknown);
+    }
+
+    #[test]
+    fn loadgame_with_other_fid_clears_location() {
+        let mut t = TransientTracker::new();
+        t.apply(&ev(r#"{"timestamp":"2026-03-09T09:00:12Z","event":"LoadGame","FID":"F0000001","Commander":"C","gameversion":"4.0.0.1","build":"b"}"#));
+        t.apply(&ev(r#"{"timestamp":"2026-03-09T09:01:00Z","event":"Location","StarSystem":"Sol","SystemAddress":10477373803,"StarPos":[0,0,0],"Docked":true,"StationName":"Abraham Lincoln","MarketID":128016640}"#));
+        assert_eq!(t.snapshot().system_name.as_deref(), Some("Sol"));
+        assert_eq!(t.snapshot().market_id, Some(128016640));
+
+        // Mismo FID: conserva el sistema (relogueo del mismo comandante).
+        t.apply(&ev(r#"{"timestamp":"2026-03-09T09:02:00Z","event":"LoadGame","FID":"F0000001","Commander":"C","gameversion":"4.0.0.1","build":"b"}"#));
+        assert_eq!(t.snapshot().system_name.as_deref(), Some("Sol"));
+
+        t.apply(&ev(r#"{"timestamp":"2026-03-09T09:03:00Z","event":"LoadGame","FID":"F0000002","Commander":"D","gameversion":"4.0.0.1","build":"b"}"#));
+        let s = t.snapshot();
+        assert_eq!(s.cmdr_fid.as_deref(), Some("F0000002"));
+        assert_eq!(s.system_name, None);
+        assert_eq!(s.system_address, None);
+        assert_eq!(s.star_pos, None);
+        assert_eq!(s.market_id, None);
+        assert_eq!(s.station_name, None);
+    }
+
+    #[test]
+    fn commander_with_other_fid_clears_location() {
+        let mut t = TransientTracker::new();
+        t.apply(&ev(r#"{"timestamp":"2026-03-09T09:00:05Z","event":"Commander","FID":"F0000001","Name":"C"}"#));
+        t.apply(&ev(r#"{"timestamp":"2026-03-09T09:01:00Z","event":"FSDJump","StarSystem":"Achenar","SystemAddress":2,"StarPos":[67.5,-119.4,24.8]}"#));
+        t.apply(&ev(r#"{"timestamp":"2026-03-09T09:20:05Z","event":"Commander","FID":"F0000002","Name":"D"}"#));
+        let s = t.snapshot();
+        assert_eq!(s.cmdr_fid.as_deref(), Some("F0000002"));
+        assert_eq!(s.system_name, None);
+        assert_eq!(s.system_address, None);
+        assert_eq!(s.star_pos, None);
     }
 }

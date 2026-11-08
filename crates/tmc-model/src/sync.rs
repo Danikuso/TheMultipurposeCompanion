@@ -5,6 +5,9 @@ use crate::events::JournalEvent;
 use crate::state::Galaxy;
 use serde::{Deserialize, Serialize};
 
+/// Marcador que `tmc-replay play` deja en la carpeta de destino: con él presente no se sincroniza nada.
+pub const REPLAY_MARKER: &str = ".tmc-replay";
+
 /// Servicio externo al que se sincroniza.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
