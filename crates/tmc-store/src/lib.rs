@@ -10,6 +10,7 @@ pub mod import;
 pub mod migrations;
 pub mod prices;
 pub mod query;
+pub mod sync_credential;
 pub mod sync_outbox;
 pub mod ui_layout;
 pub mod writer;
@@ -18,6 +19,7 @@ pub use accounts::AccountCredentialRecord;
 pub use import::{ImportOptions, ImportReport, import_history};
 pub use migrations::Migration;
 pub use query::{EventQuery, EventRow};
+pub use sync_credential::{MigrationReport, SyncCredential, UnassignedKey, UnassignedReason};
 pub use sync_outbox::{
     CursorAdvance, EnqueueOutcome, NewOutboxRow, OutboxRow, SYNC_PENDING_CAP, SYNC_RETENTION_DAYS,
     SyncCounts,
