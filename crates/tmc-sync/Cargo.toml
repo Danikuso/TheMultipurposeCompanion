@@ -1,0 +1,26 @@
+[package]
+name = "tmc-sync"
+description = "Sincronización con servicios externos (Inara, EDSM, EDDN): reloj, identificadores y estado transitorio"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[dependencies]
+tmc-model = { path = "../tmc-model" }
+tmc-journal = { path = "../tmc-journal" }
+tmc-net = { path = "../tmc-net" }
+tmc-store = { path = "../tmc-store" }
+tokio = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+flate2 = { workspace = true }
+
+[dev-dependencies]
+tmc-net = { path = "../tmc-net", features = ["testing"] }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }

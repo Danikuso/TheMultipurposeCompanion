@@ -5211,6 +5211,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "tmc-sync"
+version = "1.3.0"
+dependencies = [
+ "chrono",
+ "flate2",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "tmc-journal",
+ "tmc-model",
+ "tmc-net",
+ "tmc-store",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "tmc-tts"
 version = "1.3.0"
 dependencies = [
