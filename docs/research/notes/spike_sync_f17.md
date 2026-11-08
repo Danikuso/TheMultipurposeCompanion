@@ -31,6 +31,8 @@ same_session(prev, cur) -> bool
   4. en cualquier otro caso -> false
 ```
 
+**Estrechamiento declarado frente a spec §5.4.1:** la spec admite «`Continued` o `part > 1`»; esta regla exige además `part(prev)+1 == part(cur)` cuando se apoya en el nombre. Falla cerrado (ante duda, no se recupera); coste: alguna recuperación no hecha en rollovers raros (ruling T0-4, desviación registrada en el plan).
+
 Es decir: `same_session = (part(cur) >= 2 && part(prev)+1 == part(cur)) || last_event(prev) == "Continued"`.
 
 Justificación:
@@ -65,7 +67,7 @@ Problema: `replaying = true` marca el final del arranque solo cuando llega la pr
 Decisión: añadir `SourceEvent::CatchUpDone`, emitido por el watcher **inmediatamente después** de `emit_journals(events, ..)` del arranque (l. 454) y **antes** de `Theme`. Garantías:
 - Va por el mismo `mpsc` ordenado: se recibe tras todos los `Journal`/`Companion` del arranque (incluidos los prependidos) y antes de cualquier línea `Live`.
 - Se emite **siempre**, incluso sin diarios o si el primero falla al abrir (eventos vacíos).
-- El `Recovery` del anterior de la misma sesión debe ejecutarse **antes** de procesar las líneas del vigente (§5.4 «Lectura»); como el router solo ve el vigente a través del watcher, la forma segura es que el actor/router retenga las líneas `CatchUp` hasta tener el resultado del `Recovery` o que el `Recovery` se ejecute al construir el router (antes de que el actor consuma). Decisión de integración para la tarea de implementación; el marcador `CatchUpDone` solo delimita el final de lo recuperable.
+- El `Recovery` del anterior de la misma sesión debe ejecutarse **antes** de procesar las líneas del vigente (§5.4 «Lectura»); como el router solo ve el vigente a través del watcher, la forma segura es que el actor/router retenga las líneas `CatchUp` hasta tener el resultado del `Recovery` o que el `Recovery` se ejecute al construir el router (antes de que el actor consuma). **Fijado (ruling T0-5):** `Recovery` se ejecuta al construir el router, antes de procesar las líneas del archivo vigente. El marcador `CatchUpDone` solo delimita el final de lo recuperable.
 - Tras `CatchUpDone` empieza el estado `Live`; la instantánea de Inara (§5.3) se genera tras `CatchUpDone` y después de `Recovery`.
 
 Alternativa descartada: usar `Theme` como delimitador (acoplado a otro propósito; si en el futuro se omite en error, rompe la sincronización).
@@ -82,25 +84,18 @@ Alternativa descartada: usar `Theme` como delimitador (acoplado a otro propósit
 
 Windows: `ProcessCheck`. `tmc-journal/src/process.rs` busca el proceso `EliteDangerous64.exe` con `sysinfo` 0.39.6 (`Cargo.lock`). Verificado en esta máquina por el código y por el uso en producción. Con `TMC_E2E_GAME_RUNNING` solo en depuración.
 
-Linux/Proton: hallazgos por lectura del código de `sysinfo-0.39.6/src/unix/linux/process.rs` (l. 579, 589, 1080-1100):
-- `Process::name()` se toma del campo `comm` de `/proc/<pid>/stat`, entre paréntesis. El kernel trunca `comm` a **15 caracteres**.
-- `EliteDangerous64.exe` / `EliteDangerous64` (16 caracteres) llegaría como `EliteDangerous6`. La comparación actual de `is_game_running` (`== "EliteDangerous64.exe"` o `== "EliteDangerous64"`) **no coincidiría nunca en Linux**. Defecto latente de la detección en Linux (no afecta a Windows).
-- Bajo Proton/Wine el hilo principal del juego normalmente toma como `comm` el nombre del ejecutable `.exe` truncado, de modo que la coincidencia correcta sería por prefijo `EliteDangerous6`. **No se ha podido verificar en una máquina Linux real** (host Windows, sin WSL con el juego, sin red).
+Linux/Proton (decisión del controlador, ruling T0-1): **`LiveSignalPolicy::JournalActivity`** (en la spec: «Juego en vivo (Linux)», §5.2). La señal es: líneas `Live` nuevas en el archivo vigente **+ ausencia del marcador `.tmc-replay`** (lo creará E0-8, PD-9; hoy no existe en el código ni `tmc-replay` lo escribe) **+ el resto de guardas** (§5.4.6). Si el marcador o las guardas no se cumplen, el estado es `unavailable`.
 
-Señal alternativa «líneas `Live` nuevas en el archivo vigente» (`JournalActivity`): **no es fiable por sí sola**. Falsos positivos demostrados por el código:
-1. Cualquier archivo nuevo que aparezca con nombre de diario mientras TMC corre se lee entero con `replaying = false` (watcher `poll`, l. 215-232): una copia manual, un archivo restaurado o la salida de `tmc-replay` produce líneas `Live`.
-2. Truncado del archivo -> `line_no = 0` y relectura marcada como `Live`.
-3. Un diario que sigue creciendo por un juego lanzado por otro usuario/prefijo de Proton ajeno a TMC (cambio de carpeta) no es discernible.
-El marcador `.tmc-replay` mitigaría solo el caso `tmc-replay` (hoy el marcador **no existe** en el código; `tmc-replay` no lo escribe) y no las copias manuales. Tampoco hay forma segura de distinguir «diario escribiéndose» de «diario recién copiado» sin heurísticas de `mtime`.
+Riesgo aceptado: una copia manual de un diario con TMC abierto se trataría como vivo, porque el watcher lee entero con `replaying = false` cualquier archivo nuevo que aparezca (`poll`, l. 215-232); igual un truncado (`line_no = 0`, relectura `Live`). El marcador `.tmc-replay` mitiga `tmc-replay`, no las copias manuales. Coste si falla: envío duplicado de datos reales (EDDN/EDSM mayormente idempotentes por el lado servidor).
 
-Decisión para Linux: `LiveSignalPolicy::ProcessCheck` con coincidencia por prefijo de 15 caracteres (`EliteDangerous6`) **como política primaria**, con degradación segura: si en la sesión nunca se observa el proceso, no se sincroniza (equivale a `Unavailable`; falla hacia no enviar). Se descarta `JournalActivity` como señal de autorización. Estado: **pendiente de verificación manual por el propietario en una máquina Linux/Proton** (comprobar que `/proc/<pid>/comm` es `EliteDangerous6`). Si esa verificación falla, la política pasa a `Unavailable` (la spec §5.2 y §Riesgos lo prevén; no es bloqueo). No contradice la spec §5.4: la recuperación (§5.4.7) no requiere el juego en ejecución.
+Mejora futura / defecto latente de `is_game_running` (NO es política de F17): según `sysinfo-0.39.6/src/unix/linux/process.rs` (l. 579, 589, 1080-1100) `Process::name()` es el campo `comm` de `/proc/<pid>/stat`, que el kernel trunca a 15 caracteres. `EliteDangerous64(.exe)` (16) llegaría como `EliteDangerous6`, por lo que la comparación actual no coincide nunca en Linux. Una futura `ProcessCheck` en Linux debería comparar por prefijo `EliteDangerous6`; no se pudo verificar en una máquina Linux/Proton real (host Windows).
 
 Enum resultante:
 
 ```
 enum LiveSignalPolicy { ProcessCheck, JournalActivity, Unavailable }
 // Windows -> ProcessCheck ("EliteDangerous64.exe")
-// Linux   -> ProcessCheck (prefijo "EliteDangerous6"), degradación a Unavailable si no se observa
+// Linux   -> JournalActivity (Live nuevas + sin .tmc-replay + guardas); si no se cumple -> unavailable
 // macOS / otros -> Unavailable
 ```
 
@@ -114,7 +109,7 @@ enum LiveSignalPolicy { ProcessCheck, JournalActivity, Unavailable }
 | Base de líneas | 1-based; `last_line` = última línea procesada; cursor ausente = 0 |
 | Importación histórica | no pasa por el actor; no genera envíos |
 | Windows | `ProcessCheck` |
-| Linux | `ProcessCheck` por prefijo `EliteDangerous6` (sin verificar en máquina real); `JournalActivity` descartada; fallo seguro a no enviar |
+| Linux | `JournalActivity`: Live nuevas + sin `.tmc-replay` + guardas (ruling T0-1). `ProcessCheck` por prefijo `EliteDangerous6` = mejora futura |
 | Hipótesis no verificada | nombre del archivo tras un `Continued` real (ausente en los diarios del propietario) |
 
 ## EDDN
