@@ -5,6 +5,7 @@ use crate::events::JournalEvent;
 use crate::net::NetResponse;
 use crate::settings::ModuleSettings;
 use crate::status::Status;
+use crate::sync::SyncReport;
 use crate::theme::HudTheme;
 use chrono::{DateTime, Utc};
 
@@ -34,6 +35,8 @@ pub enum SourceEvent {
     Settings(ModuleSettings),
     /// Aviso ligero del servicio EDDN: los datos viven en la tabla de precios.
     Eddn(EddnNotice),
+    /// Estado de sincronización con servicios externos (Inara, EDSM, EDDN, roster).
+    SyncReport(Box<SyncReport>),
     Stored {
         module: String,
         tag: String,

@@ -105,7 +105,7 @@ impl InaraClient {
             header: InaraHeader {
                 app_name: self.app_name.clone(),
                 app_version: self.app_version.clone(),
-                is_developed: false,
+                is_being_developed: false,
                 api_key: api_key.trim().to_string(),
                 commander_name: commander_name.map(|n| n.trim().to_string()),
             },

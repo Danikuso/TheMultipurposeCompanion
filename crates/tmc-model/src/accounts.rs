@@ -154,8 +154,8 @@ pub struct InaraHeader {
     pub app_name: String,
     #[serde(rename = "appVersion")]
     pub app_version: String,
-    #[serde(rename = "isDeveloped")]
-    pub is_developed: bool,
+    #[serde(rename = "isBeingDeveloped")]
+    pub is_being_developed: bool,
     #[serde(rename = "APIkey")]
     pub api_key: String,
     #[serde(rename = "commanderName", skip_serializing_if = "Option::is_none")]
@@ -183,6 +183,20 @@ pub struct InaraBatchEnvelope<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn inara_header_uses_is_being_developed() {
+        let header = InaraHeader {
+            app_name: "TMC".into(),
+            app_version: "1".into(),
+            is_being_developed: false,
+            api_key: "k".into(),
+            commander_name: None,
+        };
+        let json = serde_json::to_string(&header).unwrap();
+        assert!(json.contains("\"isBeingDeveloped\":false"));
+        assert!(!json.contains("isDeveloped"));
+    }
 
     #[test]
     fn account_settings_defaults() {
@@ -231,7 +245,7 @@ mod tests {
             header: InaraHeader {
                 app_name: "TMC".to_string(),
                 app_version: "0.1.0".to_string(),
-                is_developed: false,
+                is_being_developed: false,
                 api_key: "key123".to_string(),
                 commander_name: Some("Danikuso".to_string()),
             },

@@ -464,6 +464,10 @@ fn secret_field(key: &str) -> bool {
         "dbpath",
         "url",
         "uri",
+        "commanderfrontierid",
+        "cmdrfid",
+        "uploaderid",
+        "payload",
     ]
     .iter()
     .any(|part| key.contains(part))
@@ -1223,6 +1227,22 @@ pub mod capture {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn sync_secret_fields_are_redacted() {
+        let raw = json!({"commanderFrontierID":"F1","cmdr_fid":"F1","uploaderID":"u","payload":"{}","APIkey":"k","api_key":"k"});
+        let safe = redact_diagnostic(&raw, DiagnosticContext::State);
+        for key in [
+            "commanderFrontierID",
+            "cmdr_fid",
+            "uploaderID",
+            "payload",
+            "APIkey",
+            "api_key",
+        ] {
+            assert_eq!(safe[key], "[redacted]", "{key}");
+        }
+    }
 
     #[test]
     fn sql_template_rejects_comments_and_bracket_identifiers() {
