@@ -23,6 +23,8 @@ pub enum SourceEvent {
         running: bool,
     },
     Theme(HudTheme),
+    /// Fin de la relectura inicial del diario (una sola vez, antes de `Theme`).
+    CatchUpDone,
     ImportProgress {
         done: u64,
         total: u64,

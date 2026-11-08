@@ -8,6 +8,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::time::Duration;
 use tmc_model::net::NetRequest;
 use tmc_model::source::SourceEvent;
+use tmc_model::sync::{FeedOrigin, SyncFeed, SyncFeedEvent};
 use tmc_model::{
     state::{Changes, GameState},
     theme::HudTheme,
@@ -104,6 +105,8 @@ pub struct CoreOptions {
     pub flush_every: Duration,
     pub store: Option<Store>,
     pub net: Option<mpsc::Sender<NetRequest>>,
+    /// Feed ordenado hacia la sincronización con servicios externos (`None` = sin coste).
+    pub sync: Option<mpsc::UnboundedSender<SyncFeed>>,
 }
 
 pub fn spawn_core(
@@ -118,6 +121,7 @@ pub fn spawn_core(
             flush_every,
             store: None,
             net: None,
+            sync: None,
         },
     )
 }
@@ -128,6 +132,7 @@ pub fn spawn_core_with(modules: Vec<Box<dyn Module>>, opts: CoreOptions) -> Core
         flush_every,
         store,
         net,
+        sync,
     } = opts;
     let (events, event_receiver) = mpsc::channel(256);
     let (snapshots, snapshot_receiver) = mpsc::channel(32);
@@ -139,6 +144,7 @@ pub fn spawn_core_with(modules: Vec<Box<dyn Module>>, opts: CoreOptions) -> Core
         let (stored_tx, stored_rx) = mpsc::channel(64);
         let mut actor = Actor::new(modules, writer, actor_updates);
         actor.net = net;
+        actor.sync = sync;
         // Un único worker ejecuta las tareas de SQLite en orden FIFO; termina
         // cuando el actor suelta `task_tx`.
         if let Some(store) = store {
@@ -213,6 +219,10 @@ struct Actor {
     writer: Option<EventWriter>,
     updates: broadcast::Sender<CoreMessage>,
     net: Option<mpsc::Sender<NetRequest>>,
+    // Feed hacia la sincronización; se suelta si el receptor se cierra.
+    sync: Option<mpsc::UnboundedSender<SyncFeed>>,
+    sync_sent: u64,
+    sync_catch_up_done: bool,
     // Cola (sin límite, nunca bloquea al actor) hacia el worker único de SQLite.
     // Los resultados vuelven por un canal propio, que no mantiene vivo al actor.
     task_tx: Option<std::sync::mpsc::Sender<StoreJob>>,
@@ -241,6 +251,9 @@ impl Actor {
             writer,
             updates,
             net: None,
+            sync: None,
+            sync_sent: 0,
+            sync_catch_up_done: false,
             task_tx: None,
             next_request_id: 1,
             advisor: crate::voice_advisor::VoiceAdvisor::new(),
@@ -442,6 +455,66 @@ impl Actor {
         }
     }
 
+    /// Envía al feed de sincronización el evento ya aplicado al estado. Nunca bloquea:
+    /// el canal no tiene límite y, si el receptor se cierra, el feed se desactiva.
+    fn feed_sync(&mut self, event: &SourceEvent) {
+        let Some(sync) = &self.sync else {
+            return;
+        };
+        let (event, origin) = match event {
+            SourceEvent::Journal {
+                ev,
+                file,
+                line,
+                replaying,
+            } => (
+                SyncFeedEvent::Journal {
+                    ev: ev.clone(),
+                    file: file.clone(),
+                    line: *line,
+                },
+                if *replaying {
+                    FeedOrigin::CatchUp
+                } else {
+                    FeedOrigin::Live
+                },
+            ),
+            SourceEvent::Companion(file) => {
+                (SyncFeedEvent::Companion(file.clone()), FeedOrigin::Live)
+            }
+            SourceEvent::GameProcess { running } => (
+                SyncFeedEvent::GameProcess { running: *running },
+                FeedOrigin::Live,
+            ),
+            SourceEvent::CatchUpDone if !self.sync_catch_up_done => {
+                self.sync_catch_up_done = true;
+                (SyncFeedEvent::CatchUpDone, FeedOrigin::Live)
+            }
+            _ => return,
+        };
+        let feed = SyncFeed {
+            event,
+            origin,
+            galaxy: self.state.galaxy,
+            game_running: self.state.game_running,
+        };
+        if sync.send(feed).is_err() {
+            self.sync = None;
+            tracing::warn!("sync feed receiver closed; feed disabled");
+            return;
+        }
+        self.sync_sent += 1;
+        #[cfg(debug_assertions)]
+        if self.sync_sent == 1 || self.sync_sent.is_multiple_of(256) {
+            // El canal sin límite no expone su profundidad: se registra el total enviado.
+            tmc_model::diagnostic!(
+                tmc_model::diagnostics::DiagnosticContext::State,
+                "actor.sync.depth",
+                tmc_model::diagnostics::json!({"sent": self.sync_sent})
+            );
+        }
+    }
+
     fn apply(&mut self, event: SourceEvent) {
         #[cfg(debug_assertions)]
         let diag = self.diag_begin(&event);
@@ -493,6 +566,7 @@ impl Actor {
                 Changes::empty()
             }
             SourceEvent::Net(_)
+            | SourceEvent::CatchUpDone
             | SourceEvent::Action { .. }
             | SourceEvent::Settings(_)
             | SourceEvent::Eddn(_)
@@ -500,6 +574,7 @@ impl Actor {
             | SourceEvent::Stored { .. } => Changes::empty(),
         };
         self.update_core(changes);
+        self.feed_sync(&event);
 
         // Evaluar avisos contextuales de copiloto de cabina
         let voice_cues = self.advisor.process_event(&event, &self.state);
@@ -727,6 +802,28 @@ mod tests {
             ))
             .unwrap(),
         )
+    }
+    fn journal_at(name: &str, extra: &str, line: u64, replaying: bool) -> SourceEvent {
+        match journal(name, extra, replaying) {
+            SourceEvent::Journal {
+                ev,
+                file,
+                replaying,
+                ..
+            } => SourceEvent::Journal {
+                ev,
+                file,
+                line,
+                replaying,
+            },
+            other => other,
+        }
+    }
+    fn sync_core() -> (CoreHandle, mpsc::UnboundedReceiver<SyncFeed>) {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let mut opts = options(None, None);
+        opts.sync = Some(tx);
+        (spawn_core_with(vec![], opts), rx)
     }
     async fn next(rx: &mut broadcast::Receiver<CoreMessage>) -> CoreMessage {
         timeout(Duration::from_secs(2), rx.recv())
@@ -1423,7 +1520,114 @@ mod tests {
             flush_every: Duration::from_millis(100),
             store,
             net,
+            sync: None,
         }
+    }
+
+    #[tokio::test]
+    async fn sync_sink_receives_events_after_apply_in_order() {
+        let (core, mut rx) = sync_core();
+        for event in [
+            journal_at("Fileheader", r#","gameversion":"4.1.0.0""#, 1, true),
+            journal_at("LoadGame", "", 2, true),
+            journal_at("FSDJump", "", 3, true),
+        ] {
+            core.events.send(event).await.unwrap();
+        }
+        core.snapshot().await;
+        let feeds: Vec<_> = std::iter::from_fn(|| rx.try_recv().ok()).collect();
+        assert_eq!(feeds.len(), 3);
+        match &feeds[2].event {
+            SyncFeedEvent::Journal { ev, line, file } => {
+                assert_eq!((ev.name.as_str(), *line), ("FSDJump", 3));
+                assert_eq!(file, "Journal.synthetic.log");
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn replaying_journal_is_catchup_and_live_is_live() {
+        let (core, mut rx) = sync_core();
+        core.events
+            .send(journal_at("Shutdown", "", 1, true))
+            .await
+            .unwrap();
+        core.events
+            .send(journal_at("Shutdown", "", 2, false))
+            .await
+            .unwrap();
+        core.snapshot().await;
+        assert_eq!(rx.try_recv().unwrap().origin, FeedOrigin::CatchUp);
+        assert_eq!(rx.try_recv().unwrap().origin, FeedOrigin::Live);
+    }
+
+    #[tokio::test]
+    async fn feed_galaxy_reflects_state_after_event() {
+        let (core, mut rx) = sync_core();
+        core.events
+            .send(journal_at(
+                "Fileheader",
+                r#","gameversion":"3.8.0""#,
+                1,
+                true,
+            ))
+            .await
+            .unwrap();
+        core.snapshot().await;
+        assert_eq!(
+            rx.try_recv().unwrap().galaxy,
+            tmc_model::state::Galaxy::Legacy
+        );
+    }
+
+    #[tokio::test]
+    async fn catchup_done_sent_once_after_replay_signal() {
+        let (core, mut rx) = sync_core();
+        core.events
+            .send(journal_at("Shutdown", "", 1, true))
+            .await
+            .unwrap();
+        core.events
+            .send(journal_at("Shutdown", "", 2, true))
+            .await
+            .unwrap();
+        core.events.send(SourceEvent::CatchUpDone).await.unwrap();
+        core.events.send(SourceEvent::CatchUpDone).await.unwrap();
+        core.events
+            .send(SourceEvent::Theme(HudTheme::default()))
+            .await
+            .unwrap();
+        core.events
+            .send(SourceEvent::GameProcess { running: true })
+            .await
+            .unwrap();
+        core.snapshot().await;
+        let kinds: Vec<_> = std::iter::from_fn(|| rx.try_recv().ok())
+            .map(|f| match f.event {
+                SyncFeedEvent::Journal { .. } => "journal",
+                SyncFeedEvent::CatchUpDone => "done",
+                SyncFeedEvent::GameProcess { running } => {
+                    assert!(running);
+                    "process"
+                }
+                SyncFeedEvent::Companion(_) => "companion",
+            })
+            .collect();
+        assert_eq!(kinds, ["journal", "journal", "done", "process"]);
+    }
+
+    #[tokio::test]
+    async fn closed_sync_receiver_never_blocks_actor() {
+        let (core, rx) = sync_core();
+        drop(rx);
+        for line in 0..100 {
+            core.events
+                .send(journal_at("Shutdown", "", line, false))
+                .await
+                .unwrap();
+        }
+        assert!(core.snapshot().await.contains_key("core.game"));
     }
 
     #[tokio::test]

@@ -48,6 +48,7 @@ fn kind(event: &SourceEvent) -> u8 {
         SourceEvent::Stored { .. } => 9,
         SourceEvent::Eddn(_) => 10,
         SourceEvent::SyncReport(_) => 11,
+        SourceEvent::CatchUpDone => 12,
     }
 }
 

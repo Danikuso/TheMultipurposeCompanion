@@ -454,6 +454,10 @@ async fn run(opts: WatchOptions, tx: mpsc::Sender<SourceEvent>) {
     if !emit_journals(events, &opts.journal_dir, &tx, &mut running).await {
         return;
     }
+    // Fin de la relectura inicial: lo consume la sincronización (CatchUp -> Live).
+    if tx.send(SourceEvent::CatchUpDone).await.is_err() {
+        return;
+    }
     let theme = tokio::select! {
         biased;
         _ = tx.closed() => return,
@@ -618,6 +622,40 @@ mod tests {
             .write_all(line(2).as_bytes())
             .unwrap();
         assert_eq!(journal(&mut rx).await, ("Test2".into(), A.into(), 2, false));
+        stop(rx, handle).await;
+    }
+
+    #[tokio::test]
+    async fn catch_up_done_is_emitted_once_after_replay_and_before_theme() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join(A), [line(1), line(2)].concat()).unwrap();
+        let (mut rx, handle) = start(dir.path());
+        let mut seen = Vec::new();
+        loop {
+            match next(&mut rx).await {
+                SourceEvent::Journal { ev, replaying, .. } => {
+                    seen.push(format!("{}:{replaying}", ev.name))
+                }
+                SourceEvent::CatchUpDone => seen.push("done".into()),
+                SourceEvent::Theme(_) => break,
+                _ => {}
+            }
+        }
+        assert_eq!(seen, ["Test1:true", "Test2:true", "done"]);
+        OpenOptions::new()
+            .append(true)
+            .open(dir.path().join(A))
+            .unwrap()
+            .write_all(line(3).as_bytes())
+            .unwrap();
+        // Tras el arranque no vuelve a emitirse.
+        loop {
+            match next(&mut rx).await {
+                SourceEvent::CatchUpDone => panic!("CatchUpDone repetido"),
+                SourceEvent::Journal { ev, .. } if ev.name == "Test3" => break,
+                _ => {}
+            }
+        }
         stop(rx, handle).await;
     }
 

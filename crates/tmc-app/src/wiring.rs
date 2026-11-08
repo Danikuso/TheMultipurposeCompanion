@@ -213,6 +213,7 @@ async fn start_inner(
             flush_every: Duration::from_millis(100),
             store: Some(store.clone()),
             net: Some(net.tx.clone()),
+            sync: None,
         },
     );
     tmc_model::diagnostic!(
