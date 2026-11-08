@@ -1,0 +1,4 @@
+{ "timestamp":"2026-03-07T09:00:01Z", "event":"Fileheader", "part":1, "language":"English/UK", "Odyssey":true, "gameversion":"3.8.0.407", "build":"r999999/r0 " }
+{ "timestamp":"2026-03-07T09:00:05Z", "event":"Commander", "FID":"F0000001", "Name":"CMDR TESTER" }
+{ "timestamp":"2026-03-07T09:00:12Z", "event":"LoadGame", "FID":"F0000001", "Commander":"CMDR TESTER", "Horizons":true, "Odyssey":true, "Ship":"python", "ShipID":7, "GameMode":"Solo", "Credits":1000, "language":"English/UK", "gameversion":"3.8.0.407", "build":"r999999/r0 " }
+{ "timestamp":"2026-03-07T09:05:00Z", "event":"FSDJump", "StarSystem":"Legacyia", "SystemAddress":10477373807, "StarPos":[1.0,2.0,3.0], "JumpDist":10.5 }
