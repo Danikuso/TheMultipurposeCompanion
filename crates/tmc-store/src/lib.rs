@@ -10,6 +10,7 @@ pub mod import;
 pub mod migrations;
 pub mod prices;
 pub mod query;
+pub mod sync_outbox;
 pub mod ui_layout;
 pub mod writer;
 
@@ -17,6 +18,7 @@ pub use accounts::AccountCredentialRecord;
 pub use import::{ImportOptions, ImportReport, import_history};
 pub use migrations::Migration;
 pub use query::{EventQuery, EventRow};
+pub use sync_outbox::{CursorAdvance, EnqueueOutcome, NewOutboxRow};
 pub use ui_layout::{UiLayoutProfile, UiLayoutSummary};
 pub use writer::{EventWriter, StoredEvent};
 
@@ -151,6 +153,10 @@ impl Store {
                 Migration {
                     id: "f15_ui_layout",
                     sql: migrations::UI_LAYOUT_SCHEMA,
+                },
+                Migration {
+                    id: "f17_sync",
+                    sql: migrations::SYNC_SCHEMA,
                 },
             ])?;
             Ok(store)
