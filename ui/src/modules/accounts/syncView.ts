@@ -97,6 +97,12 @@ export function formatLastConfirmed(iso: string | null | undefined, nowMs = Date
   return relativeAge(iso, nowMs);
 }
 
+export function formatKeyHint(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const clean = raw.replace(/^[•.\s]+/, '');
+  return clean ? `••••${clean}` : null;
+}
+
 export function openSettingsAccounts(): void {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('tmc:open-settings', { detail: { section: 'accounts' } }));
