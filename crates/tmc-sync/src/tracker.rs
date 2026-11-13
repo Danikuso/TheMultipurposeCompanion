@@ -1,6 +1,6 @@
 //! Estado transitorio del juego que EDDN, EDSM e Inara exigen en sus cabeceras y cargas.
 
-use tmc_model::events::{EventKind, JournalEvent, LocationInfo};
+use tmc_model::events::{EventKind, JournalEvent, LocationInfo, Rank};
 use tmc_model::state::Galaxy;
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -14,9 +14,13 @@ pub struct TransientSnapshot {
     pub system_name: Option<String>,
     pub system_address: Option<u64>,
     pub star_pos: Option<[f64; 3]>,
+    pub body_name: Option<String>,
     pub market_id: Option<u64>,
     pub station_name: Option<String>,
     pub ship_id: Option<u64>,
+    pub ship_type: Option<String>,
+    pub ranks: Option<Rank>,
+    pub rank_progress: Option<Rank>,
     pub galaxy: Galaxy,
     pub is_beta: bool,
 }
@@ -66,10 +70,16 @@ impl TransientTracker {
                     self.state.horizons = Some(h);
                 }
                 self.state.ship_id = l.ship_id;
-                // Una carga nueva parte sin estación hasta el siguiente Location/Docked.
+                if l.ship.is_some() {
+                    self.state.ship_type = l.ship.clone();
+                }
+                // Una carga nueva parte sin estación ni cuerpo hasta Location/Docked.
                 self.state.market_id = None;
                 self.state.station_name = None;
+                self.state.body_name = None;
             }
+            EventKind::Rank(r) => self.state.ranks = Some(r.clone()),
+            EventKind::Progress(p) => self.state.rank_progress = Some(p.clone()),
             EventKind::Location(i) | EventKind::CarrierJump(i) => self.set_location(i, true),
             EventKind::FsdJump(i) => self.set_location(i, false),
             EventKind::Docked(d) => {
@@ -86,8 +96,32 @@ impl TransientTracker {
                 self.state.market_id = None;
                 self.state.station_name = None;
             }
-            EventKind::ShipyardSwap(s) if s.ship_id.is_some() => {
-                self.state.ship_id = s.ship_id;
+            EventKind::ApproachBody(b) => {
+                if b.body.is_some() {
+                    self.state.body_name = b.body.clone();
+                }
+            }
+            EventKind::LeaveBody(_) | EventKind::SupercruiseEntry(_) => {
+                self.state.body_name = None;
+            }
+            EventKind::Touchdown(s) | EventKind::Liftoff(s) => {
+                if s.body.is_some() {
+                    self.state.body_name = s.body.clone();
+                }
+            }
+            EventKind::ShipyardSwap(s) => {
+                if s.ship_id.is_some() {
+                    self.state.ship_id = s.ship_id;
+                }
+                if s.ship_type.is_some() {
+                    self.state.ship_type = s.ship_type.clone();
+                }
+            }
+            EventKind::Loadout(l) => {
+                self.state.ship_id = l.ship_id;
+                if l.ship.is_some() {
+                    self.state.ship_type = l.ship.clone();
+                }
             }
             _ => {}
         }
@@ -113,8 +147,13 @@ impl TransientTracker {
             self.state.system_name = None;
             self.state.system_address = None;
             self.state.star_pos = None;
+            self.state.body_name = None;
             self.state.market_id = None;
             self.state.station_name = None;
+            self.state.ship_id = None;
+            self.state.ship_type = None;
+            self.state.ranks = None;
+            self.state.rank_progress = None;
             self.state.cmdr_fid = Some(fid.to_string());
         }
     }
@@ -135,6 +174,7 @@ impl TransientTracker {
         self.state.system_name = Some(i.star_system.clone());
         self.state.system_address = Some(i.system_address);
         self.state.star_pos = Some(i.star_pos);
+        self.state.body_name = i.body.clone();
         if keep_station && i.docked {
             self.state.market_id = i.market_id;
             self.state.station_name = i.station_name.clone();

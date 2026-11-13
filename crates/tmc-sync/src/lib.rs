@@ -5,6 +5,7 @@ pub mod eddn;
 pub mod edsm;
 pub mod housekeeping;
 pub mod ids;
+pub mod inara;
 pub mod lease;
 pub mod recovery;
 pub mod router;

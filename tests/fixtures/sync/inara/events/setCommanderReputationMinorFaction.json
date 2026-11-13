@@ -18,11 +18,9 @@
   "inara": {
     "eventName": "setCommanderReputationMinorFaction",
     "eventTimestamp": "2026-11-10T18:00:00Z",
-    "eventData": [
-      {
-        "minorfactionName": "Mother Gaia",
-        "minorfactionReputation": 0.425
-      }
-    ]
+    "eventData": {
+      "minorfactionName": "Mother Gaia",
+      "minorfactionReputation": 0.425
+    }
   }
 }
