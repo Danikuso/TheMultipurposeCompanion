@@ -24,3 +24,4 @@ flate2 = { workspace = true }
 tmc-net = { path = "../tmc-net", features = ["testing"] }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
+jsonschema = { version = "0.61.2", default-features = false }

@@ -441,6 +441,16 @@ Versión 1, licencia de datos propios del proyecto **PolyForm Noncommercial 1.0.
 - Licencia: MIT OR Apache-2.0
 - Usada por: `tmc-net` (seudonimización determinista e irreversible de `uploaderID` para envíos a EDDN y generación de PKCE para CAPI)
 
+### jsonschema (solo dev-dependencies)
+- Versión: 0.61.2
+- Licencia: MIT
+- Usada por: tests de `tmc-sync` (`validate_local` + validación Draft-04 offline contra los 16 esquemas oficiales EDDN BSD-3-Clause de `tests/fixtures/sync/eddn/_schemas/`)
+
+### EDCD / EDDN Schemas (solo fixtures de test)
+- Fuente: https://github.com/EDCD/EDDN (rama `live`, commit `4ad669bb7bbe1eae080e4c354e786dca4db91f35`)
+- Licencia: BSD-3-Clause (`tests/fixtures/sync/eddn/_schemas/EDCD-LICENSE.txt`)
+- Usada por: validación offline en tests de conformidad de los 16 esquemas EDDN.
+
 ## Herramientas opcionales para generar los manuales
 
 No se incorporan al ejecutable de TMC. Se utilizan únicamente al generar la documentación PDF mediante `docs/manual/build_manuals.py`.

@@ -1,10 +1,11 @@
 //! Mapeador EDDN y saneado conforme a los 16 esquemas oficiales.
 
 pub mod companion;
+pub mod events;
 pub mod journal;
 pub mod sanitize;
 
-use crate::router::{MappedInput, MappedRow, ServiceMapper};
+use crate::router::{BatchedRow, MappedInput, MappedRow, ServiceMapper};
 use serde_json::{Value, json};
 use tmc_model::sync::{ErrorClass, OutboxState, SyncService};
 use tmc_net::eddn_upload::{SchemaMode, build_envelope, schema_ref, uploader_id};
@@ -79,6 +80,10 @@ impl ServiceMapper for EddnMapper {
         companion::wants_companion(ev)
     }
 
+    fn batches_event(&self, ev: &tmc_model::events::JournalEvent) -> bool {
+        ev.name == "FSSSignalDiscovered"
+    }
+
     fn map(&mut self, input: &MappedInput<'_>, out: &mut Vec<MappedRow>) {
         if let Some(res) = journal::map_journal(input.ev, input.snap) {
             out.push(self.build_row("journal/1", 0, input.snap, res));
@@ -86,6 +91,23 @@ impl ServiceMapper for EddnMapper {
         if let Some((schema, res)) = companion::map_companion(input.ev, input.snap, input.companion)
         {
             out.push(self.build_row(schema, 0, input.snap, res));
+        }
+        if let Some((schema, res)) = events::map_event(input.ev, input.snap) {
+            out.push(self.build_row(schema, 0, input.snap, res));
+        }
+    }
+
+    fn flush_batch(
+        &mut self,
+        evs: &[tmc_model::events::JournalEvent],
+        snap: &crate::tracker::TransientSnapshot,
+        out: &mut Vec<BatchedRow>,
+    ) {
+        if let Some((event_ts, res)) = events::map_fss_signal_group(evs, snap) {
+            out.push(BatchedRow {
+                row: self.build_row("fsssignaldiscovered/1", 0, snap, res),
+                event_ts,
+            });
         }
     }
 }

@@ -1,3 +1,4 @@
+use crate::clock::Clock;
 use crate::eddn::EddnMapper;
 use crate::eddn::sanitize::{strip_localised, validate_local};
 use crate::router::{MappedInput, MappedRow, ServiceMapper};
@@ -457,4 +458,244 @@ fn commodity_excludes_non_marketable_and_illegal() {
     assert_eq!(items.len(), 1);
     assert_eq!(items[0]["name"], "gold");
     assert!(last.payload["message"].get("stationType").is_none());
+}
+
+#[test]
+fn event_fixtures_match_golden() {
+    for name in [
+        "fssdiscoveryscan_1",
+        "fssallbodiesfound_1",
+        "navbeaconscan_1",
+        "codexentry_1",
+        "scanbarycentre_1",
+        "fssbodysignals_1",
+        "approachsettlement_1",
+        "dockinggranted_1",
+        "dockingdenied_1",
+    ] {
+        let dir = eddn_fixtures_root().join(name);
+        let input = std::fs::read_to_string(dir.join("input.log")).unwrap();
+        let expected: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(dir.join("expected.json")).unwrap())
+                .unwrap();
+
+        let mut tracker = TransientTracker::new();
+        let mut mapper = EddnMapper::new(SchemaMode::Live, "test-salt");
+        let mut rows = Vec::new();
+        for (idx, line) in input.lines().filter(|l| !l.trim().is_empty()).enumerate() {
+            let ev = parse_line(line).unwrap();
+            tracker.apply(&ev);
+            let snap = tracker.snapshot();
+            mapper.map(
+                &MappedInput {
+                    ev: &ev,
+                    file: "Journal.2026-01-01T120000.01.log",
+                    line: (idx + 1) as u64,
+                    snap: &snap,
+                    companion: None,
+                    tracker: &tracker,
+                },
+                &mut rows,
+            );
+        }
+        let last = rows
+            .last()
+            .unwrap_or_else(|| panic!("sin salida en {name}"));
+        assert_eq!(last.state, OutboxState::Pending, "{name}");
+        assert_eq!(last.payload, expected, "mismatch en {name}");
+    }
+}
+
+#[test]
+fn fss_signals_grouped_until_other_event() {
+    let tmp = tempfile::tempdir().unwrap();
+    let store = tmc_store::Store::open_in_memory().unwrap();
+    let (mut router, _clock) = setup_eddn_router(tmp.path(), &store, true);
+    let file = "Journal.2026-01-01T120000.01.log";
+
+    let lines = [
+        r#"{"timestamp":"2026-01-01T12:00:00Z","event":"Fileheader","part":1,"gameversion":"4.0.0.1903","build":"r310123/r0 "}"#,
+        r#"{"timestamp":"2026-01-01T12:00:01Z","event":"LoadGame","FID":"F0000001","Commander":"C","Horizons":true,"Odyssey":true}"#,
+        r#"{"timestamp":"2026-01-01T12:00:01Z","event":"Location","StarSystem":"Sistema A","SystemAddress":1001,"StarPos":[1.0,2.0,3.0],"Docked":false}"#,
+        r#"{"timestamp":"2026-01-01T12:00:02Z","event":"FSSSignalDiscovered","SystemAddress":1001,"SignalName":"Señal 1","SignalType":"ResourceExtraction"}"#,
+        r#"{"timestamp":"2026-01-01T12:00:03Z","event":"FSSSignalDiscovered","SystemAddress":1001,"SignalName":"Señal 2","SignalType":"USS","USSType":"$USS_Type_Salvage;","ThreatLevel":2}"#,
+        r#"{"timestamp":"2026-01-01T12:00:04Z","event":"FSSSignalDiscovered","SystemAddress":1001,"SignalName":"Señal 3","SignalType":"Outpost","IsStation":true}"#,
+    ];
+
+    for (idx, line) in lines.iter().enumerate() {
+        router
+            .handle(feed_ev(
+                tmc_model::sync::FeedOrigin::Live,
+                tmc_model::sync::SyncFeedEvent::Journal {
+                    ev: parse_line(line).unwrap(),
+                    file: file.into(),
+                    line: (idx + 1) as u64,
+                },
+            ))
+            .unwrap();
+    }
+    router.flush().unwrap();
+    assert_eq!(store.sync_cursor("F0000001", file).unwrap(), Some(3));
+
+    let jump = parse_line(
+        r#"{"timestamp":"2026-01-01T12:00:05Z","event":"FSDJump","StarSystem":"Sistema B","SystemAddress":1002,"StarPos":[10.0,20.0,30.0]}"#,
+    )
+    .unwrap();
+    router
+        .handle(feed_ev(
+            tmc_model::sync::FeedOrigin::Live,
+            tmc_model::sync::SyncFeedEvent::Journal {
+                ev: jump,
+                file: file.into(),
+                line: 7,
+            },
+        ))
+        .unwrap();
+    router.flush().unwrap();
+
+    assert_eq!(store.sync_cursor("F0000001", file).unwrap(), Some(7));
+    let counts = store
+        .sync_counts(tmc_model::sync::SyncService::Eddn, "F0000001")
+        .unwrap();
+    assert_eq!(counts.pending, 3);
+
+    let pending = store
+        .claim_ready(
+            tmc_model::sync::SyncService::Eddn,
+            None,
+            10,
+            _clock.now_utc(),
+        )
+        .unwrap();
+    let fss_rows: Vec<_> = pending
+        .iter()
+        .filter(|r| r.kind == "https://eddn.edcd.io/schemas/fsssignaldiscovered/1")
+        .collect();
+    assert_eq!(fss_rows.len(), 1);
+    let msg: serde_json::Value = serde_json::from_str(&fss_rows[0].payload).unwrap();
+    assert_eq!(msg["message"]["signals"].as_array().unwrap().len(), 3);
+    assert_eq!(msg["message"]["StarSystem"], "Sistema A");
+}
+
+#[test]
+fn fss_signal_filters_per_t0() {
+    let tmp = tempfile::tempdir().unwrap();
+    let store = tmc_store::Store::open_in_memory().unwrap();
+    let (mut router, clock) = setup_eddn_router(tmp.path(), &store, true);
+    let dir = eddn_fixtures_root().join("fsssignaldiscovered_1");
+    let input = std::fs::read_to_string(dir.join("input.log")).unwrap();
+    let expected: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(dir.join("expected.json")).unwrap()).unwrap();
+    let file = "Journal.2026-01-01T120000.01.log";
+
+    for (idx, line) in input.lines().filter(|l| !l.trim().is_empty()).enumerate() {
+        router
+            .handle(feed_ev(
+                tmc_model::sync::FeedOrigin::Live,
+                tmc_model::sync::SyncFeedEvent::Journal {
+                    ev: parse_line(line).unwrap(),
+                    file: file.into(),
+                    line: (idx + 1) as u64,
+                },
+            ))
+            .unwrap();
+    }
+    router.flush().unwrap();
+
+    let pending = store
+        .claim_ready(
+            tmc_model::sync::SyncService::Eddn,
+            None,
+            10,
+            clock.now_utc(),
+        )
+        .unwrap();
+    let fss_row = pending
+        .iter()
+        .find(|r| r.kind == "https://eddn.edcd.io/schemas/fsssignaldiscovered/1")
+        .expect("debe emitir fsssignaldiscovered/1");
+    let actual: serde_json::Value = serde_json::from_str(&fss_row.payload).unwrap();
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn all_16_golden_fixtures_pass_recursive_privacy_sweep() {
+    fn schema_file_for_dir(dir_name: &str) -> &'static str {
+        match dir_name {
+            "journal_1" => "journal-v1.0.json",
+            "commodity_3" => "commodity-v3.0.json",
+            "shipyard_2" => "shipyard-v2.0.json",
+            "outfitting_2" => "outfitting-v2.0.json",
+            "navroute_1" => "navroute-v1.0.json",
+            "fcmaterials_journal_1" => "fcmaterials_journal-v1.0.json",
+            "fssdiscoveryscan_1" => "fssdiscoveryscan-v1.0.json",
+            "fssallbodiesfound_1" => "fssallbodiesfound-v1.0.json",
+            "navbeaconscan_1" => "navbeaconscan-v1.0.json",
+            "codexentry_1" => "codexentry-v1.0.json",
+            "scanbarycentre_1" => "scanbarycentre-v1.0.json",
+            "fssbodysignals_1" => "fssbodysignals-v1.0.json",
+            "approachsettlement_1" => "approachsettlement-v1.0.json",
+            "dockinggranted_1" => "dockinggranted-v1.0.json",
+            "dockingdenied_1" => "dockingdenied-v1.0.json",
+            "fsssignaldiscovered_1" => "fsssignaldiscovered-v1.0.json",
+            other => panic!("esquema desconocido: {other}"),
+        }
+    }
+
+    let schemas_dir = eddn_fixtures_root().join("_schemas");
+    let mut expected_paths = Vec::new();
+    for j in [
+        "docked",
+        "fsdjump",
+        "scan",
+        "location",
+        "saasignalsfound",
+        "carrierjump",
+    ] {
+        expected_paths.push((
+            "journal_1",
+            eddn_fixtures_root()
+                .join("journal_1")
+                .join(j)
+                .join("expected.json"),
+        ));
+    }
+    for s in [
+        "commodity_3",
+        "shipyard_2",
+        "outfitting_2",
+        "navroute_1",
+        "fcmaterials_journal_1",
+        "fssdiscoveryscan_1",
+        "fssallbodiesfound_1",
+        "navbeaconscan_1",
+        "codexentry_1",
+        "scanbarycentre_1",
+        "fssbodysignals_1",
+        "approachsettlement_1",
+        "dockinggranted_1",
+        "dockingdenied_1",
+        "fsssignaldiscovered_1",
+    ] {
+        expected_paths.push((s, eddn_fixtures_root().join(s).join("expected.json")));
+    }
+
+    assert_eq!(expected_paths.len(), 21);
+    for (dir_name, path) in expected_paths {
+        let env: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        crate::eddn::sanitize::validate_local(&env["message"])
+            .unwrap_or_else(|bad| panic!("campo sensible {bad} en {}", path.display()));
+        let schema_json: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(schemas_dir.join(schema_file_for_dir(dir_name))).unwrap(),
+        )
+        .unwrap();
+        let validator = jsonschema::draft4::new(&schema_json).unwrap();
+        assert!(
+            validator.is_valid(&env),
+            "fallo de esquema Draft-04 en {}: {:?}",
+            path.display(),
+            validator.iter_errors(&env).collect::<Vec<_>>()
+        );
+    }
 }

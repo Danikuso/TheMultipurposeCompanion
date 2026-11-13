@@ -89,13 +89,30 @@ pub struct MappedRow {
     pub class: Option<ErrorClass>,
 }
 
+/// Fila diferida de una racha de eventos agrupados (p. ej. `FSSSignalDiscovered`).
+#[derive(Debug, Clone)]
+pub struct BatchedRow {
+    pub row: MappedRow,
+    pub event_ts: DateTime<Utc>,
+}
+
 /// Traduce eventos del diario a filas de un servicio.
 pub trait ServiceMapper: Send {
     fn service(&self) -> SyncService;
     fn wants_companion(&self, _ev: &JournalEvent) -> bool {
         false
     }
+    fn batches_event(&self, _ev: &JournalEvent) -> bool {
+        false
+    }
     fn map(&mut self, input: &MappedInput<'_>, out: &mut Vec<MappedRow>);
+    fn flush_batch(
+        &mut self,
+        _evs: &[JournalEvent],
+        _snap: &TransientSnapshot,
+        _out: &mut Vec<BatchedRow>,
+    ) {
+    }
 }
 
 const R_NONE: u8 = 0;
@@ -239,6 +256,17 @@ struct PendingCompanion {
     row_origin: RowOrigin,
 }
 
+struct PendingEventBatch {
+    kind: String,
+    file: String,
+    first_line: u64,
+    last_line: u64,
+    fid: String,
+    prior_snap: TransientSnapshot,
+    row_origin: RowOrigin,
+    events: Vec<JournalEvent>,
+}
+
 pub struct Router {
     store: Store,
     clock: Arc<dyn Clock>,
@@ -265,6 +293,7 @@ pub struct Router {
     held: VecDeque<SyncFeed>,
     held_since: Option<Instant>,
     pending_companion: Option<PendingCompanion>,
+    pending_batch: Option<PendingEventBatch>,
     enqueued_wakers: Vec<Arc<Notify>>,
     recovered_totals: Option<Arc<[AtomicU64; 3]>>,
 }
@@ -297,6 +326,7 @@ impl Router {
             held: VecDeque::new(),
             held_since: None,
             pending_companion: None,
+            pending_batch: None,
             enqueued_wakers: Vec::new(),
             recovered_totals: None,
         };
@@ -586,6 +616,7 @@ impl Router {
             }
             SyncFeedEvent::CatchUpDone => {
                 self.resolve_pending_companion(None)?;
+                self.flush_pending_batch(None)?;
                 self.finish_recovery();
                 Ok(())
             }
@@ -616,6 +647,13 @@ impl Router {
             .is_some_and(|p| p.row_origin == RowOrigin::Recovered)
         {
             self.pending_companion = None;
+        }
+        if self
+            .pending_batch
+            .as_ref()
+            .is_some_and(|b| b.row_origin == RowOrigin::Recovered)
+        {
+            self.pending_batch = None;
         }
         for c in &self.staged.cursors {
             self.cursors
@@ -666,6 +704,17 @@ impl Router {
             self.register_cmdr(ev)?;
         }
 
+        let is_live = origin == FeedOrigin::Live;
+        let same_open_batch = self.pending_batch.as_ref().is_some_and(|b| {
+            b.kind == ev.name
+                && b.file == file
+                && snap.cmdr_fid.as_deref() == Some(b.fid.as_str())
+                && self.line_block(&snap, feed_galaxy, is_live).is_none()
+        });
+        if !same_open_batch && self.pending_batch.is_some() {
+            self.flush_pending_batch(Some((ev, &snap)))?;
+        }
+
         if let Some(fid) = snap.cmdr_fid.clone() {
             let recoverable_catchup = origin == FeedOrigin::CatchUp
                 && self.recovery_open
@@ -673,7 +722,6 @@ impl Router {
             if (origin != FeedOrigin::CatchUp || recoverable_catchup)
                 && line > self.cursor(&fid, file)?
             {
-                let is_live = origin == FeedOrigin::Live;
                 let mut defer_cursor = false;
                 if self.line_block(&snap, feed_galaxy, is_live).is_none() {
                     let row_origin = if is_live {
@@ -681,7 +729,7 @@ impl Router {
                     } else {
                         RowOrigin::Recovered
                     };
-                    if self.line_wants_companion(ev, &fid)? {
+                    if self.any_active_mapper_matches(ev, &fid, |m, e| m.wants_companion(e))? {
                         self.pending_companion = Some(PendingCompanion {
                             ev: ev.clone(),
                             file: file.to_string(),
@@ -690,6 +738,29 @@ impl Router {
                             snap,
                             row_origin,
                         });
+                        defer_cursor = true;
+                    } else if self.any_active_mapper_matches(ev, &fid, |m, e| m.batches_event(e))? {
+                        if let Some(batch) = self.pending_batch.as_mut()
+                            && batch.fid == fid
+                            && batch.file == file
+                            && batch.kind == ev.name
+                            && batch.row_origin == row_origin
+                        {
+                            batch.last_line = line;
+                            batch.events.push(ev.clone());
+                        } else {
+                            self.flush_pending_batch(None)?;
+                            self.pending_batch = Some(PendingEventBatch {
+                                kind: ev.name.clone(),
+                                file: file.to_string(),
+                                first_line: line,
+                                last_line: line,
+                                fid: fid.clone(),
+                                prior_snap: snap,
+                                row_origin,
+                                events: vec![ev.clone()],
+                            });
+                        }
                         defer_cursor = true;
                     } else {
                         self.map_line(ev, file, line, &fid, &snap, row_origin, None)?;
@@ -722,6 +793,9 @@ impl Router {
         {
             self.pending_companion = None;
         }
+        if self.pending_batch.as_ref().is_some_and(|b| b.file == file) {
+            self.pending_batch = None;
+        }
         self.tracker.reset_for_new_file();
         self.refresh_replay_marker();
         let mut owners: Vec<String> = self
@@ -747,9 +821,14 @@ impl Router {
         Ok(line)
     }
 
-    fn line_wants_companion(&self, ev: &JournalEvent, fid: &str) -> Result<bool, StoreError> {
+    fn any_active_mapper_matches(
+        &self,
+        ev: &JournalEvent,
+        fid: &str,
+        pred: impl Fn(&dyn ServiceMapper, &JournalEvent) -> bool,
+    ) -> Result<bool, StoreError> {
         for mapper in &self.mappers {
-            if !mapper.wants_companion(ev) {
+            if !pred(mapper.as_ref(), ev) {
                 continue;
             }
             let Some(activated_at) = active_since(&self.store, mapper.service(), fid)? else {
@@ -760,6 +839,110 @@ impl Router {
             }
         }
         Ok(false)
+    }
+
+    fn flush_pending_batch(
+        &mut self,
+        closing: Option<(&JournalEvent, &TransientSnapshot)>,
+    ) -> Result<(), StoreError> {
+        let Some(pending) = self.pending_batch.take() else {
+            return Ok(());
+        };
+        let chosen_snap = match closing {
+            Some((ev, post_snap))
+                if matches!(ev.name.as_str(), "Location" | "FSDJump" | "CarrierJump")
+                    && post_snap.cmdr_fid.as_deref() == Some(pending.fid.as_str())
+                    && crate::eddn::events::fss_group_system_address(&pending.events)
+                        == post_snap.system_address =>
+            {
+                post_snap
+            }
+            _ => &pending.prior_snap,
+        };
+
+        let first_ev = &pending.events[0];
+        let now = self.clock.now_utc();
+        let mut batched_out = Vec::new();
+        for mapper in &mut self.mappers {
+            let service = mapper.service();
+            if !mapper.batches_event(first_ev) {
+                continue;
+            }
+            let Some(activated_at) = (match active_since(&self.store, service, &pending.fid) {
+                Ok(ts) => ts,
+                Err(err) => {
+                    self.pending_batch = Some(pending);
+                    return Err(err);
+                }
+            }) else {
+                continue;
+            };
+            if first_ev.timestamp < activated_at {
+                continue;
+            }
+            batched_out.clear();
+            mapper.flush_batch(&pending.events, chosen_snap, &mut batched_out);
+            let target = if pending.row_origin == RowOrigin::Recovered {
+                &mut self.staged.rows
+            } else {
+                &mut self.batch.rows
+            };
+            for item in batched_out.drain(..) {
+                Self::push_row(
+                    target,
+                    service,
+                    &pending.fid,
+                    &pending.file,
+                    pending.first_line,
+                    pending.row_origin,
+                    item.event_ts,
+                    now,
+                    item.row,
+                );
+            }
+        }
+
+        let target = if pending.row_origin == RowOrigin::Live {
+            &mut self.batch
+        } else {
+            &mut self.staged
+        };
+        target.lines += pending.events.len();
+        target.advance(&pending.fid, &pending.file, pending.last_line);
+        self.cursors
+            .insert((pending.fid, pending.file), pending.last_line);
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn push_row(
+        target: &mut Vec<NewOutboxRow>,
+        service: SyncService,
+        fid: &str,
+        file: &str,
+        line: u64,
+        row_origin: RowOrigin,
+        event_ts: DateTime<Utc>,
+        now: DateTime<Utc>,
+        row: MappedRow,
+    ) {
+        let state = if row_origin == RowOrigin::Recovered && now - event_ts > service.max_age() {
+            OutboxState::Expired
+        } else {
+            row.state
+        };
+        target.push(NewOutboxRow {
+            service,
+            cmdr_fid: fid.to_string(),
+            idem_key: idem_key(service, fid, file, line, row.sub),
+            kind: row.kind,
+            coalesce_key: row.coalesce_key,
+            event_ts,
+            payload: row.payload.to_string(),
+            origin: row_origin,
+            state,
+            last_class: row.class,
+        });
     }
 
     fn resolve_pending_companion(
@@ -830,25 +1013,17 @@ impl Router {
                 &mut self.batch.rows
             };
             for row in out.drain(..) {
-                let state = if row_origin == RowOrigin::Recovered
-                    && now - ev.timestamp > service.max_age()
-                {
-                    OutboxState::Expired
-                } else {
-                    row.state
-                };
-                target.push(NewOutboxRow {
+                Self::push_row(
+                    target,
                     service,
-                    cmdr_fid: fid.to_string(),
-                    idem_key: idem_key(service, fid, file, line, row.sub),
-                    kind: row.kind,
-                    coalesce_key: row.coalesce_key,
-                    event_ts: ev.timestamp,
-                    payload: row.payload.to_string(),
-                    origin: row_origin,
-                    state,
-                    last_class: row.class,
-                });
+                    fid,
+                    file,
+                    line,
+                    row_origin,
+                    ev.timestamp,
+                    now,
+                    row,
+                );
             }
         }
         Ok(())
