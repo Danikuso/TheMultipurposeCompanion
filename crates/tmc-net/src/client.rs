@@ -140,6 +140,15 @@ fn endpoint_of(req: &Req) -> &'static str {
     if path.starts_with(crate::eddn_upload::EDDN_UPLOAD_URL) {
         return "eddn.upload";
     }
+    if path.starts_with(crate::edsm_journal::EDSM_DISCARD_URL) {
+        return "edsm.discard";
+    }
+    if path.starts_with(crate::edsm_journal::EDSM_JOURNAL_URL) {
+        return "edsm.journal";
+    }
+    if path.starts_with("https://www.edsm.net/api-commander-v1/") {
+        return "edsm.commander";
+    }
     "unknown"
 }
 

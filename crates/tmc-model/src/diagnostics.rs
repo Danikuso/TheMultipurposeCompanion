@@ -852,6 +852,9 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
                     | "ardent.nearby.exports"
                     | "ardent.system.coords"
                     | "edsm.coords"
+                    | "edsm.journal"
+                    | "edsm.discard"
+                    | "edsm.commander"
                     | "eddn.upload"
                     | "unknown"
             )
