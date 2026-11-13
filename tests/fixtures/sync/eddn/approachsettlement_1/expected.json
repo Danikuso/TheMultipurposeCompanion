@@ -1,0 +1,46 @@
+{
+  "$schemaRef": "https://eddn.edcd.io/schemas/approachsettlement/1",
+  "header": {
+    "uploaderID": "290d497c61e19213ec286ad31430b47e",
+    "softwareName": "The Multipurpose Companion (TMC)",
+    "softwareVersion": "1.3.0",
+    "gameversion": "4.0.0.1903",
+    "gamebuild": "r310123/r0 "
+  },
+  "message": {
+    "timestamp": "2026-01-01T12:00:02Z",
+    "event": "ApproachSettlement",
+    "horizons": true,
+    "odyssey": true,
+    "StarSystem": "Sistema Ficticio",
+    "StarPos": [
+      10.5,
+      -20.25,
+      30.125
+    ],
+    "SystemAddress": 1000000000001,
+    "Name": "Asentamiento Ficticio",
+    "MarketID": 128000050,
+    "BodyID": 1,
+    "BodyName": "Sistema Ficticio 1",
+    "Latitude": 22.5,
+    "Longitude": -14.25,
+    "StationGovernment": "$government_Corporate;",
+    "StationAllegiance": "Independent",
+    "StationEconomy": "$economy_Extraction;",
+    "StationEconomies": [
+      {
+        "Name": "$economy_Extraction;",
+        "Proportion": 1.0
+      }
+    ],
+    "StationFaction": {
+      "Name": "Facción Ficticia",
+      "FactionState": "Boom"
+    },
+    "StationServices": [
+      "dock",
+      "refuel"
+    ]
+  }
+}

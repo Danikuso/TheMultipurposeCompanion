@@ -1,0 +1,55 @@
+{
+  "timestamp": "2026-01-01T12:00:02Z",
+  "event": "Market",
+  "MarketID": 128000001,
+  "StationName": "Puerto Ficticio",
+  "StationType": "Coriolis",
+  "CarrierDockingAccess": "all",
+  "StarSystem": "Sistema Ficticio",
+  "Items": [
+    {
+      "id": 128000042,
+      "Name": "$gold_name;",
+      "Name_Localised": "Oro",
+      "Category": "$MARKET_category_metals;",
+      "Category_Localised": "Metales",
+      "BuyPrice": 9400,
+      "SellPrice": 9000,
+      "MeanPrice": 9200,
+      "StockBracket": 3,
+      "DemandBracket": 2,
+      "Stock": 5000,
+      "Demand": 100,
+      "Consumer": false,
+      "Producer": true,
+      "Rare": false,
+      "Legality": ""
+    },
+    {
+      "id": 128000099,
+      "Name": "$drones_name;",
+      "Category": "NonMarketable",
+      "BuyPrice": 101,
+      "SellPrice": 0,
+      "MeanPrice": 101,
+      "StockBracket": 0,
+      "DemandBracket": 0,
+      "Stock": 0,
+      "Demand": 0,
+      "Legality": ""
+    },
+    {
+      "id": 128000100,
+      "Name": "$narcotics_name;",
+      "Category": "$MARKET_category_legal_drugs;",
+      "BuyPrice": 0,
+      "SellPrice": 500,
+      "MeanPrice": 300,
+      "StockBracket": 0,
+      "DemandBracket": 1,
+      "Stock": 0,
+      "Demand": 10,
+      "Legality": "Illegal"
+    }
+  ]
+}

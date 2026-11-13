@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-01-01T12:00:02Z",
+  "event": "NavRoute",
+  "Route": [
+    {
+      "StarSystem": "Sistema Ficticio",
+      "SystemAddress": 1000000000001,
+      "StarPos": [
+        10.5,
+        -20.25,
+        30.125
+      ],
+      "StarClass": "G"
+    },
+    {
+      "StarSystem": "Sistema Destino",
+      "SystemAddress": 1000000000002,
+      "StarPos": [
+        20.0,
+        5.5,
+        -12.25
+      ],
+      "StarClass": "K"
+    }
+  ]
+}

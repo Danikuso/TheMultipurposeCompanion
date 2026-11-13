@@ -1,0 +1,44 @@
+{
+  "timestamp": "2026-01-01T12:00:02Z",
+  "event": "Outfitting",
+  "MarketID": 128000001,
+  "StationName": "Puerto Ficticio",
+  "StarSystem": "Sistema Ficticio",
+  "Items": [
+    {
+      "id": 1,
+      "Name": "Hpt_PulseLaser_Fixed_Small",
+      "BuyPrice": 2200,
+      "sku": null
+    },
+    {
+      "id": 2,
+      "Name": "Int_Engine_Size3_Class5",
+      "BuyPrice": 160000
+    },
+    {
+      "id": 3,
+      "Name": "SideWinder_Armour_Grade2",
+      "BuyPrice": 28800,
+      "sku": "ELITE_HORIZONS_V_PLANETARY_LANDINGS"
+    },
+    {
+      "id": 4,
+      "Name": "Int_PlanetApproachSuite",
+      "BuyPrice": 500,
+      "sku": null
+    },
+    {
+      "id": 5,
+      "Name": "decal_pilot_rank1",
+      "BuyPrice": 0,
+      "sku": null
+    },
+    {
+      "id": 6,
+      "Name": "Hpt_PlasmaAccelerator_Fixed_Large_Advanced",
+      "BuyPrice": 9000000,
+      "sku": "TECHBROKER"
+    }
+  ]
+}

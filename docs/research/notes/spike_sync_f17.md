@@ -114,7 +114,60 @@ enum LiveSignalPolicy { ProcessCheck, JournalActivity, Unavailable }
 
 ## EDDN
 
-_Pendiente (tarea T0-EDDN)._
+### 1. Fuente consultada y licencia
+
+- **Repositorio oficial:** `https://github.com/EDCD/EDDN`, rama `live`, commit **`4ad669bb7bbe1eae080e4c354e786dca4db91f35`**.
+- **Documentación y código revisados:** `docs/Developers.md`, `schemas/README-EDDN-schemas.md`, `src/eddn/Gateway.py`, `src/eddn/Validator.py`, `src/eddn/conf/Settings.py` y los 16 esquemas JSON (`schemas/*-v*.json` + `*-README.md`), junto con la nota previa [`docs/research/notes/spike_eddn_f3.md`](spike_eddn_f3.md).
+- **Licencia de `EDCD/EDDN`:** **BSD 3-Clause** (compatible con `PolyForm-Noncommercial-1.0.0`). Se conservan copias locales de solo los 16 esquemas Draft-04 vigentes y su licencia (`EDCD-LICENSE.txt`) en [`tests/fixtures/sync/eddn/_schemas/`](../../../tests/fixtures/sync/eddn/_schemas/) para validación offline en tests.
+
+### 2. Protocolo del gateway y cabeceras
+
+- **Endpoint:** `POST https://eddn.edcd.io:4430/upload/` (barra final obligatoria, HTTPS, **solo HTTP/1.1** `http1_only=true`, sin parámetros de consulta).
+- **Cuerpo y compresión:** JSON UTF-8 (`Content-Type: application/json`). Cuando el JSON supera 16 KiB (`16384` bytes, decisión `[DR-17]`), se comprime con gzip (`Content-Encoding: gzip`); `Gateway.py` descomprime mediante `zlib.decompress(..., 15 + 32)`. Límite máximo comprimido: **`1 MiB` (`1048576` bytes)**. Un mensaje por petición.
+- **Límite de tasa y edad máxima:** máximo **2 mensajes/s** en TMC (`RateLimiter::for_service(Eddn)`). El gateway no aplica corte duro de edad en el POST, aunque `Developers.md` advierte de que los listeners descartan marcas antiguas; TMC aplica `max_age = 24 h` (§5.4).
+- **Envelope:**
+  - `$schemaRef`: URL canónica sin `#` final (ej. `https://eddn.edcd.io/schemas/journal/1`), o con sufijo `/test` en `SchemaMode::Test` (`TMC_EDDN_TEST_SCHEMAS=1`). Todos los esquemas `https://eddn.edcd.io/schemas/...` son activos; `Settings.GATEWAY_OUTDATED_SCHEMAS` solo lista los antiguos `http://schemas.elite-markets.net/eddn/*`.
+  - `header`: `uploaderID` (`hex(sha256(sal_local || FID))[..32]`, sin nombre ni FID en claro), `softwareName` (`"The Multipurpose Companion (TMC)"`), `softwareVersion` (`CARGO_PKG_VERSION`), `gameversion` (de `Fileheader.gameversion`, si falta de `LoadGame.gameversion`, si no `""`), `gamebuild` (de `Fileheader.build` o `LoadGame.build` preservando espacios finales como `"r310123/r0 "`, si no `""`). **Sin `gatewayTimestamp`**.
+  - En todos los mensajes, `horizons` y `odyssey` proceden **exclusivamente de `LoadGame`** (nunca de `Fileheader`, que no tiene `Horizons`/`Odyssey` fiables) y se omiten si se desconocen (nunca `null`).
+
+### 3. Respuestas del gateway (`Gateway.py`)
+
+| Estado HTTP | Cuerpo / patrón típico | Acción en TMC |
+|---|---|---|
+| `200 OK` | `OK` | `Sent`. |
+| `400 Bad Request` | `FAIL: Schema Validation: [...]` / `FAIL: JSON parsing: ...` / `FAIL: zlib.error: ...` | `Rejected` (`invalid_event`, sin reintento; pista saneada `<= 120` chars). |
+| `413 Payload Too Large` | Límite `MEMFILE_MAX` (`1 MiB`) | `Rejected` (`too_large`, sin reintento). |
+| `426 Upgrade Required` | `FAIL: Outdated Schema: ...` | `SchemaOutdated`: pausa ese `$schemaRef` en `kv` (`sync.eddn.paused_schemas`) y muestra aviso hasta nueva versión de TMC. |
+| `408`, `503`, otros `5xx`, timeout, error de red | HTML/texto de proxy o caída | `Retry` (`server_error` / `timeout` / `network`) con espera mínima de **60 s** y backoff exponencial hasta **30 min**. |
+
+**Alineación con §7.3:** no se ha detectado ninguna contradicción entre `Gateway.py` y la spec §7.3 (ni respecto a `426`, cabeceras, HTTP/1.1 ni saneado).
+
+### 4. Decisión de validador en tests
+
+- En la tarea `E1-4` se añadirá la crate **`jsonschema`** (licencia **MIT**, compatible y anotada en `THIRD_PARTY_NOTICES.md`) en `[dev-dependencies]` de `tmc-sync` para validar offline Draft-04 contra los 16 esquemas BSD-3-Clause de `tests/fixtures/sync/eddn/_schemas/`, evitando tráfico de red y duplicación manual de reglas de esquema.
+
+### 5. Tabla de saneado, aumentos y elisiones por esquema (16 esquemas)
+
+Reglas transversales a todos los esquemas de diario: (a) eliminar recursivamente cualquier clave acabada en `_Localised`; (b) comprobar coherencia de ubicación (`StarSystem`, `SystemAddress`, `StarPos`) contra el último `Location` / `FSDJump` / `CarrierJump`: ante discrepancia, omitir la fila (`Inconsistent`); (c) barrido local recursivo final contra lista negra de campos personales (`Name`/`CMDR`/FID cuando proceda, `Credits`, `Loan`, `Wanted`, `ActiveFine`, `MyReputation`, chat, `*_Localised`).
+
+| # | `$schemaRef` | Origen | Renombrados / Aumentos obligatorios | Campos eliminados / filtros |
+|---|---|---|---|---|
+| 1 | `journal/1` | `Docked`, `FSDJump`, `Scan`, `Location`, `SAASignalsFound`, `CarrierJump` | Añadir `StarSystem` (`SAASignalsFound`) y `StarPos` (`Docked`, `Scan`, `SAASignalsFound`) tras cross-check de `SystemAddress`; `horizons`, `odyssey`. | Quitar `ActiveFine`, `CockpitBreach`, `BoostUsed`, `FuelLevel`, `FuelUsed`, `JumpDist`, `Latitude`, `Longitude`, `Wanted`, `IsNewEntry`, `NewTraitsDiscovered`, `Traits`, `VoucherAmount`; dentro de `Factions[]`: `HappiestSystem`, `HomeSystem`, `MyReputation`, `SquadronFaction`; todo `_Localised`. |
+| 2 | `commodity/3` | `Market` + `Market.json` | Renombrar `StarSystem->systemName`, `StationName->stationName`, `MarketID->marketId`, `CarrierDockingAccess->carrierDockingAccess`, `Items->commodities`; por item: `Name->name` sin prefijo `$` ni sufijo `_name;` (minúsculas), `MeanPrice->meanPrice`, `BuyPrice->buyPrice`, `Stock->stock`, `StockBracket->stockBracket`, `SellPrice->sellPrice`, `Demand->demand`, `DemandBracket->demandBracket`, `statusFlags` si no vacío; `horizons`, `odyssey`. | Quitar `StationType`, `Producer`, `Rare`, `id`, `Category`, `*_Localised`; no emitir `economies`/`prohibited` si faltan o vacíos; descartar artículos con `Category`/`categoryname == "NonMarketable"` o `Legality` no vacía. |
+| 3 | `shipyard/2` | `Shipyard` + `Shipyard.json` | Renombrar `StarSystem->systemName`, `StationName->stationName`, `MarketID->marketId`, `AllowCobraMkIV->allowCobraMkIV`, `PriceList[*].ShipType -> ships` (`uniqueItems`, `minItems: 1`); `horizons`, `odyssey`. | Quitar precios, `ShipPrice`, `*_Localised`; no emitir si `ships` queda vacío. |
+| 4 | `outfitting/2` | `Outfitting` + `Outfitting.json` | Renombrar `StarSystem->systemName`, `StationName->stationName`, `MarketID->marketId`, `Items[*].Name -> modules` (`uniqueItems`, `minItems: 1`); `horizons`, `odyssey`. | Conservar solo nombres `^(?i)(Hpt_|Int_|.*_Armour_)` distintos de `Int_PlanetApproachSuite` y con `sku` ausente/null o `"ELITE_HORIZONS_V_PLANETARY_LANDINGS"`; omitir mensaje si `modules` queda vacío. |
+| 5 | `navroute/1` | `NavRoute` + `NavRoute.json` | `Route[*]` conserva `{ StarSystem, SystemAddress, StarPos, StarClass }` (`additionalProperties: false`); `horizons`, `odyssey`. | Si `NavRouteClear` o `Route` vacío → no emitir. |
+| 6 | `fcmaterials_journal/1` | `FCMaterials` + `FCMaterials.json` | Contenido de `FCMaterials.json` (`MarketID`, `CarrierName`, `CarrierID`, `Items[{id,Name,Price,Stock,Demand}]`); `horizons`, `odyssey`. | Quitar `_Localised`. |
+| 7 | `fssdiscoveryscan/1` | `FSSDiscoveryScan` | Aumentar `StarPos` (+ cross-check `SystemAddress`/`SystemName`); `horizons`, `odyssey`. | Quitar `Progress` y claves ajenas al esquema (`additionalProperties: false`), `_Localised`. |
+| 8 | `fssallbodiesfound/1` | `FSSAllBodiesFound` | Aumentar `StarPos` (+ cross-check `SystemAddress`/`SystemName`); `horizons`, `odyssey`. | Quitar `_Localised` y claves ajenas (`additionalProperties: false`). |
+| 9 | `navbeaconscan/1` | `NavBeaconScan` | Aumentar `StarSystem` y `StarPos` (+ cross-check `SystemAddress`); `horizons`, `odyssey`. | Quitar `_Localised` y claves ajenas (`additionalProperties: false`). |
+| 10 | `codexentry/1` | `CodexEntry` | Aumentar `StarPos` y `SystemAddress` si faltan (+ cross-check `System`); `horizons`, `odyssey`; `BodyID`/`BodyName` solo si confirmados por `ApproachBody`/`Location`. | Quitar `IsNewEntry`, `NewTraitsDiscovered`, `_Localised` y claves ajenas (`additionalProperties: false`). |
+| 11 | `scanbarycentre/1` | `ScanBaryCentre` | Aumentar `StarPos` (+ cross-check `StarSystem`/`SystemAddress`); `horizons`, `odyssey`. | Conservar solo parámetros orbitales permitidos por el esquema; quitar `_Localised`. |
+| 12 | `fssbodysignals/1` | `FSSBodySignals` | Aumentar `StarSystem` y `StarPos` (+ cross-check `SystemAddress`); `Signals[{Type,Count}]`; `horizons`, `odyssey`. | Quitar `Type_Localised` y claves ajenas (`additionalProperties: false`). |
+| 13 | `approachsettlement/1` | `ApproachSettlement` | Aumentar `StarSystem` y `StarPos` (+ cross-check `SystemAddress`), conservar `MarketID` cuando exista; `horizons`, `odyssey`. | En `StationFaction` conservar solo `{Name, FactionState}`, en `StationEconomies` `{Name, Proportion}`; quitar `_Localised` y claves ajenas. |
+| 14 | `dockinggranted/1` | `DockingGranted` | `timestamp`, `event`, `MarketID`, `StationName`, opcionales `StationType`, `LandingPad`; `horizons`, `odyssey`. | Quitar `_Localised` y claves ajenas (`additionalProperties: false`). |
+| 15 | `dockingdenied/1` | `DockingDenied` | `timestamp`, `event`, `MarketID`, `StationName`, `Reason`, opcional `StationType`; `horizons`, `odyssey`. | Quitar `_Localised` y claves ajenas (`additionalProperties: false`). |
+| 16 | `fsssignaldiscovered/1` | Racha contigua de `FSSSignalDiscovered` | Agrupar en `signals[]`; `timestamp` del mensaje = primero de la racha; aumentar `StarSystem` y `StarPos` usando la ubicación nueva si cierra con `Location`/`FSDJump`/`CarrierJump` (Odyssey) o la previa (Horizons); `horizons`, `odyssey`. | Descartar señal con `USSType == "$USS_Type_MissionTarget;"` o `SystemAddress` distinto; por señal quitar `event`, `SystemAddress`, `TimeRemaining`, `_Localised`; si `signals` queda vacío no emitir. |
 
 ## EDSM
 

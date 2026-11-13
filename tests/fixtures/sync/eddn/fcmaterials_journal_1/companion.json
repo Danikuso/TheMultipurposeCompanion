@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-01-01T12:00:02Z",
+  "event": "FCMaterials",
+  "MarketID": 3700000001,
+  "CarrierName": "PORTADOR FICTICIO",
+  "CarrierID": "F1C-001",
+  "Items": [
+    {
+      "id": 128961542,
+      "Name": "$graphene_name;",
+      "Name_Localised": "Grafeno",
+      "Price": 25000,
+      "Stock": 10,
+      "Demand": 0
+    }
+  ]
+}

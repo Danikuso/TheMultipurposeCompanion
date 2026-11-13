@@ -1,0 +1,24 @@
+{
+  "$schemaRef": "https://eddn.edcd.io/schemas/navbeaconscan/1",
+  "header": {
+    "uploaderID": "290d497c61e19213ec286ad31430b47e",
+    "softwareName": "The Multipurpose Companion (TMC)",
+    "softwareVersion": "1.3.0",
+    "gameversion": "4.0.0.1903",
+    "gamebuild": "r310123/r0 "
+  },
+  "message": {
+    "timestamp": "2026-01-01T12:00:02Z",
+    "event": "NavBeaconScan",
+    "horizons": true,
+    "odyssey": true,
+    "StarSystem": "Sistema Ficticio",
+    "StarPos": [
+      10.5,
+      -20.25,
+      30.125
+    ],
+    "SystemAddress": 1000000000001,
+    "NumBodies": 12
+  }
+}

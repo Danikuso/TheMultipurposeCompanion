@@ -1,0 +1,40 @@
+{
+  "$schemaRef": "https://eddn.edcd.io/schemas/journal/1",
+  "header": {
+    "uploaderID": "290d497c61e19213ec286ad31430b47e",
+    "softwareName": "The Multipurpose Companion (TMC)",
+    "softwareVersion": "1.3.0",
+    "gameversion": "4.0.0.1903",
+    "gamebuild": "r310123/r0 "
+  },
+  "message": {
+    "timestamp": "2026-01-01T12:00:02Z",
+    "event": "Location",
+    "horizons": true,
+    "odyssey": true,
+    "StarSystem": "Sistema Ficticio",
+    "SystemAddress": 1000000000001,
+    "StarPos": [
+      10.5,
+      -20.25,
+      30.125
+    ],
+    "Docked": false,
+    "SystemAllegiance": "Independent",
+    "SystemEconomy": "$economy_Industrial;",
+    "SystemGovernment": "$government_Corporate;",
+    "SystemSecurity": "$SYSTEM_SECURITY_medium;",
+    "Population": 1000000,
+    "Body": "Sistema Ficticio A",
+    "BodyID": 0,
+    "BodyType": "Star",
+    "Factions": [
+      {
+        "Name": "Facción Local",
+        "FactionState": "Boom",
+        "Government": "Democracy",
+        "Influence": 0.55
+      }
+    ]
+  }
+}
