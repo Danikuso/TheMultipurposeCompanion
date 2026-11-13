@@ -8,6 +8,8 @@ use std::path::{Path, PathBuf};
 const UPLOAD_ENDPOINTS: &[&str] = &[
     "https://inara.cz/inapi",
     "https://www.edsm.net/api-logs-v1",
+    "edsm.net/api-journal-v1",
+    "edsm.net/api-commander-v1",
     "eddn.edcd.io:4430",
 ];
 

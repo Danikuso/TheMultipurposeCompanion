@@ -886,39 +886,40 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
                     text,
                     "network"
                         | "timeout"
-                        | "rate_limit"
-                        | "auth_rejected"
-                        | "client_error"
-                        | "schema_deprecated"
+                        | "rate_limited"
+                        | "blocked"
+                        | "auth"
+                        | "software_blocked"
+                        | "schema_outdated"
+                        | "invalid_event"
+                        | "too_large"
                         | "server_error"
-                        | "malformed"
-                        | "parse_error"
-                        | "local_validation"
-                        | "discarded"
+                        | "discard_list_missing"
                 )
         }
         "syncreason" => {
             matches!(context, DiagnosticContext::Sync)
                 && matches!(
                     text,
-                    "online_off"
+                    "no_key"
+                        | "switch_off"
+                        | "online_off"
                         | "legacy"
                         | "beta"
                         | "replay"
                         | "game_not_running"
                         | "other_instance"
                         | "platform_unsupported"
-                        | "no_key"
                         | "key_unassigned"
-                        | "switch_off"
-                        | "auth_invalid"
-                        | "auth_missing"
-                        | "rate_limited"
-                        | "server_down"
-                        | "schema_paused"
                         | "network"
-                        | "bad_request"
-                        | "internal"
+                        | "timeout"
+                        | "rate_limited"
+                        | "blocked"
+                        | "auth"
+                        | "software_blocked"
+                        | "schema_outdated"
+                        | "server_error"
+                        | "discard_list_missing"
                 )
         }
         _ => false,
@@ -2013,7 +2014,7 @@ mod tests {
             &json!({
                 "service": "inara",
                 "decision": "worker_outcome",
-                "class": "rate_limit",
+                "class": "rate_limited",
                 "sync_reason": "rate_limited",
                 "process_kind": "desktop",
                 "payload": {"secret": "CANARY"},
@@ -2026,7 +2027,7 @@ mod tests {
         );
         assert_eq!(safe["service"], "inara");
         assert_eq!(safe["decision"], "worker_outcome");
-        assert_eq!(safe["class"], "rate_limit");
+        assert_eq!(safe["class"], "rate_limited");
         assert_eq!(safe["sync_reason"], "rate_limited");
         assert_eq!(safe["process_kind"], "desktop");
         assert_eq!(safe["payload"]["secret"], REDACTED);
@@ -2034,5 +2035,50 @@ mod tests {
         assert_eq!(safe["api_key"], REDACTED);
         assert_eq!(safe["cmdr_fid"], REDACTED);
         assert_eq!(safe["cmdr_name"], REDACTED);
+    }
+
+    #[test]
+    fn sync_diagnostics_accept_all_error_classes_and_sync_reasons() {
+        for class in [
+            "network",
+            "timeout",
+            "rate_limited",
+            "blocked",
+            "auth",
+            "software_blocked",
+            "schema_outdated",
+            "invalid_event",
+            "too_large",
+            "server_error",
+            "discard_list_missing",
+        ] {
+            let safe = redact_diagnostic(&json!({ "class": class }), DiagnosticContext::Sync);
+            assert_eq!(safe["class"], class, "ErrorClass {class}");
+        }
+        for reason in [
+            "no_key",
+            "switch_off",
+            "online_off",
+            "legacy",
+            "beta",
+            "replay",
+            "game_not_running",
+            "other_instance",
+            "platform_unsupported",
+            "key_unassigned",
+            "network",
+            "timeout",
+            "rate_limited",
+            "blocked",
+            "auth",
+            "software_blocked",
+            "schema_outdated",
+            "server_error",
+            "discard_list_missing",
+        ] {
+            let safe =
+                redact_diagnostic(&json!({ "sync_reason": reason }), DiagnosticContext::Sync);
+            assert_eq!(safe["sync_reason"], reason, "SyncReason {reason}");
+        }
     }
 }

@@ -9,13 +9,15 @@ use crate::router::{
 use crate::status::StatusAggregator;
 use crate::worker::{ServiceClient, Worker, WorkerEvent};
 use std::path::PathBuf;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+#[cfg(debug_assertions)]
 use tmc_model::diagnostic;
+#[cfg(debug_assertions)]
 use tmc_model::diagnostics::{DiagnosticContext, json};
 use tmc_model::source::SourceEvent;
-use tmc_model::sync::SyncFeed;
+use tmc_model::sync::{SyncFeed, SyncService};
 use tmc_net::Transport;
 use tmc_store::Store;
 use tokio::sync::{Notify, mpsc, watch};
@@ -171,7 +173,10 @@ pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
     }
     drop(worker_events_tx);
     router.set_enqueued_wakers(wakers.clone());
+    let recovered_totals = Arc::new([AtomicU64::new(0), AtomicU64::new(0), AtomicU64::new(0)]);
+    router.set_recovered_totals(recovered_totals.clone());
 
+    #[cfg(debug_assertions)]
     diagnostic!(
         DiagnosticContext::Sync,
         "sync.runtime.started",
@@ -273,6 +278,17 @@ pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
             if *agg_shutdown.borrow() {
                 break;
             }
+            for (svc, slot) in [
+                (SyncService::Inara, &recovered_totals[0]),
+                (SyncService::Edsm, &recovered_totals[1]),
+                (SyncService::Eddn, &recovered_totals[2]),
+            ] {
+                let delta = slot.swap(0, Ordering::AcqRel);
+                if delta > 0 {
+                    agg.on_recovered(svc, delta);
+                    dirty = true;
+                }
+            }
             if dirty {
                 let fid = current_fid.lock().unwrap().clone();
                 let reports = agg.build(fid.as_deref(), &|svc, f| {
@@ -344,5 +360,126 @@ async fn sleep_until_opt(deadline: Option<Instant>) {
     match deadline {
         Some(at) => tokio::time::sleep_until(at).await,
         None => std::future::pending().await,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::clock::TestClock;
+    use crate::router::{EDDN_ENABLED_KEY, MappedInput, MappedRow, ServiceMapper};
+    use chrono::TimeZone;
+    use tmc_model::events::{EventKind, parse_line};
+    use tmc_model::state::Galaxy;
+    use tmc_model::sync::{FeedOrigin, OutboxState, SyncFeedEvent, SyncReport, SyncService};
+    use tmc_net::testing::NoNetworkTransport;
+
+    struct DummyEddnMapper;
+    impl ServiceMapper for DummyEddnMapper {
+        fn service(&self) -> SyncService {
+            SyncService::Eddn
+        }
+        fn map(&mut self, input: &MappedInput<'_>, out: &mut Vec<MappedRow>) {
+            if matches!(input.ev.kind, EventKind::FsdJump(_)) {
+                out.push(MappedRow {
+                    sub: 0,
+                    kind: "journal/1".into(),
+                    coalesce_key: None,
+                    payload: serde_json::json!({"event": "FSDJump"}),
+                    state: OutboxState::Pending,
+                    class: None,
+                });
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn recovered_session_is_reported_via_status_aggregator() {
+        let dir =
+            std::env::temp_dir().join(format!("tmc-sync-recovered-runtime-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = "Journal.2026-11-10T100000.01.log";
+        std::fs::write(
+            dir.join(file),
+            "{\"timestamp\":\"2026-11-10T10:00:00Z\",\"event\":\"Fileheader\",\"part\":1,\"language\":\"English/UK\",\"gameversion\":\"4.0.0.1903\",\"build\":\"r310123/r0 \"}\n",
+        )
+        .unwrap();
+
+        let store = Store::open_in_memory().unwrap();
+        let now = chrono::Utc
+            .with_ymd_and_hms(2026, 11, 10, 10, 5, 0)
+            .unwrap();
+        let enabled_at = (now - chrono::Duration::hours(1)).to_rfc3339();
+        store.kv_set(EDDN_ENABLED_KEY, &enabled_at);
+
+        let (core_tx, mut core_rx) = mpsc::channel(32);
+        let handle = spawn_sync(SyncDeps {
+            store,
+            transport: Arc::new(NoNetworkTransport::default()),
+            online: Arc::new(AtomicBool::new(true)),
+            core_events: core_tx,
+            journal_dir: dir.clone(),
+            env: EnvGates::default(),
+            live_signal: LiveSignalPolicy::JournalActivity,
+            clock: TestClock::new(now),
+            process_kind: "desktop",
+            clients: Vec::new(),
+            mappers: vec![Box::new(DummyEddnMapper)],
+        });
+
+        let load = parse_line(
+            r#"{"timestamp":"2026-11-10T10:01:00Z","event":"LoadGame","FID":"F1000001","Commander":"CMDR REC","Horizons":true,"Odyssey":true,"gameversion":"4.0.0.1903","build":"r310123/r0 "}"#,
+        )
+        .unwrap();
+        let jump = parse_line(
+            r#"{"timestamp":"2026-11-10T10:02:00Z","event":"FSDJump","StarSystem":"Sol","SystemAddress":10477373803,"StarPos":[0.0,0.0,0.0]}"#,
+        )
+        .unwrap();
+
+        for (line, ev) in [(2u64, load), (3u64, jump)] {
+            handle
+                .feed
+                .send(SyncFeed {
+                    event: SyncFeedEvent::Journal {
+                        ev,
+                        file: file.to_string(),
+                        line,
+                    },
+                    origin: FeedOrigin::CatchUp,
+                    galaxy: Galaxy::Live,
+                    game_running: true,
+                })
+                .unwrap();
+        }
+        handle
+            .feed
+            .send(SyncFeed {
+                event: SyncFeedEvent::CatchUpDone,
+                origin: FeedOrigin::CatchUp,
+                galaxy: Galaxy::Live,
+                game_running: true,
+            })
+            .unwrap();
+
+        let mut seen = false;
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(3);
+        while tokio::time::Instant::now() < deadline {
+            match tokio::time::timeout_at(deadline, core_rx.recv()).await {
+                Ok(Some(SourceEvent::SyncReport(rep))) => {
+                    if let SyncReport::Eddn(st) = *rep
+                        && st.status.recovered_session == 1
+                    {
+                        seen = true;
+                        break;
+                    }
+                }
+                Ok(Some(_)) => {}
+                Ok(None) | Err(_) => break,
+            }
+        }
+        handle.shutdown().await;
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(seen, "expected Eddn SyncReport with recovered_session == 1");
     }
 }

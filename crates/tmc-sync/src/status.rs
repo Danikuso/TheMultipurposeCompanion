@@ -57,7 +57,7 @@ pub struct StatusAggregator {
     recovered_session: [u64; 3],
     service_outcome: [LastOutcome; 3],
     cmdr_error: HashMap<(SyncService, String), ErrorClass>,
-    rejections: [VecDeque<RecentRejection>; 3],
+    rejections: HashMap<(SyncService, String), VecDeque<RecentRejection>>,
     paused_schemas: Vec<String>,
     last_emitted: HashMap<ReportSlot, SyncReport>,
     last_sent_at: HashMap<ReportSlot, tokio::time::Instant>,
@@ -66,6 +66,18 @@ pub struct StatusAggregator {
 impl StatusAggregator {
     pub fn new(store: Store, clock: Arc<dyn Clock>, salt: String) -> Self {
         let paused_schemas = read_paused_schemas(&store);
+        let mut rejections = HashMap::new();
+        if let Ok(cmdrs) = store.known_cmdrs() {
+            for (fid, _name) in cmdrs {
+                for service in [SyncService::Inara, SyncService::Edsm, SyncService::Eddn] {
+                    if let Ok(list) = store.recent_rejections(service, &fid)
+                        && !list.is_empty()
+                    {
+                        rejections.insert((service, fid.clone()), list.into());
+                    }
+                }
+            }
+        }
         Self {
             store,
             _clock: clock,
@@ -75,7 +87,7 @@ impl StatusAggregator {
             recovered_session: [0; 3],
             service_outcome: [LastOutcome::None, LastOutcome::None, LastOutcome::None],
             cmdr_error: HashMap::new(),
-            rejections: [VecDeque::new(), VecDeque::new(), VecDeque::new()],
+            rejections,
             paused_schemas,
             last_emitted: HashMap::new(),
             last_sent_at: HashMap::new(),
@@ -118,14 +130,18 @@ impl StatusAggregator {
                 }
             }
             WorkerEvent::Rejection {
-                service, rejection, ..
+                service,
+                cmdr_fid,
+                rejection,
             } => {
-                let idx = service_idx(*service);
                 let mut item = rejection.clone();
                 if let Some(hint) = item.hint {
                     item.hint = Some(hint.chars().take(SERVER_HINT_MAX_CHARS).collect());
                 }
-                let queue = &mut self.rejections[idx];
+                let queue = self
+                    .rejections
+                    .entry((*service, cmdr_fid.clone()))
+                    .or_default();
                 queue.push_front(item);
                 while queue.len() > RECENT_REJECTIONS_MAX {
                     queue.pop_back();
@@ -207,6 +223,18 @@ impl StatusAggregator {
             .and_then(|fid| self.store.sync_counts(service, fid).ok())
             .unwrap_or_default();
         let (state, reason, next_attempt_at) = self.derive_state(service, current_fid, blocked);
+        let recent_rejections = match current_fid {
+            Some(fid) => self
+                .rejections
+                .get(&(service, fid.to_string()))
+                .map(|q| q.iter().cloned().collect())
+                .unwrap_or_else(|| {
+                    self.store
+                        .recent_rejections(service, fid)
+                        .unwrap_or_default()
+                }),
+            None => Vec::new(),
+        };
         SyncServiceStatus {
             state,
             reason,
@@ -220,7 +248,7 @@ impl StatusAggregator {
             omitted_total: counts.omitted_total,
             last_confirmed_at: counts.last_confirmed_at,
             next_attempt_at,
-            recent_rejections: self.rejections[idx].iter().cloned().collect(),
+            recent_rejections,
         }
     }
 
@@ -647,5 +675,85 @@ mod tests {
             .unwrap();
         assert_eq!(roster.other_cmdrs_pending.inara, 3);
         assert_eq!(roster.current_cmdr.as_ref().unwrap().name, "CMDR ALPHA");
+    }
+
+    #[test]
+    fn rejections_are_scoped_per_commander() {
+        let (store, clock, mut agg) = setup();
+        let now = clock.now_utc();
+        store.upsert_known_cmdr(F2, "CMDR BETA", now).unwrap();
+        let at = now.to_rfc3339_opts(SecondsFormat::Secs, true);
+        agg.on_worker_event(&WorkerEvent::Rejection {
+            service: SyncService::Inara,
+            cmdr_fid: F1.into(),
+            rejection: RecentRejection {
+                kind: "FSDJump".into(),
+                class: ErrorClass::InvalidEvent,
+                code: "400".into(),
+                at: at.clone(),
+                hint: Some("alpha-only".into()),
+            },
+        });
+        agg.on_worker_event(&WorkerEvent::Rejection {
+            service: SyncService::Inara,
+            cmdr_fid: F2.into(),
+            rejection: RecentRejection {
+                kind: "Docked".into(),
+                class: ErrorClass::TooLarge,
+                code: "413".into(),
+                at,
+                hint: Some("beta-only".into()),
+            },
+        });
+
+        let r1 = agg.build(Some(F1), &|_, _| None);
+        let rej1 = &inara_status(&r1).status.recent_rejections;
+        assert_eq!(rej1.len(), 1);
+        assert_eq!(rej1[0].kind, "FSDJump");
+
+        let r2 = agg.build(Some(F2), &|_, _| None);
+        let rej2 = &inara_status(&r2).status.recent_rejections;
+        assert_eq!(rej2.len(), 1);
+        assert_eq!(rej2[0].kind, "Docked");
+
+        let r_none = agg.build(None, &|_, _| None);
+        assert!(inara_status(&r_none).status.recent_rejections.is_empty());
+    }
+
+    #[test]
+    fn rejections_are_reloaded_from_store_after_restart() {
+        let (store, clock, _old_agg) = setup();
+        let now = clock.now_utc();
+        store.upsert_known_cmdr(F2, "CMDR BETA", now).unwrap();
+        store
+            .enqueue_batch_with_cursor(
+                &[NewOutboxRow {
+                    service: SyncService::Inara,
+                    cmdr_fid: F1.into(),
+                    idem_key: "k-rej-1".into(),
+                    kind: "Scan".into(),
+                    coalesce_key: None,
+                    event_ts: now,
+                    payload: "{}".into(),
+                    origin: RowOrigin::Live,
+                    state: OutboxState::Pending,
+                    last_class: None,
+                }],
+                &[],
+                now,
+            )
+            .unwrap();
+        let rows = store.claim_ready(SyncService::Inara, None, 1, now).unwrap();
+        store
+            .mark_rejected(&[rows[0].id], "400", ErrorClass::InvalidEvent, now)
+            .unwrap();
+
+        let agg = StatusAggregator::new(store, clock, "salt-test".into());
+        let r1 = agg.build(Some(F1), &|_, _| None);
+        assert_eq!(inara_status(&r1).status.recent_rejections.len(), 1);
+        assert_eq!(inara_status(&r1).status.recent_rejections[0].kind, "Scan");
+
+        let r2 = agg.build(Some(F2), &|_, _| None);
+        assert!(inara_status(&r2).status.recent_rejections.is_empty());
     }
 }

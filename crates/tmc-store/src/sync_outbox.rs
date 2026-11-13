@@ -37,6 +37,8 @@ pub struct EnqueueOutcome {
     pub ignored: u64,
     /// Filas realmente insertadas con origen recuperado.
     pub recovered: usize,
+    /// Filas pendientes recuperadas realmente insertadas, por servicio `[Inara, Edsm, Eddn]`.
+    pub recovered_by_service: [u64; 3],
 }
 
 fn ts(value: DateTime<Utc>) -> String {
@@ -89,6 +91,14 @@ impl Store {
             outcome.inserted += 1;
             if row.origin == RowOrigin::Recovered {
                 outcome.recovered += 1;
+                if row.state == OutboxState::Pending {
+                    let idx = match row.service {
+                        SyncService::Inara => 0,
+                        SyncService::Edsm => 1,
+                        SyncService::Eddn => 2,
+                    };
+                    outcome.recovered_by_service[idx] += 1;
+                }
             }
             let column = match row.state {
                 OutboxState::Omitted => Some("omitted"),

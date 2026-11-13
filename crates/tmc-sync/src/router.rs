@@ -18,7 +18,7 @@ use chrono::{DateTime, Utc};
 use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering};
 use std::time::Duration;
 use tmc_model::companion::CompanionFile;
 use tmc_model::events::{EventKind, JournalEvent};
@@ -256,6 +256,7 @@ pub struct Router {
     held: VecDeque<SyncFeed>,
     held_since: Option<Instant>,
     enqueued_wakers: Vec<Arc<Notify>>,
+    recovered_totals: Option<Arc<[AtomicU64; 3]>>,
 }
 
 impl Router {
@@ -286,6 +287,7 @@ impl Router {
             held: VecDeque::new(),
             held_since: None,
             enqueued_wakers: Vec::new(),
+            recovered_totals: None,
         };
         router.refresh_replay_marker();
         router.publish();
@@ -343,6 +345,11 @@ impl Router {
     /// Registra notificadores que se despiertan cuando `flush` inserta filas nuevas.
     pub fn set_enqueued_wakers(&mut self, wakers: Vec<Arc<Notify>>) {
         self.enqueued_wakers = wakers;
+    }
+
+    /// Registra acumuladores atómicos para notificar filas recuperadas al agregador de estado.
+    pub(crate) fn set_recovered_totals(&mut self, totals: Arc<[AtomicU64; 3]>) {
+        self.recovered_totals = Some(totals);
     }
 
     /// Estado transitorio tras la última línea procesada.
@@ -404,6 +411,13 @@ impl Router {
             self.clock.now_utc(),
         )?;
         self.batch = Batch::default();
+        if let Some(totals) = &self.recovered_totals {
+            for (slot, count) in totals.iter().zip(outcome.recovered_by_service) {
+                if count > 0 {
+                    slot.fetch_add(count, Ordering::AcqRel);
+                }
+            }
+        }
         if outcome.inserted > 0 {
             for wake in &self.enqueued_wakers {
                 wake.notify_one();
