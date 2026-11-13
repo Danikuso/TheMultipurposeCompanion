@@ -302,9 +302,21 @@ impl Worker {
         let all_rows = claimed.clone();
         let (to_send, mut verdicts) = self.client.filter_claimed(claimed);
         if to_send.is_empty() {
-            self.commit_verdicts(st, &cmdr_fid, &all_rows, verdicts, ServiceEffect::None)
+            let effect = filter_only_effect(&verdicts);
+            let halt = matches!(
+                effect,
+                ServiceEffect::ServiceError {
+                    class: ErrorClass::SoftwareBlocked,
+                    ..
+                }
+            );
+            self.commit_verdicts(st, &cmdr_fid, &all_rows, verdicts, effect)
                 .await;
-            return StepControl::Continue;
+            return if halt {
+                StepControl::Stop
+            } else {
+                StepControl::Continue
+            };
         }
 
         // Espera el limitador si toca justo antes de lanzar el POST.
@@ -357,10 +369,21 @@ impl Worker {
             return StepControl::Sleep(None);
         }
 
+        let halt = matches!(
+            outcome.effect,
+            ServiceEffect::ServiceError {
+                class: ErrorClass::SoftwareBlocked,
+                ..
+            }
+        );
         verdicts.extend(outcome.verdicts);
         self.commit_verdicts(st, &cmdr_fid, &all_rows, verdicts, outcome.effect)
             .await;
-        StepControl::Continue
+        if halt {
+            StepControl::Stop
+        } else {
+            StepControl::Continue
+        }
     }
 
     async fn commit_verdicts(
@@ -625,6 +648,23 @@ impl Worker {
             }
         }
     }
+}
+
+fn filter_only_effect(verdicts: &[(i64, RowVerdict)]) -> ServiceEffect {
+    for (_, verdict) in verdicts {
+        if let RowVerdict::Hold { class, .. } = verdict
+            && matches!(
+                class,
+                ErrorClass::DiscardListMissing | ErrorClass::SoftwareBlocked
+            )
+        {
+            return ServiceEffect::ServiceError {
+                class: *class,
+                until: None,
+            };
+        }
+    }
+    ServiceEffect::None
 }
 
 enum StepControl {
