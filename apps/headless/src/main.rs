@@ -2,6 +2,7 @@
 #![forbid(unsafe_code)]
 
 mod eval;
+mod sync_seed;
 
 use std::path::PathBuf;
 use tmc_app::{Config, data_dir, init_logging, start_headless};
@@ -9,9 +10,16 @@ use tmc_app::{Config, data_dir, init_logging, start_headless};
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let mut raw = std::env::args().skip(1).peekable();
-    if raw.peek().map(String::as_str) == Some("eval") {
-        raw.next();
-        return eval::run(raw);
+    match raw.peek().map(String::as_str) {
+        Some("eval") => {
+            raw.next();
+            return eval::run(raw);
+        }
+        Some("sync-seed") => {
+            raw.next();
+            return sync_seed::run(raw);
+        }
+        _ => {}
     }
 
     let mut config_file: Option<PathBuf> = None;

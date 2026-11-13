@@ -5329,6 +5329,7 @@ name = "tmc-headless"
 version = "1.3.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "serde_json",
  "tempfile",
  "tmc-app",
@@ -5337,6 +5338,7 @@ dependencies = [
  "tmc-modules",
  "tmc-net",
  "tmc-store",
+ "tmc-sync",
  "tokio",
  "tracing",
 ]
