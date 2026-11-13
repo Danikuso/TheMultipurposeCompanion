@@ -1,5 +1,5 @@
 import type { Component } from 'svelte';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { disconnect, live } from '../src/lib/ws.svelte';
 import { setLocale } from '../src/lib/i18n';
@@ -286,4 +286,196 @@ test('eddn switch sends accounts.eddn.set_enabled and never shows sent without r
   expect(q('eddn-state-pill')?.textContent).toContain('Desactivado');
   expect(q('eddn-state-pill')?.textContent).not.toContain('Conectado');
   expect(q('eddn-metric-sent')?.textContent?.trim()).toBe('0');
+});
+
+describe('E4-2 collapsible sync details', () => {
+  const mkRejection = (idx: number) => ({
+    kind: idx === 0 ? 'journal/1' : `FSDJump#${idx}`,
+    class: 'invalid_event',
+    code: idx === 0 ? '400' : `E${idx}`,
+    at: `2026-11-13T10:${String(idx % 60).padStart(2, '0')}:00Z`,
+    hint: `Server detail ${idx} secret-hint`,
+  });
+
+  test('details collapsed by default and expands on toggle', () => {
+    mountWith(AccountsPanel, {
+      'accounts.status': {
+        current_cmdr: { cmdr_ref: 'cmdr-1', name: 'Danikuso' },
+        inara: { ...baseDisabledService('no_key'), has_key: false, key_hint: null },
+        edsm: { ...baseDisabledService('no_key'), has_key: false, key_hint: null },
+        eddn: { ...baseDisabledService('switch_off'), enabled: false, paused_schemas: [] },
+        commanders: [],
+        other_cmdrs_pending: { inara: 0, edsm: 0, eddn: 0 },
+        unassigned_keys: [],
+        capi: {
+          configured: false,
+          connected: false,
+          commander_name: null,
+          token_expires_at: null,
+          remote_ships_count: 0,
+          last_sync_time: null,
+          last_error: null,
+        },
+      },
+    });
+
+    const detailsWrap = target.querySelector('.hud-panel-details');
+    expect(detailsWrap?.classList.contains('collapsed')).toBe(true);
+    expect(q('sync-details-section')).toBeTruthy();
+
+    const toggle = target.querySelector('.panel-header-toggle') as HTMLButtonElement;
+    toggle.click();
+    flushSync();
+    expect(detailsWrap?.classList.contains('collapsed')).toBe(false);
+  });
+
+  test('breakdown, paused schemas, per-CMDR pending, privacy table, EDMC/EDDiscovery warning, and rejections (max 20, hint only in title)', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-13T10:00:00Z'));
+
+    const manyRejections = Array.from({ length: 24 }, (_, i) => mkRejection(i));
+
+    mountWith(AccountsPanel, {
+      'accounts.status': {
+        current_cmdr: { cmdr_ref: 'cmdr-1', name: 'Danikuso' },
+        inara: {
+          ...baseDisabledService('network'),
+          state: 'error',
+          pending: 5,
+          recovered_session: 3,
+          sent_total: 42,
+          sent_session: 7,
+          rejected_total: 2,
+          rejected_session: 1,
+          expired_total: 4,
+          omitted_total: 6,
+          next_attempt_at: '2026-11-13T10:04:00Z',
+          recent_rejections: manyRejections,
+          has_key: true,
+          key_hint: '1234',
+        },
+        edsm: {
+          ...baseDisabledService('no_key'),
+          state: 'waiting',
+          reason: null,
+          pending: 1,
+          recovered_session: 1,
+          sent_total: 10,
+          sent_session: 2,
+          has_key: true,
+          key_hint: '5678',
+        },
+        eddn: {
+          ...baseDisabledService('schema_outdated'),
+          state: 'paused',
+          enabled: true,
+          paused_schemas: ['journal/1', 'commodity/3'],
+          pending: 2,
+          recovered_session: 4,
+          sent_total: 100,
+          sent_session: 15,
+        },
+        commanders: [
+          {
+            cmdr_ref: 'cmdr-1',
+            name: 'Danikuso',
+            inara_key: true,
+            edsm_key: true,
+            key_assignment: 'confirmed',
+            inara_pending: 5,
+            edsm_pending: 1,
+            eddn_pending: 2,
+          },
+          {
+            cmdr_ref: 'cmdr-2',
+            name: 'AltExplorer',
+            inara_key: true,
+            edsm_key: false,
+            key_assignment: 'confirmed',
+            inara_pending: 8,
+            edsm_pending: 0,
+            eddn_pending: 0,
+          },
+        ],
+        other_cmdrs_pending: { inara: 8, edsm: 0, eddn: 0 },
+        unassigned_keys: [],
+        capi: {
+          configured: false,
+          connected: false,
+          commander_name: null,
+          token_expires_at: null,
+          remote_ships_count: 0,
+          last_sync_time: null,
+          last_error: null,
+        },
+      },
+    });
+
+    (target.querySelector('.panel-header-toggle') as HTMLButtonElement).click();
+    flushSync();
+
+    const details = q('sync-details-section')!;
+    expect(q('details-inara-breakdown')?.textContent).toContain('42');
+    expect(q('details-inara-breakdown')?.textContent).toContain('7');
+    expect(q('details-inara-breakdown')?.textContent).toContain('4');
+    expect(q('details-inara-breakdown')?.textContent).toContain('6');
+    expect(q('details-inara-breakdown')?.textContent).toContain('4 min');
+    expect(q('details-recovered-total')?.textContent).toContain('8');
+    expect(q('details-eddn-paused-schemas')?.textContent).toContain('journal/1');
+    expect(q('details-eddn-paused-schemas')?.textContent).toContain('commodity/3');
+
+    const rejRows = details.querySelectorAll('[data-testid="sync-rejection-row"]');
+    expect(rejRows.length).toBe(20);
+    expect(rejRows[0].textContent).toContain('Evento no válido');
+    expect(rejRows[0].textContent).not.toContain('Server detail');
+    expect((rejRows[0] as HTMLElement).getAttribute('title')).toContain('Server detail');
+
+    const cmdrRows = details.querySelectorAll('[data-testid="details-cmdr-pending-row"]');
+    expect(cmdrRows.length).toBe(2);
+    expect(cmdrRows[0].textContent).toContain('Danikuso');
+    expect(cmdrRows[1].textContent).toContain('AltExplorer');
+    expect(cmdrRows[1].textContent).toContain('8');
+
+    expect(q('details-privacy-table')?.textContent).toContain('EDDN');
+    expect(q('details-privacy-table')?.textContent).toContain('EDSM');
+    expect(q('details-privacy-table')?.textContent).toContain('Inara');
+    expect(q('details-duplicate-warning')?.textContent).toContain('EDMC');
+    expect(q('details-duplicate-warning')?.textContent).toContain('EDDiscovery');
+  });
+
+  test('list height adapts to rows with zero phantom scroll when short and enables scroll only when overflowed', () => {
+    mountWith(AccountsPanel, {
+      'accounts.status': {
+        current_cmdr: { cmdr_ref: 'cmdr-1', name: 'Danikuso' },
+        inara: {
+          ...baseDisabledService('network'),
+          state: 'error',
+          has_key: true,
+          key_hint: '1234',
+          recent_rejections: [mkRejection(0), mkRejection(1)],
+        },
+        edsm: { ...baseDisabledService('no_key'), has_key: false, key_hint: null },
+        eddn: { ...baseDisabledService('switch_off'), enabled: false, paused_schemas: [] },
+        commanders: [],
+        other_cmdrs_pending: { inara: 0, edsm: 0, eddn: 0 },
+        unassigned_keys: [],
+        capi: {
+          configured: false,
+          connected: false,
+          commander_name: null,
+          token_expires_at: null,
+          remote_ships_count: 0,
+          last_sync_time: null,
+          last_error: null,
+        },
+      },
+    });
+
+    (target.querySelector('.panel-header-toggle') as HTMLButtonElement).click();
+    flushSync();
+
+    const shortList = q('sync-rejections-list') as HTMLElement;
+    expect(shortList.style.height).toBe('72px');
+    expect(shortList.style.overflowY).toBe('hidden');
+  });
 });

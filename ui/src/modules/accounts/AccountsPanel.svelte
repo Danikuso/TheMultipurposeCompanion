@@ -4,6 +4,7 @@
   import { t } from '../../lib/i18n';
   import { action, topic } from '../../lib/ws.svelte';
   import CapiCard from './CapiCard.svelte';
+  import SyncDetails from './SyncDetails.svelte';
   import SyncGuide from './SyncGuide.svelte';
   import SyncServiceRow from './SyncServiceRow.svelte';
   import { openSettingsAccounts, type KeyedService } from './syncView';
@@ -101,6 +102,10 @@
 
     <CapiCard capi={status?.capi ?? null} />
   </div>
+
+  {#snippet details()}
+    <SyncDetails status={status ?? null} />
+  {/snippet}
 </Panel>
 
 <style>

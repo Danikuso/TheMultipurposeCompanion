@@ -1,6 +1,6 @@
 import { relativeAge } from '../../lib/format';
 import { t } from '../../lib/i18n';
-import type { SyncReason, SyncServiceStatus, SyncState } from './types';
+import type { ErrorClass, SyncReason, SyncServiceStatus, SyncState } from './types';
 
 export const KEY_PAGES = {
   inara: 'https://inara.cz/elite/cmdr-settings-api/',
@@ -50,6 +50,25 @@ export function reasonText(reason: SyncReason | null | undefined): string | null
   if (!reason) return null;
   const kebab = reason.replaceAll('_', '-');
   return t(`accounts-sync-reason-${kebab}`);
+}
+
+export function errorClassText(cls: ErrorClass | string): string {
+  const kebab = String(cls).replaceAll('_', '-');
+  return t(`accounts-sync-class-${kebab}`);
+}
+
+export function adaptiveListBox(
+  rowCount: number,
+  rowHeight = 36,
+  maxRows = 6,
+): { heightPx: number; overflowY: 'hidden' | 'auto' } {
+  const maxHeight = rowHeight * maxRows;
+  const rawHeight = rowCount * rowHeight;
+  const heightPx = rowCount === 0 ? rowHeight : Math.min(maxHeight, rawHeight);
+  return {
+    heightPx,
+    overflowY: rawHeight > maxHeight ? 'auto' : 'hidden',
+  };
 }
 
 export function formatRetryTime(nextAttemptAt: string | null | undefined, nowMs = Date.now()): string | null {
