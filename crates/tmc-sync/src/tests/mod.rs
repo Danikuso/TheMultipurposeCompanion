@@ -1,5 +1,6 @@
 mod credentials;
 mod eddn;
+mod edsm;
 mod expiry;
 mod guards;
 mod idle;

@@ -2,6 +2,7 @@
 
 pub mod clock;
 pub mod eddn;
+pub mod edsm;
 pub mod housekeeping;
 pub mod ids;
 pub mod lease;
