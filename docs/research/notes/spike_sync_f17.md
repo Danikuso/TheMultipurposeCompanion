@@ -171,7 +171,58 @@ Reglas transversales a todos los esquemas de diario: (a) eliminar recursivamente
 
 ## EDSM
 
-_Pendiente (tarea T0-EDSM)._
+Fecha de verificación: **2026-11-13**. Las páginas HTML oficiales en vivo (`https://www.edsm.net/en/api-journal-v1` y `https://www.edsm.net/en/api-commander-v1`) presentan desafío JS de Cloudflare para clientes sin navegador, por lo que se consultaron sus instantáneas archivadas de Wayback Machine (`2026-03-12` y `2026-03-25`, coincidiendo con las revisiones oficiales del `2022-11-30` y `2019-03-21`), contrastadas con [`community_apis_core.md`](community_apis_core.md) y una **única petición pública `GET https://www.edsm.net/api-journal-v1/discard`** (`200 OK`, `2267` bytes, **141 eventos**, capturada en [`tests/fixtures/sync/edsm/discard.json`](../../../tests/fixtures/sync/edsm/discard.json)). **Ningún POST enviado.**
+
+### 1. Endpoints y petición (`api-journal-v1`)
+
+- **Envío de diario:** `POST https://www.edsm.net/api-journal-v1` (cuerpo JSON o multipart; nunca `GET`).
+- **Lista de descarte:** `GET https://www.edsm.net/api-journal-v1/discard` → array JSON de nombres de evento a omitir sin enviar (`141` entradas el `2026-11-13`; se cachea 24 h en `api_cache` y falla cerrado si nunca se obtuvo).
+- **Verificación de clave/comandante:** `GET https://www.edsm.net/api-commander-v1/get-ranks?commanderName=...&apiKey=...`.
+- **Campos del cuerpo JSON en POST:**
+  - `commanderName` (obligatorio; nombre exacto registrado en EDSM, nunca el FID).
+  - `apiKey` (obligatorio).
+  - `fromSoftware` = `"The Multipurpose Companion (TMC)"` (`[DR-19]`).
+  - `fromSoftwareVersion` = versión SemVer (`CARGO_PKG_VERSION`).
+  - `fromGameVersion` y `fromGameBuild` (del `Fileheader`, preservando espacios finales como `"r310123/r0 "`; obligatorio para distinguir Live de Legacy — «ONLY THE LIVE VERSION IS ACCEPTED»).
+  - `message`: línea del diario sin modificar **o lista (array) JSON de eventos para lotes**. La documentación oficial indica: *«In order to send messages by batch, you can also send a list of message line from the journal»*, adjuntando los seis campos transitorios por entrada mediante la lógica documentada `updateGameStatus(entry)`: `_systemAddress`, `_systemName`, `_systemCoordinates`, `_marketId`, `_stationName`, `_shipId` (como propiedades de cada objeto evento en `message[]`, `null` si se desconocen).
+- **Tamaño máximo de lote:** la documentación no publica un límite fijo de elementos por POST ni contradice el máximo de **50 eventos** fijado en §7.2 / `BatchPolicy`; se mantiene `max_rows = 50` (o flush a los 15 s) y objetivo ≤ 1 petición cada 5 s bajo el limitador duro de Cloudflare (10 req / 10 s).
+
+### 2. Formato de respuesta, códigos `msgnum`, tasa y Cloudflare
+
+- **Forma JSON en lote:** objeto raíz `{ "msgnum": <int>, "msg": "<texto>", "events": [ { "msgnum": <int>, "msg": "<texto>", ... }, ... ] }` (en errores globales de autenticación/software/JSON puede omitirse `events`). Si `events.len()` no coincide con el número de eventos enviados en el lote, TMC reintenta todos sin marcar ninguno como enviado.
+- **Tabla completa de `msgnum` (`api-journal-v1`):**
+  - `100` (`OK`) → `Sent`.
+  - `101` (`Message already stored`), `102` (`Message older than the stored one`), `103` (`Duplicate event request`, caché de ~300 s), `104` (`Crew session`) → `Sent` (benigno).
+  - `201` (falta `commanderName`), `202` (falta `apiKey`), `203` (`Commander name/API Key not found`) → `CredentialError` (retiene pendientes hasta corregir clave).
+  - `204` (`Software/Software version not found`), `205` (`Blacklisted software`) → `SoftwareBlocked` (detiene servicio sin reintentos).
+  - `206` (`Cannot decode JSON`) → `Rejected` (`invalid_event`).
+  - `207` (`Game/Build version not found`), `208` (`Game/Build version too old`) → `Rejected`.
+  - `301` (`Message not found`), `302` (`Cannot decode message JSON`), `303` (`Missing timestamp/event`) → `Rejected`.
+  - `304` (`Discarded event`) → `Discarded` + refresco inmediato de la lista de descarte.
+  - `401` (`Category unknown`), `402` (`Item unknown`) → `Rejected`.
+  - `451` (`System probably non existant`), `452` / `453` (`Same system just before/after visited date`) → `BenignRejected` (sin contar error de servicio).
+  - `500`, `501` → `Retry` (`server_error`) con backoff.
+- **Límites de tasa y Cloudflare:**
+  - Límite Cloudflare (confirmado en `FrontEnd#563`, 2026-08-17): **10 peticiones / 10 s** (bloqueo temporal de 10 s si se supera). HTTP `429` respeta `Retry-After` en primer lugar y como respaldo `X-Rate-Limit-Reset` (además de leer `X-Rate-Limit-Remaining` cuando estén presentes).
+  - HTTP `403` con HTML de Cloudflare («Attention Required!» / desafío) → `Retry` con clase `Blocked` y backoff largo (**≥ 15 min**).
+  - Respuesta HTML inesperada con HTTP `200 OK` (p. ej. mantenimiento o proxy) → **nunca** se considera `Sent`; clasificada como `Retry` (`Unknown`).
+
+### 3. Contrato `GET /api-commander-v1/get-ranks` (verificación de clave)
+
+- **Respuesta `msgnum: 100`:** devuelve `ranks`, `progress` y `ranksVerbose` (`Combat`, `Trade`, `Explore`, `CQC`, `Federation`, `Empire`) → `KeyCheck::Valid`.
+- **Respuesta `msgnum: 207` (`No ranks stored`):** comandante/clave válidos cuando el perfil aún no tiene rangos registrados y se envió `apiKey` → `KeyCheck::Valid`.
+- **Respuestas `msgnum: 201 | 202 | 203`:** falta nombre/clave o par inválido en EDSM → `KeyCheck::Rejected`.
+- **Cualquier otro código HTTP/red/HTML/403/429:** → `KeyCheck::Unreachable`.
+
+**Alineación con §7.2:** 100 % alineado sin bloqueos ni desviaciones necesarias respecto a la spec §7.2.
+
+### 4. Inventario de fixtures EDSM (`tests/fixtures/sync/edsm/`)
+
+- `discard.json`: instantánea real capturada de `GET /api-journal-v1/discard` (141 eventos, `2026-11-13`).
+- `request_batch.json`: ejemplo normalizado de lote POST con `fromSoftware` exacto y los 6 campos transitorios en el evento `FSDJump`.
+- `response_ok.json`, `response_mixed.json`: respuestas JSON con `msgnum` global + `events[]`.
+- `response_html_403.html`, `response_html_200.html`: páginas HTML defensivas (Cloudflare / mantenimiento).
+- `get_ranks_ok.json`, `get_ranks_bad_key.json`: respuestas de verificación de clave.
 
 ## Inara
 
