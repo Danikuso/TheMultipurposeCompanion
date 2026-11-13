@@ -11,7 +11,7 @@
 //! vivo antes, la recuperación se abandona sin confirmar nada (ruling E0-6).
 
 use crate::clock::Clock;
-use crate::ids::idem_key;
+use crate::ids::{idem_key, snapshot_idem_key};
 use crate::recovery::{Recovery, RecoveryPlan, same_session};
 use crate::tracker::{TransientSnapshot, TransientTracker};
 use chrono::{DateTime, Utc};
@@ -112,6 +112,14 @@ pub trait ServiceMapper: Send {
         _snap: &TransientSnapshot,
         _out: &mut Vec<BatchedRow>,
     ) {
+    }
+    fn snapshot(
+        &mut self,
+        _tracker: &TransientTracker,
+        _fid: &str,
+        _ts: DateTime<Utc>,
+    ) -> Vec<MappedRow> {
+        Vec::new()
     }
 }
 
@@ -296,6 +304,9 @@ pub struct Router {
     pending_batch: Option<PendingEventBatch>,
     enqueued_wakers: Vec<Arc<Notify>>,
     recovered_totals: Option<Arc<[AtomicU64; 3]>>,
+    started_at: DateTime<Utc>,
+    catchup_done: bool,
+    snapshotted: HashMap<(SyncService, String), DateTime<Utc>>,
 }
 
 impl Router {
@@ -307,6 +318,7 @@ impl Router {
         cfg: RouterConfig,
         mappers: Vec<Box<dyn ServiceMapper>>,
     ) -> Self {
+        let started_at = clock.now_utc();
         let mut router = Self {
             store,
             clock,
@@ -329,6 +341,9 @@ impl Router {
             pending_batch: None,
             enqueued_wakers: Vec::new(),
             recovered_totals: None,
+            started_at,
+            catchup_done: false,
+            snapshotted: HashMap::new(),
         };
         router.refresh_replay_marker();
         router.publish();
@@ -413,6 +428,8 @@ impl Router {
         if let SyncFeedEvent::GameProcess { running } = feed.event {
             self.process = Some(running);
             self.release_held()?;
+            self.publish();
+            self.maybe_emit_snapshots()?;
         } else {
             if let Err(error) = self.release_held_if_expired() {
                 self.held.push_back(feed);
@@ -480,6 +497,8 @@ impl Router {
     /// Vence retenciones y vacía el lote si han pasado `flush_every` desde su primera línea.
     pub fn tick(&mut self) -> Result<(), StoreError> {
         self.release_held_if_expired()?;
+        self.publish();
+        self.maybe_emit_snapshots()?;
         if self
             .batch
             .since
@@ -487,7 +506,6 @@ impl Router {
         {
             self.flush()?;
         }
-        self.publish();
         Ok(())
     }
 
@@ -618,10 +636,15 @@ impl Router {
                 self.resolve_pending_companion(None)?;
                 self.flush_pending_batch(None)?;
                 self.finish_recovery();
+                self.catchup_done = true;
+                self.publish();
+                self.maybe_emit_snapshots()?;
                 Ok(())
             }
             SyncFeedEvent::GameProcess { running } => {
                 self.process = Some(*running);
+                self.publish();
+                self.maybe_emit_snapshots()?;
                 Ok(())
             }
         }
@@ -780,6 +803,66 @@ impl Router {
         }
         // Solo tras completar la evaluación sin error para no falsar truncado al reintentar.
         self.last_line.insert(file.to_string(), line);
+        self.publish();
+        self.maybe_emit_snapshots()?;
+        Ok(())
+    }
+
+    fn game_running(&self) -> bool {
+        match self.cfg.live_signal {
+            LiveSignalPolicy::ProcessCheck => self.process == Some(true),
+            LiveSignalPolicy::JournalActivity => self.process != Some(false),
+            LiveSignalPolicy::Unavailable => false,
+        }
+    }
+
+    fn maybe_emit_snapshots(&mut self) -> Result<(), StoreError> {
+        if !self.catchup_done
+            || !self.game_running()
+            || !self.gates.lease_held.load(Ordering::SeqCst)
+            || self.gates.global_reason().is_some()
+        {
+            return Ok(());
+        }
+        let Some(fid) = self.tracker.snapshot().cmdr_fid.clone() else {
+            return Ok(());
+        };
+        if fid.trim().is_empty() {
+            return Ok(());
+        }
+        let now = self.clock.now_utc();
+        let mut emitted = Vec::new();
+        for mapper in &mut self.mappers {
+            let service = mapper.service();
+            let Some(activated_at) = active_since(&self.store, service, &fid)? else {
+                continue;
+            };
+            if self.snapshotted.get(&(service, fid.clone())) == Some(&activated_at) {
+                continue;
+            }
+            let snap_at = activated_at.max(self.started_at).max(now);
+            let rows = mapper.snapshot(&self.tracker, &fid, snap_at);
+            self.snapshotted
+                .insert((service, fid.clone()), activated_at);
+            for row in rows {
+                emitted.push(NewOutboxRow {
+                    service,
+                    cmdr_fid: fid.clone(),
+                    idem_key: snapshot_idem_key(service, &fid, snap_at, &row.kind),
+                    kind: row.kind,
+                    coalesce_key: row.coalesce_key,
+                    event_ts: snap_at,
+                    payload: row.payload.to_string(),
+                    origin: RowOrigin::Live,
+                    state: row.state,
+                    last_class: row.class,
+                });
+            }
+        }
+        if !emitted.is_empty() {
+            self.batch.touch();
+            self.batch.rows.extend(emitted);
+        }
         Ok(())
     }
 

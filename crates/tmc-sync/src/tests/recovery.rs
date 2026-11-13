@@ -428,3 +428,105 @@ fn part02_without_commander_inherits_fid() {
     assert_eq!(b.router.tracker().snapshot().cmdr_fid, None);
     assert_eq!(b.cursor(F1, other), None);
 }
+
+#[test]
+fn inara_snapshot_after_recovery_supersedes_not_duplicates() {
+    use crate::clock::TestClock;
+    use crate::inara::InaraMapper;
+    use crate::router::{EnvGates, LiveSignalPolicy, Router, RouterConfig};
+    use crate::tests::support::ev;
+    use chrono::{TimeZone, Utc};
+    use std::sync::Arc;
+    use std::sync::atomic::AtomicBool;
+    use tmc_model::state::Galaxy;
+    use tmc_model::sync::{KeyAssignment, SyncFeed};
+    use tmc_store::{Store, SyncCredential};
+
+    let dir = tempfile::tempdir().unwrap();
+    let store = Store::open_in_memory().unwrap();
+    let t_start = Utc.with_ymd_and_hms(2026, 11, 10, 18, 0, 0).unwrap();
+    let activated = Utc.with_ymd_and_hms(2026, 11, 10, 17, 0, 0).unwrap();
+    store
+        .upsert_known_cmdr(F1, "CMDR TESTER", activated)
+        .unwrap();
+    store
+        .put_sync_credential(&SyncCredential {
+            service: SyncService::Inara,
+            cmdr_fid: F1.into(),
+            cmdr_name: "CMDR TESTER".into(),
+            api_key: "inara-k".into(),
+            created_at: "2026-11-10T17:00:00Z".into(),
+            verified_at: Some("2026-11-10T17:00:00Z".into()),
+            assignment: KeyAssignment::Confirmed,
+        })
+        .unwrap();
+    store
+        .set_activation(SyncService::Inara, F1, activated)
+        .unwrap();
+
+    let mut router = Router::new(
+        store.clone(),
+        TestClock::new(t_start),
+        Arc::new(AtomicBool::new(true)),
+        Arc::new(AtomicBool::new(true)),
+        RouterConfig {
+            journal_dir: dir.path().to_path_buf(),
+            env: EnvGates {
+                e2e_simulation: false,
+            },
+            live_signal: LiveSignalPolicy::ProcessCheck,
+            flush_every: std::time::Duration::from_millis(250),
+            flush_rows: 200,
+            hold_before_process: (200, std::time::Duration::from_secs(10)),
+        },
+        vec![Box::new(InaraMapper::new())],
+    );
+    router.set_current_file(A2);
+    router
+        .handle(SyncFeed {
+            origin: FeedOrigin::Live,
+            galaxy: Galaxy::Live,
+            game_running: true,
+            event: SyncFeedEvent::GameProcess { running: true },
+        })
+        .unwrap();
+    router
+        .handle(SyncFeed {
+            origin: FeedOrigin::CatchUp,
+            galaxy: Galaxy::Live,
+            game_running: true,
+            event: SyncFeedEvent::Journal {
+                ev: ev(r#"{"timestamp":"2026-11-10T17:30:00Z","event":"LoadGame","FID":"F0000001","Commander":"CMDR TESTER","Ship":"asp","ShipID":1,"Credits":1000,"gameversion":"4.1.0.0"}"#),
+                file: A2.into(),
+                line: 1,
+            },
+        })
+        .unwrap();
+    router
+        .handle(SyncFeed {
+            origin: FeedOrigin::Live,
+            galaxy: Galaxy::Live,
+            game_running: true,
+            event: SyncFeedEvent::CatchUpDone,
+        })
+        .unwrap();
+    router.flush().unwrap();
+
+    let rows = store
+        .query_json(
+            "SELECT kind, state FROM sync_outbox WHERE service='inara' AND kind='setCommanderCredits' ORDER BY id",
+            &[],
+        )
+        .unwrap();
+    assert_eq!(rows.len(), 2, "recuperado + snapshot en tabla: {rows:?}");
+    assert_eq!(
+        rows.iter().filter(|r| r[1] == "pending").count(),
+        1,
+        "solo una fila pending tras reemplazar el set recuperado: {rows:?}"
+    );
+    assert_eq!(
+        rows.iter().filter(|r| r[1] == "superseded").count(),
+        1,
+        "el set recuperado más antiguo debe quedar superseded: {rows:?}"
+    );
+}

@@ -55,6 +55,7 @@ pub enum RowVerdict {
     Discarded {
         code: String,
     },
+    Superseded,
     Retry {
         code: String,
         class: ErrorClass,
@@ -436,6 +437,14 @@ impl Worker {
                         id,
                         state: OutboxState::Discarded,
                         code: Some(code),
+                        class: None,
+                    });
+                }
+                RowVerdict::Superseded => {
+                    updates.push(OutboxVerdict::Closed {
+                        id,
+                        state: OutboxState::Superseded,
+                        code: None,
                         class: None,
                     });
                 }

@@ -45,6 +45,7 @@ pub struct SyncWaker {
     wakers: Vec<Arc<Notify>>,
     status_wake: Arc<Notify>,
     verify_wake: Arc<Notify>,
+    router_wake: Arc<Notify>,
     verify_tx: Option<mpsc::Sender<crate::verify::VerifyUpdate>>,
 }
 
@@ -54,6 +55,7 @@ impl SyncWaker {
             wake.notify_one();
         }
         self.verify_wake.notify_one();
+        self.router_wake.notify_one();
         self.status_wake.notify_one();
     }
 
@@ -77,6 +79,7 @@ pub struct SyncHandle {
     wakers: Vec<Arc<Notify>>,
     status_wake: Arc<Notify>,
     verify_wake: Arc<Notify>,
+    router_wake: Arc<Notify>,
     verify_tx: mpsc::Sender<crate::verify::VerifyUpdate>,
     router_shutdown: watch::Sender<bool>,
     aux_shutdown: watch::Sender<bool>,
@@ -111,6 +114,7 @@ impl SyncHandle {
             wakers: self.wakers.clone(),
             status_wake: self.status_wake.clone(),
             verify_wake: self.verify_wake.clone(),
+            router_wake: self.router_wake.clone(),
             verify_tx: Some(self.verify_tx.clone()),
         }
     }
@@ -189,6 +193,7 @@ pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
     let (worker_events_tx, mut worker_events_rx) = mpsc::channel::<WorkerEvent>(128);
     let status_wake = Arc::new(Notify::new());
     let verify_wake = Arc::new(Notify::new());
+    let router_wake = Arc::new(Notify::new());
     let (verify_tx, mut verify_rx) = mpsc::channel::<crate::verify::VerifyUpdate>(64);
 
     let mut wakers = Vec::with_capacity(deps.clients.len());
@@ -242,6 +247,7 @@ pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
     )));
 
     let router_status_wake = status_wake.clone();
+    let router_wake_rx = router_wake.clone();
     let router_fid = current_fid.clone();
     let mut router_shutdown = router_shutdown_rx;
     router_and_workers.push(tokio::spawn(async move {
@@ -285,6 +291,22 @@ pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
                         tracing::warn!(
                             failure_class = error.diagnostic_class(),
                             "sync router: tick failed"
+                        );
+                    }
+                    *router_fid.lock().unwrap() = router.tracker().snapshot().cmdr_fid.clone();
+                    router_status_wake.notify_one();
+                }
+                _ = router_wake_rx.notified() => {
+                    if let Err(error) = router.tick() {
+                        tracing::warn!(
+                            failure_class = error.diagnostic_class(),
+                            "sync router: tick failed"
+                        );
+                    }
+                    if let Err(error) = router.flush() {
+                        tracing::warn!(
+                            failure_class = error.diagnostic_class(),
+                            "sync router: wake flush failed"
                         );
                     }
                     *router_fid.lock().unwrap() = router.tracker().snapshot().cmdr_fid.clone();
@@ -467,6 +489,7 @@ pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
         wakers,
         status_wake,
         verify_wake,
+        router_wake,
         verify_tx,
         router_shutdown: router_shutdown_tx,
         aux_shutdown: aux_shutdown_tx,

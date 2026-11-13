@@ -1,10 +1,12 @@
 //! Mapeo, coalescencia, instantánea y trabajador de Inara (InAPI v1).
 
+pub mod coalesce;
 pub mod combat;
 pub mod commander;
 pub mod inventory;
 pub mod missions;
 pub mod ship;
+pub mod snapshot;
 pub mod travel;
 
 use crate::router::{MappedInput, MappedRow, ServiceMapper};
@@ -103,6 +105,15 @@ impl ServiceMapper for InaraMapper {
             return;
         }
         combat::map_combat(fid, input, out);
+    }
+
+    fn snapshot(
+        &mut self,
+        tracker: &crate::tracker::TransientTracker,
+        fid: &str,
+        ts: chrono::DateTime<chrono::Utc>,
+    ) -> Vec<MappedRow> {
+        snapshot::build_snapshot(tracker, fid, ts)
     }
 }
 
@@ -511,5 +522,211 @@ mod tests {
                 "evento fuera de alcance DR-29 generó filas: {rows:?}"
             );
         }
+    }
+
+    #[test]
+    fn coalesce_keeps_latest_set_and_never_merges_add() {
+        use chrono::{TimeZone, Utc};
+        use tmc_model::sync::RowOrigin;
+        use tmc_store::OutboxRow;
+
+        let t0 = Utc.with_ymd_and_hms(2026, 11, 10, 18, 0, 0).unwrap();
+        let t1 = Utc.with_ymd_and_hms(2026, 11, 10, 18, 1, 0).unwrap();
+        let t2 = Utc.with_ymd_and_hms(2026, 11, 10, 18, 2, 0).unwrap();
+        let row = |id: i64, kind: &str, ck: Option<&str>, ts| OutboxRow {
+            id,
+            service: SyncService::Inara,
+            cmdr_fid: "F000001".into(),
+            kind: kind.into(),
+            coalesce_key: ck.map(str::to_string),
+            event_ts: ts,
+            payload: format!(r#"{{"eventName":"{kind}","id":{id}}}"#),
+            origin: RowOrigin::Live,
+            attempts: 0,
+        };
+
+        let input = vec![
+            row(
+                1,
+                "setCommanderCredits",
+                Some("F000001|setCommanderCredits|credits"),
+                t0,
+            ),
+            row(2, "addCommanderTravelFSDJump", Some("F000001|add|x"), t0),
+            row(3, "addCommanderTravelFSDJump", Some("F000001|add|x"), t1),
+            row(
+                4,
+                "setCommanderCredits",
+                Some("F000001|setCommanderCredits|credits"),
+                t2,
+            ),
+            row(
+                5,
+                "setCommanderShip",
+                Some("F000001|setCommanderShip|4"),
+                t1,
+            ),
+            row(6, "addCommanderTravelDock", None, t1),
+        ];
+
+        let (kept, superseded) = coalesce::coalesce(input);
+        let kept_ids: Vec<i64> = kept.iter().map(|r| r.id).collect();
+        assert_eq!(kept_ids, vec![2, 3, 4, 5, 6]);
+        assert_eq!(superseded, vec![1]);
+    }
+
+    #[test]
+    fn snapshot_contains_only_set_events() {
+        use chrono::{TimeZone, Utc};
+
+        let mut tracker = TransientTracker::new();
+        for raw in [
+            json!({"timestamp": "2026-11-10T18:00:00Z", "event": "LoadGame", "Commander": "ExampleCmdr", "FID": "F000001", "Ship": "krait_mkii", "ShipID": 4, "ShipName": "Nostromo", "Credits": 500000, "Loan": 0}),
+            json!({"timestamp": "2026-11-10T18:00:10Z", "event": "Location", "StarSystem": "Sol", "SystemAddress": 10477373803u64, "StarPos": [0.0, 0.0, 0.0], "Docked": true, "StationName": "Galileo", "MarketID": 128004520}),
+            json!({"timestamp": "2026-11-10T18:00:20Z", "event": "Rank", "Combat": 3, "Trade": 5, "Explore": 4}),
+            json!({"timestamp": "2026-11-10T18:00:30Z", "event": "Progress", "Combat": 25, "Trade": 50, "Explore": 75}),
+            json!({"timestamp": "2026-11-10T18:00:40Z", "event": "Reputation", "Federation": 75.0}),
+            json!({"timestamp": "2026-11-10T18:00:50Z", "event": "Materials", "Raw": [{"Name": "iron", "Count": 10}], "Manufactured": [], "Encoded": []}),
+            json!({"timestamp": "2026-11-10T18:01:00Z", "event": "Cargo", "Vessel": "Ship", "Count": 2, "Inventory": [{"Name": "gold", "Count": 2, "Stolen": 0}]}),
+            json!({"timestamp": "2026-11-10T18:01:10Z", "event": "Loadout", "Ship": "krait_mkii", "ShipID": 4, "Modules": []}),
+        ] {
+            tracker.apply(&ev(&raw.to_string()));
+        }
+
+        let at = Utc.with_ymd_and_hms(2026, 11, 10, 18, 5, 0).unwrap();
+        let rows = snapshot::build_snapshot(&tracker, "F000001", at);
+        assert!(
+            rows.len() >= 7,
+            "instantánea debe cubrir rangos, reputación, créditos, nave, loadout, materiales, carga y ubicación: {rows:?}"
+        );
+        assert!(
+            rows.iter().all(|r| r.kind.starts_with("set")),
+            "solo eventos set* permitidos en la instantánea: {rows:?}"
+        );
+        assert!(rows.iter().all(|r| r.coalesce_key.is_some()));
+        let kinds: Vec<&str> = rows.iter().map(|r| r.kind.as_str()).collect();
+        for expected in [
+            "setCommanderRankPilot",
+            "setCommanderReputationMajorFaction",
+            "setCommanderCredits",
+            "setCommanderShip",
+            "setCommanderShipLoadout",
+            "setCommanderInventoryMaterials",
+            "setCommanderInventoryCargo",
+            "setCommanderTravelLocation",
+        ] {
+            assert!(kinds.contains(&expected), "falta {expected} en {kinds:?}");
+        }
+    }
+
+    #[test]
+    fn snapshot_once_per_start() {
+        use crate::clock::TestClock;
+        use crate::router::{EnvGates, LiveSignalPolicy, Router, RouterConfig};
+        use chrono::{TimeZone, Utc};
+        use std::sync::Arc;
+        use std::sync::atomic::AtomicBool;
+        use tmc_model::state::Galaxy;
+        use tmc_model::sync::{FeedOrigin, KeyAssignment, SyncFeed, SyncFeedEvent};
+        use tmc_store::{Store, SyncCredential};
+
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::open_in_memory().unwrap();
+        let clock = TestClock::new(Utc.with_ymd_and_hms(2026, 11, 10, 18, 0, 0).unwrap());
+        let activated = Utc.with_ymd_and_hms(2026, 11, 10, 17, 0, 0).unwrap();
+        store
+            .upsert_known_cmdr("F000001", "CMDR", activated)
+            .unwrap();
+        store
+            .put_sync_credential(&SyncCredential {
+                service: SyncService::Inara,
+                cmdr_fid: "F000001".into(),
+                cmdr_name: "CMDR".into(),
+                api_key: "k1".into(),
+                created_at: "2026-11-10T17:00:00Z".into(),
+                verified_at: Some("2026-11-10T17:00:00Z".into()),
+                assignment: KeyAssignment::Confirmed,
+            })
+            .unwrap();
+        store
+            .set_activation(SyncService::Inara, "F000001", activated)
+            .unwrap();
+
+        let mut router = Router::new(
+            store.clone(),
+            clock,
+            Arc::new(AtomicBool::new(true)),
+            Arc::new(AtomicBool::new(true)),
+            RouterConfig {
+                journal_dir: dir.path().to_path_buf(),
+                env: EnvGates {
+                    e2e_simulation: false,
+                },
+                live_signal: LiveSignalPolicy::ProcessCheck,
+                flush_every: std::time::Duration::from_millis(250),
+                flush_rows: 200,
+                hold_before_process: (200, std::time::Duration::from_secs(10)),
+            },
+            vec![Box::new(InaraMapper::new())],
+        );
+
+        let file = "Journal.2026-11-10T180000.01.log";
+        let send = |r: &mut Router, event| {
+            r.handle(SyncFeed {
+                origin: FeedOrigin::Live,
+                galaxy: Galaxy::Live,
+                game_running: true,
+                event,
+            })
+            .unwrap();
+        };
+
+        send(
+            &mut router,
+            SyncFeedEvent::Journal {
+                ev: ev(
+                    r#"{"timestamp":"2026-11-10T16:50:00Z","event":"LoadGame","FID":"F000001","Commander":"CMDR","Ship":"asp","ShipID":1,"Credits":1234,"gameversion":"4.1.0.0"}"#,
+                ),
+                file: file.into(),
+                line: 1,
+            },
+        );
+        send(&mut router, SyncFeedEvent::CatchUpDone);
+        send(&mut router, SyncFeedEvent::GameProcess { running: true });
+        router.flush().unwrap();
+
+        let count_snap = || {
+            store
+                .query_json(
+                    "SELECT kind FROM sync_outbox WHERE service='inara' AND kind='setCommanderCredits'",
+                    &[],
+                )
+                .unwrap()
+                .len()
+        };
+        assert_eq!(
+            count_snap(),
+            1,
+            "debe emitir una instantánea al cumplirse CatchUpDone+running+activo"
+        );
+
+        // Eventos siguientes en la misma sesión NO disparan otra instantánea.
+        send(&mut router, SyncFeedEvent::GameProcess { running: true });
+        send(
+            &mut router,
+            SyncFeedEvent::Journal {
+                ev: ev(
+                    r#"{"timestamp":"2026-11-10T18:05:00Z","event":"Docked","StarSystem":"Sol","StationName":"Galileo","MarketID":1}"#,
+                ),
+                file: file.into(),
+                line: 2,
+            },
+        );
+        router.flush().unwrap();
+        assert_eq!(
+            count_snap(),
+            1,
+            "solo una instantánea por arranque y comandante"
+        );
     }
 }

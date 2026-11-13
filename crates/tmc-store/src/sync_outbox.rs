@@ -88,6 +88,19 @@ impl Store {
                 outcome.ignored += 1;
                 continue;
             }
+            let keep_id = tx.last_insert_rowid();
+            if row.state == OutboxState::Pending
+                && row.kind.starts_with("set")
+                && let Some(ck) = row.coalesce_key.as_deref()
+                && !ck.trim().is_empty()
+            {
+                let row_ts = ts(row.event_ts);
+                tx.execute(
+                    "UPDATE sync_outbox SET state='superseded', done_at=?5 \
+                     WHERE service=?1 AND coalesce_key=?2 AND state='pending' AND id < ?3 AND event_ts <= ?4",
+                    rusqlite::params![row.service.as_str(), ck, keep_id, row_ts, now_s],
+                )?;
+            }
             outcome.inserted += 1;
             if row.origin == RowOrigin::Recovered {
                 outcome.recovered += 1;
@@ -147,6 +160,23 @@ impl Store {
             Some(row) => Ok(Some(u64::try_from(row.get::<_, i64>(0)?.max(0))?)),
             None => Ok(None),
         }
+    }
+
+    /// Marca como `superseded` las filas pendientes anteriores que comparten `coalesce_key`.
+    pub fn supersede_older(
+        &self,
+        service: SyncService,
+        coalesce_key: &str,
+        keep_id: i64,
+    ) -> Result<usize, StoreError> {
+        let now_s = ts(Utc::now());
+        let conn = self.lock()?;
+        let updated = conn.execute(
+            "UPDATE sync_outbox SET state='superseded', done_at=?4 \
+             WHERE service=?1 AND coalesce_key=?2 AND state='pending' AND id < ?3",
+            rusqlite::params![service.as_str(), coalesce_key, keep_id, now_s],
+        )?;
+        Ok(updated)
     }
 }
 
