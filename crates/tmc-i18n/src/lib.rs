@@ -366,6 +366,11 @@ mod tests {
                 ("version", FluentValue::from("1.0.2")),
                 ("group", FluentValue::from("Fleetcomm")),
                 ("schemas", FluentValue::from("journal/1")),
+                ("schema", FluentValue::from("journal/1")),
+                ("service", FluentValue::from("Inara")),
+                ("inara", FluentValue::from(2)),
+                ("edsm", FluentValue::from(1)),
+                ("eddn", FluentValue::from(0)),
                 ("cmdr", FluentValue::from("Danikuso")),
             ] {
                 args.set(name, value);
