@@ -351,7 +351,7 @@ mod tests {
         assert_eq!(res, Ok(()));
         let forms = transport.posted_forms.lock().unwrap();
         assert_eq!(forms.len(), 1);
-        assert_eq!(forms[0].0, "https://www.edsm.net/api-logs-v1/set-logs");
+        assert_eq!(forms[0].0, format!("{EDSM_LOGS_BASE}/set-logs"));
         assert!(
             forms[0]
                 .1

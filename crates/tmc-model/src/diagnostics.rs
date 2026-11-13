@@ -161,6 +161,7 @@ pub enum DiagnosticContext<'a> {
     Auth,
     Ui,
     Sql,
+    Sync,
 }
 
 impl DiagnosticContext<'_> {
@@ -184,6 +185,7 @@ impl DiagnosticContext<'_> {
             Self::Auth => "auth",
             Self::Ui => "ui",
             Self::Sql => "sql",
+            Self::Sync => "sync",
         }
     }
 }
@@ -490,6 +492,9 @@ fn secret_field(key: &str) -> bool {
                 | "uri"
                 | "requestbody"
                 | "responsebody"
+                | "keyhint"
+                | "serverhint"
+                | "cmdrref"
         )
 }
 
@@ -761,9 +766,17 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
             text,
             "null" | "boolean" | "number" | "string" | "array" | "object"
         ),
-        "tab" | "slot" | "panel" | "view" | "relevance" | "state" | "kind" | "layout" | "level"
+        "tab" | "slot" | "panel" | "view" | "relevance" | "kind" | "layout" | "level"
         | "context" | "manualcontext" => {
             matches!(context, DiagnosticContext::Ui) && ui_value(key, text)
+        }
+        "state" => {
+            (matches!(context, DiagnosticContext::Ui) && ui_value(key, text))
+                || (matches!(context, DiagnosticContext::Sync)
+                    && matches!(
+                        text,
+                        "disabled" | "paused" | "waiting" | "connected" | "error" | "unavailable"
+                    ))
         }
         "reason" => matches!(
             text,
@@ -840,6 +853,73 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
                     | "edsm.coords"
                     | "unknown"
             )
+        }
+        "service" => {
+            matches!(context, DiagnosticContext::Sync) && matches!(text, "inara" | "edsm" | "eddn")
+        }
+        "decision" | "outcome" => {
+            matches!(context, DiagnosticContext::Sync)
+                && matches!(
+                    text,
+                    "started"
+                        | "stopped"
+                        | "enqueued"
+                        | "flushed"
+                        | "aborted_recovery"
+                        | "recovered"
+                        | "held"
+                        | "released"
+                        | "lease_acquired"
+                        | "lease_released"
+                        | "lease_lost"
+                        | "worker_outcome"
+                        | "housekeeping"
+                        | "e2e_disabled"
+                )
+        }
+        "processkind" => {
+            matches!(context, DiagnosticContext::Sync) && matches!(text, "desktop" | "headless")
+        }
+        "syncclass" | "class" => {
+            matches!(context, DiagnosticContext::Sync)
+                && matches!(
+                    text,
+                    "network"
+                        | "timeout"
+                        | "rate_limit"
+                        | "auth_rejected"
+                        | "client_error"
+                        | "schema_deprecated"
+                        | "server_error"
+                        | "malformed"
+                        | "parse_error"
+                        | "local_validation"
+                        | "discarded"
+                )
+        }
+        "syncreason" => {
+            matches!(context, DiagnosticContext::Sync)
+                && matches!(
+                    text,
+                    "online_off"
+                        | "legacy"
+                        | "beta"
+                        | "replay"
+                        | "game_not_running"
+                        | "other_instance"
+                        | "platform_unsupported"
+                        | "no_key"
+                        | "key_unassigned"
+                        | "switch_off"
+                        | "auth_invalid"
+                        | "auth_missing"
+                        | "rate_limited"
+                        | "server_down"
+                        | "schema_paused"
+                        | "network"
+                        | "bad_request"
+                        | "internal"
+                )
         }
         _ => false,
     }
@@ -1925,5 +2005,34 @@ mod tests {
     fn auto_companion_actions_are_registered() {
         assert!(is_registered_action("app.toggle_lock"));
         assert!(is_registered_action("app.set_auto_priorities"));
+    }
+
+    #[test]
+    fn sync_diagnostics_keep_classes_and_redact_payload() {
+        let safe = redact_diagnostic(
+            &json!({
+                "service": "inara",
+                "decision": "worker_outcome",
+                "class": "rate_limit",
+                "sync_reason": "rate_limited",
+                "process_kind": "desktop",
+                "payload": {"secret": "CANARY"},
+                "payload_raw": "CANARY_RAW",
+                "api_key": "CANARYKEY",
+                "cmdr_fid": "F9999999",
+                "cmdr_name": "CMDR CANARY"
+            }),
+            DiagnosticContext::Sync,
+        );
+        assert_eq!(safe["service"], "inara");
+        assert_eq!(safe["decision"], "worker_outcome");
+        assert_eq!(safe["class"], "rate_limit");
+        assert_eq!(safe["sync_reason"], "rate_limited");
+        assert_eq!(safe["process_kind"], "desktop");
+        assert_eq!(safe["payload"]["secret"], REDACTED);
+        assert_eq!(safe["payload_raw"], REDACTED);
+        assert_eq!(safe["api_key"], REDACTED);
+        assert_eq!(safe["cmdr_fid"], REDACTED);
+        assert_eq!(safe["cmdr_name"], REDACTED);
     }
 }

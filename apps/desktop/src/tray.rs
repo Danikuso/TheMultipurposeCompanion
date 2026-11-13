@@ -37,7 +37,7 @@ pub fn setup_tray(app: &AppHandle, language: &str, local_url: Url) -> tauri::Res
                     && let Ok(mut guard) = state.0.lock()
                     && let Some(running) = guard.take()
                 {
-                    running.server.shutdown();
+                    tauri::async_runtime::block_on(running.shutdown());
                 }
                 app.exit(0);
             }

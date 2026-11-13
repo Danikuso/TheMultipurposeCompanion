@@ -28,6 +28,7 @@ use tmc_model::sync::{
     SyncReason, SyncService,
 };
 use tmc_store::{CursorAdvance, EnqueueOutcome, NewOutboxRow, Store, StoreError, UnassignedReason};
+use tokio::sync::Notify;
 use tokio::time::Instant;
 
 pub use tmc_model::sync::REPLAY_MARKER;
@@ -254,6 +255,7 @@ pub struct Router {
     batch: Batch,
     held: VecDeque<SyncFeed>,
     held_since: Option<Instant>,
+    enqueued_wakers: Vec<Arc<Notify>>,
 }
 
 impl Router {
@@ -283,6 +285,7 @@ impl Router {
             batch: Batch::default(),
             held: VecDeque::new(),
             held_since: None,
+            enqueued_wakers: Vec::new(),
         };
         router.refresh_replay_marker();
         router.publish();
@@ -335,6 +338,11 @@ impl Router {
     /// Estado de guardas compartido con trabajadores y agregador.
     pub fn send_gates(&self) -> Arc<SendGates> {
         self.gates.clone()
+    }
+
+    /// Registra notificadores que se despiertan cuando `flush` inserta filas nuevas.
+    pub fn set_enqueued_wakers(&mut self, wakers: Vec<Arc<Notify>>) {
+        self.enqueued_wakers = wakers;
     }
 
     /// Estado transitorio tras la última línea procesada.
@@ -396,6 +404,11 @@ impl Router {
             self.clock.now_utc(),
         )?;
         self.batch = Batch::default();
+        if outcome.inserted > 0 {
+            for wake in &self.enqueued_wakers {
+                wake.notify_one();
+            }
+        }
         Ok(outcome)
     }
 
@@ -425,44 +438,60 @@ impl Router {
 
     /// Motivo por el que un servicio no encola para un comandante (para el agregador).
     pub fn blocked(&self, service: SyncService, cmdr_fid: Option<&str>) -> Option<SyncReason> {
-        if let Some(reason) = self.gates.global_reason() {
-            return Some(reason);
-        }
-        if let Some(reason) = self.service_reason(service, cmdr_fid) {
-            return Some(reason);
-        }
-        self.gates
-            .game_not_running()
-            .then_some(SyncReason::GameNotRunning)
+        blocked_with(&self.gates, &self.store, service, cmdr_fid)
     }
+}
 
-    fn service_reason(&self, service: SyncService, cmdr_fid: Option<&str>) -> Option<SyncReason> {
-        match service {
-            SyncService::Eddn => match eddn_enabled_at(&self.store) {
-                Some(_) => None,
-                None => Some(SyncReason::SwitchOff),
-            },
-            SyncService::Inara | SyncService::Edsm => {
-                if let Some(fid) = cmdr_fid {
-                    match self.store.sync_credential(service, fid) {
-                        Ok(Some(_)) => return None,
-                        Ok(None) => {}
-                        Err(_) => return Some(SyncReason::NoKey),
-                    }
+/// Evalúa el bloqueo efectivo con las guardas compartidas y el estado en almacén.
+pub(crate) fn blocked_with(
+    gates: &SendGates,
+    store: &Store,
+    service: SyncService,
+    cmdr_fid: Option<&str>,
+) -> Option<SyncReason> {
+    if let Some(reason) = gates.global_reason() {
+        return Some(reason);
+    }
+    if let Some(reason) = service_reason_in(store, service, cmdr_fid) {
+        return Some(reason);
+    }
+    gates
+        .game_not_running()
+        .then_some(SyncReason::GameNotRunning)
+}
+
+fn service_reason_in(
+    store: &Store,
+    service: SyncService,
+    cmdr_fid: Option<&str>,
+) -> Option<SyncReason> {
+    match service {
+        SyncService::Eddn => match eddn_enabled_at(store) {
+            Some(_) => None,
+            None => Some(SyncReason::SwitchOff),
+        },
+        SyncService::Inara | SyncService::Edsm => {
+            if let Some(fid) = cmdr_fid {
+                match store.sync_credential(service, fid) {
+                    Ok(Some(_)) => return None,
+                    Ok(None) => {}
+                    Err(_) => return Some(SyncReason::NoKey),
                 }
-                let ambiguous = self.store.unassigned_keys().is_ok_and(|keys| {
-                    keys.iter()
-                        .any(|k| k.service == service && k.reason == UnassignedReason::Ambiguous)
-                });
-                Some(if ambiguous {
-                    SyncReason::KeyUnassigned
-                } else {
-                    SyncReason::NoKey
-                })
             }
+            let ambiguous = store.unassigned_keys().is_ok_and(|keys| {
+                keys.iter()
+                    .any(|k| k.service == service && k.reason == UnassignedReason::Ambiguous)
+            });
+            Some(if ambiguous {
+                SyncReason::KeyUnassigned
+            } else {
+                SyncReason::NoKey
+            })
         }
     }
+}
 
+impl Router {
     fn must_hold(&self, feed: &SyncFeed) -> bool {
         self.cfg.live_signal == LiveSignalPolicy::ProcessCheck
             && self.process.is_none()

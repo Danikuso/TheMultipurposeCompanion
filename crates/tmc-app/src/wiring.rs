@@ -17,6 +17,7 @@ use tmc_modules::all_modules;
 use tmc_net::{NetClient, ReqwestTransport, Transport};
 use tmc_server::{ServerConfig, ServerHandle, serve};
 use tmc_store::{EventWriter, ImportOptions, Store, import_history};
+use tmc_sync::SyncHandle;
 use tokio::sync::broadcast::error::RecvError;
 
 pub struct Running {
@@ -24,6 +25,16 @@ pub struct Running {
     pub core: CoreHandle,
     pub store: Store,
     pub clipboard: Arc<Clipboard>,
+    pub actions: Arc<AppActions>,
+    pub sync: SyncHandle,
+}
+
+impl Running {
+    /// Cierra ordenadamente la sincronización (vacía lote y libera lease) y el servidor HTTP.
+    pub async fn shutdown(self) {
+        self.sync.shutdown().await;
+        self.server.shutdown();
+    }
 }
 
 fn open_or_rebuild_store(db_dir: &Path) -> anyhow::Result<Store> {
@@ -95,6 +106,15 @@ impl tmc_net::client::RefPersist for CodexRefStore {
 }
 
 pub async fn start(config: Config) -> anyhow::Result<Running> {
+    start_with_kind(config, "desktop").await
+}
+
+/// Igual que [`start`], indicando tipo de proceso `"headless"` en el lease de sincronización.
+pub async fn start_headless(config: Config) -> anyhow::Result<Running> {
+    start_with_kind(config, "headless").await
+}
+
+async fn start_with_kind(config: Config, process_kind: &'static str) -> anyhow::Result<Running> {
     tmc_model::diagnostic!(
         tmc_model::diagnostics::DiagnosticContext::State,
         "app.transport.starting",
@@ -109,7 +129,7 @@ pub async fn start(config: Config) -> anyhow::Result<Running> {
             );
         })
         .map_err(|err| anyhow::anyhow!("could not build HTTP transport: {err:?}"))?;
-    start_custom(config, Arc::new(transport), None).await
+    start_full_with_kind(config, Arc::new(transport), None, None, process_kind).await
 }
 
 /// Igual que [`start`] pero con el transporte HTTP inyectado (tests de extremo a extremo).
@@ -137,6 +157,26 @@ pub async fn start_full(
     poll_idle: Option<Duration>,
     eddn_url: Option<String>,
 ) -> anyhow::Result<Running> {
+    start_full_with_kind(config, transport, poll_idle, eddn_url, "desktop").await
+}
+
+/// Igual que [`start_full`], para el binario `headless`.
+pub async fn start_headless_full(
+    config: Config,
+    transport: Arc<dyn Transport>,
+    poll_idle: Option<Duration>,
+    eddn_url: Option<String>,
+) -> anyhow::Result<Running> {
+    start_full_with_kind(config, transport, poll_idle, eddn_url, "headless").await
+}
+
+async fn start_full_with_kind(
+    config: Config,
+    transport: Arc<dyn Transport>,
+    poll_idle: Option<Duration>,
+    eddn_url: Option<String>,
+    process_kind: &'static str,
+) -> anyhow::Result<Running> {
     #[cfg(debug_assertions)]
     let diagnostic_started = std::time::Instant::now();
     tmc_model::diagnostic!(
@@ -144,7 +184,7 @@ pub async fn start_full(
         "app.runtime.starting",
         config.diagnostic_snapshot()
     );
-    let result = start_inner(config, transport, poll_idle, eddn_url).await;
+    let result = start_inner(config, transport, poll_idle, eddn_url, process_kind).await;
     #[cfg(debug_assertions)]
     match &result {
         Ok(_) => {
@@ -170,6 +210,7 @@ async fn start_inner(
     transport: Arc<dyn Transport>,
     poll_idle: Option<Duration>,
     eddn_url: Option<String>,
+    process_kind: &'static str,
 ) -> anyhow::Result<Running> {
     let journal_dir = resolve_journal_dir(config.journal_dir.as_deref())?;
     let db_dir = config.data_dir.clone().unwrap_or_else(data_dir);
@@ -206,6 +247,16 @@ async fn start_inner(
         net_events,
         online.clone(),
     );
+    let (sync_events, mut sync_events_rx) = tokio::sync::mpsc::channel::<SourceEvent>(64);
+    let sync = crate::sync_wiring::start_sync(
+        &store,
+        transport.clone(),
+        online.clone(),
+        sync_events,
+        &journal_dir,
+        process_kind,
+    );
+    let sync_waker = sync.waker();
     let core = spawn_core_with(
         modules,
         CoreOptions {
@@ -213,9 +264,17 @@ async fn start_inner(
             flush_every: Duration::from_millis(100),
             store: Some(store.clone()),
             net: Some(net.tx.clone()),
-            sync: None,
+            sync: Some(sync.feed.clone()),
         },
     );
+    let sync_forward = core.events.clone();
+    tokio::spawn(async move {
+        while let Some(event) = sync_events_rx.recv().await {
+            if sync_forward.send(event).await.is_err() {
+                break;
+            }
+        }
+    });
     tmc_model::diagnostic!(
         tmc_model::diagnostics::DiagnosticContext::State,
         "app.core.started",
@@ -462,6 +521,7 @@ async fn start_inner(
     let auto_update_install = config.auto_update_install;
     let actions = Arc::new(
         AppActions::with_runtime(config, core.events.clone(), online.clone(), net)
+            .with_sync_waker(sync_waker)
             .with_clipboard(clipboard.clone())
             .with_settings_watch(settings_tx)
             .with_capi_service(capi_service)
@@ -482,7 +542,7 @@ async fn start_inner(
         });
     }
 
-    let server = serve(server_cfg, core.clone(), store.clone(), actions).await?;
+    let server = serve(server_cfg, core.clone(), store.clone(), actions.clone()).await?;
 
     tmc_model::diagnostic!(
         tmc_model::diagnostics::DiagnosticContext::State,
@@ -494,6 +554,8 @@ async fn start_inner(
         core,
         store,
         clipboard,
+        actions,
+        sync,
     })
 }
 

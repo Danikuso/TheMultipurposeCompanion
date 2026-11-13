@@ -93,7 +93,7 @@ const MODULES: [&str; 8] = [
 ];
 
 #[derive(Clone, Copy)]
-pub(super) struct Limits {
+pub(crate) struct Limits {
     max_bytes: u64,
     retention_days: i64,
     batch_records: usize,
@@ -135,7 +135,7 @@ fn route(code: &str) -> Route {
         "config" => "diag_config",
         "core" | "actor" | "app" => "diag_actor",
         "topic" => "diag_topic",
-        "net" | "eddn" => "diag_net",
+        "net" | "eddn" | "sync" => "diag_net",
         "http" | "ws" | "auth" | "action" | "clipboard" => "diag_server",
         "ui" => "diag_ui",
         other => {
@@ -166,7 +166,7 @@ struct Shared {
     started: Instant,
 }
 
-pub(super) struct DiagnosticGuard {
+pub(crate) struct DiagnosticGuard {
     shared: Arc<Shared>,
     worker: Option<JoinHandle<()>>,
 }
@@ -211,7 +211,7 @@ fn now_ts() -> String {
     ts_of(Utc::now())
 }
 
-pub(super) struct DiagnosticLayer {
+pub(crate) struct DiagnosticLayer {
     sender: SyncSender<Record>,
     shared: Arc<Shared>,
 }
@@ -590,7 +590,7 @@ fn insert(tx: &Transaction, session: &str, seq: i64, r: &Record) -> rusqlite::Re
     .map(|_| ())
 }
 
-pub(super) fn start_writer(
+pub(crate) fn start_writer(
     dir: PathBuf,
     limits: Limits,
 ) -> io::Result<(DiagnosticLayer, DiagnosticGuard)> {

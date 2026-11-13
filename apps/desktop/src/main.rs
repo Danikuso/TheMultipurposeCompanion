@@ -89,7 +89,7 @@ fn main() -> anyhow::Result<()> {
                 && let Ok(mut guard) = state.0.lock()
                 && let Some(running) = guard.take()
             {
-                running.server.shutdown();
+                tauri::async_runtime::block_on(running.shutdown());
             }
         }
         _ => {}

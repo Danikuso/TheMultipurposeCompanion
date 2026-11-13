@@ -162,22 +162,38 @@ impl StatusAggregator {
         reports: Vec<SyncReport>,
         now: tokio::time::Instant,
     ) -> Vec<SyncReport> {
+        self.changed_reports_with_pending(reports, now).0
+    }
+
+    /// Igual que `changed_reports`, e indica el menor tiempo restante si alguno quedó retenido por límite de 1/s.
+    pub fn changed_reports_with_pending(
+        &mut self,
+        reports: Vec<SyncReport>,
+        now: tokio::time::Instant,
+    ) -> (Vec<SyncReport>, Option<Duration>) {
         let mut out = Vec::new();
+        let mut min_wait: Option<Duration> = None;
         for report in reports {
             let slot = ReportSlot::of(&report);
             if self.last_emitted.get(&slot) == Some(&report) {
                 continue;
             }
-            if let Some(&prev_at) = self.last_sent_at.get(&slot)
-                && now.saturating_duration_since(prev_at) < REPORT_MIN_INTERVAL
-            {
-                continue;
+            if let Some(&prev_at) = self.last_sent_at.get(&slot) {
+                let elapsed = now.saturating_duration_since(prev_at);
+                if elapsed < REPORT_MIN_INTERVAL {
+                    let rem = REPORT_MIN_INTERVAL - elapsed;
+                    min_wait = Some(match min_wait {
+                        Some(prev) => prev.min(rem),
+                        None => rem,
+                    });
+                    continue;
+                }
             }
             self.last_emitted.insert(slot, report.clone());
             self.last_sent_at.insert(slot, now);
             out.push(report);
         }
-        out
+        (out, min_wait)
     }
 
     fn build_service_status(

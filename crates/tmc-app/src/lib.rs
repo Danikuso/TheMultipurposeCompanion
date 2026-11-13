@@ -11,6 +11,7 @@ pub mod env;
 pub mod inara_service;
 pub mod logging;
 pub mod net_service;
+pub mod sync_wiring;
 pub mod updater;
 pub mod voiceattack;
 pub mod wiring;
@@ -24,13 +25,19 @@ pub use inara_service::InaraService;
 pub use logging::{LoggingGuards, init_logging};
 pub use net_service::{NetServiceHandle, spawn_net_service};
 pub use voiceattack::{detect_voiceattack, generate_vap_profile};
-pub use wiring::{Running, start, start_custom, start_full, start_with_transport};
+pub use wiring::{
+    Running, start, start_custom, start_full, start_headless, start_headless_full,
+    start_with_transport,
+};
 
 #[cfg(all(test, debug_assertions))]
 mod e2e_tests;
 
 #[cfg(test)]
 mod engineering_pages_tests;
+
+#[cfg(test)]
+mod sync_tests;
 
 #[cfg(test)]
 mod tests {
@@ -469,7 +476,7 @@ tourism_reference_cr_ly = 200000
         let (events, _rx) = tokio::sync::mpsc::channel(8);
         let net = spawn_net_service(
             std::sync::Arc::new(tmc_net::NetClient::new(std::sync::Arc::new(
-                tmc_net::ReqwestTransport::new().unwrap(),
+                tmc_net::testing::NoNetworkTransport::default(),
             ))),
             tmc_core::Store::open_in_memory().unwrap(),
             events,
@@ -538,7 +545,7 @@ tourism_reference_cr_ly = 200000
         let (events, _rx) = tokio::sync::mpsc::channel(8);
         let net = spawn_net_service(
             std::sync::Arc::new(tmc_net::NetClient::new(std::sync::Arc::new(
-                tmc_net::ReqwestTransport::new().unwrap(),
+                tmc_net::testing::NoNetworkTransport::default(),
             ))),
             tmc_core::Store::open_in_memory().unwrap(),
             events,
@@ -595,7 +602,7 @@ tourism_reference_cr_ly = 200000
         let (events, _rx) = tokio::sync::mpsc::channel(8);
         let net = spawn_net_service(
             std::sync::Arc::new(tmc_net::NetClient::new(std::sync::Arc::new(
-                tmc_net::ReqwestTransport::new().unwrap(),
+                tmc_net::testing::NoNetworkTransport::default(),
             ))),
             tmc_core::Store::open_in_memory().unwrap(),
             events,
@@ -676,7 +683,7 @@ tourism_reference_cr_ly = 200000
         let online = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
         let net = spawn_net_service(
             std::sync::Arc::new(tmc_net::NetClient::new(std::sync::Arc::new(
-                tmc_net::ReqwestTransport::new().unwrap(),
+                tmc_net::testing::NoNetworkTransport::default(),
             ))),
             tmc_core::Store::open_in_memory().unwrap(),
             net_events,

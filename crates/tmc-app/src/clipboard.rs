@@ -112,6 +112,7 @@ struct Runtime {
     events: mpsc::Sender<SourceEvent>,
     online: Arc<AtomicBool>,
     net: NetServiceHandle,
+    sync_waker: Option<tmc_sync::SyncWaker>,
 }
 
 pub struct AppActions {
@@ -184,9 +185,18 @@ impl AppActions {
                 events,
                 online,
                 net,
+                sync_waker: None,
             }),
             ..Self::with_config(cfg)
         }
+    }
+
+    /// Conecta el notificador de sincronización (`accounts.sync_now` y cambios de `online_services`).
+    pub fn with_sync_waker(mut self, waker: tmc_sync::SyncWaker) -> Self {
+        if let Some(runtime) = &mut self.runtime {
+            runtime.sync_waker = Some(waker);
+        }
+        self
     }
 
     /// Comparte el portapapeles con la tarea de copia automática.
@@ -316,6 +326,9 @@ impl ConfigHost for AppActions {
             runtime
                 .online
                 .store(updated.online_services, Ordering::Relaxed);
+            if let Some(waker) = &runtime.sync_waker {
+                waker.wake_all();
+            }
             let event = SourceEvent::Settings(updated.module_settings());
             match runtime.events.try_send(event) {
                 Ok(()) => {}
@@ -958,6 +971,11 @@ impl ActionHost for AppActions {
             .runtime
             .as_ref()
             .ok_or_else(|| ActionError::Failed("no-runtime".into()))?;
+        if name == "accounts.sync_now"
+            && let Some(waker) = &runtime.sync_waker
+        {
+            waker.wake_all();
+        }
         let event = SourceEvent::Action {
             name: name.to_owned(),
             args: args.clone(),

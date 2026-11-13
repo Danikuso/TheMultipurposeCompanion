@@ -6,6 +6,7 @@ pub mod ids;
 pub mod lease;
 pub mod recovery;
 pub mod router;
+pub mod runtime;
 pub mod status;
 pub mod tracker;
 pub mod worker;
@@ -21,6 +22,7 @@ pub use router::{
     EnvGates, LiveSignalPolicy, MappedInput, MappedRow, REPLAY_MARKER, Router, RouterConfig,
     SendGates, ServiceMapper,
 };
+pub use runtime::{SyncDeps, SyncHandle, SyncWaker, spawn_sync};
 pub use status::{EDDN_PAUSED_SCHEMAS_KEY, StatusAggregator};
 pub use tracker::{TransientSnapshot, TransientTracker};
 pub use worker::{
