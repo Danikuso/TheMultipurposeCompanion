@@ -1131,11 +1131,12 @@ impl Router {
             }
         }
         // EDDN encendido: la activación del comandante es el instante de encendido (PD-3).
-        if let Some(enabled_at) = eddn_enabled_at(&self.store)
-            && self.store.activation(SyncService::Eddn, fid)?.is_none()
-        {
-            self.store
-                .set_activation(SyncService::Eddn, fid, enabled_at)?;
+        if let Some(enabled_at) = eddn_enabled_at(&self.store) {
+            let current = self.store.activation(SyncService::Eddn, fid)?;
+            if current.is_none_or(|ts| ts < enabled_at) {
+                self.store
+                    .set_activation(SyncService::Eddn, fid, enabled_at)?;
+            }
         }
         Ok(())
     }
@@ -1154,12 +1155,20 @@ fn active_since(
     service: SyncService,
     fid: &str,
 ) -> Result<Option<DateTime<Utc>>, StoreError> {
-    let active = match service {
-        SyncService::Eddn => eddn_enabled_at(store).is_some(),
-        SyncService::Inara | SyncService::Edsm => store.sync_credential(service, fid)?.is_some(),
-    };
-    if !active {
-        return Ok(None);
+    match service {
+        SyncService::Eddn => match eddn_enabled_at(store) {
+            Some(enabled_at) => Ok(Some(
+                store
+                    .activation(SyncService::Eddn, fid)?
+                    .map_or(enabled_at, |a| a.max(enabled_at)),
+            )),
+            None => Ok(None),
+        },
+        SyncService::Inara | SyncService::Edsm => {
+            if store.sync_credential(service, fid)?.is_none() {
+                return Ok(None);
+            }
+            store.activation(service, fid)
+        }
     }
-    store.activation(service, fid)
 }

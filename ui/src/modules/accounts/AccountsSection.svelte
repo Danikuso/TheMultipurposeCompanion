@@ -122,7 +122,7 @@
   }
 
   async function toggleEddn() {
-    await action('accounts.set_settings', { eddn_enabled: !status?.eddn?.enabled });
+    await action('accounts.eddn.set_enabled', { enabled: !status?.eddn?.enabled });
   }
 
   async function saveEdsmKey() {
@@ -315,6 +315,11 @@
         </div>
         {#if reasonText(status?.eddn?.reason)}
           <p class="sync-reason-line sub">{reasonText(status?.eddn?.reason)}</p>
+        {/if}
+        {#if (status?.eddn?.paused_schemas?.length ?? 0) > 0}
+          <p class="sync-reason-line sub mono" data-testid="eddn-paused-schemas">
+            {t('accounts-eddn-paused-schemas', { schemas: status?.eddn?.paused_schemas?.join(', ') ?? '' })}
+          </p>
         {/if}
 
         <div class="sync-metrics-grid">
@@ -927,6 +932,7 @@
   .sync-reason-line {
     margin: 0 0 10px 0;
     line-height: 1.35;
+    overflow-wrap: anywhere;
   }
 
   .badges-wrap {

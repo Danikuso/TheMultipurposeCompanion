@@ -113,6 +113,7 @@ struct Runtime {
     online: Arc<AtomicBool>,
     net: NetServiceHandle,
     sync_waker: Option<tmc_sync::SyncWaker>,
+    store: Option<tmc_store::Store>,
 }
 
 pub struct AppActions {
@@ -186,6 +187,7 @@ impl AppActions {
                 online,
                 net,
                 sync_waker: None,
+                store: None,
             }),
             ..Self::with_config(cfg)
         }
@@ -195,6 +197,14 @@ impl AppActions {
     pub fn with_sync_waker(mut self, waker: tmc_sync::SyncWaker) -> Self {
         if let Some(runtime) = &mut self.runtime {
             runtime.sync_waker = Some(waker);
+        }
+        self
+    }
+
+    /// Conecta la base de datos SQLite para acciones de cuentas y credenciales (`accounts.eddn.set_enabled`, etc.).
+    pub fn with_store(mut self, store: tmc_store::Store) -> Self {
+        if let Some(runtime) = &mut self.runtime {
+            runtime.store = Some(store);
         }
         self
     }
@@ -925,6 +935,37 @@ impl ActionHost for AppActions {
                     return Ok(json!({ "copied": text }));
                 }
                 return Err(ActionError::Failed("empty-text".into()));
+            }
+            "accounts.eddn.set_enabled" => {
+                let enabled = args
+                    .get("enabled")
+                    .and_then(Value::as_bool)
+                    .ok_or_else(|| ActionError::Failed("missing-enabled".into()))?;
+                let runtime = self
+                    .runtime
+                    .as_ref()
+                    .ok_or_else(|| ActionError::Failed("no-runtime".into()))?;
+                let store = runtime
+                    .store
+                    .as_ref()
+                    .ok_or_else(|| ActionError::Failed("no-store".into()))?;
+                let now = chrono::Utc::now();
+                if enabled {
+                    if store.kv_get(tmc_sync::router::EDDN_ENABLED_KEY).is_none() {
+                        store.kv_set(
+                            tmc_sync::router::EDDN_ENABLED_KEY,
+                            &now.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                        );
+                    }
+                } else {
+                    store.kv_delete(tmc_sync::router::EDDN_ENABLED_KEY);
+                    let _ = store.discard_pending(tmc_model::sync::SyncService::Eddn, None, now);
+                    let _ = store.clear_sync_activations(tmc_model::sync::SyncService::Eddn);
+                }
+                if let Some(waker) = &runtime.sync_waker {
+                    waker.wake_all();
+                }
+                return Ok(json!({ "ok": true, "enabled": enabled }));
             }
             "voice.speak" => {
                 let (engine_kind, default_voice, default_vol, default_rate) = {

@@ -522,6 +522,7 @@ async fn start_inner(
     let actions = Arc::new(
         AppActions::with_runtime(config, core.events.clone(), online.clone(), net)
             .with_sync_waker(sync_waker)
+            .with_store(store.clone())
             .with_clipboard(clipboard.clone())
             .with_settings_watch(settings_tx)
             .with_capi_service(capi_service)

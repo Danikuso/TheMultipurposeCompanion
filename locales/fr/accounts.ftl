@@ -114,3 +114,4 @@ accounts-sync-metric-last-confirmed = Dernier confirmé
 accounts-sync-never = —
 accounts-sync-retry-in = Erreur · nouvel essai dans { $time }
 accounts-sync-retry-now = Réessayer maintenant
+accounts-eddn-paused-schemas = Schémas en pause (mise à jour requise) : { $schemas }

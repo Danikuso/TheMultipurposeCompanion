@@ -468,6 +468,19 @@ impl Store {
             );
         }
     }
+
+    pub fn kv_delete(&self, key: &str) {
+        let result = self.lock().and_then(|conn| {
+            conn.execute("DELETE FROM kv WHERE key=?1", [key])?;
+            Ok(())
+        });
+        if let Err(error) = result {
+            tracing::warn!(
+                failure_class = error.diagnostic_class(),
+                "could not delete stored setting"
+            );
+        }
+    }
 }
 
 #[cfg(test)]

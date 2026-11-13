@@ -1,3 +1,4 @@
+mod credentials;
 mod eddn;
 mod expiry;
 mod guards;

@@ -437,6 +437,16 @@ impl Store {
         value.as_deref().map(parse_ts).transpose()
     }
 
+    /// Elimina todas las activaciones registradas para un servicio (p. ej. al apagar EDDN).
+    pub fn clear_sync_activations(&self, service: SyncService) -> Result<(), StoreError> {
+        let conn = self.lock()?;
+        conn.execute(
+            "DELETE FROM sync_activation WHERE service=?1",
+            [service.as_str()],
+        )?;
+        Ok(())
+    }
+
     /// Registra o actualiza un comandante visto en el diario. `true` si es nuevo.
     pub fn upsert_known_cmdr(
         &self,

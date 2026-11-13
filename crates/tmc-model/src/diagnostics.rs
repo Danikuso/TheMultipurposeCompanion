@@ -311,6 +311,7 @@ const ACTIONS: &[&str] = &[
     "engineering.reset_session",
     "accounts.sync_now",
     "accounts.set_settings",
+    "accounts.eddn.set_enabled",
     "frontier.login",
     "frontier.logout",
     "frontier.fleet",

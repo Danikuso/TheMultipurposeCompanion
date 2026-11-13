@@ -230,3 +230,60 @@ test('AccountsPanel saveEdsmKey dispatches edsm.save_key and clears input', asyn
   expect(actionCalled).toBe(true);
   expect(input.value).toBe('');
 });
+
+test('eddn switch sends accounts.eddn.set_enabled and never shows sent without report', async () => {
+  const posted: Array<{ url: string; body: unknown }> = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string, init?: RequestInit) => {
+      posted.push({
+        url,
+        body: init?.body ? JSON.parse(String(init.body)) : null,
+      });
+      return new Response(JSON.stringify({ ok: true, enabled: true }), { status: 200 });
+    }),
+  );
+
+  mountWith(AccountsPanel, {
+    'accounts.status': {
+      current_cmdr: { cmdr_ref: 'cmdr-1', name: 'Danikuso' },
+      inara: { ...baseDisabledService('no_key'), has_key: false, key_hint: null },
+      edsm: { ...baseDisabledService('no_key'), has_key: false, key_hint: null },
+      eddn: {
+        ...baseDisabledService('switch_off'),
+        enabled: false,
+        paused_schemas: ['journal/1'],
+      },
+      commanders: [],
+      other_cmdrs_pending: { inara: 0, edsm: 0, eddn: 0 },
+      unassigned_keys: [],
+      capi: {
+        configured: false,
+        connected: false,
+        commander_name: null,
+        token_expires_at: null,
+        remote_ships_count: 0,
+        last_sync_time: null,
+        last_error: null,
+      },
+    },
+  });
+
+  expect(q('eddn-state-pill')?.textContent).toContain('Desactivado');
+  expect(q('eddn-metric-sent')?.textContent?.trim()).toBe('0');
+  expect(q('eddn-paused-schemas')?.textContent).toContain('journal/1');
+
+  const sw = q('eddn-switch') as HTMLButtonElement;
+  sw.click();
+  await new Promise((r) => setTimeout(r, 10));
+  flushSync();
+
+  expect(posted.length).toBe(1);
+  expect(posted[0].url).toContain('accounts.eddn.set_enabled');
+  expect(posted[0].body).toEqual({ enabled: true });
+
+  // Sin un nuevo reporte del backend no se muestra optimísticamente como Conectado/enviado.
+  expect(q('eddn-state-pill')?.textContent).toContain('Desactivado');
+  expect(q('eddn-state-pill')?.textContent).not.toContain('Conectado');
+  expect(q('eddn-metric-sent')?.textContent?.trim()).toBe('0');
+});

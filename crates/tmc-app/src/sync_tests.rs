@@ -494,3 +494,201 @@ async fn shutdown_flushes_router_batch() {
     let _ = LiveSignalPolicy::Unavailable;
     assert_eq!(store.sync_cursor("F1234567", &file).unwrap(), Some(3));
 }
+
+#[test]
+fn sync_canary_eddn() {
+    use crate::sync_wiring::eddn_schema_mode_from;
+    use flate2::read::GzDecoder;
+    use std::io::Read;
+    use tmc_net::HttpReplyEx;
+    use tmc_net::eddn_upload::SchemaMode;
+    use tmc_net::testing::ScriptedTransport;
+
+    assert_eq!(
+        eddn_schema_mode_from(|k| (k == "TMC_EDDN_TEST_SCHEMAS").then(|| OsString::from("1"))),
+        SchemaMode::Test
+    );
+    assert_eq!(eddn_schema_mode_from(|_| None), SchemaMode::Live);
+
+    let jdir = tempdir().unwrap();
+    let ddir = tempdir().unwrap();
+    let now = Utc::now();
+    let t_hdr =
+        (now - chrono::Duration::seconds(5)).to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let t_cmdr =
+        (now - chrono::Duration::seconds(4)).to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let t_load =
+        (now - chrono::Duration::seconds(3)).to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let t_jump =
+        (now + chrono::Duration::seconds(2)).to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+
+    let journal_name = "Journal.2026-11-10T100000.01.log";
+    let journal_lines = format!(
+        concat!(
+            r#"{{"timestamp":"{t_hdr}","event":"Fileheader","part":1,"language":"English/UK","Odyssey":true,"gameversion":"4.1.0.0","build":"r1"}}"#,
+            "\n",
+            r#"{{"timestamp":"{t_cmdr}","event":"Commander","FID":"{fid}","Name":"{name}"}}"#,
+            "\n",
+            r#"{{"timestamp":"{t_load}","event":"LoadGame","FID":"{fid}","Commander":"{name}","Ship":"SideWinder","ShipID":1,"Horizons":true,"Odyssey":true,"FuelLevel":8.0,"FuelCapacity":8.0,"GameMode":"Solo","Credits":1000,"Loan":0}}"#,
+            "\n"
+        ),
+        t_hdr = t_hdr,
+        t_cmdr = t_cmdr,
+        t_load = t_load,
+        fid = CANARY_FID,
+        name = CANARY_NAME,
+    );
+    std::fs::write(jdir.path().join(journal_name), journal_lines).unwrap();
+
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+
+    let transport = ScriptedTransport::new(vec![Ok(HttpReplyEx {
+        status: 200,
+        body: "OK".to_string(),
+        retry_after_s: None,
+        rate_limit_remaining: None,
+        rate_limit_reset_s: None,
+    })]);
+
+    let (posts, snapshot) = rt.block_on(async {
+        let cfg = Config {
+            journal_dir: Some(jdir.path().to_path_buf()),
+            data_dir: Some(ddir.path().to_path_buf()),
+            server: ServerSection {
+                port: 0,
+                ..Default::default()
+            },
+            online_services: true,
+            auto_update_check: false,
+            auto_copy_next_system: false,
+            ..Default::default()
+        };
+        let running = start_with_transport(cfg, transport.clone())
+            .await
+            .unwrap();
+
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                let s = running.core.snapshot().await;
+                if s.get("core.cmdr")
+                    .and_then(|v| v.get("fid"))
+                    .and_then(Value::as_str)
+                    == Some(CANARY_FID)
+                {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .unwrap();
+
+        let router = build_router(
+            ServerConfig {
+                port: running.server.port,
+                lan: false,
+                token: String::new(),
+                ui_dir: None,
+            },
+            "127.0.0.1".into(),
+            running.core.clone(),
+            running.store.clone(),
+            running.actions.clone(),
+        );
+
+        let mut req_on = Request::builder()
+            .method("POST")
+            .uri("/api/actions/accounts.eddn.set_enabled")
+            .header(header::HOST, format!("127.0.0.1:{}", running.server.port))
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(r#"{"enabled":true}"#))
+            .unwrap();
+        req_on
+            .extensions_mut()
+            .insert(ConnectInfo("127.0.0.1:55001".parse::<SocketAddr>().unwrap()));
+        let resp_on = router.clone().oneshot(req_on).await.unwrap();
+        assert_eq!(resp_on.status(), StatusCode::OK);
+
+        let _ = running
+            .core
+            .events
+            .send(SourceEvent::GameProcess { running: true })
+            .await;
+        let _ = running
+            .core
+            .events
+            .send(SourceEvent::Journal {
+                file: journal_name.to_string(),
+                line: 4,
+                replaying: false,
+                ev: parse_line(&format!(
+                    r#"{{"timestamp":"{t_jump}","event":"FSDJump","StarSystem":"Sirius","SystemAddress":10477373805,"StarPos":[6.25,1.25,-1.25],"JumpDist":8.5}}"#
+                ))
+                .unwrap(),
+            })
+            .await;
+
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if !transport.posts().is_empty() {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .unwrap();
+
+        let snap = running.core.snapshot().await;
+
+        let mut req_off = Request::builder()
+            .method("POST")
+            .uri("/api/actions/accounts.eddn.set_enabled")
+            .header(header::HOST, format!("127.0.0.1:{}", running.server.port))
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(r#"{"enabled":false}"#))
+            .unwrap();
+        req_off
+            .extensions_mut()
+            .insert(ConnectInfo("127.0.0.1:55001".parse::<SocketAddr>().unwrap()));
+        let resp_off = router.oneshot(req_off).await.unwrap();
+        assert_eq!(resp_off.status(), StatusCode::OK);
+        assert!(running.store.kv_get("sync.eddn.enabled_at").is_none());
+
+        running.shutdown().await;
+        (transport.posts(), snap)
+    });
+
+    assert_eq!(posts.len(), 1);
+    let raw = &posts[0].body;
+    let body_text = if raw.starts_with(&[0x1f, 0x8b]) {
+        let mut out = String::new();
+        GzDecoder::new(raw.as_slice())
+            .read_to_string(&mut out)
+            .unwrap();
+        out
+    } else {
+        String::from_utf8(raw.clone()).unwrap()
+    };
+
+    for secret in [CANARY_NAME, CANARY_FID, CANARY_KEY] {
+        assert!(
+            !body_text.contains(secret),
+            "secreto `{secret}` filtrado en cuerpo EDDN: {body_text}"
+        );
+    }
+
+    let payload: Value = serde_json::from_str(&body_text).unwrap();
+    assert_eq!(
+        payload["$schemaRef"],
+        "https://eddn.edcd.io/schemas/journal/1"
+    );
+    assert_eq!(
+        payload["header"]["softwareName"],
+        tmc_net::eddn_upload::EDDN_SOFTWARE_NAME
+    );
+    assert!(snapshot.contains_key("accounts.status"));
+}
