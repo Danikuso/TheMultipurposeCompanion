@@ -1,95 +1,9 @@
 //! Modelos de datos y topics para cuentas y sincronizaciones externas (EDDN, EDSM, Inara, Frontier CAPI).
 
+use crate::sync::{
+    CmdrRef, CommanderRow, EddnServiceStatus, KeyedServiceStatus, PendingByService, SyncService,
+};
 use serde::{Deserialize, Serialize};
-
-/// Ajustes de cuentas de servicios de sincronización.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct AccountSettings {
-    /// Envío a EDDN activado (opt-in/opt-out).
-    pub eddn_enabled: bool,
-    /// Sal criptográfica para anonimizar el uploaderID de EDDN.
-    pub eddn_uploader_salt: Option<String>,
-    /// Sincronización con EDSM activada.
-    pub edsm_enabled: bool,
-    /// Nombre del comandante en EDSM.
-    pub edsm_cmdr_name: Option<String>,
-    /// Sincronización con Inara activada.
-    pub inara_enabled: bool,
-    /// Nombre del comandante en Inara.
-    pub inara_cmdr_name: Option<String>,
-    /// Integración con Frontier CAPI activada.
-    pub capi_enabled: bool,
-    /// Client ID opcional de Frontier CAPI.
-    pub capi_client_id: Option<String>,
-}
-
-impl Default for AccountSettings {
-    fn default() -> Self {
-        Self {
-            eddn_enabled: true,
-            eddn_uploader_salt: None,
-            edsm_enabled: false,
-            edsm_cmdr_name: None,
-            inara_enabled: false,
-            inara_cmdr_name: None,
-            capi_enabled: false,
-            capi_client_id: None,
-        }
-    }
-}
-
-/// Estado de la transmisión a EDDN.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EddnStatus {
-    pub enabled: bool,
-    pub connected: bool,
-    pub uploader_id: String,
-    pub messages_sent_session: u32,
-    pub last_upload_time: Option<String>,
-    pub last_error: Option<String>,
-}
-
-impl Default for EddnStatus {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            connected: false,
-            uploader_id: String::new(),
-            messages_sent_session: 0,
-            last_upload_time: None,
-            last_error: None,
-        }
-    }
-}
-
-/// Estado de la sincronización con EDSM.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub struct EdsmStatus {
-    pub enabled: bool,
-    pub has_key: bool,
-    pub commander_name: Option<String>,
-    pub last_sync_time: Option<String>,
-    pub last_error: Option<String>,
-    pub syncing: bool,
-}
-
-/// Estado de la sincronización con Inara.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub struct InaraStatus {
-    pub enabled: bool,
-    pub has_key: bool,
-    pub commander_name: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub inara_url: Option<String>,
-    #[serde(default)]
-    pub verified: bool,
-    pub last_sync_time: Option<String>,
-    pub last_error: Option<String>,
-    pub pending_events: u32,
-    pub next_slot_secs: u32,
-    pub syncing: bool,
-}
 
 /// Estado de la conexión con Frontier CAPI.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -106,9 +20,13 @@ pub struct CapiStatus {
 /// Topic WebSocket `accounts.status` servido a la interfaz.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct AccountsStatusTopic {
-    pub eddn: EddnStatus,
-    pub edsm: EdsmStatus,
-    pub inara: InaraStatus,
+    pub current_cmdr: Option<CmdrRef>,
+    pub inara: KeyedServiceStatus,
+    pub edsm: KeyedServiceStatus,
+    pub eddn: EddnServiceStatus,
+    pub commanders: Vec<CommanderRow>,
+    pub other_cmdrs_pending: PendingByService,
+    pub unassigned_keys: Vec<SyncService>,
     pub capi: CapiStatus,
 }
 
@@ -199,21 +117,21 @@ mod tests {
     }
 
     #[test]
-    fn account_settings_defaults() {
-        let s = AccountSettings::default();
-        assert!(s.eddn_enabled);
-        assert!(!s.edsm_enabled);
-        assert!(!s.inara_enabled);
-        assert!(!s.capi_enabled);
-        assert_eq!(s.eddn_uploader_salt, None);
-    }
-
-    #[test]
     fn accounts_status_topic_defaults() {
         let topic = AccountsStatusTopic::default();
-        assert!(topic.eddn.enabled);
-        assert!(!topic.edsm.enabled);
-        assert_eq!(topic.inara.pending_events, 0);
+        assert!(!topic.eddn.enabled);
+        assert_eq!(topic.eddn.status.state, crate::sync::SyncState::Disabled);
+        assert_eq!(
+            topic.eddn.status.reason,
+            Some(crate::sync::SyncReason::SwitchOff)
+        );
+        assert!(!topic.edsm.has_key);
+        assert_eq!(
+            topic.edsm.status.reason,
+            Some(crate::sync::SyncReason::NoKey)
+        );
+        assert!(!topic.inara.has_key);
+        assert_eq!(topic.inara.status.pending, 0);
         assert_eq!(topic.capi.remote_ships_count, 0);
     }
 

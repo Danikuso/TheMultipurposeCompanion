@@ -622,13 +622,6 @@ impl ActionHost for AppActions {
                     .and_then(|c| c.as_str())
                     .or_else(|| {
                         snapshot
-                            .get("accounts.status")
-                            .and_then(|s| s.get("inara"))
-                            .and_then(|i| i.get("commander_name"))
-                            .and_then(|c| c.as_str())
-                    })
-                    .or_else(|| {
-                        snapshot
                             .get("core.cmdr")
                             .and_then(|c| c.get("name"))
                             .and_then(|n| n.as_str())

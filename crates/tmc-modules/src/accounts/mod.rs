@@ -1,12 +1,11 @@
-//! Módulo `accounts`: orquestación de sincronización externa (EDDN, EDSM, Inara, Frontier CAPI)
-//! y publicación del topic `accounts.status`.
+//! Módulo `accounts`: publicación del topic `accounts.status` a partir de `SyncReport`
+//! reales de `tmc-sync` y del estado de Frontier CAPI.
 
-use chrono::Utc;
 use tmc_core::{Module, ModuleCtx, Relevance, TopicSet};
-use tmc_model::accounts::{AccountsStatusTopic, CapiStatus, EddnStatus, EdsmStatus, InaraStatus};
-use tmc_model::events::EventKind;
+use tmc_model::accounts::AccountsStatusTopic;
 use tmc_model::source::SourceEvent;
-use tmc_model::state::{Galaxy, GameState};
+use tmc_model::state::GameState;
+use tmc_model::sync::SyncReport;
 
 pub const TOPIC_STATUS: &str = "accounts.status";
 const TOPICS: [&str; 1] = [TOPIC_STATUS];
@@ -19,17 +18,7 @@ pub struct AccountsModule {
 impl AccountsModule {
     pub fn new() -> Self {
         Self {
-            status: AccountsStatusTopic {
-                eddn: EddnStatus {
-                    enabled: true,
-                    connected: true,
-                    uploader_id: "TMC-Live-Uploader".to_string(),
-                    ..Default::default()
-                },
-                edsm: EdsmStatus::default(),
-                inara: InaraStatus::default(),
-                capi: CapiStatus::default(),
-            },
+            status: AccountsStatusTopic::default(),
         }
     }
 
@@ -63,151 +52,50 @@ impl Module for AccountsModule {
         }
     }
 
-    fn on_event(&mut self, ev: &SourceEvent, state: &GameState, ctx: &mut ModuleCtx) -> TopicSet {
+    fn on_event(&mut self, ev: &SourceEvent, _state: &GameState, _ctx: &mut ModuleCtx) -> TopicSet {
         let mut changed = TopicSet::new();
 
         match ev {
-            SourceEvent::Journal { ev, replaying, .. } => {
-                // Innegociable §0 y §1.5: La galaxia Legacy tiene aborto absoluto de cualquier sincronización
-                if state.galaxy == Galaxy::Legacy {
-                    decide!("accounts.dispatch.legacy_rejected", { "galaxy": "Legacy" });
-                    return changed;
+            SourceEvent::SyncReport(report) => {
+                match &**report {
+                    SyncReport::Inara(inara) => self.status.inara = inara.clone(),
+                    SyncReport::Edsm(edsm) => self.status.edsm = edsm.clone(),
+                    SyncReport::Eddn(eddn) => self.status.eddn = eddn.clone(),
+                    SyncReport::Roster(roster) => {
+                        self.status.current_cmdr = roster.current_cmdr.clone();
+                        self.status.commanders = roster.commanders.clone();
+                        self.status.other_cmdrs_pending = roster.other_cmdrs_pending.clone();
+                        self.status.unassigned_keys = roster.unassigned_keys.clone();
+                    }
                 }
-
-                // Durante replaying histórico no se transmiten eventos a gateways públicos
-                if *replaying || ctx.replaying {
-                    return changed;
-                }
-
-                match &ev.kind {
-                    EventKind::Commander(cmdr) => {
-                        if let Some(name) = &cmdr.name {
-                            self.status.edsm.commander_name = Some(name.clone());
-                            self.status.inara.commander_name = Some(name.clone());
-                            self.status.capi.commander_name = Some(name.clone());
-                            if self.status.eddn.uploader_id.is_empty()
-                                || self.status.eddn.uploader_id == "TMC-Live-Uploader"
-                            {
-                                self.status.eddn.uploader_id = format!("TMC-{name}");
-                            }
-                            changed.insert(TOPIC_STATUS.to_string());
-                        }
-                    }
-                    EventKind::FsdJump(_) => {
-                        let now_iso = ev.timestamp.to_rfc3339();
-                        if self.status.eddn.enabled {
-                            self.status.eddn.messages_sent_session += 1;
-                            self.status.eddn.last_upload_time = Some(now_iso.clone());
-                        }
-                        if self.status.edsm.enabled && self.status.edsm.has_key {
-                            self.status.edsm.last_sync_time = Some(now_iso.clone());
-                        }
-                        if self.status.inara.enabled && self.status.inara.has_key {
-                            self.status.inara.pending_events += 1;
-                        }
-                        changed.insert(TOPIC_STATUS.to_string());
-                    }
-                    EventKind::Market | EventKind::Outfitting | EventKind::Shipyard => {
-                        if self.status.eddn.enabled {
-                            self.status.eddn.messages_sent_session += 1;
-                            self.status.eddn.last_upload_time = Some(ev.timestamp.to_rfc3339());
-                            changed.insert(TOPIC_STATUS.to_string());
-                        }
-                    }
-                    EventKind::Rank(_) | EventKind::Progress(_) => {
-                        let now_iso = ev.timestamp.to_rfc3339();
-                        if self.status.edsm.enabled && self.status.edsm.has_key {
-                            self.status.edsm.last_sync_time = Some(now_iso);
-                        }
-                        if self.status.inara.enabled && self.status.inara.has_key {
-                            self.status.inara.pending_events += 1;
-                        }
-                        changed.insert(TOPIC_STATUS.to_string());
-                    }
-                    EventKind::Loadout(_)
-                    | EventKind::Materials(_)
-                    | EventKind::ShipLocker(_)
-                    | EventKind::CarrierStats(_)
-                    | EventKind::CommunityGoal(_)
-                        if self.status.inara.enabled && self.status.inara.has_key =>
-                    {
-                        self.status.inara.pending_events += 1;
-                        changed.insert(TOPIC_STATUS.to_string());
-                    }
-                    _ => {}
-                }
+                changed.insert(TOPIC_STATUS.to_string());
             }
-            SourceEvent::Action { name, args } => match name.as_str() {
-                "accounts.sync_now" => {
-                    if state.galaxy == Galaxy::Live {
-                        let now_iso = Utc::now().to_rfc3339();
-                        if self.status.edsm.enabled {
-                            self.status.edsm.last_sync_time = Some(now_iso.clone());
-                        }
-                        if self.status.inara.enabled {
-                            self.status.inara.last_sync_time = Some(now_iso);
-                            self.status.inara.pending_events = 0;
-                        }
-                        changed.insert(TOPIC_STATUS.to_string());
-                    }
+            SourceEvent::Action { name, args } if name == "accounts.set_settings" => {
+                let mut touched = false;
+                if let Some(capi_en) = args.get("capi_enabled").and_then(|v| v.as_bool()) {
+                    self.status.capi.configured = capi_en;
+                    touched = true;
                 }
-                "accounts.set_settings" => {
-                    if let Some(eddn_en) = args.get("eddn_enabled").and_then(|v| v.as_bool()) {
-                        self.status.eddn.enabled = eddn_en;
-                    }
-                    if let Some(edsm_en) = args.get("edsm_enabled").and_then(|v| v.as_bool()) {
-                        self.status.edsm.enabled = edsm_en;
-                    }
-                    if let Some(edsm_key) = args.get("edsm_has_key").and_then(|v| v.as_bool()) {
-                        self.status.edsm.has_key = edsm_key;
-                    }
-                    if let Some(edsm_cmdr) =
-                        args.get("edsm_commander_name").and_then(|v| v.as_str())
-                    {
-                        self.status.edsm.commander_name = Some(edsm_cmdr.to_string());
-                    }
-                    if let Some(inara_en) = args.get("inara_enabled").and_then(|v| v.as_bool()) {
-                        self.status.inara.enabled = inara_en;
-                    }
-                    if let Some(inara_key) = args.get("inara_has_key").and_then(|v| v.as_bool()) {
-                        self.status.inara.has_key = inara_key;
-                    }
-                    if let Some(inara_url) = args.get("inara_url").and_then(|v| v.as_str()) {
-                        self.status.inara.inara_url = Some(inara_url.to_string());
-                    }
-                    if let Some(inara_ver) = args.get("inara_verified").and_then(|v| v.as_bool()) {
-                        self.status.inara.verified = inara_ver;
-                    }
-                    if let Some(inara_cmdr) =
-                        args.get("inara_commander_name").and_then(|v| v.as_str())
-                    {
-                        self.status.inara.commander_name = Some(inara_cmdr.to_string());
-                    }
-                    if let Some(inara_err) = args.get("inara_last_error").and_then(|v| v.as_str()) {
-                        self.status.inara.last_error = Some(inara_err.to_string());
-                    }
-                    if let Some(capi_en) = args.get("capi_enabled").and_then(|v| v.as_bool()) {
-                        self.status.capi.configured = capi_en;
-                    }
-                    if let Some(capi_conn) = args.get("capi_connected").and_then(|v| v.as_bool()) {
-                        self.status.capi.connected = capi_conn;
-                    }
-                    if let Some(ships) = args
-                        .get("capi_remote_ships_count")
-                        .or_else(|| args.get("remote_ships_count"))
-                        .and_then(|v| v.as_u64())
-                    {
-                        self.status.capi.remote_ships_count = ships as u32;
-                    }
-                    if let Some(capi_cmdr) =
-                        args.get("capi_commander_name").and_then(|v| v.as_str())
-                    {
-                        self.status.capi.commander_name = Some(capi_cmdr.to_string());
-                    }
+                if let Some(capi_conn) = args.get("capi_connected").and_then(|v| v.as_bool()) {
+                    self.status.capi.connected = capi_conn;
+                    touched = true;
+                }
+                if let Some(ships) = args
+                    .get("capi_remote_ships_count")
+                    .or_else(|| args.get("remote_ships_count"))
+                    .and_then(|v| v.as_u64())
+                {
+                    self.status.capi.remote_ships_count = ships as u32;
+                    touched = true;
+                }
+                if let Some(capi_cmdr) = args.get("capi_commander_name").and_then(|v| v.as_str()) {
+                    self.status.capi.commander_name = Some(capi_cmdr.to_string());
+                    touched = true;
+                }
+                if touched {
                     changed.insert(TOPIC_STATUS.to_string());
                 }
-                _ => {}
-            },
+            }
             _ => {}
         }
 

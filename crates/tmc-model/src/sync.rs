@@ -267,12 +267,40 @@ pub struct KeyedServiceStatus {
     pub key_hint: Option<String>,
 }
 
+impl Default for KeyedServiceStatus {
+    fn default() -> Self {
+        Self {
+            status: SyncServiceStatus {
+                state: SyncState::Disabled,
+                reason: Some(SyncReason::NoKey),
+                ..Default::default()
+            },
+            has_key: false,
+            key_hint: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EddnServiceStatus {
     #[serde(flatten)]
     pub status: SyncServiceStatus,
     pub enabled: bool,
     pub paused_schemas: Vec<String>,
+}
+
+impl Default for EddnServiceStatus {
+    fn default() -> Self {
+        Self {
+            status: SyncServiceStatus {
+                state: SyncState::Disabled,
+                reason: Some(SyncReason::SwitchOff),
+                ..Default::default()
+            },
+            enabled: false,
+            paused_schemas: Vec::new(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

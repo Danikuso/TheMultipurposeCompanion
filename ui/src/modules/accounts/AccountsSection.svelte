@@ -1,10 +1,16 @@
 <script lang="ts">
   import { t } from '../../lib/i18n';
-  import { credits, formatShipName, integer, ly } from '../../lib/format';
+  import { credits, formatShipName, integer, ly, relativeAge } from '../../lib/format';
   import { action, topic } from '../../lib/ws.svelte';
   import ManufacturerIcon from '../../lib/icons/ManufacturerIcon.svelte';
   import StationIcon from '../../lib/icons/StationIcon.svelte';
-  import type { AccountsStatusTopic, RemoteShip } from './types';
+  import type {
+    AccountsStatusTopic,
+    RemoteShip,
+    SyncReason,
+    SyncServiceStatus,
+    SyncState,
+  } from './types';
 
   const status = $derived(topic<AccountsStatusTopic>('accounts.status'));
 
@@ -12,9 +18,7 @@
   let inaraKey = $state('');
   let showEdsmKey = $state(false);
   let showInaraKey = $state(false);
-  let eddnCopied = $state(false);
-  let syncingEdsm = $state(false);
-  let syncingInara = $state(false);
+  let retryingService = $state<string | null>(null);
   let loadingFleet = $state(false);
   let fleetFetched = $state(false);
   let loginOpening = $state(false);
@@ -54,26 +58,71 @@
     }
   });
 
-  async function copyUploaderId() {
-    const id = status?.eddn?.uploader_id;
-    if (!id) return;
-    try {
-      await navigator.clipboard.writeText(id);
-      eddnCopied = true;
-      setTimeout(() => {
-        eddnCopied = false;
-      }, 2000);
-    } catch {
-      // Ignorar si clipboard no está disponible
+  function stateIcon(state: SyncState | undefined): string {
+    switch (state) {
+      case 'connected':
+        return '✓';
+      case 'error':
+        return '⚠';
+      case 'waiting':
+        return '⏳';
+      case 'paused':
+        return '⏸';
+      case 'unavailable':
+        return '⛔';
+      default:
+        return '○';
     }
+  }
+
+  function stateBadgeClass(state: SyncState | undefined): string {
+    switch (state) {
+      case 'connected':
+        return 'badge-green';
+      case 'error':
+        return 'badge-red';
+      case 'waiting':
+      case 'paused':
+        return 'badge-amber';
+      default:
+        return 'badge-muted';
+    }
+  }
+
+  function reasonText(reason: SyncReason | null | undefined): string | null {
+    if (!reason) return null;
+    const kebab = reason.replaceAll('_', '-');
+    return t(`accounts-sync-reason-${kebab}`);
+  }
+
+  function formatRetryTime(nextAttemptAt: string | null | undefined): string | null {
+    if (!nextAttemptAt) return null;
+    const targetMs = Date.parse(nextAttemptAt);
+    if (Number.isNaN(targetMs)) return null;
+    const secs = Math.max(1, Math.ceil((targetMs - Date.now()) / 1000));
+    if (secs < 60) return `${secs} s`;
+    if (secs < 3600) return `${Math.ceil(secs / 60)} min`;
+    return `${Math.ceil(secs / 3600)} h`;
+  }
+
+  function formatStateLabel(svc: SyncServiceStatus | undefined): string {
+    const state = svc?.state ?? 'disabled';
+    if (state === 'error') {
+      const retryTime = formatRetryTime(svc?.next_attempt_at);
+      if (retryTime) {
+        return t('accounts-sync-retry-in', { time: retryTime });
+      }
+    }
+    return t(`accounts-sync-state-${state}`);
+  }
+
+  function formatLastConfirmed(iso: string | null | undefined): string {
+    if (!iso) return t('accounts-sync-never');
+    return relativeAge(iso, Date.now());
   }
 
   async function toggleEddn() {
     await action('accounts.set_settings', { eddn_enabled: !status?.eddn?.enabled });
-  }
-
-  async function toggleEdsm() {
-    await action('accounts.set_settings', { edsm_enabled: !status?.edsm?.enabled });
   }
 
   async function saveEdsmKey() {
@@ -86,10 +135,6 @@
 
   async function clearEdsmKey() {
     await action('edsm.clear_key', {});
-  }
-
-  async function toggleInara() {
-    await action('accounts.set_settings', { inara_enabled: !status?.inara?.enabled });
   }
 
   let testingInara = $state(false);
@@ -130,16 +175,12 @@
     inaraKey = '';
   }
 
-  async function syncNow() {
-    syncingEdsm = true;
-    syncingInara = true;
+  async function retryNow(serviceId: string) {
+    retryingService = serviceId;
     try {
       await action('accounts.sync_now');
     } finally {
-      setTimeout(() => {
-        syncingEdsm = false;
-        syncingInara = false;
-      }, 600);
+      retryingService = null;
     }
   }
 
@@ -221,6 +262,8 @@
       loadingFleet = false;
     }
   }
+
+  const currentCmdrName = $derived(status?.current_cmdr?.name ?? null);
 </script>
 
 <div class="accounts-container">
@@ -228,7 +271,12 @@
   <div class="privacy-banner glass-card" data-testid="accounts-privacy-banner">
     <div class="shield-icon">🛡️</div>
     <div class="banner-content">
-      <span class="badge badge-green mono">{t('accounts-title')}</span>
+      <div class="badges-wrap">
+        <span class="badge badge-green mono">{t('accounts-title')}</span>
+        {#if currentCmdrName}
+          <span class="cmdr-pill mono" data-testid="accounts-active-cmdr">CMDR {currentCmdrName}</span>
+        {/if}
+      </div>
       <p class="privacy-text">{t('accounts-companion-privacy-notice')}</p>
     </div>
   </div>
@@ -257,30 +305,57 @@
 
       <div class="card-body">
         <div class="status-row">
-          <span class="badge" class:badge-green={status?.eddn?.connected} class:badge-amber={!status?.eddn?.connected}>
-            {status?.eddn?.connected ? t('accounts-eddn-connected') : t('accounts-eddn-disconnected')}
-          </span>
-          <span class="sub">{t('accounts-eddn-last-upload')} <b class="mono">{status?.eddn?.last_upload_time ?? '—'}</b></span>
-        </div>
-
-        <div class="metric-block">
-          <span class="metric-label">{t('accounts-eddn-messages-sent')}</span>
-          <span class="metric-value mono cyan" data-testid="eddn-messages-count">
-            {integer(status?.eddn?.messages_sent_session ?? 0)}
+          <span
+            class="badge {stateBadgeClass(status?.eddn?.state)}"
+            data-testid="eddn-state-pill"
+            title={reasonText(status?.eddn?.reason) ?? formatStateLabel(status?.eddn)}
+          >
+            {stateIcon(status?.eddn?.state)} {formatStateLabel(status?.eddn)}
           </span>
         </div>
+        {#if reasonText(status?.eddn?.reason)}
+          <p class="sync-reason-line sub">{reasonText(status?.eddn?.reason)}</p>
+        {/if}
 
-        <div class="uploader-pill-row">
-          <span class="sub mono">{t('accounts-eddn-uploader-id')}:</span>
-          <div class="uploader-chip">
-            <span class="mono uploader-text" data-testid="eddn-uploader-id">
-              {status?.eddn?.uploader_id || 'TMC-Anon'}
+        <div class="sync-metrics-grid">
+          <div class="sync-metric-cell">
+            <span class="metric-label">{t('accounts-sync-metric-sent')}</span>
+            <span class="sync-metric-val mono cyan" data-testid="eddn-metric-sent">
+              {integer(status?.eddn?.sent_total ?? 0)}
             </span>
-            <button class="chip-copy-btn" onclick={copyUploaderId} data-testid="eddn-copy-btn" title={t('accounts-copy-uploader-id')}>
-              {eddnCopied ? '✓' : '📋'}
-            </button>
+          </div>
+          <div class="sync-metric-cell">
+            <span class="metric-label">{t('accounts-sync-metric-pending')}</span>
+            <span class="sync-metric-val mono" data-testid="eddn-metric-pending">
+              {integer(status?.eddn?.pending ?? 0)}
+            </span>
+          </div>
+          <div class="sync-metric-cell">
+            <span class="metric-label">{t('accounts-sync-metric-rejected')}</span>
+            <span class="sync-metric-val mono" data-testid="eddn-metric-rejected">
+              {integer(status?.eddn?.rejected_total ?? 0)}
+            </span>
+          </div>
+          <div class="sync-metric-cell">
+            <span class="metric-label">{t('accounts-sync-metric-last-confirmed')}</span>
+            <span class="sync-metric-val mono" data-testid="eddn-metric-last-confirmed">
+              {formatLastConfirmed(status?.eddn?.last_confirmed_at)}
+            </span>
           </div>
         </div>
+
+        {#if status?.eddn?.state === 'error'}
+          <div class="card-foot">
+            <button
+              class="btn-sync"
+              onclick={() => retryNow('eddn')}
+              disabled={retryingService === 'eddn'}
+              data-testid="eddn-retry-btn"
+            >
+              {retryingService === 'eddn' ? '...' : t('accounts-sync-retry-now')}
+            </button>
+          </div>
+        {/if}
       </div>
     </div>
 
@@ -294,25 +369,50 @@
             <p class="sub">{t('accounts-edsm-desc')}</p>
           </div>
         </div>
-        <button
-          class="switch-btn"
-          class:active={status?.edsm?.enabled}
-          onclick={toggleEdsm}
-          data-testid="edsm-switch"
-          aria-label={t('accounts-edsm-switch')}
-        >
-          <span class="switch-knob"></span>
-        </button>
       </div>
 
       <div class="card-body">
         <div class="status-row">
-          <span class="badge" class:badge-green={status?.edsm?.has_key} class:badge-amber={!status?.edsm?.has_key}>
-            {status?.edsm?.has_key ? t('accounts-edsm-status-configured') : t('accounts-edsm-status-pending')}
+          <span
+            class="badge {stateBadgeClass(status?.edsm?.state)}"
+            data-testid="edsm-state-pill"
+            title={reasonText(status?.edsm?.reason) ?? formatStateLabel(status?.edsm)}
+          >
+            {stateIcon(status?.edsm?.state)} {formatStateLabel(status?.edsm)}
           </span>
-          {#if status?.edsm?.commander_name}
-            <span class="cmdr-pill mono">CMDR {status.edsm.commander_name}</span>
+          {#if status?.edsm?.key_hint}
+            <span class="cmdr-pill mono">••{status.edsm.key_hint}</span>
           {/if}
+        </div>
+        {#if reasonText(status?.edsm?.reason)}
+          <p class="sync-reason-line sub">{reasonText(status?.edsm?.reason)}</p>
+        {/if}
+
+        <div class="sync-metrics-grid">
+          <div class="sync-metric-cell">
+            <span class="metric-label">{t('accounts-sync-metric-sent')}</span>
+            <span class="sync-metric-val mono cyan" data-testid="edsm-metric-sent">
+              {integer(status?.edsm?.sent_total ?? 0)}
+            </span>
+          </div>
+          <div class="sync-metric-cell">
+            <span class="metric-label">{t('accounts-sync-metric-pending')}</span>
+            <span class="sync-metric-val mono" data-testid="edsm-metric-pending">
+              {integer(status?.edsm?.pending ?? 0)}
+            </span>
+          </div>
+          <div class="sync-metric-cell">
+            <span class="metric-label">{t('accounts-sync-metric-rejected')}</span>
+            <span class="sync-metric-val mono" data-testid="edsm-metric-rejected">
+              {integer(status?.edsm?.rejected_total ?? 0)}
+            </span>
+          </div>
+          <div class="sync-metric-cell">
+            <span class="metric-label">{t('accounts-sync-metric-last-confirmed')}</span>
+            <span class="sync-metric-val mono" data-testid="edsm-metric-last-confirmed">
+              {formatLastConfirmed(status?.edsm?.last_confirmed_at)}
+            </span>
+          </div>
         </div>
 
         <div class="input-form">
@@ -342,12 +442,18 @@
           </div>
         </div>
 
-        <div class="card-foot">
-          <span class="sub">{t('accounts-edsm-last-sync')} <b class="mono">{status?.edsm?.last_sync_time ?? '—'}</b></span>
-          <button class="btn-sync" onclick={syncNow} disabled={syncingEdsm} data-testid="edsm-sync-btn">
-            {syncingEdsm ? '...' : t('accounts-edsm-btn-sync')}
-          </button>
-        </div>
+        {#if status?.edsm?.state === 'error'}
+          <div class="card-foot">
+            <button
+              class="btn-sync"
+              onclick={() => retryNow('edsm')}
+              disabled={retryingService === 'edsm'}
+              data-testid="edsm-retry-btn"
+            >
+              {retryingService === 'edsm' ? '...' : t('accounts-sync-retry-now')}
+            </button>
+          </div>
+        {/if}
       </div>
     </div>
 
@@ -361,42 +467,54 @@
             <p class="sub">{t('accounts-inara-desc')}</p>
           </div>
         </div>
-        <button
-          class="switch-btn"
-          class:active={status?.inara?.enabled}
-          onclick={toggleInara}
-          data-testid="inara-switch"
-          aria-label={t('accounts-inara-switch')}
-        >
-          <span class="switch-knob"></span>
-        </button>
       </div>
 
       <div class="card-body">
         <div class="status-row">
           <div class="badges-wrap">
-            <span class="badge" class:badge-green={status?.inara?.has_key} class:badge-amber={!status?.inara?.has_key}>
-              {status?.inara?.has_key ? t('accounts-edsm-status-configured') : t('accounts-edsm-status-pending')}
+            <span
+              class="badge {stateBadgeClass(status?.inara?.state)}"
+              data-testid="inara-state-pill"
+              title={reasonText(status?.inara?.reason) ?? formatStateLabel(status?.inara)}
+            >
+              {stateIcon(status?.inara?.state)} {formatStateLabel(status?.inara)}
             </span>
             <span class="badge badge-green" data-testid="inara-whitelist-badge" title={t('accounts-inara-whitelist-tooltip')}>
               🛡️ {t('accounts-inara-whitelist-badge')}
             </span>
           </div>
-          <div class="badges-wrap">
-            {#if status?.inara?.commander_name}
-              <span class="cmdr-pill mono">CMDR {status.inara.commander_name}</span>
-            {/if}
-            {#if status?.inara?.inara_url}
-              <a
-                href={status.inara.inara_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inara-link mono"
-                data-testid="inara-profile-link"
-              >
-                🌐 {t('accounts-inara-profile-link')}
-              </a>
-            {/if}
+          {#if status?.inara?.key_hint}
+            <span class="cmdr-pill mono">••{status.inara.key_hint}</span>
+          {/if}
+        </div>
+        {#if reasonText(status?.inara?.reason)}
+          <p class="sync-reason-line sub">{reasonText(status?.inara?.reason)}</p>
+        {/if}
+
+        <div class="sync-metrics-grid">
+          <div class="sync-metric-cell">
+            <span class="metric-label">{t('accounts-sync-metric-sent')}</span>
+            <span class="sync-metric-val mono cyan" data-testid="inara-metric-sent">
+              {integer(status?.inara?.sent_total ?? 0)}
+            </span>
+          </div>
+          <div class="sync-metric-cell">
+            <span class="metric-label">{t('accounts-sync-metric-pending')}</span>
+            <span class="sync-metric-val mono" data-testid="inara-metric-pending">
+              {integer(status?.inara?.pending ?? 0)}
+            </span>
+          </div>
+          <div class="sync-metric-cell">
+            <span class="metric-label">{t('accounts-sync-metric-rejected')}</span>
+            <span class="sync-metric-val mono" data-testid="inara-metric-rejected">
+              {integer(status?.inara?.rejected_total ?? 0)}
+            </span>
+          </div>
+          <div class="sync-metric-cell">
+            <span class="metric-label">{t('accounts-sync-metric-last-confirmed')}</span>
+            <span class="sync-metric-val mono" data-testid="inara-metric-last-confirmed">
+              {formatLastConfirmed(status?.inara?.last_confirmed_at)}
+            </span>
           </div>
         </div>
 
@@ -433,22 +551,18 @@
           {/if}
         </div>
 
-        <!-- Medidor de 2 peticiones/minuto -->
-        <div class="rate-limit-card" data-testid="inara-rate-meter">
-          <div class="rate-head">
-            <span class="sub bold">{t('accounts-inara-rate-limit-title')}</span>
-            <span class="sub mono gold">{t('accounts-inara-rate-label')}</span>
-          </div>
-          <div class="hud-meter-track" role="progressbar" aria-valuenow={1} aria-valuemin={0} aria-valuemax={2}>
-            <div class="hud-meter-fill fill-cyan" style:width="50%"></div>
-          </div>
-          <div class="rate-foot">
-            <span class="sub">{t('accounts-inara-pending-batch')} <b class="mono cyan">{status?.inara?.pending_events ?? 0}</b></span>
-            <button class="btn-sync" onclick={syncNow} disabled={syncingInara} data-testid="inara-send-btn">
-              {syncingInara ? '...' : t('accounts-inara-btn-send')}
+        {#if status?.inara?.state === 'error'}
+          <div class="card-foot">
+            <button
+              class="btn-sync"
+              onclick={() => retryNow('inara')}
+              disabled={retryingService === 'inara'}
+              data-testid="inara-retry-btn"
+            >
+              {retryingService === 'inara' ? '...' : t('accounts-sync-retry-now')}
             </button>
           </div>
-        </div>
+        {/if}
       </div>
     </div>
 
@@ -679,6 +793,7 @@
   .shield-icon {
     font-size: 28px;
     line-height: 1;
+    flex-shrink: 0;
   }
 
   .privacy-text {
@@ -690,7 +805,7 @@
 
   .accounts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
     gap: 16px;
   }
 
@@ -699,6 +814,7 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
+    min-width: 0;
   }
 
   .card-head {
@@ -724,6 +840,7 @@
   .service-icon {
     font-size: 24px;
     line-height: 1;
+    flex-shrink: 0;
   }
 
   .service-name {
@@ -755,11 +872,15 @@
   }
 
   .badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-size: 11px;
     padding: 2px 8px;
     border-radius: 4px;
     font-weight: 600;
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
 
   .badge-green {
@@ -772,6 +893,18 @@
     background: rgba(229, 169, 59, 0.15);
     color: #e5a93b;
     border: 1px solid rgba(229, 169, 59, 0.4);
+  }
+
+  .badge-red {
+    background: rgba(255, 102, 68, 0.15);
+    color: #ff7b5c;
+    border: 1px solid rgba(255, 102, 68, 0.45);
+  }
+
+  .badge-muted {
+    background: rgba(148, 163, 184, 0.14);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.35);
   }
 
   .cmdr-pill {
@@ -788,7 +921,12 @@
     justify-content: space-between;
     gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 12px;
+    margin-bottom: 6px;
+  }
+
+  .sync-reason-line {
+    margin: 0 0 10px 0;
+    line-height: 1.35;
   }
 
   .badges-wrap {
@@ -798,54 +936,34 @@
     flex-wrap: wrap;
   }
 
-  .metric-block {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+  .sync-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
     margin-bottom: 12px;
   }
 
+  .sync-metric-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 7px 9px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 5px;
+    min-width: 0;
+  }
+
   .metric-label {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-dim, #7e9bb5);
   }
 
-  .metric-value {
-    font-size: 24px;
+  .sync-metric-val {
+    font-size: 14px;
     font-weight: 700;
-    line-height: 1;
-  }
-
-  .uploader-pill-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-  }
-
-  .uploader-chip {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(0, 0, 0, 0.3);
-    padding: 3px 8px;
-    border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .uploader-text {
-    font-size: 11px;
-    color: #00d4b2;
-  }
-
-  .chip-copy-btn {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 12px;
-    padding: 0;
+    color: var(--text-main, #e6f1ff);
+    overflow-wrap: anywhere;
   }
 
   /* Switches */
@@ -896,16 +1014,18 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
 
   .input-row {
     display: flex;
     gap: 6px;
+    min-width: 0;
   }
 
   .btn-group-row {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     align-items: center;
     width: 100%;
@@ -914,11 +1034,13 @@
 
   .flex-1 {
     flex: 1;
+    min-width: 120px;
     text-align: center;
   }
 
   .glass-input {
     flex: 1;
+    min-width: 0;
     background: rgba(0, 0, 0, 0.35);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 4px;
@@ -938,6 +1060,7 @@
     border-radius: 4px;
     padding: 0 8px;
     cursor: pointer;
+    flex-shrink: 0;
   }
 
   .action-btn,
@@ -981,25 +1104,6 @@
   .btn-secondary:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.16);
     border-color: rgba(255, 255, 255, 0.4);
-  }
-
-  .inara-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    background: rgba(0, 229, 255, 0.12);
-    border: 1px solid rgba(0, 229, 255, 0.35);
-    color: #00e5ff;
-    text-decoration: none;
-    transition: all 0.2s;
-  }
-
-  .inara-link:hover {
-    background: rgba(0, 229, 255, 0.25);
-    border-color: #00e5ff;
   }
 
   .test-feedback {
@@ -1063,40 +1167,9 @@
   .card-foot {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 8px;
-  }
-
-  /* Rate meter */
-  .rate-limit-card {
-    background: rgba(0, 0, 0, 0.25);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 6px;
-    padding: 10px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .rate-head,
-  .rate-foot {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .hud-meter-track {
-    width: 100%;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-
-  .hud-meter-fill {
-    height: 100%;
-    background: #00d4b2;
-    transition: width 0.3s;
+    flex-wrap: wrap;
   }
 
   /* CAPI Card & Full-Width layout */
@@ -1125,6 +1198,7 @@
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
+    flex-wrap: wrap;
   }
 
   .capi-empty-state {
@@ -1190,7 +1264,7 @@
   /* Cockpit Fleet Layout (2 columns) */
   .fleet-cockpit-layout {
     display: grid;
-    grid-template-columns: minmax(280px, 320px) 1fr;
+    grid-template-columns: minmax(min(280px, 100%), 320px) 1fr;
     gap: 16px;
     align-items: start;
   }
@@ -1219,11 +1293,12 @@
     justify-content: space-between;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
   }
 
   .fleet-cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
     gap: 10px;
     max-height: 280px;
     overflow-y: auto;
@@ -1239,6 +1314,7 @@
     font-size: 12px;
     color: var(--hud-muted, #7ea0b8);
     width: 100%;
+    flex-wrap: wrap;
   }
 
   .compact-selector-label .label-text {
@@ -1250,6 +1326,7 @@
 
   .glass-select {
     flex: 1;
+    min-width: 0;
     background: rgba(10, 16, 26, 0.9);
     border: 1px solid var(--hud-border, rgba(0, 229, 255, 0.3));
     color: var(--hud-primary, #00e5ff);
@@ -1315,6 +1392,7 @@
     justify-content: space-between;
     align-items: center;
     gap: 6px;
+    flex-wrap: wrap;
   }
 
   .ship-mfr {
