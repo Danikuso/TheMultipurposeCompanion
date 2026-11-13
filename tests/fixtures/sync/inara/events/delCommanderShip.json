@@ -1,0 +1,17 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "ShipyardSell",
+    "ShipType": "adder",
+    "SellShipID": 6,
+    "ShipPrice": 79027
+  },
+  "inara": {
+    "eventName": "delCommanderShip",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": {
+      "shipType": "adder",
+      "shipGameID": 6
+    }
+  }
+}

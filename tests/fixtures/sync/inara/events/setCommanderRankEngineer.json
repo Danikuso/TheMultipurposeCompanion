@@ -1,0 +1,34 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "EngineerProgress",
+    "Engineers": [
+      {
+        "Engineer": "Felicity Farseer",
+        "EngineerID": 300100,
+        "Progress": "Unlocked",
+        "Rank": 5
+      },
+      {
+        "Engineer": "Elvira Martuuk",
+        "EngineerID": 300160,
+        "Progress": "Invited"
+      }
+    ]
+  },
+  "inara": {
+    "eventName": "setCommanderRankEngineer",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": [
+      {
+        "engineerName": "Felicity Farseer",
+        "rankStage": "Unlocked",
+        "rankValue": 5
+      },
+      {
+        "engineerName": "Elvira Martuuk",
+        "rankStage": "Invited"
+      }
+    ]
+  }
+}

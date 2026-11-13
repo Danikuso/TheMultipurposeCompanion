@@ -1,0 +1,39 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "Touchdown",
+    "PlayerControlled": true,
+    "StarSystem": "Sol",
+    "Body": "Mercury",
+    "Latitude": 12.3456,
+    "Longitude": -45.6789
+  },
+  "context": {
+    "starsystemCoords": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "shipType": "krait_mkii",
+    "shipGameID": 4
+  },
+  "inara": {
+    "eventName": "addCommanderTravelLand",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": {
+      "starsystemName": "Sol",
+      "starsystemCoords": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "starsystemBodyName": "Mercury",
+      "starsystemBodyCoords": [
+        12.3456,
+        -45.6789
+      ],
+      "shipType": "krait_mkii",
+      "shipGameID": 4
+    }
+  }
+}

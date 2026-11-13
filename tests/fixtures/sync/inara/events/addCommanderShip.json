@@ -1,0 +1,16 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "ShipyardNew",
+    "ShipType": "hauler",
+    "NewShipID": 12
+  },
+  "inara": {
+    "eventName": "addCommanderShip",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": {
+      "shipType": "hauler",
+      "shipGameID": 12
+    }
+  }
+}

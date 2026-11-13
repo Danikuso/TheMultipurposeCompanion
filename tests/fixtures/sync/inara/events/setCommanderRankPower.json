@@ -1,0 +1,18 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "Powerplay",
+    "Power": "Felicia Winters",
+    "Rank": 3,
+    "Merits": 1520
+  },
+  "inara": {
+    "eventName": "setCommanderRankPower",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": {
+      "powerName": "Felicia Winters",
+      "rankValue": 3,
+      "meritsValue": 1520
+    }
+  }
+}

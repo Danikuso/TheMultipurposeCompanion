@@ -226,4 +226,74 @@ Fecha de verificación: **2026-11-13**. Las páginas HTML oficiales en vivo (`ht
 
 ## Inara
 
-_Pendiente (tarea T0-Inara)._
+> Investigación realizada el **2026-11-13** leyendo en caché pública de solo lectura (Wayback Machine, capturas `20260308173432id_` y `20260308173440id_` de <https://inara.cz/elite/inara-api-docs/> y <https://inara.cz/elite/inara-api-devguide/>, ya que el host origen presentaba reto Cloudflare `503` a clientes automatizados). **Cero peticiones POST enviadas.**
+
+### 1. Contrato de cabecera, lote y respuestas (InAPI v1)
+
+- **Endpoint:** `POST https://inara.cz/inapi/v1/` con JSON **sin comprimir** (`Content-Type: application/json`).
+- **Whitelist oficial:** `"The Multipurpose Companion (TMC)"` exacto en `header.appName`.
+- **Página de clave personal del usuario:** <https://inara.cz/elite/cmdr-settings-api/> (en la ficha de ajustes de API de Inara).
+- **Cabecera de entrada (`header`):**
+  - `appName` (`string`, obligatorio): `"The Multipurpose Companion (TMC)"`.
+  - `appVersion` (`string`, obligatorio): versión semántica `x.y.z` de Cargo.
+  - `isBeingDeveloped` (`boolean`, obligatorio): `cfg!(debug_assertions)` (`true` en desarrollo, `false` en release). La documentación indica que en `true` Inara omite actualizaciones globales como `setCommunityGoal` para no contaminar con datos de prueba; **en `false` con la app ya en whitelist no requiere gestión adicional** (DR-11, DR-33 verificados sin bloqueo).
+  - `APIkey` (`string`, obligatorio): clave personal del comandante (inyectada al enviar; **nunca** persistida en el `payload`).
+  - `commanderName` (`string`, recomendado/obligatorio en combate): nombre exacto del diario/cAPI.
+  - `commanderFrontierID` (`string`, opcional): formato `'F123456'` o `'123456'` (el `FID` del diario es `'F...'`, compatible directamente).
+- **Formato de evento de entrada:**
+  - `eventName` (`string`, obligatorio).
+  - `eventTimestamp` (`string`, obligatorio): ISO 8601 UTC (`2017-05-02T17:30:49Z`); no debe superar 30 días de antigüedad.
+  - `eventCustomID` (`integer`, opcional): asignado a `sync_outbox.id`; **Inara confirma que devuelve `eventCustomID` en el objeto de salida** de cada evento si se envió.
+  - `eventData` (`object | array`, obligatorio): campos específicos por evento (se aceptan arrays de objetos en `setCommanderRankPilot`, `setCommanderRankEngineer`, `setCommanderReputationMajorFaction`, `setCommanderReputationMinorFaction`, `setCommanderInventory*`, `resetCommanderInventory`).
+- **Tamaño máximo de lote:** la documentación y devguide recomiendan agrupar en lotes («event batching») sin imponer un tope < 100 eventos en InAPI v1; se fija `MAX_EVENTS_PER_BATCH = 100` (sustituyendo el antiguo `50`), **sin truncado silencioso** y sin requerir cambios en el limitador (**2 req / 60 s**, intervalo mínimo **35 s**).
+- **Reglas del devguide:** prohibido enviar datos de **Legacy (3.8)** y de versiones **Beta**; enviar solo Live y evitar peticiones unitarias repetitivas (coalescencia previa de `set*`).
+- **Respuesta (`output`):**
+  - `header`: `{ eventStatus: 200 | 400, eventStatusText?: string, eventData?: { userID, userName } }`. Con `header.eventStatus == 400` se cancela el lote entero (fallo de autorización/cabecera).
+  - `events`: array devuelto en el **mismo orden de envío**, cada elemento con `{ eventCustomID?: integer, eventStatus: 200 | 202 | 204 | 400, eventStatusText?: string, eventData?: mixed }`:
+    - `200`: aceptado OK → `Sent`.
+    - `202`: aviso (p. ej. múltiples coincidencias, todo OK) → `Sent` + aviso diagnóstico.
+    - `204`: error blando («sin resultados» / no aplicado pero formato válido) → `Sent` + aviso diagnóstico.
+    - `400`: error en propiedades/validación del evento → `Rejected` (permanente).
+    - `eventStatus` ausente o cuerpo HTML con HTTP 200 → tratado como `Retry` (nunca asumido como éxito).
+- **Verificación de clave (`getCommanderProfile`):**
+  - Evento `getCommanderProfile` con `{ "searchName": "<commanderName>" }` (o `{}` con clave personal).
+  - `header.eventStatus == 200` y evento `200` (o `204` si el nombre aún no tiene historial pero cabecera autorizada con clave personal válida) → `KeyCheck::Valid`; `header.eventStatus == 400` → `KeyCheck::Rejected`; error de red/HTML/429 → `KeyCheck::Unreachable`.
+
+### 2. Mapeo detallado `eventData` (§7.1) y decisiones [T0]
+
+| Evento Inara | Diario(s) origen | Campos obligatorios (`eventData`) | Campos opcionales relevantes | Notas T0 |
+|---|---|---|---|---|
+| `addCommanderTravelFSDJump` | `FSDJump` | `starsystemName` | `starsystemCoords` `[x,y,z]`, `jumpDistance`, `shipType`, `shipGameID`, `isTaxiShuttle`, `isTaxiDropship` | Además emite `setCommanderReputationMinorFaction` si hay `Factions[].MyReputation`. |
+| `addCommanderTravelCarrierJump` | `CarrierJump` | `starsystemName` | `starsystemCoords`, `stationName`, `marketID`, `shipType`, `shipGameID` | No enviar `jumpDistance` (docs indican omitirlo). |
+| `addCommanderTravelDock` | `Docked` | `starsystemName`, `stationName` | `starsystemCoords`, `marketID`, `starsystemBodyName`, `starsystemBodyCoords`, `shipType`, `shipGameID`, `isTaxiShuttle`, `isTaxiDropship` | `Location` **nunca** genera `Dock` (aviso oficial Inara). |
+| `addCommanderTravelLand` | `Touchdown`, `DropShipDeploy` | `starsystemName`, `starsystemBodyName` | `starsystemCoords`, `starsystemBodyCoords` `[Lat,Lon]`, `shipType`, `shipGameID`, `isTaxiShuttle`, `isTaxiDropship` | **`Touchdown` (cuando el jugador aterriza, `PlayerControlled != false`) y `DropShipDeploy`** disparan `Land`; `ApproachSettlement` no implica aterrizaje. Si `Touchdown` omite `Body`, usar cuerpo actual del tracker. |
+| `setCommanderTravelLocation` | `Location` | `starsystemName` | `starsystemCoords`, `stationName`, `marketID`, `starsystemBodyName`, `starsystemBodyCoords` | Coalescencia `set`: conserva último estado de ubicación. |
+| `setCommanderRankPilot` | `Rank`, `Progress` | `rankName` (array de entradas) | `rankValue` `[0..13]` / `[0..14]`, `rankProgress` `[0.0..1.0]` | Incluye `combat`, `trade`, `explore`, `cqc`, `soldier`, `exobiologist`, `federation`, `empire`. Normalizar progreso `/ 100.0`. |
+| `setCommanderRankEngineer` | `EngineerProgress` | `engineerName`, `rankStage` | `rankValue` `[1..5]` | Array con los ingenieros conocidos (`Invited`, `Acquainted`, `Unlocked`, `Barred`). |
+| `setCommanderRankPower` | `Powerplay` | `powerName`, `rankValue` | `meritsValue` | — |
+| `setCommanderReputationMajorFaction` | `Reputation` | `majorfactionName`, `majorfactionReputation` `[-1..1]` | — | Normalizar valor del diario (`/ 100.0`): `"federation"`, `"empire"`, `"alliance"`, `"independent"`. |
+| `setCommanderReputationMinorFaction` | `FSDJump`, `Location` (`Factions[]`) | `minorfactionName`, `minorfactionReputation` `[-1..1]` | — | Emite con `sub >= 1` (`MyReputation / 100.0`). |
+| `setCommanderCredits` | `LoadGame` | `commanderCredits` | `commanderAssets`, `commanderLoan` | **Solo en `LoadGame`** **[DR-13]** siguiendo aviso oficial de no spammear cambios menores. |
+| `setCommanderShip` | `LoadGame`, `ShipyardSwap`, `Loadout`, `SetUserShipName`, `StoredShips` | `shipType`, `shipGameID` | `shipName`, `shipIdent`, `isCurrentShip`, `isHot`, `shipHullValue`, `shipModulesValue`, `shipRebuyCost`, `shipMaxJumpRange`, `shipCargoCapacity`, `starsystemName`, `stationName`, `marketID` | En `StoredShips`, emitir un `setCommanderShip` por nave en `ShipsHere` (ubicación actual) y `ShipsRemote` (si `!InTransit`, con `StarSystem` y `ShipMarketID`; o `setCommanderShipTransfer` si `InTransit` con tiempo). |
+| `setCommanderShipLoadout` | `Loadout` | `shipType`, `shipGameID` | `shipLoadout` (`slotName`, `itemName`, `itemValue`, `itemHealth`, `isOn`, `isHot`, `itemPriority`, `itemAmmoClip`, `itemAmmoHopper`, `engineering`) | Modifiers con `name`, `value`, `originalValue`, `lessIsGood`. |
+| `addCommanderShip` | `ShipyardNew` (+ `ShipyardBuy` contexto) | `shipType`, `shipGameID` | — | En `ShipyardBuy` manejar antes `StoreOldShip` (`setCommanderShip` docked) o `SellOldShip` (`delCommanderShip`). |
+| `delCommanderShip` | `ShipyardSell`, `SellShipOnRebuy`, `ShipyardSwap`/`Buy` con `SellOldShip` | `shipType`, `shipGameID` | — | — |
+| `setCommanderShipTransfer` | `ShipyardTransfer` | `shipType`, `shipGameID`, `starsystemName`, `stationName`, `transferTime` | `marketID` | `starsystemName` y `stationName` son destino actual del comandante (donde se solicita). |
+| `setCommanderInventoryMaterials` | `Materials` + deltas | `[{ itemName, itemCount }]` | — | Conjunto completo mantenido en `TransientTracker` **[DR-12]**. |
+| `setCommanderInventoryCargo` | `Cargo` / `Cargo.json` | `[{ itemName, itemCount }]` | `isStolen`, `missionGameID` | Conjunto completo (incluye drones/limpets). |
+| **`setCommanderInventory`** | `ShipLocker` / `ShipLocker.json` | `[{ itemName, itemCount, itemType, itemLocation: "ShipLocker" }]` | — | **Evento Odyssey confirmado:** `setCommanderInventory` con `itemLocation: "ShipLocker"` y `itemType` ∈ `{'Item', 'Component', 'Data', 'Consumable'}` (equivalentes a `Items`, `Components`, `Data`, `Consumables` en diario). Si una categoría queda vacía, usar `resetCommanderInventory` con `{ itemType, itemLocation: "ShipLocker" }` (o antes de reescribir si vacía). |
+| `addCommanderMission` | `MissionAccepted` | `missionName`, `missionGameID`, `starsystemNameOrigin`, `stationNameOrigin` | `missionExpiry`, `influenceGain`, `reputationGain`, `minorfactionNameOrigin`, `starsystemNameTarget`, `stationNameTarget`, `minorfactionNameTarget`, `commodityName`, `commodityCount`, `targetName`, `targetType`, `killCount`, `passengerType`, `passengerCount`, `passengerIsVIP`, `passengerIsWanted` | Requiere ubicación de origen conocida en tracker. |
+| `setCommanderMissionCompleted` | `MissionCompleted` | `missionGameID`, `donationCredits`, `rewardCredits` | `rewardPermits`, `rewardCommodities`, `rewardMaterials`, `minorfactionEffects` | `donationCredits`/`rewardCredits` a `0` si ausentes en el diario. |
+| `setCommanderMissionFailed` / `…Abandoned` | `MissionFailed` / `MissionAbandoned` | `missionGameID` | — | — |
+| `addCommanderCombatDeath` | `Died` | `starsystemName` | `opponentName`, `wingOpponentNames` (`isPlayer` omitido si el diario no lo indica) | Si colisión sin atacante (`KillerName`/`Killers` vacíos), omitir envío porque Inara lo ignora. |
+| `addCommanderCombatInterdicted` | `Interdicted` | `starsystemName`, `opponentName`, `isPlayer` | `isSubmit` | Si falta `Interdictor`, usar `Faction` o `Power`. |
+| `addCommanderCombatInterdiction` | `Interdiction` | `starsystemName`, `opponentName`, `isPlayer` | `isSuccess` | Si falta `Interdicted`, usar `Faction` o `Power`. |
+| `addCommanderCombatInterdictionEscape` | `EscapeInterdiction` | `starsystemName`, `opponentName`, `isPlayer` | — | Si falta `Interdictor`, usar `Faction` o `Power`. |
+
+### 3. Inventario de fixtures Inara (`tests/fixtures/sync/inara/`)
+
+- `response_ok.json`, `response_mixed.json`, `response_header_400.json`, `response_no_status.json`, `response_html_200.html`, `profile_ok.json`.
+- `events/<evento>.json`: 28 fixtures (`{ "journal": ... | [...], "inara": { "eventName": ..., "eventTimestamp": ..., "eventData": ... } }`) cubriendo todos los eventos de la tabla §7.1 (incluido `ShipLocker` → `setCommanderInventory` y `StoredShips` → `setCommanderShip`).
+
+**Alineación con §7.1:** 100 % alineado sin bloqueos ni desviaciones.
+

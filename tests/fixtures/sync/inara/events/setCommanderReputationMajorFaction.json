@@ -1,0 +1,27 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "Reputation",
+    "Empire": 55.0,
+    "Federation": 78.5,
+    "Alliance": 12.0
+  },
+  "inara": {
+    "eventName": "setCommanderReputationMajorFaction",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": [
+      {
+        "majorfactionName": "empire",
+        "majorfactionReputation": 0.55
+      },
+      {
+        "majorfactionName": "federation",
+        "majorfactionReputation": 0.785
+      },
+      {
+        "majorfactionName": "alliance",
+        "majorfactionReputation": 0.12
+      }
+    ]
+  }
+}

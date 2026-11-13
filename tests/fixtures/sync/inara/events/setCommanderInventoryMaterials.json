@@ -1,0 +1,33 @@
+{
+  "journal": [
+    {
+      "timestamp": "2026-11-10T18:00:00Z",
+      "event": "Materials",
+      "Raw": [
+        {
+          "Name": "iron",
+          "Count": 120
+        }
+      ],
+      "Manufactured": [],
+      "Encoded": []
+    },
+    {
+      "timestamp": "2026-11-10T18:00:00Z",
+      "event": "MaterialCollected",
+      "Category": "Raw",
+      "Name": "iron",
+      "Count": 3
+    }
+  ],
+  "inara": {
+    "eventName": "setCommanderInventoryMaterials",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": [
+      {
+        "itemName": "iron",
+        "itemCount": 123
+      }
+    ]
+  }
+}

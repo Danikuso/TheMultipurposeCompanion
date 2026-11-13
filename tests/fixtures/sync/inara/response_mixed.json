@@ -1,0 +1,25 @@
+{
+  "header": {
+    "eventStatus": 200,
+    "eventData": {
+      "userID": 1001,
+      "userName": "ExampleCmdr"
+    }
+  },
+  "events": [
+    {
+      "eventCustomID": 201,
+      "eventStatus": 200
+    },
+    {
+      "eventCustomID": 202,
+      "eventStatus": 400,
+      "eventStatusText": "Missing required property starsystemName."
+    },
+    {
+      "eventCustomID": 203,
+      "eventStatus": 204,
+      "eventStatusText": "Event ignored (older record stored)."
+    }
+  ]
+}

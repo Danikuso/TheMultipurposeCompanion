@@ -1,0 +1,25 @@
+{
+  "header": {
+    "eventStatus": 200,
+    "eventData": {
+      "userID": 1001,
+      "userName": "ExampleCmdr"
+    }
+  },
+  "events": [
+    {
+      "eventCustomID": 101,
+      "eventStatus": 200
+    },
+    {
+      "eventCustomID": 102,
+      "eventStatus": 202,
+      "eventStatusText": "Multiple matching items."
+    },
+    {
+      "eventCustomID": 103,
+      "eventStatus": 204,
+      "eventStatusText": "No results found."
+    }
+  ]
+}

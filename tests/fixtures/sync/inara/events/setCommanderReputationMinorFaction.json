@@ -1,0 +1,28 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "FSDJump",
+    "StarSystem": "Sol",
+    "StarPos": [
+      0,
+      0,
+      0
+    ],
+    "Factions": [
+      {
+        "Name": "Mother Gaia",
+        "MyReputation": 42.5
+      }
+    ]
+  },
+  "inara": {
+    "eventName": "setCommanderReputationMinorFaction",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": [
+      {
+        "minorfactionName": "Mother Gaia",
+        "minorfactionReputation": 0.425
+      }
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "header": {
+    "eventStatus": 200,
+    "eventData": {
+      "userID": 1001,
+      "userName": "ExampleCmdr"
+    }
+  },
+  "events": [
+    {
+      "eventCustomID": 1,
+      "eventStatus": 200,
+      "eventData": {
+        "userID": 1001,
+        "userName": "ExampleCmdr",
+        "commanderName": "ExampleCmdr",
+        "inaraURL": "https://inara.cz/elite/cmdr/1001/"
+      }
+    }
+  ]
+}

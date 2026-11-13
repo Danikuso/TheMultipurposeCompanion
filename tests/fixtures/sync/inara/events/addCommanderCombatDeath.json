@@ -1,0 +1,19 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "Died",
+    "KillerName": "Cmdr Rival",
+    "KillerShip": "fer_de_lance"
+  },
+  "context": {
+    "starsystemName": "Lave"
+  },
+  "inara": {
+    "eventName": "addCommanderCombatDeath",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": {
+      "starsystemName": "Lave",
+      "opponentName": "Cmdr Rival"
+    }
+  }
+}

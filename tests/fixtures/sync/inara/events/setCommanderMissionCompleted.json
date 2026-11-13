@@ -1,0 +1,52 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "MissionCompleted",
+    "Faction": "Mother Gaia",
+    "Name": "Mission_Delivery",
+    "MissionID": 171735583,
+    "Reward": 120000,
+    "Donation": 0,
+    "MaterialsReward": [
+      {
+        "Name": "Arsenic",
+        "Count": 2
+      }
+    ],
+    "FactionEffects": [
+      {
+        "Faction": "Mother Gaia",
+        "Influence": [
+          {
+            "Trend": "UpGood",
+            "Influence": "++++"
+          }
+        ],
+        "ReputationTrend": "UpGood",
+        "Reputation": "++"
+      }
+    ]
+  },
+  "inara": {
+    "eventName": "setCommanderMissionCompleted",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": {
+      "missionGameID": 171735583,
+      "donationCredits": 0,
+      "rewardCredits": 120000,
+      "rewardMaterials": [
+        {
+          "itemName": "Arsenic",
+          "itemCount": 2
+        }
+      ],
+      "minorfactionEffects": [
+        {
+          "minorfactionName": "Mother Gaia",
+          "influenceGain": "++++",
+          "reputationGain": "++"
+        }
+      ]
+    }
+  }
+}

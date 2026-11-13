@@ -1,0 +1,60 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "ShipLocker",
+    "Items": [
+      {
+        "Name": "suitschematic",
+        "Count": 6
+      }
+    ],
+    "Components": [
+      {
+        "Name": "graphene",
+        "Count": 12
+      }
+    ],
+    "Data": [
+      {
+        "Name": "opinionpolls",
+        "Count": 3
+      }
+    ],
+    "Consumables": [
+      {
+        "Name": "medkit",
+        "Count": 5
+      }
+    ]
+  },
+  "inara": {
+    "eventName": "setCommanderInventory",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": [
+      {
+        "itemName": "suitschematic",
+        "itemCount": 6,
+        "itemType": "Item",
+        "itemLocation": "ShipLocker"
+      },
+      {
+        "itemName": "graphene",
+        "itemCount": 12,
+        "itemType": "Component",
+        "itemLocation": "ShipLocker"
+      },
+      {
+        "itemName": "opinionpolls",
+        "itemCount": 3,
+        "itemType": "Data",
+        "itemLocation": "ShipLocker"
+      },
+      {
+        "itemName": "medkit",
+        "itemCount": 5,
+        "itemType": "Consumable",
+        "itemLocation": "ShipLocker"
+      }
+    ]
+  }
+}

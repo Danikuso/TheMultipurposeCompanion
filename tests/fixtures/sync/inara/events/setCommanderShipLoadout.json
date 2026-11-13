@@ -1,0 +1,71 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "Loadout",
+    "Ship": "krait_mkii",
+    "ShipID": 4,
+    "ShipName": "Nostromo",
+    "ShipIdent": "TM-01",
+    "HullValue": 45000000,
+    "ModulesValue": 90000000,
+    "Rebuy": 6750000,
+    "MaxJumpRange": 42.5,
+    "CargoCapacity": 64,
+    "Modules": [
+      {
+        "Slot": "FrameShiftDrive",
+        "Item": "int_hyperdrive_size5_class5",
+        "On": true,
+        "Priority": 0,
+        "Health": 1.0,
+        "Value": 5103950,
+        "Engineering": {
+          "BlueprintName": "FSD_LongRange",
+          "Level": 5,
+          "Quality": 1.0,
+          "ExperimentalEffect": "special_fsd_heavy",
+          "Modifiers": [
+            {
+              "Label": "FSDOptimalMass",
+              "Value": 1692.6,
+              "OriginalValue": 1050.0,
+              "LessIsGood": 0
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "inara": {
+    "eventName": "setCommanderShipLoadout",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": {
+      "shipType": "krait_mkii",
+      "shipGameID": 4,
+      "shipLoadout": [
+        {
+          "slotName": "FrameShiftDrive",
+          "itemName": "int_hyperdrive_size5_class5",
+          "itemValue": 5103950,
+          "itemHealth": 1.0,
+          "isOn": true,
+          "itemPriority": 0,
+          "engineering": {
+            "blueprintName": "FSD_LongRange",
+            "blueprintLevel": 5,
+            "blueprintQuality": 1.0,
+            "experimentalEffect": "special_fsd_heavy",
+            "modifiers": [
+              {
+                "name": "FSDOptimalMass",
+                "value": 1692.6,
+                "originalValue": 1050.0,
+                "lessIsGood": false
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

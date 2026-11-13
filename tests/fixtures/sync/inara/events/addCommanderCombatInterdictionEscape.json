@@ -1,0 +1,20 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "EscapeInterdiction",
+    "Interdictor": "Cmdr Pirate",
+    "IsPlayer": true
+  },
+  "context": {
+    "starsystemName": "Lave"
+  },
+  "inara": {
+    "eventName": "addCommanderCombatInterdictionEscape",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": {
+      "starsystemName": "Lave",
+      "opponentName": "Cmdr Pirate",
+      "isPlayer": true
+    }
+  }
+}

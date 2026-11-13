@@ -1,0 +1,31 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "Location",
+    "Docked": true,
+    "StarSystem": "Sol",
+    "StarPos": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "StationName": "Galileo",
+    "MarketID": 128004520,
+    "Body": "Moon"
+  },
+  "inara": {
+    "eventName": "setCommanderTravelLocation",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": {
+      "starsystemName": "Sol",
+      "starsystemCoords": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "stationName": "Galileo",
+      "marketID": 128004520,
+      "starsystemBodyName": "Moon"
+    }
+  }
+}

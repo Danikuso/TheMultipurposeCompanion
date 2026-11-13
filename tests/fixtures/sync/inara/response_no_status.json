@@ -1,0 +1,12 @@
+{
+  "header": {
+    "eventData": {
+      "userID": 1001
+    }
+  },
+  "events": [
+    {
+      "eventCustomID": 301
+    }
+  ]
+}
