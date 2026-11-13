@@ -1,5 +1,6 @@
 //! Mapeador EDDN y saneado conforme a los 16 esquemas oficiales.
 
+pub mod companion;
 pub mod journal;
 pub mod sanitize;
 
@@ -74,9 +75,17 @@ impl ServiceMapper for EddnMapper {
         SyncService::Eddn
     }
 
+    fn wants_companion(&self, ev: &tmc_model::events::JournalEvent) -> bool {
+        companion::wants_companion(ev)
+    }
+
     fn map(&mut self, input: &MappedInput<'_>, out: &mut Vec<MappedRow>) {
         if let Some(res) = journal::map_journal(input.ev, input.snap) {
             out.push(self.build_row("journal/1", 0, input.snap, res));
+        }
+        if let Some((schema, res)) = companion::map_companion(input.ev, input.snap, input.companion)
+        {
+            out.push(self.build_row(schema, 0, input.snap, res));
         }
     }
 }

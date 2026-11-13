@@ -230,6 +230,15 @@ impl Batch {
     }
 }
 
+struct PendingCompanion {
+    ev: JournalEvent,
+    file: String,
+    line: u64,
+    fid: String,
+    snap: TransientSnapshot,
+    row_origin: RowOrigin,
+}
+
 pub struct Router {
     store: Store,
     clock: Arc<dyn Clock>,
@@ -255,6 +264,7 @@ pub struct Router {
     batch: Batch,
     held: VecDeque<SyncFeed>,
     held_since: Option<Instant>,
+    pending_companion: Option<PendingCompanion>,
     enqueued_wakers: Vec<Arc<Notify>>,
     recovered_totals: Option<Arc<[AtomicU64; 3]>>,
 }
@@ -286,6 +296,7 @@ impl Router {
             batch: Batch::default(),
             held: VecDeque::new(),
             held_since: None,
+            pending_companion: None,
             enqueued_wakers: Vec::new(),
             recovered_totals: None,
         };
@@ -510,7 +521,10 @@ impl Router {
         self.cfg.live_signal == LiveSignalPolicy::ProcessCheck
             && self.process.is_none()
             && feed.origin == FeedOrigin::Live
-            && matches!(feed.event, SyncFeedEvent::Journal { .. })
+            && matches!(
+                feed.event,
+                SyncFeedEvent::Journal { .. } | SyncFeedEvent::Companion(_)
+            )
     }
 
     fn release_held_if_expired(&mut self) -> Result<(), StoreError> {
@@ -556,11 +570,22 @@ impl Router {
     fn process_feed(&mut self, feed: &SyncFeed) -> Result<(), StoreError> {
         match &feed.event {
             SyncFeedEvent::Journal { ev, file, line } => {
+                if feed.origin == FeedOrigin::Live && self.recovery_open {
+                    self.abort_recovery();
+                }
+                self.resolve_pending_companion(None)?;
                 self.process_line(ev, file, *line, feed.origin, feed.galaxy)
             }
-            // Emparejamiento de compañeros: E1-3.
-            SyncFeedEvent::Companion(_) => Ok(()),
+            SyncFeedEvent::Companion(comp) => {
+                if self.pending_companion.as_ref().is_some_and(|p| {
+                    crate::eddn::companion::companion_matches_event(&p.ev.name, comp)
+                }) {
+                    self.resolve_pending_companion(Some(comp))?;
+                }
+                Ok(())
+            }
             SyncFeedEvent::CatchUpDone => {
+                self.resolve_pending_companion(None)?;
                 self.finish_recovery();
                 Ok(())
             }
@@ -585,6 +610,13 @@ impl Router {
             return;
         }
         self.recovery_open = false;
+        if self
+            .pending_companion
+            .as_ref()
+            .is_some_and(|p| p.row_origin == RowOrigin::Recovered)
+        {
+            self.pending_companion = None;
+        }
         for c in &self.staged.cursors {
             self.cursors
                 .remove(&(c.cmdr_fid.clone(), c.journal_file.clone()));
@@ -642,22 +674,37 @@ impl Router {
                 && line > self.cursor(&fid, file)?
             {
                 let is_live = origin == FeedOrigin::Live;
+                let mut defer_cursor = false;
                 if self.line_block(&snap, feed_galaxy, is_live).is_none() {
                     let row_origin = if is_live {
                         RowOrigin::Live
                     } else {
                         RowOrigin::Recovered
                     };
-                    self.map_line(ev, file, line, &fid, &snap, row_origin)?;
+                    if self.line_wants_companion(ev, &fid)? {
+                        self.pending_companion = Some(PendingCompanion {
+                            ev: ev.clone(),
+                            file: file.to_string(),
+                            line,
+                            fid: fid.clone(),
+                            snap,
+                            row_origin,
+                        });
+                        defer_cursor = true;
+                    } else {
+                        self.map_line(ev, file, line, &fid, &snap, row_origin, None)?;
+                    }
                 }
-                let target = if is_live {
-                    &mut self.batch
-                } else {
-                    &mut self.staged
-                };
-                target.lines += 1;
-                target.advance(&fid, file, line);
-                self.cursors.insert((fid, file.to_string()), line);
+                if !defer_cursor {
+                    let target = if is_live {
+                        &mut self.batch
+                    } else {
+                        &mut self.staged
+                    };
+                    target.lines += 1;
+                    target.advance(&fid, file, line);
+                    self.cursors.insert((fid, file.to_string()), line);
+                }
             }
         }
         // Solo tras completar la evaluación sin error para no falsar truncado al reintentar.
@@ -668,6 +715,13 @@ impl Router {
     /// La numeración del archivo vuelve a empezar: cursores a 0 antes de las líneas nuevas (T0-2).
     fn on_truncated(&mut self, file: &str) {
         tracing::debug!("sync router: journal file truncated, cursors reset");
+        if self
+            .pending_companion
+            .as_ref()
+            .is_some_and(|p| p.file == file)
+        {
+            self.pending_companion = None;
+        }
         self.tracker.reset_for_new_file();
         self.refresh_replay_marker();
         let mut owners: Vec<String> = self
@@ -693,6 +747,53 @@ impl Router {
         Ok(line)
     }
 
+    fn line_wants_companion(&self, ev: &JournalEvent, fid: &str) -> Result<bool, StoreError> {
+        for mapper in &self.mappers {
+            if !mapper.wants_companion(ev) {
+                continue;
+            }
+            let Some(activated_at) = active_since(&self.store, mapper.service(), fid)? else {
+                continue;
+            };
+            if ev.timestamp >= activated_at {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
+    fn resolve_pending_companion(
+        &mut self,
+        companion: Option<&CompanionFile>,
+    ) -> Result<(), StoreError> {
+        let Some(pending) = self.pending_companion.take() else {
+            return Ok(());
+        };
+        if let Err(err) = self.map_line(
+            &pending.ev,
+            &pending.file,
+            pending.line,
+            &pending.fid,
+            &pending.snap,
+            pending.row_origin,
+            companion,
+        ) {
+            self.pending_companion = Some(pending);
+            return Err(err);
+        }
+        let target = if pending.row_origin == RowOrigin::Live {
+            &mut self.batch
+        } else {
+            &mut self.staged
+        };
+        target.lines += 1;
+        target.advance(&pending.fid, &pending.file, pending.line);
+        self.cursors
+            .insert((pending.fid, pending.file), pending.line);
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
     fn map_line(
         &mut self,
         ev: &JournalEvent,
@@ -701,13 +802,14 @@ impl Router {
         fid: &str,
         snap: &TransientSnapshot,
         row_origin: RowOrigin,
+        companion: Option<&CompanionFile>,
     ) -> Result<(), StoreError> {
         let input = MappedInput {
             ev,
             file,
             line,
             snap,
-            companion: None,
+            companion,
             tracker: &self.tracker,
         };
         let now = self.clock.now_utc();
