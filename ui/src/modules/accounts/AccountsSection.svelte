@@ -19,6 +19,8 @@
   let savingEdsm = $state(false);
   let edsmFeedback = $state<{ tone: 'green' | 'red' | 'amber'; text: string } | null>(null);
   let inaraKey = $state('');
+  let savingInara = $state(false);
+  let inaraFeedback = $state<{ tone: 'green' | 'red' | 'amber'; text: string } | null>(null);
   let showEdsmKey = $state(false);
   let showInaraKey = $state(false);
   let retryingService = $state<string | null>(null);
@@ -145,6 +147,15 @@
     selectedCmdr ? selectedCmdr.edsm_key : Boolean(status?.edsm?.has_key)
   );
   const hasUnassignedEdsm = $derived((status?.unassigned_keys ?? []).includes('edsm'));
+  const selectedInaraHint = $derived.by(() => {
+    const raw = isSelectedCurrent || !selectedCmdr ? (status?.inara?.key_hint ?? null) : null;
+    if (!raw) return null;
+    return raw.includes('•') ? raw : `••${raw}`;
+  });
+  const selectedInaraHasKey = $derived(
+    selectedCmdr ? selectedCmdr.inara_key : Boolean(status?.inara?.has_key)
+  );
+  const hasUnassignedInara = $derived((status?.unassigned_keys ?? []).includes('inara'));
   const needsAutoConfirm = $derived(selectedCmdr?.key_assignment === 'auto_pending_confirmation');
 
   $effect(() => {
@@ -222,42 +233,48 @@
     }
   }
 
-  let testingInara = $state(false);
-  let inaraTestFeedback = $state<string | null>(null);
-
-  async function testInaraConnection() {
-    testingInara = true;
-    inaraTestFeedback = null;
+  async function saveInaraKey() {
+    const cmdrRef = effectiveCmdrRef;
+    if (!inaraKey.trim() || !cmdrRef) return;
+    savingInara = true;
+    inaraFeedback = null;
     try {
-      const payload: Record<string, string> = {};
-      if (inaraKey.trim()) {
-        payload.api_key = inaraKey.trim();
-      }
-      const res = (await action('inara.test_connection', payload)) as { ok?: boolean } | undefined;
-      if (res && res.ok) {
-        inaraTestFeedback = t('accounts-inara-test-success');
-        if (inaraKey.trim()) {
-          inaraKey = '';
-        }
+      const res = (await action('accounts.key.save', {
+        service: 'inara',
+        cmdr_ref: cmdrRef,
+        api_key: inaraKey.trim(),
+      })) as { ok?: boolean; verified?: boolean; state?: string } | undefined;
+      if (res?.state === 'rejected') {
+        inaraFeedback = { tone: 'red', text: t('accounts-key-verify-rejected') };
+      } else if (res?.verified || res?.state === 'active') {
+        inaraKey = '';
+        inaraFeedback = { tone: 'green', text: t('accounts-key-verify-active') };
       } else {
-        inaraTestFeedback = t('accounts-inara-test-failed');
+        inaraKey = '';
+        inaraFeedback = { tone: 'amber', text: t('accounts-key-verify-unverified') };
       }
-    } catch {
-      inaraTestFeedback = t('accounts-inara-test-failed');
     } finally {
-      testingInara = false;
-      setTimeout(() => {
-        inaraTestFeedback = null;
-      }, 5000);
+      savingInara = false;
     }
   }
 
-  async function saveInaraKey() {
-    if (!inaraKey.trim()) return;
-    await action('inara.save_key', {
-      api_key: inaraKey.trim(),
-    });
-    inaraKey = '';
+  async function deleteInaraKey() {
+    const cmdrRef = effectiveCmdrRef;
+    if (!cmdrRef) return;
+    savingInara = true;
+    inaraFeedback = null;
+    try {
+      const res = (await action('accounts.key.delete', {
+        service: 'inara',
+        cmdr_ref: cmdrRef,
+      })) as { discarded?: number } | undefined;
+      inaraFeedback = {
+        tone: 'amber',
+        text: t('accounts-key-pending-discarded', { count: res?.discarded ?? 0 }),
+      };
+    } finally {
+      savingInara = false;
+    }
   }
 
   async function retryNow(serviceId: string) {
@@ -648,12 +665,38 @@
               🛡️ {t('accounts-inara-whitelist-badge')}
             </span>
           </div>
-          {#if status?.inara?.key_hint}
-            <span class="cmdr-pill mono">••{status.inara.key_hint}</span>
+          {#if selectedInaraHint}
+            <span class="cmdr-pill mono" data-testid="inara-key-hint">{selectedInaraHint}</span>
           {/if}
         </div>
         {#if reasonText(status?.inara?.reason)}
           <p class="sync-reason-line sub">{reasonText(status?.inara?.reason)}</p>
+        {/if}
+        {#if hasUnassignedInara && effectiveCmdrRef}
+          <div class="sync-callout callout-amber" data-testid="inara-unassigned-banner">
+            <p class="sub">{t('accounts-key-unassigned-banner')}</p>
+            <button
+              type="button"
+              class="btn-sync btn-compact"
+              onclick={() => assignUnassignedKey('inara')}
+              data-testid="inara-assign-key-btn"
+            >
+              {t('accounts-key-unassigned-assign')}
+            </button>
+          </div>
+        {/if}
+        {#if needsAutoConfirm && selectedInaraHasKey && selectedCmdr}
+          <div class="sync-callout callout-amber" data-testid="inara-autoconfirm-banner">
+            <p class="sub">{t('accounts-key-auto-confirm-banner', { cmdr: selectedCmdr.name })}</p>
+            <button
+              type="button"
+              class="btn-sync btn-compact"
+              onclick={() => confirmKeyOwner('inara')}
+              data-testid="inara-confirm-owner-btn"
+            >
+              {t('accounts-key-confirm-owner')}
+            </button>
+          </div>
         {/if}
 
         <div class="sync-metrics-grid">
@@ -699,20 +742,30 @@
             </button>
           </div>
           <div class="btn-group-row">
-            <button class="action-btn flex-1" onclick={saveInaraKey} data-testid="inara-save-btn">
-              {t('accounts-inara-btn-save')}
-            </button>
             <button
-              class="action-btn btn-secondary flex-1"
-              onclick={testInaraConnection}
-              disabled={testingInara}
-              data-testid="inara-test-btn"
+              class="action-btn flex-1"
+              onclick={saveInaraKey}
+              disabled={savingInara || !effectiveCmdrRef || !inaraKey.trim()}
+              data-testid="inara-save-btn"
             >
-              {testingInara ? t('accounts-inara-test-testing') : t('accounts-inara-btn-test')}
+              {savingInara ? '...' : t('accounts-edsm-btn-save-verify')}
             </button>
+            {#if selectedInaraHasKey}
+              <button
+                class="action-btn btn-secondary flex-1"
+                onclick={deleteInaraKey}
+                disabled={savingInara || !effectiveCmdrRef}
+                title={t('accounts-key-delete-confirm-note')}
+                data-testid="inara-clear-btn"
+              >
+                {t('accounts-edsm-btn-delete')}
+              </button>
+            {/if}
           </div>
-          {#if inaraTestFeedback}
-            <p class="test-feedback mono" data-testid="inara-test-feedback">{inaraTestFeedback}</p>
+          {#if inaraFeedback}
+            <p class="key-feedback feedback-{inaraFeedback.tone}" data-testid="inara-key-feedback">
+              {inaraFeedback.text}
+            </p>
           {/if}
         </div>
 

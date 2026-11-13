@@ -7,7 +7,6 @@ pub mod config;
 pub mod eddn_service;
 mod eddn_wiring;
 pub mod env;
-pub mod inara_service;
 pub mod logging;
 pub mod net_service;
 pub mod sync_wiring;
@@ -19,7 +18,6 @@ pub use capi_service::CapiService;
 pub use clipboard::{AppActions, Clipboard};
 pub use config::{Config, ServerSection, config_path, data_dir};
 pub use env::env_var_or_file;
-pub use inara_service::InaraService;
 pub use logging::{LoggingGuards, init_logging};
 pub use net_service::{NetServiceHandle, spawn_net_service};
 pub use voiceattack::{detect_voiceattack, generate_vap_profile};
@@ -38,7 +36,7 @@ mod engineering_pages_tests;
 mod sync_tests;
 
 #[cfg(test)]
-mod edsm_sync_tests;
+mod sync_accounts_tests;
 
 #[cfg(test)]
 mod tests {
@@ -1488,253 +1486,6 @@ tourism_reference_cr_ly = 200000
                 .unwrap()
                 .is_some()
         );
-    }
-
-    #[tokio::test]
-    async fn inara_actions_save_key_and_test_connection() {
-        use std::sync::Arc;
-        let core = tmc_core::spawn_core(vec![], None, Duration::from_millis(100));
-        let store = tmc_store::Store::open_in_memory().unwrap();
-
-        struct MockInaraTransport;
-        impl tmc_net::Transport for MockInaraTransport {
-            fn get(
-                &self,
-                _url: &str,
-            ) -> tmc_net::transport::BoxFut<
-                '_,
-                Result<tmc_net::transport::HttpReply, tmc_net::transport::TransportError>,
-            > {
-                Box::pin(async {
-                    Err(tmc_net::transport::TransportError::Connect("no get".into()))
-                })
-            }
-            fn post_form(
-                &self,
-                _url: &str,
-                _form: &[(String, String)],
-            ) -> tmc_net::transport::BoxFut<
-                '_,
-                Result<tmc_net::transport::HttpReply, tmc_net::transport::TransportError>,
-            > {
-                Box::pin(async {
-                    Err(tmc_net::transport::TransportError::Connect(
-                        "no form".into(),
-                    ))
-                })
-            }
-            fn post_json(
-                &self,
-                _url: &str,
-                _body: &str,
-            ) -> tmc_net::transport::BoxFut<
-                '_,
-                Result<tmc_net::transport::HttpReply, tmc_net::transport::TransportError>,
-            > {
-                Box::pin(async {
-                    Ok(tmc_net::transport::HttpReply {
-                        status: 200,
-                        body: serde_json::json!({
-                            "header": { "eventStatus": 200, "eventStatusText": "OK" },
-                            "events": [
-                                {
-                                    "eventStatus": 200,
-                                    "eventData": {
-                                        "userName": "Danikuso",
-                                        "commanderName": "Danikuso",
-                                        "inaraURL": "https://inara.cz/elite/cmdr/44444/"
-                                    }
-                                }
-                            ]
-                        })
-                        .to_string(),
-                    })
-                })
-            }
-        }
-
-        let inara_service = Arc::new(InaraService::new(
-            store.clone(),
-            Arc::new(MockInaraTransport),
-        ));
-        let actions =
-            Arc::new(AppActions::with_config(Config::default()).with_inara_service(inara_service));
-
-        let router = tmc_server::build_router(
-            tmc_server::ServerConfig {
-                port: 47320,
-                lan: false,
-                token: String::new(),
-                ui_dir: None,
-            },
-            "127.0.0.1".into(),
-            core,
-            store.clone(),
-            actions,
-        );
-
-        // 1. Probar acción inara.save_key
-        let mut req_save = Request::builder()
-            .method("POST")
-            .uri("/api/actions/inara.save_key")
-            .header(header::HOST, "127.0.0.1:47320")
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(
-                r#"{"api_key":"my_secret_inara_key","commander_name":"Danikuso"}"#,
-            ))
-            .unwrap();
-        req_save.extensions_mut().insert(ConnectInfo(
-            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
-        ));
-        let resp_save = router.clone().oneshot(req_save).await.unwrap();
-        assert_eq!(resp_save.status(), StatusCode::OK);
-
-        let cred = store.get_account_credential("inara").unwrap().unwrap();
-        assert_eq!(cred.api_key.as_deref(), Some("my_secret_inara_key"));
-
-        // 2. Probar acción inara.test_connection
-        let mut req_test = Request::builder()
-            .method("POST")
-            .uri("/api/actions/inara.test_connection")
-            .header(header::HOST, "127.0.0.1:47320")
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(r#"{"commander_name":"Danikuso"}"#))
-            .unwrap();
-        req_test.extensions_mut().insert(ConnectInfo(
-            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
-        ));
-        let resp_test = router.clone().oneshot(req_test).await.unwrap();
-        assert_eq!(resp_test.status(), StatusCode::OK);
-        let body_bytes = axum::body::to_bytes(resp_test.into_body(), usize::MAX)
-            .await
-            .unwrap();
-        let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
-        assert_eq!(body_json["ok"], true);
-        assert_eq!(body_json["user_name"], "Danikuso");
-        assert_eq!(body_json["inara_url"], "https://inara.cz/elite/cmdr/44444/");
-    }
-
-    #[tokio::test]
-    async fn inara_app_key_fallback_works_in_actions() {
-        use std::sync::Arc;
-        let core = tmc_core::spawn_core(vec![], None, Duration::from_millis(100));
-        let store = tmc_store::Store::open_in_memory().unwrap();
-
-        struct MockInaraTransport;
-        impl tmc_net::Transport for MockInaraTransport {
-            fn get(
-                &self,
-                _url: &str,
-            ) -> tmc_net::transport::BoxFut<
-                '_,
-                Result<tmc_net::transport::HttpReply, tmc_net::transport::TransportError>,
-            > {
-                Box::pin(async {
-                    Err(tmc_net::transport::TransportError::Connect("no get".into()))
-                })
-            }
-            fn post_form(
-                &self,
-                _url: &str,
-                _form: &[(String, String)],
-            ) -> tmc_net::transport::BoxFut<
-                '_,
-                Result<tmc_net::transport::HttpReply, tmc_net::transport::TransportError>,
-            > {
-                Box::pin(async {
-                    Err(tmc_net::transport::TransportError::Connect(
-                        "no form".into(),
-                    ))
-                })
-            }
-            fn post_json(
-                &self,
-                _url: &str,
-                _body: &str,
-            ) -> tmc_net::transport::BoxFut<
-                '_,
-                Result<tmc_net::transport::HttpReply, tmc_net::transport::TransportError>,
-            > {
-                Box::pin(async {
-                    Ok(tmc_net::transport::HttpReply {
-                        status: 200,
-                        body: serde_json::json!({
-                            "header": { "eventStatus": 200, "eventStatusText": "OK" },
-                            "events": [
-                                {
-                                    "eventStatus": 200,
-                                    "eventData": {
-                                        "userName": "Danikuso",
-                                        "commanderName": "Danikuso",
-                                        "inaraURL": "https://inara.cz/elite/cmdr/77777/"
-                                    }
-                                }
-                            ]
-                        })
-                        .to_string(),
-                    })
-                })
-            }
-        }
-
-        // Servicio configurado con clave de aplicación oficial y SQLite vacío
-        let inara_service = Arc::new(InaraService::with_app_key(
-            store.clone(),
-            Arc::new(MockInaraTransport),
-            Some("dev_inara_key_official".into()),
-        ));
-        let actions =
-            Arc::new(AppActions::with_config(Config::default()).with_inara_service(inara_service));
-
-        let router = tmc_server::build_router(
-            tmc_server::ServerConfig {
-                port: 47320,
-                lan: false,
-                token: String::new(),
-                ui_dir: None,
-            },
-            "127.0.0.1".into(),
-            core,
-            store.clone(),
-            actions,
-        );
-
-        // Probar conexión sin haber guardado clave en SQLite: debe usar la clave de la app
-        let mut req_test = Request::builder()
-            .method("POST")
-            .uri("/api/actions/inara.test_connection")
-            .header(header::HOST, "127.0.0.1:47320")
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(r#"{"commander_name":"Danikuso"}"#))
-            .unwrap();
-        req_test.extensions_mut().insert(ConnectInfo(
-            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
-        ));
-        let resp_test = router.clone().oneshot(req_test).await.unwrap();
-        assert_eq!(resp_test.status(), StatusCode::OK);
-        let body_bytes = axum::body::to_bytes(resp_test.into_body(), usize::MAX)
-            .await
-            .unwrap();
-        let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
-        assert_eq!(body_json["ok"], true);
-        assert_eq!(body_json["inara_url"], "https://inara.cz/elite/cmdr/77777/");
-
-        // SQLite debe seguir vacío (no se introdujo clave personal)
-        assert_eq!(store.get_account_credential("inara").unwrap(), None);
-
-        // Probar clear_key
-        let mut req_clear = Request::builder()
-            .method("POST")
-            .uri("/api/actions/inara.clear_key")
-            .header(header::HOST, "127.0.0.1:47320")
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from("{}"))
-            .unwrap();
-        req_clear.extensions_mut().insert(ConnectInfo(
-            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
-        ));
-        let resp_clear = router.clone().oneshot(req_clear).await.unwrap();
-        assert_eq!(resp_clear.status(), StatusCode::OK);
     }
 
     #[tokio::test]

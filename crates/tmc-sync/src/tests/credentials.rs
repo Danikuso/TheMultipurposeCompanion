@@ -574,3 +574,216 @@ async fn switch_cmdr_keeps_sending_previous_cmdr_pending() {
     drop(_shut_tx);
     let _ = handle.await;
 }
+
+#[tokio::test]
+async fn inara_two_cmdrs_key_only_for_one() {
+    use crate::inara::InaraMapper;
+    use crate::inara::client::InaraClient;
+    use crate::worker::Worker;
+    use tmc_net::HttpReplyEx;
+    use tmc_net::limiter::{Service, SharedRateLimiter};
+    use tmc_net::testing::ScriptedTransport;
+    use tmc_store::SyncCredential;
+
+    const F2: &str = "F0000002";
+    let dir = tempdir().unwrap();
+    let store = Store::open_in_memory().unwrap();
+    let t0 = Utc.with_ymd_and_hms(2026, 11, 10, 10, 0, 0).unwrap();
+    let t_s = |secs: i64| {
+        (t0 + chrono::Duration::seconds(secs)).to_rfc3339_opts(SecondsFormat::Secs, true)
+    };
+    store.upsert_known_cmdr(F1, "CMDR ONE", t0).unwrap();
+    store.upsert_known_cmdr(F2, "CMDR TWO", t0).unwrap();
+    store.set_activation(SyncService::Inara, F1, t0).unwrap();
+    store
+        .put_sync_credential(&SyncCredential {
+            service: SyncService::Inara,
+            cmdr_fid: F1.into(),
+            cmdr_name: "CMDR ONE".into(),
+            api_key: "inara-key-f1".into(),
+            created_at: t0.to_rfc3339(),
+            verified_at: Some(t0.to_rfc3339()),
+            assignment: tmc_model::sync::KeyAssignment::Confirmed,
+        })
+        .unwrap();
+
+    let clock = TestClock::new(t0);
+    let mut router = Router::new(
+        store.clone(),
+        clock.clone(),
+        Arc::new(AtomicBool::new(true)),
+        Arc::new(AtomicBool::new(true)),
+        RouterConfig {
+            env: EnvGates {
+                e2e_simulation: false,
+            },
+            live_signal: LiveSignalPolicy::ProcessCheck,
+            journal_dir: dir.path().to_path_buf(),
+            flush_every: Duration::from_secs(60),
+            flush_rows: 200,
+            hold_before_process: (200, Duration::from_secs(10)),
+        },
+        vec![Box::new(InaraMapper::new())],
+    );
+    router
+        .handle(live_feed(SyncFeedEvent::CatchUpDone))
+        .unwrap();
+    router
+        .handle(live_feed(SyncFeedEvent::GameProcess { running: true }))
+        .unwrap();
+
+    // F1 salta (genera addCommanderTravelFSDJump), luego cambia a F2 que NO tiene clave Inara.
+    for (line, ev_json) in [
+        (
+            1u64,
+            format!(
+                r#"{{"timestamp":"{}","event":"Fileheader","part":1,"gameversion":"4.1.0.0","build":"r1","Odyssey":true}}"#,
+                t_s(0)
+            ),
+        ),
+        (
+            2u64,
+            format!(
+                r#"{{"timestamp":"{}","event":"LoadGame","FID":"{F1}","Commander":"CMDR ONE","Ship":"SideWinder","ShipID":1,"Horizons":true,"Odyssey":true,"Credits":1000}}"#,
+                t_s(1)
+            ),
+        ),
+        (
+            3u64,
+            format!(
+                r#"{{"timestamp":"{}","event":"FSDJump","StarSystem":"Sol","SystemAddress":10477373803,"StarPos":[0,0,0],"JumpDist":8.5}}"#,
+                t_s(2)
+            ),
+        ),
+        (
+            4u64,
+            format!(
+                r#"{{"timestamp":"{}","event":"LoadGame","FID":"{F2}","Commander":"CMDR TWO","Ship":"CobraMkIII","ShipID":2,"Horizons":true,"Odyssey":true,"Credits":500}}"#,
+                t_s(3)
+            ),
+        ),
+        (
+            5u64,
+            format!(
+                r#"{{"timestamp":"{}","event":"FSDJump","StarSystem":"Sirius","SystemAddress":10477373805,"StarPos":[6.25,1.25,-1.25],"JumpDist":10.0}}"#,
+                t_s(4)
+            ),
+        ),
+    ] {
+        router
+            .handle(live_feed(SyncFeedEvent::Journal {
+                ev: parse(&ev_json),
+                file: "Journal.2026-11-10T100000.01.log".into(),
+                line,
+            }))
+            .unwrap();
+    }
+    router.flush().unwrap();
+
+    // F1 tiene pendientes listos para enviar; F2 sin clave produce 0 filas Inara.
+    assert!(store.sync_counts(SyncService::Inara, F1).unwrap().pending > 0);
+    assert_eq!(
+        store.sync_counts(SyncService::Inara, F2).unwrap().pending,
+        0
+    );
+    assert_eq!(
+        store
+            .sync_counts(SyncService::Inara, F2)
+            .unwrap()
+            .sent_total,
+        0
+    );
+    assert!(
+        store
+            .pending_by_cmdr(SyncService::Inara)
+            .unwrap()
+            .iter()
+            .all(|(fid, _, _)| fid == F1)
+    );
+
+    let transport = ScriptedTransport::new(vec![Ok(HttpReplyEx {
+        status: 200,
+        body: r#"{"header":{"eventStatus":200},"events":[{"eventStatus":200,"eventCustomID":1},{"eventStatus":200,"eventCustomID":2},{"eventStatus":200,"eventCustomID":3}]}"#.into(),
+        retry_after_s: None,
+        rate_limit_remaining: None,
+        rate_limit_reset_s: None,
+    })]);
+    let client: Arc<dyn crate::worker::ServiceClient> = Arc::new(InaraClient::new(
+        transport.clone(),
+        SharedRateLimiter::for_service(Service::Inara),
+    ));
+    let (ev_tx, mut ev_rx) = tokio::sync::mpsc::channel(16);
+    let (_shut_tx, shut_rx) = tokio::sync::watch::channel(false);
+    let worker = Worker::new(
+        client,
+        store.clone(),
+        clock,
+        router.send_gates(),
+        Arc::new(tokio::sync::Notify::new()),
+        ev_tx,
+    );
+    let handle = tokio::spawn(worker.run(shut_rx));
+    let _ = ev_rx.recv().await.unwrap();
+    assert_eq!(transport.calls(), 1);
+    let posted: serde_json::Value = serde_json::from_slice(&transport.posts()[0].body).unwrap();
+    assert_eq!(posted["header"]["commanderFrontierID"], F1);
+    assert_eq!(posted["header"]["APIkey"], "inara-key-f1");
+    drop(_shut_tx);
+    let _ = handle.await;
+}
+
+#[test]
+fn inara_delete_key_discards_pending() {
+    use tmc_store::{NewOutboxRow, SyncCredential};
+    let store = Store::open_in_memory().unwrap();
+    let t0 = Utc.with_ymd_and_hms(2026, 11, 10, 10, 0, 0).unwrap();
+    store.upsert_known_cmdr(F1, "CMDR ONE", t0).unwrap();
+    store
+        .put_sync_credential(&SyncCredential {
+            service: SyncService::Inara,
+            cmdr_fid: F1.into(),
+            cmdr_name: "CMDR ONE".into(),
+            api_key: "inara-k1".into(),
+            created_at: t0.to_rfc3339(),
+            verified_at: Some(t0.to_rfc3339()),
+            assignment: tmc_model::sync::KeyAssignment::Confirmed,
+        })
+        .unwrap();
+    store.set_activation(SyncService::Inara, F1, t0).unwrap();
+    store
+        .enqueue_batch_with_cursor(
+            &[NewOutboxRow {
+                service: SyncService::Inara,
+                cmdr_fid: F1.into(),
+                origin: tmc_model::sync::RowOrigin::Live,
+                idem_key: "inara-del-1".into(),
+                kind: "addCommanderTravelFSDJump".into(),
+                coalesce_key: None,
+                payload: "{}".into(),
+                event_ts: t0,
+                state: tmc_model::sync::OutboxState::Pending,
+                last_class: None,
+            }],
+            &[],
+            t0,
+        )
+        .unwrap();
+
+    let discarded = store
+        .delete_sync_credential(SyncService::Inara, F1, t0)
+        .unwrap();
+    assert_eq!(discarded, 1);
+    assert!(
+        store
+            .sync_credential(SyncService::Inara, F1)
+            .unwrap()
+            .is_none()
+    );
+    assert!(store.activation(SyncService::Inara, F1).unwrap().is_none());
+    assert!(
+        store
+            .pending_by_cmdr(SyncService::Inara)
+            .unwrap()
+            .is_empty()
+    );
+}

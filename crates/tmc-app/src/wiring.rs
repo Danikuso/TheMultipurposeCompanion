@@ -247,13 +247,16 @@ async fn start_inner(
         net_events,
         online.clone(),
     );
-    if let Err(err) =
-        store.migrate_legacy_credentials(tmc_model::sync::SyncService::Edsm, Utc::now())
-    {
-        tracing::warn!(
-            failure_class = err.diagnostic_class(),
-            "edsm credential migration failed"
-        );
+    for svc in [
+        tmc_model::sync::SyncService::Edsm,
+        tmc_model::sync::SyncService::Inara,
+    ] {
+        if let Err(err) = store.migrate_legacy_credentials(svc, Utc::now()) {
+            tracing::warn!(
+                failure_class = err.diagnostic_class(),
+                "legacy credential migration failed"
+            );
+        }
     }
 
     let (sync_events, mut sync_events_rx) = tokio::sync::mpsc::channel::<SourceEvent>(64);
@@ -474,10 +477,6 @@ async fn start_inner(
         transport.clone(),
         None,
     ));
-    let inara_service = Arc::new(crate::inara_service::InaraService::new(
-        store.clone(),
-        transport.clone(),
-    ));
 
     // Si hay una sesión de Frontier CAPI guardada en SQLite, restaurar estado en accounts
     if let Ok(Some(_token)) = capi_service.get_token() {
@@ -493,20 +492,6 @@ async fn start_inner(
             .await;
     }
 
-    // Si hay una clave API de Inara (personal o de aplicación oficial), activar el estado en el módulo accounts
-    if inara_service.has_any_key() {
-        let _ = core
-            .events
-            .send(SourceEvent::Action {
-                name: "accounts.set_settings".to_string(),
-                args: serde_json::json!({
-                    "inara_has_key": true,
-                    "inara_enabled": true,
-                }),
-            })
-            .await;
-    }
-
     let auto_update_check = config.auto_update_check;
     let auto_update_install = config.auto_update_install;
     let actions = Arc::new(
@@ -515,8 +500,7 @@ async fn start_inner(
             .with_store(store.clone())
             .with_clipboard(clipboard.clone())
             .with_settings_watch(settings_tx)
-            .with_capi_service(capi_service)
-            .with_inara_service(inara_service),
+            .with_capi_service(capi_service),
     );
 
     if auto_update_check && online.load(std::sync::atomic::Ordering::Relaxed) {

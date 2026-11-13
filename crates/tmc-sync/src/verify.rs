@@ -103,6 +103,7 @@ pub async fn run_key_verifier(
     worker_wakers: Vec<Arc<Notify>>,
     status_wake: Arc<Notify>,
     verify_tx: mpsc::Sender<VerifyUpdate>,
+    inara_limiter: Option<SharedRateLimiter>,
     mut shutdown: watch::Receiver<bool>,
 ) {
     let mut retries: HashMap<(SyncService, String), RetryEntry> = HashMap::new();
@@ -116,12 +117,13 @@ pub async fn run_key_verifier(
         let mut active_keys: Vec<(SyncService, tmc_store::SyncCredential)> = Vec::new();
         if let Ok(cmdrs) = store.known_cmdrs() {
             for (fid, _) in cmdrs {
-                let service = SyncService::Edsm;
-                if let Ok(Some(cred)) = store.sync_credential(service, &fid)
-                    && cred.verified_at.is_none()
-                    && cred.assignment == KeyAssignment::Confirmed
-                {
-                    active_keys.push((service, cred));
+                for service in [SyncService::Inara, SyncService::Edsm] {
+                    if let Ok(Some(cred)) = store.sync_credential(service, &fid)
+                        && cred.verified_at.is_none()
+                        && cred.assignment == KeyAssignment::Confirmed
+                    {
+                        active_keys.push((service, cred));
+                    }
                 }
             }
         }
@@ -162,8 +164,15 @@ pub async fn run_key_verifier(
                 continue;
             }
 
-            match check_service_key(transport.as_ref(), service, &cred.cmdr_name, &cred.api_key)
-                .await
+            match check_service_key_limited(
+                transport.as_ref(),
+                service,
+                &cred.cmdr_name,
+                Some(&cred.cmdr_fid),
+                &cred.api_key,
+                inara_limiter.as_ref(),
+            )
+            .await
             {
                 KeyCheck::Valid => {
                     let verified_now = clock.now_utc();

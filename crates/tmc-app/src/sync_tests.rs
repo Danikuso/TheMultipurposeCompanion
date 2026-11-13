@@ -25,7 +25,7 @@ use tmc_model::sync::{
     FeedOrigin, KeyAssignment, SyncFeed, SyncFeedEvent, SyncReason, SyncService,
 };
 use tmc_net::testing::NoNetworkTransport;
-use tmc_server::{ServerConfig, build_router};
+use tmc_server::{ActionHost, ServerConfig, build_router};
 use tmc_store::{Store, SyncCredential};
 use tmc_sync::{EnvGates, LiveSignalPolicy, SyncDeps, SystemClock, spawn_sync};
 use tokio::sync::mpsc;
@@ -691,4 +691,241 @@ fn sync_canary_eddn() {
         tmc_net::eddn_upload::EDDN_SOFTWARE_NAME
     );
     assert!(snapshot.contains_key("accounts.status"));
+}
+
+#[test]
+fn module_prefixes_without_inara_and_edsm() {
+    assert_eq!(crate::clipboard::module_prefixes().len(), 13);
+    assert!(!crate::clipboard::has_module_prefix("inara.save_key"));
+    assert!(!crate::clipboard::has_module_prefix("inara.clear_key"));
+    assert!(!crate::clipboard::has_module_prefix(
+        "inara.test_connection"
+    ));
+    assert!(!crate::clipboard::has_module_prefix("edsm.save_key"));
+    assert!(crate::clipboard::has_module_prefix("accounts.key.save"));
+}
+
+#[test]
+fn no_dead_sync_paths() {
+    let crates_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("crates dir");
+    let needles = ["sync_batch", "EddnSender", "edsm_sync"];
+    let mut stack = vec![crates_dir.to_path_buf()];
+    let mut hits = Vec::new();
+    while let Some(dir) = stack.pop() {
+        for entry in std::fs::read_dir(&dir).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if path.is_dir() {
+                stack.push(path);
+                continue;
+            }
+            if path.extension().and_then(|e| e.to_str()) != Some("rs") {
+                continue;
+            }
+            // Excluir esta línea de definición de `needles`.
+            if path.ends_with("sync_tests.rs") {
+                continue;
+            }
+            let text = std::fs::read_to_string(&path).unwrap();
+            for needle in needles {
+                if text.contains(needle) {
+                    hits.push(format!("{}: {needle}", path.display()));
+                }
+            }
+        }
+    }
+    assert!(hits.is_empty(), "rutas muertas encontradas: {hits:?}");
+}
+
+#[test]
+fn sync_canary_inara() {
+    use tmc_net::HttpReplyEx;
+    use tmc_net::inara::INARA_API_URL;
+    use tmc_net::testing::ScriptedTransport;
+
+    let jdir = tempdir().unwrap();
+    let ddir = tempdir().unwrap();
+    let now = Utc::now();
+    let t_hdr =
+        (now - chrono::Duration::seconds(5)).to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let t_cmdr =
+        (now - chrono::Duration::seconds(4)).to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let t_load =
+        (now - chrono::Duration::seconds(3)).to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let t_jump =
+        (now + chrono::Duration::seconds(2)).to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+
+    let journal_name = "Journal.2026-11-10T100000.01.log";
+    let journal_lines = format!(
+        concat!(
+            r#"{{"timestamp":"{t_hdr}","event":"Fileheader","part":1,"language":"English/UK","Odyssey":true,"gameversion":"4.1.0.0","build":"r1"}}"#,
+            "\n",
+            r#"{{"timestamp":"{t_cmdr}","event":"Commander","FID":"{fid}","Name":"{name}"}}"#,
+            "\n",
+            r#"{{"timestamp":"{t_load}","event":"LoadGame","FID":"{fid}","Commander":"{name}","Ship":"SideWinder","ShipID":1,"Horizons":true,"Odyssey":true,"FuelLevel":8.0,"FuelCapacity":8.0,"GameMode":"Solo","Credits":1000,"Loan":0}}"#,
+            "\n"
+        ),
+        t_hdr = t_hdr,
+        t_cmdr = t_cmdr,
+        t_load = t_load,
+        fid = CANARY_FID,
+        name = CANARY_NAME,
+    );
+    std::fs::write(jdir.path().join(journal_name), journal_lines).unwrap();
+
+    // 1. Respuesta a getCommanderProfile al guardar clave; 2. Respuesta al lote Inara real.
+    let mut batch_events = Vec::new();
+    for cid in 1..=30i64 {
+        batch_events.push(serde_json::json!({ "eventStatus": 200, "eventCustomID": cid }));
+    }
+    let transport = ScriptedTransport::new(vec![
+        Ok(HttpReplyEx {
+            status: 200,
+            body: serde_json::json!({
+                "header": { "eventStatus": 200 },
+                "events": [{ "eventStatus": 200, "eventCustomID": 1, "eventData": { "userName": CANARY_NAME } }]
+            })
+            .to_string(),
+            retry_after_s: None,
+            rate_limit_remaining: None,
+            rate_limit_reset_s: None,
+        }),
+        Ok(HttpReplyEx {
+            status: 200,
+            body: serde_json::json!({
+                "header": { "eventStatus": 200 },
+                "events": batch_events
+            })
+            .to_string(),
+            retry_after_s: None,
+            rate_limit_remaining: None,
+            rate_limit_reset_s: None,
+        }),
+    ]);
+
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+
+    let (posts, outbox_payloads, snapshot) = rt.block_on(async {
+        let cfg = Config {
+            journal_dir: Some(jdir.path().to_path_buf()),
+            data_dir: Some(ddir.path().to_path_buf()),
+            server: ServerSection {
+                port: 0,
+                ..Default::default()
+            },
+            online_services: true,
+            auto_update_check: false,
+            auto_copy_next_system: false,
+            ..Default::default()
+        };
+        let running = start_with_transport(cfg, transport.clone())
+            .await
+            .unwrap();
+
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if !running.store.known_cmdrs().unwrap_or_default().is_empty() {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .unwrap();
+
+        let salt = running.store.get_or_create_eddn_salt().unwrap();
+        let cref = tmc_sync::cmdr_ref(&salt, CANARY_FID);
+        let save_res = running
+            .actions
+            .run_action_with(
+                "accounts.key.save",
+                &serde_json::json!({
+                    "service": "inara",
+                    "cmdr_ref": cref,
+                    "api_key": CANARY_KEY,
+                }),
+                &Default::default(),
+            )
+            .unwrap();
+        assert_eq!(save_res["verified"], true);
+
+        let _ = running
+            .core
+            .events
+            .send(SourceEvent::GameProcess { running: true })
+            .await;
+        let _ = running
+            .core
+            .events
+            .send(SourceEvent::Journal {
+                file: journal_name.to_string(),
+                line: 4,
+                replaying: false,
+                ev: parse_line(&format!(
+                    r#"{{"timestamp":"{t_jump}","event":"FSDJump","StarSystem":"Sirius","SystemAddress":10477373805,"StarPos":[6.25,1.25,-1.25],"JumpDist":8.5}}"#
+                ))
+                .unwrap(),
+            })
+            .await;
+
+        let send_deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+        while tokio::time::Instant::now() < send_deadline {
+            let inara_posts = transport
+                .posts()
+                .into_iter()
+                .filter(|p| p.url == INARA_API_URL)
+                .count();
+            if inara_posts >= 2 {
+                break;
+            }
+            let _ = running
+                .core
+                .events
+                .send(SourceEvent::GameProcess { running: true })
+                .await;
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+
+        let payloads: Vec<String> = running
+            .store
+            .query_json("SELECT payload FROM sync_outbox WHERE service='inara'", &[])
+            .unwrap()
+            .into_iter()
+            .filter_map(|row| row.as_array()?.first()?.as_str().map(str::to_owned))
+            .collect();
+        let snap = running.core.snapshot().await;
+        running.shutdown().await;
+        (transport.posts(), payloads, snap)
+    });
+
+    assert!(!outbox_payloads.is_empty());
+    for p in &outbox_payloads {
+        assert!(!p.contains(CANARY_KEY), "clave en payload BD: {p}");
+        assert!(!p.contains(CANARY_FID), "FID en payload BD: {p}");
+    }
+
+    let upload_post = posts
+        .iter()
+        .filter(|p| p.url == INARA_API_URL)
+        .find(|p| {
+            let v: Value = serde_json::from_slice(&p.body).unwrap_or(Value::Null);
+            v["events"][0]["eventName"] != "getCommanderProfile"
+        })
+        .expect("POST de eventos Inara faltante");
+    let req_json: Value = serde_json::from_slice(&upload_post.body).unwrap();
+    assert_eq!(req_json["header"]["APIkey"], CANARY_KEY);
+    assert_eq!(req_json["header"]["commanderFrontierID"], CANARY_FID);
+    assert_eq!(
+        req_json["header"]["appName"],
+        tmc_net::inara::INARA_APP_NAME
+    );
+
+    let acc_str = snapshot["accounts.status"].to_string();
+    assert!(!acc_str.contains(CANARY_KEY));
+    assert!(!acc_str.contains(CANARY_FID));
 }

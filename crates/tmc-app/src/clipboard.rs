@@ -123,7 +123,6 @@ pub struct AppActions {
     save_path: Option<PathBuf>,
     settings_watch: Option<tokio::sync::watch::Sender<tmc_model::settings::ModuleSettings>>,
     capi_service: Option<Arc<crate::capi_service::CapiService>>,
-    inara_service: Option<Arc<crate::inara_service::InaraService>>,
     store: Option<tmc_store::Store>,
     sync_waker: Option<tmc_sync::SyncWaker>,
     transport: Option<Arc<dyn tmc_net::Transport>>,
@@ -149,7 +148,6 @@ impl AppActions {
             save_path: None,
             settings_watch: None,
             capi_service: None,
-            inara_service: None,
             store: None,
             sync_waker: None,
             transport: None,
@@ -168,7 +166,6 @@ impl AppActions {
             runtime: None,
             settings_watch: None,
             capi_service: None,
-            inara_service: None,
             store: None,
             sync_waker: None,
             transport: None,
@@ -243,15 +240,6 @@ impl AppActions {
         capi_service: Arc<crate::capi_service::CapiService>,
     ) -> Self {
         self.capi_service = Some(capi_service);
-        self
-    }
-
-    /// Conecta el servicio de integración y sincronización de Inara InAPI v1.
-    pub fn with_inara_service(
-        mut self,
-        inara_service: Arc<crate::inara_service::InaraService>,
-    ) -> Self {
-        self.inara_service = Some(inara_service);
         self
     }
 
@@ -644,137 +632,6 @@ impl ActionHost for AppActions {
                     Err(e) => return Err(ActionError::Failed(e.to_string())),
                 }
             }
-            "inara.test_connection" => {
-                let inara = self.inara_service.as_ref().ok_or(ActionError::NotFound)?;
-                let api_key = args.get("api_key").and_then(|k| k.as_str());
-                let cmdr = args
-                    .get("commander_name")
-                    .and_then(|c| c.as_str())
-                    .or_else(|| {
-                        snapshot
-                            .get("core.cmdr")
-                            .and_then(|c| c.get("name"))
-                            .and_then(|n| n.as_str())
-                    });
-
-                let inara_cloned = inara.clone();
-                let key_owned = api_key.map(|k| k.to_string());
-                let cmdr_owned = cmdr.map(|c| c.to_string());
-                let events = self.runtime.as_ref().map(|r| r.events.clone());
-
-                let result = {
-                    let handle = tokio::runtime::Handle::try_current();
-                    match handle {
-                        Ok(h)
-                            if h.runtime_flavor() == tokio::runtime::RuntimeFlavor::MultiThread =>
-                        {
-                            tokio::task::block_in_place(|| {
-                                h.block_on(async {
-                                    inara_cloned
-                                        .test_connection(
-                                            key_owned.as_deref(),
-                                            cmdr_owned.as_deref(),
-                                        )
-                                        .await
-                                })
-                            })
-                        }
-                        _ => std::thread::spawn(move || {
-                            let rt = tokio::runtime::Builder::new_current_thread()
-                                .enable_all()
-                                .build()
-                                .unwrap();
-                            rt.block_on(async {
-                                inara_cloned
-                                    .test_connection(key_owned.as_deref(), cmdr_owned.as_deref())
-                                    .await
-                            })
-                        })
-                        .join()
-                        .unwrap_or_else(|_| Err("Thread panicked".to_string())),
-                    }
-                };
-
-                match result {
-                    Ok(val) => {
-                        if let Some(events) = events {
-                            let inara_url = val
-                                .get("inara_url")
-                                .and_then(|u| u.as_str())
-                                .map(ToString::to_string);
-                            let cmdr_name = val
-                                .get("commander_name")
-                                .and_then(|c| c.as_str())
-                                .map(ToString::to_string);
-                            let _ = events.try_send(SourceEvent::Action {
-                                name: "accounts.set_settings".to_string(),
-                                args: json!({
-                                    "inara_has_key": true,
-                                    "inara_enabled": true,
-                                    "inara_url": inara_url,
-                                    "inara_commander_name": cmdr_name,
-                                    "inara_verified": true,
-                                }),
-                            });
-                        }
-                        return Ok(val);
-                    }
-                    Err(err) => {
-                        if let Some(events) = events {
-                            let _ = events.try_send(SourceEvent::Action {
-                                name: "accounts.set_settings".to_string(),
-                                args: json!({
-                                    "inara_last_error": err.clone(),
-                                }),
-                            });
-                        }
-                        return Err(ActionError::Failed(err));
-                    }
-                }
-            }
-            "inara.save_key" => {
-                let inara = self.inara_service.as_ref().ok_or(ActionError::NotFound)?;
-                let api_key = args
-                    .get("api_key")
-                    .and_then(|k| k.as_str())
-                    .ok_or_else(|| ActionError::Failed("missing-api-key".into()))?;
-                let cmdr = args
-                    .get("commander_name")
-                    .and_then(|c| c.as_str())
-                    .or_else(|| {
-                        snapshot
-                            .get("core.cmdr")
-                            .and_then(|c| c.get("name"))
-                            .and_then(|n| n.as_str())
-                    });
-                inara.save_key(api_key, cmdr).map_err(ActionError::Failed)?;
-
-                if let Some(runtime) = &self.runtime {
-                    let _ = runtime.events.try_send(SourceEvent::Action {
-                        name: "accounts.set_settings".to_string(),
-                        args: json!({
-                            "inara_has_key": true,
-                            "inara_enabled": true,
-                        }),
-                    });
-                }
-                return Ok(json!({ "ok": true }));
-            }
-            "inara.clear_key" => {
-                let inara = self.inara_service.as_ref().ok_or(ActionError::NotFound)?;
-                inara.clear_key().map_err(ActionError::Failed)?;
-                let has_key = inara.has_any_key();
-                if let Some(runtime) = &self.runtime {
-                    let _ = runtime.events.try_send(SourceEvent::Action {
-                        name: "accounts.set_settings".to_string(),
-                        args: json!({
-                            "inara_has_key": has_key,
-                            "inara_verified": false,
-                        }),
-                    });
-                }
-                return Ok(json!({ "ok": true }));
-            }
             "tts.voices" => {
                 let engine_kind = args
                     .get("engine")
@@ -950,14 +807,20 @@ impl ActionHost for AppActions {
                 let check = if !is_online {
                     tmc_net::KeyCheck::Unreachable
                 } else if let Some(transport) = self.transport.clone() {
+                    let fid_owned = fid.clone();
                     let name_owned = cmdr_name.clone();
                     let key_owned = api_key.to_owned();
+                    let inara_limiter = self
+                        .active_sync_waker()
+                        .and_then(|w| w.inara_limiter().cloned());
                     block_on_sync(async move {
-                        tmc_sync::check_service_key(
+                        tmc_sync::check_service_key_limited(
                             transport.as_ref(),
                             service,
                             &name_owned,
+                            Some(&fid_owned),
                             &key_owned,
+                            inara_limiter.as_ref(),
                         )
                         .await
                     })
@@ -1341,7 +1204,7 @@ impl ActionHost for AppActions {
     }
 }
 
-const MODULE_PREFIXES: [&str; 14] = [
+const MODULE_PREFIXES: [&str; 13] = [
     "navigation.",
     "exploration.",
     "exobiology.",
@@ -1355,8 +1218,12 @@ const MODULE_PREFIXES: [&str; 14] = [
     "powerplay.",
     "bgs.",
     "accounts.",
-    "inara.",
 ];
+
+#[cfg(test)]
+pub(crate) fn module_prefixes() -> &'static [&'static str] {
+    &MODULE_PREFIXES
+}
 
 #[cfg(test)]
 pub(crate) fn has_module_prefix(name: &str) -> bool {

@@ -7,9 +7,11 @@ use std::sync::atomic::AtomicBool;
 use tmc_model::source::SourceEvent;
 use tmc_net::Transport;
 use tmc_net::eddn_upload::SchemaMode;
+use tmc_net::limiter::{Service, SharedRateLimiter};
 use tmc_store::Store;
 use tmc_sync::eddn::{EddnClient, EddnMapper};
 use tmc_sync::edsm::{DiscardList, EdsmClient, EdsmMapper, run_discard_refresh};
+use tmc_sync::inara::{InaraMapper, client::InaraClient};
 use tmc_sync::{EnvGates, LiveSignalPolicy, SyncDeps, SyncHandle, SystemClock, spawn_sync};
 use tokio::sync::{Notify, mpsc};
 
@@ -77,6 +79,10 @@ pub fn start_sync(
     ));
     let edsm_mapper = Box::new(EdsmMapper::new(discard.clone()));
 
+    let inara_limiter = SharedRateLimiter::for_service(Service::Inara);
+    let inara_client = Arc::new(InaraClient::new(transport.clone(), inara_limiter));
+    let inara_mapper = Box::new(InaraMapper::new());
+
     let mut handle = spawn_sync(SyncDeps {
         store: store.clone(),
         transport: transport.clone(),
@@ -87,8 +93,8 @@ pub fn start_sync(
         live_signal: live_signal_for_platform(),
         clock: clock.clone(),
         process_kind,
-        clients: vec![eddn_client, edsm_client],
-        mappers: vec![eddn_mapper, edsm_mapper],
+        clients: vec![eddn_client, edsm_client, inara_client],
+        mappers: vec![eddn_mapper, edsm_mapper, inara_mapper],
     });
 
     let discard_store = store.clone();

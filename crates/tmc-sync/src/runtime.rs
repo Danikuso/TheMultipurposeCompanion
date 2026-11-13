@@ -47,9 +47,13 @@ pub struct SyncWaker {
     verify_wake: Arc<Notify>,
     router_wake: Arc<Notify>,
     verify_tx: Option<mpsc::Sender<crate::verify::VerifyUpdate>>,
+    inara_limiter: Option<tmc_net::limiter::SharedRateLimiter>,
 }
 
 impl SyncWaker {
+    pub fn inara_limiter(&self) -> Option<&tmc_net::limiter::SharedRateLimiter> {
+        self.inara_limiter.as_ref()
+    }
     pub fn wake_all(&self) {
         for wake in &self.wakers {
             wake.notify_one();
@@ -81,6 +85,7 @@ pub struct SyncHandle {
     verify_wake: Arc<Notify>,
     router_wake: Arc<Notify>,
     verify_tx: mpsc::Sender<crate::verify::VerifyUpdate>,
+    inara_limiter: Option<tmc_net::limiter::SharedRateLimiter>,
     router_shutdown: watch::Sender<bool>,
     aux_shutdown: watch::Sender<bool>,
     router_and_workers: Vec<JoinHandle<()>>,
@@ -116,6 +121,7 @@ impl SyncHandle {
             verify_wake: self.verify_wake.clone(),
             router_wake: self.router_wake.clone(),
             verify_tx: Some(self.verify_tx.clone()),
+            inara_limiter: self.inara_limiter.clone(),
         }
     }
 
@@ -200,6 +206,12 @@ pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
     let mut router_and_workers = Vec::new();
     let mut aux_tasks = Vec::new();
 
+    let inara_limiter = deps
+        .clients
+        .iter()
+        .find(|c| c.service() == SyncService::Inara)
+        .and_then(|c| c.shared_limiter());
+
     for client in deps.clients {
         let wake = Arc::new(Notify::new());
         wakers.push(wake.clone());
@@ -243,6 +255,7 @@ pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
         wakers.clone(),
         status_wake.clone(),
         verify_tx.clone(),
+        inara_limiter.clone(),
         aux_shutdown_rx.clone(),
     )));
 
@@ -491,6 +504,7 @@ pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
         verify_wake,
         router_wake,
         verify_tx,
+        inara_limiter,
         router_shutdown: router_shutdown_tx,
         aux_shutdown: aux_shutdown_tx,
         router_and_workers,
