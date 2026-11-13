@@ -159,6 +159,40 @@ pub struct OutboxRow {
     pub attempts: u32,
 }
 
+/// Veredicto de cierre o reapertura aplicado por un trabajador sobre una fila.
+#[derive(Debug, Clone)]
+pub enum OutboxVerdict {
+    Sent {
+        id: i64,
+        code: String,
+    },
+    Rejected {
+        id: i64,
+        code: String,
+        class: ErrorClass,
+    },
+    Closed {
+        id: i64,
+        state: OutboxState,
+        code: Option<String>,
+        class: Option<ErrorClass>,
+    },
+    Retry {
+        id: i64,
+        next_attempt_at: DateTime<Utc>,
+        code: String,
+        class: ErrorClass,
+    },
+    Hold {
+        id: i64,
+        code: String,
+        class: ErrorClass,
+    },
+    Release {
+        id: i64,
+    },
+}
+
 /// Contadores y volumen pendiente de un servicio para un comandante.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SyncCounts {
@@ -259,6 +293,134 @@ impl Store {
         Ok(out)
     }
 
+    /// Marca o reabre un subconjunto mixto de filas de un lote en una sola transacción.
+    pub fn apply_verdicts(
+        &self,
+        verdicts: &[OutboxVerdict],
+        now: DateTime<Utc>,
+    ) -> Result<(), StoreError> {
+        if verdicts.is_empty() {
+            return Ok(());
+        }
+        let now_s = ts(now);
+        let mut conn = self.lock()?;
+        let tx = conn.transaction()?;
+        for verdict in verdicts {
+            match verdict {
+                OutboxVerdict::Sent { id, code } => {
+                    Self::close_one_tx(
+                        &tx,
+                        *id,
+                        OutboxState::Sent,
+                        Some(code.as_str()),
+                        None,
+                        Some("sent"),
+                        &now_s,
+                    )?;
+                }
+                OutboxVerdict::Rejected { id, code, class } => {
+                    Self::close_one_tx(
+                        &tx,
+                        *id,
+                        OutboxState::Rejected,
+                        Some(code.as_str()),
+                        Some(*class),
+                        Some("rejected"),
+                        &now_s,
+                    )?;
+                }
+                OutboxVerdict::Closed {
+                    id,
+                    state,
+                    code,
+                    class,
+                } => {
+                    if !matches!(
+                        state,
+                        OutboxState::Discarded | OutboxState::Omitted | OutboxState::Superseded
+                    ) {
+                        return Err(StoreError::Unsupported("closing state".into()));
+                    }
+                    let counter = (*state == OutboxState::Omitted).then_some("omitted");
+                    Self::close_one_tx(&tx, *id, *state, code.as_deref(), *class, counter, &now_s)?;
+                }
+                OutboxVerdict::Retry {
+                    id,
+                    next_attempt_at,
+                    code,
+                    class,
+                } => {
+                    Self::reopen_one_tx(&tx, *id, Some(*next_attempt_at), code.as_str(), *class)?;
+                }
+                OutboxVerdict::Hold { id, code, class } => {
+                    Self::reopen_one_tx(&tx, *id, None, code.as_str(), *class)?;
+                }
+                OutboxVerdict::Release { id } => {
+                    tx.execute(
+                        "UPDATE sync_outbox SET state='pending' WHERE id=?1 AND state='inflight'",
+                        [id],
+                    )?;
+                }
+            }
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    fn close_one_tx(
+        tx: &rusqlite::Transaction<'_>,
+        id: i64,
+        state: OutboxState,
+        code: Option<&str>,
+        class: Option<ErrorClass>,
+        counter: Option<&str>,
+        now_s: &str,
+    ) -> Result<(), StoreError> {
+        let class = class.map(class_str).transpose()?;
+        let confirmed = (state == OutboxState::Sent).then_some(now_s);
+        let key: Option<(String, String)> = tx
+            .query_row(
+                "SELECT service, cmdr_fid FROM sync_outbox WHERE id=?1 AND state IN ('pending','inflight')",
+                [id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .map(Some)
+            .or_else(|e| match e {
+                rusqlite::Error::QueryReturnedNoRows => Ok(None),
+                e => Err(e),
+            })?;
+        let Some((service, fid)) = key else {
+            return Ok(());
+        };
+        tx.execute(
+            "UPDATE sync_outbox SET state=?2, last_code=?3, last_class=?4, done_at=?5 WHERE id=?1",
+            rusqlite::params![id, state.as_str(), code, class, now_s],
+        )?;
+        if let Some(column) = counter {
+            bump(tx, &service, &fid, column, confirmed)?;
+        }
+        Ok(())
+    }
+
+    fn reopen_one_tx(
+        tx: &rusqlite::Transaction<'_>,
+        id: i64,
+        next_attempt_at: Option<DateTime<Utc>>,
+        code: &str,
+        class: ErrorClass,
+    ) -> Result<(), StoreError> {
+        let class = class_str(class)?;
+        let next = next_attempt_at.map(ts);
+        let step = i64::from(next.is_some());
+        tx.execute(
+            "UPDATE sync_outbox SET state='pending', attempts = attempts + ?2, \
+             next_attempt_at = COALESCE(?3, next_attempt_at), last_code=?4, last_class=?5 \
+             WHERE id=?1 AND state IN ('pending','inflight')",
+            rusqlite::params![id, step, next, code, class],
+        )?;
+        Ok(())
+    }
+
     /// Cierra filas con un estado final y suma el contador indicado (solo si estaban abiertas).
     fn close_rows(
         &self,
@@ -270,30 +432,10 @@ impl Store {
         now: DateTime<Utc>,
     ) -> Result<(), StoreError> {
         let now_s = ts(now);
-        let class = class.map(class_str).transpose()?;
-        let confirmed = (state == OutboxState::Sent).then_some(now_s.as_str());
         let mut conn = self.lock()?;
         let tx = conn.transaction()?;
         for id in ids {
-            let key: Option<(String, String)> = tx
-                .query_row(
-                    "SELECT service, cmdr_fid FROM sync_outbox WHERE id=?1 AND state IN ('pending','inflight')",
-                    [id],
-                    |r| Ok((r.get(0)?, r.get(1)?)),
-                )
-                .map(Some)
-                .or_else(|e| match e {
-                    rusqlite::Error::QueryReturnedNoRows => Ok(None),
-                    e => Err(e),
-                })?;
-            let Some((service, fid)) = key else { continue };
-            tx.execute(
-                "UPDATE sync_outbox SET state=?2, last_code=?3, last_class=?4, done_at=?5 WHERE id=?1",
-                rusqlite::params![id, state.as_str(), code, class, now_s],
-            )?;
-            if let Some(column) = counter {
-                bump(&tx, &service, &fid, column, confirmed)?;
-            }
+            Self::close_one_tx(&tx, *id, state, code, class, counter, &now_s)?;
         }
         tx.commit()?;
         Ok(())
@@ -348,18 +490,10 @@ impl Store {
         code: &str,
         class: ErrorClass,
     ) -> Result<(), StoreError> {
-        let class = class_str(class)?;
-        let next = next_attempt_at.map(ts);
-        let step = i64::from(next.is_some());
         let mut conn = self.lock()?;
         let tx = conn.transaction()?;
         for id in ids {
-            tx.execute(
-                "UPDATE sync_outbox SET state='pending', attempts = attempts + ?2, \
-                 next_attempt_at = COALESCE(?3, next_attempt_at), last_code=?4, last_class=?5 \
-                 WHERE id=?1 AND state IN ('pending','inflight')",
-                rusqlite::params![id, step, next, code, class],
-            )?;
+            Self::reopen_one_tx(&tx, *id, next_attempt_at, code, class)?;
         }
         tx.commit()?;
         Ok(())
@@ -394,6 +528,23 @@ impl Store {
             [],
         )?;
         Ok(n as u64)
+    }
+
+    /// Devuelve filas `inflight` concretas a `pending` sin tocar intentos ni programación.
+    pub fn release_rows(&self, ids: &[i64]) -> Result<(), StoreError> {
+        if ids.is_empty() {
+            return Ok(());
+        }
+        let mut conn = self.lock()?;
+        let tx = conn.transaction()?;
+        for id in ids {
+            tx.execute(
+                "UPDATE sync_outbox SET state='pending' WHERE id=?1 AND state='inflight'",
+                [id],
+            )?;
+        }
+        tx.commit()?;
+        Ok(())
     }
 
     /// Cierra como `expired` (y cuenta) las filas pendientes ya demasiado antiguas.
@@ -504,10 +655,20 @@ impl Store {
         &self,
         service: SyncService,
     ) -> Result<Option<DateTime<Utc>>, StoreError> {
+        self.next_attempt_at_for(service, None)
+    }
+
+    /// Próximo reintento programado entre las filas pendientes del servicio (opcionalmente por comandante).
+    pub fn next_attempt_at_for(
+        &self,
+        service: SyncService,
+        cmdr_fid: Option<&str>,
+    ) -> Result<Option<DateTime<Utc>>, StoreError> {
         let conn = self.lock()?;
         let value: Option<String> = conn.query_row(
-            "SELECT MIN(next_attempt_at) FROM sync_outbox WHERE service=?1 AND state='pending'",
-            [service.as_str()],
+            "SELECT MIN(next_attempt_at) FROM sync_outbox \
+             WHERE service=?1 AND state='pending' AND (?2 IS NULL OR cmdr_fid=?2)",
+            rusqlite::params![service.as_str(), cmdr_fid],
             |r| r.get(0),
         )?;
         value.as_deref().map(parse_ts).transpose()

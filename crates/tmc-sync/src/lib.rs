@@ -6,6 +6,7 @@ pub mod lease;
 pub mod recovery;
 pub mod router;
 pub mod tracker;
+pub mod worker;
 
 #[cfg(test)]
 mod tests;
@@ -18,3 +19,7 @@ pub use router::{
     SendGates, ServiceMapper,
 };
 pub use tracker::{TransientSnapshot, TransientTracker};
+pub use worker::{
+    BatchPolicy, MAX_WORKER_SLEEP, RowVerdict, SendCtx, SendOutcome, ServiceClient, ServiceEffect,
+    Worker, WorkerEvent, backoff,
+};

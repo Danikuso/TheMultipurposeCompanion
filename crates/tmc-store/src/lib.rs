@@ -22,8 +22,8 @@ pub use migrations::Migration;
 pub use query::{EventQuery, EventRow};
 pub use sync_credential::{MigrationReport, SyncCredential, UnassignedKey, UnassignedReason};
 pub use sync_outbox::{
-    CursorAdvance, EnqueueOutcome, NewOutboxRow, OutboxRow, SYNC_PENDING_CAP, SYNC_RETENTION_DAYS,
-    SyncCounts,
+    CursorAdvance, EnqueueOutcome, NewOutboxRow, OutboxRow, OutboxVerdict, SYNC_PENDING_CAP,
+    SYNC_RETENTION_DAYS, SyncCounts,
 };
 pub use ui_layout::{UiLayoutProfile, UiLayoutSummary};
 pub use writer::{EventWriter, StoredEvent};
