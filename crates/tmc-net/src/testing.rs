@@ -19,6 +19,7 @@ pub struct RecordedPost {
 pub struct ScriptedTransport {
     replies: Mutex<VecDeque<Result<HttpReplyEx, TransportError>>>,
     get_replies: Mutex<VecDeque<Result<HttpReply, TransportError>>>,
+    get_routes: Mutex<Vec<(String, Result<HttpReply, TransportError>)>>,
     posts: Mutex<Vec<RecordedPost>>,
     get_urls: Mutex<Vec<String>>,
     calls: AtomicUsize,
@@ -29,6 +30,7 @@ impl ScriptedTransport {
         Arc::new(Self {
             replies: Mutex::new(replies.into()),
             get_replies: Mutex::new(VecDeque::new()),
+            get_routes: Mutex::new(Vec::new()),
             posts: Mutex::new(Vec::new()),
             get_urls: Mutex::new(Vec::new()),
             calls: AtomicUsize::new(0),
@@ -55,6 +57,11 @@ impl ScriptedTransport {
         self.get_replies.lock().unwrap().push_back(r);
     }
 
+    /// Registra una respuesta GET fija cuando la URL empieza por `prefix`.
+    pub fn on_get(&self, prefix: &str, r: Result<HttpReply, TransportError>) {
+        self.get_routes.lock().unwrap().push((prefix.to_owned(), r));
+    }
+
     fn unsupported<T: Send + 'static>(&self) -> BoxFut<'_, Result<T, TransportError>> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         Box::pin(async {
@@ -67,6 +74,19 @@ impl ScriptedTransport {
 
 impl Transport for ScriptedTransport {
     fn get(&self, url: &str) -> BoxFut<'_, Result<HttpReply, TransportError>> {
+        let routed = self
+            .get_routes
+            .lock()
+            .unwrap()
+            .iter()
+            .rev()
+            .find(|(prefix, _)| url.starts_with(prefix))
+            .map(|(_, reply)| reply.clone());
+        if let Some(reply) = routed {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            self.get_urls.lock().unwrap().push(url.to_owned());
+            return Box::pin(async move { reply });
+        }
         let next = self.get_replies.lock().unwrap().pop_front();
         match next {
             Some(reply) => {

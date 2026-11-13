@@ -75,6 +75,11 @@ pub struct NetServiceHandle {
 }
 
 impl NetServiceHandle {
+    /// Transporte HTTP compartido para verificaciones de credenciales (`accounts.key.save`).
+    pub fn transport(&self) -> Arc<dyn tmc_net::Transport> {
+        self.client.transport().clone()
+    }
+
     /// Autocompletado para REST (sin pasar por el actor).
     pub async fn autocomplete(&self, prefix: &str) -> Result<Vec<SystemSuggestion>, NetFailure> {
         if prefix.chars().count() < AUTOCOMPLETE_MIN_CHARS || !self.online.load(Ordering::Relaxed) {

@@ -186,23 +186,34 @@ test('AccountsPanel renders connected CAPI status with remote fleet list', () =>
   expect(q('remote-fleet-select')).toBeNull();
 });
 
-test('AccountsPanel saveEdsmKey dispatches edsm.save_key and clears input', async () => {
-  let actionCalled = false;
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
-    if (typeof url === 'string' && url.includes('edsm.save_key')) {
-      actionCalled = true;
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+test('AccountsPanel saveEdsmKey dispatches accounts.key.save and clears input', async () => {
+  let sentBody: Record<string, unknown> | null = null;
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (typeof url === 'string' && url.includes('accounts.key.save')) {
+      sentBody = JSON.parse((init?.body as string) ?? '{}');
+      return new Response(JSON.stringify({ ok: true, verified: true, state: 'active' }), { status: 200 });
     }
     return new Response(JSON.stringify({}), { status: 200 });
   }));
 
   mountWith(AccountsPanel, {
     'accounts.status': {
-      current_cmdr: null,
+      current_cmdr: { cmdr_ref: 'cmdr-1', name: 'Danikuso' },
       inara: { ...baseDisabledService('no_key'), has_key: false, key_hint: null },
       edsm: { ...baseDisabledService('no_key'), has_key: false, key_hint: null },
       eddn: { ...baseDisabledService('switch_off'), enabled: false, paused_schemas: [] },
-      commanders: [],
+      commanders: [
+        {
+          cmdr_ref: 'cmdr-1',
+          name: 'Danikuso',
+          edsm_key: false,
+          inara_key: false,
+          key_assignment: 'confirmed',
+          edsm_pending: 0,
+          inara_pending: 0,
+          eddn_pending: 0,
+        },
+      ],
       other_cmdrs_pending: { inara: 0, edsm: 0, eddn: 0 },
       unassigned_keys: [],
       capi: {
@@ -227,7 +238,11 @@ test('AccountsPanel saveEdsmKey dispatches edsm.save_key and clears input', asyn
   await new Promise((r) => setTimeout(r, 10));
   flushSync();
 
-  expect(actionCalled).toBe(true);
+  expect(sentBody).toEqual({
+    service: 'edsm',
+    cmdr_ref: 'cmdr-1',
+    api_key: 'secret-edsm-key',
+  });
   expect(input.value).toBe('');
 });
 

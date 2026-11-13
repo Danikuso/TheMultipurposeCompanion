@@ -247,6 +247,15 @@ async fn start_inner(
         net_events,
         online.clone(),
     );
+    if let Err(err) =
+        store.migrate_legacy_credentials(tmc_model::sync::SyncService::Edsm, Utc::now())
+    {
+        tracing::warn!(
+            failure_class = err.diagnostic_class(),
+            "edsm credential migration failed"
+        );
+    }
+
     let (sync_events, mut sync_events_rx) = tokio::sync::mpsc::channel::<SourceEvent>(64);
     let sync = crate::sync_wiring::start_sync(
         &store,
@@ -465,7 +474,6 @@ async fn start_inner(
         transport.clone(),
         None,
     ));
-    let edsm_service = Arc::new(crate::edsm_service::EdsmService::new(store.clone()));
     let inara_service = Arc::new(crate::inara_service::InaraService::new(
         store.clone(),
         transport.clone(),
@@ -481,24 +489,6 @@ async fn start_inner(
                     "capi_connected": true,
                     "capi_enabled": true,
                 }),
-            })
-            .await;
-    }
-
-    // Si hay una clave API de EDSM guardada en SQLite, restaurar estado en accounts
-    if let Some(_key) = edsm_service.get_saved_key() {
-        let mut edsm_args = serde_json::json!({
-            "edsm_has_key": true,
-            "edsm_enabled": true,
-        });
-        if let Some(cmdr) = edsm_service.get_saved_cmdr() {
-            edsm_args["edsm_commander_name"] = serde_json::json!(cmdr);
-        }
-        let _ = core
-            .events
-            .send(SourceEvent::Action {
-                name: "accounts.set_settings".to_string(),
-                args: edsm_args,
             })
             .await;
     }
@@ -526,7 +516,6 @@ async fn start_inner(
             .with_clipboard(clipboard.clone())
             .with_settings_watch(settings_tx)
             .with_capi_service(capi_service)
-            .with_edsm_service(edsm_service)
             .with_inara_service(inara_service),
     );
 

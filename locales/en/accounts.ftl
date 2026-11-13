@@ -115,3 +115,19 @@ accounts-sync-never = —
 accounts-sync-retry-in = Error · retry in { $time }
 accounts-sync-retry-now = Retry now
 accounts-eddn-paused-schemas = Paused schemas (update required): { $schemas }
+
+
+accounts-cmdr-selector-label = Configured Commander
+accounts-cmdr-none = No commander detected yet
+accounts-cmdr-forget = Forget commander
+accounts-edsm-btn-save-verify = Save & verify
+accounts-edsm-btn-delete = Delete key
+accounts-key-delete-confirm-note = Deleting this key will discard pending EDSM events for this commander.
+accounts-key-verify-active = Key verified and active.
+accounts-key-verify-rejected = Key rejected by EDSM. Check or delete it.
+accounts-key-verify-unverified = Offline right now; key saved and will be verified automatically once back online.
+accounts-key-unassigned-banner = A legacy EDSM key is waiting to be assigned to a commander.
+accounts-key-unassigned-assign = Assign key to this commander
+accounts-key-auto-confirm-banner = Key auto-assigned after migration. Confirm it belongs to { $cmdr }?
+accounts-key-confirm-owner = Confirm owner
+accounts-key-pending-discarded = Key deleted ({ $count } pending discarded).

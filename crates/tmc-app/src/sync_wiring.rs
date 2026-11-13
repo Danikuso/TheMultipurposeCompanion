@@ -9,8 +9,9 @@ use tmc_net::Transport;
 use tmc_net::eddn_upload::SchemaMode;
 use tmc_store::Store;
 use tmc_sync::eddn::{EddnClient, EddnMapper};
+use tmc_sync::edsm::{DiscardList, EdsmClient, EdsmMapper, run_discard_refresh};
 use tmc_sync::{EnvGates, LiveSignalPolicy, SyncDeps, SyncHandle, SystemClock, spawn_sync};
-use tokio::sync::mpsc;
+use tokio::sync::{Notify, mpsc};
 
 const E2E_GAME_RUNNING_ENV: &str = "TMC_E2E_GAME_RUNNING";
 const EDDN_TEST_SCHEMAS_ENV: &str = "TMC_EDDN_TEST_SCHEMAS";
@@ -61,20 +62,54 @@ pub fn start_sync(
 ) -> SyncHandle {
     let salt = store.get_or_create_eddn_salt().unwrap_or_default();
     let schema_mode = eddn_schema_mode();
+    let clock: Arc<dyn tmc_sync::Clock> = Arc::new(SystemClock);
     let eddn_client = Arc::new(EddnClient::new(transport.clone(), store.clone()));
     let eddn_mapper = Box::new(EddnMapper::new(schema_mode, salt));
 
-    spawn_sync(SyncDeps {
+    let discard = DiscardList::from_store(store);
+    let refresh_wake = Arc::new(Notify::new());
+    let edsm_client = Arc::new(EdsmClient::new(
+        transport.clone(),
+        store.clone(),
+        clock.clone(),
+        discard.clone(),
+        refresh_wake.clone(),
+    ));
+    let edsm_mapper = Box::new(EdsmMapper::new(discard.clone()));
+
+    let mut handle = spawn_sync(SyncDeps {
         store: store.clone(),
-        transport,
-        online,
+        transport: transport.clone(),
+        online: online.clone(),
         core_events,
         journal_dir: journal_dir.to_path_buf(),
         env: env_gates(),
         live_signal: live_signal_for_platform(),
-        clock: Arc::new(SystemClock),
+        clock: clock.clone(),
         process_kind,
-        clients: vec![eddn_client],
-        mappers: vec![eddn_mapper],
-    })
+        clients: vec![eddn_client, edsm_client],
+        mappers: vec![eddn_mapper, edsm_mapper],
+    });
+
+    let discard_store = store.clone();
+    let discard_transport = transport;
+    let discard_online = online;
+    let worker_wake = handle
+        .client_wake(1)
+        .unwrap_or_else(|| Arc::new(Notify::new()));
+    handle.spawn_aux(move |shutdown| async move {
+        run_discard_refresh(
+            discard_store,
+            discard_transport,
+            clock,
+            discard,
+            discard_online,
+            refresh_wake,
+            worker_wake,
+            shutdown,
+        )
+        .await;
+    });
+
+    handle
 }

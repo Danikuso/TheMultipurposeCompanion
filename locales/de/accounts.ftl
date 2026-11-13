@@ -115,3 +115,19 @@ accounts-sync-never = —
 accounts-sync-retry-in = Fehler · neuer Versuch in { $time }
 accounts-sync-retry-now = Jetzt erneut versuchen
 accounts-eddn-paused-schemas = Pausierte Schemas (Update erforderlich): { $schemas }
+
+
+accounts-cmdr-selector-label = Konfigurierter Kommandant
+accounts-cmdr-none = Noch kein Kommandant erkannt
+accounts-cmdr-forget = Kommandant vergessen
+accounts-edsm-btn-save-verify = Speichern & prüfen
+accounts-edsm-btn-delete = Schlüssel löschen
+accounts-key-delete-confirm-note = Durch Löschen dieses Schlüssels werden ausstehende EDSM-Ereignisse dieses Kommandanten verworfen.
+accounts-key-verify-active = Schlüssel verifiziert und aktiv.
+accounts-key-verify-rejected = Schlüssel von EDSM abgelehnt. Prüfen oder löschen.
+accounts-key-verify-unverified = Derzeit offline; Schlüssel gespeichert und wird automatisch bei bestehender Verbindung geprüft.
+accounts-key-unassigned-banner = Ein älterer EDSM-Schlüssel wartet auf Zuweisung an einen Kommandanten.
+accounts-key-unassigned-assign = Schlüssel diesem Kommandanten zuweisen
+accounts-key-auto-confirm-banner = Schlüssel nach Migration automatisch zugewiesen. Gehört er zu { $cmdr }?
+accounts-key-confirm-owner = Eigentümer bestätigen
+accounts-key-pending-discarded = Schlüssel gelöscht ({ $count } ausstehend verworfen).

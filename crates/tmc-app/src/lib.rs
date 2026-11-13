@@ -6,7 +6,6 @@ pub mod clipboard;
 pub mod config;
 pub mod eddn_service;
 mod eddn_wiring;
-pub mod edsm_service;
 pub mod env;
 pub mod inara_service;
 pub mod logging;
@@ -19,7 +18,6 @@ pub mod wiring;
 pub use capi_service::CapiService;
 pub use clipboard::{AppActions, Clipboard};
 pub use config::{Config, ServerSection, config_path, data_dir};
-pub use edsm_service::EdsmService;
 pub use env::env_var_or_file;
 pub use inara_service::InaraService;
 pub use logging::{LoggingGuards, init_logging};
@@ -38,6 +36,9 @@ mod engineering_pages_tests;
 
 #[cfg(test)]
 mod sync_tests;
+
+#[cfg(test)]
+mod edsm_sync_tests;
 
 #[cfg(test)]
 mod tests {
@@ -1734,62 +1735,6 @@ tourism_reference_cr_ly = 200000
         ));
         let resp_clear = router.clone().oneshot(req_clear).await.unwrap();
         assert_eq!(resp_clear.status(), StatusCode::OK);
-    }
-
-    #[tokio::test]
-    async fn edsm_actions_save_and_clear_key() {
-        use std::sync::Arc;
-        let core = tmc_core::spawn_core(vec![], None, Duration::from_millis(100));
-        let store = tmc_store::Store::open_in_memory().unwrap();
-        let edsm_service = Arc::new(EdsmService::new(store.clone()));
-        let actions = Arc::new(AppActions::new().with_edsm_service(edsm_service));
-
-        let router = tmc_server::build_router(
-            tmc_server::ServerConfig {
-                port: 47320,
-                lan: false,
-                token: String::new(),
-                ui_dir: None,
-            },
-            "127.0.0.1".into(),
-            core,
-            store.clone(),
-            actions,
-        );
-
-        let mut req_save = Request::builder()
-            .method("POST")
-            .uri("/api/actions/edsm.save_key")
-            .header(header::HOST, "127.0.0.1:47320")
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(
-                r#"{"api_key":"my_secret_edsm_key","commander_name":"Danikuso"}"#,
-            ))
-            .unwrap();
-        req_save.extensions_mut().insert(ConnectInfo(
-            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
-        ));
-        let resp_save = router.clone().oneshot(req_save).await.unwrap();
-        assert_eq!(resp_save.status(), StatusCode::OK);
-
-        let cred = store.get_account_credential("edsm").unwrap().unwrap();
-        assert_eq!(cred.api_key.as_deref(), Some("my_secret_edsm_key"));
-        assert_eq!(cred.cmdr_name.as_deref(), Some("Danikuso"));
-
-        let mut req_clear = Request::builder()
-            .method("POST")
-            .uri("/api/actions/edsm.clear_key")
-            .header(header::HOST, "127.0.0.1:47320")
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(r#"{}"#))
-            .unwrap();
-        req_clear.extensions_mut().insert(ConnectInfo(
-            "127.0.0.1:55000".parse::<SocketAddr>().unwrap(),
-        ));
-        let resp_clear = router.clone().oneshot(req_clear).await.unwrap();
-        assert_eq!(resp_clear.status(), StatusCode::OK);
-
-        assert_eq!(store.get_account_credential("edsm").unwrap(), None);
     }
 
     #[tokio::test]

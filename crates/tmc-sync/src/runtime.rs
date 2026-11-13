@@ -44,6 +44,8 @@ pub struct SyncDeps {
 pub struct SyncWaker {
     wakers: Vec<Arc<Notify>>,
     status_wake: Arc<Notify>,
+    verify_wake: Arc<Notify>,
+    verify_tx: Option<mpsc::Sender<crate::verify::VerifyUpdate>>,
 }
 
 impl SyncWaker {
@@ -51,6 +53,20 @@ impl SyncWaker {
         for wake in &self.wakers {
             wake.notify_one();
         }
+        self.verify_wake.notify_one();
+        self.status_wake.notify_one();
+    }
+
+    pub fn wake_verify(&self) {
+        self.verify_wake.notify_one();
+        self.status_wake.notify_one();
+    }
+
+    pub fn report_verify(&self, update: crate::verify::VerifyUpdate) {
+        if let Some(tx) = &self.verify_tx {
+            let _ = tx.try_send(update);
+        }
+        self.verify_wake.notify_one();
         self.status_wake.notify_one();
     }
 }
@@ -60,6 +76,8 @@ pub struct SyncHandle {
     pub feed: mpsc::UnboundedSender<SyncFeed>,
     wakers: Vec<Arc<Notify>>,
     status_wake: Arc<Notify>,
+    verify_wake: Arc<Notify>,
+    verify_tx: mpsc::Sender<crate::verify::VerifyUpdate>,
     router_shutdown: watch::Sender<bool>,
     aux_shutdown: watch::Sender<bool>,
     router_and_workers: Vec<JoinHandle<()>>,
@@ -71,13 +89,29 @@ impl SyncHandle {
         for wake in &self.wakers {
             wake.notify_one();
         }
+        self.verify_wake.notify_one();
         self.status_wake.notify_one();
+    }
+
+    pub fn client_wake(&self, index: usize) -> Option<Arc<Notify>> {
+        self.wakers.get(index).cloned()
+    }
+
+    pub fn spawn_aux<F, Fut>(&mut self, build: F)
+    where
+        F: FnOnce(watch::Receiver<bool>) -> Fut,
+        Fut: std::future::Future<Output = ()> + Send + 'static,
+    {
+        let rx = self.aux_shutdown.subscribe();
+        self.aux_tasks.push(tokio::spawn(build(rx)));
     }
 
     pub fn waker(&self) -> SyncWaker {
         SyncWaker {
             wakers: self.wakers.clone(),
             status_wake: self.status_wake.clone(),
+            verify_wake: self.verify_wake.clone(),
+            verify_tx: Some(self.verify_tx.clone()),
         }
     }
 
@@ -110,7 +144,7 @@ impl Drop for SyncHandle {
 ///
 /// Orden: `release_inflight` → lease → `Recovery` → router → trabajadores → agregador → housekeeping.
 pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
-    let _ = &deps.transport;
+    let verify_transport = deps.transport.clone();
     if let Err(error) = deps.store.release_inflight() {
         tracing::warn!(
             failure_class = error.diagnostic_class(),
@@ -124,6 +158,7 @@ pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
     let lease_held = lease.held.clone();
     let _ = lease.try_step(&deps.store, deps.clock.as_ref());
 
+    let verify_online = deps.online.clone();
     let cfg = RouterConfig {
         journal_dir: deps.journal_dir,
         env: deps.env,
@@ -153,6 +188,8 @@ pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
     let (feed_tx, mut feed_rx) = mpsc::unbounded_channel();
     let (worker_events_tx, mut worker_events_rx) = mpsc::channel::<WorkerEvent>(128);
     let status_wake = Arc::new(Notify::new());
+    let verify_wake = Arc::new(Notify::new());
+    let (verify_tx, mut verify_rx) = mpsc::channel::<crate::verify::VerifyUpdate>(64);
 
     let mut wakers = Vec::with_capacity(deps.clients.len());
     let mut router_and_workers = Vec::new();
@@ -191,6 +228,17 @@ pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
         deps.clock.clone(),
         aux_shutdown_rx.clone(),
         status_wake.clone(),
+    )));
+    aux_tasks.push(tokio::spawn(crate::verify::run_key_verifier(
+        deps.store.clone(),
+        verify_transport,
+        deps.clock.clone(),
+        verify_online,
+        verify_wake.clone(),
+        wakers.clone(),
+        status_wake.clone(),
+        verify_tx.clone(),
+        aux_shutdown_rx.clone(),
     )));
 
     let router_status_wake = status_wake.clone();
@@ -270,9 +318,18 @@ pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
     let mut agg_shutdown = aux_shutdown_rx.clone();
     aux_tasks.push(tokio::spawn(async move {
         let mut agg = StatusAggregator::new(status_store.clone(), status_clock, salt);
+        type VerifyErrorMap = std::collections::HashMap<
+            (SyncService, String),
+            (
+                tmc_model::sync::ErrorClass,
+                Option<chrono::DateTime<chrono::Utc>>,
+            ),
+        >;
+        let mut verify_errors: VerifyErrorMap = std::collections::HashMap::new();
         let mut dirty = true;
         let mut retry_at: Option<Instant> = None;
         let mut worker_events_open = true;
+        let mut verify_open = true;
 
         loop {
             if *agg_shutdown.borrow() {
@@ -291,9 +348,44 @@ pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
             }
             if dirty {
                 let fid = current_fid.lock().unwrap().clone();
-                let reports = agg.build(fid.as_deref(), &|svc, f| {
+                let mut reports = agg.build(fid.as_deref(), &|svc, f| {
                     blocked_with(&gates, &status_store, svc, f)
                 });
+                if let Some(active_fid) = fid.as_deref() {
+                    for report in &mut reports {
+                        let (svc, keyed) = match report {
+                            tmc_model::sync::SyncReport::Inara(k) => (SyncService::Inara, k),
+                            tmc_model::sync::SyncReport::Edsm(k) => (SyncService::Edsm, k),
+                            _ => continue,
+                        };
+                        if keyed.has_key
+                            && let Some((class, until)) =
+                                verify_errors.get(&(svc, active_fid.to_string()))
+                            && !matches!(
+                                keyed.status.reason,
+                                Some(
+                                    tmc_model::sync::SyncReason::OnlineOff
+                                        | tmc_model::sync::SyncReason::Legacy
+                                        | tmc_model::sync::SyncReason::Beta
+                                        | tmc_model::sync::SyncReason::Replay
+                                        | tmc_model::sync::SyncReason::OtherInstance
+                                        | tmc_model::sync::SyncReason::PlatformUnsupported
+                                        | tmc_model::sync::SyncReason::KeyUnassigned
+                                )
+                            )
+                        {
+                            keyed.status.state = tmc_model::sync::SyncState::Error;
+                            keyed.status.reason = Some(match class {
+                                tmc_model::sync::ErrorClass::Auth => {
+                                    tmc_model::sync::SyncReason::Auth
+                                }
+                                _ => tmc_model::sync::SyncReason::Network,
+                            });
+                            keyed.status.next_attempt_at = until
+                                .map(|ts| ts.to_rfc3339_opts(chrono::SecondsFormat::Secs, true));
+                        }
+                    }
+                }
                 let now = Instant::now();
                 let (to_send, throttled_wait) = agg.changed_reports_with_pending(reports, now);
                 for report in to_send {
@@ -328,6 +420,31 @@ pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
                         worker_events_open = false;
                     }
                 }
+                upd = verify_rx.recv(), if verify_open => {
+                    match upd {
+                        Some(u) => {
+                            match u.check {
+                                Some(tmc_net::KeyCheck::Unreachable) => {
+                                    verify_errors.insert(
+                                        (u.service, u.fid),
+                                        (tmc_model::sync::ErrorClass::Network, u.next_retry),
+                                    );
+                                }
+                                Some(tmc_net::KeyCheck::Rejected) => {
+                                    verify_errors.insert(
+                                        (u.service, u.fid),
+                                        (tmc_model::sync::ErrorClass::Auth, None),
+                                    );
+                                }
+                                Some(tmc_net::KeyCheck::Valid) | None => {
+                                    verify_errors.remove(&(u.service, u.fid));
+                                }
+                            }
+                            dirty = true;
+                        }
+                        None => verify_open = false,
+                    }
+                }
                 _ = status_notify.notified() => {
                     dirty = true;
                 }
@@ -349,6 +466,8 @@ pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
         feed: feed_tx,
         wakers,
         status_wake,
+        verify_wake,
+        verify_tx,
         router_shutdown: router_shutdown_tx,
         aux_shutdown: aux_shutdown_tx,
         router_and_workers,

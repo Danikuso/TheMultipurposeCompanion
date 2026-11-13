@@ -115,3 +115,19 @@ accounts-sync-never = —
 accounts-sync-retry-in = Erreur · nouvel essai dans { $time }
 accounts-sync-retry-now = Réessayer maintenant
 accounts-eddn-paused-schemas = Schémas en pause (mise à jour requise) : { $schemas }
+
+
+accounts-cmdr-selector-label = Commandant configuré
+accounts-cmdr-none = Aucun commandant détecté pour l’instant
+accounts-cmdr-forget = Oublier ce commandant
+accounts-edsm-btn-save-verify = Enregistrer et vérifier
+accounts-edsm-btn-delete = Supprimer la clé
+accounts-key-delete-confirm-note = La suppression de cette clé annulera les événements EDSM en attente pour ce commandant.
+accounts-key-verify-active = Clé vérifiée et active.
+accounts-key-verify-rejected = Clé rejetée par EDSM. Vérifiez-la ou supprimez-la.
+accounts-key-verify-unverified = Hors ligne pour le moment ; clé enregistrée et vérifiée automatiquement dès le retour du réseau.
+accounts-key-unassigned-banner = Une clé EDSM héritée attend d’être attribuée à un commandant.
+accounts-key-unassigned-assign = Attribuer la clé à ce commandant
+accounts-key-auto-confirm-banner = Clé attribuée automatiquement après migration. Confirmer qu’elle appartient à { $cmdr } ?
+accounts-key-confirm-owner = Confirmer le propriétaire
+accounts-key-pending-discarded = Clé supprimée ({ $count } en attente annulés).

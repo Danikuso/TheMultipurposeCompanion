@@ -115,3 +115,19 @@ accounts-sync-never = —
 accounts-sync-retry-in = Error · reintento en { $time }
 accounts-sync-retry-now = Reintentar ahora
 accounts-eddn-paused-schemas = Esquemas en pausa (requiere actualizar): { $schemas }
+
+
+accounts-cmdr-selector-label = Comandante configurado
+accounts-cmdr-none = Ningún comandante detectado todavía
+accounts-cmdr-forget = Olvidar comandante
+accounts-edsm-btn-save-verify = Guardar y verificar
+accounts-edsm-btn-delete = Eliminar clave
+accounts-key-delete-confirm-note = Al eliminar esta clave se descartarán los eventos EDSM pendientes de este comandante.
+accounts-key-verify-active = Clave verificada y activa.
+accounts-key-verify-rejected = Clave rechazada por EDSM. Revísala o elimínala.
+accounts-key-verify-unverified = Sin conexión ahora; la clave se guardó y se verificará automáticamente al volver la red.
+accounts-key-unassigned-banner = Hay una clave EDSM heredada pendiente de asignar a un comandante.
+accounts-key-unassigned-assign = Asignar clave a este comandante
+accounts-key-auto-confirm-banner = Clave asignada automáticamente tras la migración. ¿Confirmas que pertenece a { $cmdr }?
+accounts-key-confirm-owner = Confirmar propietario
+accounts-key-pending-discarded = Clave eliminada ({ $count } pendientes descartados).

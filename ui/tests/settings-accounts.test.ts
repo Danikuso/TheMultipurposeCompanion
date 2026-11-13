@@ -115,4 +115,75 @@ describe('Settings with integrated Accounts', () => {
     // Check Commander pills
     expect(accountsPane?.textContent).toContain('CMDR Danikuso');
   });
+
+  test('settings shows EDSM key field per commander with masked hint', async () => {
+    const posted: Array<{ url: string; body: unknown }> = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        posted.push({
+          url,
+          body: init?.body ? JSON.parse(String(init.body)) : null,
+        });
+        return new Response(
+          JSON.stringify({ ok: true, verified: true, state: 'active' }),
+          { status: 200 },
+        );
+      }),
+    );
+
+    (live.topics['accounts.status'] as Record<string, unknown>).commanders = [
+      {
+        cmdr_ref: 'cmdr-1',
+        name: 'Danikuso',
+        inara_key: true,
+        edsm_key: true,
+        key_assignment: 'confirmed',
+        inara_pending: 0,
+        edsm_pending: 0,
+        eddn_pending: 0,
+      },
+      {
+        cmdr_ref: 'cmdr-2',
+        name: 'AltCmdr',
+        inara_key: false,
+        edsm_key: false,
+        key_assignment: null,
+        inara_pending: 0,
+        edsm_pending: 0,
+        eddn_pending: 0,
+      },
+    ];
+
+    instance = mount(Settings, { target });
+    flushSync();
+
+    const selector = target.querySelector('[data-testid="accounts-cmdr-select"]') as HTMLSelectElement;
+    expect(selector).not.toBeNull();
+    expect(selector.value).toBe('cmdr-1');
+    expect(target.querySelector('[data-testid="edsm-key-hint"]')?.textContent).toContain('5678');
+
+    // Cambiar al segundo comandante y guardar una clave EDSM para él.
+    selector.value = 'cmdr-2';
+    selector.dispatchEvent(new Event('change'));
+    flushSync();
+
+    const input = target.querySelector('[data-testid="edsm-key-input"]') as HTMLInputElement;
+    input.value = 'NEW-EDSM-ALT-KEY';
+    input.dispatchEvent(new Event('input'));
+    flushSync();
+
+    const saveBtn = target.querySelector('[data-testid="edsm-save-btn"]') as HTMLButtonElement;
+    saveBtn.click();
+    await new Promise((r) => setTimeout(r, 10));
+    flushSync();
+
+    const saveReq = posted.find((p) => p.url.includes('accounts.key.save'));
+    expect(saveReq).toBeTruthy();
+    expect(saveReq?.body).toEqual({
+      service: 'edsm',
+      cmdr_ref: 'cmdr-2',
+      api_key: 'NEW-EDSM-ALT-KEY',
+    });
+  });
 });

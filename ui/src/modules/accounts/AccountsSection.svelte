@@ -14,7 +14,10 @@
 
   const status = $derived(topic<AccountsStatusTopic>('accounts.status'));
 
+  let selectedCmdrRef = $state<string | null>(null);
   let edsmKey = $state('');
+  let savingEdsm = $state(false);
+  let edsmFeedback = $state<{ tone: 'green' | 'red' | 'amber'; text: string } | null>(null);
   let inaraKey = $state('');
   let showEdsmKey = $state(false);
   let showInaraKey = $state(false);
@@ -121,20 +124,102 @@
     return relativeAge(iso, Date.now());
   }
 
+  const commanders = $derived(status?.commanders ?? []);
+  const effectiveCmdrRef = $derived(
+    selectedCmdrRef && commanders.some((c) => c.cmdr_ref === selectedCmdrRef)
+      ? selectedCmdrRef
+      : (status?.current_cmdr?.cmdr_ref ?? commanders[0]?.cmdr_ref ?? null)
+  );
+  const selectedCmdr = $derived(
+    commanders.find((c) => c.cmdr_ref === effectiveCmdrRef) ?? null
+  );
+  const isSelectedCurrent = $derived(
+    effectiveCmdrRef != null && effectiveCmdrRef === (status?.current_cmdr?.cmdr_ref ?? null)
+  );
+  const selectedEdsmHint = $derived.by(() => {
+    const raw = isSelectedCurrent || !selectedCmdr ? (status?.edsm?.key_hint ?? null) : null;
+    if (!raw) return null;
+    return raw.includes('•') ? raw : `••${raw}`;
+  });
+  const selectedEdsmHasKey = $derived(
+    selectedCmdr ? selectedCmdr.edsm_key : Boolean(status?.edsm?.has_key)
+  );
+  const hasUnassignedEdsm = $derived((status?.unassigned_keys ?? []).includes('edsm'));
+  const needsAutoConfirm = $derived(selectedCmdr?.key_assignment === 'auto_pending_confirmation');
+
+  $effect(() => {
+    if (commanders.length > 0 && (!selectedCmdrRef || !commanders.some((c) => c.cmdr_ref === selectedCmdrRef))) {
+      selectedCmdrRef = status?.current_cmdr?.cmdr_ref ?? commanders[0]?.cmdr_ref ?? null;
+    }
+  });
+
   async function toggleEddn() {
     await action('accounts.eddn.set_enabled', { enabled: !status?.eddn?.enabled });
   }
 
   async function saveEdsmKey() {
-    if (!edsmKey.trim()) return;
-    await action('edsm.save_key', {
-      api_key: edsmKey.trim(),
-    });
-    edsmKey = '';
+    const cmdrRef = effectiveCmdrRef;
+    if (!edsmKey.trim() || !cmdrRef) return;
+    savingEdsm = true;
+    edsmFeedback = null;
+    try {
+      const res = (await action('accounts.key.save', {
+        service: 'edsm',
+        cmdr_ref: cmdrRef,
+        api_key: edsmKey.trim(),
+      })) as { ok?: boolean; verified?: boolean; state?: string } | undefined;
+      if (res?.state === 'rejected') {
+        edsmFeedback = { tone: 'red', text: t('accounts-key-verify-rejected') };
+      } else if (res?.verified || res?.state === 'active') {
+        edsmKey = '';
+        edsmFeedback = { tone: 'green', text: t('accounts-key-verify-active') };
+      } else {
+        edsmKey = '';
+        edsmFeedback = { tone: 'amber', text: t('accounts-key-verify-unverified') };
+      }
+    } finally {
+      savingEdsm = false;
+    }
   }
 
-  async function clearEdsmKey() {
-    await action('edsm.clear_key', {});
+  async function deleteEdsmKey() {
+    const cmdrRef = effectiveCmdrRef;
+    if (!cmdrRef) return;
+    savingEdsm = true;
+    edsmFeedback = null;
+    try {
+      const res = (await action('accounts.key.delete', {
+        service: 'edsm',
+        cmdr_ref: cmdrRef,
+      })) as { discarded?: number } | undefined;
+      edsmFeedback = {
+        tone: 'amber',
+        text: t('accounts-key-pending-discarded', { count: res?.discarded ?? 0 }),
+      };
+    } finally {
+      savingEdsm = false;
+    }
+  }
+
+  async function confirmKeyOwner(service: 'edsm' | 'inara') {
+    const cmdrRef = effectiveCmdrRef;
+    if (!cmdrRef) return;
+    await action('accounts.key.confirm', { service, cmdr_ref: cmdrRef });
+  }
+
+  async function assignUnassignedKey(service: 'edsm' | 'inara') {
+    const cmdrRef = effectiveCmdrRef;
+    if (!cmdrRef) return;
+    await action('accounts.key.assign', { service, cmdr_ref: cmdrRef });
+  }
+
+  async function forgetCommander() {
+    const cmdrRef = effectiveCmdrRef;
+    if (!cmdrRef) return;
+    await action('accounts.cmdr.forget', { cmdr_ref: cmdrRef });
+    if (selectedCmdrRef === cmdrRef) {
+      selectedCmdrRef = null;
+    }
   }
 
   let testingInara = $state(false);
@@ -281,6 +366,39 @@
     </div>
   </div>
 
+  {#if commanders.length > 0}
+    <div class="cmdr-selector-bar glass-card" data-testid="accounts-cmdr-bar">
+      <label class="cmdr-selector-label" for="accounts-cmdr-select">
+        <span class="sub bold">{t('accounts-cmdr-selector-label')}</span>
+      </label>
+      <div class="cmdr-selector-controls">
+        <select
+          id="accounts-cmdr-select"
+          class="glass-select"
+          data-testid="accounts-cmdr-select"
+          bind:value={selectedCmdrRef}
+          onchange={() => {
+            edsmFeedback = null;
+          }}
+        >
+          {#each commanders as cmdr (cmdr.cmdr_ref)}
+            <option value={cmdr.cmdr_ref}>CMDR {cmdr.name}</option>
+          {/each}
+        </select>
+        {#if effectiveCmdrRef && !isSelectedCurrent}
+          <button
+            type="button"
+            class="btn-outline btn-compact"
+            onclick={forgetCommander}
+            data-testid="accounts-cmdr-forget-btn"
+          >
+            {t('accounts-cmdr-forget')}
+          </button>
+        {/if}
+      </div>
+    </div>
+  {/if}
+
   <div class="accounts-grid">
     <!-- 1. TARJETA EDDN -->
     <div class="hud-card glass-card" data-testid="accounts-eddn-card">
@@ -385,12 +503,38 @@
           >
             {stateIcon(status?.edsm?.state)} {formatStateLabel(status?.edsm)}
           </span>
-          {#if status?.edsm?.key_hint}
-            <span class="cmdr-pill mono">••{status.edsm.key_hint}</span>
+          {#if selectedEdsmHint}
+            <span class="cmdr-pill mono" data-testid="edsm-key-hint">{selectedEdsmHint}</span>
           {/if}
         </div>
         {#if reasonText(status?.edsm?.reason)}
           <p class="sync-reason-line sub">{reasonText(status?.edsm?.reason)}</p>
+        {/if}
+        {#if hasUnassignedEdsm && effectiveCmdrRef}
+          <div class="sync-callout callout-amber" data-testid="edsm-unassigned-banner">
+            <p class="sub">{t('accounts-key-unassigned-banner')}</p>
+            <button
+              type="button"
+              class="btn-sync btn-compact"
+              onclick={() => assignUnassignedKey('edsm')}
+              data-testid="edsm-assign-key-btn"
+            >
+              {t('accounts-key-unassigned-assign')}
+            </button>
+          </div>
+        {/if}
+        {#if needsAutoConfirm && selectedEdsmHasKey && selectedCmdr}
+          <div class="sync-callout callout-amber" data-testid="edsm-autoconfirm-banner">
+            <p class="sub">{t('accounts-key-auto-confirm-banner', { cmdr: selectedCmdr.name })}</p>
+            <button
+              type="button"
+              class="btn-sync btn-compact"
+              onclick={() => confirmKeyOwner('edsm')}
+              data-testid="edsm-confirm-owner-btn"
+            >
+              {t('accounts-key-confirm-owner')}
+            </button>
+          </div>
         {/if}
 
         <div class="sync-metrics-grid">
@@ -436,15 +580,31 @@
             </button>
           </div>
           <div class="btn-group-row">
-            <button class="action-btn flex-1" onclick={saveEdsmKey} data-testid="edsm-save-btn">
-              {t('accounts-edsm-btn-save')}
+            <button
+              class="action-btn flex-1"
+              onclick={saveEdsmKey}
+              disabled={savingEdsm || !effectiveCmdrRef || !edsmKey.trim()}
+              data-testid="edsm-save-btn"
+            >
+              {savingEdsm ? '...' : t('accounts-edsm-btn-save-verify')}
             </button>
-            {#if status?.edsm?.has_key}
-              <button class="action-btn btn-secondary flex-1" onclick={clearEdsmKey} data-testid="edsm-clear-btn">
-                {t('accounts-capi-btn-unlink')}
+            {#if selectedEdsmHasKey}
+              <button
+                class="action-btn btn-secondary flex-1"
+                onclick={deleteEdsmKey}
+                disabled={savingEdsm || !effectiveCmdrRef}
+                title={t('accounts-key-delete-confirm-note')}
+                data-testid="edsm-clear-btn"
+              >
+                {t('accounts-edsm-btn-delete')}
               </button>
             {/if}
           </div>
+          {#if edsmFeedback}
+            <p class="key-feedback feedback-{edsmFeedback.tone}" data-testid="edsm-key-feedback">
+              {edsmFeedback.text}
+            </p>
+          {/if}
         </div>
 
         {#if status?.edsm?.state === 'error'}
@@ -806,6 +966,73 @@
     color: var(--text-dim, #8fa3b8);
     margin-top: 4px;
     line-height: 1.4;
+  }
+
+  .cmdr-selector-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    padding: 10px 16px;
+  }
+
+  .cmdr-selector-label {
+    flex-shrink: 0;
+  }
+
+  .cmdr-selector-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex: 1;
+    min-width: min(220px, 100%);
+    max-width: 460px;
+  }
+
+  .btn-compact {
+    padding: 5px 10px;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  .sync-callout {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+  }
+
+  .sync-callout p {
+    margin: 0;
+    line-height: 1.35;
+  }
+
+  .callout-amber {
+    background: rgba(229, 169, 59, 0.1);
+    border: 1px solid rgba(229, 169, 59, 0.35);
+  }
+
+  .key-feedback {
+    font-size: 11px;
+    margin: 4px 0 0 0;
+    line-height: 1.35;
+  }
+
+  .feedback-green {
+    color: #00d4b2;
+  }
+
+  .feedback-red {
+    color: #ff7b5c;
+  }
+
+  .feedback-amber {
+    color: #e5a93b;
   }
 
   .accounts-grid {

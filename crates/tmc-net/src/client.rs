@@ -305,6 +305,11 @@ impl NetClient {
         }
     }
 
+    /// Devuelve el transporte subyacente para reutilizarlo en verificaciones de cuentas.
+    pub fn transport(&self) -> &Arc<dyn Transport> {
+        &self.transport
+    }
+
     /// Guarda y recupera el `codex/ref` compacto (7 días) para no bajarlo en cada arranque.
     pub fn with_codex_persist(mut self, persist: Arc<dyn RefPersist>) -> NetClient {
         self.persist = Some(persist);

@@ -123,8 +123,10 @@ pub struct AppActions {
     save_path: Option<PathBuf>,
     settings_watch: Option<tokio::sync::watch::Sender<tmc_model::settings::ModuleSettings>>,
     capi_service: Option<Arc<crate::capi_service::CapiService>>,
-    edsm_service: Option<Arc<crate::edsm_service::EdsmService>>,
     inara_service: Option<Arc<crate::inara_service::InaraService>>,
+    store: Option<tmc_store::Store>,
+    sync_waker: Option<tmc_sync::SyncWaker>,
+    transport: Option<Arc<dyn tmc_net::Transport>>,
     kokoro_engine: Mutex<Option<tmc_tts::KokoroEngine>>,
     pub update_state: Arc<tokio::sync::RwLock<crate::updater::UpdateStatus>>,
 }
@@ -147,8 +149,10 @@ impl AppActions {
             save_path: None,
             settings_watch: None,
             capi_service: None,
-            edsm_service: None,
             inara_service: None,
+            store: None,
+            sync_waker: None,
+            transport: None,
             kokoro_engine: Mutex::new(None),
             update_state: Arc::new(tokio::sync::RwLock::new(
                 crate::updater::UpdateStatus::default(),
@@ -164,8 +168,10 @@ impl AppActions {
             runtime: None,
             settings_watch: None,
             capi_service: None,
-            edsm_service: None,
             inara_service: None,
+            store: None,
+            sync_waker: None,
+            transport: None,
             kokoro_engine: Mutex::new(None),
             update_state: Arc::new(tokio::sync::RwLock::new(
                 crate::updater::UpdateStatus::default(),
@@ -181,6 +187,7 @@ impl AppActions {
         online: Arc<AtomicBool>,
         net: NetServiceHandle,
     ) -> Self {
+        let transport = net.transport();
         Self {
             runtime: Some(Runtime {
                 events,
@@ -189,6 +196,7 @@ impl AppActions {
                 sync_waker: None,
                 store: None,
             }),
+            transport: Some(transport),
             ..Self::with_config(cfg)
         }
     }
@@ -196,16 +204,24 @@ impl AppActions {
     /// Conecta el notificador de sincronización (`accounts.sync_now` y cambios de `online_services`).
     pub fn with_sync_waker(mut self, waker: tmc_sync::SyncWaker) -> Self {
         if let Some(runtime) = &mut self.runtime {
-            runtime.sync_waker = Some(waker);
+            runtime.sync_waker = Some(waker.clone());
         }
+        self.sync_waker = Some(waker);
         self
     }
 
     /// Conecta la base de datos SQLite para acciones de cuentas y credenciales (`accounts.eddn.set_enabled`, etc.).
     pub fn with_store(mut self, store: tmc_store::Store) -> Self {
         if let Some(runtime) = &mut self.runtime {
-            runtime.store = Some(store);
+            runtime.store = Some(store.clone());
         }
+        self.store = Some(store);
+        self
+    }
+
+    /// Conecta un transporte HTTP para verificación de credenciales en pruebas o headless.
+    pub fn with_transport(mut self, transport: Arc<dyn tmc_net::Transport>) -> Self {
+        self.transport = Some(transport);
         self
     }
 
@@ -227,15 +243,6 @@ impl AppActions {
         capi_service: Arc<crate::capi_service::CapiService>,
     ) -> Self {
         self.capi_service = Some(capi_service);
-        self
-    }
-
-    /// Conecta el servicio de persistencia y sincronización de EDSM.
-    pub fn with_edsm_service(
-        mut self,
-        edsm_service: Arc<crate::edsm_service::EdsmService>,
-    ) -> Self {
-        self.edsm_service = Some(edsm_service);
         self
     }
 
@@ -768,48 +775,6 @@ impl ActionHost for AppActions {
                 }
                 return Ok(json!({ "ok": true }));
             }
-            "edsm.save_key" => {
-                let edsm = self.edsm_service.as_ref().ok_or(ActionError::NotFound)?;
-                let api_key = args
-                    .get("api_key")
-                    .and_then(|k| k.as_str())
-                    .ok_or_else(|| ActionError::Failed("missing-api-key".into()))?;
-                let cmdr = args
-                    .get("commander_name")
-                    .and_then(|c| c.as_str())
-                    .or_else(|| {
-                        snapshot
-                            .get("core.cmdr")
-                            .and_then(|c| c.get("name"))
-                            .and_then(|n| n.as_str())
-                    });
-                edsm.save_key(api_key, cmdr).map_err(ActionError::Failed)?;
-
-                if let Some(runtime) = &self.runtime {
-                    let _ = runtime.events.try_send(SourceEvent::Action {
-                        name: "accounts.set_settings".to_string(),
-                        args: json!({
-                            "edsm_has_key": true,
-                            "edsm_enabled": true,
-                        }),
-                    });
-                }
-                return Ok(json!({ "ok": true }));
-            }
-            "edsm.clear_key" => {
-                let edsm = self.edsm_service.as_ref().ok_or(ActionError::NotFound)?;
-                edsm.clear_key().map_err(ActionError::Failed)?;
-                if let Some(runtime) = &self.runtime {
-                    let _ = runtime.events.try_send(SourceEvent::Action {
-                        name: "accounts.set_settings".to_string(),
-                        args: json!({
-                            "edsm_has_key": false,
-                            "edsm_enabled": false,
-                        }),
-                    });
-                }
-                return Ok(json!({ "ok": true }));
-            }
             "tts.voices" => {
                 let engine_kind = args
                     .get("engine")
@@ -941,14 +906,7 @@ impl ActionHost for AppActions {
                     .get("enabled")
                     .and_then(Value::as_bool)
                     .ok_or_else(|| ActionError::Failed("missing-enabled".into()))?;
-                let runtime = self
-                    .runtime
-                    .as_ref()
-                    .ok_or_else(|| ActionError::Failed("no-runtime".into()))?;
-                let store = runtime
-                    .store
-                    .as_ref()
-                    .ok_or_else(|| ActionError::Failed("no-store".into()))?;
+                let store = self.active_store()?;
                 let now = chrono::Utc::now();
                 if enabled {
                     if store.kv_get(tmc_sync::router::EDDN_ENABLED_KEY).is_none() {
@@ -962,10 +920,261 @@ impl ActionHost for AppActions {
                     let _ = store.discard_pending(tmc_model::sync::SyncService::Eddn, None, now);
                     let _ = store.clear_sync_activations(tmc_model::sync::SyncService::Eddn);
                 }
-                if let Some(waker) = &runtime.sync_waker {
+                if let Some(waker) = self.active_sync_waker() {
                     waker.wake_all();
                 }
                 return Ok(json!({ "ok": true, "enabled": enabled }));
+            }
+            "accounts.key.save" => {
+                let service = parse_key_service(args)?;
+                let cmdr_ref = args
+                    .get("cmdr_ref")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .ok_or_else(|| ActionError::Failed("missing-cmdr-ref".into()))?;
+                let api_key = args
+                    .get("api_key")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .ok_or_else(|| ActionError::Failed("empty-api-key".into()))?;
+                let store = self.active_store()?;
+                let (fid, cmdr_name) = resolve_cmdr_ref(&store, cmdr_ref)?;
+                let is_online = self
+                    .runtime
+                    .as_ref()
+                    .map(|r| r.online.load(Ordering::Acquire))
+                    .unwrap_or_else(|| self.config.lock().unwrap().online_services);
+
+                let check = if !is_online {
+                    tmc_net::KeyCheck::Unreachable
+                } else if let Some(transport) = self.transport.clone() {
+                    let name_owned = cmdr_name.clone();
+                    let key_owned = api_key.to_owned();
+                    block_on_sync(async move {
+                        tmc_sync::check_service_key(
+                            transport.as_ref(),
+                            service,
+                            &name_owned,
+                            &key_owned,
+                        )
+                        .await
+                    })
+                } else {
+                    tmc_net::KeyCheck::Unreachable
+                };
+
+                let now = chrono::Utc::now();
+                let now_str = now.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+                match check {
+                    tmc_net::KeyCheck::Valid => {
+                        let cred = tmc_store::SyncCredential {
+                            service,
+                            cmdr_fid: fid.clone(),
+                            cmdr_name,
+                            api_key: api_key.to_owned(),
+                            created_at: now_str.clone(),
+                            verified_at: Some(now_str),
+                            assignment: tmc_model::sync::KeyAssignment::Confirmed,
+                        };
+                        store
+                            .put_sync_credential(&cred)
+                            .map_err(|e| ActionError::Failed(e.to_string()))?;
+                        if store.activation(service, &fid).ok().flatten().is_none() {
+                            store
+                                .set_activation(service, &fid, now)
+                                .map_err(|e| ActionError::Failed(e.to_string()))?;
+                        }
+                        if let Some(waker) = self.active_sync_waker() {
+                            waker.report_verify(tmc_sync::VerifyUpdate {
+                                service,
+                                fid,
+                                check: Some(tmc_net::KeyCheck::Valid),
+                                next_retry: None,
+                            });
+                            waker.wake_all();
+                        }
+                        return Ok(json!({
+                            "ok": true,
+                            "verified": true,
+                            "state": "active",
+                        }));
+                    }
+                    tmc_net::KeyCheck::Rejected => {
+                        return Ok(json!({
+                            "ok": false,
+                            "verified": false,
+                            "state": "rejected",
+                        }));
+                    }
+                    tmc_net::KeyCheck::Unreachable => {
+                        let cred = tmc_store::SyncCredential {
+                            service,
+                            cmdr_fid: fid.clone(),
+                            cmdr_name,
+                            api_key: api_key.to_owned(),
+                            created_at: now_str,
+                            verified_at: None,
+                            assignment: tmc_model::sync::KeyAssignment::Confirmed,
+                        };
+                        store
+                            .put_sync_credential(&cred)
+                            .map_err(|e| ActionError::Failed(e.to_string()))?;
+                        let next_retry = now + chrono::Duration::seconds(60);
+                        if let Some(waker) = self.active_sync_waker() {
+                            waker.report_verify(tmc_sync::VerifyUpdate {
+                                service,
+                                fid,
+                                check: Some(tmc_net::KeyCheck::Unreachable),
+                                next_retry: Some(next_retry),
+                            });
+                            waker.wake_all();
+                        }
+                        return Ok(json!({
+                            "ok": true,
+                            "verified": false,
+                            "state": "saved_unverified",
+                        }));
+                    }
+                }
+            }
+            "accounts.key.delete" => {
+                let service = parse_key_service(args)?;
+                let cmdr_ref = args
+                    .get("cmdr_ref")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .ok_or_else(|| ActionError::Failed("missing-cmdr-ref".into()))?;
+                let store = self.active_store()?;
+                let (fid, _) = resolve_cmdr_ref(&store, cmdr_ref)?;
+                let discarded = store
+                    .delete_sync_credential(service, &fid, chrono::Utc::now())
+                    .map_err(|e| ActionError::Failed(e.to_string()))?;
+                if let Some(waker) = self.active_sync_waker() {
+                    waker.report_verify(tmc_sync::VerifyUpdate {
+                        service,
+                        fid,
+                        check: None,
+                        next_retry: None,
+                    });
+                    waker.wake_all();
+                }
+                return Ok(json!({ "ok": true, "discarded": discarded }));
+            }
+            "accounts.key.confirm" => {
+                let service = parse_key_service(args)?;
+                let cmdr_ref = args
+                    .get("cmdr_ref")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .ok_or_else(|| ActionError::Failed("missing-cmdr-ref".into()))?;
+                let store = self.active_store()?;
+                let (fid, _) = resolve_cmdr_ref(&store, cmdr_ref)?;
+                let _ = store
+                    .confirm_assignment(service, &fid)
+                    .map_err(|e| ActionError::Failed(e.to_string()))?;
+                if let Some(waker) = self.active_sync_waker() {
+                    waker.wake_all();
+                }
+                return Ok(json!({ "ok": true }));
+            }
+            "accounts.key.assign" => {
+                let service = parse_key_service(args)?;
+                let cmdr_ref = args
+                    .get("cmdr_ref")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .ok_or_else(|| ActionError::Failed("missing-cmdr-ref".into()))?;
+                let store = self.active_store()?;
+                let (fid, cmdr_name) = resolve_cmdr_ref(&store, cmdr_ref)?;
+                let now = chrono::Utc::now();
+                let mut assigned = store
+                    .assign_unassigned_key(
+                        service,
+                        &fid,
+                        &cmdr_name,
+                        tmc_model::sync::KeyAssignment::Confirmed,
+                        now,
+                    )
+                    .map_err(|e| ActionError::Failed(e.to_string()))?;
+                if !assigned {
+                    // Reasignación desde una clave auto-asignada pendiente de confirmación.
+                    let known = store
+                        .known_cmdrs()
+                        .map_err(|e| ActionError::Failed(e.to_string()))?;
+                    for (other_fid, _) in known {
+                        if let Ok(Some(other_cred)) = store.sync_credential(service, &other_fid)
+                            && other_cred.assignment
+                                == tmc_model::sync::KeyAssignment::AutoPendingConfirmation
+                        {
+                            let migrated = tmc_store::SyncCredential {
+                                service,
+                                cmdr_fid: fid.clone(),
+                                cmdr_name: cmdr_name.clone(),
+                                api_key: other_cred.api_key,
+                                created_at: other_cred.created_at,
+                                verified_at: other_cred.verified_at,
+                                assignment: tmc_model::sync::KeyAssignment::Confirmed,
+                            };
+                            store
+                                .put_sync_credential(&migrated)
+                                .map_err(|e| ActionError::Failed(e.to_string()))?;
+                            if store.activation(service, &fid).ok().flatten().is_none() {
+                                store
+                                    .set_activation(service, &fid, now)
+                                    .map_err(|e| ActionError::Failed(e.to_string()))?;
+                            }
+                            if other_fid != fid {
+                                let _ = store.delete_sync_credential(service, &other_fid, now);
+                            }
+                            assigned = true;
+                            break;
+                        }
+                    }
+                }
+                if assigned {
+                    if store.activation(service, &fid).ok().flatten().is_none() {
+                        let _ = store.set_activation(service, &fid, now);
+                    }
+                    if let Some(waker) = self.active_sync_waker() {
+                        waker.wake_verify();
+                        waker.wake_all();
+                    }
+                    return Ok(json!({ "ok": true }));
+                }
+                return Err(ActionError::Failed("no-unassigned-key".into()));
+            }
+            "accounts.cmdr.forget" => {
+                let cmdr_ref = args
+                    .get("cmdr_ref")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .ok_or_else(|| ActionError::Failed("missing-cmdr-ref".into()))?;
+                let store = self.active_store()?;
+                let (fid, _) = resolve_cmdr_ref(&store, cmdr_ref)?;
+                store
+                    .forget_cmdr(&fid, chrono::Utc::now())
+                    .map_err(|e| ActionError::Failed(e.to_string()))?;
+                if let Some(waker) = self.active_sync_waker() {
+                    for service in [
+                        tmc_model::sync::SyncService::Inara,
+                        tmc_model::sync::SyncService::Edsm,
+                    ] {
+                        waker.report_verify(tmc_sync::VerifyUpdate {
+                            service,
+                            fid: fid.clone(),
+                            check: None,
+                            next_retry: None,
+                        });
+                    }
+                    waker.wake_all();
+                }
+                return Ok(json!({ "ok": true }));
             }
             "voice.speak" => {
                 let (engine_kind, default_voice, default_vol, default_rate) = {
@@ -1132,7 +1341,7 @@ impl ActionHost for AppActions {
     }
 }
 
-const MODULE_PREFIXES: [&str; 15] = [
+const MODULE_PREFIXES: [&str; 14] = [
     "navigation.",
     "exploration.",
     "exobiology.",
@@ -1147,8 +1356,72 @@ const MODULE_PREFIXES: [&str; 15] = [
     "bgs.",
     "accounts.",
     "inara.",
-    "edsm.",
 ];
+
+#[cfg(test)]
+pub(crate) fn has_module_prefix(name: &str) -> bool {
+    MODULE_PREFIXES.iter().any(|p| name.starts_with(p))
+}
+
+fn parse_key_service(args: &Value) -> Result<tmc_model::sync::SyncService, ActionError> {
+    match args.get("service").and_then(Value::as_str) {
+        Some("edsm") => Ok(tmc_model::sync::SyncService::Edsm),
+        Some("inara") => Ok(tmc_model::sync::SyncService::Inara),
+        _ => Err(ActionError::Failed("invalid-service".into())),
+    }
+}
+
+fn resolve_cmdr_ref(
+    store: &tmc_store::Store,
+    cmdr_ref: &str,
+) -> Result<(String, String), ActionError> {
+    let salt = store
+        .get_or_create_eddn_salt()
+        .map_err(|e| ActionError::Failed(e.to_string()))?;
+    let known = store
+        .known_cmdrs()
+        .map_err(|e| ActionError::Failed(e.to_string()))?;
+    known
+        .into_iter()
+        .find(|(fid, _)| tmc_sync::cmdr_ref(&salt, fid) == cmdr_ref)
+        .ok_or_else(|| ActionError::Failed("unknown-commander".into()))
+}
+
+fn block_on_sync<F>(fut: F) -> F::Output
+where
+    F: std::future::Future + Send + 'static,
+    F::Output: Send + 'static,
+{
+    match tokio::runtime::Handle::try_current() {
+        Ok(h) if h.runtime_flavor() == tokio::runtime::RuntimeFlavor::MultiThread => {
+            tokio::task::block_in_place(|| h.block_on(fut))
+        }
+        _ => std::thread::spawn(move || {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("tokio current_thread runtime");
+            rt.block_on(fut)
+        })
+        .join()
+        .expect("verification thread panicked"),
+    }
+}
+
+impl AppActions {
+    fn active_store(&self) -> Result<tmc_store::Store, ActionError> {
+        self.store
+            .clone()
+            .or_else(|| self.runtime.as_ref().and_then(|r| r.store.clone()))
+            .ok_or_else(|| ActionError::Failed("no-store".into()))
+    }
+
+    fn active_sync_waker(&self) -> Option<tmc_sync::SyncWaker> {
+        self.sync_waker
+            .clone()
+            .or_else(|| self.runtime.as_ref().and_then(|r| r.sync_waker.clone()))
+    }
+}
 
 #[cfg(test)]
 mod tests {
