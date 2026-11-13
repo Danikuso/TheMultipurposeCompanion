@@ -1,5 +1,6 @@
 //! Mapeo, coalescencia, instantánea y trabajador de Inara (InAPI v1).
 
+pub mod client;
 pub mod coalesce;
 pub mod combat;
 pub mod commander;

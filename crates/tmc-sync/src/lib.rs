@@ -29,7 +29,7 @@ pub use router::{
 pub use runtime::{SyncDeps, SyncHandle, SyncWaker, spawn_sync};
 pub use status::{EDDN_PAUSED_SCHEMAS_KEY, StatusAggregator};
 pub use tracker::{TransientSnapshot, TransientTracker};
-pub use verify::{VerifyUpdate, check_service_key};
+pub use verify::{VerifyUpdate, check_service_key, check_service_key_limited};
 pub use worker::{
     BatchPolicy, MAX_WORKER_SLEEP, RowVerdict, SendCtx, SendOutcome, ServiceClient, ServiceEffect,
     Worker, WorkerEvent, backoff,

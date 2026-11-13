@@ -10,7 +10,7 @@ use std::time::Duration;
 use tmc_model::sync::{
     ErrorClass, OutboxState, RecentRejection, SERVER_HINT_MAX_CHARS, SyncService,
 };
-use tmc_net::limiter::RateLimiter;
+use tmc_net::limiter::{RateLimiter, SharedRateLimiter};
 pub use tmc_net::transport::BoxFut;
 use tmc_store::{OutboxRow, OutboxVerdict, Store, StoreError, SyncCredential};
 use tokio::sync::{Notify, mpsc, watch};
@@ -99,6 +99,10 @@ pub trait ServiceClient: Send + Sync {
     fn excluded_kinds(&self) -> Vec<String> {
         Vec::new()
     }
+    /// Limitador compartido entre trabajadores y verificaciones (p. ej. Inara 2/60 s).
+    fn shared_limiter(&self) -> Option<SharedRateLimiter> {
+        None
+    }
 }
 
 /// Eventos publicados por los trabajadores hacia [`crate::status::StatusAggregator`].
@@ -131,25 +135,23 @@ pub struct Worker {
 
 struct WorkerState {
     policy: BatchPolicy,
+    shared_limiter: Option<SharedRateLimiter>,
     held_cmdrs: BTreeSet<String>,
-    base_wall: std::time::Instant,
-    base_tokio: tokio::time::Instant,
     last_send: Option<tokio::time::Instant>,
 }
 
 impl WorkerState {
-    fn new(policy: BatchPolicy) -> Self {
+    fn new(policy: BatchPolicy, shared_limiter: Option<SharedRateLimiter>) -> Self {
         Self {
             policy,
+            shared_limiter,
             held_cmdrs: BTreeSet::new(),
-            base_wall: std::time::Instant::now(),
-            base_tokio: tokio::time::Instant::now(),
             last_send: None,
         }
     }
 
     fn now_std(&self) -> std::time::Instant {
-        self.base_wall + self.base_tokio.elapsed()
+        tokio::time::Instant::now().into_std()
     }
 }
 
@@ -180,7 +182,7 @@ impl Worker {
 
     /// Bucle principal hasta que `shutdown` sea `true`.
     pub async fn run(self, mut shutdown: watch::Receiver<bool>) {
-        let mut st = WorkerState::new(self.client.policy());
+        let mut st = WorkerState::new(self.client.policy(), self.client.shared_limiter());
         loop {
             if *shutdown.borrow() {
                 break;
@@ -322,7 +324,12 @@ impl Worker {
 
         // Espera el limitador si toca justo antes de lanzar el POST.
         loop {
-            match st.policy.limiter.try_acquire(st.now_std()) {
+            let now_lim = st.now_std();
+            let slot = match &st.shared_limiter {
+                Some(shared) => shared.try_acquire(now_lim),
+                None => st.policy.limiter.try_acquire(now_lim),
+            };
+            match slot {
                 Ok(()) => break,
                 Err(wait) => {
                     if !self
@@ -526,6 +533,7 @@ impl Worker {
             }
             eligible.push((fid, count, oldest_ts));
         }
+        eligible.sort_by_key(|(_, _, oldest)| *oldest);
         Ok(eligible)
     }
 

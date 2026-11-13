@@ -9,6 +9,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tmc_model::sync::{KeyAssignment, SyncService};
 use tmc_net::edsm_journal::{classify_get_ranks, get_ranks_url};
+use tmc_net::inara::{INARA_API_URL, build_profile_request, classify_profile};
+use tmc_net::limiter::SharedRateLimiter;
+use tmc_net::transport::HttpPost;
 use tmc_net::{HttpReplyEx, KeyCheck, Transport};
 use tmc_store::Store;
 use tokio::sync::{Notify, mpsc, watch};
@@ -22,12 +25,14 @@ pub struct VerifyUpdate {
     pub next_retry: Option<DateTime<Utc>>,
 }
 
-/// Verifica una clave personal contra el endpoint oficial del servicio sin enviar datos de diario.
-pub async fn check_service_key(
+/// Verifica una clave personal contra el endpoint oficial del servicio respetando limitadores compartidos.
+pub async fn check_service_key_limited(
     transport: &dyn Transport,
     service: SyncService,
     cmdr_name: &str,
+    cmdr_fid: Option<&str>,
     api_key: &str,
+    inara_limiter: Option<&SharedRateLimiter>,
 ) -> KeyCheck {
     match service {
         SyncService::Edsm => {
@@ -41,8 +46,43 @@ pub async fn check_service_key(
             });
             classify_get_ranks(&reply)
         }
-        SyncService::Inara | SyncService::Eddn => KeyCheck::Valid,
+        SyncService::Inara => {
+            if let Some(limiter) = inara_limiter {
+                loop {
+                    let now_lim = tokio::time::Instant::now().into_std();
+                    match limiter.try_acquire(now_lim) {
+                        Ok(()) => break,
+                        Err(wait) => tokio::time::sleep(wait).await,
+                    }
+                }
+            }
+            let req = build_profile_request(api_key, cmdr_name, cmdr_fid);
+            let Ok(body) = serde_json::to_vec(&req) else {
+                return KeyCheck::Unreachable;
+            };
+            let reply = transport
+                .post(HttpPost {
+                    url: INARA_API_URL,
+                    body: &body,
+                    content_type: "application/json",
+                    headers: &[],
+                    http1_only: false,
+                })
+                .await;
+            classify_profile(&reply)
+        }
+        SyncService::Eddn => KeyCheck::Valid,
     }
+}
+
+/// Verifica una clave personal contra el endpoint oficial del servicio sin enviar datos de diario.
+pub async fn check_service_key(
+    transport: &dyn Transport,
+    service: SyncService,
+    cmdr_name: &str,
+    api_key: &str,
+) -> KeyCheck {
+    check_service_key_limited(transport, service, cmdr_name, None, api_key, None).await
 }
 
 struct RetryEntry {

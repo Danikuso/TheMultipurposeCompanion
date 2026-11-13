@@ -816,7 +816,7 @@ impl Store {
         let conn = self.lock()?;
         let mut stmt = conn.prepare(
             "SELECT cmdr_fid, COUNT(*), MIN(event_ts) FROM sync_outbox \
-             WHERE service=?1 AND state='pending' GROUP BY cmdr_fid ORDER BY cmdr_fid",
+             WHERE service=?1 AND state='pending' GROUP BY cmdr_fid ORDER BY MIN(event_ts) ASC, cmdr_fid ASC",
         )?;
         let mut rows = stmt.query([service.as_str()])?;
         let mut out = Vec::new();

@@ -1,6 +1,7 @@
 //! Limitador de peticiones por servicio (ventana deslizante, reloj inyectado).
 
 use std::collections::VecDeque;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 /// Servicio externo con límite propio.
@@ -62,6 +63,27 @@ impl RateLimiter {
             Some(&first) => Err(self.window - now.saturating_duration_since(first)),
             None => Err(self.window),
         }
+    }
+}
+
+/// Limitador compartible entre tareas y trabajadores (p. ej. Inara 2/60 s).
+#[derive(Debug, Clone)]
+pub struct SharedRateLimiter(Arc<Mutex<RateLimiter>>);
+
+impl SharedRateLimiter {
+    pub fn new(limiter: RateLimiter) -> Self {
+        Self(Arc::new(Mutex::new(limiter)))
+    }
+
+    pub fn for_service(service: Service) -> Self {
+        Self::new(RateLimiter::for_service(service))
+    }
+
+    pub fn try_acquire(&self, now: Instant) -> Result<(), Duration> {
+        self.0
+            .lock()
+            .expect("rate limiter mutex poisoned")
+            .try_acquire(now)
     }
 }
 
