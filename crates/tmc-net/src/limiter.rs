@@ -33,13 +33,13 @@ impl RateLimiter {
         }
     }
 
-    /// Spansh 1/1 s, Canonn 1/1 s, Ardent 1/1 s, EDCD 1/1 s, CAPI 1/1 s, EDDN 10/1 s, EDSM 10/10 s, Inara 2/60 s.
+    /// Spansh 1/1 s, Canonn 1/1 s, Ardent 1/1 s, EDCD 1/1 s, CAPI 1/1 s, EDDN 2/1 s, EDSM 10/10 s, Inara 2/60 s.
     pub fn for_service(service: Service) -> Self {
         match service {
             Service::Spansh | Service::Canonn | Service::Ardent | Service::Edcd | Service::Capi => {
                 Self::per_window(1, Duration::from_secs(1))
             }
-            Service::Eddn => Self::per_window(10, Duration::from_secs(1)),
+            Service::Eddn => Self::per_window(2, Duration::from_secs(1)),
             Service::Edsm => Self::per_window(10, Duration::from_secs(10)),
             Service::Inara => Self::per_window(2, Duration::from_secs(60)),
         }
@@ -120,10 +120,10 @@ mod tests {
     }
 
     #[test]
-    fn eddn_limiter_allows_ten_per_second() {
+    fn eddn_limiter_is_two_per_second() {
         let t0 = Instant::now();
         let mut l = RateLimiter::for_service(Service::Eddn);
-        for _ in 0..10 {
+        for _ in 0..2 {
             assert_eq!(l.try_acquire(t0), Ok(()));
         }
         assert_eq!(l.try_acquire(t0), Err(Duration::from_secs(1)));

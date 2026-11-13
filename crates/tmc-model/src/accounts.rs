@@ -43,28 +43,6 @@ pub struct RemoteShip {
     pub transfer_time_secs: Option<u64>,
 }
 
-/// Cabecera obligatoria de un mensaje EDDN.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EddnHeader {
-    #[serde(rename = "uploaderID")]
-    pub uploader_id: String,
-    #[serde(rename = "softwareName")]
-    pub software_name: String,
-    #[serde(rename = "softwareVersion")]
-    pub software_version: String,
-    #[serde(rename = "gatewayTimestamp")]
-    pub gateway_timestamp: String,
-}
-
-/// Envelope oficial de envío a EDDN.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EddnEnvelope<T> {
-    #[serde(rename = "$schemaRef")]
-    pub schema_ref: String,
-    pub header: EddnHeader,
-    pub message: T,
-}
-
 /// Cabecera del envelope Inara InAPI v1.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InaraHeader {
@@ -133,28 +111,6 @@ mod tests {
         assert!(!topic.inara.has_key);
         assert_eq!(topic.inara.status.pending, 0);
         assert_eq!(topic.capi.remote_ships_count, 0);
-    }
-
-    #[test]
-    fn eddn_envelope_serialization() {
-        let env = EddnEnvelope {
-            schema_ref: "https://eddn.edcd.io/schemas/commodity/3".to_string(),
-            header: EddnHeader {
-                uploader_id: "test_salt_id".to_string(),
-                software_name: "TMC".to_string(),
-                software_version: "0.1.0".to_string(),
-                gateway_timestamp: "2026-10-23T12:00:00Z".to_string(),
-            },
-            message: serde_json::json!({
-                "systemName": "Sol",
-                "stationName": "Li Qing Jao"
-            }),
-        };
-
-        let json = serde_json::to_string(&env).unwrap();
-        assert!(json.contains("\"$schemaRef\":\"https://eddn.edcd.io/schemas/commodity/3\""));
-        assert!(json.contains("\"uploaderID\":\"test_salt_id\""));
-        assert!(json.contains("\"softwareName\":\"TMC\""));
     }
 
     #[test]

@@ -7,7 +7,7 @@ pub mod cache_policy;
 pub mod canonn;
 pub mod capi;
 pub mod client;
-pub mod eddn_sender;
+pub mod eddn_upload;
 pub mod edsm;
 pub mod edsm_sync;
 pub mod health;

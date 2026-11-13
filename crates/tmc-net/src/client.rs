@@ -137,6 +137,9 @@ fn endpoint_of(req: &Req) -> &'static str {
             "ardent.nearest.service"
         };
     }
+    if path.starts_with(crate::eddn_upload::EDDN_UPLOAD_URL) {
+        return "eddn.upload";
+    }
     "unknown"
 }
 
