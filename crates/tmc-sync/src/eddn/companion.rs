@@ -34,6 +34,11 @@ pub fn companion_matches_event(ev_name: &str, companion: &CompanionFile) -> bool
                 "FCMaterials",
                 CompanionFile::Raw(CompanionKind::FcMaterials, _)
             )
+            | ("Cargo", CompanionFile::Cargo(_))
+            | (
+                "ShipLocker",
+                CompanionFile::Raw(CompanionKind::ShipLocker, _)
+            )
     )
 }
 

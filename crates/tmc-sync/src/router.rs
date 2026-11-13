@@ -952,12 +952,21 @@ impl Router {
         let Some(pending) = self.pending_companion.take() else {
             return Ok(());
         };
+        if let Some(comp) = companion {
+            self.tracker.apply_companion(comp);
+        }
+        let updated_snap = if companion.is_some() {
+            Some(self.tracker.snapshot())
+        } else {
+            None
+        };
+        let snap = updated_snap.as_ref().unwrap_or(&pending.snap);
         if let Err(err) = self.map_line(
             &pending.ev,
             &pending.file,
             pending.line,
             &pending.fid,
-            &pending.snap,
+            snap,
             pending.row_origin,
             companion,
         ) {

@@ -1,10 +1,15 @@
 //! Mapeo, coalescencia, instantánea y trabajador de Inara (InAPI v1).
 
+pub mod combat;
 pub mod commander;
+pub mod inventory;
+pub mod missions;
+pub mod ship;
 pub mod travel;
 
 use crate::router::{MappedInput, MappedRow, ServiceMapper};
 use serde_json::{Value, json};
+use tmc_model::events::{EventKind, JournalEvent};
 use tmc_model::sync::{OutboxState, SyncService};
 
 #[derive(Debug, Default)]
@@ -55,6 +60,19 @@ impl ServiceMapper for InaraMapper {
         SyncService::Inara
     }
 
+    fn wants_companion(&self, ev: &JournalEvent) -> bool {
+        match &ev.kind {
+            EventKind::Cargo(c) => {
+                !c.vessel
+                    .as_deref()
+                    .is_some_and(|v| v.eq_ignore_ascii_case("SRV"))
+                    && c.inventory.is_none()
+            }
+            EventKind::ShipLocker(sl) => sl.is_stub(),
+            _ => false,
+        }
+    }
+
     fn map(&mut self, input: &MappedInput<'_>, out: &mut Vec<MappedRow>) {
         let Some(fid) = input
             .snap
@@ -69,7 +87,22 @@ impl ServiceMapper for InaraMapper {
         if travel::map_travel(fid, input, out) {
             return;
         }
+        if matches!(input.ev.kind, EventKind::LoadGame(_)) {
+            commander::map_commander(fid, input, out);
+            ship::map_ship(fid, input, out);
+            return;
+        }
         commander::map_commander(fid, input, out);
+        if ship::map_ship(fid, input, out) {
+            return;
+        }
+        if inventory::map_inventory(fid, input, out) {
+            return;
+        }
+        if missions::map_missions(fid, input, out) {
+            return;
+        }
+        combat::map_combat(fid, input, out);
     }
 }
 
@@ -269,5 +302,214 @@ mod tests {
         assert_eq!(rows[1].sub, 1);
         assert_eq!(rows[2].kind, "setCommanderReputationMinorFaction");
         assert_eq!(rows[2].sub, 2);
+    }
+
+    #[test]
+    fn ship_inventory_mission_combat_fixtures_match() {
+        let names = [
+            "setCommanderShip",
+            "storedShips",
+            "setCommanderShipLoadout",
+            "addCommanderShip",
+            "delCommanderShip",
+            "setCommanderShipTransfer",
+            "setCommanderInventoryMaterials",
+            "setCommanderInventoryCargo",
+            "setCommanderInventory",
+            "addCommanderMission",
+            "setCommanderMissionCompleted",
+            "setCommanderMissionFailed",
+            "setCommanderMissionAbandoned",
+            "addCommanderCombatDeath",
+            "addCommanderCombatInterdicted",
+            "addCommanderCombatInterdiction",
+            "addCommanderCombatInterdictionEscape",
+        ];
+
+        for name in names {
+            let fix = load_event_fixture(name);
+            let mut tracker = TransientTracker::new();
+            let mut mapper = InaraMapper::new();
+            seed_context(&mut tracker, fix.get("context"));
+
+            if let Some(ctx) = fix.get("context")
+                && let (Some(sys), Some(st)) = (
+                    ctx.get("starsystemNameOrigin").and_then(Value::as_str),
+                    ctx.get("stationNameOrigin").and_then(Value::as_str),
+                )
+            {
+                tracker.apply(&ev(&json!({
+                    "timestamp": "2026-11-10T17:57:00Z",
+                    "event": "Location",
+                    "StarSystem": sys,
+                    "SystemAddress": 10477373803u64,
+                    "StarPos": [0.0, 0.0, 0.0],
+                    "Docked": true,
+                    "StationName": st,
+                    "MarketID": ctx.get("marketID").and_then(Value::as_u64).unwrap_or(128004512u64)
+                })
+                .to_string()));
+            }
+            if let Some(ctx) = fix.get("context")
+                && let (Some(sys), Some(st)) = (
+                    ctx.get("starsystemName").and_then(Value::as_str),
+                    ctx.get("stationName").and_then(Value::as_str),
+                )
+            {
+                tracker.apply(&ev(&json!({
+                    "timestamp": "2026-11-10T17:57:00Z",
+                    "event": "Location",
+                    "StarSystem": sys,
+                    "SystemAddress": 10477373803u64,
+                    "StarPos": [0.0, 0.0, 0.0],
+                    "Docked": true,
+                    "StationName": st,
+                    "MarketID": ctx.get("marketID").and_then(Value::as_u64).unwrap_or(128004512u64)
+                })
+                .to_string()));
+            } else if let Some(ctx) = fix.get("context")
+                && let Some(sys) = ctx.get("starsystemName").and_then(Value::as_str)
+            {
+                tracker.apply(&ev(&json!({
+                    "timestamp": "2026-11-10T17:57:00Z",
+                    "event": "Location",
+                    "StarSystem": sys,
+                    "SystemAddress": 10477373803u64,
+                    "StarPos": [0.0, 0.0, 0.0],
+                    "Docked": false
+                })
+                .to_string()));
+            }
+
+            let journal_entries = match &fix["journal"] {
+                Value::Array(arr) => arr.clone(),
+                obj => vec![obj.clone()],
+            };
+
+            let mut all_rows = Vec::new();
+            for entry in &journal_entries {
+                all_rows.extend(apply_and_map(&mut tracker, &mut mapper, entry));
+            }
+
+            let expected_list: Vec<Value> = match &fix["inara"] {
+                Value::Array(arr) => arr.clone(),
+                obj => vec![obj.clone()],
+            };
+
+            for expected in &expected_list {
+                let expected_name = expected["eventName"].as_str().unwrap();
+                let found = all_rows
+                    .iter()
+                    .rev()
+                    .find(|r| r.kind == expected_name && r.payload == *expected);
+                assert!(
+                    found.is_some(),
+                    "mismatch o ausencia para {name} esperando {expected}; generado: {all_rows:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn materials_sent_as_full_set_after_delta_events() {
+        let mut tracker = TransientTracker::new();
+        let mut mapper = InaraMapper::new();
+        seed_context(&mut tracker, None);
+
+        // Delta sin Materials previo no debe mandar lista parcial a Inara
+        let early = apply_and_map(
+            &mut tracker,
+            &mut mapper,
+            &json!({"timestamp": "2026-11-10T18:00:00Z", "event": "MaterialCollected", "Category": "Raw", "Name": "iron", "Count": 3}),
+        );
+        assert!(early.is_empty());
+
+        let base = apply_and_map(
+            &mut tracker,
+            &mut mapper,
+            &json!({
+                "timestamp": "2026-11-10T18:01:00Z",
+                "event": "Materials",
+                "Raw": [{"Name": "iron", "Count": 120}, {"Name": "nickel", "Count": 40}],
+                "Manufactured": [],
+                "Encoded": []
+            }),
+        );
+        assert_eq!(base.len(), 1);
+        assert_eq!(base[0].kind, "setCommanderInventoryMaterials");
+
+        let delta = apply_and_map(
+            &mut tracker,
+            &mut mapper,
+            &json!({"timestamp": "2026-11-10T18:02:00Z", "event": "MaterialCollected", "Category": "Raw", "Name": "iron", "Count": 3}),
+        );
+        assert_eq!(delta.len(), 1);
+        assert_eq!(delta[0].kind, "setCommanderInventoryMaterials");
+        let items = delta[0].payload["eventData"].as_array().unwrap();
+        assert!(items.contains(&json!({"itemName": "iron", "itemCount": 123})));
+        assert!(items.contains(&json!({"itemName": "nickel", "itemCount": 40})));
+    }
+
+    #[test]
+    fn cargo_from_companion_cargo_json() {
+        use tmc_model::companion::{CargoFile, CargoItem, CompanionFile};
+
+        let mut tracker = TransientTracker::new();
+        let mut mapper = InaraMapper::new();
+        seed_context(&mut tracker, None);
+
+        let stub =
+            ev(r#"{"timestamp":"2026-11-10T18:00:00Z","event":"Cargo","Vessel":"Ship","Count":5}"#);
+        assert!(mapper.wants_companion(&stub));
+
+        let cargo_comp = CompanionFile::Cargo(CargoFile {
+            vessel: Some("Ship".into()),
+            count: 5,
+            inventory: vec![CargoItem {
+                name: "gold".into(),
+                name_localised: None,
+                count: 5,
+                stolen: 1,
+                mission_id: Some(99),
+            }],
+        });
+        tracker.apply(&stub);
+        let snap = tracker.snapshot();
+        let input = MappedInput {
+            ev: &stub,
+            file: "Journal.2026-11-10.01.log",
+            line: 1,
+            snap: &snap,
+            companion: Some(&cargo_comp),
+            tracker: &tracker,
+        };
+        let mut out = Vec::new();
+        mapper.map(&input, &mut out);
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].kind, "setCommanderInventoryCargo");
+        assert_eq!(
+            out[0].payload["eventData"],
+            json!([{"itemName": "gold", "itemCount": 5, "isStolen": true, "missionGameID": 99}])
+        );
+    }
+
+    #[test]
+    fn out_of_scope_events_never_mapped() {
+        let mut tracker = TransientTracker::new();
+        let mut mapper = InaraMapper::new();
+        seed_context(&mut tracker, None);
+
+        for raw in [
+            json!({"timestamp": "2026-11-10T18:00:00Z", "event": "Statistics", "Bank_Account": {"Current_Wealth": 1000}}),
+            json!({"timestamp": "2026-11-10T18:01:00Z", "event": "StoredModules", "Items": []}),
+            json!({"timestamp": "2026-11-10T18:02:00Z", "event": "CommunityGoal", "CurrentGoals": []}),
+            json!({"timestamp": "2026-11-10T18:03:00Z", "event": "PVPKill", "Victim": "Cmdr Foo", "CombatRank": 5}),
+        ] {
+            let rows = apply_and_map(&mut tracker, &mut mapper, &raw);
+            assert!(
+                rows.is_empty(),
+                "evento fuera de alcance DR-29 generó filas: {rows:?}"
+            );
+        }
     }
 }
