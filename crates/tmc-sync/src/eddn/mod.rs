@@ -1,9 +1,12 @@
 //! Mapeador EDDN y saneado conforme a los 16 esquemas oficiales.
 
+pub mod client;
 pub mod companion;
 pub mod events;
 pub mod journal;
 pub mod sanitize;
+
+pub use client::EddnClient;
 
 use crate::router::{BatchedRow, MappedInput, MappedRow, ServiceMapper};
 use serde_json::{Value, json};

@@ -94,6 +94,10 @@ pub trait ServiceClient: Send + Sync {
     fn filter_claimed(&self, rows: Vec<OutboxRow>) -> (Vec<OutboxRow>, Vec<(i64, RowVerdict)>) {
         (rows, Vec::new())
     }
+    /// Claves `kind` actualmente en pausa (no reclamables por ahora, p. ej. HTTP 426 EDDN).
+    fn excluded_kinds(&self) -> Vec<String> {
+        Vec::new()
+    }
 }
 
 /// Eventos publicados por los trabajadores hacia [`crate::status::StatusAggregator`].
@@ -232,7 +236,15 @@ impl Worker {
             return StepControl::Sleep(Some(wait.min(MAX_WORKER_SLEEP)));
         }
 
-        let rows = match self.claim_batch(service, &st.policy, &st.held_cmdrs, &eligible, now) {
+        let excluded = self.client.excluded_kinds();
+        let rows = match self.claim_batch(
+            service,
+            &st.policy,
+            &st.held_cmdrs,
+            &eligible,
+            &excluded,
+            now,
+        ) {
             Ok(rows) => rows,
             Err(error) => {
                 tracing::warn!(
@@ -244,7 +256,7 @@ impl Worker {
         };
 
         if rows.is_empty() {
-            let next = self.next_eligible_wait(service, &eligible, now);
+            let next = self.next_eligible_wait(service, &eligible, &excluded, now);
             return StepControl::Sleep(next);
         }
 
@@ -287,9 +299,10 @@ impl Worker {
             None
         };
 
+        let all_rows = claimed.clone();
         let (to_send, mut verdicts) = self.client.filter_claimed(claimed);
         if to_send.is_empty() {
-            self.commit_verdicts(st, &cmdr_fid, &[], verdicts, ServiceEffect::None)
+            self.commit_verdicts(st, &cmdr_fid, &all_rows, verdicts, ServiceEffect::None)
                 .await;
             return StepControl::Continue;
         }
@@ -345,7 +358,7 @@ impl Worker {
         }
 
         verdicts.extend(outcome.verdicts);
-        self.commit_verdicts(st, &cmdr_fid, &to_send, verdicts, outcome.effect)
+        self.commit_verdicts(st, &cmdr_fid, &all_rows, verdicts, outcome.effect)
             .await;
         StepControl::Continue
     }
@@ -523,15 +536,26 @@ impl Worker {
         policy: &BatchPolicy,
         held: &BTreeSet<String>,
         eligible: &[(String, u64, DateTime<Utc>)],
+        excluded_kinds: &[String],
         now: DateTime<Utc>,
     ) -> Result<Vec<OutboxRow>, StoreError> {
         if !policy.per_cmdr && held.is_empty() && !self.client.needs_credential() {
-            return self.store.claim_ready(service, None, policy.max_rows, now);
+            return self.store.claim_ready_excluding(
+                service,
+                None,
+                excluded_kinds,
+                policy.max_rows,
+                now,
+            );
         }
         for (fid, _, _) in eligible {
-            let rows = self
-                .store
-                .claim_ready(service, Some(fid), policy.max_rows, now)?;
+            let rows = self.store.claim_ready_excluding(
+                service,
+                Some(fid),
+                excluded_kinds,
+                policy.max_rows,
+                now,
+            )?;
             if !rows.is_empty() {
                 return Ok(rows);
             }
@@ -543,11 +567,15 @@ impl Worker {
         &self,
         service: SyncService,
         eligible: &[(String, u64, DateTime<Utc>)],
+        excluded_kinds: &[String],
         now: DateTime<Utc>,
     ) -> Option<Duration> {
         let mut earliest: Option<DateTime<Utc>> = None;
         for (fid, _, _) in eligible {
-            if let Ok(Some(next_at)) = self.store.next_attempt_at_for(service, Some(fid)) {
+            if let Ok(Some(next_at)) =
+                self.store
+                    .next_attempt_at_excluding(service, Some(fid), excluded_kinds)
+            {
                 earliest = Some(match earliest {
                     Some(cur) => cur.min(next_at),
                     None => next_at,

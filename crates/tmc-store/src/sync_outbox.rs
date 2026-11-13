@@ -264,21 +264,50 @@ impl Store {
         limit: usize,
         now: DateTime<Utc>,
     ) -> Result<Vec<OutboxRow>, StoreError> {
+        self.claim_ready_excluding(service, cmdr_fid, &[], limit, now)
+    }
+
+    /// Igual que [`Self::claim_ready`], excluyendo las filas cuyo `kind` esté en `excluded_kinds`.
+    pub fn claim_ready_excluding(
+        &self,
+        service: SyncService,
+        cmdr_fid: Option<&str>,
+        excluded_kinds: &[String],
+        limit: usize,
+        now: DateTime<Utc>,
+    ) -> Result<Vec<OutboxRow>, StoreError> {
         let mut conn = self.lock()?;
         let tx = conn.transaction()?;
         let mut out = Vec::new();
         {
-            let mut stmt = tx.prepare(
+            let excl = if excluded_kinds.is_empty() {
+                String::new()
+            } else {
+                let slots: Vec<String> = (0..excluded_kinds.len())
+                    .map(|i| format!("?{}", i + 5))
+                    .collect();
+                format!(" AND kind NOT IN ({})", slots.join(","))
+            };
+            let sql = format!(
                 "SELECT id, cmdr_fid, kind, coalesce_key, event_ts, payload, origin, attempts FROM sync_outbox \
-                 WHERE service=?1 AND state='pending' AND next_attempt_at <= ?2 AND (?3 IS NULL OR cmdr_fid=?3) \
-                 ORDER BY event_ts, id LIMIT ?4",
-            )?;
-            let mut rows = stmt.query(rusqlite::params![
-                service.as_str(),
-                ts(now),
-                cmdr_fid,
-                i64::try_from(limit)?
-            ])?;
+                 WHERE service=?1 AND state='pending' AND next_attempt_at <= ?2 AND (?3 IS NULL OR cmdr_fid=?3){excl} \
+                 ORDER BY event_ts, id LIMIT ?4"
+            );
+            let mut stmt = tx.prepare(&sql)?;
+            let now_s = ts(now);
+            let limit_i = i64::try_from(limit)?;
+            let mut params: Vec<rusqlite::types::Value> = vec![
+                rusqlite::types::Value::Text(service.as_str().to_string()),
+                rusqlite::types::Value::Text(now_s),
+                cmdr_fid
+                    .map(|s| rusqlite::types::Value::Text(s.to_string()))
+                    .unwrap_or(rusqlite::types::Value::Null),
+                rusqlite::types::Value::Integer(limit_i),
+            ];
+            for k in excluded_kinds {
+                params.push(rusqlite::types::Value::Text(k.clone()));
+            }
+            let mut rows = stmt.query(rusqlite::params_from_iter(params))?;
             while let Some(r) = rows.next()? {
                 out.push(OutboxRow {
                     id: r.get(0)?,
@@ -674,13 +703,40 @@ impl Store {
         service: SyncService,
         cmdr_fid: Option<&str>,
     ) -> Result<Option<DateTime<Utc>>, StoreError> {
+        self.next_attempt_at_excluding(service, cmdr_fid, &[])
+    }
+
+    /// Próximo reintento excluyendo filas con `kind` en `excluded_kinds` (p. ej. esquemas en pausa).
+    pub fn next_attempt_at_excluding(
+        &self,
+        service: SyncService,
+        cmdr_fid: Option<&str>,
+        excluded_kinds: &[String],
+    ) -> Result<Option<DateTime<Utc>>, StoreError> {
         let conn = self.lock()?;
-        let value: Option<String> = conn.query_row(
+        let excl = if excluded_kinds.is_empty() {
+            String::new()
+        } else {
+            let slots: Vec<String> = (0..excluded_kinds.len())
+                .map(|i| format!("?{}", i + 3))
+                .collect();
+            format!(" AND kind NOT IN ({})", slots.join(","))
+        };
+        let sql = format!(
             "SELECT MIN(next_attempt_at) FROM sync_outbox \
-             WHERE service=?1 AND state='pending' AND (?2 IS NULL OR cmdr_fid=?2)",
-            rusqlite::params![service.as_str(), cmdr_fid],
-            |r| r.get(0),
-        )?;
+             WHERE service=?1 AND state='pending' AND (?2 IS NULL OR cmdr_fid=?2){excl}"
+        );
+        let mut params: Vec<rusqlite::types::Value> = vec![
+            rusqlite::types::Value::Text(service.as_str().to_string()),
+            cmdr_fid
+                .map(|s| rusqlite::types::Value::Text(s.to_string()))
+                .unwrap_or(rusqlite::types::Value::Null),
+        ];
+        for k in excluded_kinds {
+            params.push(rusqlite::types::Value::Text(k.clone()));
+        }
+        let value: Option<String> =
+            conn.query_row(&sql, rusqlite::params_from_iter(params), |r| r.get(0))?;
         value.as_deref().map(parse_ts).transpose()
     }
 
