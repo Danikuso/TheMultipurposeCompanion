@@ -821,7 +821,7 @@ impl Router {
     }
 }
 
-fn eddn_enabled_at(store: &Store) -> Option<DateTime<Utc>> {
+pub(crate) fn eddn_enabled_at(store: &Store) -> Option<DateTime<Utc>> {
     let value = store.kv_get(EDDN_ENABLED_KEY)?;
     DateTime::parse_from_rfc3339(&value)
         .ok()
