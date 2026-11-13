@@ -1,7 +1,6 @@
 accounts-title = Accounts & External Sync
 accounts-companion-privacy-notice = Privacy first: TMC never transmits data from the Legacy galaxy, never shares private chats or credit balances without authorization, and pseudonymizes your identity on EDDN using a local cryptographic salt.
 
-accounts-eddn-title = Elite Dangerous Data Network (EDDN)
 accounts-eddn-desc = Share public market data, outfitting, shipyards, and jump logs with the galactic community.
 accounts-eddn-switch = EDDN transmission active
 

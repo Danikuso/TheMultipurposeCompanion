@@ -56,7 +56,7 @@ pub fn build_snapshot(
             0,
             &ts,
             Value::Array(entries),
-            Some("engineers"),
+            Some("all"),
         ));
     }
 
@@ -73,7 +73,7 @@ pub fn build_snapshot(
                 "rankValue": rank,
                 "meritsValue": merits,
             }),
-            Some(power.trim()),
+            Some("power"),
         ));
     }
 
@@ -274,7 +274,7 @@ pub fn build_snapshot(
             0,
             &ts,
             Value::Object(m),
-            Some("location"),
+            Some("current"),
         ));
     }
 

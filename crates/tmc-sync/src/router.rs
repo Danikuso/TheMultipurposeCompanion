@@ -853,7 +853,7 @@ impl Router {
                     coalesce_key: row.coalesce_key,
                     event_ts: snap_at,
                     payload: row.payload.to_string(),
-                    origin: RowOrigin::Live,
+                    origin: RowOrigin::Snapshot,
                     state: row.state,
                     last_class: row.class,
                 });

@@ -729,5 +729,78 @@ mod tests {
             1,
             "solo una instantánea por arranque y comandante"
         );
+        let origins = store
+            .query_json(
+                "SELECT origin FROM sync_outbox WHERE service='inara' AND kind='setCommanderCredits'",
+                &[],
+            )
+            .unwrap();
+        assert_eq!(origins, vec![json!(["snapshot"])]);
+    }
+
+    #[test]
+    fn snapshot_coalesce_keys_match_live_events() {
+        use chrono::{TimeZone, Utc};
+
+        let mut tracker = TransientTracker::new();
+        let events = [
+            ev(
+                r#"{"timestamp":"2026-11-10T18:00:00Z","event":"LoadGame","Commander":"CMDR","FID":"F000001","Ship":"asp","ShipID":1,"Credits":1000,"Loan":0}"#,
+            ),
+            ev(
+                r#"{"timestamp":"2026-11-10T18:00:05Z","event":"Location","StarSystem":"Sol","SystemAddress":10477373803,"StarPos":[0,0,0],"Docked":false}"#,
+            ),
+            ev(
+                r#"{"timestamp":"2026-11-10T18:00:10Z","event":"EngineerProgress","Engineers":[{"Engineer":"Felicity Farseer","EngineerID":300100,"Progress":"Unlocked","Rank":5,"RankProgress":0}]}"#,
+            ),
+            ev(
+                r#"{"timestamp":"2026-11-10T18:00:15Z","event":"Powerplay","Power":"Aisling Duval","Rank":3,"Merits":1200,"Votes":0,"TimePledged":1000}"#,
+            ),
+        ];
+
+        let mut mapper = InaraMapper::new();
+        let mut live_keys = std::collections::BTreeMap::new();
+        for (idx, event) in events.iter().enumerate() {
+            tracker.apply(event);
+            let snap = tracker.snapshot();
+            let mut out = Vec::new();
+            mapper.map(
+                &MappedInput {
+                    ev: event,
+                    file: "Journal.2026-11-10T180000.01.log",
+                    line: (idx + 1) as u64,
+                    snap: &snap,
+                    companion: None,
+                    tracker: &tracker,
+                },
+                &mut out,
+            );
+            for row in out {
+                if row.kind.starts_with("set") {
+                    live_keys.insert(row.kind, row.coalesce_key);
+                }
+            }
+        }
+
+        let snap = snapshot::build_snapshot(
+            &tracker,
+            "F000001",
+            Utc.with_ymd_and_hms(2026, 11, 10, 18, 5, 0).unwrap(),
+        );
+        for kind in [
+            "setCommanderRankEngineer",
+            "setCommanderRankPower",
+            "setCommanderTravelLocation",
+        ] {
+            let snap_key = snap
+                .iter()
+                .find(|r| r.kind == kind)
+                .and_then(|r| r.coalesce_key.clone());
+            assert_eq!(
+                snap_key,
+                live_keys.get(kind).cloned().flatten(),
+                "coalesce_key mismatch for {kind}"
+            );
+        }
     }
 }

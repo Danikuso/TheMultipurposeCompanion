@@ -3,7 +3,6 @@
   "locales": {
     "es": {
       "accounts-capi-title": "Frontier Companion API (CAPI)",
-      "accounts-eddn-title": "Elite Dangerous Data Network (EDDN)",
       "accounts-edsm-title": "Elite Dangerous Star Map (EDSM)",
       "accounts-inara-title": "Inara (InAPI v1)",
       "accounts-sync-never": "—",
@@ -116,7 +115,6 @@
     },
     "fr": {
       "accounts-capi-title": "Frontier Companion API (CAPI)",
-      "accounts-eddn-title": "Elite Dangerous Data Network (EDDN)",
       "accounts-edsm-title": "Elite Dangerous Star Map (EDSM)",
       "accounts-inara-title": "Inara (InAPI v1)",
       "accounts-sync-details-privacy-service": "Service",
@@ -337,7 +335,6 @@
     },
     "de": {
       "accounts-capi-title": "Frontier Companion API (CAPI)",
-      "accounts-eddn-title": "Elite Dangerous Data Network (EDDN)",
       "accounts-edsm-title": "Elite Dangerous Star Map (EDSM)",
       "accounts-inara-title": "Inara (InAPI v1)",
       "accounts-sync-never": "—",
@@ -522,7 +519,6 @@
     },
     "pt": {
       "accounts-capi-title": "Frontier Companion API (CAPI)",
-      "accounts-eddn-title": "Elite Dangerous Data Network (EDDN)",
       "accounts-edsm-title": "Elite Dangerous Star Map (EDSM)",
       "accounts-inara-title": "Inara (InAPI v1)",
       "accounts-sync-never": "—",
