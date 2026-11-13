@@ -42,9 +42,6 @@ impl TransientTracker {
         match &ev.kind {
             EventKind::Fileheader(h) => {
                 self.set_version(h.gameversion.as_deref(), h.build.as_deref());
-                if let Some(o) = raw_bool(ev, "Odyssey") {
-                    self.state.odyssey = Some(o);
-                }
             }
             EventKind::Commander(c) => {
                 if let Some(fid) = &c.fid {

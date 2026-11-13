@@ -1,3 +1,4 @@
+mod eddn;
 mod expiry;
 mod guards;
 mod idle;

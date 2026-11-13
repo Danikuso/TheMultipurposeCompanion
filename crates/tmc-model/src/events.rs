@@ -71,6 +71,7 @@ pub struct LocationInfo {
     pub system_faction: Option<SystemFaction>,
     pub powers: Vec<String>,
     pub powerplay_state: Option<String>,
+    #[serde(deserialize_with = "lenient_boost_used")]
     pub boost_used: Option<f64>,
     #[serde(deserialize_with = "lenient_war")]
     pub thargoid_war: Option<ThargoidWar>,
@@ -103,6 +104,17 @@ fn l_bool(v: Option<&Json>) -> Option<bool> {
         Json::String(s) => s.trim().parse().ok(),
         _ => None,
     }
+}
+
+fn lenient_boost_used<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<f64>, D::Error> {
+    let v = Json::deserialize(d).unwrap_or(Json::Null);
+    Ok(match v {
+        Json::Number(n) => n.as_f64(),
+        Json::Bool(true) => Some(1.0),
+        Json::Bool(false) => Some(0.0),
+        Json::String(s) => s.trim().parse().ok(),
+        _ => None,
+    })
 }
 
 /// Bloque `ThargoidWar` tolerante: un tipo inesperado nunca rompe el evento.
