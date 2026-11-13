@@ -581,6 +581,11 @@ impl Router {
         self.tracker.apply(ev);
         let snap = self.tracker.snapshot();
         self.content_state(&snap, feed_galaxy);
+        if !self.gates.lease_held.load(Ordering::SeqCst) {
+            // Sin lease esta instancia es solo observadora: no escribe comandantes ni cursores en BD.
+            self.last_line.insert(file.to_string(), line);
+            return Ok(());
+        }
         // Datos de replay o simulación nunca registran comandantes ni reciben claves en espera.
         if !(self.replay_marker || self.cfg.env.e2e_simulation) {
             self.register_cmdr(ev)?;

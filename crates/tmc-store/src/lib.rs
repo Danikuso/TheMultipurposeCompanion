@@ -11,6 +11,7 @@ pub mod migrations;
 pub mod prices;
 pub mod query;
 pub mod sync_credential;
+pub mod sync_lease;
 pub mod sync_outbox;
 pub mod ui_layout;
 pub mod writer;
