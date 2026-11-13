@@ -4,9 +4,15 @@
 //! (activo y `timestamp ≥ activated_at`) → `map`. El cursor del comandante dueño de la línea avanza
 //! siempre que la línea se evalúa (con filas o sin ellas) y en la misma transacción que las filas.
 //! Ante cualquier duda la línea no se encola (falla cerrado).
+//!
+//! Modo recuperable (§5.4): las líneas `CatchUp` del archivo vigente al arrancar y del anterior de la
+//! misma sesión (leído por [`Recovery`] al construir el router) se evalúan con las guardas normales,
+//! salvo la del juego en marcha, y sus filas se retienen hasta `CatchUpDone`; si llega una línea en
+//! vivo antes, la recuperación se abandona sin confirmar nada (ruling E0-6).
 
 use crate::clock::Clock;
 use crate::ids::idem_key;
+use crate::recovery::{Recovery, RecoveryPlan, same_session};
 use crate::tracker::{TransientSnapshot, TransientTracker};
 use chrono::{DateTime, Utc};
 use std::collections::{HashMap, VecDeque};
@@ -209,6 +215,18 @@ impl Batch {
             last_line: line,
         });
     }
+
+    fn extend_from(&mut self, mut other: Batch) {
+        if other.is_empty() && other.lines == 0 {
+            return;
+        }
+        self.touch();
+        self.lines += other.lines;
+        self.rows.append(&mut other.rows);
+        for c in other.cursors.drain(..) {
+            self.advance(&c.cmdr_fid, &c.journal_file, c.last_line);
+        }
+    }
 }
 
 pub struct Router {
@@ -221,7 +239,14 @@ pub struct Router {
     replay_marker: bool,
     /// Última muestra de proceso (`None` = aún ninguna).
     process: Option<bool>,
-    current_file: Option<String>,
+    /// Archivo de la última línea evaluada.
+    last_file: Option<String>,
+    /// Archivos cuyas líneas `CatchUp` son recuperables: vigente al arrancar y anterior de la sesión.
+    recoverable_files: Vec<String>,
+    /// La relectura sigue abierta: ni `CatchUpDone` ni línea en vivo todavía.
+    recovery_open: bool,
+    /// Filas y cursores recuperados, retenidos hasta `CatchUpDone`.
+    staged: Batch,
     /// Última línea vista por archivo en esta ejecución (detección de truncado).
     last_line: HashMap<String, u64>,
     /// Cursor conocido por (comandante, archivo): del almacén o del lote en curso.
@@ -249,7 +274,10 @@ impl Router {
             tracker: TransientTracker::new(),
             replay_marker: true,
             process: None,
-            current_file: None,
+            last_file: None,
+            recoverable_files: Vec::new(),
+            recovery_open: true,
+            staged: Batch::default(),
             last_line: HashMap::new(),
             cursors: HashMap::new(),
             batch: Batch::default(),
@@ -259,6 +287,49 @@ impl Router {
         router.refresh_replay_marker();
         router.publish();
         router
+    }
+
+    /// Archivo vigente al arrancar (el último de `list_journals`): sus líneas `CatchUp` son recuperables.
+    pub fn set_current_file(&mut self, file: &str) {
+        if !self.recoverable_files.iter().any(|f| f == file) {
+            self.recoverable_files.push(file.to_string());
+        }
+    }
+
+    /// Recuperación de arranque (ruling T0-5): llamar justo tras `new`, antes de cualquier `handle`.
+    /// Si la carpeta no se puede listar, no se recupera nada (falla cerrado).
+    pub fn recover_previous_session(&mut self) -> Result<(), StoreError> {
+        match Recovery::new(self.cfg.journal_dir.clone()).plan() {
+            Ok(Some(plan)) => self.recover_with(&plan),
+            Ok(None) => Ok(()),
+            Err(error) => {
+                tracing::warn!(failure_class = ?error.kind(), "sync recovery: cannot list journals");
+                Ok(())
+            }
+        }
+    }
+
+    /// Aplica un plan de recuperación: fija el vigente y evalúa el anterior de la misma sesión.
+    /// Solo actúa mientras la relectura sigue abierta. Un error de lectura detiene la recuperación
+    /// del anterior en esa línea (lo ya evaluado se conserva; el cursor no pasa de ahí).
+    pub fn recover_with(&mut self, plan: &RecoveryPlan) -> Result<(), StoreError> {
+        if !self.recovery_open {
+            return Ok(());
+        }
+        self.set_current_file(&plan.current);
+        let Some(previous) = &plan.previous else {
+            return Ok(());
+        };
+        if let Some(name) = previous.file_name() {
+            self.set_current_file(&name.to_string_lossy());
+        }
+        match Recovery::stream_feeds(previous, |feed| self.handle(feed)) {
+            Err(StoreError::Io(error)) => {
+                tracing::warn!(failure_class = ?error.kind(), "sync recovery: previous journal unreadable");
+                Ok(())
+            }
+            other => other,
+        }
     }
 
     /// Estado de guardas compartido con trabajadores y agregador.
@@ -271,39 +342,56 @@ impl Router {
         &self.tracker
     }
 
-    /// Procesa un evento del feed; vacía el lote al llegar a `flush_rows`.
+    /// Procesa un evento del feed; vacía el lote al llegar a `flush_rows`. Si falla, el evento no se
+    /// pierde: queda retenido en orden y se reintenta en la siguiente llamada a `handle` o `tick`.
     pub fn handle(&mut self, feed: SyncFeed) -> Result<(), StoreError> {
         self.gates
             .galaxy_not_legacy
             .store(feed.galaxy != Galaxy::Legacy, Ordering::SeqCst);
-        self.release_held_if_expired()?;
+        let result = self.route(feed);
+        self.publish();
+        result
+    }
+
+    fn route(&mut self, feed: SyncFeed) -> Result<(), StoreError> {
         if let SyncFeedEvent::GameProcess { running } = feed.event {
             self.process = Some(running);
             self.release_held()?;
-        } else if !self.held.is_empty() || self.must_hold(&feed) {
-            if self.held.is_empty() {
-                self.held_since = Some(Instant::now());
-            }
-            self.held.push_back(feed);
-            if self.held.len() >= self.cfg.hold_before_process.0 {
-                self.release_held()?;
-            }
         } else {
-            self.process_feed(feed)?;
+            if let Err(error) = self.release_held_if_expired() {
+                self.held.push_back(feed);
+                return Err(error);
+            }
+            if !self.held.is_empty() || self.must_hold(&feed) {
+                if self.held.is_empty() {
+                    self.held_since = Some(Instant::now());
+                }
+                self.held.push_back(feed);
+                if self.held.len() >= self.cfg.hold_before_process.0 {
+                    self.release_held()?;
+                }
+            } else if let Err(error) = self.process_feed(&feed) {
+                self.requeue(feed);
+                return Err(error);
+            }
         }
-        self.flush_if_full()?;
-        self.publish();
-        Ok(())
+        self.flush_if_full()
     }
 
     /// Confirma el lote (filas y cursores) en una única transacción.
+    /// Si una guarda global cayó tras evaluar la línea, solo se confirman los cursores (C2).
     pub fn flush(&mut self) -> Result<EnqueueOutcome, StoreError> {
         if self.batch.is_empty() {
             self.batch = Batch::default();
             return Ok(EnqueueOutcome::default());
         }
+        let rows: &[NewOutboxRow] = if self.gates.global_reason().is_some() {
+            &[]
+        } else {
+            &self.batch.rows
+        };
         let outcome = self.store.enqueue_batch_with_cursor(
-            &self.batch.rows,
+            rows,
             &self.batch.cursors,
             self.clock.now_utc(),
         )?;
@@ -350,7 +438,7 @@ impl Router {
 
     fn service_reason(&self, service: SyncService, cmdr_fid: Option<&str>) -> Option<SyncReason> {
         match service {
-            SyncService::Eddn => match self.store.kv_get(EDDN_ENABLED_KEY) {
+            SyncService::Eddn => match eddn_enabled_at(&self.store) {
                 Some(_) => None,
                 None => Some(SyncReason::SwitchOff),
             },
@@ -394,12 +482,25 @@ impl Router {
 
     /// Evalúa en orden las líneas retenidas con la muestra de proceso disponible (o sin ella).
     fn release_held(&mut self) -> Result<(), StoreError> {
-        self.held_since = None;
         while let Some(feed) = self.held.pop_front() {
-            self.process_feed(feed)?;
+            if let Err(error) = self.process_feed(&feed) {
+                self.requeue(feed);
+                return Err(error);
+            }
             self.flush_if_full()?;
         }
+        self.held_since = None;
         Ok(())
+    }
+
+    /// Devuelve a la cabeza de la retención un evento que falló, con reintento inmediato.
+    fn requeue(&mut self, feed: SyncFeed) {
+        self.held.push_front(feed);
+        let now = Instant::now();
+        self.held_since = Some(
+            now.checked_sub(self.cfg.hold_before_process.1)
+                .unwrap_or(now),
+        );
     }
 
     fn flush_if_full(&mut self) -> Result<(), StoreError> {
@@ -409,18 +510,43 @@ impl Router {
         Ok(())
     }
 
-    fn process_feed(&mut self, feed: SyncFeed) -> Result<(), StoreError> {
-        match feed.event {
+    fn process_feed(&mut self, feed: &SyncFeed) -> Result<(), StoreError> {
+        match &feed.event {
             SyncFeedEvent::Journal { ev, file, line } => {
-                self.process_line(&ev, &file, line, feed.origin, feed.galaxy)
+                self.process_line(ev, file, *line, feed.origin, feed.galaxy)
             }
-            // Emparejamiento de compañeros: E1-3. Fin de relectura y recuperación: E0-9.
-            SyncFeedEvent::Companion(_) | SyncFeedEvent::CatchUpDone => Ok(()),
+            // Emparejamiento de compañeros: E1-3.
+            SyncFeedEvent::Companion(_) => Ok(()),
+            SyncFeedEvent::CatchUpDone => {
+                self.finish_recovery();
+                Ok(())
+            }
             SyncFeedEvent::GameProcess { running } => {
-                self.process = Some(running);
+                self.process = Some(*running);
                 Ok(())
             }
         }
+    }
+
+    fn finish_recovery(&mut self) {
+        if !self.recovery_open {
+            return;
+        }
+        self.recovery_open = false;
+        let staged = std::mem::take(&mut self.staged);
+        self.batch.extend_from(staged);
+    }
+
+    fn abort_recovery(&mut self) {
+        if !self.recovery_open {
+            return;
+        }
+        self.recovery_open = false;
+        for c in &self.staged.cursors {
+            self.cursors
+                .remove(&(c.cmdr_fid.clone(), c.journal_file.clone()));
+        }
+        self.staged = Batch::default();
     }
 
     fn process_line(
@@ -431,15 +557,26 @@ impl Router {
         origin: FeedOrigin,
         feed_galaxy: Galaxy,
     ) -> Result<(), StoreError> {
-        if self.current_file.as_deref() != Some(file) {
-            // Archivo nuevo: estado propio del archivo y nueva comprobación del marcador (PD-9).
-            self.tracker.reset_for_new_file();
+        if self.last_file.as_deref() != Some(file) {
+            let inherited = self.last_file.as_deref().is_some_and(|prev| {
+                same_session(
+                    &self.cfg.journal_dir.join(prev),
+                    &self.cfg.journal_dir.join(file),
+                )
+            });
+            if !inherited {
+                // Archivo nuevo de otra sesión: estado propio del archivo (PD-9).
+                self.tracker.reset_for_new_file();
+            }
             self.refresh_replay_marker();
-            self.current_file = Some(file.to_string());
+            self.last_file = Some(file.to_string());
         } else if self.last_line.get(file).is_some_and(|&last| line <= last) {
             self.on_truncated(file);
         }
-        self.last_line.insert(file.to_string(), line);
+
+        if origin == FeedOrigin::Live && self.recovery_open {
+            self.abort_recovery();
+        }
 
         self.tracker.apply(ev);
         let snap = self.tracker.snapshot();
@@ -449,22 +586,34 @@ impl Router {
             self.register_cmdr(ev)?;
         }
 
-        let Some(fid) = snap.cmdr_fid.clone() else {
-            return Ok(()); // sin FID no hay dueño de la línea: no se encola nada
-        };
-        if origin == FeedOrigin::CatchUp {
-            return Ok(()); // en E0-8 la relectura solo alimenta el tracker; E0-9 habilita la recuperación
+        if let Some(fid) = snap.cmdr_fid.clone() {
+            let recoverable_catchup = origin == FeedOrigin::CatchUp
+                && self.recovery_open
+                && self.recoverable_files.iter().any(|f| f == file);
+            if (origin != FeedOrigin::CatchUp || recoverable_catchup)
+                && line > self.cursor(&fid, file)?
+            {
+                let is_live = origin == FeedOrigin::Live;
+                if self.line_block(&snap, feed_galaxy, is_live).is_none() {
+                    let row_origin = if is_live {
+                        RowOrigin::Live
+                    } else {
+                        RowOrigin::Recovered
+                    };
+                    self.map_line(ev, file, line, &fid, &snap, row_origin)?;
+                }
+                let target = if is_live {
+                    &mut self.batch
+                } else {
+                    &mut self.staged
+                };
+                target.lines += 1;
+                target.advance(&fid, file, line);
+                self.cursors.insert((fid, file.to_string()), line);
+            }
         }
-        if line <= self.cursor(&fid, file)? {
-            return Ok(()); // ya procesada: una línea nunca se evalúa dos veces
-        }
-
-        if self.line_block(&snap, feed_galaxy).is_none() {
-            self.map_line(ev, file, line, &fid, &snap)?;
-        }
-        self.batch.lines += 1;
-        self.batch.advance(&fid, file, line);
-        self.cursors.insert((fid, file.to_string()), line);
+        // Solo tras completar la evaluación sin error para no falsar truncado al reintentar.
+        self.last_line.insert(file.to_string(), line);
         Ok(())
     }
 
@@ -503,6 +652,7 @@ impl Router {
         line: u64,
         fid: &str,
         snap: &TransientSnapshot,
+        row_origin: RowOrigin,
     ) -> Result<(), StoreError> {
         let input = MappedInput {
             ev,
@@ -512,6 +662,7 @@ impl Router {
             companion: None,
             tracker: &self.tracker,
         };
+        let now = self.clock.now_utc();
         let mut out = Vec::new();
         for mapper in &mut self.mappers {
             let service = mapper.service();
@@ -523,8 +674,20 @@ impl Router {
             }
             out.clear();
             mapper.map(&input, &mut out);
+            let target = if row_origin == RowOrigin::Recovered {
+                &mut self.staged.rows
+            } else {
+                &mut self.batch.rows
+            };
             for row in out.drain(..) {
-                self.batch.rows.push(NewOutboxRow {
+                let state = if row_origin == RowOrigin::Recovered
+                    && now - ev.timestamp > service.max_age()
+                {
+                    OutboxState::Expired
+                } else {
+                    row.state
+                };
+                target.push(NewOutboxRow {
                     service,
                     cmdr_fid: fid.to_string(),
                     idem_key: idem_key(service, fid, file, line, row.sub),
@@ -532,8 +695,8 @@ impl Router {
                     coalesce_key: row.coalesce_key,
                     event_ts: ev.timestamp,
                     payload: row.payload.to_string(),
-                    origin: RowOrigin::Live,
-                    state: row.state,
+                    origin: row_origin,
+                    state,
                     last_class: row.class,
                 });
             }
@@ -541,8 +704,13 @@ impl Router {
         Ok(())
     }
 
-    /// Guardas de una línea `Live` con FID, en orden; `None` = se puede mapear.
-    fn line_block(&self, snap: &TransientSnapshot, feed_galaxy: Galaxy) -> Option<SyncReason> {
+    /// Guardas de una línea con FID, en orden; `None` = se puede mapear.
+    fn line_block(
+        &self,
+        snap: &TransientSnapshot,
+        feed_galaxy: Galaxy,
+        check_process: bool,
+    ) -> Option<SyncReason> {
         if !self.gates.lease_held.load(Ordering::SeqCst) {
             return Some(SyncReason::OtherInstance);
         }
@@ -559,7 +727,10 @@ impl Router {
         if snap.is_beta {
             return Some(SyncReason::Beta);
         }
-        if self.cfg.live_signal == LiveSignalPolicy::ProcessCheck && self.process != Some(true) {
+        if check_process
+            && self.cfg.live_signal == LiveSignalPolicy::ProcessCheck
+            && self.process != Some(true)
+        {
             return Some(SyncReason::GameNotRunning);
         }
         None
@@ -577,7 +748,7 @@ impl Router {
     }
 
     fn content_state(&self, snap: &TransientSnapshot, feed_galaxy: Galaxy) {
-        let code = if snap.galaxy == Galaxy::Legacy || feed_galaxy == Galaxy::Legacy {
+        let code = if snap.galaxy != Galaxy::Live || feed_galaxy == Galaxy::Legacy {
             R_LEGACY
         } else if snap.is_beta {
             R_BETA

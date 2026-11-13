@@ -484,3 +484,114 @@ fn cursor_reset_is_sent_before_new_advances() {
         .unwrap();
     assert_eq!(store.sync_cursor(F1, TWO_CMDRS).unwrap(), Some(2));
 }
+
+#[test]
+fn lease_lost_before_flush_enqueues_nothing() {
+    let mut b = ready();
+    b.fixture("two_cmdrs.01.log", TWO_CMDRS, 1..=4, FeedOrigin::Live);
+    assert_eq!(b.mapper_calls.load(Ordering::SeqCst), 3);
+    // La lease se pierde entre la evaluación y el vaciado: solo se confirman los cursores.
+    b.lease.store(false, Ordering::SeqCst);
+    let outcome = b.router.flush().unwrap();
+    assert_eq!(outcome.inserted, 0);
+    assert_eq!(b.pending(), 0);
+    assert_eq!(b.cursor(F1, TWO_CMDRS), Some(4));
+
+    // Igual con «Servicios en línea» apagado justo antes del vaciado.
+    b.lease.store(true, Ordering::SeqCst);
+    b.fixture("two_cmdrs.01.log", TWO_CMDRS, 5..=6, FeedOrigin::Live);
+    b.online.store(false, Ordering::SeqCst);
+    b.router.flush().unwrap();
+    assert_eq!(b.pending(), 0);
+    assert_eq!(b.cursor(F1, TWO_CMDRS), Some(4));
+    assert_eq!(b.cursor(F2, TWO_CMDRS), Some(6));
+}
+
+#[test]
+fn blocked_reflects_unknown_galaxy_and_invalid_eddn_switch() {
+    let mut b = ready();
+    // Archivo sin `gameversion`: galaxia desconocida → bloquea y lo dice.
+    b.line(
+        "Journal.2026-03-09T100001.01.log",
+        1,
+        r#"{ "timestamp":"2026-03-09T10:00:01Z", "event":"Commander", "FID":"F0000001", "Name":"CMDR TESTER" }"#,
+        FeedOrigin::Live,
+    );
+    b.assert_nothing_enqueued();
+    assert_eq!(
+        b.router.blocked(SyncService::Inara, Some(F1)),
+        Some(SyncReason::Legacy)
+    );
+
+    // Interruptor EDDN con valor imposible de analizar: apagado de verdad.
+    let mut b = ready();
+    b.fixture("two_cmdrs.01.log", TWO_CMDRS, 1..=4, FeedOrigin::Live);
+    b.store
+        .kv_set(crate::router::EDDN_ENABLED_KEY, "not-a-date");
+    assert_eq!(
+        b.router.blocked(SyncService::Eddn, Some(F1)),
+        Some(SyncReason::SwitchOff)
+    );
+    b.store
+        .kv_set(crate::router::EDDN_ENABLED_KEY, "2026-03-01T00:00:00Z");
+    assert_eq!(b.router.blocked(SyncService::Eddn, Some(F1)), None);
+}
+
+/// Hace fallar las consultas de activación renombrando su tabla (y la restaura).
+fn break_activation(store: &tmc_store::Store, broken: bool) {
+    let sql = if broken {
+        "ALTER TABLE sync_activation RENAME TO sync_activation_off"
+    } else {
+        "ALTER TABLE sync_activation_off RENAME TO sync_activation"
+    };
+    store.exec_json(sql, &[]).unwrap();
+}
+
+#[test]
+fn failed_line_is_retried_not_lost() {
+    // Línea directa: el error no la pierde ni avanza el cursor; se reintenta en la siguiente llamada.
+    let mut b = ready();
+    b.fixture("two_cmdrs.01.log", TWO_CMDRS, 1..=3, FeedOrigin::Live);
+    b.router.flush().unwrap();
+    assert_eq!(b.cursor(F1, TWO_CMDRS), Some(3));
+    break_activation(&b.store, true);
+    let lines = fixture_lines("two_cmdrs.01.log");
+    let err = b.router.handle(tmc_model::sync::SyncFeed {
+        event: SyncFeedEvent::Journal {
+            ev: super::support::ev(&lines[3]),
+            file: TWO_CMDRS.into(),
+            line: 4,
+        },
+        origin: FeedOrigin::Live,
+        galaxy: tmc_model::state::Galaxy::Live,
+        game_running: true,
+    });
+    assert!(err.is_err());
+    assert_eq!(b.router.flush().unwrap().inserted, 0);
+    assert_eq!(b.cursor(F1, TWO_CMDRS), Some(3));
+    break_activation(&b.store, false);
+    b.router.tick().unwrap();
+    b.router.flush().unwrap();
+    assert_eq!(b.cursor(F1, TWO_CMDRS), Some(4));
+    assert_eq!(b.pending(), 3);
+
+    // Línea retenida (sin muestra de proceso): falla al liberarse y se vuelve a intentar en orden.
+    let mut b = bench(BenchOptions::default());
+    b.give_key(F1, early_activation());
+    b.fixture("two_cmdrs.01.log", TWO_CMDRS, 1..=4, FeedOrigin::Live);
+    break_activation(&b.store, true);
+    let err = b.router.handle(tmc_model::sync::SyncFeed {
+        event: SyncFeedEvent::GameProcess { running: true },
+        origin: FeedOrigin::Live,
+        galaxy: tmc_model::state::Galaxy::Live,
+        game_running: true,
+    });
+    assert!(err.is_err());
+    b.router.flush().unwrap();
+    assert_eq!(b.pending(), 0);
+    break_activation(&b.store, false);
+    b.router.tick().unwrap();
+    b.router.flush().unwrap();
+    assert_eq!(b.pending(), 3);
+    assert_eq!(b.cursor(F1, TWO_CMDRS), Some(4));
+}

@@ -2,6 +2,7 @@
 
 pub mod clock;
 pub mod ids;
+pub mod recovery;
 pub mod router;
 pub mod tracker;
 

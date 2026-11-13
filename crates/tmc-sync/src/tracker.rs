@@ -100,6 +100,11 @@ impl TransientTracker {
         self.state.clone()
     }
 
+    /// Galaxia del archivo según su `gameversion` (sin copiar la instantánea completa).
+    pub fn galaxy(&self) -> Galaxy {
+        self.state.galaxy
+    }
+
     /// Descarta todo el estado al empezar a leer otro archivo de diario.
     pub fn reset_for_new_file(&mut self) {
         self.state = TransientSnapshot::default();
