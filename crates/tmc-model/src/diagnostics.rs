@@ -860,6 +860,7 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
                     | "edsm.journal"
                     | "edsm.discard"
                     | "edsm.commander"
+                    | "inara.inapi"
                     | "eddn.upload"
                     | "unknown"
             )

@@ -1,18 +1,17 @@
-//! Servicio de integración con Inara InAPI v1.
+//! Servicio de integración con Inara InAPI v1 (legado, pendiente de retirada en E3-6).
 
 use serde_json::{Value, json};
 use std::sync::Arc;
-use tmc_model::accounts::InaraEvent;
-use tmc_model::state::Galaxy;
+use tmc_model::accounts::{InaraBatchEnvelope, InaraEvent, InaraHeader};
 use tmc_net::Transport;
-use tmc_net::inara::InaraClient;
+use tmc_net::inara::{INARA_API_URL, INARA_APP_NAME, MAX_EVENTS_PER_BATCH};
 use tmc_store::{AccountCredentialRecord, Store};
 
 pub const INARA_SERVICE_KEY: &str = "inara";
 
 /// Servicio de integración y sincronización con Inara InAPI v1.
 pub struct InaraService {
-    client: InaraClient,
+    transport: Arc<dyn Transport>,
     store: Store,
     app_key: Option<String>,
 }
@@ -29,12 +28,44 @@ impl InaraService {
         app_key: Option<String>,
     ) -> Self {
         Self {
-            client: InaraClient::new(transport),
+            transport,
             store,
             app_key: app_key
                 .map(|k| k.trim().to_string())
                 .filter(|k| !k.is_empty()),
         }
+    }
+
+    async fn post_events_legacy(
+        &self,
+        api_key: &str,
+        commander_name: Option<&str>,
+        events: Vec<InaraEvent<Value>>,
+    ) -> Result<Value, String> {
+        if events.is_empty() {
+            return Err("la cola de eventos para el lote está vacía".into());
+        }
+        let batch = InaraBatchEnvelope {
+            header: InaraHeader {
+                app_name: INARA_APP_NAME.to_string(),
+                app_version: env!("CARGO_PKG_VERSION").to_string(),
+                is_being_developed: cfg!(debug_assertions),
+                api_key: api_key.trim().to_string(),
+                commander_name: commander_name.map(|n| n.trim().to_string()),
+                commander_frontier_id: None,
+            },
+            events: events.into_iter().take(MAX_EVENTS_PER_BATCH).collect(),
+        };
+        let body = serde_json::to_string(&batch).map_err(|e| e.to_string())?;
+        let reply = self
+            .transport
+            .post_json(INARA_API_URL, &body)
+            .await
+            .map_err(|e| format!("{e:?}"))?;
+        if !(200..300).contains(&reply.status) {
+            return Err(format!("HTTP {}", reply.status));
+        }
+        serde_json::from_str(&reply.body).map_err(|e| e.to_string())
     }
 
     /// Obtiene la clave API personal guardada en SQLite si existe.
@@ -111,17 +142,37 @@ impl InaraService {
 
         let cmdr = commander_name.unwrap_or("").trim();
 
-        let profile_opt = if !cmdr.is_empty() {
-            self.client
-                .get_commander_profile(&key, cmdr, Galaxy::Live, true, true)
-                .await
-                .map_err(|e| format!("{e}"))?
+        let resp = if !cmdr.is_empty() {
+            self.post_events_legacy(
+                &key,
+                Some(cmdr),
+                vec![InaraEvent {
+                    event_name: "getCommanderProfile".to_string(),
+                    event_timestamp: chrono::Utc::now().to_rfc3339(),
+                    event_custom_id: None,
+                    event_data: json!({ "searchName": cmdr }),
+                }],
+            )
+            .await?
         } else {
-            self.client
-                .get_community_goals(&key, Galaxy::Live, true, true)
-                .await
-                .map_err(|e| format!("{e}"))?
+            self.post_events_legacy(
+                &key,
+                None,
+                vec![InaraEvent {
+                    event_name: "getCommunityGoalsRecent".to_string(),
+                    event_timestamp: chrono::Utc::now().to_rfc3339(),
+                    event_custom_id: None,
+                    event_data: json!([]),
+                }],
+            )
+            .await?
         };
+        let profile_opt = resp
+            .get("events")
+            .and_then(Value::as_array)
+            .and_then(|arr| arr.first())
+            .and_then(|e| e.get("eventData"))
+            .cloned();
 
         // Si se proporcionó una clave explícita y la llamada tuvo éxito, persistirla
         if let Some(new_k) = explicit_key {
@@ -159,10 +210,10 @@ impl InaraService {
             .get_effective_key()
             .ok_or_else(|| "Falta la clave API de Inara (personal o de aplicación)".to_string())?;
 
-        self.client
-            .send_batch(&key, commander_name, events, Galaxy::Live, true, true)
-            .await
-            .map_err(|e| format!("{e}"))
+        let count = events.len().min(MAX_EVENTS_PER_BATCH);
+        self.post_events_legacy(&key, commander_name, events)
+            .await?;
+        Ok(count)
     }
 }
 

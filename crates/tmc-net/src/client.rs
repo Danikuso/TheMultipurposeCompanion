@@ -149,6 +149,9 @@ fn endpoint_of(req: &Req) -> &'static str {
     if path.starts_with("https://www.edsm.net/api-commander-v1/") {
         return "edsm.commander";
     }
+    if path.starts_with(crate::inara::INARA_API_URL) {
+        return "inara.inapi";
+    }
     "unknown"
 }
 

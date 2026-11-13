@@ -56,6 +56,11 @@ pub struct InaraHeader {
     pub api_key: String,
     #[serde(rename = "commanderName", skip_serializing_if = "Option::is_none")]
     pub commander_name: Option<String>,
+    #[serde(
+        rename = "commanderFrontierID",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub commander_frontier_id: Option<String>,
 }
 
 /// Evento individual dentro de un lote de Inara InAPI v1.
@@ -65,6 +70,8 @@ pub struct InaraEvent<T> {
     pub event_name: String,
     #[serde(rename = "eventTimestamp")]
     pub event_timestamp: String,
+    #[serde(rename = "eventCustomID", skip_serializing_if = "Option::is_none")]
+    pub event_custom_id: Option<i64>,
     #[serde(rename = "eventData")]
     pub event_data: T,
 }
@@ -88,9 +95,11 @@ mod tests {
             is_being_developed: false,
             api_key: "k".into(),
             commander_name: None,
+            commander_frontier_id: Some("F123456".into()),
         };
         let json = serde_json::to_string(&header).unwrap();
         assert!(json.contains("\"isBeingDeveloped\":false"));
+        assert!(json.contains("\"commanderFrontierID\":\"F123456\""));
         assert!(!json.contains("isDeveloped"));
     }
 
@@ -122,10 +131,12 @@ mod tests {
                 is_being_developed: false,
                 api_key: "key123".to_string(),
                 commander_name: Some("Danikuso".to_string()),
+                commander_frontier_id: None,
             },
             events: vec![InaraEvent {
                 event_name: "setCommanderProfile".to_string(),
                 event_timestamp: "2026-10-23T12:00:00Z".to_string(),
+                event_custom_id: Some(77),
                 event_data: serde_json::json!({ "credits": 500000000 }),
             }],
         };
@@ -134,6 +145,7 @@ mod tests {
         assert!(json.contains("\"appName\":\"TMC\""));
         assert!(json.contains("\"APIkey\":\"key123\""));
         assert!(json.contains("\"eventName\":\"setCommanderProfile\""));
+        assert!(json.contains("\"eventCustomID\":77"));
     }
 
     #[test]
