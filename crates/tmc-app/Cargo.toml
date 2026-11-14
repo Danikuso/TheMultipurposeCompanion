@@ -33,6 +33,7 @@ uuid.workspace = true
 rusqlite.workspace = true
 sysinfo.workspace = true
 reqwest = { workspace = true }
+sha2 = { workspace = true }
 
 [dev-dependencies]
 tmc-net = { path = "../tmc-net", features = ["testing"] }
