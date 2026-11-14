@@ -169,3 +169,76 @@ test('ColonisationSupplyPanel shows completion card when all resources provided'
 
   expect(q('supply-all-complete')).toBeTruthy();
 });
+
+test('ColonisationSupplyPanel triggers trade.search on pending supply and shows nearby market results', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(new Response('{}'));
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal('fetch', fetchMock);
+  vi.stubGlobal('navigator', { clipboard: { writeText } });
+
+  mountWith(ColonisationSupplyPanel, {
+    'colonisation.depot': {
+      active_project: true,
+      market_id: 3224567,
+      station_name: 'Outpost Orion',
+      construction_type: 'Orbital Station Stage 1',
+      progress_percent: 40.0,
+      total_required: 1000,
+      total_provided: 400,
+      total_remaining: 600,
+      cargo_capacity: 752,
+      total_trips_remaining: 1,
+      is_docked: true,
+      resources: [
+        {
+          name: '$titanium_name;',
+          name_localised: 'Titanio',
+          required: 1000,
+          provided: 400,
+          remaining: 600,
+          progress_percent: 40.0,
+          trips_remaining: 1,
+        },
+      ],
+    },
+    'trade.search': {
+      commodity: 'titanium',
+      status: 'ok',
+      rows: [
+        {
+          station_name: 'Ray Gateway',
+          system_name: 'Diaguandri',
+          distance_ly: 14.2,
+          buy_price: 4200,
+          stock: 8500,
+          pad: 'Large',
+          pad_ok: true,
+          updated_at: null,
+          origin: 'Eddn',
+        },
+      ],
+    },
+  });
+
+  const findBtn = q('find-supply-market-btn') as HTMLButtonElement | null;
+  expect(findBtn).not.toBeNull();
+  findBtn!.click();
+  await new Promise((r) => setTimeout(r, 0));
+  flushSync();
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/api/actions/trade.search',
+    expect.objectContaining({ body: JSON.stringify({ commodity: 'titanium' }) }),
+  );
+
+  const results = q('colonisation-market-results');
+  expect(results).not.toBeNull();
+  expect(results!.textContent).toContain('Ray Gateway');
+  expect(results!.textContent).toContain('Diaguandri');
+
+  const copySysBtn = q('copy-market-system-btn') as HTMLButtonElement | null;
+  expect(copySysBtn).not.toBeNull();
+  copySysBtn!.click();
+  await new Promise((r) => setTimeout(r, 0));
+  expect(writeText).toHaveBeenCalledWith('Diaguandri');
+});
+

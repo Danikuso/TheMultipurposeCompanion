@@ -17,3 +17,7 @@ colonisation-copied = Copié !
 colonisation-supply-complete = Terminé
 colonisation-supply-delivered = Toutes les ressources du dépôt ont été livrées.
 colonisation-resource-missing = Manque : { $tons } t (~{ $trips } trajets)
+colonisation-find-market = Chercher un marché
+colonisation-market-results-title = Marchés proches avec stock
+colonisation-market-empty = Aucun marché proche enregistré avec du stock
+
