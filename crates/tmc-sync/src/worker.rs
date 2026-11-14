@@ -493,6 +493,24 @@ impl Worker {
             return;
         }
 
+        if matches!(effect, ServiceEffect::Connected)
+            && self.client.needs_credential()
+            && let Ok(Some(mut cred)) = self.store.sync_credential(service, cmdr_fid)
+            && cred.verified_at.is_none()
+        {
+            cred.verified_at = Some(now_rfc.clone());
+            let _ = self.store.put_sync_credential(&cred);
+            if self
+                .store
+                .activation(service, cmdr_fid)
+                .ok()
+                .flatten()
+                .is_none()
+            {
+                let _ = self.store.set_activation(service, cmdr_fid, now);
+            }
+        }
+
         for (fid, rejection) in rejections {
             let _ = self
                 .events

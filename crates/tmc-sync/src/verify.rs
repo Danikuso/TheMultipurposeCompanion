@@ -238,7 +238,15 @@ pub async fn run_key_verifier(
                     break;
                 }
             }
-            _ = verify_wake.notified() => {}
+            _ = verify_wake.notified() => {
+                let wake_now = clock.now_utc();
+                for entry in retries.values_mut() {
+                    if entry.exhausted_rejected {
+                        entry.exhausted_rejected = false;
+                        entry.next_at = wake_now;
+                    }
+                }
+            }
             _ = sleep_opt(wait_dur) => {}
         }
     }
@@ -253,5 +261,103 @@ async fn sleep_opt(dur: Option<Duration>) {
     match dur {
         Some(d) => tokio::time::sleep(d).await,
         None => std::future::pending().await,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::clock::TestClock;
+    use chrono::TimeZone;
+    use tmc_model::sync::KeyAssignment;
+    use tmc_net::HttpReplyEx;
+    use tmc_net::testing::ScriptedTransport;
+    use tmc_store::SyncCredential;
+
+    #[tokio::test(start_paused = true)]
+    async fn wake_retries_rejected_key_immediately() {
+        let store = Store::open_in_memory().unwrap();
+        let t0 = Utc.with_ymd_and_hms(2026, 11, 14, 19, 0, 0).unwrap();
+        let clock = TestClock::new(t0);
+        store.upsert_known_cmdr("F1", "CMDR TEST", t0).unwrap();
+        store
+            .put_sync_credential(&SyncCredential {
+                service: SyncService::Inara,
+                cmdr_fid: "F1".into(),
+                cmdr_name: "CMDR TEST".into(),
+                api_key: "TEST-KEY".into(),
+                created_at: t0.to_rfc3339(),
+                verified_at: None,
+                assignment: KeyAssignment::Confirmed,
+            })
+            .unwrap();
+
+        let transport = ScriptedTransport::new(vec![
+            Ok(HttpReplyEx {
+                status: 200,
+                body: r#"{"header":{"eventStatus":400},"events":[]}"#.into(),
+                retry_after_s: None,
+                rate_limit_remaining: None,
+                rate_limit_reset_s: None,
+            }),
+            Ok(HttpReplyEx {
+                status: 200,
+                body: r#"{"header":{"eventStatus":200},"events":[{"eventStatus":200,"eventCustomID":1}]}"#.into(),
+                retry_after_s: None,
+                rate_limit_remaining: None,
+                rate_limit_reset_s: None,
+            }),
+        ]);
+
+        let online = Arc::new(AtomicBool::new(true));
+        let verify_wake = Arc::new(Notify::new());
+        let status_wake = Arc::new(Notify::new());
+        let (verify_tx, mut verify_rx) = mpsc::channel(8);
+        let (sd_tx, sd_rx) = watch::channel(false);
+
+        let handle = tokio::spawn(run_key_verifier(
+            store.clone(),
+            transport.clone(),
+            clock,
+            online,
+            verify_wake.clone(),
+            Vec::new(),
+            status_wake,
+            verify_tx,
+            None,
+            sd_rx,
+        ));
+
+        // 1er intento tras el backoff inicial de 60 s: rechazado (exhausted_rejected = true).
+        for _ in 0..65 {
+            tokio::time::advance(Duration::from_secs(1)).await;
+            tokio::task::yield_now().await;
+        }
+        let first = tokio::time::timeout(Duration::from_secs(1), verify_rx.recv())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(first.check, Some(KeyCheck::Rejected));
+        assert_eq!(transport.posts().len(), 1);
+
+        // Despertar manual ("Reintentar ahora"): debe volver a consultar sin esperar 60 s ni cambiar la clave.
+        verify_wake.notify_one();
+        for _ in 0..5 {
+            tokio::task::yield_now().await;
+        }
+        let second = tokio::time::timeout(Duration::from_secs(1), verify_rx.recv())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(second.check, Some(KeyCheck::Valid));
+        assert_eq!(transport.posts().len(), 2);
+        let cred = store
+            .sync_credential(SyncService::Inara, "F1")
+            .unwrap()
+            .unwrap();
+        assert!(cred.verified_at.is_some());
+
+        let _ = sd_tx.send(true);
+        let _ = handle.await;
     }
 }

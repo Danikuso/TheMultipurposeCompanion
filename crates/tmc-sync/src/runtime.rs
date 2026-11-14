@@ -449,6 +449,15 @@ pub fn spawn_sync(deps: SyncDeps) -> SyncHandle {
                 }
                 ev = worker_events_rx.recv(), if worker_events_open => {
                     if let Some(event) = ev {
+                        if let crate::worker::WorkerEvent::Outcome {
+                            service,
+                            cmdr_fid,
+                            effect: crate::worker::ServiceEffect::Connected,
+                            ..
+                        } = &event
+                        {
+                            verify_errors.remove(&(*service, cmdr_fid.clone()));
+                        }
                         agg.on_worker_event(&event);
                         dirty = true;
                     } else {
@@ -637,5 +646,227 @@ mod tests {
         handle.shutdown().await;
         let _ = std::fs::remove_dir_all(&dir);
         assert!(seen, "expected Eddn SyncReport with recovered_session == 1");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn worker_connected_clears_verify_error_and_marks_verified_at() {
+        use crate::inara::client::InaraClient;
+        use serde_json::{Value, json};
+        use tmc_model::sync::{KeyAssignment, SyncReason, SyncState};
+        use tmc_net::HttpReplyEx;
+        use tmc_net::limiter::{Service, SharedRateLimiter};
+        use tmc_net::transport::{BoxFut, HttpPost, HttpReply, Transport, TransportError};
+        use tmc_store::SyncCredential;
+
+        struct ProfileFailThenUploadOkTransport;
+        impl Transport for ProfileFailThenUploadOkTransport {
+            fn get(&self, _url: &str) -> BoxFut<'_, Result<HttpReply, TransportError>> {
+                Box::pin(async { Err(TransportError::Connect("unused".into())) })
+            }
+            fn post_form(
+                &self,
+                _url: &str,
+                _form: &[(String, String)],
+            ) -> BoxFut<'_, Result<HttpReply, TransportError>> {
+                Box::pin(async { Err(TransportError::Connect("unused".into())) })
+            }
+            fn post<'a>(
+                &'a self,
+                req: HttpPost<'a>,
+            ) -> BoxFut<'a, Result<HttpReplyEx, TransportError>> {
+                let parsed: Value = serde_json::from_slice(req.body).unwrap_or(Value::Null);
+                let first_name = parsed["events"][0]["eventName"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_string();
+                let reply = if first_name == "getCommanderProfile" {
+                    json!({
+                        "header": { "eventStatus": 400, "eventStatusText": "Simulated error" },
+                        "events": []
+                    })
+                } else {
+                    let resp_events: Vec<Value> = parsed["events"]
+                        .as_array()
+                        .cloned()
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(|ev| {
+                            json!({
+                                "eventStatus": 200,
+                                "eventCustomID": ev["eventCustomID"],
+                                "eventData": {}
+                            })
+                        })
+                        .collect();
+                    json!({
+                        "header": { "eventStatus": 200 },
+                        "events": resp_events
+                    })
+                };
+                Box::pin(async move {
+                    Ok(HttpReplyEx {
+                        status: 200,
+                        body: reply.to_string(),
+                        retry_after_s: None,
+                        rate_limit_remaining: None,
+                        rate_limit_reset_s: None,
+                    })
+                })
+            }
+        }
+
+        let dir = std::env::temp_dir().join(format!(
+            "tmc-sync-verify-clear-runtime-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = "Journal.2026-11-10T100000.01.log";
+        std::fs::write(
+            dir.join(file),
+            "{\"timestamp\":\"2026-11-10T10:00:00Z\",\"event\":\"Fileheader\",\"part\":1,\"language\":\"English/UK\",\"gameversion\":\"4.0.0.1903\",\"build\":\"r310123/r0 \"}\n",
+        )
+        .unwrap();
+
+        let store = Store::open_in_memory().unwrap();
+        let now = chrono::Utc
+            .with_ymd_and_hms(2026, 11, 10, 10, 5, 0)
+            .unwrap();
+        store
+            .upsert_known_cmdr("F1000001", "CMDR VER", now)
+            .unwrap();
+        store
+            .put_sync_credential(&SyncCredential {
+                service: SyncService::Inara,
+                cmdr_fid: "F1000001".into(),
+                cmdr_name: "CMDR VER".into(),
+                api_key: "INARA-KEY-MIGRATED".into(),
+                created_at: now.to_rfc3339(),
+                verified_at: None,
+                assignment: KeyAssignment::Confirmed,
+            })
+            .unwrap();
+        store
+            .set_activation(SyncService::Inara, "F1000001", now)
+            .unwrap();
+
+        let limiter = SharedRateLimiter::for_service(Service::Inara);
+        let transport: Arc<dyn Transport> = Arc::new(ProfileFailThenUploadOkTransport);
+        let client: Arc<dyn ServiceClient> = Arc::new(InaraClient::new(transport.clone(), limiter));
+
+        let (core_tx, mut core_rx) = mpsc::channel(64);
+        let handle = spawn_sync(SyncDeps {
+            store: store.clone(),
+            transport,
+            online: Arc::new(AtomicBool::new(true)),
+            core_events: core_tx,
+            journal_dir: dir.clone(),
+            env: EnvGates::default(),
+            live_signal: LiveSignalPolicy::JournalActivity,
+            clock: TestClock::new(now),
+            process_kind: "desktop",
+            clients: vec![client],
+            mappers: vec![Box::new(crate::inara::InaraMapper::new())],
+        });
+
+        let load = parse_line(
+            r#"{"timestamp":"2026-11-10T10:06:00Z","event":"LoadGame","FID":"F1000001","Commander":"CMDR VER","Horizons":true,"Odyssey":true,"gameversion":"4.0.0.1903","build":"r310123/r0 "}"#,
+        )
+        .unwrap();
+        handle
+            .feed
+            .send(SyncFeed {
+                event: SyncFeedEvent::Journal {
+                    ev: load,
+                    file: file.to_string(),
+                    line: 2,
+                },
+                origin: FeedOrigin::CatchUp,
+                galaxy: Galaxy::Live,
+                game_running: true,
+            })
+            .unwrap();
+        handle
+            .feed
+            .send(SyncFeed {
+                event: SyncFeedEvent::CatchUpDone,
+                origin: FeedOrigin::CatchUp,
+                galaxy: Galaxy::Live,
+                game_running: true,
+            })
+            .unwrap();
+
+        // Primero, la verificación inicial de clave falla -> SyncReport::Inara entra en Error/Auth.
+        let mut saw_error_auth = false;
+        for _ in 0..70 {
+            tokio::time::advance(Duration::from_secs(1)).await;
+            tokio::task::yield_now().await;
+            while let Ok(SourceEvent::SyncReport(rep)) = core_rx.try_recv() {
+                if let SyncReport::Inara(st) = *rep
+                    && st.status.state == SyncState::Error
+                    && st.status.reason == Some(SyncReason::Auth)
+                {
+                    saw_error_auth = true;
+                }
+            }
+            if saw_error_auth {
+                break;
+            }
+        }
+        assert!(
+            saw_error_auth,
+            "expected initial Error/Auth report from verify"
+        );
+
+        // Luego llega un salto en vivo y el lote real de Inara se envía con éxito (200 OK).
+        let jump = parse_line(
+            r#"{"timestamp":"2026-11-10T10:06:10Z","event":"FSDJump","StarSystem":"Sol","SystemAddress":10477373803,"StarPos":[0.0,0.0,0.0],"JumpDist":8.5}"#,
+        )
+        .unwrap();
+        handle
+            .feed
+            .send(SyncFeed {
+                event: SyncFeedEvent::Journal {
+                    ev: jump,
+                    file: file.to_string(),
+                    line: 3,
+                },
+                origin: FeedOrigin::Live,
+                galaxy: Galaxy::Live,
+                game_running: true,
+            })
+            .unwrap();
+
+        let mut saw_connected = false;
+        for _ in 0..20 {
+            tokio::time::advance(Duration::from_secs(1)).await;
+            tokio::task::yield_now().await;
+            while let Ok(SourceEvent::SyncReport(rep)) = core_rx.try_recv() {
+                if let SyncReport::Inara(st) = *rep
+                    && st.status.state == SyncState::Connected
+                    && st.status.reason.is_none()
+                    && st.status.sent_total >= 1
+                {
+                    saw_connected = true;
+                }
+            }
+            if saw_connected {
+                break;
+            }
+        }
+        handle.shutdown().await;
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(
+            saw_connected,
+            "expected SyncReport::Inara to become Connected after successful upload"
+        );
+        let cred = store
+            .sync_credential(SyncService::Inara, "F1000001")
+            .unwrap()
+            .unwrap();
+        assert!(
+            cred.verified_at.is_some(),
+            "expected verified_at persisted once real batch succeeded"
+        );
     }
 }

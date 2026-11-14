@@ -121,9 +121,6 @@ pub fn build_profile_request(
     commander_name: &str,
     commander_fid: Option<&str>,
 ) -> Value {
-    let event_data = non_empty(commander_name)
-        .map(|name| serde_json::json!({ "searchName": name }))
-        .unwrap_or_else(|| serde_json::json!({}));
     let envelope = InaraBatchEnvelope {
         header: InaraHeader {
             app_name: INARA_APP_NAME.to_string(),
@@ -135,9 +132,9 @@ pub fn build_profile_request(
         },
         events: vec![InaraEvent {
             event_name: "getCommanderProfile".to_string(),
-            event_timestamp: chrono::Utc::now().to_rfc3339(),
+            event_timestamp: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
             event_custom_id: Some(1),
-            event_data,
+            event_data: serde_json::json!({}),
         }],
     };
     serde_json::to_value(envelope).unwrap_or(Value::Null)
@@ -301,8 +298,8 @@ pub fn classify_profile(reply: &Result<HttpReplyEx, TransportError>) -> KeyCheck
         None => {}
     }
     match classified.per_event.first().map(|(_, v)| v) {
-        Some(InaraVerdict::Sent { .. }) => KeyCheck::Valid,
-        Some(InaraVerdict::Rejected { .. } | InaraVerdict::AuthError) => KeyCheck::Rejected,
+        Some(InaraVerdict::Sent { .. } | InaraVerdict::Rejected { .. }) => KeyCheck::Valid,
+        Some(InaraVerdict::AuthError) => KeyCheck::Rejected,
         Some(InaraVerdict::Retry { .. }) | None => KeyCheck::Unreachable,
     }
 }
@@ -555,5 +552,26 @@ mod tests {
             classify_profile(&ok_reply(200, html, None)),
             KeyCheck::Unreachable
         );
+
+        let profile_missing_header_ok = json!({
+            "header": { "eventStatus": 200 },
+            "events": [{ "eventStatus": 400, "eventStatusText": "No commander found." }]
+        })
+        .to_string();
+        assert_eq!(
+            classify_profile(&ok_reply(200, &profile_missing_header_ok, None)),
+            KeyCheck::Valid
+        );
+    }
+
+    #[test]
+    fn profile_request_uses_empty_event_data_and_sec_timestamp() {
+        let req = build_profile_request("fake-key", "ExampleCmdr", Some("F000001"));
+        let ev = &req["events"][0];
+        assert_eq!(ev["eventName"], "getCommanderProfile");
+        assert_eq!(ev["eventData"], json!({}));
+        let ts = ev["eventTimestamp"].as_str().unwrap();
+        assert!(ts.ends_with('Z'), "timestamp must end with Z: {ts}");
+        assert!(!ts.contains('.'), "timestamp must omit subseconds: {ts}");
     }
 }
