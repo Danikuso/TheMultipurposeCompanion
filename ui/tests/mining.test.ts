@@ -252,3 +252,15 @@ test('session uses backend names and full bin labels', () => {
   expect(bins[0].textContent).toContain('Platino');
   expect(bins[1].textContent).toContain('Paladio');
 });
+
+test('sell best card offers one-click system copy without expanding option table', () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal('navigator', { clipboard: { writeText } });
+  mountWith(SellPanel, { 'mining.sell': sellTopic() });
+  const copyBestBtn = q('sell-best-copy-system') as HTMLButtonElement | null;
+  expect(copyBestBtn).not.toBeNull();
+  copyBestBtn!.click();
+  flushSync();
+  expect(writeText).toHaveBeenCalledWith('LHS 20');
+});
+

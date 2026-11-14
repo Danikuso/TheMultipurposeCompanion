@@ -99,3 +99,5 @@ combat-ax-type-scythe = Sense
 combat-ax-type-glaive = Glaive
 combat-ax-type-orthrus = Orthrus
 combat-ax-type-unknown = unbekannt
+combat-copy-if-system = IF kopieren
+

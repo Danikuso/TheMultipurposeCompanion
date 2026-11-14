@@ -39,6 +39,19 @@
     return Number.isNaN(ts) || now == null ? null : ageShort(Math.max(0, (now - ts) / 1000));
   });
   const unredeemed = $derived(s ? s.vouchers_total.bounty + s.vouchers_total.combat_bond : 0);
+  let copiedIfSystem = $state<string | null>(null);
+
+  async function copyIfSystem(sys: string) {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(sys);
+        copiedIfSystem = sys;
+        setTimeout(() => {
+          if (copiedIfSystem === sys) copiedIfSystem = null;
+        }, 2000);
+      }
+    } catch { /* Ignorado sin portapapeles */ }
+  }
 
   function fee(amount: number): string {
     return credits(Math.round((amount * (s?.if_fee_pct ?? 25)) / 100));
@@ -69,6 +82,22 @@
       <div class="row">
         <span class="label">{t('combat-rank')}</span>
         <span data-testid="rank-progress">{t('combat-rank-progress', { rank: rankName, pct: pct(s.combat_progress == null ? null : s.combat_progress / 100) })}</span>
+      </div>
+    {/if}
+    {#if unredeemed > 0}
+      <div class="row unredeemed-summary" data-testid="session-unredeemed-summary">
+        <span class="label">{t('combat-vouchers-title')}: <strong class="mono">{credits(unredeemed)}</strong></span>
+        {#if s.nearest_if}
+          <span class="if-quick">
+            <span class="mono">{s.nearest_if.system_name}</span>
+            <button
+              type="button"
+              class="btn-copy-if"
+              data-testid="copy-nearest-if-system"
+              onclick={() => copyIfSystem(s.nearest_if!.system_name)}
+            >{copiedIfSystem === s.nearest_if.system_name ? '✓' : t('combat-copy-if-system')}</button>
+          </span>
+        {/if}
       </div>
     {/if}
     <div class="actions-row">
@@ -126,4 +155,8 @@
   .amount { margin-left: auto; }
   .if { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.6rem 0; }
   .err { color: var(--hud-danger); }
+  .unredeemed-summary { align-items: center; padding: 0.35rem 0.55rem; background: rgba(255, 170, 0, 0.08); border: 1px solid rgba(255, 170, 0, 0.25); border-radius: 4px; }
+  .if-quick { display: inline-flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+  .btn-copy-if { font-size: 0.72rem; padding: 0.15rem 0.45rem; cursor: pointer; background: transparent; border: 1px solid var(--hud-border); border-radius: 3px; color: var(--hud-text); }
+  .btn-copy-if:hover { border-color: var(--hud-primary); color: var(--hud-primary); }
 </style>

@@ -108,6 +108,11 @@
     system?.geo_signals ?? 
     (system?.rows?.reduce((acc, r) => acc + (r.geo ?? 0), 0) ?? 0)
   );
+  const priorityBodies = $derived(
+    (system?.rows ?? []).filter(
+      (r) => (r.advice?.includes('map') && ((r.marks ?? 0) & 32) === 0) || (r.bio ?? 0) > 0,
+    ),
+  );
 
   async function copySystem() {
     if (!system?.system) return;
@@ -260,6 +265,25 @@
         {/if}
       </div>
     </div>
+
+    {#if priorityBodies.length > 0}
+      <div class="priority-targets-strip" data-testid="exploration-priority-targets">
+        <span class="priority-label">{t('exploration-priority-targets')}:</span>
+        <div class="priority-pills">
+          {#each priorityBodies as b (b.body_id)}
+            <span class="priority-pill" data-testid="priority-target-pill">
+              <strong>{b.short_name}</strong>
+              {#if b.advice?.includes('map') && ((b.marks ?? 0) & 32) === 0}
+                <span class="pill-tag map-tag">★ {t('exploration-advice-map')}</span>
+              {/if}
+              {#if (b.bio ?? 0) > 0}
+                <span class="pill-tag bio-tag">🌿 {b.bio}</span>
+              {/if}
+            </span>
+          {/each}
+        </div>
+      </div>
+    {/if}
   {:else}
     <p class="empty">{t('empty-no-data')}</p>
   {/if}
@@ -464,4 +488,11 @@
   footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .75rem; margin-top: .75rem; padding-top: 0.5rem; border-top: 1px solid var(--hud-border-subtle); font-size: 0.82rem; color: var(--hud-muted); }
   .unsold-info { display: flex; align-items: center; gap: 0.6rem; }
   .risk { color: var(--hud-danger); }
+  .priority-targets-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; margin: 0.55rem 0 0.25rem; padding: 0.45rem 0.6rem; background: rgba(255, 113, 0, 0.06); border: 1px solid rgba(255, 113, 0, 0.25); border-radius: 4px; }
+  .priority-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--hud-primary); }
+  .priority-pills { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .priority-pill { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; padding: 0.15rem 0.45rem; border-radius: 3px; background: rgba(15, 23, 42, 0.65); border: 1px solid var(--hud-border-subtle); color: var(--hud-text); }
+  .pill-tag { font-size: 0.7rem; font-weight: 600; }
+  .map-tag { color: var(--hud-primary); }
+  .bio-tag { color: var(--hud-success); }
 </style>

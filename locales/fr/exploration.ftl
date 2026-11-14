@@ -72,3 +72,5 @@ exploration-geo-total = { $count } signaux géo
 exploration-non-body-signals = { $count } signaux spatiaux
 exploration-system-address = Identifiant du système
 exploration-current-location = Vous êtes ici
+exploration-priority-targets = Cibles prioritaires
+

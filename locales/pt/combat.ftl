@@ -101,3 +101,5 @@ combat-ax-type-scythe = Foice
 combat-ax-type-glaive = Glaive
 combat-ax-type-orthrus = Orthrus
 combat-ax-type-unknown = desconhecido
+combat-copy-if-system = Copiar IF
+
