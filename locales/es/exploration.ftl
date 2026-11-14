@@ -72,3 +72,5 @@ exploration-geo-total = { $count } señales geo
 exploration-non-body-signals = { $count } señales espaciales
 exploration-system-address = ID Sistema
 exploration-current-location = Estás aquí
+exploration-priority-targets = Objetivos prioritarios
+

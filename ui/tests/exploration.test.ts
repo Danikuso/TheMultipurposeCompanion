@@ -201,3 +201,20 @@ test('system panel renders rich telemetry chips, address, distance to sol and cu
   expect(currentPin).not.toBeNull();
   expect(currentPin?.getAttribute('title')).toBe(t('exploration-current-location'));
 });
+
+test('priority targets strip highlights unmapped recommended bodies and bio bodies in summary', () => {
+  render([
+    body(1, { short_name: 'A 1', advice: ['map'], marks: 1 }),
+    body(2, { short_name: 'B 2', advice: ['land'], bio: 3, marks: 2 }),
+    body(3, { short_name: 'C 3', advice: ['map'], marks: 32, bio: 0 }),
+  ]);
+  const strip = target.querySelector('[data-testid="exploration-priority-targets"]');
+  expect(strip).not.toBeNull();
+  const pills = [...target.querySelectorAll('[data-testid="priority-target-pill"]')];
+  expect(pills).toHaveLength(2);
+  expect(pills[0].textContent).toContain('A 1');
+  expect(pills[1].textContent).toContain('B 2');
+  expect(pills[1].textContent).toContain('3');
+  expect(strip!.textContent).not.toContain('C 3');
+});
+

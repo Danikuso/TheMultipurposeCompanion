@@ -30,6 +30,19 @@
   const groups = $derived(
     plan ? Object.entries(plan.by_commodity).filter(([, opts]) => opts.length > 0) : [],
   );
+  const bestStationSystem = $derived.by(() => {
+    if (!plan?.best_station_total) return null;
+    const label = plan.best_station_total[0];
+    for (const opts of Object.values(plan.by_commodity)) {
+      for (const o of opts) {
+        if (label.includes(o.station_name) || label.includes(o.system_name)) {
+          return o.system_name;
+        }
+      }
+    }
+    const parts = label.split('·');
+    return parts.length > 1 ? parts[parts.length - 1].trim() : label.trim();
+  });
 
   function padLabel(p: PadSize | null): string {
     return p === 'Small' ? t('mining-pad-small') : p === 'Medium' ? t('mining-pad-medium') : p === 'Large' ? t('mining-pad-large') : '?';
@@ -65,6 +78,16 @@
         <div class="best-info">
           {t('mining-best-total', { credits: credits(plan.best_station_total[1]), station: plan.best_station_total[0] })}
         </div>
+        {#if bestStationSystem}
+          <button
+            type="button"
+            class="btn-copy"
+            data-testid="sell-best-copy-system"
+            onclick={() => copySystem(bestStationSystem)}
+            title={t('action-copy-system')}
+            aria-label={t('ui-copy-value', { value: bestStationSystem })}
+          >{copiedSystem === bestStationSystem ? '✓' : '⎘'}</button>
+        {/if}
       </div>
     {/if}
 
@@ -142,6 +165,10 @@
     color: var(--hud-warning);
     font-size: 1.1rem;
     filter: drop-shadow(0 0 6px rgba(255, 170, 0, 0.5));
+  }
+  .best-info {
+    flex: 1;
+    min-width: 0;
   }
   .commodity-header {
     display: flex;

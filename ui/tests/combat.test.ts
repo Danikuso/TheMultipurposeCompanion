@@ -329,3 +329,18 @@ test('ax types are localized with raw fallback', () => {
   expect(target.querySelector('[data-testid="ax-kill-Weird_Thing"]')!.textContent).toContain('Weird Thing');
   expect(target.querySelector('[data-testid="ax-target"]')!.textContent).toBe('Objetivo: Medusa');
 });
+
+test('hunting panel surfaces unredeemed total and one-click IF system copy in basic view', async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal('navigator', { clipboard: { writeText } });
+  mountWith(HuntingPanel, 'combat.session', sessionTopic());
+  const summary = target.querySelector('[data-testid="session-unredeemed-summary"]');
+  expect(summary).not.toBeNull();
+  expect(summary!.textContent).toContain('81.000 CR');
+  const copyIfBtn = target.querySelector('[data-testid="copy-nearest-if-system"]') as HTMLButtonElement | null;
+  expect(copyIfBtn).not.toBeNull();
+  copyIfBtn!.click();
+  await new Promise((r) => setTimeout(r, 0));
+  expect(writeText).toHaveBeenCalledWith('Alpha Centauri');
+});
+

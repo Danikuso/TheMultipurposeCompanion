@@ -99,3 +99,5 @@ combat-ax-type-scythe = Guadaña
 combat-ax-type-glaive = Glaive
 combat-ax-type-orthrus = Orthrus
 combat-ax-type-unknown = desconocido
+combat-copy-if-system = Copiar IF
+
