@@ -196,3 +196,7 @@ engineering-reputation-friendly = Amistoso
 engineering-reputation-allied = Aliado
 engineering-reputation-cordial = Cordial
 engineering-reputation-unfriendly = Poco amistoso
+engineering-route-plan-title = Ruta recomendada de ingeniería
+engineering-route-step-trader = Parada en comerciante
+engineering-route-step-workshop = Taller del ingeniero
+
