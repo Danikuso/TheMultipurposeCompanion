@@ -442,6 +442,18 @@ impl ActionHost for AppActions {
         args: &Value,
         snapshot: &BTreeMap<String, Value>,
     ) -> Result<Value, ActionError> {
+        let sync_capi_fid = |capi: &crate::capi_service::CapiService| {
+            let fid = args.get("fid").and_then(Value::as_str).or_else(|| {
+                snapshot
+                    .get("core.cmdr")
+                    .and_then(|c| c.get("fid"))
+                    .and_then(Value::as_str)
+            });
+            if let Some(f) = fid {
+                capi.set_active_fid(Some(f));
+            }
+        };
+
         match name {
             "frontier.login" => {
                 let redirect_uri = args
@@ -453,11 +465,13 @@ impl ActionHost for AppActions {
                         "https://localhost:47320/api/auth/frontier/callback".to_string()
                     });
                 let capi = self.capi_service.as_ref().ok_or(ActionError::NotFound)?;
+                sync_capi_fid(capi);
                 let (url, state) = capi.start_login(&redirect_uri);
                 return Ok(json!({ "url": url, "state": state }));
             }
             "frontier.logout" => {
                 let capi = self.capi_service.as_ref().ok_or(ActionError::NotFound)?;
+                sync_capi_fid(capi);
                 capi.clear_session()
                     .map_err(|e| ActionError::Failed(e.to_string()))?;
                 if let Some(runtime) = &self.runtime {
@@ -474,6 +488,7 @@ impl ActionHost for AppActions {
             }
             "frontier.submit_callback" => {
                 let capi = self.capi_service.as_ref().ok_or(ActionError::NotFound)?;
+                sync_capi_fid(capi);
                 let raw_input = args
                     .get("url")
                     .or_else(|| args.get("code"))
@@ -580,6 +595,7 @@ impl ActionHost for AppActions {
             }
             "frontier.fleet" => {
                 let capi = self.capi_service.as_ref().ok_or(ActionError::NotFound)?;
+                sync_capi_fid(capi);
                 let capi_cloned = capi.clone();
                 let events = self.runtime.as_ref().map(|r| r.events.clone());
 

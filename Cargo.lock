@@ -5410,6 +5410,7 @@ dependencies = [
  "tmc-model",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
