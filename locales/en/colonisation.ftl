@@ -17,3 +17,7 @@ colonisation-copied = Copied!
 colonisation-supply-complete = Complete
 colonisation-supply-delivered = All depot resources have been delivered.
 colonisation-resource-missing = Missing { $tons } t (~{ $trips } trips)
+colonisation-find-market = Find market
+colonisation-market-results-title = Nearby markets with stock
+colonisation-market-empty = No nearby markets recorded with stock
+
