@@ -7,12 +7,12 @@
   import { topic } from '../../lib/ws.svelte';
   import { engineeringActions, shipFlowAction, syncEngineeringContext } from './actions.svelte';
   import Panel from '../../shell/Panel.svelte';
-  import { blockerLabel, blueprintLabel, engineeringDataLabel, engineerStatusLabel, materialName, contributionCommodityLabel } from './labels';
+  import { blockerLabel, blueprintLabel, categoryLabel, engineeringDataLabel, engineerStatusLabel, materialName, contributionCommodityLabel } from './labels';
   import { pushToast } from '../../shell/Toasts.svelte';
   import { createSectionsReader } from './sections.svelte';
   import MercCoinsLine from './MercCoins.svelte';
   import GradeBadge from '../../lib/icons/GradeBadge.svelte';
-  import type { EngineeringFlowTopic, FlowRows, InventoryTopic } from './types';
+  import type { EngineeringFlowTopic, FlowLine, FlowRows, InventoryTopic, MaterialCategory, RemoteStation, SourcesTopic } from './types';
 
   const data = $derived(topic<EngineeringFlowTopic>('engineering.flow'));
   // La visibilidad del flujo la decide la ranura abierta, no el estado del cálculo.
@@ -29,8 +29,33 @@
   const identity = $derived(JSON.stringify([topic<{ name?: string }>('core.cmdr')?.name, topic<{ ship_id?: number }>('engineering.ship')?.ship_id]));
   const context = $derived(JSON.stringify([identity, slot]));
   const inventory = $derived(topic<InventoryTopic>('engineering.inventory'));
+  const sources = $derived(topic<SourcesTopic>('engineering.sources'));
   const recommended = $derived(data?.engineer?.nearest_unlocked ?? data?.engineer?.nearest_any);
   const next = $derived(data?.engineer?.next_step);
+  const traderOrder: MaterialCategory[] = ['Raw', 'Manufactured', 'Encoded'];
+  const routeTraderStops = $derived.by(() => {
+    if (!data || !calculated || data.status !== 'ok') return [];
+    const byCat = new Map<MaterialCategory, NonNullable<FlowLine['trade']>[]>();
+    for (const row of lineRows) {
+      if (row.trade) {
+        const list = byCat.get(row.trade.trader) ?? [];
+        list.push(row.trade);
+        byCat.set(row.trade.trader, list);
+      }
+    }
+    return traderOrder
+      .filter((cat) => byCat.has(cat))
+      .map((cat) => {
+        const st = sources?.traders?.[cat];
+        const station: RemoteStation | null =
+          st && typeof st === 'object' && 'Ok' in st ? st.Ok : null;
+        return {
+          category: cat,
+          trades: byCat.get(cat) ?? [],
+          station,
+        };
+      });
+  });
   let defaults = $state([1, 1, 1, 1, 4]);
   let blueprint = $state('');
   let experimental = $state('');
@@ -454,6 +479,69 @@
         </div>
       </div>
 
+      {#if routeTraderStops.length > 0 || recommended}
+        <section class="route-plan-box" data-testid="flow-route-plan">
+          <h3>{t('engineering-route-plan-title')}</h3>
+          <ol class="route-steps-list">
+            {#each routeTraderStops as stop, idx}
+              <li class="route-step-item" data-testid={`flow-route-trader-${stop.category}`}>
+                <span class="step-num">{idx + 1}</span>
+                <div class="route-step-body">
+                  <div class="route-step-head">
+                    <strong>{t('engineering-route-step-trader')} · {categoryLabel(stop.category)}</strong>
+                    {#if stop.station}
+                      <button
+                        type="button"
+                        class="btn-copy"
+                        data-testid={`flow-route-copy-trader-${stop.category}`}
+                        title={t('engineering-copy-system')}
+                        onclick={() => copyText(stop.station!.system_name)}
+                      >{t('engineering-copy-system')}</button>
+                    {/if}
+                  </div>
+                  <p class="route-step-loc">
+                    {#if stop.station}
+                      {stop.station.station_name} · <span class="mono">{stop.station.system_name}</span> ({t('engineering-distance-ly', { distance: decimal(stop.station.distance_ly) })})
+                    {:else}
+                      {t('engineering-no-data')}
+                    {/if}
+                  </p>
+                  <ul class="route-trade-sublist">
+                    {#each stop.trades as tr}
+                      <li>{t('engineering-trade-proposal', { give: integer(tr.give), material: name(tr.give_key), receive: `${integer(tr.get)} ${name(tr.get_key)}` })}</li>
+                    {/each}
+                  </ul>
+                </div>
+              </li>
+            {/each}
+            {#if recommended}
+              <li class="route-step-item" data-testid="flow-route-workshop">
+                <span class="step-num">{routeTraderStops.length + 1}</span>
+                <div class="route-step-body">
+                  <div class="route-step-head">
+                    <strong>{t('engineering-route-step-workshop')} · {recommended.name}</strong>
+                    {#if recommended.system}
+                      <button
+                        type="button"
+                        class="btn-copy"
+                        data-testid="flow-route-copy-engineer"
+                        title={t('engineering-copy-system')}
+                        onclick={() => copyText(recommended.system!)}
+                      >{t('engineering-copy-system')}</button>
+                    {/if}
+                  </div>
+                  <p class="route-step-loc">
+                    <span class="mono">{recommended.system ?? t('engineering-no-data')}</span>
+                    · {recommended.distance_ly == null ? t('engineering-no-data') : t('engineering-distance-ly', { distance: decimal(recommended.distance_ly) })}
+                    · {engineerStatusLabel(recommended.status)}
+                  </p>
+                </div>
+              </li>
+            {/if}
+          </ol>
+        </section>
+      {/if}
+
       <div class="pin-goal-wrap">
         <button
           data-testid="pin-goal"
@@ -563,6 +651,15 @@
   .pin-goal-wrap { margin-top: .8rem; }
   .btn-pin { width: 100%; background: rgba(0, 255, 100, 0.15); color: #00ff66; border: 1px solid rgba(0, 255, 100, 0.4); padding: .5rem; border-radius: 4px; font-weight: 700; cursor: pointer; }
   .btn-pin:hover:not(:disabled) { background: #00ff66; color: #000; }
+
+  .route-plan-box { margin: 1rem 0 .4rem; padding: .75rem; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--hud-border); border-radius: 6px; }
+  .route-plan-box h3 { font-size: .9rem; color: var(--hud-primary); margin: 0 0 .55rem; }
+  .route-steps-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .5rem; }
+  .route-step-item { display: flex; align-items: flex-start; gap: .6rem; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--hud-border); border-radius: 4px; padding: .5rem .65rem; }
+  .route-step-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .2rem; }
+  .route-step-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; flex-wrap: wrap; font-size: .82rem; }
+  .route-step-loc { margin: 0; font-size: .78rem; color: var(--hud-muted); overflow-wrap: anywhere; }
+  .route-trade-sublist { margin: .15rem 0 0; padding-left: 1rem; font-size: .75rem; color: #00d2ff; }
 
   .mono { font-family: var(--font-mono); }
   .muted { color: var(--hud-muted); }

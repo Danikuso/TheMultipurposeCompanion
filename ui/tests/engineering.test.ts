@@ -777,3 +777,41 @@ test('flow auto-correction of an inapplicable grade leaves the draft needing rec
  expect((input('target-grade') as HTMLSelectElement).value).toBe('4');
  expect(target.textContent).toContain('Calcula los materiales para estos ajustes'); expect(target.querySelector('[data-testid="pin-goal"]')).toBeNull();
 });
+test('flow route plan lists needed material traders then engineer workshop with one-click copy', async () => {
+ const writeText = vi.fn(async () => {});
+ vi.stubGlobal('navigator', { clipboard: { writeText } });
+ await showFlow();
+ const plan = target.querySelector('[data-testid="flow-route-plan"]');
+ expect(plan).not.toBeNull();
+ const traderEncoded = plan!.querySelector('[data-testid="flow-route-trader-Encoded"]');
+ expect(traderEncoded).not.toBeNull();
+ expect(traderEncoded!.textContent).toContain('Fake Port');
+ expect(traderEncoded!.textContent).toContain('Synthetic Neighbour');
+ expect(plan!.querySelector('[data-testid="flow-route-workshop"]')?.textContent).toContain('Professor Palin');
+ (plan!.querySelector('[data-testid="flow-route-copy-trader-Encoded"]') as HTMLButtonElement).click();
+ await settle();
+ expect(writeText).toHaveBeenCalledWith('Synthetic Neighbour');
+ (plan!.querySelector('[data-testid="flow-route-copy-engineer"]') as HTMLButtonElement).click();
+ await settle();
+ expect(writeText).toHaveBeenCalledWith('Arque');
+});
+test('sources panel offers one-click system copy for available traders and brokers', async () => {
+ const writeText = vi.fn(async () => {});
+ vi.stubGlobal('navigator', { clipboard: { writeText } });
+ live.topics['engineering.sources'] = {
+  ...fixture['engineering.sources'],
+  brokers: { Human: { Ok: { station_name: 'Jameson Memorial', system_name: 'Shinrarta Dezhra', distance_ly: 14.5, max_pad: 'Large' } } }
+ };
+ panel(SourcesPanel);
+ const copyTrader = target.querySelector('[data-testid="source-copy-trader-Encoded"]') as HTMLButtonElement | null;
+ const copyBroker = target.querySelector('[data-testid="source-copy-broker-Human"]') as HTMLButtonElement | null;
+ expect(copyTrader).not.toBeNull();
+ expect(copyBroker).not.toBeNull();
+ copyTrader!.click();
+ await settle();
+ expect(writeText).toHaveBeenCalledWith('Synthetic Neighbour');
+ copyBroker!.click();
+ await settle();
+ expect(writeText).toHaveBeenCalledWith('Shinrarta Dezhra');
+});
+
