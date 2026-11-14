@@ -1,6 +1,6 @@
 {
-  "version": "1.3.0",
-  "date": "2026-11-06",
+  "version": "1.4.0",
+  "date": "2026-11-14",
   "checks": [
     {
       "language": "es",
@@ -13,7 +13,7 @@
       "toc_links": 21,
       "outline_destinations": "PASS",
       "visual_review": "PASS",
-      "sha256": "a84cd3f35572acc6e8c5d0ae9adda15a5ab37d875a0ee04813bc40bfa41204ed"
+      "sha256": "8fb31a3854b90b7f238be25f490117f22c8bb789bdf00218382767d416f148ed"
     },
     {
       "language": "en",
@@ -22,11 +22,11 @@
       "content": "PASS",
       "bounds": "PASS",
       "rendered": 23,
-      "pdf_bytes": 101538,
+      "pdf_bytes": 101537,
       "toc_links": 21,
       "outline_destinations": "PASS",
       "visual_review": "PASS",
-      "sha256": "d91c7c7b29d7a84166230d0f62a4976414bc0289dbdd0395de57681d99163d9f"
+      "sha256": "85e761589ca339a64529f841ff15c57a83a8f0309f15dafc2b2e7eafa16e3fba"
     },
     {
       "language": "fr",
@@ -35,11 +35,11 @@
       "content": "PASS",
       "bounds": "PASS",
       "rendered": 23,
-      "pdf_bytes": 105734,
+      "pdf_bytes": 105740,
       "toc_links": 21,
       "outline_destinations": "PASS",
       "visual_review": "PASS",
-      "sha256": "f4c0f3dbeddcba435e706882ab7b04c59628c5c168c9dbb7408001c3e14dbcf2"
+      "sha256": "6af433e435630e8f5dcde7142f911a43fec58f0bd6c4c7303f60134c8c73255e"
     },
     {
       "language": "de",
@@ -48,11 +48,11 @@
       "content": "PASS",
       "bounds": "PASS",
       "rendered": 23,
-      "pdf_bytes": 105167,
+      "pdf_bytes": 105175,
       "toc_links": 21,
       "outline_destinations": "PASS",
       "visual_review": "PASS",
-      "sha256": "dc3b3fecd6d11c1f0ace9adba72f6ef6f26d28a8d048e98d6ab0d91560c760e7"
+      "sha256": "05d33cd5b46beed2ada5291d0388f3999fd350d2ea50c48e82edcd2e6ee7baa9"
     },
     {
       "language": "pt",
@@ -61,11 +61,11 @@
       "content": "PASS",
       "bounds": "PASS",
       "rendered": 23,
-      "pdf_bytes": 104849,
+      "pdf_bytes": 104855,
       "toc_links": 21,
       "outline_destinations": "PASS",
       "visual_review": "PASS",
-      "sha256": "0e1339299819f9052938b5f09c81f035097f34e2caed07e2f58b791719526db4"
+      "sha256": "ed3457e5083fe4f21157dc7d108c807436560813b99248e84041b5a883c48210"
     }
   ]
 }
