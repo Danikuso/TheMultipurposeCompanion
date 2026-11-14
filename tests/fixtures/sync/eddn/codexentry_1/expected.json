@@ -1,0 +1,31 @@
+{
+  "$schemaRef": "https://eddn.edcd.io/schemas/codexentry/1",
+  "header": {
+    "uploaderID": "290d497c61e19213ec286ad31430b47e",
+    "softwareName": "The Multipurpose Companion (TMC)",
+    "softwareVersion": "1.4.0",
+    "gameversion": "4.0.0.1903",
+    "gamebuild": "r310123/r0 "
+  },
+  "message": {
+    "timestamp": "2026-01-01T12:00:02Z",
+    "event": "CodexEntry",
+    "horizons": true,
+    "odyssey": true,
+    "System": "Sistema Ficticio",
+    "StarPos": [
+      10.5,
+      -20.25,
+      30.125
+    ],
+    "SystemAddress": 1000000000001,
+    "Name": "$Codex_Ent_Aleoids_Genus_Name;",
+    "Region": "$Codex_RegionName_18;",
+    "EntryID": 2100401,
+    "Category": "$Codex_Category_Biology;",
+    "Latitude": 12.34,
+    "Longitude": -56.78,
+    "SubCategory": "$Codex_SubCategory_Organic_Structures;",
+    "VoucherAmount": 50000
+  }
+}

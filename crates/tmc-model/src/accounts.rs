@@ -1,95 +1,9 @@
 //! Modelos de datos y topics para cuentas y sincronizaciones externas (EDDN, EDSM, Inara, Frontier CAPI).
 
+use crate::sync::{
+    CmdrRef, CommanderRow, EddnServiceStatus, KeyedServiceStatus, PendingByService, SyncService,
+};
 use serde::{Deserialize, Serialize};
-
-/// Ajustes de cuentas de servicios de sincronización.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct AccountSettings {
-    /// Envío a EDDN activado (opt-in/opt-out).
-    pub eddn_enabled: bool,
-    /// Sal criptográfica para anonimizar el uploaderID de EDDN.
-    pub eddn_uploader_salt: Option<String>,
-    /// Sincronización con EDSM activada.
-    pub edsm_enabled: bool,
-    /// Nombre del comandante en EDSM.
-    pub edsm_cmdr_name: Option<String>,
-    /// Sincronización con Inara activada.
-    pub inara_enabled: bool,
-    /// Nombre del comandante en Inara.
-    pub inara_cmdr_name: Option<String>,
-    /// Integración con Frontier CAPI activada.
-    pub capi_enabled: bool,
-    /// Client ID opcional de Frontier CAPI.
-    pub capi_client_id: Option<String>,
-}
-
-impl Default for AccountSettings {
-    fn default() -> Self {
-        Self {
-            eddn_enabled: true,
-            eddn_uploader_salt: None,
-            edsm_enabled: false,
-            edsm_cmdr_name: None,
-            inara_enabled: false,
-            inara_cmdr_name: None,
-            capi_enabled: false,
-            capi_client_id: None,
-        }
-    }
-}
-
-/// Estado de la transmisión a EDDN.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EddnStatus {
-    pub enabled: bool,
-    pub connected: bool,
-    pub uploader_id: String,
-    pub messages_sent_session: u32,
-    pub last_upload_time: Option<String>,
-    pub last_error: Option<String>,
-}
-
-impl Default for EddnStatus {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            connected: false,
-            uploader_id: String::new(),
-            messages_sent_session: 0,
-            last_upload_time: None,
-            last_error: None,
-        }
-    }
-}
-
-/// Estado de la sincronización con EDSM.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub struct EdsmStatus {
-    pub enabled: bool,
-    pub has_key: bool,
-    pub commander_name: Option<String>,
-    pub last_sync_time: Option<String>,
-    pub last_error: Option<String>,
-    pub syncing: bool,
-}
-
-/// Estado de la sincronización con Inara.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub struct InaraStatus {
-    pub enabled: bool,
-    pub has_key: bool,
-    pub commander_name: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub inara_url: Option<String>,
-    #[serde(default)]
-    pub verified: bool,
-    pub last_sync_time: Option<String>,
-    pub last_error: Option<String>,
-    pub pending_events: u32,
-    pub next_slot_secs: u32,
-    pub syncing: bool,
-}
 
 /// Estado de la conexión con Frontier CAPI.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -106,9 +20,13 @@ pub struct CapiStatus {
 /// Topic WebSocket `accounts.status` servido a la interfaz.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct AccountsStatusTopic {
-    pub eddn: EddnStatus,
-    pub edsm: EdsmStatus,
-    pub inara: InaraStatus,
+    pub current_cmdr: Option<CmdrRef>,
+    pub inara: KeyedServiceStatus,
+    pub edsm: KeyedServiceStatus,
+    pub eddn: EddnServiceStatus,
+    pub commanders: Vec<CommanderRow>,
+    pub other_cmdrs_pending: PendingByService,
+    pub unassigned_keys: Vec<SyncService>,
     pub capi: CapiStatus,
 }
 
@@ -125,28 +43,6 @@ pub struct RemoteShip {
     pub transfer_time_secs: Option<u64>,
 }
 
-/// Cabecera obligatoria de un mensaje EDDN.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EddnHeader {
-    #[serde(rename = "uploaderID")]
-    pub uploader_id: String,
-    #[serde(rename = "softwareName")]
-    pub software_name: String,
-    #[serde(rename = "softwareVersion")]
-    pub software_version: String,
-    #[serde(rename = "gatewayTimestamp")]
-    pub gateway_timestamp: String,
-}
-
-/// Envelope oficial de envío a EDDN.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EddnEnvelope<T> {
-    #[serde(rename = "$schemaRef")]
-    pub schema_ref: String,
-    pub header: EddnHeader,
-    pub message: T,
-}
-
 /// Cabecera del envelope Inara InAPI v1.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InaraHeader {
@@ -154,12 +50,17 @@ pub struct InaraHeader {
     pub app_name: String,
     #[serde(rename = "appVersion")]
     pub app_version: String,
-    #[serde(rename = "isDeveloped")]
-    pub is_developed: bool,
+    #[serde(rename = "isBeingDeveloped")]
+    pub is_being_developed: bool,
     #[serde(rename = "APIkey")]
     pub api_key: String,
     #[serde(rename = "commanderName", skip_serializing_if = "Option::is_none")]
     pub commander_name: Option<String>,
+    #[serde(
+        rename = "commanderFrontierID",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub commander_frontier_id: Option<String>,
 }
 
 /// Evento individual dentro de un lote de Inara InAPI v1.
@@ -169,6 +70,8 @@ pub struct InaraEvent<T> {
     pub event_name: String,
     #[serde(rename = "eventTimestamp")]
     pub event_timestamp: String,
+    #[serde(rename = "eventCustomID", skip_serializing_if = "Option::is_none")]
+    pub event_custom_id: Option<i64>,
     #[serde(rename = "eventData")]
     pub event_data: T,
 }
@@ -185,44 +88,38 @@ mod tests {
     use super::*;
 
     #[test]
-    fn account_settings_defaults() {
-        let s = AccountSettings::default();
-        assert!(s.eddn_enabled);
-        assert!(!s.edsm_enabled);
-        assert!(!s.inara_enabled);
-        assert!(!s.capi_enabled);
-        assert_eq!(s.eddn_uploader_salt, None);
+    fn inara_header_uses_is_being_developed() {
+        let header = InaraHeader {
+            app_name: "TMC".into(),
+            app_version: "1".into(),
+            is_being_developed: false,
+            api_key: "k".into(),
+            commander_name: None,
+            commander_frontier_id: Some("F123456".into()),
+        };
+        let json = serde_json::to_string(&header).unwrap();
+        assert!(json.contains("\"isBeingDeveloped\":false"));
+        assert!(json.contains("\"commanderFrontierID\":\"F123456\""));
+        assert!(!json.contains("isDeveloped"));
     }
 
     #[test]
     fn accounts_status_topic_defaults() {
         let topic = AccountsStatusTopic::default();
-        assert!(topic.eddn.enabled);
-        assert!(!topic.edsm.enabled);
-        assert_eq!(topic.inara.pending_events, 0);
+        assert!(!topic.eddn.enabled);
+        assert_eq!(topic.eddn.status.state, crate::sync::SyncState::Disabled);
+        assert_eq!(
+            topic.eddn.status.reason,
+            Some(crate::sync::SyncReason::SwitchOff)
+        );
+        assert!(!topic.edsm.has_key);
+        assert_eq!(
+            topic.edsm.status.reason,
+            Some(crate::sync::SyncReason::NoKey)
+        );
+        assert!(!topic.inara.has_key);
+        assert_eq!(topic.inara.status.pending, 0);
         assert_eq!(topic.capi.remote_ships_count, 0);
-    }
-
-    #[test]
-    fn eddn_envelope_serialization() {
-        let env = EddnEnvelope {
-            schema_ref: "https://eddn.edcd.io/schemas/commodity/3".to_string(),
-            header: EddnHeader {
-                uploader_id: "test_salt_id".to_string(),
-                software_name: "TMC".to_string(),
-                software_version: "0.1.0".to_string(),
-                gateway_timestamp: "2026-10-23T12:00:00Z".to_string(),
-            },
-            message: serde_json::json!({
-                "systemName": "Sol",
-                "stationName": "Li Qing Jao"
-            }),
-        };
-
-        let json = serde_json::to_string(&env).unwrap();
-        assert!(json.contains("\"$schemaRef\":\"https://eddn.edcd.io/schemas/commodity/3\""));
-        assert!(json.contains("\"uploaderID\":\"test_salt_id\""));
-        assert!(json.contains("\"softwareName\":\"TMC\""));
     }
 
     #[test]
@@ -231,13 +128,15 @@ mod tests {
             header: InaraHeader {
                 app_name: "TMC".to_string(),
                 app_version: "0.1.0".to_string(),
-                is_developed: false,
+                is_being_developed: false,
                 api_key: "key123".to_string(),
                 commander_name: Some("Danikuso".to_string()),
+                commander_frontier_id: None,
             },
             events: vec![InaraEvent {
                 event_name: "setCommanderProfile".to_string(),
                 event_timestamp: "2026-10-23T12:00:00Z".to_string(),
+                event_custom_id: Some(77),
                 event_data: serde_json::json!({ "credits": 500000000 }),
             }],
         };
@@ -246,6 +145,7 @@ mod tests {
         assert!(json.contains("\"appName\":\"TMC\""));
         assert!(json.contains("\"APIkey\":\"key123\""));
         assert!(json.contains("\"eventName\":\"setCommanderProfile\""));
+        assert!(json.contains("\"eventCustomID\":77"));
     }
 
     #[test]

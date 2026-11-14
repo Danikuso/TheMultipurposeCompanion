@@ -1,0 +1,1 @@
+FAIL: Schema Validation: ["message.StarPos is a required property"]

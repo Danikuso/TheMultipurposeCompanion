@@ -1,6 +1,7 @@
 //! Limitador de peticiones por servicio (ventana deslizante, reloj inyectado).
 
 use std::collections::VecDeque;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 /// Servicio externo con límite propio.
@@ -33,13 +34,13 @@ impl RateLimiter {
         }
     }
 
-    /// Spansh 1/1 s, Canonn 1/1 s, Ardent 1/1 s, EDCD 1/1 s, CAPI 1/1 s, EDDN 10/1 s, EDSM 10/10 s, Inara 2/60 s.
+    /// Spansh 1/1 s, Canonn 1/1 s, Ardent 1/1 s, EDCD 1/1 s, CAPI 1/1 s, EDDN 2/1 s, EDSM 10/10 s, Inara 2/60 s.
     pub fn for_service(service: Service) -> Self {
         match service {
             Service::Spansh | Service::Canonn | Service::Ardent | Service::Edcd | Service::Capi => {
                 Self::per_window(1, Duration::from_secs(1))
             }
-            Service::Eddn => Self::per_window(10, Duration::from_secs(1)),
+            Service::Eddn => Self::per_window(2, Duration::from_secs(1)),
             Service::Edsm => Self::per_window(10, Duration::from_secs(10)),
             Service::Inara => Self::per_window(2, Duration::from_secs(60)),
         }
@@ -62,6 +63,27 @@ impl RateLimiter {
             Some(&first) => Err(self.window - now.saturating_duration_since(first)),
             None => Err(self.window),
         }
+    }
+}
+
+/// Limitador compartible entre tareas y trabajadores (p. ej. Inara 2/60 s).
+#[derive(Debug, Clone)]
+pub struct SharedRateLimiter(Arc<Mutex<RateLimiter>>);
+
+impl SharedRateLimiter {
+    pub fn new(limiter: RateLimiter) -> Self {
+        Self(Arc::new(Mutex::new(limiter)))
+    }
+
+    pub fn for_service(service: Service) -> Self {
+        Self::new(RateLimiter::for_service(service))
+    }
+
+    pub fn try_acquire(&self, now: Instant) -> Result<(), Duration> {
+        self.0
+            .lock()
+            .expect("rate limiter mutex poisoned")
+            .try_acquire(now)
     }
 }
 
@@ -120,10 +142,10 @@ mod tests {
     }
 
     #[test]
-    fn eddn_limiter_allows_ten_per_second() {
+    fn eddn_limiter_is_two_per_second() {
         let t0 = Instant::now();
         let mut l = RateLimiter::for_service(Service::Eddn);
-        for _ in 0..10 {
+        for _ in 0..2 {
             assert_eq!(l.try_acquire(t0), Ok(()));
         }
         assert_eq!(l.try_acquire(t0), Err(Duration::from_secs(1)));

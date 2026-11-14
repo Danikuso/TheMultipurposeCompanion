@@ -1,0 +1,22 @@
+{
+  "msgnum": 100,
+  "msg": "OK",
+  "events": [
+    {
+      "msgnum": 100,
+      "msg": "OK"
+    },
+    {
+      "msgnum": 304,
+      "msg": "Discarded event"
+    },
+    {
+      "msgnum": 452,
+      "msg": "An entry for the same system already exists just before the visited date."
+    },
+    {
+      "msgnum": 302,
+      "msg": "Cannot decode message JSON"
+    }
+  ]
+}

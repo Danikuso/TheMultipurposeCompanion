@@ -1,0 +1,40 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "MissionAccepted",
+    "Faction": "Mother Gaia",
+    "Name": "Mission_Massacre_Legal_Military",
+    "MissionID": 170577201,
+    "TargetType": "$MissionUtil_FactionTag_Pirate;",
+    "TargetFaction": "Sol Pirates",
+    "KillCount": 10,
+    "DestinationSystem": "Barnard's Star",
+    "DestinationStation": "Miller Depot",
+    "Expiry": "2026-11-12T18:00:00Z",
+    "Influence": "++++",
+    "Reputation": "+++"
+  },
+  "context": {
+    "starsystemNameOrigin": "Sol",
+    "stationNameOrigin": "Abraham Lincoln"
+  },
+  "inara": {
+    "eventName": "addCommanderMission",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": {
+      "missionName": "Mission_Massacre_Legal_Military",
+      "missionGameID": 170577201,
+      "missionExpiry": "2026-11-12T18:00:00Z",
+      "influenceGain": "++++",
+      "reputationGain": "+++",
+      "starsystemNameOrigin": "Sol",
+      "stationNameOrigin": "Abraham Lincoln",
+      "minorfactionNameOrigin": "Mother Gaia",
+      "starsystemNameTarget": "Barnard's Star",
+      "stationNameTarget": "Miller Depot",
+      "minorfactionNameTarget": "Sol Pirates",
+      "targetType": "$MissionUtil_FactionTag_Pirate;",
+      "killCount": 10
+    }
+  }
+}

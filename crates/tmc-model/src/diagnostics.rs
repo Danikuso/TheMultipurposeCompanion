@@ -161,6 +161,7 @@ pub enum DiagnosticContext<'a> {
     Auth,
     Ui,
     Sql,
+    Sync,
 }
 
 impl DiagnosticContext<'_> {
@@ -184,6 +185,7 @@ impl DiagnosticContext<'_> {
             Self::Auth => "auth",
             Self::Ui => "ui",
             Self::Sql => "sql",
+            Self::Sync => "sync",
         }
     }
 }
@@ -309,6 +311,12 @@ const ACTIONS: &[&str] = &[
     "engineering.reset_session",
     "accounts.sync_now",
     "accounts.set_settings",
+    "accounts.eddn.set_enabled",
+    "accounts.key.save",
+    "accounts.key.delete",
+    "accounts.key.confirm",
+    "accounts.key.assign",
+    "accounts.cmdr.forget",
     "frontier.login",
     "frontier.logout",
     "frontier.fleet",
@@ -464,6 +472,10 @@ fn secret_field(key: &str) -> bool {
         "dbpath",
         "url",
         "uri",
+        "commanderfrontierid",
+        "cmdrfid",
+        "uploaderid",
+        "payload",
     ]
     .iter()
     .any(|part| key.contains(part))
@@ -486,6 +498,9 @@ fn secret_field(key: &str) -> bool {
                 | "uri"
                 | "requestbody"
                 | "responsebody"
+                | "keyhint"
+                | "serverhint"
+                | "cmdrref"
         )
 }
 
@@ -757,9 +772,17 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
             text,
             "null" | "boolean" | "number" | "string" | "array" | "object"
         ),
-        "tab" | "slot" | "panel" | "view" | "relevance" | "state" | "kind" | "layout" | "level"
+        "tab" | "slot" | "panel" | "view" | "relevance" | "kind" | "layout" | "level"
         | "context" | "manualcontext" => {
             matches!(context, DiagnosticContext::Ui) && ui_value(key, text)
+        }
+        "state" => {
+            (matches!(context, DiagnosticContext::Ui) && ui_value(key, text))
+                || (matches!(context, DiagnosticContext::Sync)
+                    && matches!(
+                        text,
+                        "disabled" | "paused" | "waiting" | "connected" | "error" | "unavailable"
+                    ))
         }
         "reason" => matches!(
             text,
@@ -834,8 +857,81 @@ fn schema_label(key: &str, path: &str, text: &str, context: DiagnosticContext<'_
                     | "ardent.nearby.exports"
                     | "ardent.system.coords"
                     | "edsm.coords"
+                    | "edsm.journal"
+                    | "edsm.discard"
+                    | "edsm.commander"
+                    | "inara.inapi"
+                    | "eddn.upload"
                     | "unknown"
             )
+        }
+        "service" => {
+            matches!(context, DiagnosticContext::Sync) && matches!(text, "inara" | "edsm" | "eddn")
+        }
+        "decision" | "outcome" => {
+            matches!(context, DiagnosticContext::Sync)
+                && matches!(
+                    text,
+                    "started"
+                        | "stopped"
+                        | "enqueued"
+                        | "flushed"
+                        | "aborted_recovery"
+                        | "recovered"
+                        | "held"
+                        | "released"
+                        | "lease_acquired"
+                        | "lease_released"
+                        | "lease_lost"
+                        | "worker_outcome"
+                        | "housekeeping"
+                        | "e2e_disabled"
+                )
+        }
+        "processkind" => {
+            matches!(context, DiagnosticContext::Sync) && matches!(text, "desktop" | "headless")
+        }
+        "syncclass" | "class" => {
+            matches!(context, DiagnosticContext::Sync)
+                && matches!(
+                    text,
+                    "network"
+                        | "timeout"
+                        | "rate_limited"
+                        | "blocked"
+                        | "auth"
+                        | "software_blocked"
+                        | "schema_outdated"
+                        | "invalid_event"
+                        | "too_large"
+                        | "server_error"
+                        | "discard_list_missing"
+                )
+        }
+        "syncreason" => {
+            matches!(context, DiagnosticContext::Sync)
+                && matches!(
+                    text,
+                    "no_key"
+                        | "switch_off"
+                        | "online_off"
+                        | "legacy"
+                        | "beta"
+                        | "replay"
+                        | "game_not_running"
+                        | "other_instance"
+                        | "platform_unsupported"
+                        | "key_unassigned"
+                        | "network"
+                        | "timeout"
+                        | "rate_limited"
+                        | "blocked"
+                        | "auth"
+                        | "software_blocked"
+                        | "schema_outdated"
+                        | "server_error"
+                        | "discard_list_missing"
+                )
         }
         _ => false,
     }
@@ -1223,6 +1319,22 @@ pub mod capture {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn sync_secret_fields_are_redacted() {
+        let raw = json!({"commanderFrontierID":"F1","cmdr_fid":"F1","uploaderID":"u","payload":"{}","APIkey":"k","api_key":"k"});
+        let safe = redact_diagnostic(&raw, DiagnosticContext::State);
+        for key in [
+            "commanderFrontierID",
+            "cmdr_fid",
+            "uploaderID",
+            "payload",
+            "APIkey",
+            "api_key",
+        ] {
+            assert_eq!(safe[key], "[redacted]", "{key}");
+        }
+    }
 
     #[test]
     fn sql_template_rejects_comments_and_bracket_identifiers() {
@@ -1905,5 +2017,79 @@ mod tests {
     fn auto_companion_actions_are_registered() {
         assert!(is_registered_action("app.toggle_lock"));
         assert!(is_registered_action("app.set_auto_priorities"));
+    }
+
+    #[test]
+    fn sync_diagnostics_keep_classes_and_redact_payload() {
+        let safe = redact_diagnostic(
+            &json!({
+                "service": "inara",
+                "decision": "worker_outcome",
+                "class": "rate_limited",
+                "sync_reason": "rate_limited",
+                "process_kind": "desktop",
+                "payload": {"secret": "CANARY"},
+                "payload_raw": "CANARY_RAW",
+                "api_key": "CANARYKEY",
+                "cmdr_fid": "F9999999",
+                "cmdr_name": "CMDR CANARY"
+            }),
+            DiagnosticContext::Sync,
+        );
+        assert_eq!(safe["service"], "inara");
+        assert_eq!(safe["decision"], "worker_outcome");
+        assert_eq!(safe["class"], "rate_limited");
+        assert_eq!(safe["sync_reason"], "rate_limited");
+        assert_eq!(safe["process_kind"], "desktop");
+        assert_eq!(safe["payload"]["secret"], REDACTED);
+        assert_eq!(safe["payload_raw"], REDACTED);
+        assert_eq!(safe["api_key"], REDACTED);
+        assert_eq!(safe["cmdr_fid"], REDACTED);
+        assert_eq!(safe["cmdr_name"], REDACTED);
+    }
+
+    #[test]
+    fn sync_diagnostics_accept_all_error_classes_and_sync_reasons() {
+        for class in [
+            "network",
+            "timeout",
+            "rate_limited",
+            "blocked",
+            "auth",
+            "software_blocked",
+            "schema_outdated",
+            "invalid_event",
+            "too_large",
+            "server_error",
+            "discard_list_missing",
+        ] {
+            let safe = redact_diagnostic(&json!({ "class": class }), DiagnosticContext::Sync);
+            assert_eq!(safe["class"], class, "ErrorClass {class}");
+        }
+        for reason in [
+            "no_key",
+            "switch_off",
+            "online_off",
+            "legacy",
+            "beta",
+            "replay",
+            "game_not_running",
+            "other_instance",
+            "platform_unsupported",
+            "key_unassigned",
+            "network",
+            "timeout",
+            "rate_limited",
+            "blocked",
+            "auth",
+            "software_blocked",
+            "schema_outdated",
+            "server_error",
+            "discard_list_missing",
+        ] {
+            let safe =
+                redact_diagnostic(&json!({ "sync_reason": reason }), DiagnosticContext::Sync);
+            assert_eq!(safe["sync_reason"], reason, "SyncReason {reason}");
+        }
     }
 }

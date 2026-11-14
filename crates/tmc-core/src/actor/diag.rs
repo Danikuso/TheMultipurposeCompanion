@@ -47,6 +47,8 @@ fn kind(event: &SourceEvent) -> u8 {
         SourceEvent::Settings(_) => 8,
         SourceEvent::Stored { .. } => 9,
         SourceEvent::Eddn(_) => 10,
+        SourceEvent::SyncReport(_) => 11,
+        SourceEvent::CatchUpDone => 12,
     }
 }
 
@@ -202,6 +204,17 @@ mod tests {
     use tmc_model::diagnostics::capture::{Record, capture};
     use tmc_model::events::parse_line;
     use tmc_model::state::GameState;
+
+    #[test]
+    fn sync_report_variant_is_registered() {
+        let report = tmc_model::sync::SyncReport::Roster(tmc_model::sync::RosterReport {
+            current_cmdr: None,
+            commanders: vec![],
+            other_cmdrs_pending: Default::default(),
+            unassigned_keys: vec![],
+        });
+        assert_eq!(kind(&SourceEvent::SyncReport(Box::new(report))), 11);
+    }
 
     fn journal(name: &str, extra: &str, replaying: bool) -> SourceEvent {
         SourceEvent::Journal {

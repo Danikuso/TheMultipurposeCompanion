@@ -1,0 +1,23 @@
+{
+  "$schemaRef": "https://eddn.edcd.io/schemas/shipyard/2",
+  "header": {
+    "uploaderID": "290d497c61e19213ec286ad31430b47e",
+    "softwareName": "The Multipurpose Companion (TMC)",
+    "softwareVersion": "1.4.0",
+    "gameversion": "4.0.0.1903",
+    "gamebuild": "r310123/r0 "
+  },
+  "message": {
+    "systemName": "Sistema Ficticio",
+    "stationName": "Puerto Ficticio",
+    "marketId": 128000001,
+    "horizons": true,
+    "odyssey": true,
+    "allowCobraMkIV": false,
+    "timestamp": "2026-01-01T12:00:02Z",
+    "ships": [
+      "sidewinder",
+      "cobra_mk_iii"
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "commanderName": "CMDR Ficticio",
+  "apiKey": "EXAMPLE-EDSM-API-KEY",
+  "fromSoftware": "The Multipurpose Companion (TMC)",
+  "fromSoftwareVersion": "1.4.0",
+  "fromGameVersion": "4.0.0.1903",
+  "fromGameBuild": "r310123/r0 ",
+  "message": [
+    {
+      "timestamp": "2026-01-01T12:00:02Z",
+      "event": "FSDJump",
+      "StarSystem": "Sistema Destino",
+      "SystemAddress": 1000000000002,
+      "StarPos": [20.0, 5.5, -12.25],
+      "StarClass": "K",
+      "JumpDist": 14.5,
+      "FuelUsed": 1.8,
+      "FuelLevel": 30.2,
+      "BoostUsed": false,
+      "Wanted": false,
+      "SystemAllegiance": "Independent",
+      "SystemEconomy": "$economy_HighTech;",
+      "SystemEconomy_Localised": "Alta tecnología",
+      "Factions": [
+        {
+          "Name": "Facción Ficticia",
+          "FactionState": "None",
+          "Government": "Corporate",
+          "Government_Localised": "Corporativo",
+          "Influence": 0.65,
+          "Allegiance": "Independent",
+          "HappiestSystem": true,
+          "HomeSystem": true,
+          "MyReputation": 75.0,
+          "SquadronFaction": true
+        }
+      ],
+      "_systemAddress": 1000000000002,
+      "_systemName": "Sistema Destino",
+      "_systemCoordinates": [20.0, 5.5, -12.25],
+      "_marketId": null,
+      "_stationName": null,
+      "_shipId": 1
+    }
+  ]
+}

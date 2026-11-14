@@ -71,6 +71,81 @@ CREATE TABLE IF NOT EXISTS ui_layout_profile (
 );
 ";
 
+pub(crate) const SYNC_SCHEMA: &str = "
+CREATE TABLE IF NOT EXISTS sync_outbox (
+  id               INTEGER PRIMARY KEY,
+  service          TEXT NOT NULL CHECK (service IN ('inara','edsm','eddn')),
+  cmdr_fid         TEXT NOT NULL,
+  idem_key         TEXT NOT NULL,
+  kind             TEXT NOT NULL,
+  coalesce_key     TEXT,
+  event_ts         TEXT NOT NULL,
+  payload          TEXT NOT NULL,
+  origin           TEXT NOT NULL CHECK (origin IN ('live','recovered','snapshot')),
+  state            TEXT NOT NULL CHECK (state IN
+                     ('pending','inflight','sent','rejected','expired','superseded','discarded','omitted')),
+  attempts         INTEGER NOT NULL DEFAULT 0,
+  next_attempt_at  TEXT NOT NULL,
+  last_code        TEXT,
+  last_class       TEXT,
+  created_at       TEXT NOT NULL,
+  done_at          TEXT,
+  UNIQUE (service, idem_key)
+);
+CREATE INDEX IF NOT EXISTS sync_outbox_ready ON sync_outbox (service, state, next_attempt_at);
+CREATE INDEX IF NOT EXISTS sync_outbox_cmdr  ON sync_outbox (service, cmdr_fid, state);
+CREATE TABLE IF NOT EXISTS sync_credential (
+  service     TEXT NOT NULL CHECK (service IN ('inara','edsm')),
+  cmdr_fid    TEXT NOT NULL,
+  cmdr_name   TEXT NOT NULL,
+  api_key     TEXT NOT NULL,
+  created_at  TEXT NOT NULL,
+  verified_at TEXT,
+  assignment  TEXT NOT NULL CHECK (assignment IN ('confirmed','auto_pending_confirmation')),
+  PRIMARY KEY (service, cmdr_fid)
+);
+CREATE TABLE IF NOT EXISTS sync_activation (
+  service      TEXT NOT NULL CHECK (service IN ('inara','edsm','eddn')),
+  cmdr_fid     TEXT NOT NULL,
+  activated_at TEXT NOT NULL,
+  PRIMARY KEY (service, cmdr_fid)
+);
+CREATE TABLE IF NOT EXISTS sync_cursor (
+  cmdr_fid     TEXT NOT NULL,
+  journal_file TEXT NOT NULL,
+  last_line    INTEGER NOT NULL,
+  updated_at   TEXT NOT NULL,
+  PRIMARY KEY (cmdr_fid, journal_file)
+);
+CREATE TABLE IF NOT EXISTS sync_lease (
+  id         INTEGER PRIMARY KEY CHECK (id = 1),
+  owner      TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS sync_counter (
+  service           TEXT NOT NULL CHECK (service IN ('inara','edsm','eddn')),
+  cmdr_fid          TEXT NOT NULL,
+  sent              INTEGER NOT NULL DEFAULT 0,
+  rejected          INTEGER NOT NULL DEFAULT 0,
+  expired           INTEGER NOT NULL DEFAULT 0,
+  omitted           INTEGER NOT NULL DEFAULT 0,
+  last_confirmed_at TEXT,
+  PRIMARY KEY (service, cmdr_fid)
+);
+CREATE TABLE IF NOT EXISTS sync_known_cmdr (
+  cmdr_fid  TEXT PRIMARY KEY,
+  cmdr_name TEXT NOT NULL,
+  last_seen TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS sync_unassigned_key (
+  service    TEXT PRIMARY KEY CHECK (service IN ('inara','edsm')),
+  cmdr_name  TEXT,
+  api_key    TEXT NOT NULL,
+  reason     TEXT NOT NULL CHECK (reason IN ('waiting_first_cmdr','ambiguous')),
+  created_at TEXT NOT NULL
+);
+";
+
 pub struct Migration {
     pub id: &'static str,
     pub sql: &'static str,

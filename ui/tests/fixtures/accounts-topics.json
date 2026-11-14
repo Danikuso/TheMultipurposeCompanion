@@ -1,0 +1,86 @@
+{
+  "accounts.status": {
+    "capi": {
+      "commander_name": null,
+      "configured": false,
+      "connected": false,
+      "last_error": null,
+      "last_sync_time": null,
+      "remote_ships_count": 0,
+      "token_expires_at": null
+    },
+    "commanders": [
+      {
+        "cmdr_ref": "cmdr-1",
+        "eddn_pending": 0,
+        "edsm_key": false,
+        "edsm_pending": 0,
+        "inara_key": true,
+        "inara_pending": 2,
+        "key_assignment": "confirmed",
+        "name": "Danikuso"
+      }
+    ],
+    "current_cmdr": {
+      "cmdr_ref": "cmdr-1",
+      "name": "Danikuso"
+    },
+    "eddn": {
+      "enabled": false,
+      "expired_total": 0,
+      "last_confirmed_at": null,
+      "next_attempt_at": null,
+      "omitted_total": 0,
+      "paused_schemas": [],
+      "pending": 0,
+      "reason": "switch_off",
+      "recent_rejections": [],
+      "recovered_session": 0,
+      "rejected_session": 0,
+      "rejected_total": 0,
+      "sent_session": 0,
+      "sent_total": 0,
+      "state": "disabled"
+    },
+    "edsm": {
+      "expired_total": 0,
+      "has_key": false,
+      "key_hint": null,
+      "last_confirmed_at": null,
+      "next_attempt_at": null,
+      "omitted_total": 0,
+      "pending": 0,
+      "reason": "no_key",
+      "recent_rejections": [],
+      "recovered_session": 0,
+      "rejected_session": 0,
+      "rejected_total": 0,
+      "sent_session": 0,
+      "sent_total": 0,
+      "state": "disabled"
+    },
+    "inara": {
+      "expired_total": 0,
+      "has_key": true,
+      "key_hint": "...9a2f",
+      "last_confirmed_at": null,
+      "next_attempt_at": null,
+      "omitted_total": 0,
+      "pending": 2,
+      "reason": null,
+      "recent_rejections": [],
+      "recovered_session": 0,
+      "rejected_session": 0,
+      "rejected_total": 0,
+      "sent_session": 0,
+      "sent_total": 0,
+      "state": "waiting"
+    },
+    "other_cmdrs_pending": {
+      "eddn": 0,
+      "edsm": 0,
+      "inara": 0
+    },
+    "unassigned_keys": []
+  }
+}

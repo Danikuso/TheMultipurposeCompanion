@@ -1,0 +1,24 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "LoadGame",
+    "Commander": "ExampleCmdr",
+    "FID": "F000001",
+    "Ship": "krait_mkii",
+    "ShipID": 4,
+    "ShipName": "Nostromo",
+    "ShipIdent": "TM-01",
+    "Credits": 1000
+  },
+  "inara": {
+    "eventName": "setCommanderShip",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": {
+      "shipType": "krait_mkii",
+      "shipGameID": 4,
+      "shipName": "Nostromo",
+      "shipIdent": "TM-01",
+      "isCurrentShip": true
+    }
+  }
+}

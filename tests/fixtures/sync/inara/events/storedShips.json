@@ -1,0 +1,57 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "StoredShips",
+    "StationName": "Jameson Memorial",
+    "MarketID": 128667640,
+    "StarSystem": "Shinrarta Dezhra",
+    "ShipsHere": [
+      {
+        "ShipID": 7,
+        "ShipType": "asp",
+        "Name": "Pathfinder",
+        "Value": 12000000,
+        "Hot": false
+      }
+    ],
+    "ShipsRemote": [
+      {
+        "ShipID": 9,
+        "ShipType": "python",
+        "Name": "Hauler",
+        "StarSystem": "Sol",
+        "ShipMarketID": 128004512,
+        "Value": 58000000,
+        "Hot": false,
+        "InTransit": false
+      }
+    ]
+  },
+  "inara": [
+    {
+      "eventName": "setCommanderShip",
+      "eventTimestamp": "2026-11-10T18:00:00Z",
+      "eventData": {
+        "shipType": "asp",
+        "shipGameID": 7,
+        "shipName": "Pathfinder",
+        "isHot": false,
+        "starsystemName": "Shinrarta Dezhra",
+        "stationName": "Jameson Memorial",
+        "marketID": 128667640
+      }
+    },
+    {
+      "eventName": "setCommanderShip",
+      "eventTimestamp": "2026-11-10T18:00:00Z",
+      "eventData": {
+        "shipType": "python",
+        "shipGameID": 9,
+        "shipName": "Hauler",
+        "isHot": false,
+        "starsystemName": "Sol",
+        "marketID": 128004512
+      }
+    }
+  ]
+}

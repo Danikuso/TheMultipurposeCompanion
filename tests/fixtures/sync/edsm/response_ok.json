@@ -1,0 +1,15 @@
+{
+  "msgnum": 100,
+  "msg": "OK",
+  "events": [
+    {
+      "msgnum": 100,
+      "msg": "OK",
+      "systemCreated": false
+    },
+    {
+      "msgnum": 101,
+      "msg": "Message already stored"
+    }
+  ]
+}

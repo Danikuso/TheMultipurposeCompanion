@@ -1,0 +1,15 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "MissionFailed",
+    "Name": "Mission_Delivery",
+    "MissionID": 171735583
+  },
+  "inara": {
+    "eventName": "setCommanderMissionFailed",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": {
+      "missionGameID": 171735583
+    }
+  }
+}

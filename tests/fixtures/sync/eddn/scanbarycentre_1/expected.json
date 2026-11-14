@@ -1,0 +1,31 @@
+{
+  "$schemaRef": "https://eddn.edcd.io/schemas/scanbarycentre/1",
+  "header": {
+    "uploaderID": "290d497c61e19213ec286ad31430b47e",
+    "softwareName": "The Multipurpose Companion (TMC)",
+    "softwareVersion": "1.4.0",
+    "gameversion": "4.0.0.1903",
+    "gamebuild": "r310123/r0 "
+  },
+  "message": {
+    "timestamp": "2026-01-01T12:00:02Z",
+    "event": "ScanBaryCentre",
+    "horizons": true,
+    "odyssey": true,
+    "StarSystem": "Sistema Ficticio",
+    "StarPos": [
+      10.5,
+      -20.25,
+      30.125
+    ],
+    "SystemAddress": 1000000000001,
+    "BodyID": 2,
+    "SemiMajorAxis": 123456789.0,
+    "Eccentricity": 0.012,
+    "OrbitalInclination": 1.5,
+    "Periapsis": 45.0,
+    "OrbitalPeriod": 86400.0,
+    "AscendingNode": 10.0,
+    "MeanAnomaly": 120.0
+  }
+}

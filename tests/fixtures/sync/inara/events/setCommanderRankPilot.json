@@ -1,0 +1,74 @@
+{
+  "journal": [
+    {
+      "timestamp": "2026-11-10T18:00:00Z",
+      "event": "Rank",
+      "Combat": 4,
+      "Trade": 6,
+      "Explore": 7,
+      "Soldier": 2,
+      "Exobiologist": 3,
+      "Empire": 5,
+      "Federation": 6,
+      "CQC": 0
+    },
+    {
+      "timestamp": "2026-11-10T18:00:00Z",
+      "event": "Progress",
+      "Combat": 42,
+      "Trade": 15,
+      "Explore": 88,
+      "Soldier": 10,
+      "Exobiologist": 5,
+      "Empire": 70,
+      "Federation": 25,
+      "CQC": 0
+    }
+  ],
+  "inara": {
+    "eventName": "setCommanderRankPilot",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": [
+      {
+        "rankName": "combat",
+        "rankValue": 4,
+        "rankProgress": 0.42
+      },
+      {
+        "rankName": "trade",
+        "rankValue": 6,
+        "rankProgress": 0.15
+      },
+      {
+        "rankName": "explore",
+        "rankValue": 7,
+        "rankProgress": 0.88
+      },
+      {
+        "rankName": "soldier",
+        "rankValue": 2,
+        "rankProgress": 0.1
+      },
+      {
+        "rankName": "exobiologist",
+        "rankValue": 3,
+        "rankProgress": 0.05
+      },
+      {
+        "rankName": "empire",
+        "rankValue": 5,
+        "rankProgress": 0.7
+      },
+      {
+        "rankName": "federation",
+        "rankValue": 6,
+        "rankProgress": 0.25
+      },
+      {
+        "rankName": "cqc",
+        "rankValue": 0,
+        "rankProgress": 0.0
+      }
+    ]
+  }
+}

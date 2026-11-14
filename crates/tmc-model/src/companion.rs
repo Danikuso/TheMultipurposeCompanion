@@ -80,6 +80,8 @@ pub struct RouteHop {
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "PascalCase")]
 pub struct NavRouteFile {
+    #[serde(rename = "timestamp", default)]
+    pub timestamp: Option<String>,
     pub route: Vec<RouteHop>,
 }
 

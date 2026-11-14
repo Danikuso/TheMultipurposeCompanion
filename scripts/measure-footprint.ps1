@@ -1,9 +1,10 @@
-param(
+﻿param(
     [Parameter(Mandatory = $true)][string]$Exe,
     [Parameter(Mandatory = $true)][string]$JournalDir,
     [string]$FixturePath = 'tests\fixtures\journal\real_explo_01.log',
     [string]$UiDir = 'ui\dist',
     [switch]$ShowWindow,
+    [switch]$SyncActive,
     [ValidateRange(1, 65535)][int]$Port = 47320,
     [ValidateRange(60, 86400)][int]$Seconds = 120,
     [ValidateScript({ $_ -gt 0 -and -not [double]::IsInfinity($_) })][double]$MaxMB = 180.0,
@@ -67,17 +68,18 @@ function Assert-TemporaryDataPath([string]$Path, [string]$CreatedPath, [string]$
     Assert-NoReparsePoints $absolute
 }
 
-function New-MeasurementConfig([string]$JournalPath, [string]$DataPath, [string]$UiPath, [int]$ServerPort) {
+function New-MeasurementConfig([string]$JournalPath, [string]$DataPath, [string]$UiPath, [int]$ServerPort, [bool]$OnlineServices = $false) {
     # TOML literal strings preserve Windows backslashes, including spaces.
     foreach ($path in @($JournalPath, $DataPath, $UiPath)) {
         if ($path.Contains("'") -or $path.Contains("`n") -or $path.Contains("`r")) { throw 'Unsupported character in config path' }
     }
+    $onlineValue = if ($OnlineServices) { 'true' } else { 'false' }
     return @"
 journal_dir = '$JournalPath'
 data_dir = '$DataPath'
 ui_dir = '$UiPath'
 language = "es"
-online_services = false
+online_services = $onlineValue
 auto_copy_next_system = false
 alerts_enabled = true
 theme_mode = "hud"
@@ -129,9 +131,14 @@ $exePath = Get-AbsolutePath $Exe $repoRoot
 $fixture = Get-AbsolutePath $FixturePath $repoRoot
 $uiPath = Get-AbsolutePath $UiDir $repoRoot
 $replayExe = Join-Path $repoRoot 'target\release\tmc-replay.exe'
+$headlessExe = Join-Path $repoRoot 'target\release\tmc-headless.exe'
 # Validate before mutation, launching processes or stopping anything.
 $journalPath = Assert-JournalPath $JournalDir $repoRoot
-foreach ($file in @($exePath, $replayExe, $fixture, (Join-Path $uiPath 'index.html'))) {
+$requiredFiles = @($exePath, $replayExe, $fixture, (Join-Path $uiPath 'index.html'))
+if ($SyncActive) {
+    $requiredFiles += $headlessExe
+}
+foreach ($file in $requiredFiles) {
     if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Required file not found; build it explicitly if needed: $file" }
 }
 Assert-NoExistingTmc -Processes @(Get-Process) -ExecutableName ([IO.Path]::GetFileNameWithoutExtension($exePath))
@@ -157,8 +164,17 @@ try {
     New-Item -ItemType Directory -Path $tempDataDir | Out-Null
     $createdData = $true
     $tempConfigPath = Join-Path $tempDataDir 'config.toml'
-    $config = New-MeasurementConfig $journalPath $tempDataDir $uiPath $Port
+    $config = New-MeasurementConfig $journalPath $tempDataDir $uiPath $Port ([bool]$SyncActive)
     [IO.File]::WriteAllText($tempConfigPath, $config, [Text.UTF8Encoding]::new($false))
+    if ($SyncActive) {
+        $tempDbPath = Join-Path $tempDataDir 'tmc.db'
+        & $headlessExe sync-seed --db $tempDbPath --from $fixture
+        if ($LASTEXITCODE -ne 0) {
+            throw "sync-seed failed with exit code $LASTEXITCODE"
+        }
+        # PD-11: copiar el fixture sin marcador `.tmc-replay` para simular arranque normal con servicios activos (sin juego en ejecución => cero peticiones).
+        Copy-Item -LiteralPath $fixture -Destination (Join-Path $journalPath 'Journal.2026-10-17T234018.01.log') -Force
+    }
     # Check again after setup to avoid accidentally connecting to another instance.
     Assert-NoExistingTmc -Processes @(Get-Process) -ExecutableName ([IO.Path]::GetFileNameWithoutExtension($exePath))
     if (-not ('TmcFootprint.NativeWindow' -as [type])) {
@@ -180,8 +196,12 @@ namespace TmcFootprint {
     $tmcArgs = '--config "{0}" --journal-dir "{1}" --ui-dir "{2}"' -f $tempConfigPath, $journalPath, $uiPath
     $windowStyle = if ($ShowWindow) { 'Normal' } else { 'Hidden' }
     $tmcProc = Start-Process -FilePath $exePath -ArgumentList $tmcArgs -PassThru -WindowStyle $windowStyle
-    $replayArgs = 'play --from "{0}" --to "{1}" --speed 10000' -f $fixture, $journalPath
-    $replayProc = Start-Process -FilePath $replayExe -ArgumentList $replayArgs -PassThru -WindowStyle Hidden
+    if (-not $SyncActive) {
+        $replayArgs = 'play --from "{0}" --to "{1}" --speed 10000' -f $fixture, $journalPath
+        $replayProc = Start-Process -FilePath $replayExe -ArgumentList $replayArgs -PassThru -WindowStyle Hidden
+    } else {
+        $replayStopped = $true
+    }
     $watch = [Diagnostics.Stopwatch]::StartNew()
     $previousCpu = @{}
     $previousTime = 0.0
@@ -193,11 +213,13 @@ namespace TmcFootprint {
         $now = $watch.Elapsed.TotalSeconds
         $tmcProc.Refresh()
         if ($tmcProc.HasExited) { throw "Launched TMC exited with code $($tmcProc.ExitCode)" }
-        $replayProc.Refresh()
-        if ($replayProc.HasExited -and -not $replayStopped -and $replayProc.ExitCode -ne 0) { throw "Replay failed with exit code $($replayProc.ExitCode)" }
-        if ($now -ge ($Seconds - 32) -and -not $replayProc.HasExited) {
-            Stop-Process -Id $replayProc.Id -Force
-            $replayStopped = $true
+        if ($null -ne $replayProc) {
+            $replayProc.Refresh()
+            if ($replayProc.HasExited -and -not $replayStopped -and $replayProc.ExitCode -ne 0) { throw "Replay failed with exit code $($replayProc.ExitCode)" }
+            if ($now -ge ($Seconds - 32) -and -not $replayProc.HasExited) {
+                Stop-Process -Id $replayProc.Id -Force
+                $replayStopped = $true
+            }
         }
         $tree = @(Get-TreeProcesses ([uint32]$tmcProc.Id))
         # Allow the renderer to initialize during the first 20 seconds only.

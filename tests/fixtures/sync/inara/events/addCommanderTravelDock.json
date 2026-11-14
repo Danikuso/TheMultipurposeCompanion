@@ -1,0 +1,34 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "Docked",
+    "StarSystem": "Sol",
+    "StationName": "Abraham Lincoln",
+    "MarketID": 128004512
+  },
+  "context": {
+    "starsystemCoords": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "shipType": "krait_mkii",
+    "shipGameID": 4
+  },
+  "inara": {
+    "eventName": "addCommanderTravelDock",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": {
+      "starsystemName": "Sol",
+      "starsystemCoords": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "stationName": "Abraham Lincoln",
+      "marketID": 128004512,
+      "shipType": "krait_mkii",
+      "shipGameID": 4
+    }
+  }
+}

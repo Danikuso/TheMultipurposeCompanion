@@ -1,0 +1,20 @@
+{
+  "$schemaRef": "https://eddn.edcd.io/schemas/dockingdenied/1",
+  "header": {
+    "uploaderID": "290d497c61e19213ec286ad31430b47e",
+    "softwareName": "The Multipurpose Companion (TMC)",
+    "softwareVersion": "1.4.0",
+    "gameversion": "4.0.0.1903",
+    "gamebuild": "r310123/r0 "
+  },
+  "message": {
+    "timestamp": "2026-01-01T12:00:02Z",
+    "event": "DockingDenied",
+    "horizons": true,
+    "odyssey": true,
+    "MarketID": 128000001,
+    "StationName": "Puerto Ficticio",
+    "StationType": "Coriolis",
+    "Reason": "NoSpace"
+  }
+}

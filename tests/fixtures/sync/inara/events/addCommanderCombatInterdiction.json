@@ -1,0 +1,22 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "Interdiction",
+    "Success": true,
+    "Interdicted": "Cmdr Trader",
+    "IsPlayer": true
+  },
+  "context": {
+    "starsystemName": "Lave"
+  },
+  "inara": {
+    "eventName": "addCommanderCombatInterdiction",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": {
+      "starsystemName": "Lave",
+      "opponentName": "Cmdr Trader",
+      "isPlayer": true,
+      "isSuccess": true
+    }
+  }
+}

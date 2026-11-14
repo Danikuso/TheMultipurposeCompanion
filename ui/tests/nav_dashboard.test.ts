@@ -38,10 +38,14 @@ describe('sequential navigation to dashboard', () => {
     live.topics['core.status'] = { flags: 0, pips: [4, 4, 4] };
     live.topics['core.modules'] = modules.map((m) => ({ id: m.id, relevance: 'normal' }));
     live.topics['accounts.status'] = {
-      eddn: { enabled: true, connected: true, uploader_id: 'TMC-Tester' },
-      edsm: { enabled: true, has_key: true, commander_name: 'Danikuso' },
-      inara: { enabled: true, has_key: true, commander_name: 'Danikuso' },
-      capi: { connected: true, commander_name: 'Danikuso' },
+      current_cmdr: { cmdr_ref: 'cmdr-1', name: 'Danikuso' },
+      inara: { state: 'waiting', reason: null, pending: 0, recovered_session: 0, sent_total: 0, sent_session: 0, rejected_total: 0, rejected_session: 0, expired_total: 0, omitted_total: 0, last_confirmed_at: null, next_attempt_at: null, recent_rejections: [], has_key: true, key_hint: null },
+      edsm: { state: 'waiting', reason: null, pending: 0, recovered_session: 0, sent_total: 0, sent_session: 0, rejected_total: 0, rejected_session: 0, expired_total: 0, omitted_total: 0, last_confirmed_at: null, next_attempt_at: null, recent_rejections: [], has_key: true, key_hint: null },
+      eddn: { state: 'waiting', reason: null, pending: 0, recovered_session: 0, sent_total: 0, sent_session: 0, rejected_total: 0, rejected_session: 0, expired_total: 0, omitted_total: 0, last_confirmed_at: null, next_attempt_at: null, recent_rejections: [], enabled: true, paused_schemas: [] },
+      commanders: [],
+      other_cmdrs_pending: { inara: 0, edsm: 0, eddn: 0 },
+      unassigned_keys: [],
+      capi: { configured: true, connected: true, commander_name: 'Danikuso', token_expires_at: null, remote_ships_count: 0, last_sync_time: null, last_error: null },
     };
     target = document.createElement('div');
     document.body.appendChild(target);

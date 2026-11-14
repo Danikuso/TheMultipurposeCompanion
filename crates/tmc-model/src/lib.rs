@@ -14,6 +14,7 @@ pub mod settings;
 pub mod source;
 pub mod state;
 pub mod status;
+pub mod sync;
 pub mod theme;
 pub mod tts;
 pub mod voice_intent;

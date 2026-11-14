@@ -1,0 +1,36 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "Cargo",
+    "Vessel": "Ship",
+    "Count": 6,
+    "Inventory": [
+      {
+        "Name": "drones",
+        "Count": 4,
+        "Stolen": 0
+      },
+      {
+        "Name": "gold",
+        "Count": 2,
+        "Stolen": 1
+      }
+    ]
+  },
+  "inara": {
+    "eventName": "setCommanderInventoryCargo",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": [
+      {
+        "itemName": "drones",
+        "itemCount": 4,
+        "isStolen": false
+      },
+      {
+        "itemName": "gold",
+        "itemCount": 2,
+        "isStolen": true
+      }
+    ]
+  }
+}

@@ -270,6 +270,17 @@
     }
     window.addEventListener('keydown', handleKeydown);
 
+    function handleOpenSettings(e: Event) {
+      const detail = (e as CustomEvent<{ section?: string }>).detail;
+      view = 'settings';
+      if (detail?.section === 'accounts') {
+        requestAnimationFrame(() => {
+          document.querySelector('[data-testid="settings-accounts-pane"]')?.scrollIntoView({ block: 'start' });
+        });
+      }
+    }
+    window.addEventListener('tmc:open-settings', handleOpenSettings);
+
     const timer = setTimeout(prefsFallback, 3000);
     const updateTimer = setTimeout(() => {
       void fetchUpdateStatus();
@@ -279,6 +290,7 @@
       clearTimeout(timer);
       clearTimeout(updateTimer);
       window.removeEventListener('keydown', handleKeydown);
+      window.removeEventListener('tmc:open-settings', handleOpenSettings);
     };
   });
 </script>

@@ -1,524 +1,577 @@
-//! Cliente Inara InAPI v1 con agrupación por lotes (batching) y límite estricto de 2 req/min.
+//! Cliente HTTP puro para la API de Inara (`InAPI v1`).
 
-use crate::transport::{HttpReply, Transport};
+use std::collections::{HashMap, HashSet};
+use std::time::Duration;
+
 use serde_json::Value;
-use std::sync::Arc;
 use tmc_model::accounts::{InaraBatchEnvelope, InaraEvent, InaraHeader};
-use tmc_model::state::Galaxy;
+use tmc_model::sync::ErrorClass;
+
+use crate::KeyCheck;
+use crate::transport::{HttpReplyEx, TransportError};
 
 pub const INARA_API_URL: &str = "https://inara.cz/inapi/v1/";
 pub const INARA_APP_NAME: &str = "The Multipurpose Companion (TMC)";
-pub const MAX_EVENTS_PER_BATCH: usize = 50;
+pub const MAX_EVENTS_PER_BATCH: usize = 100;
 
-/// Resultado de un evento individual retornado por InAPI v1.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct InaraEventResult {
-    #[serde(rename = "eventStatus")]
-    pub event_status: u16,
-    #[serde(rename = "eventStatusText", skip_serializing_if = "Option::is_none")]
-    pub event_status_text: Option<String>,
-    #[serde(rename = "eventData", skip_serializing_if = "Option::is_none")]
-    pub event_data: Option<Value>,
+/// Entrada de un lote a enviar a InAPI v1.
+pub struct InaraBatch<'a> {
+    pub api_key: &'a str,
+    pub commander_name: &'a str,
+    pub commander_fid: &'a str,
+    /// Pares `(sync_outbox.id, evento JSON sin cabecera)`.
+    pub events: &'a [(i64, Value)],
 }
 
-/// Respuesta completa analizada de InAPI v1.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct InaraResponse {
-    pub status: u16,
-    pub status_text: String,
-    pub events: Vec<InaraEventResult>,
-}
-
-/// Error de sincronización con Inara InAPI v1.
+/// Error local al construir un lote para InAPI v1.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-pub enum InaraError {
-    #[error("sincronización bloqueada: galaxia Legacy no permitida")]
-    LegacyBlocked,
-    #[error("sincronización bloqueada: servicios en línea desactivados")]
-    OfflineBlocked,
-    #[error("sincronización bloqueada: servicio Inara desactivado")]
-    DisabledBlocked,
-    #[error("falta la API key personal de Inara")]
+pub enum InaraLocalError {
+    #[error("la lista de eventos está vacía")]
+    Empty,
+    #[error("el lote excede el máximo de {MAX_EVENTS_PER_BATCH} eventos ({0})")]
+    TooMany(usize),
+    #[error("clave API vacía")]
     MissingApiKey,
-    #[error("la cola de eventos para el lote está vacía")]
-    EmptyBatch,
-    #[error("credenciales inválidas o aplicación rechazada por Inara (HTTP {0}): {1}")]
-    Unauthorized(u16, String),
-    #[error("límite de peticiones de Inara excedido (HTTP 429): {0}")]
-    RateLimited(String),
-    #[error("error de protocolo InAPI v1 (código {0}): {1}")]
-    ApiError(u16, String),
-    #[error("error de transporte HTTP: {0}")]
-    Transport(String),
+    #[error("evento inválido en el lote")]
+    InvalidEvent,
 }
 
-/// Cliente para la API de Inara.
-pub struct InaraClient {
-    transport: Arc<dyn Transport>,
-    app_name: String,
-    app_version: String,
+/// Veredicto normalizado por evento o cabecera tras una petición a InAPI v1.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum InaraVerdict {
+    Sent {
+        code: u16,
+    },
+    Rejected {
+        code: u16,
+    },
+    Retry {
+        class: ErrorClass,
+        code: String,
+        after: Option<Duration>,
+    },
+    AuthError,
 }
 
-impl InaraClient {
-    pub fn new(transport: Arc<dyn Transport>) -> Self {
-        Self {
-            transport,
+/// Respuesta clasificada de InAPI v1.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InaraClassified {
+    pub header: Option<InaraVerdict>,
+    pub per_event: Vec<(i64, InaraVerdict)>,
+}
+
+fn non_empty(s: &str) -> Option<String> {
+    let trimmed = s.trim();
+    (!trimmed.is_empty()).then(|| trimmed.to_string())
+}
+
+/// Construye el cuerpo JSON para `POST https://inara.cz/inapi/v1/`.
+/// Nunca trunca lotes de más de 100 eventos; devuelve `Err(InaraLocalError::TooMany)`.
+pub fn build_request(b: &InaraBatch<'_>) -> Result<Value, InaraLocalError> {
+    if b.events.is_empty() {
+        return Err(InaraLocalError::Empty);
+    }
+    if b.events.len() > MAX_EVENTS_PER_BATCH {
+        return Err(InaraLocalError::TooMany(b.events.len()));
+    }
+    let Some(api_key) = non_empty(b.api_key) else {
+        return Err(InaraLocalError::MissingApiKey);
+    };
+
+    let mut events = Vec::with_capacity(b.events.len());
+    for (row_id, raw) in b.events {
+        let Some(obj) = raw.as_object() else {
+            return Err(InaraLocalError::InvalidEvent);
+        };
+        let Some(event_name) = obj.get("eventName").and_then(Value::as_str) else {
+            return Err(InaraLocalError::InvalidEvent);
+        };
+        let Some(event_timestamp) = obj.get("eventTimestamp").and_then(Value::as_str) else {
+            return Err(InaraLocalError::InvalidEvent);
+        };
+        let Some(event_data) = obj.get("eventData") else {
+            return Err(InaraLocalError::InvalidEvent);
+        };
+        events.push(InaraEvent {
+            event_name: event_name.to_string(),
+            event_timestamp: event_timestamp.to_string(),
+            event_custom_id: Some(*row_id),
+            event_data: event_data.clone(),
+        });
+    }
+
+    let envelope = InaraBatchEnvelope {
+        header: InaraHeader {
             app_name: INARA_APP_NAME.to_string(),
             app_version: env!("CARGO_PKG_VERSION").to_string(),
-        }
-    }
+            is_being_developed: cfg!(debug_assertions),
+            api_key,
+            commander_name: non_empty(b.commander_name),
+            commander_frontier_id: non_empty(b.commander_fid),
+        },
+        events,
+    };
 
-    pub fn with_app_name(mut self, app_name: impl Into<String>) -> Self {
-        self.app_name = app_name.into();
-        self
-    }
+    serde_json::to_value(envelope).map_err(|_| InaraLocalError::InvalidEvent)
+}
 
-    /// Construye y envía eventos a Inara InAPI v1 devolviendo la respuesta estructurada.
-    pub async fn send_events(
-        &self,
-        api_key: &str,
-        commander_name: Option<&str>,
-        events: Vec<InaraEvent<Value>>,
-        galaxy: Galaxy,
-        online: bool,
-        enabled: bool,
-    ) -> Result<InaraResponse, InaraError> {
-        if galaxy != Galaxy::Live {
-            return Err(InaraError::LegacyBlocked);
-        }
-        if !online {
-            return Err(InaraError::OfflineBlocked);
-        }
-        if !enabled {
-            return Err(InaraError::DisabledBlocked);
-        }
-        if api_key.trim().is_empty() {
-            return Err(InaraError::MissingApiKey);
-        }
-        if events.is_empty() {
-            return Err(InaraError::EmptyBatch);
-        }
-
-        let chunk: Vec<InaraEvent<Value>> = events.into_iter().take(MAX_EVENTS_PER_BATCH).collect();
-
-        let batch = InaraBatchEnvelope {
-            header: InaraHeader {
-                app_name: self.app_name.clone(),
-                app_version: self.app_version.clone(),
-                is_developed: false,
-                api_key: api_key.trim().to_string(),
-                commander_name: commander_name.map(|n| n.trim().to_string()),
-            },
-            events: chunk,
-        };
-
-        let body =
-            serde_json::to_string(&batch).map_err(|e| InaraError::Transport(e.to_string()))?;
-
-        let reply = self
-            .transport
-            .post_json(INARA_API_URL, &body)
-            .await
-            .map_err(|e| InaraError::Transport(format!("{e:?}")))?;
-
-        parse_inara_response(&reply)
-    }
-
-    /// Construye y envía un lote de eventos a Inara InAPI v1.
-    pub async fn send_batch(
-        &self,
-        api_key: &str,
-        commander_name: Option<&str>,
-        events: Vec<InaraEvent<Value>>,
-        galaxy: Galaxy,
-        online: bool,
-        enabled: bool,
-    ) -> Result<usize, InaraError> {
-        let count = events.len().min(MAX_EVENTS_PER_BATCH);
-        self.send_events(api_key, commander_name, events, galaxy, online, enabled)
-            .await?;
-        Ok(count)
-    }
-
-    /// Consulta el perfil del comandante en Inara mediante `getCommanderProfile`.
-    pub async fn get_commander_profile(
-        &self,
-        api_key: &str,
-        commander_name: &str,
-        galaxy: Galaxy,
-        online: bool,
-        enabled: bool,
-    ) -> Result<Option<Value>, InaraError> {
-        let event = InaraEvent {
+/// Construye una petición `getCommanderProfile` para verificar una clave personal.
+pub fn build_profile_request(
+    api_key: &str,
+    commander_name: &str,
+    commander_fid: Option<&str>,
+) -> Value {
+    let envelope = InaraBatchEnvelope {
+        header: InaraHeader {
+            app_name: INARA_APP_NAME.to_string(),
+            app_version: env!("CARGO_PKG_VERSION").to_string(),
+            is_being_developed: cfg!(debug_assertions),
+            api_key: api_key.trim().to_string(),
+            commander_name: non_empty(commander_name),
+            commander_frontier_id: commander_fid.and_then(non_empty),
+        },
+        events: vec![InaraEvent {
             event_name: "getCommanderProfile".to_string(),
-            event_timestamp: chrono::Utc::now().to_rfc3339(),
-            event_data: serde_json::json!({
-                "searchName": commander_name
-            }),
-        };
-        let resp = self
-            .send_events(
-                api_key,
-                Some(commander_name),
-                vec![event],
-                galaxy,
-                online,
-                enabled,
-            )
-            .await?;
-        Ok(resp.events.into_iter().next().and_then(|e| e.event_data))
-    }
+            event_timestamp: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+            event_custom_id: Some(1),
+            event_data: serde_json::json!({}),
+        }],
+    };
+    serde_json::to_value(envelope).unwrap_or(Value::Null)
+}
 
-    /// Consulta los Community Goals recientes en Inara mediante `getCommunityGoalsRecent`.
-    pub async fn get_community_goals(
-        &self,
-        api_key: &str,
-        galaxy: Galaxy,
-        online: bool,
-        enabled: bool,
-    ) -> Result<Option<Value>, InaraError> {
-        let event = InaraEvent {
-            event_name: "getCommunityGoalsRecent".to_string(),
-            event_timestamp: chrono::Utc::now().to_rfc3339(),
-            event_data: serde_json::json!([]),
-        };
-        let resp = self
-            .send_events(api_key, None, vec![event], galaxy, online, enabled)
-            .await?;
-        Ok(resp.events.into_iter().next().and_then(|e| e.event_data))
+fn retry_header(
+    class: ErrorClass,
+    code: impl Into<String>,
+    after: Option<Duration>,
+) -> InaraClassified {
+    InaraClassified {
+        header: Some(InaraVerdict::Retry {
+            class,
+            code: code.into(),
+            after,
+        }),
+        per_event: Vec::new(),
     }
 }
 
-/// Analiza la respuesta de Inara InAPI v1.
-fn parse_inara_response(reply: &HttpReply) -> Result<InaraResponse, InaraError> {
-    if reply.status == 429 {
-        return Err(InaraError::RateLimited(
-            "Límite de 2 req/min superado".into(),
-        ));
+fn classify_event_entry(ev: &Value) -> InaraVerdict {
+    let Some(code_u64) = ev.get("eventStatus").and_then(Value::as_u64) else {
+        return InaraVerdict::Retry {
+            class: ErrorClass::ServerError,
+            code: "inara_missing_event_status".into(),
+            after: None,
+        };
+    };
+    let Ok(code) = u16::try_from(code_u64) else {
+        return InaraVerdict::Retry {
+            class: ErrorClass::ServerError,
+            code: format!("inara_event_{code_u64}"),
+            after: None,
+        };
+    };
+    match code {
+        200 | 202 | 204 => InaraVerdict::Sent { code },
+        400 => InaraVerdict::Rejected { code },
+        _ => InaraVerdict::Retry {
+            class: ErrorClass::ServerError,
+            code: format!("inara_event_{code}"),
+            after: None,
+        },
     }
-    if reply.status == 401 || reply.status == 403 {
-        return Err(InaraError::Unauthorized(reply.status, reply.body.clone()));
-    }
-    if !(200..=299).contains(&reply.status) {
-        return Err(InaraError::Transport(format!("HTTP {}", reply.status)));
-    }
+}
 
-    let val: Value = serde_json::from_str(&reply.body)
-        .map_err(|e| InaraError::Transport(format!("malformed json: {e}")))?;
-
-    let status = val
-        .get("header")
-        .and_then(|h| h.get("eventStatus"))
-        .and_then(|s| s.as_u64())
-        .unwrap_or(200) as u16;
-
-    let status_text = val
-        .get("header")
-        .and_then(|h| h.get("eventStatusText"))
-        .and_then(|t| t.as_str())
-        .unwrap_or("OK")
-        .to_string();
-
-    match status {
-        200 | 202 => {
-            let events_vec = val
-                .get("events")
-                .and_then(|e| e.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .map(|ev| InaraEventResult {
-                            event_status: ev
-                                .get("eventStatus")
-                                .and_then(|s| s.as_u64())
-                                .unwrap_or(200) as u16,
-                            event_status_text: ev
-                                .get("eventStatusText")
-                                .and_then(|t| t.as_str())
-                                .map(ToString::to_string),
-                            event_data: ev.get("eventData").cloned(),
-                        })
-                        .collect()
-                })
-                .unwrap_or_default();
-            Ok(InaraResponse {
-                status,
-                status_text,
-                events: events_vec,
-            })
+/// Clasifica la respuesta completa (cabecera y por evento) de InAPI v1.
+pub fn classify(reply: &Result<HttpReplyEx, TransportError>, sent_ids: &[i64]) -> InaraClassified {
+    let r = match reply {
+        Ok(r) => r,
+        Err(TransportError::Timeout) => {
+            return retry_header(ErrorClass::Timeout, "timeout", None);
         }
-        400 => Err(InaraError::ApiError(status, status_text)),
-        403 => Err(InaraError::Unauthorized(status, status_text)),
-        429 => Err(InaraError::RateLimited(status_text)),
-        other => Err(InaraError::ApiError(other, status_text)),
+        Err(TransportError::Connect(_)) => {
+            return retry_header(ErrorClass::Network, "network", None);
+        }
+    };
+
+    match r.status {
+        429 => {
+            let after = Duration::from_secs(r.retry_after_s.unwrap_or(120));
+            return retry_header(ErrorClass::RateLimited, "inara_429", Some(after));
+        }
+        403 => {
+            return retry_header(
+                ErrorClass::Blocked,
+                "inara_403",
+                Some(Duration::from_secs(15 * 60)),
+            );
+        }
+        408 => return retry_header(ErrorClass::Timeout, "inara_408", None),
+        s if !(200..300).contains(&s) => {
+            return retry_header(ErrorClass::ServerError, format!("inara_http_{s}"), None);
+        }
+        _ => {}
+    }
+
+    let Ok(json) = serde_json::from_str::<Value>(&r.body) else {
+        return retry_header(ErrorClass::ServerError, "inara_non_json", None);
+    };
+
+    let Some(header_code) = json
+        .pointer("/header/eventStatus")
+        .and_then(Value::as_u64)
+        .and_then(|n| u16::try_from(n).ok())
+    else {
+        return retry_header(ErrorClass::ServerError, "inara_missing_header_status", None);
+    };
+
+    match header_code {
+        400 => {
+            return InaraClassified {
+                header: Some(InaraVerdict::AuthError),
+                per_event: Vec::new(),
+            };
+        }
+        200 | 202 => {}
+        other => {
+            return retry_header(
+                ErrorClass::ServerError,
+                format!("inara_header_{other}"),
+                None,
+            );
+        }
+    }
+
+    let resp_events = json
+        .get("events")
+        .and_then(Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or(&[]);
+
+    let sent_set: HashSet<i64> = sent_ids.iter().copied().collect();
+    let mut matched: HashMap<i64, InaraVerdict> = HashMap::new();
+
+    for ev in resp_events {
+        if let Some(cid) = ev.get("eventCustomID").and_then(Value::as_i64)
+            && sent_set.contains(&cid)
+        {
+            matched
+                .entry(cid)
+                .or_insert_with(|| classify_event_entry(ev));
+        }
+    }
+
+    if resp_events.len() == sent_ids.len() {
+        for (idx, &id) in sent_ids.iter().enumerate() {
+            if let std::collections::hash_map::Entry::Vacant(slot) = matched.entry(id) {
+                let ev = &resp_events[idx];
+                if ev.get("eventCustomID").is_none() {
+                    slot.insert(classify_event_entry(ev));
+                }
+            }
+        }
+    }
+
+    let per_event = sent_ids
+        .iter()
+        .map(|&id| {
+            let verdict = matched.remove(&id).unwrap_or_else(|| InaraVerdict::Retry {
+                class: ErrorClass::ServerError,
+                code: "inara_unmatched_event".into(),
+                after: None,
+            });
+            (id, verdict)
+        })
+        .collect();
+
+    InaraClassified {
+        header: None,
+        per_event,
+    }
+}
+
+/// Clasifica la respuesta de verificación de clave (`getCommanderProfile`).
+pub fn classify_profile(reply: &Result<HttpReplyEx, TransportError>) -> KeyCheck {
+    let classified = classify(reply, &[1]);
+    match classified.header {
+        Some(InaraVerdict::AuthError) => return KeyCheck::Rejected,
+        Some(_) => return KeyCheck::Unreachable,
+        None => {}
+    }
+    match classified.per_event.first().map(|(_, v)| v) {
+        Some(InaraVerdict::Sent { .. } | InaraVerdict::Rejected { .. }) => KeyCheck::Valid,
+        Some(InaraVerdict::AuthError) => KeyCheck::Rejected,
+        Some(InaraVerdict::Retry { .. }) | None => KeyCheck::Unreachable,
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::transport::{BoxFut, TransportError};
-    use std::sync::Mutex;
+    use serde_json::json;
 
-    struct MockTransport {
-        replies: Mutex<Vec<Result<HttpReply, TransportError>>>,
-        posted_json: Mutex<Vec<(String, String)>>,
+    fn sample_event(name: &str) -> Value {
+        json!({
+            "eventName": name,
+            "eventTimestamp": "2026-11-10T18:00:00Z",
+            "eventData": { "starsystemName": "Sol" }
+        })
     }
 
-    impl MockTransport {
-        fn new(replies: Vec<Result<HttpReply, TransportError>>) -> Self {
-            Self {
-                replies: Mutex::new(replies),
-                posted_json: Mutex::new(Vec::new()),
-            }
-        }
+    fn ok_reply(
+        status: u16,
+        body: &str,
+        retry_after_s: Option<u64>,
+    ) -> Result<HttpReplyEx, TransportError> {
+        Ok(HttpReplyEx {
+            status,
+            body: body.to_string(),
+            retry_after_s,
+            rate_limit_remaining: None,
+            rate_limit_reset_s: None,
+        })
     }
 
-    impl Transport for MockTransport {
-        fn get(&self, _url: &str) -> BoxFut<'_, Result<HttpReply, TransportError>> {
-            Box::pin(async { Err(TransportError::Connect("no get".into())) })
-        }
-
-        fn post_form(
-            &self,
-            _url: &str,
-            _form: &[(String, String)],
-        ) -> BoxFut<'_, Result<HttpReply, TransportError>> {
-            Box::pin(async { Err(TransportError::Connect("no form".into())) })
-        }
-
-        fn post_json(
-            &self,
-            url: &str,
-            body: &str,
-        ) -> BoxFut<'_, Result<HttpReply, TransportError>> {
-            self.posted_json
-                .lock()
-                .unwrap()
-                .push((url.to_string(), body.to_string()));
-            let mut g = self.replies.lock().unwrap();
-            let r = if g.is_empty() {
-                Ok(HttpReply {
-                    status: 200,
-                    body: r#"{"header":{"eventStatus":200,"eventStatusText":"OK"},"events":[{"eventStatus":200}]}"#.to_string(),
-                })
-            } else {
-                g.remove(0)
-            };
-            Box::pin(async move { r })
-        }
+    #[test]
+    fn header_has_exact_app_name_and_is_being_developed() {
+        let events = [(10, sample_event("setCommanderTravelLocation"))];
+        let req = build_request(&InaraBatch {
+            api_key: "fake-key",
+            commander_name: "ExampleCmdr",
+            commander_fid: "F000001",
+            events: &events,
+        })
+        .unwrap();
+        let h = &req["header"];
+        assert_eq!(h["appName"], INARA_APP_NAME);
+        assert_eq!(h["appVersion"], env!("CARGO_PKG_VERSION"));
+        assert_eq!(h["isBeingDeveloped"], cfg!(debug_assertions));
+        assert_eq!(h["APIkey"], "fake-key");
+        assert_eq!(h["commanderName"], "ExampleCmdr");
+        assert_eq!(h["commanderFrontierID"], "F000001");
     }
 
-    #[tokio::test]
-    async fn rejects_legacy_and_offline() {
-        let transport = Arc::new(MockTransport::new(vec![]));
-        let client = InaraClient::new(transport);
-
-        let event = InaraEvent {
-            event_name: "setCommanderProfile".to_string(),
-            event_timestamp: "2026-10-23T12:00:00Z".to_string(),
-            event_data: serde_json::json!({ "credits": 100 }),
-        };
-
-        let res_leg = client
-            .send_batch(
-                "key",
-                Some("Danikuso"),
-                vec![event.clone()],
-                Galaxy::Legacy,
-                true,
-                true,
-            )
-            .await;
-        assert_eq!(res_leg, Err(InaraError::LegacyBlocked));
-
-        let res_off = client
-            .send_batch(
-                "key",
-                Some("Danikuso"),
-                vec![event],
-                Galaxy::Live,
-                false,
-                true,
-            )
-            .await;
-        assert_eq!(res_off, Err(InaraError::OfflineBlocked));
+    #[test]
+    fn event_custom_id_is_row_id() {
+        let events = [
+            (41, sample_event("addCommanderTravelFSDJump")),
+            (42, sample_event("addCommanderTravelDock")),
+        ];
+        let req = build_request(&InaraBatch {
+            api_key: "fake-key",
+            commander_name: "ExampleCmdr",
+            commander_fid: "F000001",
+            events: &events,
+        })
+        .unwrap();
+        let arr = req["events"].as_array().unwrap();
+        assert_eq!(arr.len(), 2);
+        assert_eq!(arr[0]["eventCustomID"], 41);
+        assert_eq!(arr[1]["eventCustomID"], 42);
     }
 
-    #[tokio::test]
-    async fn rejects_empty_key_or_empty_batch() {
-        let transport = Arc::new(MockTransport::new(vec![]));
-        let client = InaraClient::new(transport);
+    #[test]
+    fn more_than_100_is_error_not_truncation() {
+        let events: Vec<(i64, Value)> = (1..=101)
+            .map(|id| (id, sample_event("setCommanderTravelLocation")))
+            .collect();
+        let err = build_request(&InaraBatch {
+            api_key: "fake-key",
+            commander_name: "ExampleCmdr",
+            commander_fid: "F000001",
+            events: &events,
+        })
+        .unwrap_err();
+        assert_eq!(err, InaraLocalError::TooMany(101));
 
-        let event = InaraEvent {
-            event_name: "setCommanderProfile".to_string(),
-            event_timestamp: "2026-10-23T12:00:00Z".to_string(),
-            event_data: serde_json::json!({}),
-        };
-
-        let res_empty_key = client
-            .send_batch("", Some("Danikuso"), vec![event], Galaxy::Live, true, true)
-            .await;
-        assert_eq!(res_empty_key, Err(InaraError::MissingApiKey));
-
-        let res_empty_batch = client
-            .send_batch("key", Some("Danikuso"), vec![], Galaxy::Live, true, true)
-            .await;
-        assert_eq!(res_empty_batch, Err(InaraError::EmptyBatch));
+        let exact_100 = &events[..MAX_EVENTS_PER_BATCH];
+        let ok = build_request(&InaraBatch {
+            api_key: "fake-key",
+            commander_name: "ExampleCmdr",
+            commander_fid: "F000001",
+            events: exact_100,
+        })
+        .unwrap();
+        assert_eq!(ok["events"].as_array().unwrap().len(), 100);
     }
 
-    #[tokio::test]
-    async fn successful_batch_send_caps_at_fifty_and_posts_json() {
-        let transport = Arc::new(MockTransport::new(vec![Ok(HttpReply {
-            status: 200,
-            body: r#"{"header":{"eventStatus":200,"eventStatusText":"OK"},"events":[]}"#
-                .to_string(),
-        })]));
-        let client = InaraClient::new(transport.clone());
-
-        let mut events = Vec::new();
-        for i in 0..60 {
-            events.push(InaraEvent {
-                event_name: "setCommanderTravelLog".to_string(),
-                event_timestamp: "2026-10-23T12:00:00Z".to_string(),
-                event_data: serde_json::json!({ "starsystem": format!("System-{i}") }),
-            });
-        }
-
-        let sent = client
-            .send_batch(
-                "inara_key_xyz",
-                Some("Danikuso"),
-                events,
-                Galaxy::Live,
-                true,
-                true,
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(sent, 50); // Capped at 50 per batch
-        let posted = transport.posted_json.lock().unwrap();
-        assert_eq!(posted.len(), 1);
-        assert_eq!(posted[0].0, INARA_API_URL);
-        assert!(
-            posted[0]
-                .1
-                .contains("\"appName\":\"The Multipurpose Companion (TMC)\"")
-        );
-        assert!(posted[0].1.contains("\"APIkey\":\"inara_key_xyz\""));
-        assert!(posted[0].1.contains("\"commanderName\":\"Danikuso\""));
-    }
-
-    #[tokio::test]
-    async fn get_commander_profile_parses_response() {
-        let reply_json = serde_json::json!({
-            "header": {
-                "eventStatus": 200,
-                "eventStatusText": "OK"
-            },
-            "events": [
-                {
-                    "eventStatus": 200,
-                    "eventData": {
-                        "userID": 12345,
-                        "userName": "Danikuso",
-                        "commanderName": "Danikuso",
-                        "inaraURL": "https://inara.cz/elite/cmdr/12345/"
-                    }
-                }
+    #[test]
+    fn event_status_table() {
+        let body_ok = include_str!("../../../tests/fixtures/sync/inara/response_ok.json");
+        let c = classify(&ok_reply(200, body_ok, None), &[101, 102, 103]);
+        assert!(c.header.is_none());
+        assert_eq!(
+            c.per_event,
+            vec![
+                (101, InaraVerdict::Sent { code: 200 }),
+                (102, InaraVerdict::Sent { code: 202 }),
+                (103, InaraVerdict::Sent { code: 204 }),
             ]
-        });
-
-        let transport = Arc::new(MockTransport::new(vec![Ok(HttpReply {
-            status: 200,
-            body: reply_json.to_string(),
-        })]));
-        let client = InaraClient::new(transport.clone());
-
-        let profile = client
-            .get_commander_profile("key_123", "Danikuso", Galaxy::Live, true, true)
-            .await
-            .unwrap()
-            .expect("profile data");
-
-        assert_eq!(profile["userName"], "Danikuso");
-        assert_eq!(profile["inaraURL"], "https://inara.cz/elite/cmdr/12345/");
-
-        let posted = transport.posted_json.lock().unwrap();
-        assert!(
-            posted[0]
-                .1
-                .contains("\"eventName\":\"getCommanderProfile\"")
         );
-        assert!(posted[0].1.contains("\"searchName\":\"Danikuso\""));
-    }
 
-    #[tokio::test]
-    async fn get_community_goals_parses_response() {
-        let reply_json = serde_json::json!({
-            "header": {
-                "eventStatus": 200,
-                "eventStatusText": "OK"
-            },
-            "events": [
-                {
-                    "eventStatus": 200,
-                    "eventData": [
-                        {
-                            "communityGoalName": "Protect Traders in Lave",
-                            "starsystemName": "Lave"
-                        }
-                    ]
-                }
+        let body_mixed = include_str!("../../../tests/fixtures/sync/inara/response_mixed.json");
+        let cm = classify(&ok_reply(200, body_mixed, None), &[201, 202, 203]);
+        assert!(cm.header.is_none());
+        assert_eq!(
+            cm.per_event,
+            vec![
+                (201, InaraVerdict::Sent { code: 200 }),
+                (202, InaraVerdict::Rejected { code: 400 }),
+                (203, InaraVerdict::Sent { code: 204 }),
             ]
-        });
+        );
 
-        let transport = Arc::new(MockTransport::new(vec![Ok(HttpReply {
-            status: 200,
-            body: reply_json.to_string(),
-        })]));
-        let client = InaraClient::new(transport.clone());
+        let body_h400 = include_str!("../../../tests/fixtures/sync/inara/response_header_400.json");
+        let ch = classify(&ok_reply(200, body_h400, None), &[1, 2]);
+        assert_eq!(ch.header, Some(InaraVerdict::AuthError));
+        assert!(ch.per_event.is_empty());
 
-        let cgs = client
-            .get_community_goals("key_123", Galaxy::Live, true, true)
-            .await
-            .unwrap()
-            .expect("cgs data");
+        let body_nostat =
+            include_str!("../../../tests/fixtures/sync/inara/response_no_status.json");
+        let cn = classify(&ok_reply(200, body_nostat, None), &[301]);
+        assert!(matches!(
+            cn.header,
+            Some(InaraVerdict::Retry {
+                class: ErrorClass::ServerError,
+                ..
+            })
+        ));
+    }
 
-        assert_eq!(cgs[0]["communityGoalName"], "Protect Traders in Lave");
-        let posted = transport.posted_json.lock().unwrap();
-        assert!(
-            posted[0]
-                .1
-                .contains("\"eventName\":\"getCommunityGoalsRecent\"")
+    #[test]
+    fn pairs_by_custom_id_then_by_position_only_if_same_count() {
+        // Reordenado por eventCustomID
+        let body = json!({
+            "header": { "eventStatus": 200 },
+            "events": [
+                { "eventCustomID": 20, "eventStatus": 400 },
+                { "eventCustomID": 10, "eventStatus": 200 }
+            ]
+        })
+        .to_string();
+        let c = classify(&ok_reply(200, &body, None), &[10, 20]);
+        assert_eq!(
+            c.per_event,
+            vec![
+                (10, InaraVerdict::Sent { code: 200 }),
+                (20, InaraVerdict::Rejected { code: 400 }),
+            ]
+        );
+
+        // Sin eventCustomID pero misma longitud: empareja por posición
+        let pos_body = json!({
+            "header": { "eventStatus": 200 },
+            "events": [
+                { "eventStatus": 200 },
+                { "eventStatus": 204 }
+            ]
+        })
+        .to_string();
+        let cp = classify(&ok_reply(200, &pos_body, None), &[50, 60]);
+        assert_eq!(
+            cp.per_event,
+            vec![
+                (50, InaraVerdict::Sent { code: 200 }),
+                (60, InaraVerdict::Sent { code: 204 }),
+            ]
         );
     }
 
-    #[tokio::test]
-    async fn handles_rate_limiting_429() {
-        let transport = Arc::new(MockTransport::new(vec![Ok(HttpReply {
-            status: 429,
-            body: "Too Many Requests".to_string(),
-        })]));
-        let client = InaraClient::new(transport);
+    #[test]
+    fn unmatched_event_is_retry() {
+        // Sin eventCustomID y longitud distinta: no empareja posicionalmente; todo queda Retry
+        let body = json!({
+            "header": { "eventStatus": 200 },
+            "events": [{ "eventStatus": 200 }]
+        })
+        .to_string();
+        let c = classify(&ok_reply(200, &body, None), &[1, 2]);
+        assert_eq!(c.per_event.len(), 2);
+        assert!(matches!(c.per_event[0].1, InaraVerdict::Retry { .. }));
+        assert!(matches!(c.per_event[1].1, InaraVerdict::Retry { .. }));
 
-        let event = InaraEvent {
-            event_name: "setCommanderProfile".to_string(),
-            event_timestamp: "2026-10-23T12:00:00Z".to_string(),
-            event_data: serde_json::json!({}),
-        };
+        // Uno emparejado por custom ID y el otro ausente: el ausente queda Retry
+        let partial = json!({
+            "header": { "eventStatus": 200 },
+            "events": [{ "eventCustomID": 2, "eventStatus": 200 }]
+        })
+        .to_string();
+        let cp = classify(&ok_reply(200, &partial, None), &[1, 2]);
+        assert!(matches!(cp.per_event[0], (1, InaraVerdict::Retry { .. })));
+        assert_eq!(cp.per_event[1], (2, InaraVerdict::Sent { code: 200 }));
+    }
 
-        let res = client
-            .send_batch(
-                "key",
-                Some("Danikuso"),
-                vec![event],
-                Galaxy::Live,
-                true,
-                true,
-            )
-            .await;
+    #[test]
+    fn http_429_retry_after_or_120s() {
+        let with_header = classify(&ok_reply(429, "slow down", Some(45)), &[1]);
+        assert_eq!(
+            with_header.header,
+            Some(InaraVerdict::Retry {
+                class: ErrorClass::RateLimited,
+                code: "inara_429".into(),
+                after: Some(Duration::from_secs(45)),
+            })
+        );
 
-        assert!(matches!(res, Err(InaraError::RateLimited(_))));
+        let fallback = classify(&ok_reply(429, "slow down", None), &[1]);
+        assert_eq!(
+            fallback.header,
+            Some(InaraVerdict::Retry {
+                class: ErrorClass::RateLimited,
+                code: "inara_429".into(),
+                after: Some(Duration::from_secs(120)),
+            })
+        );
+    }
+
+    #[test]
+    fn html_200_body_is_retry_not_success() {
+        let html = include_str!("../../../tests/fixtures/sync/inara/response_html_200.html");
+        let c = classify(&ok_reply(200, html, None), &[1]);
+        assert!(matches!(
+            c.header,
+            Some(InaraVerdict::Retry {
+                class: ErrorClass::ServerError,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn profile_classification() {
+        let ok = include_str!("../../../tests/fixtures/sync/inara/profile_ok.json");
+        assert_eq!(classify_profile(&ok_reply(200, ok, None)), KeyCheck::Valid);
+
+        let bad = include_str!("../../../tests/fixtures/sync/inara/response_header_400.json");
+        assert_eq!(
+            classify_profile(&ok_reply(200, bad, None)),
+            KeyCheck::Rejected
+        );
+
+        let html = include_str!("../../../tests/fixtures/sync/inara/response_html_200.html");
+        assert_eq!(
+            classify_profile(&ok_reply(200, html, None)),
+            KeyCheck::Unreachable
+        );
+
+        let profile_missing_header_ok = json!({
+            "header": { "eventStatus": 200 },
+            "events": [{ "eventStatus": 400, "eventStatusText": "No commander found." }]
+        })
+        .to_string();
+        assert_eq!(
+            classify_profile(&ok_reply(200, &profile_missing_header_ok, None)),
+            KeyCheck::Valid
+        );
+    }
+
+    #[test]
+    fn profile_request_uses_empty_event_data_and_sec_timestamp() {
+        let req = build_profile_request("fake-key", "ExampleCmdr", Some("F000001"));
+        let ev = &req["events"][0];
+        assert_eq!(ev["eventName"], "getCommanderProfile");
+        assert_eq!(ev["eventData"], json!({}));
+        let ts = ev["eventTimestamp"].as_str().unwrap();
+        assert!(ts.ends_with('Z'), "timestamp must end with Z: {ts}");
+        assert!(!ts.contains('.'), "timestamp must omit subseconds: {ts}");
     }
 }

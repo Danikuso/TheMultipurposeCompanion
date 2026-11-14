@@ -2,16 +2,24 @@
 #![forbid(unsafe_code)]
 
 mod eval;
+mod sync_seed;
 
 use std::path::PathBuf;
-use tmc_app::{Config, data_dir, init_logging, start};
+use tmc_app::{Config, data_dir, init_logging, start_headless};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let mut raw = std::env::args().skip(1).peekable();
-    if raw.peek().map(String::as_str) == Some("eval") {
-        raw.next();
-        return eval::run(raw);
+    match raw.peek().map(String::as_str) {
+        Some("eval") => {
+            raw.next();
+            return eval::run(raw);
+        }
+        Some("sync-seed") => {
+            raw.next();
+            return sync_seed::run(raw);
+        }
+        _ => {}
     }
 
     let mut config_file: Option<PathBuf> = None;
@@ -50,25 +58,25 @@ async fn main() -> anyhow::Result<()> {
         let transport = e2e_transport()?;
         let relay = e2e_eddn_relay()?;
         if transport.is_none() && relay.is_none() {
-            start(config).await?
+            start_headless(config).await?
         } else {
             let transport = match transport {
                 Some(t) => t,
                 // Solo relay falso: ninguna petición HTTP real sale de la prueba.
                 None => std::sync::Arc::new(DenyAll),
             };
-            tmc_app::start_full(config, transport, None, relay).await?
+            tmc_app::start_headless_full(config, transport, None, relay).await?
         }
     };
     #[cfg(not(debug_assertions))]
-    let running = start(config).await?;
+    let running = start_headless(config).await?;
     println!("local_url: {}", running.server.local_url);
     if let Some(lan_url) = &running.server.lan_url {
         println!("lan_url: {lan_url}");
     }
 
     tokio::signal::ctrl_c().await?;
-    running.server.shutdown();
+    running.shutdown().await;
     Ok(())
 }
 

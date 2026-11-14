@@ -1,0 +1,50 @@
+{
+  "$schemaRef": "https://eddn.edcd.io/schemas/journal/1",
+  "header": {
+    "uploaderID": "290d497c61e19213ec286ad31430b47e",
+    "softwareName": "The Multipurpose Companion (TMC)",
+    "softwareVersion": "1.4.0",
+    "gameversion": "4.0.0.1903",
+    "gamebuild": "r310123/r0 "
+  },
+  "message": {
+    "timestamp": "2026-01-01T12:00:02Z",
+    "event": "Docked",
+    "horizons": true,
+    "odyssey": true,
+    "StarSystem": "Sistema Ficticio",
+    "StarPos": [
+      10.5,
+      -20.25,
+      30.125
+    ],
+    "SystemAddress": 1000000000001,
+    "StationName": "Puerto Ficticio",
+    "StationType": "Coriolis",
+    "MarketID": 128000001,
+    "StationFaction": {
+      "Name": "Facción Ficticia",
+      "FactionState": "Boom"
+    },
+    "StationGovernment": "$government_Corporate;",
+    "StationServices": [
+      "dock",
+      "commodities",
+      "outfitting",
+      "shipyard"
+    ],
+    "StationEconomy": "$economy_Industrial;",
+    "StationEconomies": [
+      {
+        "Name": "$economy_Industrial;",
+        "Proportion": 1.0
+      }
+    ],
+    "DistFromStarLS": 500.5,
+    "LandingPads": {
+      "Small": 10,
+      "Medium": 12,
+      "Large": 6
+    }
+  }
+}

@@ -137,6 +137,21 @@ fn endpoint_of(req: &Req) -> &'static str {
             "ardent.nearest.service"
         };
     }
+    if path.starts_with(crate::eddn_upload::EDDN_UPLOAD_URL) {
+        return "eddn.upload";
+    }
+    if path.starts_with(crate::edsm_journal::EDSM_DISCARD_URL) {
+        return "edsm.discard";
+    }
+    if path.starts_with(crate::edsm_journal::EDSM_JOURNAL_URL) {
+        return "edsm.journal";
+    }
+    if path.starts_with("https://www.edsm.net/api-commander-v1/") {
+        return "edsm.commander";
+    }
+    if path.starts_with(crate::inara::INARA_API_URL) {
+        return "inara.inapi";
+    }
     "unknown"
 }
 
@@ -291,6 +306,11 @@ impl NetClient {
             ref_lock: tokio::sync::Mutex::new(()),
             poi_lock: tokio::sync::Mutex::new(()),
         }
+    }
+
+    /// Devuelve el transporte subyacente para reutilizarlo en verificaciones de cuentas.
+    pub fn transport(&self) -> &Arc<dyn Transport> {
+        &self.transport
     }
 
     /// Guarda y recupera el `codex/ref` compacto (7 días) para no bajarlo en cada arranque.

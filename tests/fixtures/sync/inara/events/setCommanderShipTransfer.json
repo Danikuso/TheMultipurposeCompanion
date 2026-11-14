@@ -1,0 +1,27 @@
+{
+  "journal": {
+    "timestamp": "2026-11-10T18:00:00Z",
+    "event": "ShipyardTransfer",
+    "ShipType": "sidewinder",
+    "ShipID": 2,
+    "System": "Eranin",
+    "TransferTime": 643
+  },
+  "context": {
+    "starsystemName": "Sol",
+    "stationName": "Abraham Lincoln",
+    "marketID": 128004512
+  },
+  "inara": {
+    "eventName": "setCommanderShipTransfer",
+    "eventTimestamp": "2026-11-10T18:00:00Z",
+    "eventData": {
+      "shipType": "sidewinder",
+      "shipGameID": 2,
+      "starsystemName": "Sol",
+      "stationName": "Abraham Lincoln",
+      "marketID": 128004512,
+      "transferTime": 643
+    }
+  }
+}

@@ -8,7 +8,7 @@ use tracing_subscriber::filter::FilterExt;
 use tracing_subscriber::{EnvFilter, prelude::*};
 
 #[cfg(debug_assertions)]
-mod diagnostics;
+pub(crate) mod diagnostics;
 
 /// Keep alive until the application has stopped. Drop drains both writers.
 pub struct LoggingGuards {

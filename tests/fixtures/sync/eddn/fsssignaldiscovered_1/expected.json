@@ -1,0 +1,38 @@
+{
+  "$schemaRef": "https://eddn.edcd.io/schemas/fsssignaldiscovered/1",
+  "header": {
+    "uploaderID": "290d497c61e19213ec286ad31430b47e",
+    "softwareName": "The Multipurpose Companion (TMC)",
+    "softwareVersion": "1.4.0",
+    "gameversion": "4.0.0.1903",
+    "gamebuild": "r310123/r0 "
+  },
+  "message": {
+    "event": "FSSSignalDiscovered",
+    "horizons": true,
+    "odyssey": true,
+    "timestamp": "2026-01-01T12:00:03Z",
+    "SystemAddress": 1000000000001,
+    "StarSystem": "Sistema Ficticio",
+    "StarPos": [
+      10.5,
+      -20.25,
+      30.125
+    ],
+    "signals": [
+      {
+        "timestamp": "2026-01-01T12:00:03Z",
+        "SignalName": "Señal Ficticia",
+        "SignalType": "ResourceExtraction",
+        "IsStation": false
+      },
+      {
+        "timestamp": "2026-01-01T12:00:04Z",
+        "SignalName": "$USS;",
+        "SignalType": "USS",
+        "USSType": "$USS_Type_Salvage;",
+        "ThreatLevel": 1
+      }
+    ]
+  }
+}
