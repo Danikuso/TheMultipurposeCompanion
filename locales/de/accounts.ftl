@@ -142,3 +142,4 @@ accounts-cmdr-forget-confirm = { $cmdr } vergessen? Lokale Daten und Schlüssel 
 accounts-ui-confirm = Bestätigen
 accounts-ui-cancel = Abbrechen
 accounts-key-toggle-visibility = Schlüssel anzeigen oder ausblenden
+accounts-cmdr-non-active-notice = Gespeicherte Schlüssel für CMDR { $selected } werden angezeigt. Live-Zähler spiegeln die aktive Sitzung von CMDR { $active } wider.

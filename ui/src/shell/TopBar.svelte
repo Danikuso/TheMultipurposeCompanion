@@ -29,6 +29,14 @@
     galaxy?: string;
   }
 
+  let {
+    mobileNavOpen = false,
+    onToggleMobileNav,
+  }: {
+    mobileNavOpen?: boolean;
+    onToggleMobileNav?: () => void;
+  } = $props();
+
   const MODE_KEY_MAP: Record<string, string> = {
     Docked: 'mode-docked',
     Landed: 'mode-landed',
@@ -80,6 +88,16 @@
 
 <header class="hud-topbar">
   <div class="topbar-brand">
+    <button
+      type="button"
+      class="mobile-nav-toggle"
+      data-testid="mobile-nav-toggle"
+      aria-label={t('nav-toggle-menu')}
+      aria-expanded={mobileNavOpen}
+      onclick={() => onToggleMobileNav?.()}
+    >
+      <span aria-hidden="true">{mobileNavOpen ? '✕' : '☰'}</span>
+    </button>
     <span class="conn-dot" class:online={live.connected}></span>
     <span class="brand-title">{t('app-name')}</span>
     {#if game?.running}
@@ -491,5 +509,37 @@
 
   .badge-muted {
     color: var(--hud-muted);
+  }
+
+  .mobile-nav-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    background: var(--hud-surface-card);
+    border: 1px solid var(--hud-border-subtle);
+    color: var(--hud-primary);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  @media (max-width: 767px) {
+    .mobile-nav-toggle {
+      display: inline-flex;
+    }
+
+    .hud-topbar {
+      padding: 0.45rem 0.65rem;
+      gap: 0.5rem;
+    }
+
+    .topbar-status {
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
   }
 </style>

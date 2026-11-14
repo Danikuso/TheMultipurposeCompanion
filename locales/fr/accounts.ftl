@@ -142,3 +142,4 @@ accounts-cmdr-forget-confirm = Oublier { $cmdr } ? Ses données et clés locales
 accounts-ui-confirm = Confirmer
 accounts-ui-cancel = Annuler
 accounts-key-toggle-visibility = Afficher ou masquer la clé
+accounts-cmdr-non-active-notice = Affichage des clés enregistrées pour CMDR { $selected }. Les compteurs en direct reflètent la session active de CMDR { $active }.

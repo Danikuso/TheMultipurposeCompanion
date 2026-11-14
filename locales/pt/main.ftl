@@ -397,3 +397,4 @@ field-latitude = Lat.
 field-longitude = Long.
 field-altitude = Alt.
 ship-guardian-fighter = { $model } (caça Guardian)
+nav-toggle-menu = Alternar menu de navegação

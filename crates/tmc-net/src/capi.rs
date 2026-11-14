@@ -45,20 +45,24 @@ pub fn base64url_encode(input: &[u8]) -> String {
     out
 }
 
-/// Genera el par PKCE `(code_verifier, code_challenge)` conforme a RFC 7636 (S256).
-pub fn generate_pkce_pair(seed: &str) -> (String, String) {
-    let mut v_hasher = Sha256::new();
-    v_hasher.update(seed.as_bytes());
-    v_hasher.update(b":tmc_capi_verifier:");
-    v_hasher.update(format!("{:?}", std::time::Instant::now()).as_bytes());
-    let hex = format!("{:x}{:x}", v_hasher.clone().finalize(), v_hasher.finalize());
-    let verifier = hex[0..64].to_string();
+/// Genera el par PKCE `(code_verifier, code_challenge)` con entropía criptográfica (RFC 7636 S256).
+pub fn generate_random_pkce_pair() -> (String, String) {
+    let mut entropy = [0u8; 32];
+    entropy[..16].copy_from_slice(uuid::Uuid::new_v4().as_bytes());
+    entropy[16..].copy_from_slice(uuid::Uuid::new_v4().as_bytes());
+    let verifier = base64url_encode(&entropy);
 
     let mut ch_hasher = Sha256::new();
     ch_hasher.update(verifier.as_bytes());
     let challenge = base64url_encode(&ch_hasher.finalize());
 
     (verifier, challenge)
+}
+
+/// Genera el par PKCE `(code_verifier, code_challenge)` conforme a RFC 7636 (S256).
+/// El verificador se genera siempre con CSPRNG y no depende del parámetro público `_seed`.
+pub fn generate_pkce_pair(_seed: &str) -> (String, String) {
+    generate_random_pkce_pair()
 }
 
 /// Construye la URL de inicio de sesión de Frontier Store con OAuth2 + PKCE.
@@ -417,7 +421,7 @@ mod tests {
     #[test]
     fn pkce_generation_and_auth_url() {
         let (verifier, challenge) = generate_pkce_pair("test_seed");
-        assert_eq!(verifier.len(), 64);
+        assert_eq!(verifier.len(), 43);
         assert!(!challenge.is_empty());
         assert!(!challenge.contains('+'));
         assert!(!challenge.contains('/'));
@@ -428,6 +432,20 @@ mod tests {
         assert!(url.contains("client_id=my_client_id"));
         assert!(url.contains("code_challenge="));
         assert!(url.contains("code_challenge_method=S256"));
+    }
+
+    #[test]
+    fn test_pkce_generation_is_cryptographically_random_and_independent_of_seed() {
+        let (v1, c1) = generate_pkce_pair("identical-public-state");
+        let (v2, c2) = generate_pkce_pair("identical-public-state");
+        assert_eq!(v1.len(), 43);
+        assert_eq!(v2.len(), 43);
+        assert_ne!(v1, v2);
+        assert_ne!(c1, c2);
+        assert!(!v1.contains(['+', '/', '=']));
+
+        let expected_c1 = base64url_encode(&Sha256::digest(v1.as_bytes()));
+        assert_eq!(c1, expected_c1);
     }
 
     #[tokio::test]

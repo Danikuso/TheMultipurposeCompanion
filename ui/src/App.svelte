@@ -30,6 +30,7 @@
 
   let pin = $state<string | null>(null);
   let view = $state<string | null>(null);
+  let mobileNavOpen = $state(false);
   const OFF_MARK = ' off';
   let lastAuto: string | null = null;
   let manual = $state<string | null>(null);
@@ -197,6 +198,7 @@
   });
 
   function selectTab(id: string) {
+    mobileNavOpen = false;
     if (id === 'accounts') {
       view = 'settings';
       return;
@@ -272,6 +274,7 @@
 
     function handleOpenSettings(e: Event) {
       const detail = (e as CustomEvent<{ section?: string }>).detail;
+      mobileNavOpen = false;
       view = 'settings';
       if (detail?.section === 'accounts') {
         requestAnimationFrame(() => {
@@ -309,10 +312,19 @@
 {/snippet}
 
 <div class="app-shell">
-  <TopBar />
+  <TopBar {mobileNavOpen} onToggleMobileNav={() => (mobileNavOpen = !mobileNavOpen)} />
   <ImportProgress />
   <div class="app-body">
-    <Sidebar {activeTab} onSelect={selectTab} onNewTab={() => (tabDialog = 'create')} />
+    <Sidebar
+      {activeTab}
+      mobileOpen={mobileNavOpen}
+      onSelect={selectTab}
+      onNewTab={() => {
+        mobileNavOpen = false;
+        tabDialog = 'create';
+      }}
+      onCloseMobile={() => (mobileNavOpen = false)}
+    />
     <Grid {activeTab}>
       {#if activeTab === 'settings'}
         <Settings />

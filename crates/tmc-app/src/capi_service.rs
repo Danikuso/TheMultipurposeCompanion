@@ -7,6 +7,7 @@ use tmc_model::accounts::RemoteShip;
 use tmc_net::Transport;
 pub use tmc_net::capi::{
     CapiClient, CapiError, CapiProfile, CapiToken, build_auth_url, generate_pkce_pair,
+    generate_random_pkce_pair,
 };
 use tmc_store::{AccountCredentialRecord, Store, StoreError};
 
@@ -14,12 +15,27 @@ const PENDING_STATE_TTL: Duration = Duration::from_secs(600);
 const DEFAULT_CLIENT_ID: &str = "12fbec0d-b5c9-4911-af18-0e7a4ede266e";
 const CAPI_SERVICE_KEY: &str = "frontier_capi";
 
+#[derive(Clone)]
+struct PendingAuth {
+    verifier: String,
+    fid: Option<String>,
+    created: Instant,
+}
+
+fn service_key_for(fid: Option<&str>) -> String {
+    match fid.map(str::trim).filter(|f| !f.is_empty()) {
+        Some(f) => format!("{CAPI_SERVICE_KEY}:{f}"),
+        None => CAPI_SERVICE_KEY.to_string(),
+    }
+}
+
 /// Servicio de integración Frontier CAPI con gestión de ciclo de vida OAuth2 PKCE y flota remota.
 pub struct CapiService {
     client: CapiClient,
     store: Store,
     client_id: String,
-    pending: Arc<Mutex<HashMap<String, (String, Instant)>>>,
+    active_fid: Arc<Mutex<Option<String>>>,
+    pending: Arc<Mutex<HashMap<String, PendingAuth>>>,
 }
 
 impl CapiService {
@@ -31,6 +47,7 @@ impl CapiService {
             client: CapiClient::new(transport),
             store,
             client_id,
+            active_fid: Arc::new(Mutex::new(None)),
             pending: Arc::new(Mutex::new(HashMap::new())),
         }
     }
@@ -39,15 +56,52 @@ impl CapiService {
         &self.client_id
     }
 
+    /// Actualiza el FID del comandante activo para aislar sesiones CAPI multicomandante.
+    pub fn set_active_fid(&self, fid: Option<&str>) {
+        if let Ok(mut guard) = self.active_fid.lock() {
+            *guard = fid
+                .map(str::trim)
+                .filter(|f| !f.is_empty())
+                .map(str::to_owned);
+        }
+    }
+
+    pub fn active_fid(&self) -> Option<String> {
+        self.active_fid.lock().ok().and_then(|g| g.clone())
+    }
+
+    fn known_cmdrs_count(&self) -> usize {
+        self.store.known_cmdrs().map(|v| v.len()).unwrap_or(0)
+    }
+
+    fn resolve_effective_fid(&self) -> Option<String> {
+        if let Some(fid) = self.active_fid() {
+            return Some(fid);
+        }
+        let known = self.store.known_cmdrs().ok()?;
+        if known.len() == 1 {
+            return Some(known[0].0.clone());
+        }
+        None
+    }
+
     /// Inicia el flujo de autenticación PKCE, registrando el verificador temporal y generando la URL de Frontier.
     pub fn start_login(&self, redirect_uri: &str) -> (String, String) {
         let state = uuid::Uuid::new_v4().to_string();
-        let (verifier, challenge) = generate_pkce_pair(&state);
+        let (verifier, challenge) = generate_random_pkce_pair();
+        let fid = self.resolve_effective_fid();
 
         let now = Instant::now();
         if let Ok(mut pending) = self.pending.lock() {
-            pending.retain(|_, (_, created)| now.duration_since(*created) < PENDING_STATE_TTL);
-            pending.insert(state.clone(), (verifier, now));
+            pending.retain(|_, entry| now.duration_since(entry.created) < PENDING_STATE_TTL);
+            pending.insert(
+                state.clone(),
+                PendingAuth {
+                    verifier,
+                    fid,
+                    created: now,
+                },
+            );
         }
 
         let auth_url = build_auth_url(&self.client_id, redirect_uri, &challenge, &state);
@@ -61,18 +115,18 @@ impl CapiService {
         state: &str,
         redirect_uri: &str,
     ) -> Result<CapiToken, CapiError> {
-        let verifier = {
+        let (verifier, login_fid) = {
             let mut pending = self
                 .pending
                 .lock()
                 .map_err(|_| CapiError::Malformed("lock-poisoned".into()))?;
-            let (v, created) = pending
+            let entry = pending
                 .remove(state)
                 .ok_or_else(|| CapiError::InvalidCode(400, "state-not-found-or-expired".into()))?;
-            if Instant::now().duration_since(created) >= PENDING_STATE_TTL {
+            if Instant::now().duration_since(entry.created) >= PENDING_STATE_TTL {
                 return Err(CapiError::InvalidCode(400, "state-expired".into()));
             }
-            v
+            (entry.verifier, entry.fid)
         };
 
         let token = self
@@ -80,29 +134,54 @@ impl CapiService {
             .exchange_code(&self.client_id, code, &verifier, redirect_uri)
             .await?;
 
-        self.save_token(&token)?;
+        let target_fid = login_fid.or_else(|| self.resolve_effective_fid());
+        self.save_token_for(target_fid.as_deref(), &token)?;
 
         Ok(token)
     }
 
-    /// Obtiene el token de sesión almacenado si existe.
+    /// Obtiene el token de sesión del comandante activo (con respaldo transparente a clave heredada en cuentas únicas).
     pub fn get_token(&self) -> Result<Option<CapiToken>, CapiError> {
+        self.get_token_for(self.resolve_effective_fid().as_deref())
+    }
+
+    /// Obtiene el token de sesión de un comandante específico (o clave heredada si `fid` es `None` o cuenta única).
+    pub fn get_token_for(&self, fid: Option<&str>) -> Result<Option<CapiToken>, CapiError> {
+        let scoped_key = service_key_for(fid);
         let rec = self
             .store
-            .get_account_credential(CAPI_SERVICE_KEY)
+            .get_account_credential(&scoped_key)
             .map_err(|e| CapiError::Malformed(e.to_string()))?;
-        let Some(json) = rec.and_then(|r| r.token_json) else {
-            return Ok(None);
+        let json = match rec.and_then(|r| r.token_json) {
+            Some(j) => j,
+            None if fid.is_some() && self.known_cmdrs_count() <= 1 => {
+                let Some(legacy) = self
+                    .store
+                    .get_account_credential(CAPI_SERVICE_KEY)
+                    .map_err(|e| CapiError::Malformed(e.to_string()))?
+                    .and_then(|r| r.token_json)
+                else {
+                    return Ok(None);
+                };
+                legacy
+            }
+            None => return Ok(None),
         };
         let token = serde_json::from_str(&json).map_err(|e| CapiError::Malformed(e.to_string()))?;
         Ok(Some(token))
     }
 
-    /// Guarda el token OAuth2 en SQLite.
+    /// Guarda el token OAuth2 en SQLite para el comandante activo.
     pub fn save_token(&self, token: &CapiToken) -> Result<(), CapiError> {
+        self.save_token_for(self.resolve_effective_fid().as_deref(), token)
+    }
+
+    /// Guarda el token OAuth2 en SQLite aislado bajo `frontier_capi:<fid>` cuando se conoce el comandante.
+    pub fn save_token_for(&self, fid: Option<&str>, token: &CapiToken) -> Result<(), CapiError> {
+        let key = service_key_for(fid);
         let json = serde_json::to_string(token).map_err(|e| CapiError::Malformed(e.to_string()))?;
         let rec = AccountCredentialRecord {
-            service: CAPI_SERVICE_KEY.to_string(),
+            service: key,
             api_key: None,
             cmdr_name: None,
             token_json: Some(json),
@@ -111,13 +190,19 @@ impl CapiService {
         };
         self.store
             .set_account_credential(&rec)
-            .map_err(|e| CapiError::Malformed(e.to_string()))
+            .map_err(|e| CapiError::Malformed(e.to_string()))?;
+        // Limpiar clave global heredada cuando se migra a almacenamiento por FID en cuenta única.
+        if fid.is_some() && self.known_cmdrs_count() <= 1 {
+            let _ = self.store.delete_account_credential(CAPI_SERVICE_KEY);
+        }
+        Ok(())
     }
 
     /// Refresca los tokens con Frontier Store y actualiza la persistencia.
     pub async fn refresh_session(&self) -> Result<CapiToken, CapiError> {
+        let fid = self.resolve_effective_fid();
         let token = self
-            .get_token()?
+            .get_token_for(fid.as_deref())?
             .ok_or_else(|| CapiError::Unauthorized(401, "no-session".into()))?;
 
         let refreshed = self
@@ -125,7 +210,7 @@ impl CapiService {
             .refresh_token(&self.client_id, &token.refresh_token)
             .await?;
 
-        self.save_token(&refreshed)?;
+        self.save_token_for(fid.as_deref(), &refreshed)?;
 
         Ok(refreshed)
     }
@@ -152,9 +237,21 @@ impl CapiService {
         self.fetch_profile().await.map(|p| p.remote_ships)
     }
 
-    /// Elimina la sesión de Frontier de la base de datos (desvincular cuenta).
+    /// Elimina la sesión de Frontier del comandante activo en la base de datos (desvincular cuenta).
     pub fn clear_session(&self) -> Result<bool, StoreError> {
-        self.store.delete_account_credential(CAPI_SERVICE_KEY)
+        self.clear_session_for(self.resolve_effective_fid().as_deref())
+    }
+
+    /// Elimina únicamente la sesión de Frontier del comandante especificado (`frontier_capi:<fid>`).
+    pub fn clear_session_for(&self, fid: Option<&str>) -> Result<bool, StoreError> {
+        let key = service_key_for(fid);
+        let removed_scoped = self.store.delete_account_credential(&key)?;
+        let removed_legacy = if fid.is_some() && self.known_cmdrs_count() <= 1 {
+            self.store.delete_account_credential(CAPI_SERVICE_KEY)?
+        } else {
+            false
+        };
+        Ok(removed_scoped || removed_legacy)
     }
 }
 
@@ -268,5 +365,63 @@ mod tests {
         // Desvincular
         assert!(service.clear_session().unwrap());
         assert_eq!(service.get_token().unwrap(), None);
+    }
+
+    #[test]
+    fn test_multi_commander_token_isolation_and_legacy_fallback() {
+        let store = in_memory_store();
+        let now = chrono::Utc::now();
+        store.upsert_known_cmdr("F111", "Alpha", now).unwrap();
+
+        let service = CapiService::new(
+            store.clone(),
+            Arc::new(MockTransport::new(Err(TransportError::Connect(
+                "unused".into(),
+            )))),
+            Some("test_client".to_string()),
+        );
+
+        let legacy_tok = CapiToken {
+            access_token: "legacy_access".into(),
+            refresh_token: "legacy_refresh".into(),
+            token_type: "Bearer".into(),
+            expires_in: 3600,
+        };
+        service.save_token_for(None, &legacy_tok).unwrap();
+        assert_eq!(
+            service.get_token_for(Some("F111")).unwrap(),
+            Some(legacy_tok.clone())
+        );
+
+        // Registrar segundo comandante: los tokens quedan aislados por FID y sin fallback cruzado.
+        store.upsert_known_cmdr("F222", "Beta", now).unwrap();
+        assert_eq!(service.get_token_for(Some("F111")).unwrap(), None);
+        assert_eq!(service.get_token_for(Some("F222")).unwrap(), None);
+
+        let tok_alpha = CapiToken {
+            access_token: "alpha_access".into(),
+            refresh_token: "alpha_refresh".into(),
+            token_type: "Bearer".into(),
+            expires_in: 3600,
+        };
+        let tok_beta = CapiToken {
+            access_token: "beta_access".into(),
+            refresh_token: "beta_refresh".into(),
+            token_type: "Bearer".into(),
+            expires_in: 7200,
+        };
+
+        service.set_active_fid(Some("F111"));
+        service.save_token(&tok_alpha).unwrap();
+        service.set_active_fid(Some("F222"));
+        service.save_token(&tok_beta).unwrap();
+
+        service.set_active_fid(Some("F111"));
+        assert_eq!(service.get_token().unwrap().as_ref(), Some(&tok_alpha));
+        assert!(service.clear_session().unwrap());
+        assert_eq!(service.get_token().unwrap(), None);
+
+        service.set_active_fid(Some("F222"));
+        assert_eq!(service.get_token().unwrap().as_ref(), Some(&tok_beta));
     }
 }

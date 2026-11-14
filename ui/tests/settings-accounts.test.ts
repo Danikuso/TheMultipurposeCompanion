@@ -430,4 +430,45 @@ describe('Settings with integrated Accounts', () => {
       cmdr_ref: 'cmdr-2',
     });
   });
+
+  test('shows contextual notice when selecting a non-active commander in SyncKeys', () => {
+    const st = live.topics['accounts.status'] as Record<string, unknown>;
+    st.commanders = [
+      {
+        cmdr_ref: 'cmdr-1',
+        name: 'Danikuso',
+        inara_key: true,
+        edsm_key: true,
+        key_assignment: 'confirmed',
+        inara_pending: 0,
+        edsm_pending: 0,
+        eddn_pending: 0,
+      },
+      {
+        cmdr_ref: 'cmdr-2',
+        name: 'AltExplorer',
+        inara_key: false,
+        edsm_key: true,
+        key_assignment: 'confirmed',
+        inara_pending: 0,
+        edsm_pending: 0,
+        eddn_pending: 0,
+      },
+    ];
+
+    instance = mount(Settings, { target });
+    flushSync();
+
+    expect(target.querySelector('[data-testid="accounts-cmdr-non-active-notice"]')).toBeNull();
+
+    const selector = target.querySelector('[data-testid="accounts-cmdr-select"]') as HTMLSelectElement;
+    selector.value = 'cmdr-2';
+    selector.dispatchEvent(new Event('change'));
+    flushSync();
+
+    const notice = target.querySelector('[data-testid="accounts-cmdr-non-active-notice"]');
+    expect(notice).not.toBeNull();
+    expect(notice?.textContent).toContain('AltExplorer');
+    expect(notice?.textContent).toContain('Danikuso');
+  });
 });

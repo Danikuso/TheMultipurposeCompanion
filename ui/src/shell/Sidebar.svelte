@@ -14,12 +14,16 @@
 
   let {
     activeTab = 'layout:exploration',
+    mobileOpen = false,
     onSelect,
     onNewTab,
+    onCloseMobile,
   }: {
     activeTab?: string;
+    mobileOpen?: boolean;
     onSelect?: (id: string) => void;
     onNewTab?: () => void;
+    onCloseMobile?: () => void;
   } = $props();
 
   const custom = $derived(customTabs());
@@ -72,7 +76,16 @@
   };
 </script>
 
-<aside class="hud-sidebar" aria-label={t('nav-modules')}>
+{#if mobileOpen}
+  <div
+    class="sidebar-mobile-backdrop"
+    data-testid="sidebar-mobile-backdrop"
+    role="presentation"
+    onclick={() => onCloseMobile?.()}
+  ></div>
+{/if}
+
+<aside class="hud-sidebar" class:mobile-open={mobileOpen} aria-label={t('nav-modules')}>
   <div class="sidebar-top">
     <h2>{t('nav-layouts')}</h2>
     {#each layouts as layout (layout.id)}
@@ -331,5 +344,34 @@
   .relevance-critical {
     background: var(--hud-danger);
     box-shadow: 0 0 6px var(--hud-danger);
+  }
+
+  .sidebar-mobile-backdrop {
+    display: none;
+  }
+
+  @media (max-width: 767px) {
+    .sidebar-mobile-backdrop {
+      display: block;
+      position: fixed;
+      inset: 0;
+      z-index: 890;
+      background: rgba(4, 8, 16, 0.72);
+    }
+
+    .hud-sidebar {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: min(260px, 82vw);
+      z-index: 900;
+      transform: translateX(-100%);
+      transition: transform 180ms ease;
+    }
+
+    .hud-sidebar.mobile-open {
+      transform: translateX(0);
+    }
   }
 </style>

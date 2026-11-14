@@ -372,6 +372,8 @@ mod tests {
                 ("edsm", FluentValue::from(1)),
                 ("eddn", FluentValue::from(0)),
                 ("cmdr", FluentValue::from("Danikuso")),
+                ("selected", FluentValue::from("AltExplorer")),
+                ("active", FluentValue::from("Danikuso")),
             ] {
                 args.set(name, value);
             }
