@@ -142,3 +142,4 @@ accounts-cmdr-forget-confirm = Forget { $cmdr }? Local commander data and keys w
 accounts-ui-confirm = Confirm
 accounts-ui-cancel = Cancel
 accounts-key-toggle-visibility = Show or hide key
+accounts-cmdr-non-active-notice = Viewing saved keys for CMDR { $selected }. Live counters reflect the active session of CMDR { $active }.

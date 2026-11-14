@@ -397,3 +397,4 @@ field-latitude = Lat.
 field-longitude = Lon.
 field-altitude = Alt.
 ship-guardian-fighter = { $model } (Guardian fighter)
+nav-toggle-menu = Toggle navigation menu

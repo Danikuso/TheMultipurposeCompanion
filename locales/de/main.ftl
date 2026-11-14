@@ -397,3 +397,4 @@ field-latitude = Breite
 field-longitude = Länge
 field-altitude = Höhe
 ship-guardian-fighter = { $model } (Guardian-Jäger)
+nav-toggle-menu = Navigationsmenü umschalten

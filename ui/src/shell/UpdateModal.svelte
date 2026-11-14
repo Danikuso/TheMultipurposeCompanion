@@ -114,8 +114,7 @@
     position: fixed;
     inset: 0;
     z-index: 1000;
-    background: rgba(4, 8, 16, 0.78);
-    backdrop-filter: blur(8px);
+    background: rgba(4, 8, 16, 0.88);
     display: flex;
     align-items: center;
     justify-content: center;

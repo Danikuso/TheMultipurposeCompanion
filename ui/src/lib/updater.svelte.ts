@@ -26,6 +26,7 @@ export interface UpdateStatus {
   download_url: string | null;
   asset_name: string | null;
   asset_size: number | null;
+  expected_sha256?: string | null;
   release_notes: string;
   published_at: string | null;
   is_checking: boolean;

@@ -205,6 +205,12 @@
         </div>
       </div>
 
+      {#if !isSelectedCurrent && selectedCmdr && status?.current_cmdr}
+        <p class="sub cmdr-context-note" data-testid="accounts-cmdr-non-active-notice">
+          ℹ️ {t('accounts-cmdr-non-active-notice', { selected: selectedCmdr.name, active: status.current_cmdr.name })}
+        </p>
+      {/if}
+
       {#if forgetConfirmOpen && selectedCmdr}
         <div class="confirm-banner" data-testid="accounts-cmdr-forget-confirm-box">
           <p class="sub">{t('accounts-cmdr-forget-confirm', { cmdr: selectedCmdr.name })}</p>
@@ -505,6 +511,12 @@
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 8px 12px;
+  }
+
+  .cmdr-context-note {
+    padding-top: 6px;
+    border-top: 1px solid rgba(148, 163, 184, 0.16);
+    color: #cbd5e1;
   }
 
   .cmdr-selector-controls {
