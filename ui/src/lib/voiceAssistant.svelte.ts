@@ -21,13 +21,27 @@ export interface VoiceAttackStatus {
   install_path?: string | null;
 }
 
+/** Recent interaction entry displayed in the copilot console history. */
+export interface VoiceHistoryEntry {
+  query: string;
+  intent: string;
+  spokenText: string;
+  clipboardCopied?: string | null;
+  timestamp: number;
+}
+
+export const PTT_KEY_OPTIONS = ['F4', 'F8', 'F9', 'F10', 'CapsLock', 'Pause'] as const;
+
 class VoiceAssistantService {
   enabled = $state(false);
   mode = $state<ListeningMode>('continuous');
   sttEngine = $state<SttEngineKind>('whisper');
+  pttKey = $state<string>('F4');
   state = $state<ListeningState>('inactive');
+  audioLevel = $state(0);
   lastQuery = $state<string | null>(null);
   lastResponse = $state<VoiceCommandResponse | null>(null);
+  history = $state<VoiceHistoryEntry[]>([]);
   voiceAttackStatus = $state<VoiceAttackStatus | null>(null);
   error = $state<string | null>(null);
 
@@ -40,6 +54,7 @@ class VoiceAssistantService {
   private isBrowserSupported = false;
   private resetTimer: ReturnType<typeof setTimeout> | null = null;
   private activeRecorder: AudioRecorderHandle | null = null;
+  private pttActive = false;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -55,6 +70,14 @@ class VoiceAssistantService {
       if (savedEngine === 'whisper' || savedEngine === 'native') {
         this.sttEngine = savedEngine;
       }
+
+      const savedPttKey = localStorage.getItem('tmc.voice.ptt_key');
+      if (savedPttKey && savedPttKey.trim().length > 0) {
+        this.pttKey = savedPttKey;
+      }
+
+      window.addEventListener('keydown', this.handleWindowKeyDown);
+      window.addEventListener('keyup', this.handleWindowKeyUp);
 
       // Soporte nativo como respaldo secundario opcional
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -112,6 +135,37 @@ class VoiceAssistantService {
     return this.activeRecorder !== null;
   }
 
+  private isEditableTarget(target: EventTarget | null): boolean {
+    if (!target || typeof (target as HTMLElement).tagName !== 'string') {
+      return false;
+    }
+    const el = target as HTMLElement;
+    const tag = el.tagName.toUpperCase();
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || Boolean(el.isContentEditable);
+  }
+
+  private matchesPttKey(e: KeyboardEvent): boolean {
+    return e.code === this.pttKey || e.key === this.pttKey;
+  }
+
+  private handleWindowKeyDown = (e: KeyboardEvent): void => {
+    if (!this.enabled || this.mode !== 'ptt') return;
+    if (e.repeat || !this.matchesPttKey(e)) return;
+    if (this.isEditableTarget(e.target)) return;
+    if (this.pttActive || this.state === 'listening') return;
+    e.preventDefault();
+    this.pttActive = true;
+    void this.startListening();
+  };
+
+  private handleWindowKeyUp = (e: KeyboardEvent): void => {
+    if (!this.pttActive || !this.matchesPttKey(e)) return;
+    this.pttActive = false;
+    if (this.state === 'listening') {
+      void this.stopListening();
+    }
+  };
+
   toggleEnabled(): void {
     this.setEnabled(!this.enabled);
   }
@@ -122,14 +176,16 @@ class VoiceAssistantService {
       localStorage.setItem('tmc.voice.enabled', String(val));
     }
     if (val) {
-      if (this.sttEngine === 'whisper' && !whisperEngine.isReady()) {
-        void this.preloadWhisperModel();
-      }
       if (this.mode === 'continuous' && this.sttEngine === 'native') {
-        this.startListening();
+        void this.startListening();
       }
     } else {
-      this.stopListening();
+      if (this.resetTimer) {
+        clearTimeout(this.resetTimer);
+        this.resetTimer = null;
+      }
+      this.abortListening();
+      this.state = 'inactive';
     }
   }
 
@@ -140,9 +196,9 @@ class VoiceAssistantService {
     }
     if (this.enabled && this.sttEngine === 'native') {
       if (mode === 'continuous') {
-        this.startListening();
+        void this.startListening();
       } else {
-        this.stopListening();
+        void this.stopListening();
       }
     }
   }
@@ -152,19 +208,38 @@ class VoiceAssistantService {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('tmc.voice.stt_engine', engine);
     }
-    if (engine === 'whisper') {
-      this.stopListening();
-      void this.preloadWhisperModel();
+    this.abortListening();
+  }
+
+  setPttKey(key: string): void {
+    const normalized = key.trim();
+    if (!normalized) return;
+    this.pttKey = normalized;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('tmc.voice.ptt_key', normalized);
     }
   }
 
   async preloadWhisperModel(): Promise<boolean> {
     this.whisperStatus = 'loading';
+    this.error = null;
     const ok = await whisperEngine.loadModel((pct) => {
       this.whisperProgress = pct;
     });
     this.whisperStatus = whisperEngine.status;
+    if (!ok && whisperEngine.error) {
+      this.error = whisperEngine.error;
+    }
     return ok;
+  }
+
+  unloadWhisperModel(): void {
+    if (this.activeRecorder) {
+      this.abortListening();
+    }
+    whisperEngine.unloadModel();
+    this.whisperStatus = whisperEngine.status;
+    this.whisperProgress = 0;
   }
 
   async startListening(): Promise<void> {
@@ -186,9 +261,20 @@ class VoiceAssistantService {
           }
         }
 
+        this.audioLevel = 0;
         this.state = 'listening';
-        this.activeRecorder = await whisperEngine.startRecording();
+        this.activeRecorder = await whisperEngine.startRecording({
+          onAudioLevel: (lvl) => {
+            this.audioLevel = lvl;
+          },
+          onSilenceDetected: () => {
+            if (this.activeRecorder && this.state === 'listening') {
+              void this.stopListening();
+            }
+          },
+        });
       } catch (err) {
+        this.audioLevel = 0;
         this.error = err instanceof Error ? err.message : String(err);
         this.state = 'inactive';
       }
@@ -213,6 +299,7 @@ class VoiceAssistantService {
   }
 
   async stopListening(): Promise<void> {
+    this.audioLevel = 0;
     if (this.sttEngine === 'whisper' && this.activeRecorder) {
       const recorder = this.activeRecorder;
       this.activeRecorder = null;
@@ -247,11 +334,40 @@ class VoiceAssistantService {
   }
 
   abortListening(): void {
+    this.pttActive = false;
+    this.audioLevel = 0;
     if (this.activeRecorder) {
       this.activeRecorder.abort();
       this.activeRecorder = null;
     }
-    this.stopListening();
+    if (this.recognition) {
+      try {
+        this.recognition.stop();
+      } catch {
+        // ignorar
+      }
+    }
+    if (this.state === 'listening' || this.state === 'processing') {
+      this.state = 'inactive';
+    }
+  }
+
+  async stopSpeaking(): Promise<void> {
+    if (this.resetTimer) {
+      clearTimeout(this.resetTimer);
+      this.resetTimer = null;
+    }
+    if (this.state === 'speaking') {
+      this.state =
+        this.enabled && this.mode === 'continuous' && this.sttEngine === 'native'
+          ? 'listening'
+          : 'inactive';
+    }
+    try {
+      await fetch('/api/tts/stop', { method: 'POST' });
+    } catch {
+      // Ignorar errores de red al detener locución
+    }
   }
 
   async sendQuery(queryText: string, localeOverride?: string): Promise<VoiceCommandResponse | null> {
@@ -284,6 +400,16 @@ class VoiceAssistantService {
 
       const data: VoiceCommandResponse = await res.json();
       this.lastResponse = data;
+      this.history = [
+        {
+          query: text,
+          intent: data.intent,
+          spokenText: data.spoken_text,
+          clipboardCopied: data.clipboard_copied ?? null,
+          timestamp: Date.now(),
+        },
+        ...this.history,
+      ].slice(0, 6);
       this.state = 'speaking';
 
       const durationMs = Math.max(2000, Math.min(8000, (data.spoken_text?.length ?? 10) * 60));

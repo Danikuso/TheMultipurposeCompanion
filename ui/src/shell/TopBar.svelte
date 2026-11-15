@@ -155,11 +155,17 @@
       class:processing={voiceAssistant.state === 'processing'}
       class:speaking={voiceAssistant.state === 'speaking'}
       data-testid="topbar-voice-mic"
-      title={voiceAssistant.lastQuery ? `${t('voice-assistant-last-query')}: "${voiceAssistant.lastQuery}"` : t('voice-assistant-mic-toggle-tooltip')}
+      title={voiceAssistant.lastQuery
+        ? voiceAssistant.lastResponse?.spoken_text
+          ? `${t('voice-assistant-last-query')}: "${voiceAssistant.lastQuery}" — ${voiceAssistant.lastResponse.spoken_text}`
+          : `${t('voice-assistant-last-query')}: "${voiceAssistant.lastQuery}"`
+        : t('voice-assistant-mic-toggle-tooltip')}
       onclick={() => {
         if (!voiceAssistant.enabled) {
           voiceAssistant.toggleEnabled();
-        } else if (voiceAssistant.sttEngine === 'whisper') {
+        } else if (voiceAssistant.state === 'speaking') {
+          void voiceAssistant.stopSpeaking();
+        } else if (voiceAssistant.sttEngine === 'whisper' || voiceAssistant.mode === 'ptt') {
           if (voiceAssistant.state === 'inactive') {
             void voiceAssistant.startListening();
           } else if (voiceAssistant.state === 'listening') {
@@ -351,8 +357,7 @@
 
   .voice-mic-pill.listening {
     border-color: var(--hud-cyan, #00d4b2);
-    box-shadow: 0 0 10px rgba(0, 212, 178, 0.35);
-    animation: mic-pulse 1.5s infinite ease-in-out;
+    box-shadow: 0 0 10px rgba(0, 212, 178, 0.45);
   }
 
   .voice-mic-pill.processing {
@@ -377,15 +382,6 @@
   .mic-label {
     letter-spacing: 0.04em;
     text-transform: uppercase;
-  }
-
-  @keyframes mic-pulse {
-    0%, 100% {
-      box-shadow: 0 0 4px rgba(0, 212, 178, 0.2);
-    }
-    50% {
-      box-shadow: 0 0 12px rgba(0, 212, 178, 0.6);
-    }
   }
 
   .auto-switch {

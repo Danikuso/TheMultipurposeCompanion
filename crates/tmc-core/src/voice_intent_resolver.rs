@@ -24,6 +24,23 @@ pub struct VoiceResolverContext {
     pub total_bounties: u64,
     pub notoriety: u8,
     pub bio_signal_bodies_count: u32,
+    pub exploration_bodies_scanned: u32,
+    pub exploration_bodies_total: u32,
+    pub exploration_valuable_count: u32,
+    pub exploration_value_now: u64,
+    pub combat_kills: u32,
+    pub combat_unredeemed_total: u64,
+    pub carrier_name: Option<String>,
+    pub carrier_system: Option<String>,
+    pub carrier_fuel_depot: Option<u32>,
+    pub carrier_max_jumps: Option<u32>,
+    pub colonisation_station: Option<String>,
+    pub colonisation_progress_pct: Option<u32>,
+    pub colonisation_remaining_tons: Option<u64>,
+    pub colonisation_top_missing: Option<String>,
+    pub pinned_goals_total: u32,
+    pub pinned_goals_ready: u32,
+    pub inventory_materials_total: u32,
 }
 
 /// Normaliza una cadena de texto para comparación léxica tolerante.
@@ -40,6 +57,7 @@ pub fn normalize_query(query: &str) -> String {
             'ú' | 'ù' | 'ü' | 'û' => normalized.push('u'),
             'ñ' => normalized.push('n'),
             'ç' => normalized.push('c'),
+            '-' => normalized.push(' '),
             '?' | '¿' | '!' | '¡' | '.' | ',' | ';' | ':' | '"' | '\'' => {}
             _ => normalized.push(ch),
         }
@@ -48,12 +66,36 @@ pub fn normalize_query(query: &str) -> String {
     normalized
 }
 
+fn wants_clipboard_copy(q: &str) -> bool {
+    q.contains("copi") || q.contains("copy") || q.contains("kopier")
+}
+
 /// Analiza la cadena normalizada y determina la intención principal.
 pub fn parse_intent(query: &str) -> VoiceIntent {
     let q = normalize_query(query);
 
-    // 1. Acciones de copia priorizadas
-    if (q.contains("copi") || q.contains("copy") || q.contains("kopier"))
+    // 1. Ubicación actual / copiar sistema actual (prioritario frente a siguiente sistema)
+    if q.contains("donde estoy")
+        || q.contains("sistema actual")
+        || q.contains("ubicacion actual")
+        || q.contains("posicion actual")
+        || q.contains("where am i")
+        || q.contains("current system")
+        || q.contains("current location")
+        || q.contains("ou suis je")
+        || q.contains("systeme actuel")
+        || q.contains("position actuelle")
+        || q.contains("wo bin ich")
+        || q.contains("aktuelles system")
+        || q.contains("aktueller standort")
+        || q.contains("onde estou")
+        || q.contains("localizacao atual")
+    {
+        return VoiceIntent::CurrentLocation;
+    }
+
+    // 2. Acciones de copia del siguiente salto priorizadas
+    if wants_clipboard_copy(&q)
         && (q.contains("siguiente")
             || q.contains("proximo")
             || q.contains("salto")
@@ -68,7 +110,33 @@ pub fn parse_intent(query: &str) -> VoiceIntent {
         return VoiceIntent::CopyNextSystem;
     }
 
-    // 2. Interstellar Factor
+    // 3. Estado del Portanaves (antes de ShipStatus para evitar colisión con "estado")
+    if q.contains("portanaves")
+        || q.contains("porta naves")
+        || q.contains("fleet carrier")
+        || q.contains("carrier")
+        || q.contains("porte vaisseaux")
+        || q.contains("porte-vaisseaux")
+        || q.contains("flottentrager")
+        || q.contains("tritio")
+        || q.contains("tritium")
+    {
+        return VoiceIntent::CarrierStatus;
+    }
+
+    // 4. Colonización y construcción activa
+    if q.contains("colonizacion")
+        || q.contains("colonisation")
+        || q.contains("colonization")
+        || q.contains("kolonisierung")
+        || q.contains("colonizacao")
+        || q.contains("deposito colonial")
+        || q.contains("proyecto colonial")
+    {
+        return VoiceIntent::ColonisationStatus;
+    }
+
+    // 5. Interstellar Factor
     if q.contains("facteur")
         || q.contains("interstellaire")
         || q.contains("interestelar")
@@ -84,7 +152,7 @@ pub fn parse_intent(query: &str) -> VoiceIntent {
         return VoiceIntent::NearestInterstellarFactor;
     }
 
-    // 3. Mercado Negro
+    // 6. Mercado Negro
     if q.contains("negro")
         || q.contains("black market")
         || q.contains("marche noir")
@@ -96,7 +164,25 @@ pub fn parse_intent(query: &str) -> VoiceIntent {
         return VoiceIntent::NearestBlackMarket;
     }
 
-    // 4. Crimen y multas
+    // 7. Resumen de combate y vales sin cobrar (antes de CrimeStatus para separar "combat/vouchers")
+    if q.contains("combate")
+        || q.contains("combat")
+        || q.contains("bajas")
+        || q.contains("kills")
+        || q.contains("abates")
+        || q.contains("vales de recompensa")
+        || q.contains("bonos de combate")
+        || q.contains("bounty voucher")
+        || q.contains("combat bond")
+        || q.contains("pendientes de cobro")
+        || q.contains("unredeemed")
+        || q.contains("primes de combat")
+        || q.contains("kampf")
+    {
+        return VoiceIntent::CombatSummary;
+    }
+
+    // 8. Crimen y multas
     if q.contains("multa")
         || q.contains("recompensa")
         || q.contains("notoriedad")
@@ -109,11 +195,13 @@ pub fn parse_intent(query: &str) -> VoiceIntent {
         || q.contains("gesucht")
         || q.contains("recherche")
         || q.contains("procurado")
+        || q.contains("estado legal")
+        || q.contains("legal status")
     {
         return VoiceIntent::CrimeStatus;
     }
 
-    // 5. Siguiente salto / ruta
+    // 9. Siguiente salto / ruta
     if q.contains("siguiente salto")
         || q.contains("proximo salto")
         || q.contains("siguiente sistema")
@@ -122,7 +210,6 @@ pub fn parse_intent(query: &str) -> VoiceIntent {
         || q.contains("next system")
         || q.contains("prochain saut")
         || q.contains("nachster sprung")
-        || q.contains("proximo salto")
         || q.contains("a donde vamos")
         || q.contains("donde vamos")
         || q.contains("destino")
@@ -131,7 +218,25 @@ pub fn parse_intent(query: &str) -> VoiceIntent {
         return VoiceIntent::NextJump;
     }
 
-    // 6. Bio-señales y exobiología
+    // 10. Resumen de exploración y cuerpos valiosos
+    if q.contains("exploracion")
+        || q.contains("exploration")
+        || q.contains("erkundung")
+        || q.contains("exploracao")
+        || q.contains("cuerpos valiosos")
+        || q.contains("valor del sistema")
+        || q.contains("system value")
+        || q.contains("valuable bodies")
+        || q.contains("escaner fss")
+        || q.contains("system scan")
+        || q.contains("corps precieux")
+        || q.contains("wertvolle")
+        || q.contains("corpos valiosos")
+    {
+        return VoiceIntent::ExplorationSummary;
+    }
+
+    // 11. Bio-señales y exobiología
     if q.contains("bio")
         || q.contains("biolog")
         || q.contains("exobiolog")
@@ -140,7 +245,7 @@ pub fn parse_intent(query: &str) -> VoiceIntent {
         return VoiceIntent::BioSignals;
     }
 
-    // 7. Combustible
+    // 12. Combustible
     if q.contains("combustivel")
         || q.contains("combustible")
         || q.contains("fuel")
@@ -152,12 +257,18 @@ pub fn parse_intent(query: &str) -> VoiceIntent {
         return VoiceIntent::FuelStatus;
     }
 
-    // 8. Materiales de ingeniería
-    if q.contains("material") || q.contains("materiaux") || q.contains("materialien") {
+    // 13. Materiales de ingeniería
+    if q.contains("material")
+        || q.contains("materiaux")
+        || q.contains("materialien")
+        || q.contains("recetas fijadas")
+        || q.contains("pinned")
+        || q.contains("ingenier")
+    {
         return VoiceIntent::MaterialsSummary;
     }
 
-    // 9. Estado de nave
+    // 14. Estado de nave
     if q.contains("estado")
         || q.contains("nave")
         || q.contains("ship")
@@ -190,6 +301,7 @@ impl VoiceIntentResolver {
     ) -> VoiceCommandResponse {
         let intent = parse_intent(query);
         let locale = ctx.locale.as_str();
+        let norm = normalize_query(query);
 
         match intent {
             VoiceIntent::ShipStatus => Self::resolve_ship_status(state, locale),
@@ -202,7 +314,14 @@ impl VoiceIntentResolver {
             VoiceIntent::CrimeStatus => Self::resolve_crime_status(state, ctx, locale),
             VoiceIntent::BioSignals => Self::resolve_bio_signals(ctx, locale),
             VoiceIntent::FuelStatus => Self::resolve_fuel_status(state, locale),
-            VoiceIntent::MaterialsSummary => Self::resolve_materials(locale),
+            VoiceIntent::MaterialsSummary => Self::resolve_materials(ctx, locale),
+            VoiceIntent::CurrentLocation => Self::resolve_current_location(&norm, state, locale),
+            VoiceIntent::ExplorationSummary => {
+                Self::resolve_exploration_summary(state, ctx, locale)
+            }
+            VoiceIntent::CombatSummary => Self::resolve_combat_summary(ctx, locale),
+            VoiceIntent::CarrierStatus => Self::resolve_carrier_status(ctx, locale),
+            VoiceIntent::ColonisationStatus => Self::resolve_colonisation_status(ctx, locale),
             VoiceIntent::Unknown(ref raw) => Self::resolve_unknown(raw, locale),
         }
     }
@@ -675,17 +794,93 @@ impl VoiceIntentResolver {
         }
     }
 
-    fn resolve_materials(locale: &str) -> VoiceCommandResponse {
-        let spoken_text = match locale {
-            "en" => {
-                "Consult the engineering materials database and recorded inventory in the companion.".into()
+    fn resolve_materials(ctx: &VoiceResolverContext, locale: &str) -> VoiceCommandResponse {
+        let spoken_text = if ctx.pinned_goals_total > 0 {
+            let pending = ctx
+                .pinned_goals_total
+                .saturating_sub(ctx.pinned_goals_ready);
+            match locale {
+                "en" => format!(
+                    "You have {} pinned engineering goals ({} ready, {} missing materials) and {} units in inventory.",
+                    ctx.pinned_goals_total,
+                    ctx.pinned_goals_ready,
+                    pending,
+                    ctx.inventory_materials_total
+                ),
+                "fr" => format!(
+                    "{} objectifs d'ingénierie épinglés ({} prêts, {} incomplets) et {} matériaux en stock.",
+                    ctx.pinned_goals_total,
+                    ctx.pinned_goals_ready,
+                    pending,
+                    ctx.inventory_materials_total
+                ),
+                "de" => format!(
+                    "{} angeheftete Ingenieursziele ({} bereit, {} fehlend) und {} Materialien im Inventar.",
+                    ctx.pinned_goals_total,
+                    ctx.pinned_goals_ready,
+                    pending,
+                    ctx.inventory_materials_total
+                ),
+                "pt" => format!(
+                    "{} metas de engenharia fixadas ({} prontas, {} pendentes) e {} materiais no inventário.",
+                    ctx.pinned_goals_total,
+                    ctx.pinned_goals_ready,
+                    pending,
+                    ctx.inventory_materials_total
+                ),
+                _ => format!(
+                    "Tienes {} recetas fijadas de ingeniería ({} listas y {} con materiales pendientes) y {} unidades en inventario.",
+                    ctx.pinned_goals_total,
+                    ctx.pinned_goals_ready,
+                    pending,
+                    ctx.inventory_materials_total
+                ),
             }
-            "fr" => {
-                "Consultez la base de données des matériaux et l’inventaire enregistré dans le compagnon.".into()
+        } else if ctx.inventory_materials_total > 0 {
+            match locale {
+                "en" => format!(
+                    "No pinned engineering goals. You have {} material units recorded in inventory.",
+                    ctx.inventory_materials_total
+                ),
+                "fr" => format!(
+                    "Aucun objectif épinglé. {} matériaux enregistrés dans votre inventaire.",
+                    ctx.inventory_materials_total
+                ),
+                "de" => format!(
+                    "Keine angehefteten Ziele. {} Materialien im Inventar erfasst.",
+                    ctx.inventory_materials_total
+                ),
+                "pt" => format!(
+                    "Nenhuma meta fixada. {} unidades de materiais registradas no inventário.",
+                    ctx.inventory_materials_total
+                ),
+                _ => format!(
+                    "Sin recetas fijadas de ingeniería. Tienes {} unidades de materiales registradas en inventario.",
+                    ctx.inventory_materials_total
+                ),
             }
-            "de" => "Prüfen Sie die Materialdatenbank und das erfasste Inventar im Begleiter.".into(),
-            "pt" => "Consulte o banco de dados e o inventário registrado de materiais no assistente.".into(),
-            _ => "Consulta la base de datos y el inventario registrado de materiales de ingeniería.".into(),
+        } else {
+            match locale {
+                "en" => {
+                    "Consult the engineering materials database and recorded inventory in the companion."
+                        .into()
+                }
+                "fr" => {
+                    "Consultez la base de données des matériaux et l’inventaire enregistré dans le compagnon."
+                        .into()
+                }
+                "de" => {
+                    "Prüfen Sie die Materialdatenbank und das erfasste Inventar im Begleiter.".into()
+                }
+                "pt" => {
+                    "Consulte o banco de dados e o inventário registrado de materiais no assistente."
+                        .into()
+                }
+                _ => {
+                    "Consulta la base de datos y el inventario registrado de materiales de ingeniería."
+                        .into()
+                }
+            }
         };
 
         VoiceCommandResponse {
@@ -693,17 +888,324 @@ impl VoiceIntentResolver {
             action_executed: None,
             spoken_text,
             clipboard_copied: None,
-            data: serde_json::Value::Null,
+            data: serde_json::json!({
+                "pinned_goals_total": ctx.pinned_goals_total,
+                "pinned_goals_ready": ctx.pinned_goals_ready,
+                "inventory_materials_total": ctx.inventory_materials_total
+            }),
+        }
+    }
+
+    fn resolve_current_location(
+        query_norm: &str,
+        state: &GameState,
+        locale: &str,
+    ) -> VoiceCommandResponse {
+        let system = state.location.system.trim();
+        let copy = wants_clipboard_copy(query_norm);
+        if system.is_empty() {
+            let spoken_text = match locale {
+                "en" => "Current star system not detected yet.".into(),
+                "fr" => "Système stellaire actuel pas encore détecté.".into(),
+                "de" => "Aktuelles Sternensystem noch nicht erkannt.".into(),
+                "pt" => "Sistema estelar atual ainda não detectado.".into(),
+                _ => "Sistema estelar actual aún no detectado.".into(),
+            };
+            return VoiceCommandResponse {
+                intent: VoiceIntent::CurrentLocation,
+                action_executed: None,
+                spoken_text,
+                clipboard_copied: None,
+                data: serde_json::Value::Null,
+            };
+        }
+
+        let place = state
+            .location
+            .station
+            .as_deref()
+            .or(state.location.body.as_deref());
+        let spoken_text = match (locale, place, copy) {
+            ("en", Some(p), true) => {
+                format!("Current location: {p} in system {system}. System copied to clipboard.")
+            }
+            ("en", None, true) => {
+                format!("Current system: {system}. System copied to clipboard.")
+            }
+            ("en", Some(p), false) => format!("Current location: {p} in system {system}."),
+            ("en", None, false) => format!("Current system: {system}."),
+            ("fr", Some(p), true) => {
+                format!("Position actuelle : {p} dans le système {system}. Système copié.")
+            }
+            ("fr", None, true) => format!("Système actuel : {system}. Système copié."),
+            ("fr", Some(p), false) => format!("Position actuelle : {p} dans le système {system}."),
+            ("fr", None, false) => format!("Système actuel : {system}."),
+            ("de", Some(p), true) => {
+                format!("Aktueller Standort: {p} im System {system}. System kopiert.")
+            }
+            ("de", None, true) => format!("Aktuelles System: {system}. System kopiert."),
+            ("de", Some(p), false) => format!("Aktueller Standort: {p} im System {system}."),
+            ("de", None, false) => format!("Aktuelles System: {system}."),
+            ("pt", Some(p), true) => {
+                format!("Localização atual: {p} no sistema {system}. Sistema copiado.")
+            }
+            ("pt", None, true) => format!("Sistema atual: {system}. Sistema copiado."),
+            ("pt", Some(p), false) => format!("Localização atual: {p} no sistema {system}."),
+            ("pt", None, false) => format!("Sistema atual: {system}."),
+            (_, Some(p), true) => format!(
+                "Ubicación actual: {p} en el sistema {system}. Sistema copiado al portapapeles."
+            ),
+            (_, None, true) => {
+                format!("Sistema actual: {system}. Sistema copiado al portapapeles.")
+            }
+            (_, Some(p), false) => format!("Ubicación actual: {p} en el sistema {system}."),
+            (_, None, false) => format!("Sistema actual: {system}."),
+        };
+
+        VoiceCommandResponse {
+            intent: VoiceIntent::CurrentLocation,
+            action_executed: copy.then(|| "clipboard.copy-current-system".to_owned()),
+            spoken_text,
+            clipboard_copied: copy.then(|| system.to_owned()),
+            data: serde_json::json!({
+                "system": system,
+                "body": state.location.body,
+                "station": state.location.station,
+            }),
+        }
+    }
+
+    fn resolve_exploration_summary(
+        state: &GameState,
+        ctx: &VoiceResolverContext,
+        locale: &str,
+    ) -> VoiceCommandResponse {
+        let sys = state.location.system.trim();
+        let spoken_text = if ctx.exploration_bodies_total > 0 || ctx.exploration_bodies_scanned > 0
+        {
+            let total_disp = ctx
+                .exploration_bodies_total
+                .max(ctx.exploration_bodies_scanned);
+            match locale {
+                "en" => format!(
+                    "Exploration in {}: {} of {} bodies scanned, {} valuable bodies, estimated value {} credits.",
+                    if sys.is_empty() {
+                        "current system"
+                    } else {
+                        sys
+                    },
+                    ctx.exploration_bodies_scanned,
+                    total_disp,
+                    ctx.exploration_valuable_count,
+                    ctx.exploration_value_now
+                ),
+                "fr" => format!(
+                    "Exploration dans {} : {} sur {} corps scannés, {} précieux, valeur estimée {} crédits.",
+                    if sys.is_empty() {
+                        "le système actuel"
+                    } else {
+                        sys
+                    },
+                    ctx.exploration_bodies_scanned,
+                    total_disp,
+                    ctx.exploration_valuable_count,
+                    ctx.exploration_value_now
+                ),
+                "de" => format!(
+                    "Erkundung in {}: {} von {} Körpern gescannt, {} wertvoll, geschätzter Wert {} Credits.",
+                    if sys.is_empty() {
+                        "aktuelles System"
+                    } else {
+                        sys
+                    },
+                    ctx.exploration_bodies_scanned,
+                    total_disp,
+                    ctx.exploration_valuable_count,
+                    ctx.exploration_value_now
+                ),
+                "pt" => format!(
+                    "Exploração em {}: {} de {} corpos escaneados, {} valiosos, valor estimado {} créditos.",
+                    if sys.is_empty() { "sistema atual" } else { sys },
+                    ctx.exploration_bodies_scanned,
+                    total_disp,
+                    ctx.exploration_valuable_count,
+                    ctx.exploration_value_now
+                ),
+                _ => format!(
+                    "Exploración en {}: {} de {} cuerpos escaneados, {} objetivos valiosos, valor estimado {} créditos.",
+                    if sys.is_empty() {
+                        "el sistema actual"
+                    } else {
+                        sys
+                    },
+                    ctx.exploration_bodies_scanned,
+                    total_disp,
+                    ctx.exploration_valuable_count,
+                    ctx.exploration_value_now
+                ),
+            }
+        } else {
+            match locale {
+                "en" => "No scanned exploration bodies recorded in the current system.".into(),
+                "fr" => "Aucun corps scanné enregistré dans le système actuel.".into(),
+                "de" => "Keine gescannten Himmelskörper im aktuellen System verzeichnet.".into(),
+                "pt" => "Nenhum corpo escaneado registrado no sistema atual.".into(),
+                _ => "Sin cuerpos escaneados registrados en el sistema actual.".into(),
+            }
+        };
+
+        VoiceCommandResponse {
+            intent: VoiceIntent::ExplorationSummary,
+            action_executed: None,
+            spoken_text,
+            clipboard_copied: None,
+            data: serde_json::json!({
+                "bodies_scanned": ctx.exploration_bodies_scanned,
+                "bodies_total": ctx.exploration_bodies_total,
+                "valuable_count": ctx.exploration_valuable_count,
+                "value_now": ctx.exploration_value_now,
+            }),
+        }
+    }
+
+    fn resolve_combat_summary(ctx: &VoiceResolverContext, locale: &str) -> VoiceCommandResponse {
+        let spoken_text = match locale {
+            "en" => format!(
+                "Combat session: {} kills confirmed, {} credits in unredeemed vouchers.",
+                ctx.combat_kills, ctx.combat_unredeemed_total
+            ),
+            "fr" => format!(
+                "Session de combat : {} cibles détruites, {} crédits en bons non encaissés.",
+                ctx.combat_kills, ctx.combat_unredeemed_total
+            ),
+            "de" => format!(
+                "Kampfsitzung: {} Abschüsse bestätigt, {} Credits an offenen Belohnungen.",
+                ctx.combat_kills, ctx.combat_unredeemed_total
+            ),
+            "pt" => format!(
+                "Sessão de combate: {} abates confirmados, {} créditos em vales não resgatados.",
+                ctx.combat_kills, ctx.combat_unredeemed_total
+            ),
+            _ => format!(
+                "Sesión de combate: {} bajas confirmadas y {} créditos en vales pendientes de cobro.",
+                ctx.combat_kills, ctx.combat_unredeemed_total
+            ),
+        };
+
+        VoiceCommandResponse {
+            intent: VoiceIntent::CombatSummary,
+            action_executed: None,
+            spoken_text,
+            clipboard_copied: None,
+            data: serde_json::json!({
+                "kills": ctx.combat_kills,
+                "unredeemed_total": ctx.combat_unredeemed_total,
+            }),
+        }
+    }
+
+    fn resolve_carrier_status(ctx: &VoiceResolverContext, locale: &str) -> VoiceCommandResponse {
+        let spoken_text = if let Some(ref sys) = ctx.carrier_system {
+            let name = ctx.carrier_name.as_deref().unwrap_or("Fleet Carrier");
+            let fuel = ctx.carrier_fuel_depot.unwrap_or(0);
+            let jumps = ctx.carrier_max_jumps.unwrap_or(0);
+            match locale {
+                "en" => format!(
+                    "Fleet Carrier {name} is in {sys} with {fuel} tonnes of tritium ({jumps} jumps available)."
+                ),
+                "fr" => format!(
+                    "Porte-vaisseaux {name} situé à {sys} avec {fuel} tonnes de tritium ({jumps} sauts disponibles)."
+                ),
+                "de" => format!(
+                    "Flottenträger {name} befindet sich in {sys} mit {fuel} Tonnen Tritium ({jumps} Sprünge möglich)."
+                ),
+                "pt" => format!(
+                    "Porta-naves {name} está em {sys} com {fuel} toneladas de trítio ({jumps} saltos disponíveis)."
+                ),
+                _ => format!(
+                    "Portanaves {name} en el sistema {sys}, con {fuel} toneladas de tritio y autonomía para {jumps} saltos."
+                ),
+            }
+        } else {
+            match locale {
+                "en" => "No Fleet Carrier telemetry available yet.".into(),
+                "fr" => "Aucune télémétrie de porte-vaisseaux disponible pour le moment.".into(),
+                "de" => "Derzeit keine Flottenträger-Telemetrie verfügbar.".into(),
+                "pt" => "Nenhuma telemetria de porta-naves disponível no momento.".into(),
+                _ => "Sin telemetría de portanaves disponible en este momento.".into(),
+            }
+        };
+
+        VoiceCommandResponse {
+            intent: VoiceIntent::CarrierStatus,
+            action_executed: None,
+            spoken_text,
+            clipboard_copied: None,
+            data: serde_json::json!({
+                "carrier_name": ctx.carrier_name,
+                "carrier_system": ctx.carrier_system,
+                "fuel_depot": ctx.carrier_fuel_depot,
+                "max_jumps_possible": ctx.carrier_max_jumps,
+            }),
+        }
+    }
+
+    fn resolve_colonisation_status(
+        ctx: &VoiceResolverContext,
+        locale: &str,
+    ) -> VoiceCommandResponse {
+        let spoken_text = if let Some(pct) = ctx.colonisation_progress_pct {
+            let station = ctx.colonisation_station.as_deref().unwrap_or("depot");
+            let remaining = ctx.colonisation_remaining_tons.unwrap_or(0);
+            let top = ctx.colonisation_top_missing.as_deref().unwrap_or("—");
+            match locale {
+                "en" => format!(
+                    "Colonisation project at {station} is {pct} percent complete, {remaining} tonnes remaining. Top priority: {top}."
+                ),
+                "fr" => format!(
+                    "Projet de colonisation à {station} complété à {pct} pour cent, {remaining} tonnes restantes. Priorité : {top}."
+                ),
+                "de" => format!(
+                    "Kolonisierungsprojekt bei {station} zu {pct} Prozent abgeschlossen, {remaining} Tonnen offen. Priorität: {top}."
+                ),
+                "pt" => format!(
+                    "Projeto de colonização em {station} em {pct} por cento, {remaining} toneladas restantes. Prioridade: {top}."
+                ),
+                _ => format!(
+                    "Proyecto de colonización en {station} al {pct} por ciento, faltan {remaining} toneladas. Prioritario: {top}."
+                ),
+            }
+        } else {
+            match locale {
+                "en" => "No active colonisation construction project detected.".into(),
+                "fr" => "Aucun projet de colonisation actif détecté.".into(),
+                "de" => "Kein aktives Kolonisierungsprojekt erkannt.".into(),
+                "pt" => "Nenhum projeto de colonização ativo detectado.".into(),
+                _ => "No hay ningún proyecto activo de colonización detectado.".into(),
+            }
+        };
+
+        VoiceCommandResponse {
+            intent: VoiceIntent::ColonisationStatus,
+            action_executed: None,
+            spoken_text,
+            clipboard_copied: None,
+            data: serde_json::json!({
+                "station": ctx.colonisation_station,
+                "progress_pct": ctx.colonisation_progress_pct,
+                "remaining_tons": ctx.colonisation_remaining_tons,
+                "top_missing": ctx.colonisation_top_missing,
+            }),
         }
     }
 
     fn resolve_unknown(raw: &str, locale: &str) -> VoiceCommandResponse {
         let spoken_text = match locale {
-            "en" => "Query not recognized. Try asking for ship status, next jump, or nearest factor.".into(),
-            "fr" => "Requête non reconnue. Essayez de demander l'état du vaisseau ou le prochain saut.".into(),
-            "de" => "Befehl nicht erkannt. Fragen Sie nach dem Schiffstatus oder dem nächsten Sprung.".into(),
-            "pt" => "Comando não reconhecido. Tente perguntar pelo estado da nave ou próximo salto.".into(),
-            _ => "Consulta no reconocida. Prueba preguntando por el estado de la nave o el siguiente salto.".into(),
+            "en" => "Query not recognized. Try asking for ship status, current system, exploration, combat, carrier, or nearest factor.".into(),
+            "fr" => "Requête non reconnue. Essayez de demander l'état du vaisseau, votre position, l'exploration ou le prochain saut.".into(),
+            "de" => "Befehl nicht erkannt. Fragen Sie nach Schiffstatus, aktuellem System, Erkundung, Kampf oder dem nächsten Sprung.".into(),
+            "pt" => "Comando não reconhecido. Tente perguntar pelo estado da nave, sistema atual, exploração ou próximo salto.".into(),
+            _ => "Consulta no reconocida. Prueba preguntando por estado de la nave, dónde estoy, exploración, combate, portanaves o siguiente salto.".into(),
         };
 
         VoiceCommandResponse {
@@ -896,5 +1398,110 @@ mod tests {
         assert!(res.spoken_text.contains("LTT 1873"));
         assert_eq!(res.clipboard_copied.as_deref(), Some("LTT 1873"));
         assert_eq!(res.action_executed.as_deref(), Some("crime.copy_system"));
+    }
+
+    #[test]
+    fn parse_intent_and_resolve_new_f22_categories() {
+        assert_eq!(parse_intent("¿Dónde estoy?"), VoiceIntent::CurrentLocation);
+        assert_eq!(
+            parse_intent("copia el sistema actual"),
+            VoiceIntent::CurrentLocation
+        );
+        assert_eq!(parse_intent("where am I"), VoiceIntent::CurrentLocation);
+        assert_eq!(parse_intent("où suis-je"), VoiceIntent::CurrentLocation);
+        assert_eq!(parse_intent("wo bin ich"), VoiceIntent::CurrentLocation);
+        assert_eq!(parse_intent("onde estou"), VoiceIntent::CurrentLocation);
+
+        assert_eq!(
+            parse_intent("resumen de exploración"),
+            VoiceIntent::ExplorationSummary
+        );
+        assert_eq!(
+            parse_intent("valuable bodies system scan"),
+            VoiceIntent::ExplorationSummary
+        );
+        assert_eq!(
+            parse_intent("resumen de combate"),
+            VoiceIntent::CombatSummary
+        );
+        assert_eq!(
+            parse_intent("unredeemed bounty vouchers"),
+            VoiceIntent::CombatSummary
+        );
+        assert_eq!(
+            parse_intent("estado del portanaves"),
+            VoiceIntent::CarrierStatus
+        );
+        assert_eq!(
+            parse_intent("fleet carrier tritium"),
+            VoiceIntent::CarrierStatus
+        );
+        assert_eq!(
+            parse_intent("progreso de colonización"),
+            VoiceIntent::ColonisationStatus
+        );
+        assert_eq!(
+            parse_intent("colonisation progress"),
+            VoiceIntent::ColonisationStatus
+        );
+
+        let mut state = GameState::default();
+        state.location.system = "Shinrarta Dezhra".into();
+        state.location.station = Some("Jameson Memorial".into());
+
+        let ctx = VoiceResolverContext {
+            locale: "es".into(),
+            exploration_bodies_scanned: 12,
+            exploration_bodies_total: 15,
+            exploration_valuable_count: 3,
+            exploration_value_now: 2_450_000,
+            combat_kills: 7,
+            combat_unredeemed_total: 420_000,
+            carrier_name: Some("Nostromo".into()),
+            carrier_system: Some("Colonia".into()),
+            carrier_fuel_depot: Some(750),
+            carrier_max_jumps: Some(6),
+            colonisation_station: Some("Orbital Alpha".into()),
+            colonisation_progress_pct: Some(65),
+            colonisation_remaining_tons: Some(1200),
+            colonisation_top_missing: Some("Acero".into()),
+            pinned_goals_total: 2,
+            pinned_goals_ready: 1,
+            inventory_materials_total: 480,
+            ..Default::default()
+        };
+
+        let loc_copy = VoiceIntentResolver::resolve("copia el sistema actual", &state, &ctx);
+        assert_eq!(loc_copy.intent, VoiceIntent::CurrentLocation);
+        assert_eq!(
+            loc_copy.clipboard_copied.as_deref(),
+            Some("Shinrarta Dezhra")
+        );
+        assert!(loc_copy.spoken_text.contains("Jameson Memorial"));
+
+        let exp = VoiceIntentResolver::resolve("resumen de exploración", &state, &ctx);
+        assert_eq!(exp.intent, VoiceIntent::ExplorationSummary);
+        assert!(exp.spoken_text.contains("12 de 15"));
+        assert!(exp.spoken_text.contains("2450000"));
+
+        let comb = VoiceIntentResolver::resolve("resumen de combate", &state, &ctx);
+        assert_eq!(comb.intent, VoiceIntent::CombatSummary);
+        assert!(comb.spoken_text.contains("7 bajas"));
+        assert!(comb.spoken_text.contains("420000"));
+
+        let car = VoiceIntentResolver::resolve("estado del portanaves", &state, &ctx);
+        assert_eq!(car.intent, VoiceIntent::CarrierStatus);
+        assert!(car.spoken_text.contains("Nostromo"));
+        assert!(car.spoken_text.contains("750"));
+
+        let col = VoiceIntentResolver::resolve("progreso de colonización", &state, &ctx);
+        assert_eq!(col.intent, VoiceIntent::ColonisationStatus);
+        assert!(col.spoken_text.contains("Orbital Alpha"));
+        assert!(col.spoken_text.contains("65 por ciento"));
+
+        let mat = VoiceIntentResolver::resolve("materiales de ingeniería", &state, &ctx);
+        assert_eq!(mat.intent, VoiceIntent::MaterialsSummary);
+        assert!(mat.spoken_text.contains("2 recetas"));
+        assert!(mat.spoken_text.contains("480 unidades"));
     }
 }

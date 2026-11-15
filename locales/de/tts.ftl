@@ -32,3 +32,4 @@ settings-tts-channel-mining = Bergbau & Prospektion
 settings-tts-channel-carrier = Flottenträger
 settings-tts-test-button = 🔊 Copilot-Stimme testen
 settings-tts-test-playing = Testansage wird abgespielt...
+settings-tts-stop-button = ⏹️ Sprachausgabe stoppen

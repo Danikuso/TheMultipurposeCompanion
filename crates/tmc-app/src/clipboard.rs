@@ -126,7 +126,9 @@ pub struct AppActions {
     store: Option<tmc_store::Store>,
     sync_waker: Option<tmc_sync::SyncWaker>,
     transport: Option<Arc<dyn tmc_net::Transport>>,
+    native_engine: Mutex<Option<tmc_tts::NativeEngine>>,
     kokoro_engine: Mutex<Option<tmc_tts::KokoroEngine>>,
+    tts_queue: Mutex<tmc_tts::TtsQueue>,
     pub update_state: Arc<tokio::sync::RwLock<crate::updater::UpdateStatus>>,
 }
 
@@ -151,7 +153,9 @@ impl AppActions {
             store: None,
             sync_waker: None,
             transport: None,
+            native_engine: Mutex::new(None),
             kokoro_engine: Mutex::new(None),
+            tts_queue: Mutex::new(tmc_tts::TtsQueue::default()),
             update_state: Arc::new(tokio::sync::RwLock::new(
                 crate::updater::UpdateStatus::default(),
             )),
@@ -169,7 +173,9 @@ impl AppActions {
             store: None,
             sync_waker: None,
             transport: None,
+            native_engine: Mutex::new(None),
             kokoro_engine: Mutex::new(None),
+            tts_queue: Mutex::new(tmc_tts::TtsQueue::default()),
             update_state: Arc::new(tokio::sync::RwLock::new(
                 crate::updater::UpdateStatus::default(),
             )),
@@ -652,6 +658,7 @@ impl ActionHost for AppActions {
                 let engine_kind = args
                     .get("engine")
                     .and_then(|e| e.as_str())
+                    .filter(|s| !s.is_empty())
                     .map(|s| match s {
                         "kokoro" => tmc_model::tts::TtsEngineKind::Kokoro,
                         _ => tmc_model::tts::TtsEngineKind::Native,
@@ -672,27 +679,36 @@ impl ActionHost for AppActions {
                             .map(|e| e.available_voices())
                             .unwrap_or_default()
                     }
-                    tmc_model::tts::TtsEngineKind::Native => tmc_tts::NativeEngine::new()
-                        .map(|e| e.available_voices())
-                        .unwrap_or_default(),
+                    tmc_model::tts::TtsEngineKind::Native => {
+                        let mut guard = self.native_engine.lock().unwrap();
+                        if guard.is_none() {
+                            *guard = tmc_tts::NativeEngine::new().ok();
+                        }
+                        guard
+                            .as_ref()
+                            .map(|e| e.available_voices())
+                            .unwrap_or_default()
+                    }
                 };
 
                 return Ok(json!({ "voices": voices }));
             }
             "tts.test" => {
-                let (engine_kind, default_voice, default_vol, default_rate) = {
+                let (engine_kind, default_voice, default_vol, default_rate, lang) = {
                     let cfg = self.config.lock().unwrap();
                     (
                         cfg.tts.engine,
                         cfg.tts.voice.clone(),
                         cfg.tts.volume,
                         cfg.tts.rate,
+                        cfg.language.clone(),
                     )
                 };
 
                 let chosen_engine = args
                     .get("engine")
                     .and_then(|e| e.as_str())
+                    .filter(|s| !s.is_empty())
                     .map(|s| match s {
                         "kokoro" => tmc_model::tts::TtsEngineKind::Kokoro,
                         _ => tmc_model::tts::TtsEngineKind::Native,
@@ -702,52 +718,37 @@ impl ActionHost for AppActions {
                 let voice = args
                     .get("voice")
                     .and_then(|v| v.as_str())
+                    .filter(|s| !s.is_empty())
                     .map(String::from)
                     .or(default_voice);
 
                 let volume = args
                     .get("volume")
                     .and_then(|v| v.as_u64())
-                    .map(|v| v as u8)
+                    .map(|v| v.min(100) as u8)
                     .unwrap_or(default_vol);
 
                 let rate = args
                     .get("rate")
                     .and_then(|r| r.as_u64())
-                    .map(|r| r as u8)
+                    .map(|r| r.clamp(80, 150) as u8)
                     .unwrap_or(default_rate);
 
+                let default_phrase = tmc_i18n::I18n::new(&lang).t("tts-test-phrase", &[]);
                 let text = args
                     .get("text")
                     .and_then(|t| t.as_str())
-                    .unwrap_or("Copiloto de TMC activo y listo para la navegación.");
+                    .filter(|s| !s.trim().is_empty())
+                    .unwrap_or(&default_phrase);
 
                 let rate_f32 = rate as f32 / 100.0;
-
-                match chosen_engine {
-                    tmc_model::tts::TtsEngineKind::Kokoro => {
-                        let mut guard = self.kokoro_engine.lock().unwrap();
-                        if guard.is_none() {
-                            *guard = tmc_tts::KokoroEngine::new().ok();
-                        }
-                        if let Some(ref mut engine) = *guard {
-                            engine
-                                .speak(text, voice.as_deref(), volume, rate_f32)
-                                .map_err(|e| ActionError::Failed(e.to_string()))?;
-                        } else {
-                            return Err(ActionError::Failed("KokoroEngine unavailable".into()));
-                        }
-                    }
-                    tmc_model::tts::TtsEngineKind::Native => {
-                        let mut engine = tmc_tts::NativeEngine::new()
-                            .map_err(|e| ActionError::Failed(e.to_string()))?;
-                        engine
-                            .speak(text, voice.as_deref(), volume, rate_f32)
-                            .map_err(|e| ActionError::Failed(e.to_string()))?;
-                    }
-                }
+                self.speak_with_engine(chosen_engine, text, voice.as_deref(), volume, rate_f32)?;
 
                 return Ok(json!({ "ok": true }));
+            }
+            "tts.stop" | "voice.stop" => {
+                self.stop_tts();
+                return Ok(json!({ "ok": true, "stopped": true }));
             }
             "voice.status" => {
                 let status = crate::voiceattack::detect_voiceattack();
@@ -1070,26 +1071,21 @@ impl ActionHost for AppActions {
                     .get("text")
                     .and_then(|t| t.as_str())
                     .unwrap_or_default();
-                if text.is_empty() {
+                if text.trim().is_empty() {
                     return Ok(json!({ "ok": true, "spoken": false }));
                 }
 
                 let rate_f32 = default_rate as f32 / 100.0;
-                match engine_kind {
-                    tmc_model::tts::TtsEngineKind::Kokoro => {
-                        if let Ok(mut engine) = tmc_tts::KokoroEngine::new() {
-                            let _ =
-                                engine.speak(text, default_voice.as_deref(), default_vol, rate_f32);
-                        }
-                    }
-                    tmc_model::tts::TtsEngineKind::Native => {
-                        if let Ok(mut engine) = tmc_tts::NativeEngine::new() {
-                            let _ =
-                                engine.speak(text, default_voice.as_deref(), default_vol, rate_f32);
-                        }
-                    }
-                }
-                return Ok(json!({ "ok": true, "spoken": true }));
+                let spoken = self
+                    .speak_with_engine(
+                        engine_kind,
+                        text,
+                        default_voice.as_deref(),
+                        default_vol,
+                        rate_f32,
+                    )
+                    .is_ok();
+                return Ok(json!({ "ok": true, "spoken": spoken }));
             }
             _ => {}
         }
@@ -1304,6 +1300,111 @@ impl AppActions {
             .clone()
             .or_else(|| self.runtime.as_ref().and_then(|r| r.sync_waker.clone()))
     }
+
+    /// Reutiliza las instancias persistentes de los motores TTS para evitar cortar `SPF_ASYNC`
+    /// o recrear subprocesos en cada locución.
+    fn speak_with_engine(
+        &self,
+        engine_kind: tmc_model::tts::TtsEngineKind,
+        text: &str,
+        voice: Option<&str>,
+        volume: u8,
+        rate_f32: f32,
+    ) -> Result<(), ActionError> {
+        match engine_kind {
+            tmc_model::tts::TtsEngineKind::Kokoro => {
+                let mut guard = self.kokoro_engine.lock().unwrap();
+                if guard.is_none() {
+                    *guard = tmc_tts::KokoroEngine::new().ok();
+                }
+                if let Some(ref mut engine) = *guard {
+                    let _ = engine.check_idle_timeout();
+                    engine
+                        .speak(text, voice, volume, rate_f32)
+                        .map_err(|e| ActionError::Failed(e.to_string()))
+                } else {
+                    Err(ActionError::Failed("KokoroEngine unavailable".into()))
+                }
+            }
+            tmc_model::tts::TtsEngineKind::Native => {
+                let mut guard = self.native_engine.lock().unwrap();
+                if guard.is_none() {
+                    *guard = tmc_tts::NativeEngine::new().ok();
+                }
+                if let Some(ref mut engine) = *guard {
+                    engine
+                        .speak(text, voice, volume, rate_f32)
+                        .map_err(|e| ActionError::Failed(e.to_string()))
+                } else {
+                    Err(ActionError::Failed("NativeEngine unavailable".into()))
+                }
+            }
+        }
+    }
+
+    /// Detiene de inmediato la locución en curso y vacía la cola TTS pendiente.
+    pub fn stop_tts(&self) {
+        if let Ok(mut q) = self.tts_queue.lock() {
+            q.clear();
+        }
+        if let Ok(mut guard) = self.kokoro_engine.lock()
+            && let Some(ref mut engine) = *guard
+        {
+            let _ = engine.stop();
+        }
+        if let Ok(mut guard) = self.native_engine.lock()
+            && let Some(ref mut engine) = *guard
+        {
+            let _ = engine.stop();
+        }
+    }
+
+    /// Encola y reproduce un aviso táctico de cabina (`VoiceCue`) respetando los ajustes de canal,
+    /// cooldown y prioridades del copiloto. Devuelve `true` si se despachó a síntesis.
+    pub fn handle_voice_cue(&self, cue: &tmc_model::tts::VoiceCue) -> bool {
+        let (tts_cfg, lang) = {
+            let cfg = self.config.lock().unwrap();
+            (cfg.tts.clone(), cfg.language.clone())
+        };
+
+        if !tts_cfg.is_channel_enabled(cue.channel) {
+            return false;
+        }
+
+        let spoken_text = tmc_i18n::I18n::new(&lang).t_map(&cue.text_key, &cue.args);
+        if spoken_text.trim().is_empty() || spoken_text == cue.text_key {
+            return false;
+        }
+
+        let next_item = {
+            let mut queue = self.tts_queue.lock().unwrap();
+            let accepted = queue.enqueue(
+                cue.priority,
+                spoken_text,
+                tts_cfg.voice.clone(),
+                tts_cfg.volume,
+                tts_cfg.rate_multiplier(),
+                cue.cooldown_key.clone(),
+            );
+            if !accepted {
+                return false;
+            }
+            queue.pop_next()
+        };
+
+        if let Some(item) = next_item {
+            self.speak_with_engine(
+                tts_cfg.engine,
+                &item.text,
+                item.voice.as_deref(),
+                item.volume,
+                item.rate,
+            )
+            .is_ok()
+        } else {
+            false
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1342,5 +1443,52 @@ mod tests {
             ]
         );
         assert!(all.contains("\"chars\":10"));
+    }
+
+    #[test]
+    fn voice_cue_respects_enabled_channels_and_cooldown_and_stop() {
+        use tmc_model::tts::{TtsChannel, TtsPriority, VoiceCue};
+        use tmc_server::ActionHost;
+
+        let actions = super::AppActions::new();
+        let cue = VoiceCue::new(
+            TtsPriority::Tactical,
+            TtsChannel::Navigation,
+            "tts-nav-jump-scoopable",
+        )
+        .with_arg("system", "Sol")
+        .with_cooldown("nav_jump");
+
+        // Con TTS desactivado por defecto no debe despachar nada
+        assert!(!actions.handle_voice_cue(&cue));
+
+        // Activar TTS con volumen 0 para prueba silenciosa
+        {
+            let mut cfg = actions.config.lock().unwrap();
+            cfg.tts.enabled = true;
+            cfg.tts.volume = 0;
+        }
+        assert!(actions.handle_voice_cue(&cue));
+        // Segunda emisión inmediata con la misma clave de cooldown debe suprimirse
+        assert!(!actions.handle_voice_cue(&cue));
+
+        // Canal deshabilitado tampoco debe emitir
+        {
+            let mut cfg = actions.config.lock().unwrap();
+            cfg.tts.channels.insert(TtsChannel::Combat, false);
+        }
+        let combat_cue = VoiceCue::new(
+            TtsPriority::Emergency,
+            TtsChannel::Combat,
+            "tts-combat-shields-down",
+        );
+        assert!(!actions.handle_voice_cue(&combat_cue));
+
+        // tts.stop limpia y detiene sin errores
+        let res = actions
+            .run_action_with("tts.stop", &serde_json::Value::Null, &Default::default())
+            .unwrap();
+        assert_eq!(res["ok"], true);
+        assert_eq!(res["stopped"], true);
     }
 }

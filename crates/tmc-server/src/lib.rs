@@ -182,6 +182,7 @@ pub fn build_router(
         .route("/api/health", axum::routing::get(rest::get_health))
         .route("/api/tts/voices", axum::routing::get(rest::get_tts_voices))
         .route("/api/tts/test", axum::routing::post(rest::post_tts_test))
+        .route("/api/tts/stop", axum::routing::post(rest::post_tts_stop))
         .route(
             "/api/voice/intent",
             axum::routing::post(rest::post_voice_intent),
@@ -396,6 +397,13 @@ mod tests {
                 })),
                 "clipboard.copy" => Ok(serde_json::json!({ "copied": args["text"] })),
                 "voice.speak" => Ok(serde_json::json!({ "spoken": true })),
+                "tts.voices" => Ok(serde_json::json!({
+                    "engine": args.get("engine").and_then(|v| v.as_str()).unwrap_or("native"),
+                    "voices": [
+                        { "id": "ef_dora", "name": "Dora (ES)", "lang": "es", "gender": "Female" }
+                    ]
+                })),
+                "tts.stop" => Ok(serde_json::json!({ "ok": true, "stopped": true })),
                 _ => self.run_action(name, snapshot),
             }
         }
@@ -2002,6 +2010,46 @@ mod tests {
         let xml_str = std::str::from_utf8(&body_xml).unwrap();
         assert!(xml_str.contains("<Profile"));
         assert!(xml_str.contains("TMC - The Multipurpose Companion"));
+    }
+
+    #[tokio::test]
+    async fn tts_voices_query_and_stop_endpoint() {
+        let (app, _core, _store) = test_router(false, "");
+
+        let req_voices = with_peer(
+            Request::builder()
+                .uri("/api/tts/voices?engine=kokoro")
+                .header(header::HOST, "127.0.0.1:47320")
+                .body(Body::empty())
+                .unwrap(),
+            "127.0.0.1:55000",
+        );
+        let resp_voices = app.clone().oneshot(req_voices).await.unwrap();
+        assert_eq!(resp_voices.status(), StatusCode::OK);
+        let body_voices = axum::body::to_bytes(resp_voices.into_body(), 1024 * 64)
+            .await
+            .unwrap();
+        let json_voices: Value = serde_json::from_slice(&body_voices).unwrap();
+        assert_eq!(json_voices["engine"], "kokoro");
+        assert_eq!(json_voices["voices"][0]["id"], "ef_dora");
+
+        let req_stop = with_peer(
+            Request::builder()
+                .method("POST")
+                .uri("/api/tts/stop")
+                .header(header::HOST, "127.0.0.1:47320")
+                .body(Body::empty())
+                .unwrap(),
+            "127.0.0.1:55000",
+        );
+        let resp_stop = app.oneshot(req_stop).await.unwrap();
+        assert_eq!(resp_stop.status(), StatusCode::OK);
+        let body_stop = axum::body::to_bytes(resp_stop.into_body(), 1024 * 64)
+            .await
+            .unwrap();
+        let json_stop: Value = serde_json::from_slice(&body_stop).unwrap();
+        assert_eq!(json_stop["ok"], true);
+        assert_eq!(json_stop["stopped"], true);
     }
 
     #[tokio::test]

@@ -32,3 +32,4 @@ settings-tts-channel-mining = Mining & prospecting
 settings-tts-channel-carrier = Fleet Carrier
 settings-tts-test-button = 🔊 Test copilot voice
 settings-tts-test-playing = Playing test speech...
+settings-tts-stop-button = ⏹️ Stop speech

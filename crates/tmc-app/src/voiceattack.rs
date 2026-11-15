@@ -125,6 +125,36 @@ pub fn generate_vap_profile(port: u16) -> String {
             "FuelStatus",
             "Consulta el nivel porcentual y toneladas del tanque de combustible",
         ),
+        (
+            "b4382594-5a21-4f17-8a4b-2d7c04192b1a",
+            "¿Dónde estoy?;Sistema actual;Copia el sistema actual;Where am I;Copy current system",
+            "Dónde estoy",
+            "Informa del sistema, cuerpo o estación actual y opcionalmente lo copia al portapapeles",
+        ),
+        (
+            "b4382594-5a21-4f17-8a4b-2d7c04192b1b",
+            "Resumen de exploración;Valor del sistema;Exploration summary",
+            "Resumen de exploración",
+            "Consulta cuerpos escaneados, objetivos valiosos y valor cartográfico actual",
+        ),
+        (
+            "b4382594-5a21-4f17-8a4b-2d7c04192b1c",
+            "Resumen de combate;Vales de recompensa;Combat summary",
+            "Resumen de combate",
+            "Consulta las bajas de la sesión y los vales pendientes de cobro",
+        ),
+        (
+            "b4382594-5a21-4f17-8a4b-2d7c04192b1d",
+            "Estado del portanaves;Portanaves;Fleet carrier status",
+            "Estado del portanaves",
+            "Informa de la ubicación, combustible de tritio y saltos disponibles del portanaves",
+        ),
+        (
+            "b4382594-5a21-4f17-8a4b-2d7c04192b1e",
+            "Progreso de colonización;Colonización;Colonisation status",
+            "Progreso de colonización",
+            "Informa del avance del depósito colonial activo y la mercancía prioritaria",
+        ),
     ];
 
     let mut xml = String::with_capacity(8192);
