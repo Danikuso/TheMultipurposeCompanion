@@ -5244,7 +5244,7 @@ checksum = "fd3ca314f692efd6c868f8408f53fe444634a845f96c028b97d35f6a1f79f0ee"
 
 [[package]]
 name = "tmc-app"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "anyhow",
  "arboard",
@@ -5282,7 +5282,7 @@ dependencies = [
 
 [[package]]
 name = "tmc-core"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "chrono",
  "serde",
@@ -5296,7 +5296,7 @@ dependencies = [
 
 [[package]]
 name = "tmc-desktop"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "anyhow",
  "tauri",
@@ -5313,7 +5313,7 @@ dependencies = [
 
 [[package]]
 name = "tmc-eddn"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "chrono",
  "flate2",
@@ -5327,7 +5327,7 @@ dependencies = [
 
 [[package]]
 name = "tmc-headless"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -5346,7 +5346,7 @@ dependencies = [
 
 [[package]]
 name = "tmc-i18n"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "fluent-bundle",
  "fluent-syntax",
@@ -5357,7 +5357,7 @@ dependencies = [
 
 [[package]]
 name = "tmc-journal"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "notify",
  "roxmltree",
@@ -5371,7 +5371,7 @@ dependencies = [
 
 [[package]]
 name = "tmc-model"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "bitflags 2.13.2",
  "chrono",
@@ -5384,7 +5384,7 @@ dependencies = [
 
 [[package]]
 name = "tmc-modules"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "chrono",
  "serde",
@@ -5398,7 +5398,7 @@ dependencies = [
 
 [[package]]
 name = "tmc-net"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "chrono",
  "flate2",
@@ -5415,7 +5415,7 @@ dependencies = [
 
 [[package]]
 name = "tmc-replay"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -5428,7 +5428,7 @@ dependencies = [
 
 [[package]]
 name = "tmc-server"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "axum",
  "chrono",
@@ -5452,7 +5452,7 @@ dependencies = [
 
 [[package]]
 name = "tmc-store"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "chrono",
  "rusqlite",
@@ -5468,7 +5468,7 @@ dependencies = [
 
 [[package]]
 name = "tmc-sync"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "chrono",
  "flate2",
@@ -5488,7 +5488,7 @@ dependencies = [
 
 [[package]]
 name = "tmc-tts"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "serde",
  "serde_json",
