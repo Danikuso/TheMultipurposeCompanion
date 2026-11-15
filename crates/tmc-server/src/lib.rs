@@ -184,6 +184,10 @@ pub fn build_router(
         .route("/api/tts/test", axum::routing::post(rest::post_tts_test))
         .route("/api/tts/stop", axum::routing::post(rest::post_tts_stop))
         .route(
+            "/api/logs/recent",
+            axum::routing::get(rest::get_recent_logs),
+        )
+        .route(
             "/api/voice/intent",
             axum::routing::post(rest::post_voice_intent),
         )
@@ -374,6 +378,11 @@ mod tests {
                         .unwrap_or("Sol");
                     Ok(serde_json::json!({ "system": next }))
                 }
+                "logs.recent" => Ok(serde_json::json!({
+                    "filename": "tmc.2026-11-15.log",
+                    "content": "2026-11-15T12:00:00Z INFO app.start",
+                    "line_count": 1
+                })),
                 "fail" => Err(ActionError::Failed("boom".into())),
                 _ => Err(ActionError::NotFound),
             }
@@ -2050,6 +2059,28 @@ mod tests {
         let json_stop: Value = serde_json::from_slice(&body_stop).unwrap();
         assert_eq!(json_stop["ok"], true);
         assert_eq!(json_stop["stopped"], true);
+    }
+
+    #[tokio::test]
+    async fn get_recent_logs_endpoint_returns_latest_log_payload() {
+        let (app, _core, _store) = test_router(false, "");
+        let req = with_peer(
+            Request::builder()
+                .uri("/api/logs/recent")
+                .header(header::HOST, "127.0.0.1:47320")
+                .body(Body::empty())
+                .unwrap(),
+            "127.0.0.1:55000",
+        );
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(resp.into_body(), 1024 * 64)
+            .await
+            .unwrap();
+        let json: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["filename"], "tmc.2026-11-15.log");
+        assert_eq!(json["line_count"], 1);
+        assert!(json["content"].as_str().unwrap().contains("app.start"));
     }
 
     #[tokio::test]
