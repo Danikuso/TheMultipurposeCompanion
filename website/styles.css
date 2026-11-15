@@ -591,17 +591,30 @@ h1, h2, h3, h4, .hud-title {
 /* Fila de telemetría de cabina */
 .cockpit-telemetry {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.65rem;
+  grid-template-columns: minmax(0, 1.32fr) minmax(0, 0.64fr) minmax(0, 0.64fr) minmax(0, 1.15fr);
+  gap: 0.5rem;
 }
 
 .metric-card {
   background: var(--hud-surface-card);
   border: 1px solid var(--hud-border-subtle);
   border-radius: var(--radius-sm);
-  padding: 0.65rem 0.8rem;
+  padding: 0.55rem 0.65rem;
+  min-width: 0;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+}
+
+.metric-card .badge {
+  white-space: normal;
+  text-align: center;
+  justify-content: center;
+  line-height: 1.15;
+  font-size: 0.62rem;
+  padding: 0.2rem 0.45rem;
+  max-width: 100%;
+  width: fit-content;
 }
 
 .metric-label {
@@ -611,13 +624,17 @@ h1, h2, h3, h4, .hud-title {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .metric-val {
   font-family: var(--font-mono);
-  font-size: 1.1rem;
+  font-size: 0.88rem;
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 /* Banner de ruta en vivo */
@@ -707,6 +724,20 @@ h1, h2, h3, h4, .hud-title {
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: 0.8rem;
+}
+
+.sim-item-row > span:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.sim-item-row > div {
+  flex-shrink: 0;
+}
+
+.sim-item-row .text-gold {
+  white-space: nowrap;
+  text-align: right;
 }
 
 .badge {
@@ -1877,7 +1908,7 @@ h1, h2, h3, h4, .hud-title {
     grid-template-columns: 1fr;
   }
   .cockpit-telemetry {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
