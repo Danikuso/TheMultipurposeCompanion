@@ -1,0 +1,87 @@
+name: "🐛 Reporte de Bug (Manual)"
+description: "Informa de un fallo en TMC indicando función, forma de fallo, pautas seguidas y registro tmc.log"
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        💡 **Consejo:** Puedes usar el [**Reportador Guiado Interactivo**](https://danikuso.github.io/TheMultipurposeCompanion/reportar-bug.html) (también accesible desde *Ajustes → Feedback* en TMC) para seleccionar visualmente la función, el síntoma y las pautas de reproducción automáticamente.
+
+  - type: dropdown
+    id: feature
+    attributes:
+      label: "1. Función afectada"
+      description: "Selecciona el módulo o área del sistema donde se produjo el error."
+      options:
+        - "🧭 Panel General (dashboard)"
+        - "🚀 Nave y Equipamiento (ship)"
+        - "🗺️ Navegación y Planificador (navigation)"
+        - "🔭 Exploración Cartográfica (exploration)"
+        - "🧬 Exobiología (exobiology)"
+        - "⚔️ Combate y Defensa Anti-Xeno (combat)"
+        - "⛏️ Minería (mining)"
+        - "📦 Comercio y Mercados (trade)"
+        - "📋 Misiones, Turismo y Eventos (missions)"
+        - "🔧 Ingeniería y Materiales (engineering)"
+        - "🛸 Fleet Carrier (carrier)"
+        - "🏗️ Colonización de Sistemas (colonisation)"
+        - "🏛️ Powerplay 2.0 (powerplay)"
+        - "⚖️ Facciones y Política Local (bgs)"
+        - "🚨 Estado Legal y Contrabando (crime)"
+        - "🔑 Cuentas y Flota Remota (accounts)"
+        - "💿 Instalación y Actualización (install)"
+        - "📓 Lectura del Diario / Journal (journal)"
+        - "🎙️ Voz, Copiloto STT/TTS y VoiceAttack (voice)"
+        - "🎛️ Diseño y Disposición de Tarjetas (layout)"
+        - "📱 Modo Tablet / Móvil por LAN (lan)"
+    validations:
+      required: true
+
+  - type: input
+    id: failure_mode
+    attributes:
+      label: "2. ¿De qué forma ha fallado esa función?"
+      description: "Describe el síntoma específico (ej. contador congelado, ingeniero bloqueado, TTS mudo, etc.)."
+      placeholder: "Ej. La autocopia al portapapeles no avanza al siguiente salto tras FSDJump"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "3. Pautas seguidas hasta la función y el fallo"
+      description: "Indica qué pasos seguiste dentro del juego y dentro de TMC hasta reproducir el error."
+      placeholder: |
+        1. Abrí el módulo...
+        2. Activé la opción...
+        3. Dentro del juego realicé...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: "Plataforma / Modo de uso"
+      options:
+        - "Windows · App de escritorio (TMC.exe)"
+        - "Steam Deck / Proton / Linux"
+        - "Navegador Tablet / Móvil (LAN)"
+        - "Otro"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: "Versión de TMC"
+      placeholder: "Ej. v1.4.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Registro de aplicación (tmc.log)"
+      description: "Opcional pero muy útil: pega las últimas líneas de `%LOCALAPPDATA%\\TMC\\tmc.*.log`."
+      render: log

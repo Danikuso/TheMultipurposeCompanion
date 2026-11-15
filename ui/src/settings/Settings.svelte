@@ -573,29 +573,43 @@
     });
   }
 
-  function openGitHubFeedback() {
+  async function openGitHubFeedback() {
     const tmcVersion = updater.status.current_version || '—';
     const osInfo = typeof navigator !== 'undefined' ? navigator.userAgent : 'Windows';
     const lang = fullConfig.language || 'es';
-    const issueTitle = encodeURIComponent(t('feedback-issue-title') + ' ');
-    const issueBody = encodeURIComponent(
-`### ${t('feedback-description')}:
-<!-- ${t('feedback-description-hint')} -->
 
----
-### ${t('feedback-steps')}:
-1. 
-2. 
-3. 
+    let logFilename = '';
+    let logContent = '';
+    try {
+      const res = await fetch('/api/logs/recent');
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data?.filename === 'string') {
+          logFilename = data.filename;
+        }
+        if (typeof data?.content === 'string') {
+          logContent = data.content.trim();
+        }
+      }
+    } catch {
+      // Continuar igualmente hacia el reportador guiado aunque falle la lectura local
+    }
 
----
-### ${t('feedback-environment')}:
-- **${t('feedback-version')}:** ${tmcVersion}
-- **${t('feedback-language')}:** ${lang}
-- **${t('feedback-platform')}:** ${osInfo}
-`
-    );
-    const url = `https://github.com/Danikuso/TheMultipurposeCompanion/issues/new?title=${issueTitle}&body=${issueBody}`;
+    const params = new URLSearchParams({
+      lang,
+      version: tmcVersion,
+      platform: osInfo,
+      from: 'app',
+    });
+    if (logFilename) {
+      params.set('logFile', logFilename);
+    }
+
+    let url = `https://danikuso.github.io/TheMultipurposeCompanion/reportar-bug.html?${params.toString()}`;
+    if (logContent) {
+      url += `#log=${encodeURIComponent(logContent)}`;
+    }
+
     if (typeof window !== 'undefined') {
       window.open(url, '_blank');
     }

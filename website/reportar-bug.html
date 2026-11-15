@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="br_page_title">Reportar Bug Guiado | TMC — The Multipurpose Companion</title>
+  <meta name="description" content="Asistente guiado paso a paso para reportar errores en TMC (The Multipurpose Companion) indicando la función afectada, la forma de fallo, las pautas reproducidas y el registro tmc.log.">
+  <meta name="theme-color" content="#ff7100">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=1.0.3">
+</head>
+<body>
+
+  <!-- ===================================================================
+       BARRA DE NAVEGACIÓN GLASS HUD
+       =================================================================== -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand" aria-label="TMC Inicio">
+        <div class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2L2 19h20L12 2zm0 4.6l6.1 10.4H5.9L12 6.6z"/>
+          </svg>
+        </div>
+        <div class="brand-info">
+          <span class="brand-title">TMC</span>
+          <span class="brand-subtitle">The Multipurpose Companion</span>
+        </div>
+      </a>
+
+      <nav aria-label="Navegación principal">
+        <ul class="nav-links">
+          <li><a href="index.html" class="nav-link" data-i18n="nav_home">← Volver a TMC</a></li>
+          <li><a href="index.html#cualidades" class="nav-link" data-i18n="nav_qualities">Cualidades</a></li>
+          <li><a href="index.html#modulos" class="nav-link" data-i18n="nav_modules">Funciones (16)</a></li>
+          <li><a href="index.html#flujos" class="nav-link" data-i18n="nav_workflows">Tutoriales (8)</a></li>
+          <li><a href="reportar-bug.html" class="nav-link active" data-i18n="nav_bug_report">🐛 Reportar Bug</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <div class="lang-selector-dropdown">
+          <button type="button" id="langSelectBtn" class="lang-select-btn" aria-haspopup="true" aria-expanded="false">
+            <span class="lang-globe" aria-hidden="true">🌐</span>
+            <span class="lang-current">ES</span>
+            <span class="lang-chevron" aria-hidden="true">▾</span>
+          </button>
+          <div id="langDropdownMenu" class="lang-dropdown-menu" style="display: none;">
+            <button type="button" class="lang-option active" data-lang="es">🇪🇸 Español</button>
+            <button type="button" class="lang-option" data-lang="en">🇬🇧 English</button>
+            <button type="button" class="lang-option" data-lang="fr">🇫🇷 Français</button>
+            <button type="button" class="lang-option" data-lang="de">🇩🇪 Deutsch</button>
+            <button type="button" class="lang-option" data-lang="pt">🇵🇹 Português</button>
+          </div>
+        </div>
+
+        <a href="https://github.com/Danikuso/TheMultipurposeCompanion" class="btn-hud btn-hud-secondary" target="_blank" rel="noopener">
+          <span data-i18n="nav_github">GitHub</span>
+        </a>
+
+        <button type="button" class="menu-toggle" aria-label="Abrir menú">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="bugReporterApp">
+    <!-- =================================================================
+         CABECERA DEL REPORTADOR GUIADO + STEPPER DE 3 PASOS
+         ================================================================= -->
+    <section class="br-hero">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag cyan" data-i18n="br_tag">ASISTENTE DE DIAGNÓSTICO DE CABINA</div>
+          <h1 class="section-title" data-i18n="br_title">Reportador Guiado de Bugs</h1>
+          <p class="section-desc" data-i18n="br_desc">
+            Elige primero qué función de TMC falló, después la forma exacta del problema y por último marca las pautas seguidas para llegar hasta ahí. Generaremos un reporte completo listo para GitHub.
+          </p>
+        </div>
+
+        <nav class="br-stepper" aria-label="Pasos del reportador">
+          <a href="#step1Section" id="stepperStep1" class="br-step-pill active" data-i18n="br_stepper_1">
+            1. Función afectada
+          </a>
+          <a href="#step2Section" id="stepperStep2" class="br-step-pill" data-i18n="br_stepper_2">
+            2. Forma de fallo
+          </a>
+          <a href="#step3Section" id="stepperStep3" class="br-step-pill" data-i18n="br_stepper_3">
+            3. Pautas, Entorno y Log
+          </a>
+        </nav>
+
+        <div id="appContextNotice" class="br-notice" style="display: none;">
+          <span aria-hidden="true">🛰️</span>
+          <span class="br-notice-text">Datos de entorno y registro precargados automáticamente desde TMC.</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="container br-wizard-wrap">
+
+      <!-- ===============================================================
+           PASO 1: SELECCIONAR FUNCIÓN (16 MÓDULOS + 5 SISTEMA = 21)
+           =============================================================== -->
+      <section id="step1Section" class="br-panel">
+        <div class="br-panel-header">
+          <div class="br-panel-heading-group">
+            <div class="br-panel-title-row">
+              <span class="br-step-badge">01</span>
+              <h2 class="br-panel-title" data-i18n="br_step1_heading">¿Qué función de TMC presentó el problema?</h2>
+            </div>
+            <p class="br-panel-sub" data-i18n="br_step1_sub">
+              Están incluidos los 16 módulos de vuelo/gestión y las 5 áreas del sistema.
+            </p>
+          </div>
+        </div>
+
+        <div class="br-toolbar">
+          <div class="br-filters" role="group" aria-label="Filtrar categoría">
+            <button type="button" class="filter-btn active" data-br-filter="all" data-i18n="br_filter_all">Todas (21)</button>
+            <button type="button" class="filter-btn" data-br-filter="module" data-i18n="br_filter_modules">Módulos (16)</button>
+            <button type="button" class="filter-btn" data-br-filter="system" data-i18n="br_filter_system">Sistema (5)</button>
+          </div>
+
+          <div class="br-search-select-row">
+            <input type="search" id="featureSearchInput" class="br-input br-search-input"
+              placeholder="Filtrar función (ej. ingenieros, voz, diario, minería, tablet)..."
+              aria-label="Filtrar función">
+            <select id="featureSelect" class="br-select br-quick-select" aria-label="Selector rápido de función"></select>
+          </div>
+        </div>
+
+        <div id="featureCardsGrid" class="br-feature-grid"></div>
+      </section>
+
+      <!-- ===============================================================
+           PASO 2: FORMAS DE FALLO SEGÚN LA FUNCIÓN SELECCIONADA
+           =============================================================== -->
+      <section id="step2Section" class="br-panel">
+        <div class="br-panel-header">
+          <div class="br-panel-heading-group">
+            <div class="br-panel-title-row">
+              <span class="br-step-badge">02</span>
+              <h2 class="br-panel-title" data-i18n="br_step2_heading">¿De qué forma falló esa función?</h2>
+            </div>
+            <p class="br-panel-sub" data-i18n="br_step2_sub">
+              Las opciones se adaptan automáticamente a la función elegida arriba.
+            </p>
+          </div>
+          <span id="step2FeatureBadge" class="badge badge-orange" style="display: none;"></span>
+        </div>
+
+        <div id="step2EmptyHint" class="br-empty-box">
+          Selecciona primero una función en el Paso 1 para ver las formas concretas en las que puede fallar.
+        </div>
+
+        <div id="step2ModesContainer" class="br-mode-list"></div>
+      </section>
+
+      <!-- ===============================================================
+           PASO 3: PAUTAS SEGUIDAS, ENTORNO, LOG Y ENVÍO A GITHUB
+           =============================================================== -->
+      <section id="step3Section" class="br-panel">
+        <div class="br-panel-header">
+          <div class="br-panel-heading-group">
+            <div class="br-panel-title-row">
+              <span class="br-step-badge">03</span>
+              <h2 class="br-panel-title" data-i18n="br_step3_heading">¿Qué pautas seguiste hasta llegar a esa función y ese fallo?</h2>
+            </div>
+            <p class="br-panel-sub" data-i18n="br_step3_sub">
+              Marca todo lo que coincida con tu caso y adjunta tu entorno o el registro reciente.
+            </p>
+          </div>
+        </div>
+
+        <div id="step3EmptyHint" class="br-empty-box">
+          Elige primero una función y una forma de fallo para cargar las pautas exactas de reproducción.
+        </div>
+
+        <div id="step3DetailsContainer" class="br-step3-body" style="display: none;">
+          <!-- Subbloque A: Pautas hacia la función + Pautas específicas de la forma de fallo -->
+          <div class="br-check-grid">
+            <div id="featureStepsChecklist" class="br-check-card"></div>
+            <div id="failureStepsChecklist" class="br-check-card"></div>
+          </div>
+
+          <div class="br-form-grid">
+            <div class="br-field">
+              <label for="failureDetailInput" data-i18n="br_detail_label">
+                Detalle adicional de cómo se manifiesta el fallo (opcional)
+              </label>
+              <input type="text" id="failureDetailInput" class="br-input"
+                placeholder="Ej. Ocurre solo al tener más de 3 ingenieros fijados o tras cambiar de nave...">
+            </div>
+
+            <div class="br-field">
+              <label for="customStepInput" data-i18n="br_custom_step_label">
+                Otra pauta o paso que seguiste (opcional)
+              </label>
+              <input type="text" id="customStepInput" class="br-input"
+                placeholder="Ej. Antes había cambiado el idioma en Ajustes sin reiniciar la vista...">
+            </div>
+          </div>
+
+          <!-- Subbloque B: Entorno -->
+          <div class="br-subbox">
+            <h3 class="br-subbox-title" data-i18n="br_env_heading">Entorno de ejecución</h3>
+            <div class="br-form-grid">
+              <div class="br-field">
+                <label for="envVersionInput" data-i18n="br_env_version">Versión de TMC</label>
+                <input type="text" id="envVersionInput" class="br-input" placeholder="ej. v1.4.0">
+              </div>
+              <div class="br-field">
+                <label for="envPlatformSelect" data-i18n="br_env_platform">Sistema / Modo de uso</label>
+                <select id="envPlatformSelect" class="br-select"></select>
+              </div>
+              <div class="br-field">
+                <label for="envGameSelect" data-i18n="br_env_game">Edición del juego</label>
+                <select id="envGameSelect" class="br-select"></select>
+              </div>
+              <div class="br-field">
+                <label for="envFrequencySelect" data-i18n="br_env_frequency">Frecuencia</label>
+                <select id="envFrequencySelect" class="br-select"></select>
+              </div>
+              <div class="br-field">
+                <label for="envSystemContextInput" data-i18n="br_env_context">Sistema / Estación / Nave actual (opcional)</label>
+                <input type="text" id="envSystemContextInput" class="br-input" placeholder="Ej. Deciat · Farseer Inc. · Mandalay">
+              </div>
+            </div>
+
+            <div class="br-field">
+              <label for="extraNotesInput" data-i18n="br_extra_notes_label">
+                Resultado esperado y notas adicionales (opcional)
+              </label>
+              <textarea id="extraNotesInput" class="br-textarea" rows="3"
+                placeholder="Describe qué esperabas que ocurriera y si encontraste alguna forma de esquivarlo..."></textarea>
+            </div>
+          </div>
+
+          <!-- Subbloque C: Registro de aplicación -->
+          <div class="br-subbox">
+            <div class="br-subbox-head">
+              <h3 class="br-subbox-title" data-i18n="br_log_heading">Registro de aplicación (tmc.log)</h3>
+              <div class="br-log-actions">
+                <label class="btn-hud btn-hud-secondary br-btn-small" style="cursor: pointer;">
+                  <span data-i18n="br_log_upload_btn">📂 Cargar tmc.log</span>
+                  <input type="file" id="logFileInput" accept=".log,.txt" hidden>
+                </label>
+                <button type="button" id="logRestoreBtn" class="btn-hud btn-hud-cyan br-btn-small" style="display: none;" data-i18n="br_log_restore_btn">
+                  Restaurar log de TMC
+                </button>
+                <button type="button" id="logClearBtn" class="btn-hud btn-hud-secondary br-btn-small" data-i18n="br_log_clear_btn">
+                  Limpiar log
+                </button>
+              </div>
+            </div>
+            <p id="logStatusText" class="br-log-meta"></p>
+            <textarea id="logTextarea" class="br-textarea" rows="6"
+              placeholder="Pega aquí las últimas líneas del archivo de registro (tmc.log) o cárgalo con el botón superior..."></textarea>
+          </div>
+
+          <!-- Subbloque D: Resumen, Vista Previa Markdown y Botones de Acción -->
+          <div class="br-summary-bar">
+            <div>
+              <div class="br-summary-label" data-i18n="br_summary_func">Función</div>
+              <div id="summaryFeature" class="br-summary-val">—</div>
+            </div>
+            <div>
+              <div class="br-summary-label" data-i18n="br_summary_mode">Fallo</div>
+              <div id="summaryFailure" class="br-summary-val">—</div>
+            </div>
+            <div>
+              <div class="br-summary-label" data-i18n="br_summary_steps">Pautas marcadas</div>
+              <div id="summarySteps" class="br-summary-val">0</div>
+            </div>
+          </div>
+
+          <div class="br-preview-box">
+            <div class="br-subbox-head" style="margin-bottom: 0.65rem;">
+              <h3 class="br-subbox-title" data-i18n="br_preview_title">Vista previa Markdown para GitHub</h3>
+            </div>
+            <div id="previewIssueTitle" class="br-preview-issue-title">[Bug] —</div>
+            <pre id="previewMarkdownBody" class="br-preview-pre"></pre>
+          </div>
+
+          <div id="reporterToast" class="br-toast" role="status" aria-live="polite"></div>
+
+          <div class="br-submit-row">
+            <button type="button" id="openGithubIssueBtn" class="btn-hud btn-hud-primary" data-i18n="br_btn_github">
+              🚀 Abrir Issue en GitHub
+            </button>
+            <button type="button" id="copyFullReportBtn" class="btn-hud btn-hud-cyan" data-i18n="br_btn_copy">
+              📋 Copiar reporte completo
+            </button>
+            <div class="br-alt-hint">
+              <span data-i18n="br_alt_suggestion">¿Solo quieres proponer una mejora o idea nueva?</span>
+              <a href="https://github.com/Danikuso/TheMultipurposeCompanion/issues/new/choose" target="_blank" rel="noopener" data-i18n="br_alt_suggestion_link">
+                Abrir GitHub Issues generales →
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <p data-i18n="footer_rights">
+          TMC — The Multipurpose Companion. Licencia PolyForm Noncommercial 1.0.0.
+        </p>
+        <p data-i18n="footer_disclaimer">
+          Elite Dangerous es una marca registrada de Frontier Developments plc. TMC es un proyecto independiente desarrollado por la comunidad sin vinculación comercial con Frontier Developments.
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="translations.js"></script>
+  <script src="i18n.js"></script>
+  <script src="bug-reporter.js"></script>
+</body>
+</html>

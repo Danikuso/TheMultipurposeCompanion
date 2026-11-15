@@ -1053,6 +1053,27 @@ pub async fn post_voice_intent(
     (StatusCode::OK, Json(response)).into_response()
 }
 
+pub async fn get_recent_logs(State(state): State<AppState>) -> Response {
+    let snapshot = state.core.snapshot().await;
+    match state.host.run_action("logs.recent", &snapshot) {
+        Ok(val) => (StatusCode::OK, Json(val)).into_response(),
+        Err(ActionError::NotFound) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "filename": serde_json::Value::Null,
+                "content": "",
+                "line_count": 0
+            })),
+        )
+            .into_response(),
+        Err(ActionError::Failed(err)) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": err })),
+        )
+            .into_response(),
+    }
+}
+
 pub async fn get_update_status(State(state): State<AppState>) -> Response {
     match state.host.update_status().await {
         Ok(v) => Json(v).into_response(),

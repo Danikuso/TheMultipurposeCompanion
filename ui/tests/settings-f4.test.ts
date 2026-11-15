@@ -186,11 +186,36 @@ test('renders feedback and github issues card with link and button', async () =>
   expect(repoLink).not.toBeNull();
   expect(repoLink.href).toContain('github.com/Danikuso/TheMultipurposeCompanion');
 
+  const prevFetch = globalThis.fetch;
+  globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const reqUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    if (reqUrl.includes('/api/logs/recent')) {
+      return new Response(
+        JSON.stringify({
+          filename: 'tmc.2026-11-15.log',
+          content: '2026-11-15T12:00:00Z INFO startup ok',
+          line_count: 1,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+    return prevFetch(input, init);
+  }) as typeof fetch;
+
   const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-  btn.click();
-  expect(openSpy).toHaveBeenCalledTimes(1);
-  expect(openSpy.mock.calls[0][0]).toContain('github.com/Danikuso/TheMultipurposeCompanion/issues/new');
-  openSpy.mockRestore();
+  try {
+    btn.click();
+    await vi.waitFor(() => expect(openSpy).toHaveBeenCalledTimes(1));
+    const openedUrl = String(openSpy.mock.calls[0][0] ?? '');
+    expect(openedUrl).toContain('https://danikuso.github.io/TheMultipurposeCompanion/reportar-bug.html');
+    expect(openedUrl).toContain('from=app');
+    expect(openedUrl).toContain('lang=es');
+    expect(openedUrl).toContain('logFile=tmc.2026-11-15.log');
+    expect(openedUrl).toContain('#log=');
+  } finally {
+    globalThis.fetch = prevFetch;
+    openSpy.mockRestore();
+  }
 });
 
 test('auto-companion pro priorities and linger controls work and trigger PUT', async () => {

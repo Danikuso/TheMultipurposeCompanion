@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: "🐛 Asistente Guiado de Bugs (Recomendado)"
+    url: "https://danikuso.github.io/TheMultipurposeCompanion/reportar-bug.html"
+    about: "Elige la función afectada, la forma exacta en que falla y marca las pautas seguidas paso a paso."

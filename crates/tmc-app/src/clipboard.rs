@@ -438,6 +438,7 @@ impl ActionHost for AppActions {
                 };
                 Ok(json!({ "ok": true, "lan_token": new_token }))
             }
+            "logs.recent" => Ok(self.read_recent_app_log()),
             _ => Err(ActionError::NotFound),
         }
     }
@@ -1405,6 +1406,83 @@ impl AppActions {
             false
         }
     }
+
+    /// Lee de forma segura las últimas líneas del archivo `tmc*.log` más reciente en `data_dir`.
+    pub fn read_recent_app_log(&self) -> Value {
+        use std::io::{Read, Seek, SeekFrom};
+
+        let dir = self
+            .config
+            .lock()
+            .ok()
+            .and_then(|c| c.data_dir.clone())
+            .unwrap_or_else(crate::config::data_dir);
+
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            return json!({ "filename": Value::Null, "content": "", "line_count": 0 });
+        };
+
+        let latest = entries
+            .filter_map(|res| res.ok())
+            .filter(|entry| {
+                let path = entry.path();
+                if !path.is_file() {
+                    return false;
+                }
+                let name = entry.file_name();
+                let name_str = name.to_string_lossy();
+                name_str.starts_with("tmc") && name_str.contains(".log")
+            })
+            .map(|entry| {
+                let modified = entry
+                    .metadata()
+                    .and_then(|m| m.modified())
+                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                let name = entry.file_name().to_string_lossy().into_owned();
+                (modified, name, entry.path())
+            })
+            .max_by(|(m1, n1, _), (m2, n2, _)| m1.cmp(m2).then_with(|| n1.cmp(n2)));
+
+        let Some((_, filename, path)) = latest else {
+            return json!({ "filename": Value::Null, "content": "", "line_count": 0 });
+        };
+
+        let Ok(mut file) = std::fs::File::open(&path) else {
+            return json!({ "filename": filename, "content": "", "line_count": 0 });
+        };
+
+        let len = file.metadata().map(|m| m.len()).unwrap_or(0);
+        const MAX_READ_BYTES: u64 = 32 * 1024;
+        if len > MAX_READ_BYTES && file.seek(SeekFrom::Start(len - MAX_READ_BYTES)).is_err() {
+            return json!({ "filename": filename, "content": "", "line_count": 0 });
+        }
+
+        let mut buf = Vec::new();
+        if file.read_to_end(&mut buf).is_err() {
+            return json!({ "filename": filename, "content": "", "line_count": 0 });
+        }
+
+        let text = String::from_utf8_lossy(&buf);
+        let lines: Vec<&str> = text.lines().collect();
+        let start_line = lines.len().saturating_sub(60);
+        let mut tail = lines[start_line..].join("\n");
+
+        const MAX_URL_SAFE_BYTES: usize = 3800;
+        if tail.len() > MAX_URL_SAFE_BYTES {
+            let mut idx = tail.len() - MAX_URL_SAFE_BYTES;
+            while idx < tail.len() && !tail.is_char_boundary(idx) {
+                idx += 1;
+            }
+            tail = tail[idx..].to_string();
+        }
+        let line_count = tail.lines().count();
+
+        json!({
+            "filename": filename,
+            "content": tail,
+            "line_count": line_count,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -1490,5 +1568,33 @@ mod tests {
             .unwrap();
         assert_eq!(res["ok"], true);
         assert_eq!(res["stopped"], true);
+    }
+
+    #[test]
+    fn recent_app_log_action_reads_latest_log_tail() {
+        use tmc_server::ActionHost;
+
+        let dir = tempfile::tempdir().unwrap();
+        let older = dir.path().join("tmc.2026-11-14.log");
+        let newer = dir.path().join("tmc.2026-11-15.log");
+        std::fs::write(&older, "OLD LOG LINE\n").unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        std::fs::write(&newer, "2026-11-15T15:00:00Z INFO app.start\nLINE 2\n").unwrap();
+
+        let actions = super::AppActions::new();
+        {
+            let mut cfg = actions.config.lock().unwrap();
+            cfg.data_dir = Some(dir.path().to_path_buf());
+        }
+
+        let res = actions
+            .run_action("logs.recent", &Default::default())
+            .unwrap();
+        assert_eq!(res["filename"], "tmc.2026-11-15.log");
+        assert_eq!(res["line_count"], 2);
+        let content = res["content"].as_str().unwrap();
+        assert!(content.contains("INFO app.start"));
+        assert!(content.contains("LINE 2"));
+        assert!(!content.contains("OLD LOG LINE"));
     }
 }
