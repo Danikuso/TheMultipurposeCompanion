@@ -32,3 +32,4 @@ settings-tts-channel-mining = Minage et prospection
 settings-tts-channel-carrier = Porte-vaisseaux
 settings-tts-test-button = 🔊 Tester la voix du copilote
 settings-tts-test-playing = Lecture de l'échantillon vocal en cours...
+settings-tts-stop-button = ⏹️ Arrêter la voix

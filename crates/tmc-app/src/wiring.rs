@@ -384,86 +384,6 @@ async fn start_inner(
     // Navigation decide (sube `copy_seq` solo con el ajuste activo y en vivo);
     // aquí se copia cada vez que `copy_seq` aumenta.
     let clipboard = Arc::new(Clipboard::new());
-    {
-        let task_clipboard = clipboard.clone();
-        let throttle_flag = throttle.clone();
-        tokio::spawn(async move {
-            // El replay nunca incrementa `copy_seq`: arranca en 0 y solo suben los saltos en vivo.
-            let mut last_seq: u64 = 0;
-            let mut last_trade_seq: u64 = 0;
-            let mut last_missions_seq: u64 = 0;
-            loop {
-                // Si el canal se retrasa se descartan mensajes pero se sigue:
-                // `copy_seq` es acumulativo, la siguiente actualización lo recupera.
-                let msg = match rx.recv().await {
-                    Ok(msg) => msg,
-                    Err(RecvError::Lagged(_count)) => {
-                        tmc_model::diagnostic!(
-                            tmc_model::diagnostics::DiagnosticContext::State,
-                            "app.updates.lagged",
-                            serde_json::json!({"skipped":_count})
-                        );
-                        continue;
-                    }
-                    Err(RecvError::Closed) => {
-                        tmc_model::diagnostic!(
-                            tmc_model::diagnostics::DiagnosticContext::State,
-                            "app.updates.closed",
-                            serde_json::json!({"closed":true})
-                        );
-                        break;
-                    }
-                };
-                if let CoreMessage::Update { topics, .. } = msg {
-                    if let Some(game) = topics.get("core.game")
-                        && let Some(running) = game.get("running").and_then(|v| v.as_bool())
-                    {
-                        throttle_flag.store(running, Ordering::Relaxed);
-                    }
-                    if let Some(route) = topics.get("navigation.route")
-                        && let Some(seq) = route.get("copy_seq").and_then(|v| v.as_u64())
-                    {
-                        if seq > last_seq
-                            && let Some(target) = route
-                                .get("copy_target")
-                                .and_then(|v| v.as_str())
-                                .filter(|s| !s.is_empty())
-                        {
-                            let _ = task_clipboard.set_text(target);
-                        }
-                        last_seq = seq;
-                    }
-                    if let Some(route) = topics.get("trade.route")
-                        && let Some(seq) = route.get("copy_seq").and_then(|v| v.as_u64())
-                    {
-                        if seq > last_trade_seq
-                            && let Some(target) = route
-                                .get("copy_target")
-                                .and_then(|v| v.as_str())
-                                .filter(|s| !s.is_empty())
-                        {
-                            let _ = task_clipboard.set_text(target);
-                        }
-                        last_trade_seq = seq;
-                    }
-                    // «A la ruta» de misiones: copia el sistema pedido en cada acción nueva.
-                    if let Some(active) = topics.get("missions.active")
-                        && let Some(seq) = active.get("copy_seq").and_then(|v| v.as_u64())
-                    {
-                        if seq > last_missions_seq
-                            && let Some(target) = active
-                                .get("copy_target")
-                                .and_then(|v| v.as_str())
-                                .filter(|s| !s.is_empty())
-                        {
-                            let _ = task_clipboard.set_text(target);
-                        }
-                        last_missions_seq = seq;
-                    }
-                }
-            }
-        });
-    }
 
     let token = config.ensure_lan_token();
     let server_cfg = ServerConfig {
@@ -502,6 +422,94 @@ async fn start_inner(
             .with_settings_watch(settings_tx)
             .with_capi_service(capi_service),
     );
+
+    {
+        let task_clipboard = clipboard.clone();
+        let task_actions = actions.clone();
+        let throttle_flag = throttle.clone();
+        tokio::spawn(async move {
+            // El replay nunca incrementa `copy_seq`: arranca en 0 y solo suben los saltos en vivo.
+            let mut last_seq: u64 = 0;
+            let mut last_trade_seq: u64 = 0;
+            let mut last_missions_seq: u64 = 0;
+            loop {
+                // Si el canal se retrasa se descartan mensajes pero se sigue:
+                // `copy_seq` es acumulativo, la siguiente actualización lo recupera.
+                let msg = match rx.recv().await {
+                    Ok(msg) => msg,
+                    Err(RecvError::Lagged(_count)) => {
+                        tmc_model::diagnostic!(
+                            tmc_model::diagnostics::DiagnosticContext::State,
+                            "app.updates.lagged",
+                            serde_json::json!({"skipped":_count})
+                        );
+                        continue;
+                    }
+                    Err(RecvError::Closed) => {
+                        tmc_model::diagnostic!(
+                            tmc_model::diagnostics::DiagnosticContext::State,
+                            "app.updates.closed",
+                            serde_json::json!({"closed":true})
+                        );
+                        break;
+                    }
+                };
+                match msg {
+                    CoreMessage::Update { topics, .. } => {
+                        if let Some(game) = topics.get("core.game")
+                            && let Some(running) = game.get("running").and_then(|v| v.as_bool())
+                        {
+                            throttle_flag.store(running, Ordering::Relaxed);
+                        }
+                        if let Some(route) = topics.get("navigation.route")
+                            && let Some(seq) = route.get("copy_seq").and_then(|v| v.as_u64())
+                        {
+                            if seq > last_seq
+                                && let Some(target) = route
+                                    .get("copy_target")
+                                    .and_then(|v| v.as_str())
+                                    .filter(|s| !s.is_empty())
+                            {
+                                let _ = task_clipboard.set_text(target);
+                            }
+                            last_seq = seq;
+                        }
+                        if let Some(route) = topics.get("trade.route")
+                            && let Some(seq) = route.get("copy_seq").and_then(|v| v.as_u64())
+                        {
+                            if seq > last_trade_seq
+                                && let Some(target) = route
+                                    .get("copy_target")
+                                    .and_then(|v| v.as_str())
+                                    .filter(|s| !s.is_empty())
+                            {
+                                let _ = task_clipboard.set_text(target);
+                            }
+                            last_trade_seq = seq;
+                        }
+                        // «A la ruta» de misiones: copia el sistema pedido en cada acción nueva.
+                        if let Some(active) = topics.get("missions.active")
+                            && let Some(seq) = active.get("copy_seq").and_then(|v| v.as_u64())
+                        {
+                            if seq > last_missions_seq
+                                && let Some(target) = active
+                                    .get("copy_target")
+                                    .and_then(|v| v.as_str())
+                                    .filter(|s| !s.is_empty())
+                            {
+                                let _ = task_clipboard.set_text(target);
+                            }
+                            last_missions_seq = seq;
+                        }
+                    }
+                    CoreMessage::VoiceCue(cue) => {
+                        let _ = task_actions.handle_voice_cue(&cue);
+                    }
+                    _ => {}
+                }
+            }
+        });
+    }
 
     if auto_update_check && online.load(std::sync::atomic::Ordering::Relaxed) {
         let update_state = actions.update_state.clone();

@@ -32,3 +32,4 @@ settings-tts-channel-mining = Minería y prospección
 settings-tts-channel-carrier = Portanaves
 settings-tts-test-button = 🔊 Probar voz de copiloto
 settings-tts-test-playing = Reproduciendo locución de prueba...
+settings-tts-stop-button = ⏹️ Detener locución

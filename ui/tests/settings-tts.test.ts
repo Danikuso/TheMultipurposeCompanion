@@ -173,3 +173,22 @@ test('clicking test audio calls /api/tts/test', async () => {
     rate: 110,
   });
 });
+
+test('clicking stop speech button calls /api/tts/stop', async () => {
+  const cfgWithTts = {
+    ...initialConfig,
+    tts: { ...initialConfig.tts, enabled: true },
+  };
+  await render(cfgWithTts);
+
+  const stopBtn = target.querySelector('[data-testid="tts-stop-btn"]') as HTMLButtonElement;
+  expect(stopBtn).not.toBeNull();
+
+  stopBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await settle();
+
+  const fetchCalls = (globalThis.fetch as any).mock.calls;
+  const stopCall = fetchCalls.find((call: any[]) => call[0] === '/api/tts/stop');
+  expect(stopCall).toBeDefined();
+  expect(stopCall[1]?.method).toBe('POST');
+});

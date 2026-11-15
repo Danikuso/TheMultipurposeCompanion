@@ -42,6 +42,17 @@ impl I18n {
         }
         key.to_owned()
     }
+
+    /// Formatea una clave de traducción desde un mapa de argumentos textuales,
+    /// eliminando los marcadores bidireccionales invisibles de Fluent (`\u{2068}`/`\u{2069}`)
+    /// para evitar artefactos en síntesis de voz (TTS).
+    pub fn t_map(&self, key: &str, args: &std::collections::BTreeMap<String, String>) -> String {
+        let pairs: Vec<(&str, FluentValue<'_>)> = args
+            .iter()
+            .map(|(k, v)| (k.as_str(), FluentValue::from(v.as_str())))
+            .collect();
+        self.t(key, &pairs).replace(['\u{2068}', '\u{2069}'], "")
+    }
 }
 
 pub fn keys(lang: &str) -> BTreeSet<String> {
@@ -660,5 +671,16 @@ b = B
     fn localizer_is_send_and_sync() {
         fn check<T: Send + Sync>() {}
         check::<I18n>();
+    }
+
+    #[test]
+    fn t_map_formats_tts_cue_cleanly() {
+        let i18n = I18n::new("es");
+        let mut args = std::collections::BTreeMap::new();
+        args.insert("system".to_owned(), "Sol".to_owned());
+        let formatted = i18n.t_map("tts-nav-jump-scoopable", &args);
+        assert!(formatted.contains("Sol"), "{formatted}");
+        assert!(!formatted.contains('\u{2068}'));
+        assert!(!formatted.contains('\u{2069}'));
     }
 }

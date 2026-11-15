@@ -24,6 +24,16 @@ pub enum VoiceIntent {
     MaterialsSummary,
     /// Consulta sobre el nivel y depósito de combustible.
     FuelStatus,
+    /// Consulta sobre el sistema, cuerpo o estación actual (y opcionalmente copiarlo).
+    CurrentLocation,
+    /// Resumen de exploración, cuerpos valiosos y progreso FSS del sistema actual.
+    ExplorationSummary,
+    /// Resumen de bajas, bonos y vales de recompensa de la sesión de combate.
+    CombatSummary,
+    /// Estado del Portanaves (ubicación, tritio disponible y saltos posibles).
+    CarrierStatus,
+    /// Estado y progreso de la construcción/colonización activa.
+    ColonisationStatus,
     /// Consulta o comando no reconocido.
     #[serde(untagged)]
     Unknown(String),
@@ -42,6 +52,11 @@ impl VoiceIntent {
             Self::BioSignals => "bio_signals",
             Self::MaterialsSummary => "materials_summary",
             Self::FuelStatus => "fuel_status",
+            Self::CurrentLocation => "current_location",
+            Self::ExplorationSummary => "exploration_summary",
+            Self::CombatSummary => "combat_summary",
+            Self::CarrierStatus => "carrier_status",
+            Self::ColonisationStatus => "colonisation_status",
             Self::Unknown(s) => s.as_str(),
         }
     }
@@ -103,6 +118,11 @@ mod tests {
             (VoiceIntent::BioSignals, "\"bio_signals\""),
             (VoiceIntent::MaterialsSummary, "\"materials_summary\""),
             (VoiceIntent::FuelStatus, "\"fuel_status\""),
+            (VoiceIntent::CurrentLocation, "\"current_location\""),
+            (VoiceIntent::ExplorationSummary, "\"exploration_summary\""),
+            (VoiceIntent::CombatSummary, "\"combat_summary\""),
+            (VoiceIntent::CarrierStatus, "\"carrier_status\""),
+            (VoiceIntent::ColonisationStatus, "\"colonisation_status\""),
             (
                 VoiceIntent::Unknown("custom_action".into()),
                 "\"custom_action\"",

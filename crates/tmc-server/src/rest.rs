@@ -658,17 +658,47 @@ fn render_oauth_html_response(success: bool, message: &str) -> Response {
         .into_response()
 }
 
-/// Consulta de voces disponibles según el motor TTS activo.
-pub async fn get_tts_voices(State(state): State<AppState>) -> Response {
+#[derive(Debug, Deserialize, Default)]
+pub struct TtsVoicesQueryParams {
+    pub engine: Option<String>,
+}
+
+/// Consulta de voces disponibles según el motor TTS solicitado o activo.
+pub async fn get_tts_voices(
+    State(state): State<AppState>,
+    Query(params): Query<TtsVoicesQueryParams>,
+) -> Response {
     let snapshot = state.core.snapshot().await;
-    match state
-        .host
-        .run_action_with("tts.voices", &Value::Null, &snapshot)
-    {
+    let args = match params.engine {
+        Some(engine) if !engine.is_empty() => serde_json::json!({ "engine": engine }),
+        _ => Value::Null,
+    };
+    match state.host.run_action_with("tts.voices", &args, &snapshot) {
         Ok(val) => (StatusCode::OK, Json(val)).into_response(),
         Err(ActionError::NotFound) => (
             StatusCode::NOT_FOUND,
             Json(serde_json::json!({ "error": "not-found" })),
+        )
+            .into_response(),
+        Err(ActionError::Failed(err)) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": err })),
+        )
+            .into_response(),
+    }
+}
+
+/// Detiene de inmediato cualquier locución en reproducción y vacía la cola TTS pendiente.
+pub async fn post_tts_stop(State(state): State<AppState>) -> Response {
+    let snapshot = state.core.snapshot().await;
+    match state
+        .host
+        .run_action_with("tts.stop", &Value::Null, &snapshot)
+    {
+        Ok(val) => (StatusCode::OK, Json(val)).into_response(),
+        Err(ActionError::NotFound) => (
+            StatusCode::OK,
+            Json(serde_json::json!({ "ok": true, "stopped": true })),
         )
             .into_response(),
         Err(ActionError::Failed(err)) => (
@@ -823,11 +853,157 @@ pub async fn post_voice_intent(
         })
         .unwrap_or_default();
 
-    let bio_count = snapshot
+    let exobio_count = snapshot
         .get("exobiology.body")
         .and_then(|v| v.get("signals"))
         .and_then(|v| v.as_u64())
         .unwrap_or(0) as u32;
+
+    let (exp_scanned, exp_total, exp_valuable, exp_value, exp_bio_count) = snapshot
+        .get("exploration.system")
+        .map(|s| {
+            let fss = s.get("fss");
+            let scanned = fss
+                .and_then(|f| f.get("scanned"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0) as u32;
+            let body_count = fss
+                .and_then(|f| f.get("body_count"))
+                .and_then(|v| v.as_u64())
+                .or_else(|| {
+                    s.get("rows")
+                        .and_then(|r| r.as_array())
+                        .map(|a| a.len() as u64)
+                })
+                .unwrap_or(0) as u32;
+            let valuable = s.get("map_targets").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+            let value_now = s.get("value_now").and_then(|v| v.as_u64()).unwrap_or(0);
+            let bio_sig = s.get("bio_signals").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+            (scanned, body_count, valuable, value_now, bio_sig)
+        })
+        .unwrap_or_default();
+
+    let bio_count = exobio_count.max(exp_bio_count);
+
+    let (combat_kills, combat_unredeemed_total) = snapshot
+        .get("combat.session")
+        .map(|c| {
+            let kills = c.get("kills").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+            let vt = c.get("vouchers_total");
+            let bounty = vt
+                .and_then(|v| v.get("bounty"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let bond = vt
+                .and_then(|v| v.get("combat_bond"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            (kills, bounty.saturating_add(bond))
+        })
+        .unwrap_or_default();
+
+    let (carrier_name, carrier_system, carrier_fuel_depot, carrier_max_jumps) = snapshot
+        .get("carrier.overview")
+        .map(|c| {
+            let has_carrier = c.get("carrier_id").is_some_and(|v| !v.is_null())
+                || c.get("callsign").and_then(|v| v.as_str()).is_some();
+            if !has_carrier {
+                return (None, None, None, None);
+            }
+            let name = c
+                .get("name")
+                .and_then(|v| v.as_str())
+                .or_else(|| c.get("callsign").and_then(|v| v.as_str()))
+                .map(str::to_owned);
+            let system = c
+                .get("current_system")
+                .and_then(|v| v.as_str())
+                .map(str::to_owned);
+            let fuel = c
+                .get("fuel_depot")
+                .and_then(|v| v.as_u64())
+                .map(|v| v as u32);
+            let jumps = c
+                .get("max_jumps_possible")
+                .and_then(|v| v.as_u64())
+                .map(|v| v as u32);
+            (name, system, fuel, jumps)
+        })
+        .unwrap_or((None, None, None, None));
+
+    let (
+        colonisation_station,
+        colonisation_progress_pct,
+        colonisation_remaining_tons,
+        colonisation_top_missing,
+    ) = snapshot
+        .get("colonisation.depot")
+        .filter(|d| d.get("active_project").and_then(|v| v.as_bool()) == Some(true))
+        .map(|d| {
+            let station = d
+                .get("station_name")
+                .and_then(|v| v.as_str())
+                .map(str::to_owned);
+            let pct = d
+                .get("progress_percent")
+                .and_then(|v| v.as_f64())
+                .map(|v| v.round().clamp(0.0, 100.0) as u32);
+            let rem = d.get("total_remaining").and_then(|v| v.as_u64());
+            let top = d
+                .get("resources")
+                .and_then(|r| r.as_array())
+                .and_then(|arr| {
+                    arr.iter()
+                        .filter(|item| {
+                            item.get("remaining").and_then(|v| v.as_u64()).unwrap_or(0) > 0
+                        })
+                        .max_by_key(|item| {
+                            item.get("remaining").and_then(|v| v.as_u64()).unwrap_or(0)
+                        })
+                        .and_then(|item| {
+                            item.get("name_localised")
+                                .and_then(|v| v.as_str())
+                                .or_else(|| item.get("name").and_then(|v| v.as_str()))
+                        })
+                        .map(str::to_owned)
+                });
+            (station, pct, rem, top)
+        })
+        .unwrap_or((None, None, None, None));
+
+    let (pinned_goals_total, pinned_goals_ready) = snapshot
+        .get("engineering.goals")
+        .map(|g| {
+            let total = g.get("total").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+            let ready = g
+                .get("goals")
+                .and_then(|arr| arr.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter(|item| {
+                            item.get("materials_ready").and_then(|v| v.as_bool()) == Some(true)
+                        })
+                        .count() as u32
+                })
+                .unwrap_or(0);
+            (total, ready)
+        })
+        .unwrap_or_default();
+
+    let inventory_materials_total = snapshot
+        .get("engineering.inventory")
+        .and_then(|inv| inv.get("by_category"))
+        .and_then(|cats| cats.as_object())
+        .map(|cats| {
+            cats.values()
+                .filter_map(|grades| grades.as_object())
+                .flat_map(|grades| grades.values())
+                .filter_map(|rows| rows.as_array())
+                .flat_map(|rows| rows.iter())
+                .map(|row| row.get("count").and_then(|v| v.as_u64()).unwrap_or(0) as u32)
+                .sum()
+        })
+        .unwrap_or(0);
 
     let ctx = tmc_core::VoiceResolverContext {
         locale,
@@ -837,6 +1013,23 @@ pub async fn post_voice_intent(
         total_bounties,
         notoriety,
         bio_signal_bodies_count: bio_count,
+        exploration_bodies_scanned: exp_scanned,
+        exploration_bodies_total: exp_total,
+        exploration_valuable_count: exp_valuable,
+        exploration_value_now: exp_value,
+        combat_kills,
+        combat_unredeemed_total,
+        carrier_name,
+        carrier_system,
+        carrier_fuel_depot,
+        carrier_max_jumps,
+        colonisation_station,
+        colonisation_progress_pct,
+        colonisation_remaining_tons,
+        colonisation_top_missing,
+        pinned_goals_total,
+        pinned_goals_ready,
+        inventory_materials_total,
     };
 
     let response = tmc_core::VoiceIntentResolver::resolve(query, &game_state, &ctx);

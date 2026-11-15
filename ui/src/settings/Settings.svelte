@@ -10,7 +10,7 @@
   import Pairing from './Pairing.svelte';
   import LayoutSettings from './LayoutSettings.svelte';
   import { integer } from '../lib/format';
-  import { voiceAssistant } from '../lib/voiceAssistant.svelte';
+  import { voiceAssistant, PTT_KEY_OPTIONS } from '../lib/voiceAssistant.svelte';
   import AccountsSection from '../modules/accounts/AccountsSection.svelte';
   import { updater, checkForUpdates, updateMessage } from '../lib/updater.svelte';
 
@@ -209,6 +209,61 @@
       }, 2000);
     }
   }
+
+  let ttsStopping = $state(false);
+  let voiceConsoleQuery = $state('');
+  let voiceConsoleBusy = $state(false);
+
+  const QUICK_VOICE_COMMANDS: ReadonlyArray<{
+    id: string;
+    labelKey: string;
+    queryEs: string;
+    queryEn: string;
+  }> = [
+    { id: 'current_location', labelKey: 'voice-intent-current-location', queryEs: '¿Dónde estoy?', queryEn: 'where am I' },
+    { id: 'ship_status', labelKey: 'voice-intent-ship-status', queryEs: 'Estado de la nave', queryEn: 'ship status' },
+    { id: 'fuel_status', labelKey: 'voice-intent-fuel-status', queryEs: 'Nivel de combustible', queryEn: 'fuel level' },
+    { id: 'next_jump', labelKey: 'voice-intent-next-jump', queryEs: 'Siguiente salto', queryEn: 'next jump' },
+    { id: 'copy_next_system', labelKey: 'voice-intent-copy-next-system', queryEs: 'Copiar siguiente sistema', queryEn: 'copy next system' },
+    { id: 'nearest_factor', labelKey: 'voice-intent-nearest-factor', queryEs: 'Factor interestelar más cercano', queryEn: 'nearest interstellar factor' },
+    { id: 'nearest_black_market', labelKey: 'voice-intent-nearest-black-market', queryEs: 'Mercado negro más cercano', queryEn: 'nearest black market' },
+    { id: 'crime_status', labelKey: 'voice-intent-crime-status', queryEs: 'Estado legal y multas', queryEn: 'legal status' },
+    { id: 'combat_summary', labelKey: 'voice-intent-combat-summary', queryEs: 'Resumen de combate', queryEn: 'combat summary' },
+    { id: 'exploration_summary', labelKey: 'voice-intent-exploration-summary', queryEs: 'Resumen de exploración', queryEn: 'exploration summary' },
+    { id: 'bio_signals', labelKey: 'voice-intent-bio-signals', queryEs: 'Señales biológicas', queryEn: 'biological signals' },
+    { id: 'materials_summary', labelKey: 'voice-intent-materials-summary', queryEs: 'Resumen de materiales', queryEn: 'materials summary' },
+    { id: 'carrier_status', labelKey: 'voice-intent-carrier-status', queryEs: 'Estado del portanaves', queryEn: 'fleet carrier status' },
+    { id: 'colonisation_status', labelKey: 'voice-intent-colonisation-status', queryEs: 'Estado de colonización', queryEn: 'colonisation status' },
+  ];
+
+  async function stopTtsVoice() {
+    ttsStopping = true;
+    try {
+      await voiceAssistant.stopSpeaking();
+    } finally {
+      ttsStopping = false;
+    }
+  }
+
+  async function runVoiceConsoleQuery(rawQuery: string) {
+    const query = rawQuery.trim();
+    if (!query || voiceConsoleBusy) return;
+    voiceConsoleBusy = true;
+    try {
+      await voiceAssistant.sendQuery(query);
+    } finally {
+      voiceConsoleBusy = false;
+    }
+  }
+
+  async function handleVoiceConsoleSubmit(e: SubmitEvent) {
+    e.preventDefault();
+    const query = voiceConsoleQuery.trim();
+    if (!query) return;
+    await runVoiceConsoleQuery(query);
+    voiceConsoleQuery = '';
+  }
+
   const knownMinerals = $derived([...DEFAULT_MINERALS, ...miningInterest.filter((k) => !DEFAULT_MINERALS.includes(k))]);
   let fullConfig = $state<ConfigDto>({});
   let saveError = $state(false);
@@ -932,6 +987,15 @@
               >
                 {ttsTesting ? t('settings-tts-test-playing') : t('settings-tts-test-button')}
               </button>
+              <button
+                type="button"
+                class="btn-stop-voice"
+                data-testid="tts-stop-btn"
+                disabled={ttsStopping}
+                onclick={stopTtsVoice}
+              >
+                {t('settings-tts-stop-button')}
+              </button>
             </div>
           {/if}
         </fieldset>
@@ -994,8 +1058,8 @@
                   </span>
                 </div>
                 <p class="whisper-desc">{t('voice-assistant-whisper-model-info')}</p>
-                {#if voiceAssistant.whisperStatus !== 'ready'}
-                  <div class="whisper-actions">
+                <div class="whisper-actions">
+                  {#if voiceAssistant.whisperStatus !== 'ready'}
                     <button
                       type="button"
                       class="btn-preload-whisper"
@@ -1005,8 +1069,17 @@
                     >
                       ⚡ {t('voice-assistant-whisper-preload')}
                     </button>
-                  </div>
-                {/if}
+                  {:else}
+                    <button
+                      type="button"
+                      class="btn-unload-whisper"
+                      data-testid="unload-whisper-btn"
+                      onclick={() => voiceAssistant.unloadWhisperModel()}
+                    >
+                      🧹 {t('voice-assistant-whisper-unload')}
+                    </button>
+                  {/if}
+                </div>
               </div>
             {/if}
 
@@ -1025,12 +1098,92 @@
               </select>
             </div>
 
-            {#if voiceAssistant.lastQuery}
-              <div class="voice-feedback-row">
-                <span class="feedback-label">{t('voice-assistant-last-query')}:</span>
-                <span class="feedback-val font-mono">"{voiceAssistant.lastQuery}"</span>
+            {#if voiceAssistant.mode === 'ptt'}
+              <div class="field-row">
+                <label for="voice-ptt-key-select" class="voice-toggle-label">
+                  <span>{t('voice-assistant-ptt-key')}</span>
+                  <small class="field-hint">{t('voice-assistant-ptt-hint')}</small>
+                </label>
+                <select
+                  id="voice-ptt-key-select"
+                  data-testid="voice-ptt-key-select"
+                  value={voiceAssistant.pttKey}
+                  onchange={(e) => voiceAssistant.setPttKey(e.currentTarget.value)}
+                >
+                  {#each PTT_KEY_OPTIONS as keyOpt}
+                    <option value={keyOpt}>{keyOpt}</option>
+                  {/each}
+                </select>
               </div>
             {/if}
+
+            <div class="voice-console" data-testid="voice-command-console">
+              <div class="voice-console-header">
+                <span class="voice-console-title">💬 {t('voice-assistant-console-title')}</span>
+                {#if voiceAssistant.lastQuery}
+                  <span class="feedback-val font-mono">"{voiceAssistant.lastQuery}"</span>
+                {/if}
+              </div>
+
+              <form class="voice-console-form" onsubmit={handleVoiceConsoleSubmit}>
+                <input
+                  type="text"
+                  class="voice-query-input"
+                  data-testid="voice-query-input"
+                  placeholder={t('voice-assistant-query-placeholder')}
+                  bind:value={voiceConsoleQuery}
+                />
+                <button
+                  type="submit"
+                  class="btn-voice-send"
+                  data-testid="voice-query-submit"
+                  disabled={voiceConsoleBusy || !voiceConsoleQuery.trim()}
+                >
+                  {t('voice-assistant-query-send')}
+                </button>
+              </form>
+
+              <div class="voice-quick-section">
+                <span class="field-label">{t('voice-assistant-quick-commands')}</span>
+                <div class="voice-quick-grid" data-testid="voice-quick-commands">
+                  {#each QUICK_VOICE_COMMANDS as cmd}
+                    <button
+                      type="button"
+                      class="voice-quick-pill"
+                      data-testid="voice-quick-pill-{cmd.id}"
+                      disabled={voiceConsoleBusy}
+                      onclick={() => void runVoiceConsoleQuery(getLocale() === 'en' ? cmd.queryEn : cmd.queryEs)}
+                    >
+                      {t(cmd.labelKey)}
+                    </button>
+                  {/each}
+                </div>
+              </div>
+
+              {#if voiceAssistant.lastResponse}
+                <div class="voice-response-card" data-testid="voice-response-card">
+                  <div class="voice-response-meta">
+                    <span class="badge badge-muted font-mono">{voiceAssistant.lastResponse.intent}</span>
+                    {#if voiceAssistant.lastResponse.clipboard_copied}
+                      <span
+                        class="badge badge-success voice-clipboard-badge"
+                        data-testid="voice-clipboard-badge"
+                        title={t('voice-assistant-clipboard-hint')}
+                      >
+                        📋 {voiceAssistant.lastResponse.clipboard_copied}
+                      </span>
+                    {/if}
+                  </div>
+                  <p class="voice-response-text">{voiceAssistant.lastResponse.spoken_text}</p>
+                </div>
+              {/if}
+
+              {#if voiceAssistant.error}
+                <div class="voice-error-banner" data-testid="voice-error-banner" role="alert">
+                  {voiceAssistant.error}
+                </div>
+              {/if}
+            </div>
           {/if}
 
           <!-- Integración con VoiceAttack -->
@@ -1793,23 +1946,185 @@
     color: var(--hud-muted);
   }
 
-  .voice-feedback-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.45rem 0.75rem;
-    background: rgba(0, 212, 178, 0.08);
-    border: 1px dashed rgba(0, 212, 178, 0.3);
-    border-radius: 4px;
-    font-size: 0.8rem;
-  }
-
-  .feedback-label {
-    color: var(--hud-muted);
-  }
-
   .feedback-val {
     color: var(--hud-cyan, #00d4b2);
+  }
+
+  .test-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .btn-stop-voice {
+    background: rgba(239, 68, 68, 0.14);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    padding: 0.45rem 0.85rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+
+  .btn-stop-voice:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.28);
+    color: #fff;
+  }
+
+  .btn-stop-voice:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .btn-unload-whisper {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--hud-text);
+    border: 1px solid var(--hud-border-subtle, rgba(255, 255, 255, 0.15));
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+
+  .btn-unload-whisper:hover {
+    border-color: var(--hud-warning, #f59e0b);
+    color: var(--hud-warning, #f59e0b);
+  }
+
+  .voice-console {
+    margin-top: 0.4rem;
+    padding: 0.8rem 0.9rem;
+    background: var(--hud-surface-alt, rgba(16, 22, 32, 0.75));
+    border: 1px solid var(--hud-border-subtle, rgba(255, 255, 255, 0.1));
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .voice-console-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .voice-console-title {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--hud-text);
+  }
+
+  .voice-console-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .voice-query-input {
+    flex: 1 1 200px;
+    min-width: 0;
+  }
+
+  .btn-voice-send {
+    background: rgba(0, 212, 178, 0.15);
+    color: var(--hud-cyan, #00d4b2);
+    border: 1px solid rgba(0, 212, 178, 0.45);
+    padding: 0.42rem 0.85rem;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+
+  .btn-voice-send:hover:not(:disabled) {
+    background: var(--hud-cyan, #00d4b2);
+    color: #000;
+  }
+
+  .btn-voice-send:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .voice-quick-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .voice-quick-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .voice-quick-pill {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--hud-text);
+    border: 1px solid var(--hud-border-subtle, rgba(255, 255, 255, 0.12));
+    padding: 0.28rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    line-height: 1.2;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  }
+
+  .voice-quick-pill:hover:not(:disabled) {
+    border-color: var(--hud-cyan, #00d4b2);
+    color: var(--hud-cyan, #00d4b2);
+    background: rgba(0, 212, 178, 0.08);
+  }
+
+  .voice-quick-pill:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .voice-response-card {
+    padding: 0.65rem 0.75rem;
+    border-radius: 5px;
+    background: rgba(0, 212, 178, 0.07);
+    border: 1px solid rgba(0, 212, 178, 0.25);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .voice-response-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+  }
+
+  .voice-response-text {
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--hud-text);
+  }
+
+  .voice-error-banner {
+    padding: 0.5rem 0.7rem;
+    border-radius: 4px;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
+    font-size: 0.76rem;
   }
 
   .voiceattack-box {

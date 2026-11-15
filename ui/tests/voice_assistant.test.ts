@@ -3,6 +3,11 @@ import { flushSync, mount, unmount } from 'svelte';
 import TopBar from '../src/shell/TopBar.svelte';
 import Settings from '../src/settings/Settings.svelte';
 import { voiceAssistant } from '../src/lib/voiceAssistant.svelte';
+import {
+  isWhisperHallucination,
+  preprocessAudioSamples,
+  whisperEngine,
+} from '../src/lib/whisperEngine';
 import { setLocale } from '../src/lib/i18n';
 
 let target: HTMLElement;
@@ -27,9 +32,13 @@ beforeEach(() => {
   voiceAssistant.setEnabled(false);
   voiceAssistant.setMode('continuous');
   voiceAssistant.setSttEngine('whisper');
+  voiceAssistant.setPttKey('F4');
   voiceAssistant.lastQuery = null;
   voiceAssistant.lastResponse = null;
+  voiceAssistant.history = [];
+  voiceAssistant.error = null;
   voiceAssistant.voiceAttackStatus = null;
+  whisperEngine.unloadModel();
 });
 
 afterEach(() => {
@@ -213,4 +222,145 @@ test('Settings renders STT engine selector and Whisper info when enabled', async
 
   const preloadBtn = target.querySelector('[data-testid="preload-whisper-btn"]') as HTMLButtonElement;
   expect(preloadBtn).not.toBeNull();
+});
+
+test('whisperEngine trims silence, normalizes gain, filters hallucinations and unloads', () => {
+  expect(isWhisperHallucination('')).toBe(true);
+  expect(isWhisperHallucination('[BLANK_AUDIO]')).toBe(true);
+  expect(isWhisperHallucination('[Música]')).toBe(true);
+  expect(isWhisperHallucination('Gracias por ver')).toBe(true);
+  expect(isWhisperHallucination('¿Dónde estoy?')).toBe(false);
+
+  const silenceOnly = new Float32Array(1000);
+  expect(preprocessAudioSamples(silenceOnly).length).toBe(0);
+
+  // Leading/trailing silence around a quiet 0.1 peak speech burst -> normalized to ~0.85
+  const samples = new Float32Array(3000);
+  for (let i = 1000; i < 1500; i += 1) {
+    samples[i] = 0.1;
+  }
+  const processed = preprocessAudioSamples(samples);
+  expect(processed.length).toBeLessThan(samples.length);
+  expect(processed.length).toBeGreaterThanOrEqual(500);
+  const maxPeak = Math.max(...Array.from(processed, (x) => Math.abs(x)));
+  expect(maxPeak).toBeGreaterThan(0.8);
+
+  whisperEngine.status = 'ready';
+  whisperEngine.loadProgress = 100;
+  whisperEngine.unloadModel();
+  expect(whisperEngine.status).toBe('unloaded');
+  expect(whisperEngine.loadProgress).toBe(0);
+});
+
+test('TopBar stops speaking when clicked in speaking state', async () => {
+  const fetchMock = vi.fn(async (_url: string, _opts?: RequestInit) =>
+    response({ ok: true, stopped: true }),
+  );
+  vi.stubGlobal('fetch', fetchMock);
+
+  voiceAssistant.setEnabled(true);
+  voiceAssistant.state = 'speaking';
+  inst = mount(TopBar, { target });
+  await settle();
+
+  const micBtn = target.querySelector('[data-testid="topbar-voice-mic"]') as HTMLButtonElement;
+  expect(micBtn.classList.contains('speaking')).toBe(true);
+
+  micBtn.click();
+  await settle();
+
+  expect(voiceAssistant.state).toBe('inactive');
+  const stopCall = fetchMock.mock.calls.find((call) => call[0] === '/api/tts/stop');
+  expect(stopCall).toBeDefined();
+  expect(stopCall?.[1]).toMatchObject({ method: 'POST' });
+});
+
+test('Settings renders PTT key selector and interactive copilot console', async () => {
+  const fetchMock = vi.fn(async (url: string, opts?: RequestInit) => {
+    if (url === '/api/config') {
+      return response({
+        tts: { enabled: false },
+        voice: { enabled: true },
+        accounts: {},
+      });
+    }
+    if (url === '/api/tts/voices' || url.startsWith('/api/tts/voices?')) {
+      return response({ voices: [] });
+    }
+    if (url === '/api/voice/voiceattack') {
+      return response({ installed: false, running: false, profile_available: true });
+    }
+    if (url === '/api/voice/intent' && opts?.body) {
+      const parsed = JSON.parse(opts.body as string);
+      if (parsed.query.includes('portanaves')) {
+        return response({
+          intent: 'carrier_status',
+          action_executed: 'voice.carrier_status',
+          spoken_text: 'Portanaves HMS Beagle en Sol con 450 t de tritio.',
+          clipboard_copied: 'Sol',
+        });
+      }
+      return response({
+        intent: 'current_location',
+        action_executed: 'voice.copy_current_system',
+        spoken_text: 'Sistema actual Sol.',
+        clipboard_copied: 'Sol',
+      });
+    }
+    return response({});
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  voiceAssistant.setEnabled(true);
+  voiceAssistant.setMode('ptt');
+
+  inst = mount(Settings, { target });
+  await settle();
+
+  // Selector de tecla PTT visible y persistente
+  const pttSelect = target.querySelector('[data-testid="voice-ptt-key-select"]') as HTMLSelectElement;
+  expect(pttSelect).not.toBeNull();
+  pttSelect.value = 'F8';
+  pttSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  await settle();
+  expect(voiceAssistant.pttKey).toBe('F8');
+  expect(localStorage.getItem('tmc.voice.ptt_key')).toBe('F8');
+
+  // Consola manual + tarjeta de respuesta e insignia de portapapeles
+  const queryInput = target.querySelector('[data-testid="voice-query-input"]') as HTMLInputElement;
+  const submitBtn = target.querySelector('[data-testid="voice-query-submit"]') as HTMLButtonElement;
+  expect(queryInput).not.toBeNull();
+  expect(submitBtn.disabled).toBe(true);
+
+  queryInput.value = '¿Dónde estoy?';
+  queryInput.dispatchEvent(new Event('input', { bubbles: true }));
+  await settle();
+  expect(submitBtn.disabled).toBe(false);
+
+  // Pulsar F8 mientras el foco está en un INPUT no debe activar PTT
+  const startSpy = vi.spyOn(voiceAssistant, 'startListening').mockResolvedValue();
+  queryInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'F8', code: 'F8', bubbles: true }));
+  expect(startSpy).not.toHaveBeenCalled();
+
+  // Pulsar F8 fuera de campos editables sí activa PTT
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F8', code: 'F8', bubbles: true }));
+  expect(startSpy).toHaveBeenCalledTimes(1);
+  startSpy.mockRestore();
+
+  submitBtn.closest('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  await settle();
+
+  const responseCard = target.querySelector('[data-testid="voice-response-card"]');
+  expect(responseCard?.textContent).toContain('Sistema actual Sol.');
+  const clipboardBadge = target.querySelector('[data-testid="voice-clipboard-badge"]');
+  expect(clipboardBadge?.textContent).toContain('Sol');
+
+  // Píldora de acceso rápido para portanaves
+  const carrierPill = target.querySelector('[data-testid="voice-quick-pill-carrier_status"]') as HTMLButtonElement;
+  expect(carrierPill).not.toBeNull();
+  carrierPill.click();
+  await settle();
+
+  const updatedCard = target.querySelector('[data-testid="voice-response-card"]');
+  expect(updatedCard?.textContent).toContain('HMS Beagle');
 });
