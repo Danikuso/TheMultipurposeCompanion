@@ -385,6 +385,19 @@ mod tests {
                 ("cmdr", FluentValue::from("Danikuso")),
                 ("selected", FluentValue::from("AltExplorer")),
                 ("active", FluentValue::from("Danikuso")),
+                ("points", FluentValue::from(2)),
+                ("signals", FluentValue::from(3)),
+                ("targets", FluentValue::from(2)),
+                ("bio", FluentValue::from(3)),
+                ("tf", FluentValue::from(1)),
+                ("shield", FluentValue::from("100 %")),
+                ("hull", FluentValue::from("95 %")),
+                ("cap", FluentValue::from(256)),
+                ("limpets", FluentValue::from(40)),
+                ("dest", FluentValue::from("Sol")),
+                ("trips", FluentValue::from(4)),
+                ("next", FluentValue::from("Alpha Centauri")),
+                ("base", FluentValue::from("Shinrarta Dezhra")),
             ] {
                 args.set(name, value);
             }

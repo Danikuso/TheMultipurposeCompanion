@@ -2,7 +2,18 @@
   import { onMount } from 'svelte';
   import { getLocale, setLocale, t } from '../lib/i18n';
   import { applyTheme, type HudThemeInput } from '../lib/theme';
-  import { loadPrefs, prefs, setAutoCompanion } from '../lib/prefs.svelte';
+  import {
+    loadPrefs,
+    prefs,
+    setAutoCompanion,
+    toggleOverlay,
+    toggleOverlayLock,
+    updateOverlaySettings,
+    type OverlayAnchor,
+    type OverlayBlocks,
+    type OverlayMode,
+    type OverlaySettings,
+  } from '../lib/prefs.svelte';
   import { DEFAULT_PRIORITIES } from '../shell/layouts';
   import { topic } from '../lib/ws.svelte';
   import Panel from '../shell/Panel.svelte';
@@ -64,6 +75,7 @@
     tts?: TtsSettingsDto;
     home_system?: string | null;
     home_system_coords?: [number, number, number] | null;
+    overlay?: OverlaySettings;
     server?: {
       port?: number;
       lan?: boolean;
@@ -548,7 +560,12 @@
         const res = await fetch('/api/config', {
           method: 'PUT',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ ...fullConfig, ...patch, server: { ...fullConfig.server, ...patch.server } }),
+          body: JSON.stringify({
+            ...fullConfig,
+            ...patch,
+            ...(fullConfig.overlay !== undefined ? { overlay: { ...prefs.overlay } } : {}),
+            server: { ...fullConfig.server, ...patch.server },
+          }),
         });
         // Nunca se vuelca la configuración: contiene el token LAN en `server`.
         diag('ui.fetch.result', { kind: 'config-put', ok: res.ok, status: res.status, lan: lanEnabled });
@@ -820,6 +837,140 @@
               onchange={() => { prefs.autoCompanionVoiceCues = voiceCues; saveConfig(); }}
             />
           </label>
+        </fieldset>
+
+        <!-- Overlay HUD Semitransparente e Integrado (F24) -->
+        <fieldset class="settings-card tts-section overlay-settings-section" data-testid="overlay-settings">
+          <legend>🪟 {t('settings-overlay-title')}</legend>
+          <p class="help-text">{t('settings-overlay-desc')}</p>
+
+          <label class="field-row">
+            <span>{t('settings-overlay-enabled')}</span>
+            <input
+              type="checkbox"
+              role="switch"
+              class="hud-switch"
+              data-testid="overlay-enabled"
+              checked={prefs.overlay.enabled}
+              onchange={(e) => { void toggleOverlay(e.currentTarget.checked); }}
+            />
+          </label>
+
+          <label class="field-row">
+            <span>{t('settings-overlay-mode')}</span>
+            <select
+              data-testid="overlay-mode"
+              value={prefs.overlay.mode}
+              onchange={(e) => { void updateOverlaySettings({ mode: e.currentTarget.value as OverlayMode }); }}
+            >
+              <option value="tactical">{t('overlay-mode-tactical')}</option>
+              <option value="minimal">{t('overlay-mode-minimal')}</option>
+            </select>
+          </label>
+
+          <label class="field-row">
+            <span>{t('settings-overlay-opacity', { percent: prefs.overlay.opacity })}</span>
+            <input
+              type="range"
+              min="35"
+              max="95"
+              step="5"
+              data-testid="overlay-opacity"
+              value={prefs.overlay.opacity}
+              oninput={(e) => { prefs.overlay.opacity = Number(e.currentTarget.value); }}
+              onchange={(e) => { void updateOverlaySettings({ opacity: Number(e.currentTarget.value) }); }}
+            />
+          </label>
+
+          <div class="field-row overlay-lock-row">
+            <div class="toggle-group">
+              <span>{t('settings-overlay-lock-state')}</span>
+              <small class="help-text">{prefs.overlay.click_through ? t('settings-overlay-locked') : t('settings-overlay-unlocked')}</small>
+            </div>
+            <button
+              type="button"
+              class="btn-overlay-lock"
+              class:unlocked={!prefs.overlay.click_through}
+              data-testid="overlay-lock-toggle-btn"
+              onclick={() => { void toggleOverlayLock(); }}
+            >
+              {prefs.overlay.click_through ? `🔓 ${t('settings-overlay-unlock-action')}` : `🔒 ${t('settings-overlay-lock-action')}`}
+            </button>
+          </div>
+
+          <div class="tts-channels">
+            <span class="channels-title">{t('settings-overlay-anchor')}</span>
+            <div class="overlay-anchor-grid">
+              {#each [
+                { id: 'top_left', key: 'overlay-anchor-top-left' },
+                { id: 'top_center', key: 'overlay-anchor-top-center' },
+                { id: 'top_right', key: 'overlay-anchor-top-right' },
+                { id: 'bottom_left', key: 'overlay-anchor-bottom-left' },
+                { id: 'bottom_right', key: 'overlay-anchor-bottom-right' },
+              ] as anchorItem (anchorItem.id)}
+                <button
+                  type="button"
+                  class="overlay-anchor-btn"
+                  class:active={prefs.overlay.anchor === anchorItem.id}
+                  data-testid={`settings-overlay-anchor-${anchorItem.id}`}
+                  onclick={() => { void updateOverlaySettings({ anchor: anchorItem.id as OverlayAnchor }); }}
+                >
+                  {t(anchorItem.key)}
+                </button>
+              {/each}
+            </div>
+          </div>
+
+          <label class="field-row">
+            <span>{t('settings-overlay-role')}</span>
+            <select
+              data-testid="overlay-pinned-role"
+              value={prefs.overlay.pinned_role ?? ''}
+              onchange={(e) => {
+                const v = e.currentTarget.value;
+                void updateOverlaySettings({ pinned_role: v || null });
+              }}
+            >
+              <option value="">{t('overlay-role-auto')}</option>
+              <option value="exobiology">{t('overlay-role-exobiology')}</option>
+              <option value="exploration">{t('overlay-role-exploration')}</option>
+              <option value="combat">{t('overlay-role-combat')}</option>
+              <option value="mining">{t('overlay-role-mining')}</option>
+              <option value="trade">{t('overlay-role-trade')}</option>
+              <option value="colonisation">{t('overlay-role-colonisation')}</option>
+              <option value="navigation">{t('overlay-role-navigation')}</option>
+            </select>
+          </label>
+
+          <div class="tts-channels">
+            <span class="channels-title">{t('settings-overlay-blocks')}</span>
+            <div class="channels-grid">
+              {#each [
+                { id: 'navigation', key: 'overlay-role-navigation' },
+                { id: 'exploration', key: 'overlay-role-exploration' },
+                { id: 'exobiology', key: 'overlay-role-exobiology' },
+                { id: 'combat', key: 'overlay-role-combat' },
+                { id: 'mining', key: 'overlay-role-mining' },
+                { id: 'trade', key: 'overlay-role-trade' },
+                { id: 'colonisation', key: 'overlay-role-colonisation' },
+              ] as blockItem (blockItem.id)}
+                {@const blockKey = blockItem.id as keyof OverlayBlocks}
+                <label class="channel-item">
+                  <input
+                    type="checkbox"
+                    data-testid={`overlay-block-${blockItem.id}`}
+                    checked={prefs.overlay.blocks[blockKey]}
+                    onchange={(e) => {
+                      void updateOverlaySettings({ blocks: { [blockKey]: e.currentTarget.checked } });
+                    }}
+                  />
+                  <span>{t(blockItem.key)}</span>
+                </label>
+              {/each}
+            </div>
+          </div>
+
+          <p class="help-text">{t('settings-overlay-borderless-hint')}</p>
         </fieldset>
 
         <fieldset class="settings-card minerals" data-testid="mining-interest">
@@ -2357,5 +2508,58 @@
     margin-top: 0.4rem;
     font-size: 0.78rem;
     color: #ff5555;
+  }
+
+  .overlay-lock-row {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .btn-overlay-lock {
+    background: var(--hud-surface-alt, #151a29);
+    border: 1px solid var(--hud-border-subtle, rgba(255, 255, 255, 0.15));
+    color: var(--hud-text, #f1f5f9);
+    border-radius: 4px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+  }
+
+  .btn-overlay-lock:hover {
+    border-color: var(--hud-primary, #ff7100);
+    color: #fff;
+  }
+
+  .btn-overlay-lock.unlocked {
+    background: rgba(245, 158, 11, 0.16);
+    border-color: #f59e0b;
+    color: #fbbf24;
+  }
+
+  .overlay-anchor-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .overlay-anchor-btn {
+    background: var(--hud-surface-alt, #151a29);
+    border: 1px solid var(--hud-border-subtle, rgba(255, 255, 255, 0.14));
+    color: var(--hud-muted, #9ca3af);
+    border-radius: 4px;
+    padding: 0.3rem 0.55rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .overlay-anchor-btn.active {
+    background: rgba(255, 113, 0, 0.18);
+    border-color: var(--hud-primary, #ff7100);
+    color: #fff;
   }
 </style>

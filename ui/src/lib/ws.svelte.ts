@@ -1,6 +1,7 @@
 import { setLocale } from './i18n';
 import { applyTheme, type HudThemeInput } from './theme';
 import { diag, disableDiagnostics, setDiagnosticsCapability } from './diag.svelte';
+import { applyOverlayTopic } from './prefs.svelte';
 
 export interface Alert {
   id: string;
@@ -53,6 +54,9 @@ function applyTopics(incoming: Record<string, unknown>, isSnapshot: boolean): vo
   const theme = incoming['core.theme'] as HudThemeInput | undefined;
   if (theme && typeof theme.primary === 'string') {
     applyTheme(theme);
+  }
+  if (incoming['core.overlay'] !== undefined) {
+    applyOverlayTopic(incoming['core.overlay']);
   }
 }
 
