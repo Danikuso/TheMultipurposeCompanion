@@ -5299,12 +5299,15 @@ name = "tmc-desktop"
 version = "1.5.0"
 dependencies = [
  "anyhow",
+ "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-single-instance",
  "tauri-plugin-window-state",
  "tmc-app",
  "tmc-i18n",
+ "tmc-model",
+ "tmc-server",
  "tokio",
  "tracing",
  "webview2-com",
