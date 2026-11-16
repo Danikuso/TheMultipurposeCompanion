@@ -1,6 +1,82 @@
 import { diag } from './diag.svelte';
 import { DEFAULT_PRIORITIES } from '../shell/priorities';
 
+export type OverlayMode = 'minimal' | 'tactical';
+export type OverlayAnchor = 'top_left' | 'top_center' | 'top_right' | 'bottom_left' | 'bottom_right' | 'custom';
+
+export interface OverlayBlocks {
+  navigation: boolean;
+  exploration: boolean;
+  exobiology: boolean;
+  combat: boolean;
+  mining: boolean;
+  trade: boolean;
+  colonisation: boolean;
+}
+
+export interface OverlaySettings {
+  enabled: boolean;
+  mode: OverlayMode;
+  opacity: number;
+  click_through: boolean;
+  anchor: OverlayAnchor;
+  custom_x?: number | null;
+  custom_y?: number | null;
+  pinned_role?: string | null;
+  blocks: OverlayBlocks;
+}
+
+export function defaultOverlaySettings(): OverlaySettings {
+  return {
+    enabled: false,
+    mode: 'tactical',
+    opacity: 78,
+    click_through: true,
+    anchor: 'top_right',
+    custom_x: null,
+    custom_y: null,
+    pinned_role: null,
+    blocks: {
+      navigation: true,
+      exploration: true,
+      exobiology: true,
+      combat: true,
+      mining: true,
+      trade: true,
+      colonisation: true,
+    },
+  };
+}
+
+const VALID_MODES = new Set<OverlayMode>(['minimal', 'tactical']);
+const VALID_ANCHORS = new Set<OverlayAnchor>(['top_left', 'top_center', 'top_right', 'bottom_left', 'bottom_right', 'custom']);
+
+export function normalizeOverlay(raw: unknown): OverlaySettings {
+  const def = defaultOverlaySettings();
+  if (!raw || typeof raw !== 'object') return def;
+  const r = raw as Record<string, unknown>;
+  const rawBlocks = (r.blocks && typeof r.blocks === 'object' ? r.blocks : {}) as Record<string, unknown>;
+  return {
+    enabled: typeof r.enabled === 'boolean' ? r.enabled : def.enabled,
+    mode: typeof r.mode === 'string' && VALID_MODES.has(r.mode as OverlayMode) ? (r.mode as OverlayMode) : def.mode,
+    opacity: typeof r.opacity === 'number' && Number.isFinite(r.opacity) ? Math.min(95, Math.max(35, Math.round(r.opacity))) : def.opacity,
+    click_through: typeof r.click_through === 'boolean' ? r.click_through : def.click_through,
+    anchor: typeof r.anchor === 'string' && VALID_ANCHORS.has(r.anchor as OverlayAnchor) ? (r.anchor as OverlayAnchor) : def.anchor,
+    custom_x: typeof r.custom_x === 'number' && Number.isFinite(r.custom_x) ? Math.round(r.custom_x) : null,
+    custom_y: typeof r.custom_y === 'number' && Number.isFinite(r.custom_y) ? Math.round(r.custom_y) : null,
+    pinned_role: typeof r.pinned_role === 'string' && r.pinned_role.trim() ? r.pinned_role.trim() : null,
+    blocks: {
+      navigation: typeof rawBlocks.navigation === 'boolean' ? rawBlocks.navigation : true,
+      exploration: typeof rawBlocks.exploration === 'boolean' ? rawBlocks.exploration : true,
+      exobiology: typeof rawBlocks.exobiology === 'boolean' ? rawBlocks.exobiology : true,
+      combat: typeof rawBlocks.combat === 'boolean' ? rawBlocks.combat : true,
+      mining: typeof rawBlocks.mining === 'boolean' ? rawBlocks.mining : true,
+      trade: typeof rawBlocks.trade === 'boolean' ? rawBlocks.trade : true,
+      colonisation: typeof rawBlocks.colonisation === 'boolean' ? rawBlocks.colonisation : true,
+    },
+  };
+}
+
 /** Preferencias de la UI persistidas en `config.toml` (vía `/api/config`). `loaded` es false hasta conocer el valor guardado. */
 export const prefs = $state({
   autoCompanion: true,
@@ -11,13 +87,24 @@ export const prefs = $state({
   autoCompanionPredictive: true,
   homeSystem: null as string | null,
   homeSystemCoords: null as [number, number, number] | null,
+  overlay: defaultOverlaySettings(),
   locked: false,
   loaded: false,
 });
 
 let confirmed = true;
+let confirmedOverlay: OverlaySettings = defaultOverlaySettings();
+let overlayPending = 0;
 let pending = 0;
 let queue: Promise<void> = Promise.resolve();
+
+export function applyOverlayTopic(raw: unknown): void {
+  const next = normalizeOverlay(raw);
+  confirmedOverlay = next;
+  if (overlayPending === 0) {
+    prefs.overlay = next;
+  }
+}
 
 export function toggleTacticalLock(): boolean {
   prefs.locked = !prefs.locked;
@@ -33,6 +120,7 @@ export function loadPrefs(cfg: {
   auto_companion_predictive?: unknown;
   home_system?: unknown;
   home_system_coords?: unknown;
+  overlay?: unknown;
 }): void {
   confirmed = typeof cfg.auto_companion === 'boolean' ? cfg.auto_companion : true;
   prefs.autoCompanion = confirmed;
@@ -66,6 +154,9 @@ export function loadPrefs(cfg: {
     ];
   } else if (cfg.home_system_coords === null) {
     prefs.homeSystemCoords = null;
+  }
+  if (cfg.overlay !== undefined) {
+    applyOverlayTopic(cfg.overlay);
   }
   prefs.loaded = true;
 }
@@ -153,4 +244,69 @@ export function setHomeBase(
     }
   });
   return queue;
+}
+
+export interface OverlayPatch {
+  enabled?: boolean;
+  mode?: OverlayMode;
+  opacity?: number;
+  click_through?: boolean;
+  anchor?: OverlayAnchor;
+  custom_x?: number | null;
+  custom_y?: number | null;
+  pinned_role?: string | null;
+  blocks?: Partial<OverlayBlocks>;
+}
+
+function sendOverlayAction(actionName: string, payload: Record<string, unknown>, optimistic: OverlaySettings): Promise<void> {
+  prefs.overlay = optimistic;
+  overlayPending++;
+  queue = queue.then(async () => {
+    try {
+      const res = await fetch(`/api/actions/${actionName}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('overlay-action-failed');
+      const saved = normalizeOverlay(await res.json());
+      confirmedOverlay = saved;
+      if (overlayPending === 1) prefs.overlay = saved;
+    } catch {
+      if (overlayPending === 1) prefs.overlay = confirmedOverlay;
+    } finally {
+      overlayPending--;
+    }
+  });
+  return queue;
+}
+
+export function updateOverlaySettings(patch: OverlayPatch): Promise<void> {
+  const optimistic = normalizeOverlay({
+    ...prefs.overlay,
+    ...patch,
+    blocks: { ...prefs.overlay.blocks, ...(patch.blocks ?? {}) },
+  });
+  return sendOverlayAction('overlay.update', patch as Record<string, unknown>, optimistic);
+}
+
+export function toggleOverlay(enabled?: boolean): Promise<void> {
+  const next = typeof enabled === 'boolean' ? enabled : !prefs.overlay.enabled;
+  const optimistic = { ...prefs.overlay, enabled: next };
+  return sendOverlayAction('overlay.toggle', { enabled: next }, optimistic);
+}
+
+export function toggleOverlayLock(extra?: {
+  click_through?: boolean;
+  anchor?: OverlayAnchor;
+  custom_x?: number | null;
+  custom_y?: number | null;
+}): Promise<void> {
+  const next = typeof extra?.click_through === 'boolean' ? extra.click_through : !prefs.overlay.click_through;
+  const payload: Record<string, unknown> = { click_through: next };
+  if (extra?.anchor !== undefined) payload.anchor = extra.anchor;
+  if (extra?.custom_x !== undefined) payload.custom_x = extra.custom_x;
+  if (extra?.custom_y !== undefined) payload.custom_y = extra.custom_y;
+  const optimistic = normalizeOverlay({ ...prefs.overlay, ...payload });
+  return sendOverlayAction('overlay.set_click_through', payload, optimistic);
 }

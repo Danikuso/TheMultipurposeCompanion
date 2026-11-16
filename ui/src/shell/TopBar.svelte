@@ -1,7 +1,7 @@
 <script lang="ts">
   import { credits, pct } from '../lib/format';
   import { t } from '../lib/i18n';
-  import { prefs, setAutoCompanion, toggleTacticalLock } from '../lib/prefs.svelte';
+  import { prefs, setAutoCompanion, toggleOverlay, toggleOverlayLock, toggleTacticalLock } from '../lib/prefs.svelte';
   import { live, topic } from '../lib/ws.svelte';
   import { diag, diagOn } from '../lib/diag.svelte';
   import { voiceAssistant } from '../lib/voiceAssistant.svelte';
@@ -219,6 +219,30 @@
       <span class="lock-icon" aria-hidden="true">{prefs.locked ? '🔒' : '🔓'}</span>
       <span class="lock-label">{prefs.locked ? 'LOCKED' : 'LOCK'}</span>
     </button>
+
+    <button
+      type="button"
+      class="overlay-pill"
+      class:active={prefs.overlay.enabled}
+      data-testid="topbar-overlay-toggle"
+      title={t('topbar-overlay-tooltip')}
+      onclick={() => { void toggleOverlay(); }}
+    >
+      <span aria-hidden="true">🪟</span>
+      <span>{t('topbar-overlay-pill')}</span>
+    </button>
+    {#if prefs.overlay.enabled}
+      <button
+        type="button"
+        class="overlay-lock-pill"
+        class:unlocked={!prefs.overlay.click_through}
+        data-testid="topbar-overlay-lock"
+        title={t('topbar-overlay-lock-tooltip')}
+        onclick={() => { void toggleOverlayLock(); }}
+      >
+        <span aria-hidden="true">{prefs.overlay.click_through ? '🔒' : '🔓'}</span>
+      </button>
+    {/if}
     {#if updater.status.has_update}
       <button
         type="button"
@@ -456,6 +480,43 @@
     border-color: #f59e0b;
     color: #fbbf24;
     box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+  }
+
+  .overlay-pill,
+  .overlay-lock-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--hud-surface-card);
+    border: 1px solid var(--hud-border-subtle);
+    border-radius: 20px;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--hud-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 150ms ease;
+    white-space: nowrap;
+  }
+
+  .overlay-pill:hover,
+  .overlay-lock-pill:hover {
+    border-color: var(--hud-border);
+    color: var(--hud-text);
+  }
+
+  .overlay-pill.active {
+    background: rgba(6, 182, 212, 0.14);
+    border-color: rgba(6, 182, 212, 0.5);
+    color: var(--hud-cyan, #06b6d4);
+  }
+
+  .overlay-lock-pill.unlocked {
+    background: rgba(245, 158, 11, 0.16);
+    border-color: #f59e0b;
+    color: #fbbf24;
   }
 
   .update-pill {

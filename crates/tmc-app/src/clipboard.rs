@@ -129,6 +129,8 @@ pub struct AppActions {
     native_engine: Mutex<Option<tmc_tts::NativeEngine>>,
     kokoro_engine: Mutex<Option<tmc_tts::KokoroEngine>>,
     tts_queue: Mutex<tmc_tts::TtsQueue>,
+    overlay_watch: tokio::sync::watch::Sender<tmc_model::settings::OverlaySettings>,
+    overlay_drag_cb: Mutex<Option<Arc<dyn Fn() + Send + Sync>>>,
     pub update_state: Arc<tokio::sync::RwLock<crate::updater::UpdateStatus>>,
 }
 
@@ -143,26 +145,11 @@ impl AppActions {
     }
 
     pub fn new() -> Self {
-        Self {
-            clipboard: Arc::new(Clipboard::new()),
-            config: Mutex::new(Config::default()),
-            runtime: None,
-            save_path: None,
-            settings_watch: None,
-            capi_service: None,
-            store: None,
-            sync_waker: None,
-            transport: None,
-            native_engine: Mutex::new(None),
-            kokoro_engine: Mutex::new(None),
-            tts_queue: Mutex::new(tmc_tts::TtsQueue::default()),
-            update_state: Arc::new(tokio::sync::RwLock::new(
-                crate::updater::UpdateStatus::default(),
-            )),
-        }
+        Self::with_config(Config::default())
     }
 
     pub fn with_config(cfg: Config) -> Self {
+        let (overlay_tx, _) = tokio::sync::watch::channel(cfg.overlay.clone());
         Self {
             clipboard: Arc::new(Clipboard::new()),
             save_path: cfg.config_file.clone(),
@@ -176,6 +163,8 @@ impl AppActions {
             native_engine: Mutex::new(None),
             kokoro_engine: Mutex::new(None),
             tts_queue: Mutex::new(tmc_tts::TtsQueue::default()),
+            overlay_watch: overlay_tx,
+            overlay_drag_cb: Mutex::new(None),
             update_state: Arc::new(tokio::sync::RwLock::new(
                 crate::updater::UpdateStatus::default(),
             )),
@@ -279,6 +268,168 @@ impl AppActions {
     pub fn clipboard(&self) -> &Clipboard {
         &self.clipboard
     }
+
+    /// Suscripción en tiempo real a los cambios del overlay HUD.
+    pub fn subscribe_overlay(
+        &self,
+    ) -> tokio::sync::watch::Receiver<tmc_model::settings::OverlaySettings> {
+        self.overlay_watch.subscribe()
+    }
+
+    /// Registra la función de plataforma encargada de iniciar el arrastre de ventana del overlay.
+    pub fn set_overlay_drag_callback(&self, cb: Arc<dyn Fn() + Send + Sync>) {
+        *self.overlay_drag_cb.lock().unwrap() = Some(cb);
+    }
+
+    fn persist_and_broadcast_config(&self, cfg: &Config) {
+        let _ = match &self.save_path {
+            Some(path) => cfg.save_to(path),
+            None => cfg.save(),
+        };
+        let settings = cfg.module_settings();
+        if let Some(tx) = &self.settings_watch {
+            tx.send_replace(settings.clone());
+        }
+        self.overlay_watch.send_replace(cfg.overlay.clone());
+        if let Some(runtime) = &self.runtime {
+            runtime.online.store(cfg.online_services, Ordering::Relaxed);
+            if let Some(waker) = &runtime.sync_waker {
+                waker.wake_all();
+            }
+            let event = SourceEvent::Settings(settings);
+            match runtime.events.try_send(event) {
+                Ok(()) => {}
+                // Cola llena: se reenvía sin bloquear a quien llama.
+                Err(mpsc::error::TrySendError::Full(event)) => {
+                    let events = runtime.events.clone();
+                    match tokio::runtime::Handle::try_current() {
+                        Ok(handle) => {
+                            handle.spawn(async move {
+                                let _ = events.send(event).await;
+                            });
+                        }
+                        Err(_) => tracing::warn!("settings update dropped: no runtime"),
+                    }
+                }
+                Err(mpsc::error::TrySendError::Closed(_)) => {
+                    tracing::warn!("settings update dropped: core closed");
+                }
+            }
+        }
+    }
+
+    fn apply_overlay_position_args(
+        overlay: &mut tmc_model::settings::OverlaySettings,
+        args: &Value,
+    ) -> Result<(), ActionError> {
+        if let Some(anchor_val) = args.get("anchor") {
+            overlay.anchor = serde_json::from_value(anchor_val.clone())
+                .map_err(|e| ActionError::Failed(format!("invalid-overlay-anchor: {e}")))?;
+        }
+        if let Some(cx) = args.get("custom_x") {
+            overlay.custom_x = if cx.is_null() {
+                None
+            } else {
+                let raw = cx
+                    .as_i64()
+                    .ok_or_else(|| ActionError::Failed("invalid-overlay-custom-x".into()))?;
+                Some(
+                    i32::try_from(raw)
+                        .map_err(|_| ActionError::Failed("invalid-overlay-custom-x".into()))?,
+                )
+            };
+        }
+        if let Some(cy) = args.get("custom_y") {
+            overlay.custom_y = if cy.is_null() {
+                None
+            } else {
+                let raw = cy
+                    .as_i64()
+                    .ok_or_else(|| ActionError::Failed("invalid-overlay-custom-y".into()))?;
+                Some(
+                    i32::try_from(raw)
+                        .map_err(|_| ActionError::Failed("invalid-overlay-custom-y".into()))?,
+                )
+            };
+        }
+        Ok(())
+    }
+
+    fn apply_overlay_patch(
+        overlay: &mut tmc_model::settings::OverlaySettings,
+        args: &Value,
+    ) -> Result<(), ActionError> {
+        if let Some(enabled) = args.get("enabled").and_then(Value::as_bool) {
+            overlay.enabled = enabled;
+        }
+        if let Some(mode_val) = args.get("mode") {
+            overlay.mode = serde_json::from_value(mode_val.clone())
+                .map_err(|e| ActionError::Failed(format!("invalid-overlay-mode: {e}")))?;
+        }
+        if let Some(op_val) = args.get("opacity") {
+            let raw = op_val
+                .as_u64()
+                .ok_or_else(|| ActionError::Failed("invalid-overlay-opacity".into()))?;
+            overlay.opacity = u8::try_from(raw)
+                .map_err(|_| ActionError::Failed("invalid-overlay-opacity".into()))?;
+        }
+        if let Some(ct) = args.get("click_through").and_then(Value::as_bool) {
+            overlay.click_through = ct;
+        }
+        Self::apply_overlay_position_args(overlay, args)?;
+        if let Some(role_val) = args.get("pinned_role") {
+            overlay.pinned_role = if role_val.is_null() {
+                None
+            } else if let Some(s) = role_val.as_str() {
+                let trimmed = s.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_owned())
+                }
+            } else {
+                return Err(ActionError::Failed("invalid-overlay-role".into()));
+            };
+        }
+        if let Some(blocks_val) = args.get("blocks") {
+            let Some(blocks_obj) = blocks_val.as_object() else {
+                return Err(ActionError::Failed("invalid-overlay-blocks".into()));
+            };
+            for (k, v) in blocks_obj {
+                let Some(flag) = v.as_bool() else {
+                    return Err(ActionError::Failed("invalid-overlay-blocks".into()));
+                };
+                match k.as_str() {
+                    "navigation" => overlay.blocks.navigation = flag,
+                    "exploration" => overlay.blocks.exploration = flag,
+                    "exobiology" => overlay.blocks.exobiology = flag,
+                    "combat" => overlay.blocks.combat = flag,
+                    "mining" => overlay.blocks.mining = flag,
+                    "trade" => overlay.blocks.trade = flag,
+                    "colonisation" => overlay.blocks.colonisation = flag,
+                    _ => return Err(ActionError::Failed("invalid-overlay-blocks".into())),
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn apply_overlay_update(
+        &self,
+        updater: impl FnOnce(&mut tmc_model::settings::OverlaySettings) -> Result<(), ActionError>,
+    ) -> Result<Value, ActionError> {
+        let mut guard = self.config.lock().unwrap();
+        let mut candidate = guard.clone();
+        updater(&mut candidate.overlay)?;
+        candidate
+            .validate_overlay()
+            .map_err(|e| ActionError::Failed(e.into()))?;
+        self.persist_and_broadcast_config(&candidate);
+        let out = serde_json::to_value(&candidate.overlay)
+            .map_err(|e| ActionError::Failed(e.to_string()))?;
+        *guard = candidate;
+        Ok(out)
+    }
 }
 
 impl Default for AppActions {
@@ -311,6 +462,9 @@ impl ConfigHost for AppActions {
         updated
             .validate_auto_companion()
             .map_err(|e| ActionError::Failed(e.into()))?;
+        updated
+            .validate_overlay()
+            .map_err(|e| ActionError::Failed(e.into()))?;
 
         // F2 & F19: Preservar rutas del sistema y configuración de infraestructura del servidor
         {
@@ -326,40 +480,7 @@ impl ConfigHost for AppActions {
         if updated.server.lan {
             updated.ensure_lan_token();
         }
-        let _ = match &self.save_path {
-            Some(path) => updated.save_to(path),
-            None => updated.save(),
-        };
-        if let Some(tx) = &self.settings_watch {
-            tx.send_replace(updated.module_settings());
-        }
-        if let Some(runtime) = &self.runtime {
-            runtime
-                .online
-                .store(updated.online_services, Ordering::Relaxed);
-            if let Some(waker) = &runtime.sync_waker {
-                waker.wake_all();
-            }
-            let event = SourceEvent::Settings(updated.module_settings());
-            match runtime.events.try_send(event) {
-                Ok(()) => {}
-                // Cola llena: se reenvía sin bloquear a quien llama.
-                Err(mpsc::error::TrySendError::Full(event)) => {
-                    let events = runtime.events.clone();
-                    match tokio::runtime::Handle::try_current() {
-                        Ok(handle) => {
-                            handle.spawn(async move {
-                                let _ = events.send(event).await;
-                            });
-                        }
-                        Err(_) => tracing::warn!("settings update dropped: no runtime"),
-                    }
-                }
-                Err(mpsc::error::TrySendError::Closed(_)) => {
-                    tracing::warn!("settings update dropped: core closed");
-                }
-            }
-        }
+        self.persist_and_broadcast_config(&updated);
         let out = serde_json::to_value(&updated).map_err(|e| ActionError::Failed(e.to_string()))?;
         *self.config.lock().unwrap() = updated;
         Ok(out)
@@ -1088,6 +1209,34 @@ impl ActionHost for AppActions {
                     .is_ok();
                 return Ok(json!({ "ok": true, "spoken": spoken }));
             }
+            "overlay.toggle" => {
+                return self.apply_overlay_update(|o| {
+                    o.enabled = args
+                        .get("enabled")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(!o.enabled);
+                    Ok(())
+                });
+            }
+            "overlay.set_click_through" => {
+                return self.apply_overlay_update(|o| {
+                    o.click_through = args
+                        .get("click_through")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(!o.click_through);
+                    Self::apply_overlay_position_args(o, args)
+                });
+            }
+            "overlay.update" => {
+                return self.apply_overlay_update(|o| Self::apply_overlay_patch(o, args));
+            }
+            "overlay.start_drag" => {
+                let cb = self.overlay_drag_cb.lock().unwrap().clone();
+                if let Some(cb) = cb {
+                    cb();
+                }
+                return Ok(json!({ "ok": true }));
+            }
             _ => {}
         }
         if !MODULE_PREFIXES.iter().any(|p| name.starts_with(p)) {
@@ -1596,5 +1745,109 @@ mod tests {
         assert!(content.contains("INFO app.start"));
         assert!(content.contains("LINE 2"));
         assert!(!content.contains("OLD LOG LINE"));
+    }
+
+    #[test]
+    fn overlay_actions_persist_validate_watch_and_trigger_drag() {
+        use std::sync::{
+            Arc,
+            atomic::{AtomicBool, Ordering},
+        };
+        use tmc_model::settings::{OverlayAnchor, OverlayMode};
+        use tmc_server::ActionHost;
+
+        let dir = tempfile::tempdir().unwrap();
+        let cfg_path = dir.path().join("config.toml");
+        let cfg = crate::Config {
+            config_file: Some(cfg_path.clone()),
+            ..Default::default()
+        };
+        let actions = super::AppActions::with_config(cfg);
+        let rx = actions.subscribe_overlay();
+        assert!(!rx.borrow().enabled);
+
+        let dragged = Arc::new(AtomicBool::new(false));
+        let dragged_clone = dragged.clone();
+        actions.set_overlay_drag_callback(Arc::new(move || {
+            dragged_clone.store(true, Ordering::SeqCst);
+        }));
+
+        // Toggle habilita y notifica al watcher
+        let res = actions
+            .run_action_with(
+                "overlay.toggle",
+                &serde_json::Value::Null,
+                &Default::default(),
+            )
+            .unwrap();
+        assert_eq!(res["enabled"], true);
+        assert!(rx.borrow().enabled);
+
+        // Actualización de modo, opacidad, rol y bloques
+        let res = actions
+            .run_action_with(
+                "overlay.update",
+                &serde_json::json!({
+                    "mode": "minimal",
+                    "opacity": 60,
+                    "pinned_role": "exobiology",
+                    "blocks": { "mining": false }
+                }),
+                &Default::default(),
+            )
+            .unwrap();
+        assert_eq!(res["mode"], "minimal");
+        assert_eq!(res["opacity"], 60);
+        assert_eq!(res["pinned_role"], "exobiology");
+        assert_eq!(res["blocks"]["mining"], false);
+        assert_eq!(rx.borrow().mode, OverlayMode::Minimal);
+        assert_eq!(rx.borrow().opacity, 60);
+
+        // Rechazo de opacidad fuera de rango (35..=95)
+        let err = actions
+            .run_action_with(
+                "overlay.update",
+                &serde_json::json!({ "opacity": 20 }),
+                &Default::default(),
+            )
+            .unwrap_err();
+        assert!(matches!(err, tmc_server::ActionError::Failed(_)));
+
+        // Click-through y anclaje custom con coordenadas
+        let res = actions
+            .run_action_with(
+                "overlay.set_click_through",
+                &serde_json::json!({
+                    "click_through": false,
+                    "anchor": "custom",
+                    "custom_x": 140,
+                    "custom_y": 90
+                }),
+                &Default::default(),
+            )
+            .unwrap();
+        assert_eq!(res["click_through"], false);
+        assert_eq!(rx.borrow().anchor, OverlayAnchor::Custom);
+        assert_eq!(rx.borrow().custom_x, Some(140));
+        assert_eq!(rx.borrow().custom_y, Some(90));
+
+        // Persistencia en disco TOML
+        let reloaded = crate::Config::load_from_or_default(&cfg_path);
+        assert!(reloaded.overlay.enabled);
+        assert_eq!(reloaded.overlay.mode, OverlayMode::Minimal);
+        assert_eq!(reloaded.overlay.opacity, 60);
+        assert!(!reloaded.overlay.click_through);
+        assert_eq!(reloaded.overlay.custom_x, Some(140));
+
+        // Inicio de arrastre invoca callback registrado
+        let drag_res = actions
+            .run_action_with(
+                "overlay.start_drag",
+                &serde_json::Value::Null,
+                &Default::default(),
+            )
+            .unwrap();
+        assert_eq!(drag_res["ok"], true);
+        assert!(dragged.load(Ordering::SeqCst));
     }
 }

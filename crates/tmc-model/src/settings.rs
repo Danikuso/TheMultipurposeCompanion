@@ -43,6 +43,154 @@ pub struct ModuleSettings {
     /// Coordenadas estelares [x, y, z] en años luz de la Base de operaciones.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub home_system_coords: Option<[f64; 3]>,
+    /// Preferencias del overlay HUD semitransparente e integrado (F24).
+    #[serde(default)]
+    pub overlay: OverlaySettings,
+}
+
+/// Modos visuales del overlay HUD sobre el juego.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OverlayMode {
+    Minimal,
+    #[default]
+    Tactical,
+}
+
+/// Posiciones de anclaje rápido o libre del overlay en el monitor activo.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OverlayAnchor {
+    TopLeft,
+    TopCenter,
+    #[default]
+    TopRight,
+    BottomLeft,
+    BottomRight,
+    Custom,
+}
+
+/// Bloques temáticos activables dentro del overlay táctico.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct OverlayBlocks {
+    #[serde(default = "default_true")]
+    pub navigation: bool,
+    #[serde(default = "default_true")]
+    pub exploration: bool,
+    #[serde(default = "default_true")]
+    pub exobiology: bool,
+    #[serde(default = "default_true")]
+    pub combat: bool,
+    #[serde(default = "default_true")]
+    pub mining: bool,
+    #[serde(default = "default_true")]
+    pub trade: bool,
+    #[serde(default = "default_true")]
+    pub colonisation: bool,
+}
+
+impl Default for OverlayBlocks {
+    fn default() -> Self {
+        Self {
+            navigation: true,
+            exploration: true,
+            exobiology: true,
+            combat: true,
+            mining: true,
+            trade: true,
+            colonisation: true,
+        }
+    }
+}
+
+pub fn default_overlay_opacity() -> u8 {
+    78
+}
+
+/// Roles aceptados en `OverlaySettings::pinned_role`.
+pub const OVERLAY_VALID_ROLES: &[&str] = &[
+    "navigation",
+    "exploration",
+    "exobiology",
+    "combat",
+    "mining",
+    "trade",
+    "colonisation",
+    "carrier",
+    "engineering",
+    "missions",
+    "powerplay",
+];
+
+/// Configuración persistente del overlay HUD semitransparente (F24).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct OverlaySettings {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub mode: OverlayMode,
+    #[serde(default = "default_overlay_opacity")]
+    pub opacity: u8,
+    #[serde(default = "default_true")]
+    pub click_through: bool,
+    #[serde(default)]
+    pub anchor: OverlayAnchor,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custom_x: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custom_y: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pinned_role: Option<String>,
+    #[serde(default)]
+    pub blocks: OverlayBlocks,
+}
+
+impl Default for OverlaySettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            mode: OverlayMode::Tactical,
+            opacity: default_overlay_opacity(),
+            click_through: true,
+            anchor: OverlayAnchor::TopRight,
+            custom_x: None,
+            custom_y: None,
+            pinned_role: None,
+            blocks: OverlayBlocks::default(),
+        }
+    }
+}
+
+impl OverlaySettings {
+    /// Valida opacidad (35..=95) y rol fijado manualmente si existe.
+    pub fn validate(&self) -> Result<(), &'static str> {
+        if !(35..=95).contains(&self.opacity) {
+            return Err("invalid-overlay-opacity");
+        }
+        if let Some(ref role) = self.pinned_role
+            && !OVERLAY_VALID_ROLES.contains(&role.trim())
+        {
+            return Err("invalid-overlay-role");
+        }
+        Ok(())
+    }
+
+    /// Normaliza opacidad y rol fijado tras leer configuración antigua o corrupta.
+    pub fn sanitize(&mut self) {
+        if !(35..=95).contains(&self.opacity) {
+            self.opacity = self.opacity.clamp(35, 95);
+        }
+        if let Some(ref role) = self.pinned_role {
+            let trimmed = role.trim().to_string();
+            if OVERLAY_VALID_ROLES.contains(&trimmed.as_str()) {
+                self.pinned_role = Some(trimmed);
+            } else {
+                self.pinned_role = None;
+            }
+        }
+    }
 }
 
 /// Disposiciones automáticas y orden estándar por defecto.
@@ -137,6 +285,7 @@ impl Default for ModuleSettings {
             auto_companion_predictive: true,
             home_system: None,
             home_system_coords: None,
+            overlay: OverlaySettings::default(),
         }
     }
 }
@@ -213,5 +362,35 @@ mod tests {
         assert_eq!(s.eddn_radius_ly, 200);
         assert_eq!(s.tourism_reference_cr_ly, 100_000);
         assert_eq!(s.sell_search_radius_ly, 100);
+    }
+
+    #[test]
+    fn overlay_settings_defaults_validation_and_sanitize() {
+        let def = OverlaySettings::default();
+        assert!(!def.enabled);
+        assert_eq!(def.mode, OverlayMode::Tactical);
+        assert_eq!(def.opacity, 78);
+        assert!(def.click_through);
+        assert_eq!(def.anchor, OverlayAnchor::TopRight);
+        assert!(def.pinned_role.is_none());
+        assert!(def.blocks.exobiology && def.blocks.navigation && def.blocks.colonisation);
+        assert!(def.validate().is_ok());
+
+        let parsed: ModuleSettings = serde_json::from_str("{}").unwrap();
+        assert_eq!(parsed.overlay, def);
+
+        let mut bad = OverlaySettings {
+            opacity: 10,
+            pinned_role: Some("invalid_role".to_owned()),
+            ..Default::default()
+        };
+        assert_eq!(bad.validate(), Err("invalid-overlay-opacity"));
+        bad.opacity = 65;
+        assert_eq!(bad.validate(), Err("invalid-overlay-role"));
+
+        bad.opacity = 120;
+        bad.sanitize();
+        assert_eq!(bad.opacity, 95);
+        assert!(bad.pinned_role.is_none());
     }
 }

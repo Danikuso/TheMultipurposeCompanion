@@ -1,11 +1,15 @@
 import './styles/base.css';
 import { mount } from 'svelte';
 import App from './App.svelte';
+import OverlayApp from './overlay/OverlayApp.svelte';
+
+let isOverlayShell = false;
 
 // F18/F21: Limpiar el token de la barra de direcciones y del historial tras cargar
 try {
   if (typeof window !== 'undefined' && window.location) {
     const url = new URL(window.location.href);
+    isOverlayShell = url.searchParams.get('shell') === 'overlay';
     if (url.searchParams.has('token')) {
       url.searchParams.delete('token');
       window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
@@ -15,8 +19,7 @@ try {
   // Ignorar en entornos sin window/URL
 }
 
-const app = mount(App, {
-  target: document.getElementById('app')!,
-});
+const target = document.getElementById('app')!;
+const app = isOverlayShell ? mount(OverlayApp, { target }) : mount(App, { target });
 
 export default app;

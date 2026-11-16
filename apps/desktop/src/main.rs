@@ -5,14 +5,17 @@ mod tray;
 mod window;
 
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::Manager;
 use tauri::webview::Url;
 use tauri_plugin_window_state::StateFlags;
 use tmc_app::{Config, data_dir, init_logging, start};
 
 use crate::tray::{RunningState, setup_tray};
-use crate::window::{create_or_focus_main_window, open_or_focus_async};
+use crate::window::{
+    DraggedPos, OVERLAY_WINDOW_LABEL, create_or_focus_main_window, open_or_focus_async,
+    start_overlay_drag, sync_overlay_window,
+};
 
 fn main() -> anyhow::Result<()> {
     let mut config_file: Option<PathBuf> = None;
@@ -58,6 +61,9 @@ fn main() -> anyhow::Result<()> {
     };
     let local_url: Url = running.server.local_url.parse()?;
     let single_instance_url = local_url.clone();
+    let actions = running.actions.clone();
+    let mut overlay_rx = actions.subscribe_overlay();
+    let dragged_pos: DraggedPos = Arc::new(Mutex::new(None));
 
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(
@@ -67,13 +73,53 @@ fn main() -> anyhow::Result<()> {
         ))
         .plugin(
             tauri_plugin_window_state::Builder::new()
+                .with_denylist(&[OVERLAY_WINDOW_LABEL])
                 .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
                 .build(),
         )
         .manage(RunningState(Mutex::new(Some(running))))
         .setup(move |app| {
-            setup_tray(app.handle(), &language, local_url.clone())?;
+            let drag_app = app.handle().clone();
+            actions.set_overlay_drag_callback(Arc::new(move || {
+                let target_app = drag_app.clone();
+                let _ = drag_app.run_on_main_thread(move || {
+                    start_overlay_drag(&target_app);
+                });
+            }));
+
+            setup_tray(
+                app.handle(),
+                &language,
+                local_url.clone(),
+                dragged_pos.clone(),
+            )?;
             create_or_focus_main_window(app.handle(), &local_url)?;
+
+            let initial_overlay = overlay_rx.borrow().clone();
+            if initial_overlay.enabled {
+                let _ =
+                    sync_overlay_window(app.handle(), &local_url, &initial_overlay, &dragged_pos);
+            }
+
+            let watcher_app = app.handle().clone();
+            let watcher_url = local_url;
+            let watcher_dragged = dragged_pos;
+            tauri::async_runtime::spawn(async move {
+                while overlay_rx.changed().await.is_ok() {
+                    let next = overlay_rx.borrow_and_update().clone();
+                    let dispatch_app = watcher_app.clone();
+                    let dispatch_url = watcher_url.clone();
+                    let dispatch_dragged = watcher_dragged.clone();
+                    let _ = watcher_app.run_on_main_thread(move || {
+                        let _ = sync_overlay_window(
+                            &dispatch_app,
+                            &dispatch_url,
+                            &next,
+                            &dispatch_dragged,
+                        );
+                    });
+                }
+            });
             Ok(())
         })
         .build(tauri::generate_context!())?;
@@ -85,6 +131,9 @@ fn main() -> anyhow::Result<()> {
             api.prevent_exit();
         }
         tauri::RunEvent::Exit => {
+            if let Some(overlay) = app_handle.get_webview_window(OVERLAY_WINDOW_LABEL) {
+                let _ = overlay.close();
+            }
             if let Some(state) = app_handle.try_state::<RunningState>()
                 && let Ok(mut guard) = state.0.lock()
                 && let Some(running) = guard.take()

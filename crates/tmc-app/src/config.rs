@@ -80,6 +80,9 @@ pub struct Config {
     /// Identificador persistente del dispositivo de escritorio (UUID) para perfiles de disposición.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub desktop_device_id: Option<String>,
+    /// Configuración del overlay HUD semitransparente e integrado (F24).
+    #[serde(default)]
+    pub overlay: tmc_model::settings::OverlaySettings,
     /// Archivo de configuración indicado con `--config` (no se serializa).
     #[serde(skip)]
     pub config_file: Option<PathBuf>,
@@ -120,6 +123,7 @@ impl Default for Config {
             data_dir: None,
             ui_dir: None,
             desktop_device_id: None,
+            overlay: tmc_model::settings::OverlaySettings::default(),
             config_file: None,
         }
     }
@@ -198,6 +202,7 @@ impl Config {
                 cfg.sanitize_f3();
                 cfg.sanitize_f4();
                 cfg.sanitize_auto_companion();
+                cfg.overlay.sanitize();
                 cfg.sanitize_paths();
                 #[cfg(debug_assertions)]
                 cfg.record_bootstrap(
@@ -329,6 +334,15 @@ impl Config {
         Ok(())
     }
 
+    /// Valida las preferencias del overlay HUD (opacidad 35..=95 y rol fijado válido).
+    pub fn validate_overlay(&mut self) -> Result<(), &'static str> {
+        self.overlay.validate()?;
+        if let Some(ref role) = self.overlay.pinned_role {
+            self.overlay.pinned_role = Some(role.trim().to_owned());
+        }
+        Ok(())
+    }
+
     /// Al cargar: histéresis y prioridades fuera de límites se sanean.
     fn sanitize_auto_companion(&mut self) {
         if self.auto_companion_linger_seconds > 60 {
@@ -411,6 +425,7 @@ impl Config {
             auto_companion_predictive: self.auto_companion_predictive,
             home_system: self.home_system.clone(),
             home_system_coords: self.home_system_coords,
+            overlay: self.overlay.clone(),
         }
     }
 

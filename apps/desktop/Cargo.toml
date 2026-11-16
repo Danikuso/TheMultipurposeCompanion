@@ -15,6 +15,9 @@ tauri-build = { workspace = true }
 [dependencies]
 tmc-app = { path = "../../crates/tmc-app" }
 tmc-i18n = { path = "../../crates/tmc-i18n" }
+tmc-model = { path = "../../crates/tmc-model" }
+tmc-server = { path = "../../crates/tmc-server" }
+serde_json = { workspace = true }
 anyhow = { workspace = true }
 tauri = { workspace = true }
 tauri-plugin-single-instance = { workspace = true }
