@@ -202,6 +202,7 @@ const TOPICS: &[&str] = &[
     "core.clock",
     "core.modules",
     "core.theme",
+    "core.overlay",
     "dashboard.alerts",
     "navigation.route",
     "navigation.jump",
@@ -322,6 +323,10 @@ const ACTIONS: &[&str] = &[
     "frontier.fleet",
     "voice.intent",
     "voice.voiceattack",
+    "overlay.toggle",
+    "overlay.set_click_through",
+    "overlay.update",
+    "overlay.start_drag",
 ];
 const EVENTS: &[&str] = &[
     "Fileheader",

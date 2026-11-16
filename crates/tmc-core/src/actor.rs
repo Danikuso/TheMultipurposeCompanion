@@ -263,6 +263,10 @@ impl Actor {
         };
         actor.update_core(Changes::all());
         actor.set_topic("core.theme", value(&actor.theme));
+        actor.set_topic(
+            "core.overlay",
+            value(&tmc_model::settings::OverlaySettings::default()),
+        );
         for module in modules {
             let id = match catch_unwind(AssertUnwindSafe(|| module.id())) {
                 Ok(id) => id,
@@ -565,10 +569,13 @@ impl Actor {
                 });
                 Changes::empty()
             }
+            SourceEvent::Settings(settings) => {
+                self.set_topic("core.overlay", value(&settings.overlay));
+                Changes::empty()
+            }
             SourceEvent::Net(_)
             | SourceEvent::CatchUpDone
             | SourceEvent::Action { .. }
-            | SourceEvent::Settings(_)
             | SourceEvent::Eddn(_)
             | SourceEvent::SyncReport(_)
             | SourceEvent::Stored { .. } => Changes::empty(),
@@ -1929,5 +1936,30 @@ mod tests {
         assert_eq!(cue["type"], "voice-cue");
         assert_eq!(cue["text_key"], "tts-nav-jump-scoopable");
         assert_eq!(cue["priority"], "tactical");
+    }
+
+    #[tokio::test]
+    async fn actor_initializes_and_updates_core_overlay_topic() {
+        let core = spawn_core(vec![], None, Duration::from_secs(60));
+        let initial = core.snapshot().await;
+        assert_eq!(initial["core.overlay"]["enabled"], false);
+        assert_eq!(initial["core.overlay"]["mode"], "tactical");
+        assert_eq!(initial["core.overlay"]["opacity"], 78);
+
+        let mut settings = tmc_model::settings::ModuleSettings::default();
+        settings.overlay.enabled = true;
+        settings.overlay.mode = tmc_model::settings::OverlayMode::Minimal;
+        settings.overlay.opacity = 55;
+        settings.overlay.click_through = false;
+        core.events
+            .send(SourceEvent::Settings(settings))
+            .await
+            .unwrap();
+
+        let updated = core.snapshot().await;
+        assert_eq!(updated["core.overlay"]["enabled"], true);
+        assert_eq!(updated["core.overlay"]["mode"], "minimal");
+        assert_eq!(updated["core.overlay"]["opacity"], 55);
+        assert_eq!(updated["core.overlay"]["click_through"], false);
     }
 }
